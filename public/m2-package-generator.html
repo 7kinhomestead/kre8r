@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — M2 Package Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.20);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --red:#e05c5c; --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
+    --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  /* NAV */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(14,15,14,0.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+  .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--teal);text-decoration:none;}
+  .logo span{color:var(--text-dimmer);font-size:11px;font-family:var(--font-body);letter-spacing:0.5px;font-weight:500;margin-left:10px;text-transform:uppercase;}
+  .nav{display:flex;gap:4px;align-items:center;}
+  .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
+  .nav a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav a.active{background:var(--teal-glow);color:var(--teal);}
+  .milestone-tag{background:var(--teal-glow);border:1px solid var(--teal);color:var(--teal);font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:20px;text-transform:uppercase;}
+
+  /* LAYOUT */
+  .main{max-width:860px;margin:0 auto;padding:32px 16px 80px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+  /* HEADER */
+  .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(36px,8vw,56px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;max-width:520px;line-height:1.6;}
+
+  /* PROJECT CONTEXT */
+  .project-bar{background:var(--bg-card);border:1px solid var(--teal);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;animation:fadeUp 0.4s ease both;}
+  .project-bar.hidden{display:none;}
+  .project-bar-icon{font-size:20px;}
+  .project-bar-info{flex:1;}
+  .project-bar-title{font-weight:600;font-size:14px;color:var(--teal);}
+  .project-bar-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+
+  /* INPUT SECTION */
+  .input-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:24px;animation:fadeUp 0.4s 0.05s ease both;}
+  .input-label{font-family:var(--font-head);font-size:16px;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .input-label .badge{background:var(--teal);color:var(--bg);font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:0.5px;}
+
+  /* URL INPUT */
+  .url-input-wrap{position:relative;margin-bottom:14px;}
+  .url-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text-dimmer);}
+  .url-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:11px 14px 11px 42px;transition:border-color 0.15s;}
+  .url-input:focus{outline:none;border-color:var(--teal-dim);}
+  .url-input.valid{border-color:var(--green);}
+  .url-input.invalid{border-color:var(--red);}
+  .url-input::placeholder{color:var(--text-dimmer);}
+
+  .video-preview{display:none;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;display:none;align-items:center;gap:12px;}
+  .video-preview.show{display:flex;}
+  .video-preview-thumb img{width:80px;height:45px;object-fit:cover;border-radius:4px;display:block;}
+  .video-preview-title{font-size:13px;font-weight:600;color:var(--text);}
+  .video-preview-meta{font-size:11px;color:var(--text-dim);margin-top:3px;}
+
+  .context-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  @media(max-width:540px){.context-grid{grid-template-columns:1fr;}}
+  .context-field{}
+  .context-full{grid-column:1/-1;}
+  .context-field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:5px;}
+  .context-field input,.context-field textarea,.context-field select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:9px 12px;transition:border-color 0.15s;resize:none;}
+  .context-field input:focus,.context-field textarea:focus,.context-field select:focus{outline:none;border-color:var(--teal-dim);}
+  .context-field input::placeholder,.context-field textarea::placeholder{color:var(--text-dimmer);}
+  .context-field select{appearance:none;cursor:pointer;}
+  .context-field select option{background:var(--bg-card);}
+
+  /* ANGLE PILLS */
+  .angle-grid{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+  .angle-pill{background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:6px 13px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;transition:all 0.15s;user-select:none;}
+  .angle-pill:hover{border-color:var(--border-bright);color:var(--text);}
+  .angle-pill.active{background:var(--teal-glow);border-color:var(--teal);color:var(--teal);}
+
+  /* GENERATE BTN */
+  .generate-btn{width:100%;background:var(--teal);border:none;border-radius:var(--radius-sm);color:var(--bg);font-family:var(--font-head);font-size:20px;letter-spacing:2px;padding:16px 24px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;}
+  .generate-btn:hover{background:var(--teal-dim);transform:translateY(-1px);}
+  .generate-btn:active{transform:translateY(0);}
+  .generate-btn:disabled{background:var(--bg-card-2);color:var(--text-dimmer);cursor:not-allowed;transform:none;border:1px solid var(--border);}
+
+  /* LOADING */
+  .loading-section{display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:40px 24px;text-align:center;margin-bottom:20px;}
+  .loading-section.show{display:block;}
+  .loading-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--teal);margin-bottom:8px;}
+  .loading-sub{font-size:13px;color:var(--text-dim);margin-bottom:24px;}
+  .loading-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin:0 auto 24px;max-width:300px;}
+  .loading-bar::after{content:'';display:block;height:100%;background:var(--teal);animation:loadBar 2s ease-in-out infinite;}
+  @keyframes loadBar{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+  .loading-steps{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;}
+  .loading-step{font-size:12px;color:var(--text-dimmer);display:flex;align-items:center;gap:6px;transition:color 0.3s;}
+  .loading-step.active{color:var(--teal);}
+  .loading-step.done{color:var(--green);}
+  .step-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+  /* ERROR */
+  .error-section{display:none;background:var(--bg-card);border:1px solid var(--red);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;animation:fadeUp 0.3s ease both;}
+  .error-section.show{display:block;}
+  .error-title{font-family:var(--font-head);font-size:20px;letter-spacing:1px;color:var(--red);margin-bottom:8px;}
+  .error-msg{font-size:13px;color:var(--text-dim);}
+
+  /* RESULTS */
+  .results-header{display:none;justify-content:space-between;align-items:center;margin-bottom:16px;animation:fadeUp 0.3s ease both;}
+  .results-header.show{display:flex;}
+  .results-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);}
+  .results-meta{font-size:13px;color:var(--text-dim);margin-top:2px;}
+
+  /* PACKAGE CARDS */
+  .packages-grid{display:none;flex-direction:column;gap:14px;margin-bottom:24px;}
+  .packages-grid.show{display:flex;}
+  .pkg-card{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color 0.15s,transform 0.15s;animation:fadeUp 0.35s ease both;cursor:pointer;}
+  .pkg-card:hover{border-color:var(--border-bright);}
+  .pkg-card.selected{border-color:var(--teal);}
+  .pkg-card.selected .pkg-header{background:var(--teal-glow);}
+  .pkg-header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);transition:background 0.15s;}
+  .pkg-num{font-family:var(--font-head);font-size:20px;letter-spacing:1px;color:var(--text-dimmer);flex-shrink:0;width:28px;}
+  .pkg-card.selected .pkg-num{color:var(--teal);}
+  .pkg-title{font-weight:700;font-size:15px;color:var(--text);flex:1;line-height:1.35;}
+  .pkg-select-check{font-size:18px;color:var(--teal);opacity:0;transition:opacity 0.15s;flex-shrink:0;}
+  .pkg-card.selected .pkg-select-check{opacity:1;}
+  .pkg-body{padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:560px){.pkg-body{grid-template-columns:1fr;}}
+  .pkg-section-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;}
+  .pkg-hook{font-size:13px;font-style:italic;color:var(--teal);line-height:1.5;border-left:2px solid var(--teal);padding-left:10px;}
+  .pkg-rationale{font-size:13px;color:var(--text-dim);line-height:1.6;}
+  .pkg-thumb{grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--text-dim);line-height:1.6;}
+  .pkg-thumb strong{color:var(--text);}
+  .pkg-desc{grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;color:var(--text-dim);line-height:1.7;white-space:pre-line;display:none;}
+  .pkg-desc.show{display:block;}
+  .pkg-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+  /* BUTTONS */
+  .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all 0.15s;white-space:nowrap;}
+  .btn:active{transform:scale(0.97);}
+  .btn-select{background:var(--teal-glow);border-color:var(--teal);color:var(--teal);}
+  .btn-select:hover{background:var(--teal-glow-strong);}
+  .btn-copy{background:transparent;border-color:var(--border);color:var(--text-dim);font-size:11px;}
+  .btn-copy:hover{border-color:var(--teal);color:var(--teal);}
+  .btn-copy.copied{border-color:var(--green);color:var(--green);}
+  .btn-expand{background:transparent;border-color:var(--border);color:var(--text-dim);font-size:11px;}
+  .btn-expand:hover{border-color:var(--border-bright);color:var(--text);}
+  .btn-approve-all{background:var(--teal);border-color:var(--teal);color:var(--bg);font-size:13px;padding:11px 22px;}
+  .btn-approve-all:hover{background:var(--teal-dim);}
+  .btn-regen{background:transparent;border-color:var(--border-bright);color:var(--text-dim);font-size:13px;padding:11px 22px;}
+  .btn-regen:hover{border-color:var(--text-dim);color:var(--text);}
+  .btn-ghost{background:transparent;border-color:var(--border);color:var(--text-dim);}
+  .btn-ghost:hover{border-color:var(--border-bright);color:var(--text);}
+
+  /* SEND BAR */
+  .send-bar{display:none;background:linear-gradient(135deg,var(--bg-card) 0%,rgba(62,207,178,0.06) 100%);border:1px solid var(--teal);border-radius:var(--radius);padding:18px 22px;margin-bottom:24px;animation:fadeUp 0.3s ease both;}
+  .send-bar.show{display:block;}
+  .send-bar-title{font-family:var(--font-head);font-size:20px;letter-spacing:1.5px;color:var(--teal);margin-bottom:4px;}
+  .send-bar-sub{font-size:13px;color:var(--text-dim);margin-bottom:14px;}
+  .send-bar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* HISTORY */
+  .history-section{margin-top:32px;}
+  .history-title{font-family:var(--font-head);font-size:20px;letter-spacing:2px;color:var(--text-dim);margin-bottom:12px;}
+  .history-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.15s;}
+  .history-item:hover{border-color:var(--border-bright);}
+  .history-thumb{font-size:20px;}
+  .history-info{flex:1;min-width:0;}
+  .history-video{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .history-date{font-size:11px;color:var(--text-dimmer);margin-top:2px;}
+  .history-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--green-glow);color:var(--green);flex-shrink:0;}
+
+  /* TOAST */
+  .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+  .toast{background:var(--bg-card);border:1px solid var(--border);padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,0.6);animation:toastIn 0.2s ease,toastOut 0.2s ease 2.6s forwards;}
+  .toast.green{border-color:var(--green);color:var(--green);}
+  .toast.amber{border-color:var(--amber);color:var(--amber);}
+  .toast.teal{border-color:var(--teal);color:var(--teal);}
+  .toast.red{border-color:var(--red);color:var(--red);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+  @media(max-width:480px){.main{padding:20px 12px 80px;}.topbar{padding:0 12px;}.send-bar-actions{flex-direction:column;}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/" class="logo">KRE8<span style="color:var(--teal)">Ω</span>R <span>Package Generator</span></a>
+  <div class="nav">
+    <a href="/">Home</a>
+    <a href="m1-approval-dashboard.html">M1 Gates</a>
+    <a href="m2-package-generator.html" class="active">M2 Packages</a>
+    <a href="m3-caption-generator.html">M3 Captions</a>
+    <a href="m4-email-generator.html">M4 Emails</a>
+  </div>
+</nav>
+
+<main class="main">
+
+  <div class="page-header">
+    <div class="page-title">GENERATE<br><em>5 PACKAGES</em></div>
+    <div class="page-sub">Paste a YouTube URL. Pick your angle. Get five complete content packages — title, hook, rationale, thumbnail concept, and YouTube description — ready to drop into Gate A.</div>
+  </div>
+
+  <!-- PROJECT BAR -->
+  <div class="project-bar hidden" id="project-bar">
+    <div class="project-bar-icon">📁</div>
+    <div class="project-bar-info">
+      <div class="project-bar-title" id="project-bar-title">Loading project…</div>
+      <div class="project-bar-sub">Packages will be saved to this project. Gate A approval flows to M3 and M4 automatically.</div>
+    </div>
+    <a href="/" class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">← Pipeline</a>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-section">
+    <div class="input-label">VIDEO INPUT <span class="badge">STEP 1</span></div>
+    <div class="url-input-wrap">
+      <span class="url-icon">▶</span>
+      <input type="url" class="url-input" id="url-input" placeholder="https://www.youtube.com/watch?v=…" oninput="handleUrlInput(this)" onpaste="setTimeout(()=>handleUrlInput(this),50)">
+    </div>
+    <div class="video-preview" id="video-preview">
+      <div class="video-preview-thumb" id="preview-thumb"></div>
+      <div class="video-preview-info">
+        <div class="video-preview-title" id="preview-title">Video detected</div>
+        <div class="video-preview-meta" id="preview-meta"></div>
+      </div>
+    </div>
+    <div class="context-grid">
+      <div class="context-field">
+        <label>Video Topic (if no URL)</label>
+        <input type="text" id="topic-input" placeholder="e.g. Off-grid water systems">
+      </div>
+      <div class="context-field">
+        <label>Primary Goal</label>
+        <select id="goal-select">
+          <option value="grow">Grow audience</option>
+          <option value="community">Drive to ROCK RICH</option>
+          <option value="evergreen">Build evergreen archive</option>
+          <option value="viral">Maximize viral potential</option>
+        </select>
+      </div>
+      <div class="context-field context-full">
+        <label>Any specific direction or things to avoid?</label>
+        <textarea id="extra-context" rows="2" placeholder="e.g. 'lean into the cost savings angle' or 'we've done this topic before, push a new angle'"></textarea>
+      </div>
+    </div>
+    <div class="input-label" style="margin-bottom:8px;">CONTENT ANGLE <span class="badge">STEP 2</span></div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">Select one or more. These shape the angle Claude leads with.</div>
+    <div class="angle-grid">
+      <div class="angle-pill active" onclick="toggleAngle(this)" data-angle="financial">💰 Financial Take</div>
+      <div class="angle-pill active" onclick="toggleAngle(this)" data-angle="system">🏛 System Is Rigged</div>
+      <div class="angle-pill active" onclick="toggleAngle(this)" data-angle="rockrich">💎 Rock Rich Episode</div>
+      <div class="angle-pill" onclick="toggleAngle(this)" data-angle="howto">🔧 Practical How-To</div>
+      <div class="angle-pill" onclick="toggleAngle(this)" data-angle="mistakes">⚠️ Mistakes / What Not To Do</div>
+      <div class="angle-pill" onclick="toggleAngle(this)" data-angle="lifestyle">🌿 Lifestyle / Day-in-Life</div>
+      <div class="angle-pill" onclick="toggleAngle(this)" data-angle="viral">⚡ High Curiosity / Viral</div>
+      <div class="angle-pill" onclick="toggleAngle(this)" data-angle="community">🤝 Community CTA</div>
+    </div>
+    <button class="generate-btn" id="gen-btn" onclick="generate()">
+      <span id="gen-btn-text">GENERATE 5 PACKAGES</span>
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-section" id="loading-section">
+    <div class="loading-title">CLAUDE IS WORKING</div>
+    <div class="loading-sub">Building your 5 content packages. Usually takes 15–25 seconds.</div>
+    <div class="loading-bar"></div>
+    <div class="loading-steps">
+      <div class="loading-step active" id="step-1"><span class="step-dot"></span>Analysing video</div>
+      <div class="loading-step" id="step-2"><span class="step-dot"></span>Researching angles</div>
+      <div class="loading-step" id="step-3"><span class="step-dot"></span>Writing packages</div>
+      <div class="loading-step" id="step-4"><span class="step-dot"></span>Finalising</div>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-section" id="error-section">
+    <div class="error-title">SOMETHING WENT WRONG</div>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-header" id="results-header">
+    <div>
+      <div class="results-title">5 PACKAGES READY</div>
+      <div class="results-meta" id="results-meta"></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-regen" onclick="generate()">↻ Regenerate</button>
+    </div>
+  </div>
+  <div class="packages-grid" id="packages-grid"></div>
+
+  <!-- SEND BAR -->
+  <div class="send-bar" id="send-bar">
+    <div class="send-bar-title">✓ PACKAGE SELECTED</div>
+    <div class="send-bar-sub" id="send-bar-sub">Package saved to project. Open M3 to generate captions or M4 to generate emails using this package as context.</div>
+    <div class="send-bar-actions">
+      <button class="btn btn-approve-all" onclick="copySelectedPackage()">📋 Copy Full Package</button>
+      <a href="m3-caption-generator.html" id="go-m3" class="btn btn-ghost">→ M3 Captions</a>
+      <a href="m4-email-generator.html" id="go-m4" class="btn btn-ghost">→ M4 Emails</a>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section" id="history-section" style="display:none;">
+    <div class="history-title">RECENT SESSIONS</div>
+    <div id="history-list"></div>
+  </div>
+
+</main>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let selectedPackageIndex = null;
+let generatedPackages = [];
+let currentVideoInfo = {};
+let currentProjectId = null;
+let sessionHistory = JSON.parse(localStorage.getItem('kre8r_history') || '[]');
+let loadingInterval = null;
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const pid = params.get('project_id');
+  if (pid) {
+    currentProjectId = parseInt(pid);
+    loadProject(currentProjectId);
+  }
+  renderHistory();
+});
+
+async function loadProject(id) {
+  try {
+    const res = await fetch(`/api/projects/${id}`);
+    const project = await res.json();
+    if (project.error) return;
+    document.getElementById('project-bar').classList.remove('hidden');
+    document.getElementById('project-bar-title').textContent = project.title;
+    if (project.youtube_url) document.getElementById('url-input').value = project.youtube_url;
+    if (project.topic) document.getElementById('topic-input').value = project.topic;
+    if (project.youtube_url) handleUrlInput(document.getElementById('url-input'));
+    // Update M3/M4 links with project_id
+    document.getElementById('go-m3').href = `m3-caption-generator.html?project_id=${id}`;
+    document.getElementById('go-m4').href = `m4-email-generator.html?project_id=${id}`;
+  } catch(e) { console.error('loadProject:', e); }
+}
+
+// ─────────────────────────────────────────────
+// URL PARSING
+// ─────────────────────────────────────────────
+function extractVideoId(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+    if (u.hostname === 'youtu.be') return u.pathname.slice(1);
+  } catch(e) {}
+  return null;
+}
+
+function handleUrlInput(input) {
+  const url = input.value.trim();
+  const vid = extractVideoId(url);
+  const preview = document.getElementById('video-preview');
+  if (vid) {
+    input.classList.remove('invalid'); input.classList.add('valid');
+    preview.classList.add('show');
+    document.getElementById('preview-title').textContent = 'YouTube video detected — ID: ' + vid;
+    document.getElementById('preview-meta').textContent = 'Thumbnail used to inform package generation';
+    document.getElementById('preview-thumb').innerHTML = `<img src="https://img.youtube.com/vi/${vid}/mqdefault.jpg" onerror="this.style.display='none'" alt="thumb">`;
+    currentVideoInfo = { videoId: vid, url };
+  } else if (url.length > 10) {
+    input.classList.remove('valid'); input.classList.add('invalid');
+    preview.classList.remove('show'); currentVideoInfo = {};
+  } else {
+    input.classList.remove('valid','invalid'); preview.classList.remove('show'); currentVideoInfo = {};
+  }
+}
+
+// ─────────────────────────────────────────────
+// ANGLES
+// ─────────────────────────────────────────────
+function toggleAngle(el) { el.classList.toggle('active'); }
+function getActiveAngles() {
+  return Array.from(document.querySelectorAll('.angle-pill.active')).map(p => p.dataset.angle);
+}
+
+// ─────────────────────────────────────────────
+// LOADING ANIMATION
+// ─────────────────────────────────────────────
+function startLoading() {
+  document.getElementById('loading-section').classList.add('show');
+  document.getElementById('error-section').classList.remove('show');
+  document.getElementById('results-header').classList.remove('show');
+  document.getElementById('packages-grid').classList.remove('show');
+  document.getElementById('send-bar').classList.remove('show');
+  const steps = ['step-1','step-2','step-3','step-4'];
+  steps.forEach((id,i) => { const el=document.getElementById(id); el.classList.remove('active','done'); if(i===0)el.classList.add('active'); });
+  loadingInterval = setInterval(() => {
+    const active = steps.findIndex(id => document.getElementById(id).classList.contains('active'));
+    if (active < steps.length - 1) {
+      document.getElementById(steps[active]).classList.replace('active','done');
+      document.getElementById(steps[active+1]).classList.add('active');
+    }
+  }, 5000);
+}
+function stopLoading() {
+  clearInterval(loadingInterval);
+  document.getElementById('loading-section').classList.remove('show');
+}
+
+// ─────────────────────────────────────────────
+// GENERATE
+// ─────────────────────────────────────────────
+async function generate() {
+  const topic = document.getElementById('topic-input').value.trim();
+  const url = document.getElementById('url-input').value.trim();
+  if (!topic && !currentVideoInfo.videoId) {
+    showToast('Add a YouTube URL or video topic first', 'amber'); return;
+  }
+  const angles = getActiveAngles();
+  if (angles.length === 0) { showToast('Select at least one content angle', 'amber'); return; }
+
+  selectedPackageIndex = null;
+  generatedPackages = [];
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  document.getElementById('gen-btn-text').textContent = 'GENERATING…';
+  startLoading();
+  document.getElementById('loading-section').scrollIntoView({ behavior:'smooth' });
+
+  try {
+    const body = {
+      project_id: currentProjectId,
+      youtube_url: url || null,
+      youtube_video_id: currentVideoInfo.videoId || null,
+      topic: topic || null,
+      goal: document.getElementById('goal-select').value,
+      angles,
+      extra_context: document.getElementById('extra-context').value.trim() || null
+    };
+
+    const res = await fetch('/api/generate/packages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Generation failed');
+
+    // Update project tracking
+    if (data.project_id && !currentProjectId) {
+      currentProjectId = data.project_id;
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('project_id', currentProjectId);
+      window.history.replaceState({}, '', newUrl);
+      document.getElementById('go-m3').href = `m3-caption-generator.html?project_id=${currentProjectId}`;
+      document.getElementById('go-m4').href = `m4-email-generator.html?project_id=${currentProjectId}`;
+    }
+
+    generatedPackages = data.packages;
+    stopLoading();
+    renderPackages(data.packages);
+    saveToHistory(topic || url, data.packages);
+    showToast('5 packages ready — select one to approve Gate A', 'teal');
+  } catch (err) {
+    stopLoading();
+    document.getElementById('error-section').classList.add('show');
+    document.getElementById('error-msg').textContent = err.message;
+    showToast('Generation failed — check the error above', 'red');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('gen-btn-text').textContent = 'GENERATE 5 PACKAGES';
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER PACKAGES
+// ─────────────────────────────────────────────
+function renderPackages(packages) {
+  const grid = document.getElementById('packages-grid');
+  const meta = document.getElementById('results-meta');
+  meta.textContent = `${packages.length} packages generated · select one for Gate A`;
+  grid.innerHTML = '';
+
+  packages.forEach((pkg, i) => {
+    const card = document.createElement('div');
+    card.className = 'pkg-card';
+    card.style.animationDelay = `${i * 0.07}s`;
+    card.onclick = () => selectPackage(card, pkg.number);
+    card.innerHTML = `
+      <div class="pkg-header">
+        <div class="pkg-num">0${pkg.number}</div>
+        <div class="pkg-title">${escHtml(pkg.title)}</div>
+        <div class="pkg-select-check">✓</div>
+      </div>
+      <div class="pkg-body">
+        <div>
+          <div class="pkg-section-label">TIKTOK HOOK</div>
+          <div class="pkg-hook">${escHtml(pkg.hook)}</div>
+        </div>
+        <div>
+          <div class="pkg-section-label">RATIONALE</div>
+          <div class="pkg-rationale">${escHtml(pkg.rationale)}</div>
+        </div>
+        <div class="pkg-thumb">
+          <strong>Thumbnail:</strong> ${escHtml(pkg.thumbnail_concept)}
+        </div>
+        <div class="pkg-desc" id="desc-${pkg.number}">${escHtml(pkg.youtube_description)}</div>
+      </div>
+      <div class="pkg-footer">
+        <button class="btn btn-select" onclick="event.stopPropagation();selectPackage(document.querySelector('[data-pkg=\\'${pkg.number}\\']'),${pkg.number})">✓ Select This Package</button>
+        <button class="btn btn-expand" onclick="event.stopPropagation();toggleDesc(${pkg.number})">▾ YouTube Description</button>
+        <button class="btn btn-copy" onclick="event.stopPropagation();copyPackage(${pkg.number},this)">Copy All</button>
+      </div>
+    `;
+    card.dataset.pkg = pkg.number;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('results-header').classList.add('show');
+  grid.classList.add('show');
+  document.getElementById('results-header').scrollIntoView({ behavior:'smooth' });
+}
+
+function selectPackage(card, num) {
+  document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('selected'));
+  const target = document.querySelector(`[data-pkg='${num}']`);
+  if (target) target.classList.add('selected');
+  selectedPackageIndex = num;
+  const pkg = generatedPackages.find(p => p.number === num);
+
+  // Save Gate A approval to DB
+  if (currentProjectId) {
+    fetch(`/api/projects/${currentProjectId}/packages/select`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ package_number: num })
+    }).then(async res => {
+      if (res.ok) {
+        showToast('✓ Gate A approved — package saved to project', 'green');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast('Gate A save failed: ' + (err.error || res.status), 'amber');
+      }
+    }).catch(e => showToast('Gate A save failed: ' + e.message, 'amber'));
+  } else {
+    showToast('No project linked — generate first to save Gate A', 'amber');
+  }
+
+  document.getElementById('send-bar').classList.add('show');
+  document.getElementById('send-bar-sub').textContent = pkg
+    ? `"${pkg.title}" selected. Package saved to project. Open M3 or M4 to continue.`
+    : 'Package selected and saved.';
+  document.getElementById('send-bar').scrollIntoView({ behavior:'smooth' });
+}
+
+function toggleDesc(num) {
+  document.getElementById(`desc-${num}`).classList.toggle('show');
+}
+
+function copyPackage(num, btn) {
+  const pkg = generatedPackages.find(p => p.number === num);
+  if (!pkg) return;
+  const text = `TITLE: ${pkg.title}\n\nHOOK: ${pkg.hook}\n\nRATIONALE: ${pkg.rationale}\n\nTHUMBNAIL: ${pkg.thumbnail_concept}\n\nYOUTUBE DESCRIPTION:\n${pkg.youtube_description}`;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add('copied'); btn.textContent = 'Copied!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy All'; }, 2000);
+  });
+}
+
+function copySelectedPackage() {
+  if (!selectedPackageIndex) { showToast('Select a package first', 'amber'); return; }
+  copyPackage(selectedPackageIndex, { classList: { add:()=>{}, remove:()=>{} }, textContent: '' });
+  showToast('Full package copied to clipboard', 'green');
+}
+
+// ─────────────────────────────────────────────
+// HISTORY
+// ─────────────────────────────────────────────
+function saveToHistory(topic, packages) {
+  sessionHistory.unshift({ topic, packages, date: new Date().toISOString() });
+  if (sessionHistory.length > 10) sessionHistory = sessionHistory.slice(0, 10);
+  localStorage.setItem('kre8r_history', JSON.stringify(sessionHistory));
+  renderHistory();
+}
+
+function renderHistory() {
+  if (sessionHistory.length === 0) return;
+  const section = document.getElementById('history-section');
+  const list = document.getElementById('history-list');
+  section.style.display = 'block';
+  list.innerHTML = sessionHistory.map((entry, i) => `
+    <div class="history-item" onclick="loadHistoryEntry(${i})">
+      <div class="history-thumb">📦</div>
+      <div class="history-info">
+        <div class="history-video">${escHtml(entry.topic || 'Untitled session')}</div>
+        <div class="history-date">${new Date(entry.date).toLocaleDateString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div class="history-badge">5 packages</div>
+    </div>
+  `).join('');
+}
+
+function loadHistoryEntry(i) {
+  const entry = sessionHistory[i];
+  if (!entry) return;
+  generatedPackages = entry.packages;
+  renderPackages(entry.packages);
+  showToast('Session loaded from history', 'teal');
+}
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type='') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast${type?' '+type:''}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — Approval Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
+    --blue:#5b9cf6; --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  /* NAV */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(14,15,14,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;}
+  .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--teal);text-decoration:none;}
+  .logo span{color:var(--text-dimmer);font-size:11px;font-family:var(--font-body);letter-spacing:0.5px;font-weight:500;margin-left:10px;text-transform:uppercase;}
+  .nav{display:flex;gap:4px;align-items:center;}
+  .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
+  .nav a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav a.active{background:var(--teal-glow);color:var(--teal);}
+  .refresh-btn{background:none;border:1px solid var(--border);color:var(--text-dimmer);font-family:var(--font-body);font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;}
+  .refresh-btn:hover{border-color:var(--teal);color:var(--teal);}
+
+  .main{max-width:900px;margin:0 auto;padding:24px 16px 80px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+  /* PAGE HEADER */
+  .page-header{margin-bottom:24px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(32px,7vw,50px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;max-width:500px;line-height:1.6;}
+
+  /* SECTION */
+  .section{margin-bottom:40px;}
+  .section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;}
+  .section-title{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);}
+  .section-sub{color:var(--text-dim);font-size:13px;}
+  .section-count{font-family:var(--font-head);font-size:14px;color:var(--text-dimmer);letter-spacing:1px;}
+
+  /* GATE HEADER */
+  .gate-header{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;}
+  .gate-header.gate-a-style{border-left:3px solid var(--blue);}
+  .gate-header.gate-b-style{border-left:3px solid var(--amber);}
+  .gate-header.gate-c-style{border-left:3px solid var(--purple);}
+  .gate-badge{font-family:var(--font-head);font-size:16px;letter-spacing:1px;padding:4px 12px;border-radius:var(--radius-sm);flex-shrink:0;}
+  .badge-a{background:rgba(91,156,246,0.15);color:var(--blue);}
+  .badge-b{background:var(--amber-glow);color:var(--amber);}
+  .badge-c{background:var(--purple-glow);color:var(--purple);}
+  .gate-info h2{font-family:var(--font-head);font-size:20px;letter-spacing:1.5px;color:var(--text);}
+  .gate-info p{color:var(--text-dim);font-size:13px;margin-top:2px;}
+
+  /* PROJECT BLOCK */
+  .project-block{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;animation:fadeUp 0.3s ease both;}
+  .project-block-title{font-weight:600;font-size:15px;color:var(--text);margin-bottom:4px;}
+  .project-block-meta{font-size:12px;color:var(--text-dim);}
+
+  /* PACKAGE GRID */
+  .package-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
+  @media(max-width:580px){.package-grid{grid-template-columns:1fr;}}
+  .package-card{background:var(--bg-card-2);border:2px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all 0.15s;position:relative;}
+  .package-card:hover{border-color:var(--teal-dim);}
+  .package-card.selected{border-color:var(--teal);background:var(--teal-glow);}
+  .package-card.selected::after{content:'✓';position:absolute;top:10px;right:12px;color:var(--teal);font-weight:700;font-size:16px;}
+  .pkg-num{font-family:var(--font-head);font-size:12px;letter-spacing:1px;color:var(--text-dimmer);margin-bottom:6px;}
+  .pkg-title{font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px;line-height:1.35;}
+  .pkg-hook{font-size:12px;color:var(--teal);font-style:italic;margin-bottom:8px;line-height:1.4;border-left:2px solid var(--teal);padding-left:8px;}
+  .pkg-rationale{font-size:12px;color:var(--text-dim);line-height:1.4;}
+
+  /* PACKAGE APPROVE BAR */
+  .pkg-approve-bar{display:none;background:var(--bg-card-2);border:1px solid var(--border);border-top:2px solid var(--teal);border-radius:0 0 var(--radius) var(--radius);padding:14px 16px;margin-top:-2px;margin-bottom:14px;}
+  .pkg-approve-bar.show{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .notes-input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 12px;resize:none;height:36px;line-height:1.4;}
+  .notes-input:focus{outline:none;border-color:var(--teal-dim);height:70px;}
+  .notes-input::placeholder{color:var(--text-dimmer);}
+
+  /* CAPTION REVIEW */
+  .clip-block{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+  .clip-label{font-family:var(--font-head);font-size:14px;letter-spacing:1px;color:var(--amber);margin-bottom:10px;}
+  .clip-ts{font-size:12px;color:var(--text-dimmer);font-family:monospace;}
+  .platform-captions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  @media(max-width:600px){.platform-captions{grid-template-columns:1fr;}}
+  .cap-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;}
+  .cap-platform{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;}
+  .cap-text{font-size:12px;color:var(--text);line-height:1.5;}
+  .all-caps-label{font-size:12px;color:var(--text-dim);margin-bottom:10px;}
+
+  /* EMAIL REVIEW */
+  .email-block{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+  .email-day-head{font-family:var(--font-head);font-size:16px;letter-spacing:1px;margin-bottom:4px;}
+  .email-day-head.d0{color:var(--teal);}
+  .email-day-head.d3{color:var(--amber);}
+  .email-day-head.d7{color:var(--purple);}
+  .email-tier{font-size:11px;font-weight:600;color:var(--text-dimmer);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px;}
+  .email-subject-line{font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px;}
+  .email-preview{font-size:12px;color:var(--text-dim);line-height:1.6;white-space:pre-wrap;max-height:100px;overflow:hidden;position:relative;}
+  .email-preview.expanded{max-height:none;}
+  .email-preview::after{content:'';position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--bg-card-2));}
+  .email-preview.expanded::after{display:none;}
+  .expand-btn{font-size:11px;color:var(--teal);background:none;border:none;cursor:pointer;padding:4px 0;margin-top:4px;}
+  .email-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:580px){.email-grid{grid-template-columns:1fr;}}
+
+  /* PIPELINE LIST */
+  .project-row{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:border-color 0.15s;text-decoration:none;}
+  .project-row:hover{border-color:var(--border-bright);}
+  .project-row-info{flex:1;min-width:0;}
+  .project-row-title{font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .project-row-meta{font-size:12px;color:var(--text-dim);margin-top:3px;}
+  .project-row-actions{display:flex;gap:6px;flex-shrink:0;}
+
+  /* STATUS BADGES */
+  .status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:0.5px;padding:3px 8px;border-radius:20px;text-transform:uppercase;}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .s-gate-a{background:rgba(91,156,246,0.15);color:var(--blue);}
+  .s-gate-b{background:var(--amber-glow);color:var(--amber);}
+  .s-gate-c{background:var(--purple-glow);color:var(--purple);}
+  .s-gen{background:var(--teal-glow);color:var(--teal);}
+  .s-complete{background:var(--green-glow);color:var(--green);}
+  .s-new{background:var(--bg-card-2);color:var(--text-dimmer);}
+
+  /* APPROVED STATE */
+  .project-block.gate-done{border-color:var(--green);background:linear-gradient(135deg,var(--bg-card) 0%,rgba(92,186,138,0.04) 100%);}
+  .approved-overlay{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green);background:var(--green-glow);border:1px solid var(--green);border-radius:var(--radius-sm);padding:8px 14px;margin-top:12px;}
+
+  /* BUTTONS */
+  .btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all 0.15s;white-space:nowrap;text-decoration:none;}
+  .btn:active{transform:scale(0.97);}
+  .btn-approve{background:var(--green-glow);border-color:var(--green);color:var(--green);}
+  .btn-approve:hover{background:rgba(92,186,138,0.25);}
+  .btn-ghost{background:transparent;border-color:var(--border-bright);color:var(--text-dim);}
+  .btn-ghost:hover{border-color:var(--text-dim);color:var(--text);}
+  .btn-teal{background:var(--teal);border-color:var(--teal);color:var(--bg);}
+  .btn-teal:hover{background:var(--teal-dim);}
+  .btn-copy{background:transparent;border-color:var(--border);color:var(--text-dim);font-size:11px;padding:3px 8px;}
+  .btn-copy:hover{border-color:var(--teal);color:var(--teal);}
+  .btn-copy.copied{border-color:var(--green);color:var(--green);}
+  .action-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+
+  /* EMPTY STATE */
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text-dimmer);}
+  .empty-state .icon{font-size:36px;margin-bottom:12px;}
+  .empty-state h3{font-family:var(--font-head);font-size:20px;letter-spacing:1px;color:var(--text-dim);margin-bottom:6px;}
+  .empty-state p{font-size:13px;}
+
+  /* LOADING */
+  .loading-pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dimmer);padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* TOAST */
+  .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+  .toast{background:var(--bg-card);border:1px solid var(--border);padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--text);box-shadow:0 4px 20px rgba(0,0,0,0.5);animation:toastIn 0.2s ease,toastOut 0.2s ease 2.6s forwards;}
+  .toast.green{border-color:var(--green);color:var(--green);}
+  .toast.amber{border-color:var(--amber);color:var(--amber);}
+  .toast.teal{border-color:var(--teal);color:var(--teal);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+  .divider{border:none;border-top:1px solid var(--border);margin:32px 0;}
+  .hidden{display:none!important;}
+  @media(max-width:480px){.main{padding:16px 12px 80px;}.topbar{padding:0 12px;}.nav a{display:none;}.nav a.active{display:inline-flex;}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/" class="logo">KRE8<span style="color:var(--teal)">Ω</span>R <span>Approval Dashboard</span></a>
+  <div class="nav">
+    <a href="/">Home</a>
+    <a href="m1-approval-dashboard.html" class="active">M1 Gates</a>
+    <a href="m2-package-generator.html">M2 Packages</a>
+    <a href="m3-caption-generator.html">M3 Captions</a>
+    <a href="m4-email-generator.html">M4 Emails</a>
+    <button class="refresh-btn" onclick="loadDashboard()">↻ Refresh</button>
+  </div>
+</nav>
+
+<main class="main">
+
+  <div class="page-header">
+    <div class="page-title">GATE<br><em>APPROVALS</em></div>
+    <div class="page-sub">Every video in the pipeline lands here. Gate A picks the package. Gate B approves captions. Gate C approves emails. One click per gate — then it's done.</div>
+  </div>
+
+  <!-- PENDING GATES -->
+  <div class="section" id="pending-section">
+    <div class="section-header">
+      <div class="section-title">PENDING GATES</div>
+      <div class="section-count" id="pending-count"></div>
+    </div>
+    <div id="pending-container">
+      <div class="loading-pill"><span class="spin"></span> Loading pipeline…</div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ALL PROJECTS -->
+  <div class="section" id="all-section">
+    <div class="section-header">
+      <div class="section-title">ALL PROJECTS</div>
+      <div class="section-sub">Full pipeline</div>
+    </div>
+    <div id="all-container">
+      <div class="loading-pill"><span class="spin"></span> Loading…</div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let allProjects = [];
+// Map: projectId → { selectedPkgNum }
+const pendingSelections = {};
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', loadDashboard);
+
+async function loadDashboard() {
+  document.getElementById('pending-container').innerHTML =
+    '<div class="loading-pill"><span class="spin"></span> Loading pipeline…</div>';
+  document.getElementById('all-container').innerHTML =
+    '<div class="loading-pill"><span class="spin"></span> Loading…</div>';
+
+  try {
+    const res = await fetch('/api/projects');
+    allProjects = await res.json();
+    renderDashboard(allProjects);
+  } catch(e) {
+    document.getElementById('pending-container').innerHTML =
+      `<div class="empty-state"><div class="icon">⚠️</div><h3>COULDN'T LOAD PIPELINE</h3><p>${e.message}</p></div>`;
+    document.getElementById('all-container').innerHTML = '';
+  }
+}
+
+function renderDashboard(projects) {
+  // Projects needing Gate A: have packages but gate A not approved
+  const needsA = projects.filter(p => !p.gate_a_approved && p.package_count > 0);
+  // Projects needing Gate B: gate A done, gate B not done, have some content
+  const needsB = projects.filter(p => p.gate_a_approved && !p.gate_b_approved);
+  // Projects needing Gate C: gate B done, gate C not done
+  const needsC = projects.filter(p => p.gate_b_approved && !p.gate_c_approved);
+  // Projects awaiting generation (no packages yet, no gate A)
+  const awaitingGen = projects.filter(p => !p.gate_a_approved && p.package_count === 0);
+
+  const pendingCount = needsA.length + needsB.length + needsC.length;
+  document.getElementById('pending-count').textContent =
+    pendingCount > 0 ? `${pendingCount} waiting` : '';
+
+  const container = document.getElementById('pending-container');
+  container.innerHTML = '';
+
+  if (pendingCount === 0 && awaitingGen.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">✓</div>
+        <h3>ALL GATES CLEAR</h3>
+        <p>No approvals waiting. Start a new project in M2 to generate packages.</p>
+        <a href="m2-package-generator.html" class="btn btn-teal" style="margin-top:16px;">→ Generate Packages</a>
+      </div>`;
+  } else {
+    // Gate A blocks
+    if (needsA.length > 0) {
+      const heading = document.createElement('div');
+      heading.innerHTML = `<div class="gate-header gate-a-style"><div class="gate-badge badge-a">GATE A</div><div class="gate-info"><h2>PACKAGE SELECTION</h2><p>Pick one of five generated packages for each video. One click locks in the entire content angle.</p></div></div>`;
+      container.appendChild(heading);
+      needsA.forEach(p => renderGateABlock(p, container));
+    }
+
+    // Gate B blocks
+    if (needsB.length > 0) {
+      const heading = document.createElement('div');
+      heading.innerHTML = `<div class="gate-header gate-b-style" style="margin-top:${needsA.length > 0 ? '24px' : '0'}"><div class="gate-badge badge-b">GATE B</div><div class="gate-info"><h2>CAPTION APPROVAL</h2><p>Review platform-native captions for each clip. Approve all to advance to M4 emails.</p></div></div>`;
+      container.appendChild(heading);
+      needsB.forEach(p => renderGateBBlock(p, container));
+    }
+
+    // Gate C blocks
+    if (needsC.length > 0) {
+      const heading = document.createElement('div');
+      heading.innerHTML = `<div class="gate-header gate-c-style" style="margin-top:${(needsA.length + needsB.length) > 0 ? '24px' : '0'}"><div class="gate-badge badge-c">GATE C</div><div class="gate-info"><h2>EMAIL APPROVAL</h2><p>Review the 7-email ROCK RICH sequence. Approve all to mark the video complete.</p></div></div>`;
+      container.appendChild(heading);
+      needsC.forEach(p => renderGateCBlock(p, container));
+    }
+
+    // Awaiting generation
+    if (awaitingGen.length > 0) {
+      awaitingGen.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'project-block';
+        div.innerHTML = `
+          <div class="project-block-title">${escHtml(p.title)}</div>
+          <div class="project-block-meta">No packages generated yet</div>
+          <div class="action-row">
+            <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-teal">→ Generate Packages in M2</a>
+          </div>`;
+        container.appendChild(div);
+      });
+    }
+  }
+
+  // All projects list
+  const allContainer = document.getElementById('all-container');
+  allContainer.innerHTML = '';
+  if (projects.length === 0) {
+    allContainer.innerHTML = `<div class="empty-state"><div class="icon">📂</div><h3>NO PROJECTS YET</h3><p>Start in M2 — paste a YouTube URL and generate your first 5 packages.</p></div>`;
+  } else {
+    projects.forEach(p => {
+      const row = document.createElement('a');
+      row.className = 'project-row';
+      row.href = `m2-package-generator.html?project_id=${p.id}`;
+      const status = getStatusBadge(p);
+      row.innerHTML = `
+        <div class="project-row-info">
+          <div class="project-row-title">${escHtml(p.title)}</div>
+          <div class="project-row-meta">${status.label}</div>
+        </div>
+        <div class="project-row-actions">
+          <span class="status ${status.cls}"><span class="status-dot"></span>${status.text}</span>
+        </div>`;
+      allContainer.appendChild(row);
+    });
+  }
+}
+
+// ─────────────────────────────────────────────
+// GATE A — PACKAGE SELECTION
+// ─────────────────────────────────────────────
+async function renderGateABlock(project, container) {
+  const block = document.createElement('div');
+  block.className = 'project-block';
+  block.id = `gate-a-${project.id}`;
+  block.innerHTML = `
+    <div class="project-block-title">${escHtml(project.title)}</div>
+    <div class="project-block-meta">Select one content package to anchor the entire distribution strategy for this video.</div>
+    <div class="loading-pill" style="margin-top:12px;"><span class="spin"></span> Loading packages…</div>`;
+  container.appendChild(block);
+
+  try {
+    const res = await fetch(`/api/projects/${project.id}/packages`);
+    const data = await res.json();
+    const packages = data.packages || [];
+
+    let gridHtml = `<div class="package-grid" id="pkg-grid-${project.id}">`;
+    packages.forEach((pkg, i) => {
+      const isLast = i === packages.length - 1;
+      gridHtml += `
+        <div class="package-card${isLast && packages.length % 2 !== 0 ? '" style="grid-column:1/-1' : ''}" id="pkg-${project.id}-${pkg.package_number}" onclick="selectPkg(${project.id},${pkg.package_number})">
+          <div class="pkg-num">PACKAGE ${String(pkg.package_number).padStart(2,'0')}</div>
+          <div class="pkg-title">${escHtml(pkg.title)}</div>
+          ${pkg.hook ? `<div class="pkg-hook">"${escHtml(pkg.hook)}"</div>` : ''}
+          ${pkg.rationale ? `<div class="pkg-rationale">${escHtml(pkg.rationale)}</div>` : ''}
+        </div>`;
+    });
+    gridHtml += '</div>';
+
+    const approveBar = `
+      <div class="pkg-approve-bar" id="pkg-bar-${project.id}">
+        <textarea class="notes-input" id="pkg-note-${project.id}" placeholder="Optional note for the generation phase…" rows="1"></textarea>
+        <button class="btn btn-approve" onclick="approveGateA(${project.id})">✓ APPROVE PACKAGE</button>
+      </div>`;
+
+    block.innerHTML = `
+      <div class="project-block-title">${escHtml(project.title)}</div>
+      <div class="project-block-meta">Select one content package to anchor the entire distribution strategy for this video.</div>
+      ${gridHtml}
+      ${approveBar}`;
+
+  } catch(e) {
+    block.innerHTML += `<div style="color:var(--red);font-size:13px;margin-top:10px;">Failed to load packages: ${e.message}</div>`;
+  }
+}
+
+function selectPkg(projectId, pkgNum) {
+  document.querySelectorAll(`#pkg-grid-${projectId} .package-card`).forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById(`pkg-${projectId}-${pkgNum}`);
+  if (card) card.classList.add('selected');
+  pendingSelections[projectId] = pkgNum;
+  const bar = document.getElementById(`pkg-bar-${projectId}`);
+  if (bar) bar.classList.add('show');
+}
+
+async function approveGateA(projectId) {
+  const pkgNum = pendingSelections[projectId];
+  if (!pkgNum) { showToast('Pick a package first', 'amber'); return; }
+  const note = document.getElementById(`pkg-note-${projectId}`)?.value.trim() || null;
+
+  try {
+    const res = await fetch(`/api/projects/${projectId}/packages/select`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ package_number: pkgNum, note })
+    });
+    if (!res.ok) throw new Error('API error');
+
+    const block = document.getElementById(`gate-a-${projectId}`);
+    if (block) {
+      block.classList.add('gate-done');
+      const existing = block.querySelector('.pkg-approve-bar');
+      if (existing) existing.remove();
+      const overlay = document.createElement('div');
+      overlay.className = 'approved-overlay';
+      overlay.innerHTML = `✓ Package ${String(pkgNum).padStart(2,'0')} approved — pipeline advancing to M3`;
+      block.appendChild(overlay);
+    }
+    showToast('✓ Gate A approved', 'green');
+    setTimeout(loadDashboard, 1200);
+  } catch(e) {
+    showToast('Approval failed: ' + e.message, 'amber');
+  }
+}
+
+// ─────────────────────────────────────────────
+// GATE B — CAPTION APPROVAL
+// ─────────────────────────────────────────────
+async function renderGateBBlock(project, container) {
+  const block = document.createElement('div');
+  block.className = 'project-block';
+  block.id = `gate-b-${project.id}`;
+  block.innerHTML = `
+    <div class="project-block-title">${escHtml(project.title)}</div>
+    <div class="project-block-meta">Review platform captions for each clip, then approve all for Gate B.</div>
+    <div class="loading-pill" style="margin-top:12px;"><span class="spin"></span> Loading captions…</div>`;
+  container.appendChild(block);
+
+  try {
+    const res = await fetch(`/api/projects/${project.id}/captions`);
+    const captions = await res.json();
+
+    if (!captions || captions.length === 0) {
+      block.innerHTML = `
+        <div class="project-block-title">${escHtml(project.title)}</div>
+        <div class="project-block-meta" style="margin-bottom:12px;">Gate A approved. Captions not yet generated.</div>
+        <a href="m3-caption-generator.html?project_id=${project.id}" class="btn btn-teal">→ Generate Captions in M3</a>`;
+      return;
+    }
+
+    // Group by clip_label
+    const clips = {};
+    captions.forEach(c => {
+      if (!clips[c.clip_label]) clips[c.clip_label] = { label: c.clip_label, timestamp: c.timestamp_start, platforms: {} };
+      clips[c.clip_label].platforms[c.platform] = c.caption_text;
+    });
+
+    const PLATFORM_LABELS = {
+      tiktok: '🎵 TikTok', instagram: '📸 Instagram', facebook: '👥 Facebook',
+      shorts: '▶ Shorts', lemon8: '🍋 Lemon8'
+    };
+
+    let clipsHtml = '';
+    Object.values(clips).forEach((clip, ci) => {
+      const platformsHtml = Object.entries(clip.platforms).map(([p, text]) => `
+        <div class="cap-box">
+          <div class="cap-platform">
+            ${PLATFORM_LABELS[p] || p}
+            <button class="btn btn-copy" onclick="copyText(this, '${escHtml(text)}')" data-clipid="${ci}-${p}">Copy</button>
+          </div>
+          <div class="cap-text">${escHtml(text)}</div>
+        </div>`).join('');
+
+      clipsHtml += `
+        <div class="clip-block">
+          <div class="clip-label">${escHtml(clip.label)}${clip.timestamp ? ` <span class="clip-ts">⏱ ${escHtml(clip.timestamp)}</span>` : ''}</div>
+          <div class="platform-captions">${platformsHtml}</div>
+        </div>`;
+    });
+
+    block.innerHTML = `
+      <div class="project-block-title">${escHtml(project.title)}</div>
+      <div class="all-caps-label">${Object.keys(clips).length} clip${Object.keys(clips).length !== 1 ? 's' : ''} · ${captions.length} captions total</div>
+      ${clipsHtml}
+      <div class="action-row">
+        <button class="btn btn-approve" onclick="approveGateB(${project.id})">✓ APPROVE ALL CAPTIONS — GATE B</button>
+        <a href="m3-caption-generator.html?project_id=${project.id}" class="btn btn-ghost">↻ Regenerate in M3</a>
+      </div>`;
+
+  } catch(e) {
+    block.innerHTML += `<div style="color:var(--red);font-size:13px;margin-top:10px;">Failed to load captions: ${e.message}</div>`;
+  }
+}
+
+async function approveGateB(projectId) {
+  try {
+    const res = await fetch(`/api/projects/${projectId}/captions/approve-all`, { method: 'POST' });
+    if (!res.ok) throw new Error('API error');
+
+    const block = document.getElementById(`gate-b-${projectId}`);
+    if (block) {
+      block.classList.add('gate-done');
+      const row = block.querySelector('.action-row');
+      if (row) row.remove();
+      const overlay = document.createElement('div');
+      overlay.className = 'approved-overlay';
+      overlay.innerHTML = '✓ Gate B approved — pipeline advancing to M4 emails';
+      block.appendChild(overlay);
+    }
+    showToast('✓ Gate B approved', 'green');
+    setTimeout(loadDashboard, 1200);
+  } catch(e) {
+    showToast('Approval failed: ' + e.message, 'amber');
+  }
+}
+
+// ─────────────────────────────────────────────
+// GATE C — EMAIL APPROVAL
+// ─────────────────────────────────────────────
+async function renderGateCBlock(project, container) {
+  const block = document.createElement('div');
+  block.className = 'project-block';
+  block.id = `gate-c-${project.id}`;
+  block.innerHTML = `
+    <div class="project-block-title">${escHtml(project.title)}</div>
+    <div class="project-block-meta">Review the full email sequence, then approve all for Gate C.</div>
+    <div class="loading-pill" style="margin-top:12px;"><span class="spin"></span> Loading emails…</div>`;
+  container.appendChild(block);
+
+  try {
+    const res = await fetch(`/api/projects/${project.id}/emails`);
+    const emails = await res.json();
+
+    if (!emails || emails.length === 0) {
+      block.innerHTML = `
+        <div class="project-block-title">${escHtml(project.title)}</div>
+        <div class="project-block-meta" style="margin-bottom:12px;">Gate B approved. Email sequence not yet generated.</div>
+        <a href="m4-email-generator.html?project_id=${project.id}" class="btn btn-teal">→ Generate Emails in M4</a>`;
+      return;
+    }
+
+    const TIER_LABELS = { everyone: 'Everyone', greenhouse: '🌱 Greenhouse', garden: '🌿 Garden', founding: '🏆 Founding 50' };
+    const DAY_CLS = { 0: 'd0', 3: 'd3', 7: 'd7' };
+
+    // Group by send_day → tier
+    const days = {};
+    emails.forEach(e => {
+      if (!days[e.send_day]) days[e.send_day] = [];
+      days[e.send_day].push(e);
+    });
+
+    let emailsHtml = '';
+    [0, 3, 7].forEach(day => {
+      const dayEmails = days[day] || [];
+      if (dayEmails.length === 0) return;
+
+      const dayLabel = day === 0 ? 'DAY 0 — Everyone' : `DAY ${day} — Segmented`;
+      const cls = DAY_CLS[day] || '';
+
+      if (dayEmails.length === 1) {
+        const e = dayEmails[0];
+        emailsHtml += `
+          <div class="email-block">
+            <div class="email-day-head ${cls}">${dayLabel}</div>
+            <div class="email-tier">${TIER_LABELS[e.tier] || e.tier}</div>
+            <div class="email-subject-line">${escHtml(e.subject)}</div>
+            <div class="email-preview" id="ep-${project.id}-${day}-${e.tier}">${escHtml((e.body || '').substring(0, 300))}${(e.body || '').length > 300 ? '…' : ''}</div>
+            <button class="expand-btn" onclick="toggleExpand('ep-${project.id}-${day}-${e.tier}', this)">Show full email ▾</button>
+            <div style="margin-top:6px;"><button class="btn btn-copy" onclick="copyText(this, ${JSON.stringify(('Subject: ' + e.subject + '\n\n' + e.body))})">📋 Copy Email</button></div>
+          </div>`;
+      } else {
+        emailsHtml += `<div class="email-block"><div class="email-day-head ${cls}" style="margin-bottom:10px;">${dayLabel}</div><div class="email-grid">`;
+        dayEmails.forEach(e => {
+          emailsHtml += `
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;">
+              <div class="email-tier">${TIER_LABELS[e.tier] || e.tier}</div>
+              <div class="email-subject-line" style="font-size:13px;">${escHtml(e.subject)}</div>
+              <div class="email-preview" id="ep-${project.id}-${day}-${e.tier}" style="font-size:12px;">${escHtml((e.body || '').substring(0, 200))}${(e.body || '').length > 200 ? '…' : ''}</div>
+              <button class="expand-btn" onclick="toggleExpand('ep-${project.id}-${day}-${e.tier}', this)">Show full ▾</button>
+              <button class="btn btn-copy" style="margin-top:6px;" onclick="copyText(this, ${JSON.stringify(('Subject: ' + e.subject + '\n\n' + e.body))})">Copy</button>
+            </div>`;
+        });
+        emailsHtml += '</div></div>';
+      }
+    });
+
+    block.innerHTML = `
+      <div class="project-block-title">${escHtml(project.title)}</div>
+      <div class="project-block-meta" style="margin-bottom:14px;">${emails.length} emails across all tiers and send days</div>
+      ${emailsHtml}
+      <div class="action-row">
+        <button class="btn btn-approve" onclick="approveGateC(${project.id})">✓ APPROVE ALL EMAILS — GATE C</button>
+        <a href="m4-email-generator.html?project_id=${project.id}" class="btn btn-ghost">↻ Regenerate in M4</a>
+      </div>`;
+
+  } catch(e) {
+    block.innerHTML += `<div style="color:var(--red);font-size:13px;margin-top:10px;">Failed to load emails: ${e.message}</div>`;
+  }
+}
+
+async function approveGateC(projectId) {
+  try {
+    const res = await fetch(`/api/projects/${projectId}/emails/approve-all`, { method: 'POST' });
+    if (!res.ok) throw new Error('API error');
+
+    const block = document.getElementById(`gate-c-${projectId}`);
+    if (block) {
+      block.classList.add('gate-done');
+      const row = block.querySelector('.action-row');
+      if (row) row.remove();
+      const overlay = document.createElement('div');
+      overlay.className = 'approved-overlay';
+      overlay.innerHTML = '✓ Gate C approved — this video is complete';
+      block.appendChild(overlay);
+    }
+    showToast('✓ Gate C approved — video complete!', 'green');
+    setTimeout(loadDashboard, 1200);
+  } catch(e) {
+    showToast('Approval failed: ' + e.message, 'amber');
+  }
+}
+
+// ─────────────────────────────────────────────
+// STATUS HELPERS
+// ─────────────────────────────────────────────
+function getStatusBadge(p) {
+  if (p.gate_c_approved) return { cls: 's-complete', text: 'Complete', label: 'All gates approved' };
+  if (p.gate_b_approved)  return { cls: 's-gate-c',   text: 'Gate C',   label: 'Emails pending approval' };
+  if (p.gate_a_approved)  return { cls: 's-gate-b',   text: 'Gate B',   label: 'Captions pending approval' };
+  if (p.package_count > 0) return { cls: 's-gate-a',  text: 'Gate A',   label: 'Package selection needed' };
+  return { cls: 's-new', text: 'New', label: 'No packages generated yet' };
+}
+
+// ─────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────
+function toggleExpand(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('expanded');
+  btn.textContent = el.classList.contains('expanded') ? 'Collapse ▴' : 'Show full email ▾';
+}
+
+function copyText(btn, text) {
+  const orig = btn.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1800);
+  });
+  showToast('Copied to clipboard', 'teal');
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function showToast(msg, type) {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast${type ? ' ' + type : ''}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+</script>
+</body>
+</html>

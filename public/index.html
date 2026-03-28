@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — Pipeline Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f0e; --bg-card: #161916; --bg-card-2: #1c1f1b;
+    --border: #2a2e28; --border-bright: #3d4439;
+    --teal: #3ecfb2; --teal-dim: #2aa893; --teal-glow: rgba(62,207,178,0.10); --teal-glow-strong: rgba(62,207,178,0.20);
+    --amber: #f0b942; --amber-glow: rgba(240,185,66,0.10);
+    --red: #e05c5c; --red-glow: rgba(224,92,92,0.10);
+    --green: #5cba8a; --green-glow: rgba(92,186,138,0.10);
+    --purple: #a78bfa; --purple-glow: rgba(167,139,250,0.10);
+    --text: #e8ebe6; --text-dim: #8a9487; --text-dimmer: #4e5349;
+    --font-head: 'Bebas Neue', sans-serif; --font-body: 'DM Sans', sans-serif;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size:128px 128px; z-index:1000; }
+
+  /* NAV */
+  .topbar { position:sticky; top:0; z-index:50; background:rgba(14,15,14,0.94); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; }
+  .logo { font-family:var(--font-head); font-size:24px; letter-spacing:2px; color:var(--teal); text-decoration:none; }
+  .logo span { color:var(--text-dimmer); font-size:11px; font-family:var(--font-body); letter-spacing:0.5px; font-weight:500; margin-left:10px; text-transform:uppercase; }
+  .nav { display:flex; gap:4px; align-items:center; }
+  .nav a { color:var(--text-dim); font-family:var(--font-body); font-size:13px; font-weight:500; text-decoration:none; padding:6px 12px; border-radius:var(--radius-sm); transition:all 0.15s; white-space:nowrap; }
+  .nav a:hover { background:var(--bg-card-2); color:var(--text); }
+  .nav a.active { background:var(--teal-glow); color:var(--teal); }
+  .nav a.m-tag { font-size:11px; font-weight:700; letter-spacing:0.5px; padding:4px 9px; border-radius:20px; border:1px solid; }
+  .nav a.m2 { border-color:var(--teal); color:var(--teal); background:var(--teal-glow); }
+  .nav a.m3 { border-color:var(--amber); color:var(--amber); background:var(--amber-glow); }
+  .nav a.m4 { border-color:var(--purple); color:var(--purple); background:var(--purple-glow); }
+  .nav a.m1 { border-color:var(--green); color:var(--green); background:var(--green-glow); }
+
+  /* MAIN */
+  .main { max-width: 960px; margin: 0 auto; padding: 32px 16px 80px; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+  /* HERO */
+  .hero { margin-bottom: 40px; animation: fadeUp 0.4s ease both; }
+  .hero-title { font-family:var(--font-head); font-size:clamp(48px,10vw,80px); letter-spacing:4px; line-height:0.9; color:var(--text); margin-bottom:16px; }
+  .hero-title em { font-style:normal; color:var(--teal); }
+  .hero-sub { color:var(--text-dim); font-size:14px; max-width:500px; line-height:1.7; }
+  .hero-tagline { font-family:var(--font-head); font-size:13px; letter-spacing:3px; color:var(--text-dimmer); margin-top:10px; text-transform:uppercase; }
+
+  /* QUICK ACTIONS */
+  .quick-actions { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:40px; animation:fadeUp 0.4s 0.05s ease both; }
+  @media(max-width:640px) { .quick-actions { grid-template-columns:1fr 1fr; } }
+  .qa-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; text-decoration:none; color:inherit; display:block; transition:all 0.15s; position:relative; overflow:hidden; }
+  .qa-card:hover { border-color:var(--border-bright); transform:translateY(-2px); }
+  .qa-card::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg, currentColor 0%, transparent 100%); opacity:0.04; pointer-events:none; }
+  .qa-card.c-teal { color:var(--teal); border-color:var(--teal); }
+  .qa-card.c-amber { color:var(--amber); border-color:var(--amber); }
+  .qa-card.c-purple { color:var(--purple); border-color:var(--purple); }
+  .qa-card.c-green { color:var(--green); border-color:var(--green); }
+  .qa-icon { font-size:26px; margin-bottom:10px; }
+  .qa-label { font-family:var(--font-head); font-size:18px; letter-spacing:1.5px; margin-bottom:4px; }
+  .qa-sub { font-size:11px; color:var(--text-dim); font-weight:500; }
+
+  /* NEW PROJECT */
+  .new-project-bar { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:32px; animation:fadeUp 0.4s 0.08s ease both; }
+  .new-project-bar h3 { font-family:var(--font-head); font-size:20px; letter-spacing:1.5px; color:var(--text-dim); margin-bottom:12px; }
+  .new-project-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .np-input { flex:1; min-width:200px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:var(--font-body); font-size:14px; padding:10px 14px; }
+  .np-input:focus { outline:none; border-color:var(--teal-dim); }
+  .np-input::placeholder { color:var(--text-dimmer); }
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:var(--radius-sm); font-family:var(--font-body); font-size:13px; font-weight:600; cursor:pointer; border:1.5px solid transparent; transition:all 0.15s; white-space:nowrap; }
+  .btn:active { transform:scale(0.97); }
+  .btn-teal { background:var(--teal); border-color:var(--teal); color:var(--bg); }
+  .btn-teal:hover { background:var(--teal-dim); }
+  .btn-ghost { background:transparent; border-color:var(--border-bright); color:var(--text-dim); }
+  .btn-ghost:hover { border-color:var(--text-dim); color:var(--text); }
+
+  /* PIPELINE */
+  .section-header { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; }
+  .section-title { font-family:var(--font-head); font-size:28px; letter-spacing:2px; color:var(--text); }
+  .section-sub { font-size:13px; color:var(--text-dim); }
+
+  /* PROJECT CARDS */
+  .projects-list { display:flex; flex-direction:column; gap:12px; }
+  .project-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; display:grid; grid-template-columns:1fr auto; gap:16px; align-items:start; transition:border-color 0.15s; animation:fadeUp 0.35s ease both; }
+  .project-card:hover { border-color:var(--border-bright); }
+  .project-card.needs-attention { border-left:3px solid var(--amber); }
+  .project-title { font-weight:700; font-size:16px; margin-bottom:4px; color:var(--text); }
+  .project-meta { font-size:12px; color:var(--text-dim); margin-bottom:12px; }
+  .gate-pills { display:flex; gap:6px; flex-wrap:wrap; }
+  .gate-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:0.3px; border:1px solid; }
+  .gate-pill.done { background:var(--green-glow); border-color:var(--green); color:var(--green); }
+  .gate-pill.pending { background:var(--bg-card-2); border-color:var(--border); color:var(--text-dimmer); }
+  .gate-pill.waiting { background:var(--amber-glow); border-color:var(--amber); color:var(--amber); }
+  .project-actions { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  .stage-badge { font-family:var(--font-head); font-size:13px; letter-spacing:1px; color:var(--text-dimmer); margin-bottom:6px; }
+
+  /* EMPTY STATE */
+  .empty-state { text-align:center; padding:60px 20px; animation:fadeUp 0.4s 0.1s ease both; }
+  .empty-icon { font-size:48px; margin-bottom:16px; }
+  .empty-title { font-family:var(--font-head); font-size:28px; letter-spacing:2px; color:var(--text-dim); margin-bottom:8px; }
+  .empty-sub { font-size:13px; color:var(--text-dimmer); max-width:380px; margin:0 auto; line-height:1.7; }
+
+  /* TOAST */
+  .toast-wrap { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:999; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  .toast { background:var(--bg-card); border:1px solid var(--border); padding:10px 18px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; color:var(--text); box-shadow:0 6px 24px rgba(0,0,0,0.6); animation:toastIn 0.2s ease, toastOut 0.2s ease 2.6s forwards; }
+  .toast.green { border-color:var(--green); color:var(--green); }
+  .toast.amber { border-color:var(--amber); color:var(--amber); }
+  .toast.teal { border-color:var(--teal); color:var(--teal); }
+  .toast.red { border-color:var(--red); color:var(--red); }
+  @keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes toastOut { from{opacity:1} to{opacity:0} }
+
+  /* STATUS */
+  .status-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; }
+  .dot-green { background:var(--green); }
+  .dot-amber { background:var(--amber); box-shadow:0 0 6px var(--amber); }
+  .dot-dim { background:var(--text-dimmer); }
+  @media(max-width:480px) { .main{padding:20px 12px 80px;} .topbar{padding:0 12px;} .project-card{grid-template-columns:1fr;} .project-actions{flex-direction:row; align-items:center;} }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/" class="logo">KRE8<span style="color:var(--teal)">Ω</span>R <span>Pipeline</span></a>
+  <div class="nav">
+    <a href="m1-approval-dashboard.html" class="m-tag m1">M1 Gates</a>
+    <a href="m2-package-generator.html" class="m-tag m2">M2 Packages</a>
+    <a href="m3-caption-generator.html" class="m-tag m3">M3 Captions</a>
+    <a href="m4-email-generator.html" class="m-tag m4">M4 Emails</a>
+  </div>
+</nav>
+
+<main class="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-title">PIPELINE<br><em>COMMAND</em></div>
+    <div class="hero-sub">Every video. Every stage. Every gate. One place.</div>
+    <div class="hero-tagline">7 Kin Homestead · Sine Resistentia</div>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="quick-actions">
+    <a href="m2-package-generator.html" class="qa-card c-teal">
+      <div class="qa-icon">📦</div>
+      <div class="qa-label">M2 PACKAGES</div>
+      <div class="qa-sub">Generate 5 content packages</div>
+    </a>
+    <a href="m3-caption-generator.html" class="qa-card c-amber">
+      <div class="qa-icon">✍️</div>
+      <div class="qa-label">M3 CAPTIONS</div>
+      <div class="qa-sub">5-platform clip captions</div>
+    </a>
+    <a href="m4-email-generator.html" class="qa-card c-purple">
+      <div class="qa-icon">📧</div>
+      <div class="qa-label">M4 EMAILS</div>
+      <div class="qa-sub">7-email ROCK RICH sequence</div>
+    </a>
+    <a href="m1-approval-dashboard.html" class="qa-card c-green">
+      <div class="qa-icon">✅</div>
+      <div class="qa-label">M1 GATES</div>
+      <div class="qa-sub">Approve packages, clips, emails</div>
+    </a>
+  </div>
+
+  <!-- NEW PROJECT -->
+  <div class="new-project-bar">
+    <h3>NEW PROJECT</h3>
+    <div class="new-project-row">
+      <input type="text" class="np-input" id="new-title" placeholder="Video title or topic…">
+      <input type="url" class="np-input" id="new-url" placeholder="YouTube URL (optional)">
+      <button class="btn btn-teal" onclick="createProject()">+ Create Project</button>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="section-header">
+    <div class="section-title">ACTIVE PIPELINE</div>
+    <div class="section-sub" id="pipeline-count"></div>
+  </div>
+  <div class="projects-list" id="projects-list">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🌱</div>
+      <div class="empty-title">PIPELINE IS CLEAR</div>
+      <div class="empty-sub">Create a project above or start in M2 to generate packages for a video. Projects appear here automatically.</div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', loadPipeline);
+
+async function loadPipeline() {
+  try {
+    const res = await fetch('/api/projects');
+    const projects = await res.json();
+    renderPipeline(projects);
+  } catch (e) {
+    console.error('Failed to load pipeline:', e);
+  }
+}
+
+function renderPipeline(projects) {
+  const list = document.getElementById('projects-list');
+  const empty = document.getElementById('empty-state');
+  const count = document.getElementById('pipeline-count');
+
+  if (!projects || projects.length === 0) {
+    empty.style.display = 'block';
+    count.textContent = 'No active projects';
+    return;
+  }
+
+  empty.style.display = 'none';
+  count.textContent = `${projects.length} video${projects.length !== 1 ? 's' : ''} in pipeline`;
+
+  list.innerHTML = '';
+  projects.forEach((p, i) => {
+    const card = document.createElement('div');
+    const needsAttention = !p.gate_a_approved || (p.package_count > 0 && !p.gate_b_approved) || (p.gate_b_approved && !p.gate_c_approved);
+    card.className = `project-card${needsAttention ? ' needs-attention' : ''}`;
+    card.style.animationDelay = `${i * 0.06}s`;
+
+    const gateA = p.gate_a_approved
+      ? '<span class="gate-pill done">✓ Gate A</span>'
+      : (p.package_count > 0 ? '<span class="gate-pill waiting">⚡ Gate A</span>' : '<span class="gate-pill pending">Gate A</span>');
+    const gateB = p.gate_b_approved
+      ? '<span class="gate-pill done">✓ Gate B</span>'
+      : (p.approved_captions > 0 ? '<span class="gate-pill waiting">⚡ Gate B</span>' : '<span class="gate-pill pending">Gate B</span>');
+    const gateC = p.gate_c_approved
+      ? '<span class="gate-pill done">✓ Gate C</span>'
+      : (p.approved_emails > 0 ? '<span class="gate-pill waiting">⚡ Gate C</span>' : '<span class="gate-pill pending">Gate C</span>');
+
+    const dateStr = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    card.innerHTML = `
+      <div>
+        <div class="project-title">${escHtml(p.title)}</div>
+        <div class="project-meta">
+          <span class="status-dot ${needsAttention ? 'dot-amber' : 'dot-green'}"></span>
+          Stage ${escHtml(p.current_stage)} · Created ${dateStr}
+          ${p.youtube_url ? ` · <a href="${escHtml(p.youtube_url)}" target="_blank" style="color:var(--teal);font-size:11px;">YouTube ↗</a>` : ''}
+        </div>
+        <div class="gate-pills">
+          ${gateA}${gateB}${gateC}
+        </div>
+      </div>
+      <div class="project-actions">
+        <div class="stage-badge">${escHtml(p.current_stage)}</div>
+        <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">M2 →</a>
+        <a href="m1-approval-dashboard.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">Gates →</a>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// ─────────────────────────────────────────────
+// CREATE PROJECT
+// ─────────────────────────────────────────────
+async function createProject() {
+  const title = document.getElementById('new-title').value.trim();
+  const url = document.getElementById('new-url').value.trim();
+
+  if (!title) { showToast('Add a video title first', 'amber'); return; }
+
+  let videoId = null;
+  if (url) {
+    try {
+      const u = new URL(url);
+      videoId = u.searchParams.get('v') || (u.hostname === 'youtu.be' ? u.pathname.slice(1) : null);
+    } catch(e) {}
+  }
+
+  try {
+    const res = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, youtube_url: url || null, youtube_video_id: videoId })
+    });
+    const project = await res.json();
+    if (project.error) throw new Error(project.error);
+
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-url').value = '';
+    showToast('Project created — start in M2 to generate packages', 'teal');
+    loadPipeline();
+  } catch (e) {
+    showToast('Failed to create project: ' + e.message, 'red');
+  }
+}
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type = '') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast${type ? ' ' + type : ''}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+</script>
+</body>
+</html>

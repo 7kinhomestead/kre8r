@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/Users/18054/kre8r/docs/*.html)",
+      "Bash(cmd.exe /c \"npm install sql.js 2>&1\")",
+      "Bash(cmd.exe /c \"cd /d C:\\\\Users\\\\18054\\\\kre8r && npm install sql.js\")",
+      "Bash(cmd.exe /c \"where node & where npm\")",
+      "Bash(cmd.exe /c \"echo %PATH%\")",
+      "Bash(powershell -Command \"Set-Location ''C:\\\\Users\\\\18054\\\\kre8r''; npm install sql.js 2>&1\")",
+      "Bash(powershell -Command \"Get-ChildItem ''C:\\\\Program Files\\\\nodejs'' -ErrorAction SilentlyContinue; Get-ChildItem ''C:\\\\Program Files \\(x86\\)\\\\nodejs'' -ErrorAction SilentlyContinue; Get-ChildItem env: | Where-Object {$_Name -match ''node|npm''}\")",
+      "Bash(powershell -Command \"Set-Location ''C:\\\\Users\\\\18054\\\\kre8r''; & ''C:\\\\Program Files\\\\nodejs\\\\npm.cmd'' install sql.js 2>&1\")",
+      "Bash(powershell -Command \"Set-Location ''C:\\\\Users\\\\18054\\\\kre8r''; & ''C:\\\\Program Files\\\\nodejs\\\\node.exe'' -e \"\"const { initDb } = require\\(''./src/db''\\); initDb\\(\\).then\\(\\(\\) => { console.log\\(''DB init OK''\\); process.exit\\(0\\); }\\).catch\\(e => { console.error\\(''DB init FAILED:'', e.message\\); process.exit\\(1\\); }\\)\"\" 2>&1\")"
+    ]
+  }
+}

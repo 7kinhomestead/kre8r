@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — Approval Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f0e;
+    --bg-card: #161916;
+    --bg-card-2: #1c1f1b;
+    --border: #2a2e28;
+    --border-bright: #3a3f38;
+    --teal: #3ecfb2;
+    --teal-dim: #2aa893;
+    --teal-glow: rgba(62,207,178,0.12);
+    --teal-glow-strong: rgba(62,207,178,0.22);
+    --amber: #f0b942;
+    --amber-glow: rgba(240,185,66,0.12);
+    --red: #e05c5c;
+    --red-glow: rgba(224,92,92,0.12);
+    --green: #5cba8a;
+    --green-glow: rgba(92,186,138,0.12);
+    --blue: #5b9cf6;
+    --text: #e8ebe6;
+    --text-dim: #8a9487;
+    --text-dimmer: #5a5f58;
+    --font-head: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* NAV */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(14,15,14,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .topbar-logo {
+    font-family: var(--font-head);
+    font-size: 26px;
+    letter-spacing: 2px;
+    color: var(--teal);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .topbar-logo span { color: var(--text-dim); font-size: 12px; font-family: var(--font-body); letter-spacing: 0; font-weight: 500; }
+  .topbar-nav {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .topbar-nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { background: var(--bg-card-2); color: var(--text); }
+  .nav-btn.active { background: var(--teal-glow); color: var(--teal); }
+  .nav-btn .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--teal);
+    color: var(--bg);
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 9px;
+    margin-left: 5px;
+    padding: 0 4px;
+  }
+
+  /* MAIN */
+  .main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  /* SECTIONS */
+  .section { margin-bottom: 40px; }
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: var(--font-head);
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .section-sub {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  /* APPROVAL GATE HEADER */
+  .gate-header {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--teal);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .gate-badge {
+    background: var(--teal);
+    color: var(--bg);
+    font-family: var(--font-head);
+    font-size: 18px;
+    letter-spacing: 1px;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+  .gate-info h2 {
+    font-family: var(--font-head);
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    color: var(--text);
+  }
+  .gate-info p {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-top: 2px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border-bright); }
+  .card.approved {
+    border-color: var(--green);
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(92,186,138,0.04) 100%);
+    opacity: 0.7;
+  }
+  .card.changes-requested {
+    border-color: var(--amber);
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(240,185,66,0.04) 100%);
+    opacity: 0.7;
+  }
+  .card.skipped {
+    border-color: var(--border);
+    opacity: 0.45;
+  }
+
+  /* STATUS BADGE */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+  .status-gate-a { background: rgba(91,156,246,0.15); color: var(--blue); }
+  .status-gate-b { background: rgba(240,185,66,0.15); color: var(--amber); }
+  .status-gate-c { background: rgba(62,207,178,0.15); color: var(--teal); }
+  .status-complete { background: rgba(92,186,138,0.15); color: var(--green); }
+  .status-scheduled { background: rgba(62,207,178,0.1); color: var(--teal-dim); }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* VIDEO CARD */
+  .video-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .video-thumb {
+    width: 80px;
+    height: 45px;
+    background: var(--bg-card-2);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    font-size: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .video-thumb-bg {
+    position: absolute;
+    inset: 0;
+    opacity: 0.15;
+  }
+  .video-info { flex: 1; min-width: 0; }
+  .video-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .video-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .video-meta-item {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* PACKAGE CARD (Gate A) */
+  .package-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  @media (min-width: 600px) {
+    .package-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .package-card {
+    background: var(--bg-card-2);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .package-card:hover { border-color: var(--teal-dim); background: var(--bg-card); }
+  .package-card.selected {
+    border-color: var(--teal);
+    background: var(--teal-glow);
+  }
+  .package-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    color: var(--teal);
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .package-num {
+    font-family: var(--font-head);
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--text-dimmer);
+    margin-bottom: 6px;
+  }
+  .package-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.35;
+  }
+  .package-hook {
+    font-size: 12px;
+    color: var(--teal);
+    font-style: italic;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    border-left: 2px solid var(--teal);
+    padding-left: 8px;
+  }
+  .package-rationale {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .package-thumb-concept {
+    font-size: 11px;
+    color: var(--text-dimmer);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .package-thumb-concept strong { color: var(--text-dim); }
+
+  /* CLIP CARD (Gate B) */
+  .clip-card { position: relative; }
+  .clip-timestamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-head);
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--amber);
+    margin-bottom: 10px;
+  }
+  .caption-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  @media (min-width: 600px) {
+    .caption-grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
+  .caption-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    position: relative;
+  }
+  .caption-platform {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-dimmer);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .caption-text {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  /* COMMUNITY / EMAIL CARDS (Gate C) */
+  .comm-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  @media (min-width: 640px) {
+    .comm-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .email-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--teal);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .email-subject {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .email-preview {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ACTION ROW */
+  .action-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-approve {
+    background: var(--green-glow);
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .btn-approve:hover { background: rgba(92,186,138,0.25); }
+  .btn-changes {
+    background: var(--amber-glow);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .btn-changes:hover { background: rgba(240,185,66,0.25); }
+  .btn-skip {
+    background: transparent;
+    border-color: var(--border-bright);
+    color: var(--text-dim);
+  }
+  .btn-skip:hover { border-color: var(--text-dim); color: var(--text); }
+  .btn-primary {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--bg);
+  }
+  .btn-primary:hover { background: var(--teal-dim); }
+  .btn-copy {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .btn-copy:hover { border-color: var(--teal); color: var(--teal); }
+  .btn-copy.copied { border-color: var(--green); color: var(--green); }
+  .btn-repurpose {
+    background: rgba(91,156,246,0.12);
+    border-color: var(--blue);
+    color: var(--blue);
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  .btn-repurpose:hover { background: rgba(91,156,246,0.22); }
+
+  /* NOTES INPUT */
+  .notes-field {
+    flex: 1;
+    min-width: 180px;
+  }
+  .notes-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    resize: none;
+    transition: border-color 0.15s;
+    height: 36px;
+    line-height: 1.4;
+  }
+  .notes-input:focus {
+    outline: none;
+    border-color: var(--teal-dim);
+    height: 70px;
+  }
+  .notes-input::placeholder { color: var(--text-dimmer); }
+
+  /* SEARCH */
+  .search-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 9px 14px;
+    width: 100%;
+    max-width: 360px;
+    transition: border-color 0.15s;
+  }
+  .search-box:focus { outline: none; border-color: var(--teal-dim); }
+  .search-box::placeholder { color: var(--text-dimmer); }
+
+  /* SCHEDULED TABLE */
+  .sched-table { width: 100%; border-collapse: collapse; }
+  .sched-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sched-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(42,46,40,0.5);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  .sched-table tr:last-child td { border-bottom: none; }
+  .platform-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pill-tiktok { background: rgba(105,201,208,0.1); color: #69c9d0; }
+  .pill-instagram { background: rgba(225,48,108,0.1); color: #e1306c; }
+  .pill-facebook { background: rgba(66,103,178,0.1); color: #4267b2; }
+  .pill-youtube { background: rgba(255,0,0,0.1); color: #ff4444; }
+  .pill-kajabi { background: rgba(255,193,7,0.1); color: #ffc107; }
+  .pill-email { background: rgba(62,207,178,0.1); color: var(--teal); }
+
+  /* LIBRARY GRID */
+  .library-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  @media (min-width: 560px) {
+    .library-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .lib-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    transition: border-color 0.15s;
+  }
+  .lib-card:hover { border-color: var(--border-bright); }
+  .lib-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .lib-meta { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+  .lib-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .lib-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .lib-stat-val { font-weight: 700; font-size: 15px; color: var(--teal); }
+  .lib-stat-label { font-size: 10px; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* NEWSLETTER */
+  .newsletter-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .newsletter-section { margin-bottom: 16px; }
+  .newsletter-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .newsletter-body {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-line;
+  }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    animation: toastIn 0.25s ease, toastOut 0.25s ease 2.5s forwards;
+  }
+  .toast.green { border-color: var(--green); color: var(--green); }
+  .toast.amber { border-color: var(--amber); color: var(--amber); }
+  .toast.teal { border-color: var(--teal); color: var(--teal); }
+  @keyframes toastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes toastOut { from{opacity:1} to{opacity:0} }
+
+  /* STATUS OVERLAY */
+  .status-overlay {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    margin-top: 8px;
+  }
+  .status-overlay.show { display: flex; }
+  .status-overlay.approved { background: var(--green-glow); color: var(--green); }
+  .status-overlay.changes { background: var(--amber-glow); color: var(--amber); }
+  .status-overlay.skipped { background: var(--bg-card-2); color: var(--text-dim); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-dimmer);
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-state h3 { font-family: var(--font-head); font-size: 20px; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  /* HIDDEN */
+  .hidden { display: none !important; }
+
+  /* SCROLLTARGET */
+  .scroll-target { scroll-margin-top: 70px; }
+
+  /* APPROVAL BANNER */
+  .approval-banner {
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(62,207,178,0.06) 100%);
+    border: 1px solid var(--teal);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .approval-banner .icon { font-size: 28px; }
+  .approval-banner-text h3 { font-family: var(--font-head); font-size: 20px; letter-spacing: 1px; color: var(--teal); }
+  .approval-banner-text p { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+
+  /* GATE APPROVED STATE */
+  .gate-complete {
+    text-align: center;
+    padding: 24px;
+    background: var(--green-glow);
+    border: 1px solid var(--green);
+    border-radius: var(--radius);
+    margin-top: 10px;
+  }
+  .gate-complete h3 { font-family: var(--font-head); font-size: 22px; letter-spacing: 1.5px; color: var(--green); }
+  .gate-complete p { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+  /* PACKAGE SELECTED FOOTER */
+  .package-selected-bar {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--teal);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-top: 12px;
+    display: none;
+  }
+  .package-selected-bar.show { display: block; }
+
+  /* MOBILE TWEAKS */
+  @media (max-width: 480px) {
+    .topbar { padding: 0 12px; }
+    .topbar-logo { font-size: 22px; }
+    .main { padding: 16px 12px 80px; }
+    .section-title { font-size: 24px; }
+    .gate-header { padding: 12px 14px; gap: 10px; }
+    .gate-badge { font-size: 15px; padding: 3px 10px; }
+    .action-row { flex-direction: column; }
+    .btn { width: 100%; justify-content: center; }
+    .notes-field { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<nav class="topbar">
+  <div class="topbar-logo">
+    KRE8<span style="color:var(--teal)">Ω</span>R
+    <span>PIPELINE</span>
+  </div>
+  <div class="topbar-nav">
+    <button class="nav-btn active" onclick="scrollTo('pending')">
+      Pending <span class="badge">3</span>
+    </button>
+    <button class="nav-btn" onclick="scrollTo('active')">Active</button>
+    <button class="nav-btn" onclick="scrollTo('scheduled')">Scheduled</button>
+    <button class="nav-btn" onclick="scrollTo('library')">Library</button>
+    <button class="nav-btn" onclick="scrollTo('newsletter')">
+      Newsletter <span class="badge" style="background:var(--amber);color:var(--bg)">1</span>
+    </button>
+  </div>
+</nav>
+
+<main class="main">
+
+  <!-- PENDING APPROVALS BANNER -->
+  <div class="approval-banner">
+    <div class="icon">⚡</div>
+    <div class="approval-banner-text">
+      <h3>3 GATES NEED YOUR EYES</h3>
+      <p>Three videos are waiting on you. Read → React → Click. That's it.</p>
+    </div>
+  </div>
+
+  <!-- ============ GATE A ============ -->
+  <div id="pending" class="section scroll-target">
+    <div class="gate-header">
+      <div class="gate-badge">GATE A</div>
+      <div class="gate-info">
+        <h2>CONTENT PACKAGE SELECTION</h2>
+        <p>Pick one of five generated packages for this video. One click, done.</p>
+      </div>
+    </div>
+
+    <!-- Video: Rainwater Harvesting -->
+    <div class="card" id="gate-a-card">
+      <div class="video-card" style="padding:0;background:none;border:none;margin-bottom:14px;">
+        <div class="video-thumb">
+          <div class="video-thumb-bg" style="background:linear-gradient(135deg,#1a3a2a,#0d2018)"></div>
+          🌧️
+        </div>
+        <div class="video-info">
+          <div class="video-title">Off-Grid Rainwater Harvesting — Complete Setup Guide</div>
+          <div class="video-meta">
+            <span class="video-meta-item">Uploaded 2 hrs ago</span>
+            <span class="status status-gate-a"><span class="status-dot"></span>Awaiting Package</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Select one content package to build this video's entire distribution strategy around. The package you pick sets the title, thumbnail concept, TikTok hook, captions, and email angle.</div>
+
+      <div class="package-grid" id="package-grid-a">
+
+        <div class="package-card" onclick="selectPackage(this, 1)">
+          <div class="package-num">PACKAGE 01</div>
+          <div class="package-title">"I Collect My Own Rain Water (And You Can Too)"</div>
+          <div class="package-hook">"POV: you haven't paid a water bill in 3 years"</div>
+          <div class="package-rationale">Evergreen how-to angle. Positions you as the guide who makes this achievable, not intimidating. Targets people researching before they commit.</div>
+          <div class="package-thumb-concept"><strong>Thumbnail:</strong> Split-screen — empty water bill vs. full 2,500L tank. Your face, shocked expression, pointing at the tank.</div>
+        </div>
+
+        <div class="package-card" onclick="selectPackage(this, 2)">
+          <div class="package-num">PACKAGE 02</div>
+          <div class="package-title">"They Said This Was Illegal. We Did It Anyway."</div>
+          <div class="package-hook">"Wait — collecting rainwater is ILLEGAL in some states?? Here's the truth"</div>
+          <div class="package-rationale">High-curiosity hook. Addresses the legal question that stops most people. Controversy + resolution structure gets strong completion rate.</div>
+          <div class="package-thumb-concept"><strong>Thumbnail:</strong> Caution tape across a rain barrel. Your face, conspiratorial grin. Bold text: "ILLEGAL?" with a red slash through it.</div>
+        </div>
+
+        <div class="package-card" onclick="selectPackage(this, 3)">
+          <div class="package-num">PACKAGE 03</div>
+          <div class="package-title">"We Haven't Used City Water in 3 Years. Here's Our Whole Setup."</div>
+          <div class="package-hook">"3 years. Zero water bills. Here's literally everything we use."</div>
+          <div class="package-rationale">Authority-builder. Full system reveal creates high save rate. People bookmark "complete setup" videos. Great for new subscribers finding you for the first time.</div>
+          <div class="package-thumb-concept"><strong>Thumbnail:</strong> Aerial view of full tank array. Text: "3 YEARS. ZERO BILLS." Your face small in corner, thumbs up.</div>
+        </div>
+
+        <div class="package-card" onclick="selectPackage(this, 4)">
+          <div class="package-num">PACKAGE 04</div>
+          <div class="package-title">"The $800 System That Replaced Our $160/Month Water Bill"</div>
+          <div class="package-hook">"Paid off in 5 months. Here's every part and what it actually costs."</div>
+          <div class="package-rationale">ROI-framing wins every time on practical homesteading. The math does the selling. Strong appeal to the value-minded ROCK RICH audience.</div>
+          <div class="package-thumb-concept"><strong>Thumbnail:</strong> Handwritten math on whiteboard: $800 ÷ $160 = 5 months. Your face looking smug. Green checkmark.</div>
+        </div>
+
+        <div class="package-card" onclick="selectPackage(this, 5)" style="grid-column: 1 / -1;">
+          <div class="package-num">PACKAGE 05</div>
+          <div class="package-title">"Don't Install Rainwater Harvesting Until You Watch This"</div>
+          <div class="package-hook">"I made every single mistake so you don't have to"</div>
+          <div class="package-rationale">Cautionary + helpful. The "mistakes" format is comfort food for this audience — they know you're being real. High comment engagement as people share their own fails.</div>
+          <div class="package-thumb-concept"><strong>Thumbnail:</strong> You, head in hands, next to a clearly-wrongly-installed overflow pipe. Bold text: "DON'T DO THIS."</div>
+        </div>
+
+      </div>
+
+      <!-- Selected bar -->
+      <div class="package-selected-bar" id="package-selected-bar">
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">Package <span id="selected-pkg-num"></span> selected. Optional: add a note for the generation phase.</div>
+        <div class="action-row" style="border:none;padding:0;margin:0;">
+          <div class="notes-field">
+            <textarea class="notes-input" id="gate-a-note" placeholder="Optional note (e.g. 'lean into the cost savings angle more')…"></textarea>
+          </div>
+          <button class="btn btn-approve" onclick="approveGate('gate-a-card','gate-a-complete','Approved — package will be used to generate all assets')">
+            ✓ APPROVE PACKAGE
+          </button>
+        </div>
+      </div>
+
+      <div class="status-overlay approved" id="gate-a-complete">
+        ✓ Package approved — generation phase queued
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GATE B ============ -->
+  <div class="section">
+    <div class="gate-header">
+      <div class="gate-badge" style="background:var(--amber);color:var(--bg)">GATE B</div>
+      <div class="gate-info">
+        <h2>CLIP QUEUE REVIEW</h2>
+        <p>Three clips ready for your review. Approve, request changes, or skip each independently.</p>
+      </div>
+    </div>
+
+    <!-- Video context bar -->
+    <div class="video-card" style="margin-bottom:14px;">
+      <div class="video-thumb">
+        <div class="video-thumb-bg" style="background:linear-gradient(135deg,#2a1a0a,#1a0d00)"></div>
+        🏡
+      </div>
+      <div class="video-info">
+        <div class="video-title">Building Our Off-Grid Root Cellar From Scratch — No Permits, No Problems</div>
+        <div class="video-meta">
+          <span class="video-meta-item">YouTube · Published 4 days ago</span>
+          <span class="status status-gate-b"><span class="status-dot"></span>Clips Queued</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clip 1 -->
+    <div class="card" id="clip-1-card">
+      <div class="clip-timestamp">
+        ⏱ 02:14 — 02:47
+        <span style="color:var(--text-dimmer);font-size:12px;font-family:var(--font-body);font-weight:400;">33 sec clip</span>
+      </div>
+      <div class="caption-grid">
+        <div class="caption-box">
+          <div class="caption-platform">
+            🎵 TikTok
+            <button class="btn btn-copy" onclick="copyText(this, 'tiktok-1')">Copy</button>
+          </div>
+          <div class="caption-text" id="tiktok-1">Nobody talks about the food storage problem until it's too late. Root cellar in 6 weeks, no permits, no contractor. Here's how we actually did it. 🥕🪨
+
+#offgrid #homestead #rootcellar #foodstorage #selfsufficient #DIY #homesteading</div>
+        </div>
+        <div class="caption-box">
+          <div class="caption-platform">
+            📸 Instagram
+            <button class="btn btn-copy" onclick="copyText(this, 'insta-1')">Copy</button>
+          </div>
+          <div class="caption-text" id="insta-1">Real talk: most people think about food storage after a power outage, not before one.
+
+We built our root cellar in 6 weeks. Dug by hand, lined with stone, holds temp year-round without electricity. The full build is on YouTube (link in bio).
+
+What's your food storage situation look like right now? 👇
+
+#homestead #selfsufficiency #rootcellar #offgridliving #foodpreservation #preparedness</div>
+        </div>
+        <div class="caption-box">
+          <div class="caption-platform">
+            👥 Facebook
+            <button class="btn btn-copy" onclick="copyText(this, 'fb-1')">Copy</button>
+          </div>
+          <div class="caption-text" id="fb-1">Six weeks. Dug by hand. No permits. And it holds a stable 50°F year-round without a single watt of electricity.
+
+We just posted the full root cellar build on YouTube — every mistake, every win, and every tool we used. Worth a watch if food storage is on your mind this year.
+
+Comment "CELLAR" and I'll drop the link 👇</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <div class="notes-field">
+          <textarea class="notes-input" placeholder="Optional feedback for changes…"></textarea>
+        </div>
+        <button class="btn btn-approve" onclick="approveItem('clip-1-card', 'Clip 1 approved ✓')">✓ Approve</button>
+        <button class="btn btn-changes" onclick="requestChanges('clip-1-card', 'Changes requested on Clip 1')">✎ Changes</button>
+        <button class="btn btn-skip" onclick="skipItem('clip-1-card', 'Clip 1 skipped')">Skip</button>
+      </div>
+    </div>
+
+    <!-- Clip 2 -->
+    <div class="card" id="clip-2-card">
+      <div class="clip-timestamp">
+        ⏱ 08:33 — 09:12
+        <span style="color:var(--text-dimmer);font-size:12px;font-family:var(--font-body);font-weight:400;">39 sec clip</span>
+      </div>
+      <div class="caption-grid">
+        <div class="caption-box">
+          <div class="caption-platform">
+            🎵 TikTok
+            <button class="btn btn-copy" onclick="copyText(this, 'tiktok-2')">Copy</button>
+          </div>
+          <div class="caption-text" id="tiktok-2">The moment I realized I'd been storing vegetables wrong my entire life. Humidity, temperature, and airflow — get all three right and your food lasts months, not weeks. 🥔🧅
+
+#foodstorage #homesteading #rootcellar #selfsufficient #offgrid #groceryhaul</div>
+        </div>
+        <div class="caption-box">
+          <div class="caption-platform">
+            📸 Instagram
+            <button class="btn btn-copy" onclick="copyText(this, 'insta-2')">Copy</button>
+          </div>
+          <div class="caption-text" id="insta-2">Hot take: your fridge is the worst place to store most root vegetables.
+
+Potatoes hate light. Onions hate moisture. Squash needs warmth, not cold. The reason your produce goes bad faster than you'd like is usually storage conditions, not the produce itself.
+
+Full breakdown of what we learned building our root cellar — up on YouTube now. Link in bio.
+
+What do you currently do with your harvest storage? Drop it below 👇
+
+#homestead #foodpreservation #rootvegetables #growyourownfood #offgridliving</div>
+        </div>
+        <div class="caption-box">
+          <div class="caption-platform">
+            👥 Facebook
+            <button class="btn btn-copy" onclick="copyText(this, 'fb-2')">Copy</button>
+          </div>
+          <div class="caption-text" id="fb-2">After years of losing vegetables too early, I finally understood the problem: storage conditions, not shopping frequency.
+
+In our root cellar build video this week, I break down exactly what temperature, humidity, and airflow each vegetable type actually needs — and how we designed our cellar around it.
+
+It's a game changer if you grow or buy in bulk. Watch it here: [link]
+
+Drop a 🥕 if you've ever lost a whole harvest too early.</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <div class="notes-field">
+          <textarea class="notes-input" placeholder="Optional feedback for changes…"></textarea>
+        </div>
+        <button class="btn btn-approve" onclick="approveItem('clip-2-card', 'Clip 2 approved ✓')">✓ Approve</button>
+        <button class="btn btn-changes" onclick="requestChanges('clip-2-card', 'Changes requested on Clip 2')">✎ Changes</button>
+        <button class="btn btn-skip" onclick="skipItem('clip-2-card', 'Clip 2 skipped')">Skip</button>
+      </div>
+    </div>
+
+    <!-- Clip 3 -->
+    <div class="card" id="clip-3-card">
+      <div class="clip-timestamp">
+        ⏱ 15:08 — 15:44
+        <span style="color:var(--text-dimmer);font-size:12px;font-family:var(--font-body);font-weight:400;">36 sec clip</span>
+      </div>
+      <div class="caption-grid">
+        <div class="caption-box">
+          <div class="caption-platform">
+            🎵 TikTok
+            <button class="btn btn-copy" onclick="copyText(this, 'tiktok-3')">Copy</button>
+          </div>
+          <div class="caption-text" id="tiktok-3">We spent $340 total. It'll hold 800 lbs of food through winter. Do the math. 🔢❄️
+
+#homestead #offgrid #winterprep #foodsecurity #rootcellar #DIYhomestead #moneysaving</div>
+        </div>
+        <div class="caption-box">
+          <div class="caption-platform">
+            📸 Instagram
+            <button class="btn btn-copy" onclick="copyText(this, 'insta-3')">Copy</button>
+          </div>
+          <div class="caption-text" id="insta-3">Root cellar cost breakdown, since people always ask:
+
+Materials: $210
+Drainage layer: $65
+Door + hardware: $65
+Total: $340
+
+Capacity: ~800 lbs of produce
+Expected life: 20+ years
+Monthly grocery savings: roughly $60-80 in winter
+
+This math is why we build things ourselves. Full video on YouTube — link in bio.
+
+#homestead #DIY #selfsufficiency #foodstorage #offgrid #frugalliving #homesteading</div>
+        </div>
+        <div class="caption-box">
+          <div class="caption-platform">
+            👥 Facebook
+            <button class="btn btn-copy" onclick="copyText(this, 'fb-3')">Copy</button>
+          </div>
+          <div class="caption-text" id="fb-3">$340 all-in. 800 lbs of food storage capacity. 20+ year lifespan if built right.
+
+This is the kind of math that makes homesteading make sense — you do the work once, the system pays you back for decades.
+
+I break down every cost in the root cellar build video. Link in comments. 
+
+Would you ever consider building one? 👇</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <div class="notes-field">
+          <textarea class="notes-input" placeholder="Optional feedback for changes…"></textarea>
+        </div>
+        <button class="btn btn-approve" onclick="approveItem('clip-3-card', 'Clip 3 approved ✓')">✓ Approve</button>
+        <button class="btn btn-changes" onclick="requestChanges('clip-3-card', 'Changes requested on Clip 3')">✎ Changes</button>
+        <button class="btn btn-skip" onclick="skipItem('clip-3-card', 'Clip 3 skipped')">Skip</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ GATE C ============ -->
+  <div class="section">
+    <div class="gate-header">
+      <div class="gate-badge" style="background:var(--teal);color:var(--bg)">GATE C</div>
+      <div class="gate-info">
+        <h2>COMMUNITY + EMAIL APPROVAL</h2>
+        <p>Kajabi post and 3-email sequence ready. Approve all or request changes on any item.</p>
+      </div>
+    </div>
+
+    <div class="video-card" style="margin-bottom:14px;">
+      <div class="video-thumb">
+        <div class="video-thumb-bg" style="background:linear-gradient(135deg,#0a1a2a,#000d1a)"></div>
+        ☀️
+      </div>
+      <div class="video-info">
+        <div class="video-title">Our Entire Solar System Explained — What We Bought, What We'd Change, What It Cost</div>
+        <div class="video-meta">
+          <span class="video-meta-item">YouTube · Published 2 weeks ago</span>
+          <span class="status status-gate-c"><span class="status-dot"></span>Community + Email Ready</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Community Post -->
+    <div class="card" id="comm-post-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:var(--font-head);font-size:18px;letter-spacing:1px;">KAJABI COMMUNITY POST</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span class="platform-pill pill-kajabi">ROCK RICH</span>
+          <button class="btn btn-copy" style="font-size:11px;" onclick="copyText(this, 'comm-post-text')">Copy</button>
+        </div>
+      </div>
+      <div class="caption-text" id="comm-post-text" style="font-size:13px;line-height:1.75;background:var(--bg);padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border);">Hey ROCK RICH — new video just went live and this one is for anyone who's been quietly wondering if solar actually pencils out for a homestead.
+
+Short answer: yes. Long answer: it depends on four things you probably haven't thought about yet.
+
+We break down our entire system — what we bought, what we'd do differently, what it cost, and how long before it paid for itself. No fluff, no affiliate code spam. Just our actual numbers.
+
+Watch it here: [link]
+
+If you've got solar questions, drop them below. I'm going through comments this week. 👇
+
+— 7 Kin</div>
+      <div class="action-row">
+        <div class="notes-field">
+          <textarea class="notes-input" placeholder="Optional feedback…"></textarea>
+        </div>
+        <button class="btn btn-approve" onclick="approveItem('comm-post-card', 'Community post approved ✓')">✓ Approve</button>
+        <button class="btn btn-changes" onclick="requestChanges('comm-post-card', 'Changes requested on community post')">✎ Changes</button>
+      </div>
+    </div>
+
+    <!-- Emails -->
+    <div class="comm-grid">
+
+      <!-- Email Day 0 -->
+      <div class="card" id="email-0-card">
+        <div class="email-label">📧 Day 0 — Immediate Send</div>
+        <div class="email-subject">"The solar video is up (real numbers inside)"</div>
+        <div class="email-preview">Hey [first name] —
+
+New video today and I kept it real: what our solar setup actually cost, what we'd change, and whether the payoff math actually worked out.
+
+If you've been on the fence about solar for your place, this is the one to watch. I walk through the four decisions that actually determine whether it's worth it — and they're not what most guides lead with.
+
+Watch it here → [link]
+
+Talk soon,
+7 Kin</div>
+        <div class="action-row" style="flex-direction:column;gap:8px;">
+          <button class="btn btn-copy" style="align-self:flex-start;" onclick="copyText(this, 'email-0-body')">Copy</button>
+          <div id="email-0-body" style="display:none">Subject: The solar video is up (real numbers inside)
+
+Hey [first name] —
+
+New video today and I kept it real: what our solar setup actually cost, what we'd change, and whether the payoff math actually worked out.
+
+If you've been on the fence about solar for your place, this is the one to watch. I walk through the four decisions that actually determine whether it's worth it — and they're not what most guides lead with.
+
+Watch it here → [link]
+
+Talk soon,
+7 Kin</div>
+          <div style="display:flex;gap:8px;width:100%;">
+            <button class="btn btn-approve" style="flex:1;" onclick="approveItem('email-0-card', 'Day 0 email approved ✓')">✓ Approve</button>
+            <button class="btn btn-changes" style="flex:1;" onclick="requestChanges('email-0-card', 'Changes on Day 0 email')">✎ Changes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email Day 3 -->
+      <div class="card" id="email-3-card">
+        <div class="email-label">📧 Day 3 — Follow-up</div>
+        <div class="email-subject">"Quick question for you"</div>
+        <div class="email-preview">Hey [first name] —
+
+Sent you a video a few days ago about our solar setup. Quick question while I've got you:
+
+Is solar something you're actively planning, quietly considering, or not on your radar at all?
+
+Asking because the next few videos are going to go deep on the practical side of off-grid energy — and I want to make sure they're actually useful for where you're at, not just where I assume you're at.
+
+Hit reply and tell me. I read every one.
+
+— 7 Kin</div>
+        <div class="action-row" style="flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:8px;width:100%;">
+            <button class="btn btn-approve" style="flex:1;" onclick="approveItem('email-3-card', 'Day 3 email approved ✓')">✓ Approve</button>
+            <button class="btn btn-changes" style="flex:1;" onclick="requestChanges('email-3-card', 'Changes on Day 3 email')">✎ Changes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email Day 7 -->
+      <div class="card" id="email-7-card" style="grid-column: 1 / -1;">
+        <div class="email-label">📧 Day 7 — Value Add</div>
+        <div class="email-subject">"The solar sizing mistake most people make (and how to avoid it)"</div>
+        <div class="email-preview">Hey [first name] —
+
+One thing I didn't cover in the solar video — and I should have:
+
+The single biggest mistake people make when sizing a solar system is designing for what they use now, not what they'll use in 5 years.
+
+Your homestead grows. Your energy needs grow with it. If you build tight to your current usage, you're going to be adding panels and batteries on the back end — which is always more expensive than getting it right the first time.
+
+Here's the quick math I use: take your current average daily usage, multiply by 1.5, and design to that number. It gives you room to add a chest freezer, an electric fence, a second pump, a workshop — without starting over.
+
+Nothing to buy, nothing to click. Just wanted to put that in your head before you start pricing anything.
+
+More coming. Stay real.
+
+— 7 Kin
+
+P.S. — If you're a Garden or Founding 50 member, I'm doing a live Q&A on off-grid energy this month. Check the community for the date.</div>
+        <div class="action-row">
+          <div class="notes-field">
+            <textarea class="notes-input" placeholder="Optional feedback…"></textarea>
+          </div>
+          <button class="btn btn-approve" onclick="approveItem('email-7-card', 'Day 7 email approved ✓')">✓ Approve</button>
+          <button class="btn btn-changes" onclick="requestChanges('email-7-card', 'Changes on Day 7 email')">✎ Changes</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Approve All Gate C -->
+    <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+      <button class="btn btn-primary" style="font-size:14px;padding:12px 24px;" onclick="approveAllGateC()">
+        ✓ APPROVE ALL — POST + SEND
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ ACTIVE VIDEOS ============ -->
+  <div id="active" class="section scroll-target">
+    <div class="section-header">
+      <div class="section-title">ACTIVE VIDEOS</div>
+      <div class="section-sub">Currently in pipeline</div>
+    </div>
+
+    <div class="video-card">
+      <div class="video-thumb">
+        <div class="video-thumb-bg" style="background:linear-gradient(135deg,#1a3a2a,#0d2018)"></div>
+        🌧️
+      </div>
+      <div class="video-info">
+        <div class="video-title">Off-Grid Rainwater Harvesting — Complete Setup Guide</div>
+        <div class="video-meta">
+          <span class="status status-gate-a"><span class="status-dot"></span>Gate A — Package Selection</span>
+          <span class="video-meta-item">Uploaded 2 hrs ago</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="video-card">
+      <div class="video-thumb">
+        <div class="video-thumb-bg" style="background:linear-gradient(135deg,#2a1a0a,#1a0d00)"></div>
+        🏡
+      </div>
+      <div class="video-info">
+        <div class="video-title">Building Our Off-Grid Root Cellar From Scratch</div>
+        <div class="video-meta">
+          <span class="status status-gate-b"><span class="status-dot"></span>Gate B — Clip Review</span>
+          <span class="video-meta-item">Published 4 days ago</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="video-card">
+      <div class="video-thumb">
+        <div class="video-thumb-bg" style="background:linear-gradient(135deg,#0a1a2a,#000d1a)"></div>
+        ☀️
+      </div>
+      <div class="video-info">
+        <div class="video-title">Our Entire Solar System Explained</div>
+        <div class="video-meta">
+          <span class="status status-gate-c"><span class="status-dot"></span>Gate C — Community + Email</span>
+          <span class="video-meta-item">Published 2 weeks ago</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="video-card">
+      <div class="video-thumb">
+        <div class="video-thumb-bg" style="background:linear-gradient(135deg,#1a1a2a,#0d0d1a)"></div>
+        🐔
+      </div>
+      <div class="video-info">
+        <div class="video-title">Raising Meat Chickens for the First Time — Honest Results</div>
+        <div class="video-meta">
+          <span class="status status-complete">✓ Complete</span>
+          <span class="video-meta-item">All clips posted · Emails sent</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ SCHEDULED ============ -->
+  <div id="scheduled" class="section scroll-target">
+    <div class="section-header">
+      <div class="section-title">SCHEDULED</div>
+      <div class="section-sub">Upcoming posts — view only</div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="sched-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Platform</th>
+            <th>Content</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--text-dim);font-size:12px;">Today 6pm</td>
+            <td><span class="platform-pill pill-tiktok">TikTok</span></td>
+            <td style="font-size:12px;">Root Cellar — "Nobody talks about food storage…"</td>
+            <td><span class="status status-scheduled">Queued</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-dim);font-size:12px;">Today 7pm</td>
+            <td><span class="platform-pill pill-instagram">Instagram</span></td>
+            <td style="font-size:12px;">Root Cellar — Clip 1 Reel</td>
+            <td><span class="status status-scheduled">Queued</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-dim);font-size:12px;">Tomorrow 9am</td>
+            <td><span class="platform-pill pill-facebook">Facebook</span></td>
+            <td style="font-size:12px;">Root Cellar — "$340 total" clip</td>
+            <td><span class="status status-scheduled">Queued</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-dim);font-size:12px;">Thu 6pm</td>
+            <td><span class="platform-pill pill-tiktok">TikTok</span></td>
+            <td style="font-size:12px;">Root Cellar — "The moment I realized…" clip</td>
+            <td><span class="status status-scheduled">Queued</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-dim);font-size:12px;">Fri 12pm</td>
+            <td><span class="platform-pill pill-instagram">Instagram</span></td>
+            <td style="font-size:12px;">Root Cellar — Cost breakdown carousel</td>
+            <td><span class="status status-scheduled">Queued</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-dim);font-size:12px;">Sat 8am</td>
+            <td><span class="platform-pill pill-email">Email</span></td>
+            <td style="font-size:12px;">Solar — Day 3 follow-up (pending Gate C)</td>
+            <td><span class="status" style="background:rgba(224,92,92,0.1);color:var(--red);">Needs Gate C</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-dim);font-size:12px;">Next Wed</td>
+            <td><span class="platform-pill pill-youtube">YouTube</span></td>
+            <td style="font-size:12px;">Rainwater Harvesting (pending Gate A)</td>
+            <td><span class="status" style="background:rgba(224,92,92,0.1);color:var(--red);">Needs Gate A</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-dim);font-size:12px;">Next Thu</td>
+            <td><span class="platform-pill pill-kajabi">Kajabi</span></td>
+            <td style="font-size:12px;">Solar — Community post (pending Gate C)</td>
+            <td><span class="status" style="background:rgba(224,92,92,0.1);color:var(--red);">Needs Gate C</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ CONTENT LIBRARY ============ -->
+  <div id="library" class="section scroll-target">
+    <div class="section-header">
+      <div class="section-title">CONTENT LIBRARY</div>
+      <div class="section-sub">Past content — searchable archive</div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <input type="text" class="search-box" placeholder="Search videos, topics, tags…" oninput="filterLibrary(this.value)">
+    </div>
+
+    <div class="library-grid" id="library-grid">
+
+      <div class="lib-card" data-tags="chickens meat poultry raising animals">
+        <div class="lib-title">Raising Meat Chickens for the First Time — Honest Results</div>
+        <div class="lib-meta">Published 3 weeks ago · YouTube · 22 min</div>
+        <div class="lib-stats">
+          <div class="lib-stat">
+            <div class="lib-stat-val">284K</div>
+            <div class="lib-stat-label">Views</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">6.4K</div>
+            <div class="lib-stat-label">Likes</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">3</div>
+            <div class="lib-stat-label">Clips Used</div>
+          </div>
+        </div>
+        <button class="btn btn-repurpose" onclick="showToast('Repurposing engine launched for Meat Chickens video', 'teal')">♻️ Repurpose This</button>
+      </div>
+
+      <div class="lib-card" data-tags="composting soil garden soil health worms">
+        <div class="lib-title">How We Turn Kitchen Scraps Into Black Gold — Composting System Walkthrough</div>
+        <div class="lib-meta">Published 5 weeks ago · YouTube · 18 min</div>
+        <div class="lib-stats">
+          <div class="lib-stat">
+            <div class="lib-stat-val">198K</div>
+            <div class="lib-stat-label">Views</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">4.1K</div>
+            <div class="lib-stat-label">Likes</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">4</div>
+            <div class="lib-stat-label">Clips Used</div>
+          </div>
+        </div>
+        <button class="btn btn-repurpose" onclick="showToast('Repurposing engine launched for Composting video', 'teal')">♻️ Repurpose This</button>
+      </div>
+
+      <div class="lib-card" data-tags="wood stove heating fire winter off-grid">
+        <div class="lib-title">Wood Stove vs Propane — 3 Winter Heating Seasons Later, Here's the Truth</div>
+        <div class="lib-meta">Published 2 months ago · YouTube · 26 min</div>
+        <div class="lib-stats">
+          <div class="lib-stat">
+            <div class="lib-stat-val">412K</div>
+            <div class="lib-stat-label">Views</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">9.8K</div>
+            <div class="lib-stat-label">Likes</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">5</div>
+            <div class="lib-stat-label">Clips Used</div>
+          </div>
+        </div>
+        <button class="btn btn-repurpose" onclick="showToast('Repurposing engine launched for Wood Stove video', 'teal')">♻️ Repurpose This</button>
+      </div>
+
+      <div class="lib-card" data-tags="goats dairy milk animals livestock">
+        <div class="lib-title">We Got Goats. Nobody Warned Us About This Part.</div>
+        <div class="lib-meta">Published 2 months ago · YouTube · 19 min</div>
+        <div class="lib-stats">
+          <div class="lib-stat">
+            <div class="lib-stat-val">521K</div>
+            <div class="lib-stat-label">Views</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">11.2K</div>
+            <div class="lib-stat-label">Likes</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">6</div>
+            <div class="lib-stat-label">Clips Used</div>
+          </div>
+        </div>
+        <button class="btn btn-repurpose" onclick="showToast('Repurposing engine launched for Goats video', 'teal')">♻️ Repurpose This</button>
+      </div>
+
+      <div class="lib-card" data-tags="garden raised beds vegetables growing spring planting">
+        <div class="lib-title">Our Entire Garden Setup — Raised Beds, Water, Soil, Seeds</div>
+        <div class="lib-meta">Published 3 months ago · YouTube · 31 min</div>
+        <div class="lib-stats">
+          <div class="lib-stat">
+            <div class="lib-stat-val">337K</div>
+            <div class="lib-stat-label">Views</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">7.6K</div>
+            <div class="lib-stat-label">Likes</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">5</div>
+            <div class="lib-stat-label">Clips Used</div>
+          </div>
+        </div>
+        <button class="btn btn-repurpose" onclick="showToast('Repurposing engine launched for Garden Setup video', 'teal')">♻️ Repurpose This</button>
+      </div>
+
+      <div class="lib-card" data-tags="water well pump off-grid water supply plumbing">
+        <div class="lib-title">How We Get Water — Well, Pump, Tank, Gravity Feed Explained</div>
+        <div class="lib-meta">Published 3 months ago · YouTube · 24 min</div>
+        <div class="lib-stats">
+          <div class="lib-stat">
+            <div class="lib-stat-val">276K</div>
+            <div class="lib-stat-label">Views</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">5.9K</div>
+            <div class="lib-stat-label">Likes</div>
+          </div>
+          <div class="lib-stat">
+            <div class="lib-stat-val">4</div>
+            <div class="lib-stat-label">Clips Used</div>
+          </div>
+        </div>
+        <button class="btn btn-repurpose" onclick="showToast('Repurposing engine launched for Water System video', 'teal')">♻️ Repurpose This</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ NEWSLETTER ============ -->
+  <div id="newsletter" class="section scroll-target">
+    <div class="section-header">
+      <div class="section-title">MONTHLY NEWSLETTER</div>
+      <div class="section-sub">April 2026 — draft ready for approval</div>
+    </div>
+
+    <div class="newsletter-card">
+
+      <div class="newsletter-section">
+        <div class="newsletter-section-title">Subject Line</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);">"April from the homestead — solar, a root cellar, and why we're now collecting rain"</div>
+      </div>
+
+      <div class="newsletter-section">
+        <div class="newsletter-section-title">Opening</div>
+        <div class="newsletter-body">Hey [first name] —
+
+April felt like the month the homestead finally started working as a system instead of a collection of separate projects.
+
+The solar is producing more than we use most days. The root cellar is holding temp without any help from us. The rainwater system is full after last week's storm. And the chickens are — well, they're being chickens.
+
+Four videos this month, four pieces of the same bigger picture. Here's what we covered.</div>
+      </div>
+
+      <div class="newsletter-section">
+        <div class="newsletter-section-title">Video Recaps</div>
+        <div class="newsletter-body">Our Solar System Explained
+The video where I stopped trying to make solar sound simple and just gave you our actual numbers. What we bought, what it cost, what we'd change. Most people found the sizing section the most useful — I'll send a follow-up on that next week.
+
+Root Cellar From Scratch
+$340, six weeks, dug by hand. If you've ever thought "I'd love a root cellar but..." — this is the video. The food storage breakdown in the middle is the part people keep coming back to.
+
+Rainwater Harvesting Setup
+Coming next week. This one closes the loop on water independence — we'll have all three water sources documented: well, rain, and storage.
+
+Raising Meat Chickens
+The honest version. Not the "here's how it went perfectly" version. If you're considering chickens this spring, watch this one first.</div>
+      </div>
+
+      <div class="newsletter-section">
+        <div class="newsletter-section-title">Community Note</div>
+        <div class="newsletter-body">ROCK RICH members — I'm doing a live energy Q&A this month for Garden and Founding 50 members. Date's in the community. Come ask the real questions.
+
+Not a member yet? The Greenhouse is free. The Garden is $19/month. The Founding 50 is still $297 one-time — 6 spots left.
+
+More soon. Stay real.
+— 7 Kin</div>
+      </div>
+
+      <div class="action-row">
+        <div class="notes-field">
+          <textarea class="notes-input" placeholder="Optional note or edits…"></textarea>
+        </div>
+        <button class="btn btn-approve" onclick="approveItem('newsletter-outer','Newsletter approved — queued to send end of month')">✓ Approve Newsletter</button>
+        <button class="btn btn-changes" onclick="requestChanges('newsletter-outer','Changes requested on newsletter')">✎ Request Changes</button>
+      </div>
+
+    </div>
+    <div id="newsletter-outer"></div>
+
+  </div>
+
+</main>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ── NAVIGATION ──────────────────────────────────────────────
+function scrollTo(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ── TOAST ───────────────────────────────────────────────────
+function showToast(msg, type = 'green') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// ── GATE A: PACKAGE SELECTION ────────────────────────────────
+let selectedPkg = null;
+
+function selectPackage(el, num) {
+  document.querySelectorAll('.package-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedPkg = num;
+  const bar = document.getElementById('package-selected-bar');
+  bar.classList.add('show');
+  document.getElementById('selected-pkg-num').textContent = String(num).padStart(2, '0');
+  bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── APPROVE GATE A ───────────────────────────────────────────
+function approveGate(cardId, completeId, msg) {
+  if (!selectedPkg) {
+    showToast('Pick a package first!', 'amber');
+    return;
+  }
+  const card = document.getElementById(cardId);
+  card.classList.add('approved');
+  const overlay = document.getElementById(completeId);
+  overlay.classList.add('show');
+  // Hide action buttons
+  document.getElementById('package-selected-bar').style.display = 'none';
+  document.querySelectorAll('.package-card').forEach(c => {
+    if (!c.classList.contains('selected')) c.style.opacity = '0.35';
+  });
+  showToast('✓ Package approved — pipeline continues', 'green');
+}
+
+// ── APPROVE ITEM ─────────────────────────────────────────────
+function approveItem(cardId, msg) {
+  const card = document.getElementById(cardId);
+  if (!card) { showToast(msg || 'Approved', 'green'); return; }
+  card.classList.remove('changes-requested', 'skipped');
+  card.classList.add('approved');
+  // Replace action row with status
+  const existing = card.querySelector('.status-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'status-overlay approved show';
+  overlay.textContent = '✓ ' + (msg || 'Approved');
+  card.appendChild(overlay);
+  hideActionRow(card);
+  showToast(msg || 'Approved ✓', 'green');
+}
+
+function requestChanges(cardId, msg) {
+  const card = document.getElementById(cardId);
+  if (!card) { showToast(msg || 'Changes requested', 'amber'); return; }
+  const note = card.querySelector('.notes-input');
+  const noteVal = note ? note.value.trim() : '';
+  card.classList.remove('approved', 'skipped');
+  card.classList.add('changes-requested');
+  const existing = card.querySelector('.status-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'status-overlay changes show';
+  overlay.textContent = '✎ Changes requested' + (noteVal ? ` — "${noteVal}"` : '');
+  card.appendChild(overlay);
+  hideActionRow(card);
+  showToast(msg || 'Changes flagged', 'amber');
+}
+
+function skipItem(cardId, msg) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  card.classList.remove('approved', 'changes-requested');
+  card.classList.add('skipped');
+  const existing = card.querySelector('.status-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'status-overlay skipped show';
+  overlay.textContent = '— Skipped';
+  card.appendChild(overlay);
+  hideActionRow(card);
+  showToast(msg || 'Skipped', '');
+}
+
+function hideActionRow(card) {
+  const row = card.querySelector('.action-row');
+  if (row) row.style.display = 'none';
+}
+
+// ── APPROVE ALL GATE C ───────────────────────────────────────
+function approveAllGateC() {
+  ['comm-post-card','email-0-card','email-3-card','email-7-card'].forEach(id => {
+    const card = document.getElementById(id);
+    if (card && !card.classList.contains('approved')) {
+      card.classList.add('approved');
+      hideActionRow(card);
+      const existing = card.querySelector('.status-overlay');
+      if (existing) existing.remove();
+      const overlay = document.createElement('div');
+      overlay.className = 'status-overlay approved show';
+      overlay.textContent = '✓ Approved';
+      card.appendChild(overlay);
+    }
+  });
+  showToast('✓ All Gate C items approved — posts queued', 'green');
+}
+
+// ── COPY TO CLIPBOARD ────────────────────────────────────────
+function copyText(btn, targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove('copied');
+    }, 1500);
+    showToast('Copied to clipboard', 'teal');
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+    showToast('Copied to clipboard', 'teal');
+  });
+}
+
+// ── LIBRARY SEARCH ───────────────────────────────────────────
+function filterLibrary(query) {
+  const q = query.toLowerCase().trim();
+  document.querySelectorAll('#library-grid .lib-card').forEach(card => {
+    const title = card.querySelector('.lib-title').textContent.toLowerCase();
+    const tags = (card.dataset.tags || '').toLowerCase();
+    card.style.display = (!q || title.includes(q) || tags.includes(q)) ? '' : 'none';
+  });
+}
+
+// ── ACTIVE NAV HIGHLIGHT ON SCROLL ──────────────────────────
+const sections = ['pending','active','scheduled','library','newsletter'];
+const navMap = {
+  'pending': 0,
+  'active': 1,
+  'scheduled': 2,
+  'library': 3,
+  'newsletter': 4
+};
+
+window.addEventListener('scroll', () => {
+  let current = 'pending';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.scrollY >= el.offsetTop - 80) current = id;
+  });
+  document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === (navMap[current] ?? 0));
+  });
+}, { passive: true });
+</script>
+
+</body>
+</html>

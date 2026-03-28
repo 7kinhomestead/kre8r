@@ -1,0 +1,6 @@
+node_modules/
+.env
+database/kre8r.db
+database/kre8r.db-shm
+database/kre8r.db-wal
+*.log

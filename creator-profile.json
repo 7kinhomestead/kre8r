@@ -1,0 +1,188 @@
+{
+  "instance": "7-kin-homestead",
+  "version": "1.0",
+  "created": "2026-03-28",
+
+  "creator": {
+    "brand": "7 Kin Homestead",
+    "tagline": "Off-grid living. Real numbers. No fluff.",
+    "mission": "Show regular people that financial independence and self-sufficient living are achievable — with real numbers, real mistakes, and zero corporate speak."
+  },
+
+  "platforms": {
+    "tiktok": {
+      "handle": "@7kinhomestead",
+      "followers": 725000,
+      "content_type": "Short clips, hooks, cost breakdowns, homestead moments"
+    },
+    "youtube": {
+      "channel": "7 Kin Homestead",
+      "subscribers": 54000,
+      "content_type": "Long-form builds, full system reveals, how-to guides"
+    },
+    "lemon8": {
+      "handle": "@7kinhomestead",
+      "followers": 80000,
+      "content_type": "Lifestyle, aesthetic homestead content, lists"
+    },
+    "instagram": {
+      "handle": "@7kinhomestead",
+      "content_type": "Reels, behind-the-scenes, community questions"
+    },
+    "facebook": {
+      "page": "7 Kin Homestead",
+      "content_type": "Community discussion, link posts, longer stories"
+    }
+  },
+
+  "community": {
+    "platform": "Kajabi",
+    "name": "ROCK RICH",
+    "url_slug": "rock-rich",
+    "tiers": {
+      "greenhouse": {
+        "label": "The Greenhouse",
+        "emoji": "🌱",
+        "price": "Free",
+        "kajabi_tag": "greenhouse",
+        "description": "Free tier. Curious but not committed. Every touchpoint moves them toward The Garden — never second-class, always welcome.",
+        "email_strategy": {
+          "day3": "Value-add related to video topic. One useful thing they can act on. Soft, natural nudge toward The Garden at the end.",
+          "day7": "The soft pitch. Video as proof of what The Garden delivers. Invitation feels like a friend, not a funnel."
+        }
+      },
+      "garden": {
+        "label": "The Garden",
+        "emoji": "🌿",
+        "price": "$19/month",
+        "kajabi_tag": "garden",
+        "description": "Paid tier. They chose to be here — reward that. Deeper context, exclusive feel, behind-the-scenes.",
+        "email_strategy": {
+          "day3": "Deeper context or behind-the-scenes from the video. Make them feel they get the version nobody else gets.",
+          "day7": "Tease the next video. Community engagement prompt. Reinforce they're in the right place."
+        }
+      },
+      "founding_50": {
+        "label": "The Founding 50",
+        "emoji": "🏆",
+        "price": "$297 one-time",
+        "kajabi_tag": "founding-50",
+        "description": "Inner circle. Limited spots. Early access energy, insider tone. Make them feel they got in on something real.",
+        "email_strategy": {
+          "day3": "Personal note energy. Inner circle acknowledgment. Give them something exclusive — a thought, a resource, a question.",
+          "day7": "Full insider update. What's coming. What they get first. Direct creator energy."
+        }
+      }
+    }
+  },
+
+  "voice": {
+    "summary": "Straight-talking, warm, genuinely funny. The most unserious serious person to ever make a video.",
+    "traits": [
+      "Straight-talking — no hedging, no corporate euphemisms",
+      "Warm — feels like advice from a smart friend, not a content creator",
+      "Genuinely funny — slips jokes in to cut tension when things get heavy",
+      "Mission-driven — genuinely believes self-sufficiency changes lives",
+      "Never corporate — if it sounds like a brand, rewrite it",
+      "Real numbers always — cost breakdowns, ROI math, actual figures"
+    ],
+    "never": [
+      "Corporate language or marketing speak",
+      "Fake enthusiasm or hype",
+      "Vague promises without specifics",
+      "Making free-tier members feel second-class",
+      "Salesy or pushy email tone"
+    ],
+    "email_tone": "Plain text, personal heads-up energy. Feels like a text from a friend who happens to homestead."
+  },
+
+  "content_angles": {
+    "financial": {
+      "label": "Financial Take",
+      "emoji": "💰",
+      "description": "Lead with money — what it costs, what it saves, the ROI math, the real numbers. The audience wants to know if this makes financial sense for a regular person."
+    },
+    "system": {
+      "label": "System Is Rigged",
+      "emoji": "🏛",
+      "description": "Frame around systemic failures — why the mainstream approach doesn't serve regular people, how to opt out and win anyway."
+    },
+    "rockrich": {
+      "label": "Rock Rich Episode",
+      "emoji": "💎",
+      "description": "The art of doing a lot with a little. Resourcefulness and self-sufficiency as a superpower. Not poverty — strategy."
+    },
+    "howto": {
+      "label": "Practical How-To",
+      "emoji": "🔧",
+      "description": "Step-by-step, no fluff. The creator is the guide. Practical, actionable, achievable for a regular person with basic tools."
+    },
+    "mistakes": {
+      "label": "Mistakes / What Not To Do",
+      "emoji": "⚠️",
+      "description": "Hard-won lessons. The creator made the mistakes so the viewer doesn't have to. Self-deprecating but genuinely useful."
+    },
+    "lifestyle": {
+      "label": "Lifestyle / Day-in-Life",
+      "emoji": "🌿",
+      "description": "Bring the viewer into the homestead. Warm, real, showing the texture of the life."
+    },
+    "viral": {
+      "label": "High Curiosity / Viral",
+      "emoji": "⚡",
+      "description": "Open with a provocative question, a surprising fact, or a counterintuitive claim. Designed to stop the scroll."
+    },
+    "community": {
+      "label": "Community Call-to-Action",
+      "emoji": "🤝",
+      "description": "Build toward ROCK RICH. The video makes the viewer feel like they're on the outside of something they want to be part of."
+    }
+  },
+
+  "seasonal_logic": {
+    "winter": ["wood stove", "cold storage", "winter food prep", "heating costs", "firewood"],
+    "spring": ["composting", "garden prep", "seed starting", "soil building", "planting"],
+    "summer": ["harvest", "water systems", "solar", "preservation", "canning"],
+    "autumn": ["root cellar", "harvest storage", "winter prep", "animal care", "firewood"]
+  },
+
+  "existing_integrations": {
+    "suno": {
+      "status": "active",
+      "tier": "Pro",
+      "use": "SoundΩr — AI music generation per scene type"
+    },
+    "marblism": {
+      "status": "active",
+      "use": "GraphΩr — high-quality image and thumbnail generation"
+    },
+    "vidiq": {
+      "status": "active",
+      "use": "ResearchΩr — keyword data and AI coach via Playwright"
+    },
+    "canva": {
+      "status": "active",
+      "use": "GraphΩr — template-based thumbnail generation"
+    },
+    "kajabi": {
+      "status": "active",
+      "use": "MailΩr + Gate C — community posts and email scheduling"
+    },
+    "content365": {
+      "status": "active",
+      "tier": "one-time",
+      "use": "Content calendar scheduling"
+    }
+  },
+
+  "existing_agents": {
+    "blog_writer": "Currently active — do not replace, coordinate",
+    "fb_ig_poster": "Currently active — will be superseded by PostΩr in M5",
+    "email_drafter": "Currently active — do not replace, coordinate"
+  },
+
+  "hardware": {
+    "current": "Local machine",
+    "planned": "DigitalOcean Droplet when stable"
+  }
+}

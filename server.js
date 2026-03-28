@@ -1,0 +1,103 @@
+/**
+ * Kre8\u03a9r — server.js
+ * Express local server for the 7 Kin Homestead instance.
+ * Serves all four prototype tools through a shared SQLite database.
+ *
+ * SINE RESISTENTIA — Create without limits. Distribute without resistance.
+ */
+
+require('dotenv').config();
+
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// ─────────────────────────────────────────────
+// MIDDLEWARE
+// ─────────────────────────────────────────────
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// ─────────────────────────────────────────────
+// STATIC FILES
+// ─────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ─────────────────────────────────────────────
+// API ROUTES
+// ─────────────────────────────────────────────
+app.use('/api/projects', require('./src/routes/projects'));
+app.use('/api/generate', require('./src/routes/generate'));
+
+// Creator profile — served to all tools
+app.get('/api/creator-profile', (req, res) => {
+  try {
+    const profile = JSON.parse(fs.readFileSync(path.join(__dirname, 'creator-profile.json'), 'utf8'));
+    res.json(profile);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not load creator profile' });
+  }
+});
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    instance: '7-kin-homestead',
+    version: '1.0',
+    anthropic_configured: !!process.env.ANTHROPIC_API_KEY
+  });
+});
+
+// ─────────────────────────────────────────────
+// SPA FALLBACK — serve index.html for all non-API routes
+// ─────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ─────────────────────────────────────────────
+// START — async so we can await sql.js init
+// ─────────────────────────────────────────────
+const { initDb } = require('./src/db');
+
+async function start() {
+  try {
+    await initDb();
+    console.log('[DB] SQLite database ready at database/kre8r.db');
+  } catch (err) {
+    console.error('[DB] Failed to initialize database:', err.message);
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    const apiStatus = process.env.ANTHROPIC_API_KEY
+      ? '\x1b[32m✓ Anthropic API key loaded\x1b[0m'
+      : '\x1b[33m⚠ ANTHROPIC_API_KEY not set — add to .env to enable generation\x1b[0m';
+
+    console.log('');
+    console.log('\x1b[36m╔══════════════════════════════════════════╗\x1b[0m');
+    console.log('\x1b[36m║         KRE8\u03a9R — 7 KIN HOMESTEAD         ║\x1b[0m');
+    console.log('\x1b[36m╚══════════════════════════════════════════╝\x1b[0m');
+    console.log('');
+    console.log(`  \x1b[32m▶ Running:\x1b[0m http://localhost:${PORT}`);
+    console.log(`  ${apiStatus}`);
+    console.log('');
+    console.log('  \x1b[2mTools:\x1b[0m');
+    console.log(`  \x1b[2m  Pipeline\u03a9r  →\x1b[0m http://localhost:${PORT}/`);
+    console.log(`  \x1b[2m  M1 Gate\u03a9r  →\x1b[0m http://localhost:${PORT}/m1-approval-dashboard.html`);
+    console.log(`  \x1b[2m  M2 Package\u03a9r →\x1b[0m http://localhost:${PORT}/m2-package-generator.html`);
+    console.log(`  \x1b[2m  M3 Caption\u03a9r →\x1b[0m http://localhost:${PORT}/m3-caption-generator.html`);
+    console.log(`  \x1b[2m  M4 Mail\u03a9r  →\x1b[0m http://localhost:${PORT}/m4-email-generator.html`);
+    console.log('');
+    console.log('  \x1b[2mSINE RESISTENTIA\x1b[0m');
+    console.log('');
+  });
+}
+
+start();
