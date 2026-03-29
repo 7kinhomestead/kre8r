@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — VaultΩr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
+    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10); --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  /* ── NAV ── */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(14,15,14,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;}
+  .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--teal);text-decoration:none;}
+  .logo span{color:var(--text-dimmer);font-size:11px;font-family:var(--font-body);letter-spacing:0.5px;font-weight:500;margin-left:10px;text-transform:uppercase;}
+  .nav{display:flex;gap:4px;align-items:center;}
+  .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
+  .nav a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav a.active{background:var(--teal-glow);color:var(--teal);}
+
+  /* ── LAYOUT ── */
+  .main{max-width:1100px;margin:0 auto;padding:24px 16px 80px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ── PAGE HEADER ── */
+  .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(32px,7vw,52px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;line-height:1.6;}
+
+  /* ── STATUS BAR ── */
+  .status-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;animation:fadeUp 0.4s 0.05s ease both;}
+  .status-pill{display:flex;align-items:center;gap:7px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:500;}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .dot-green{background:var(--green);}
+  .dot-amber{background:var(--amber);}
+  .dot-red{background:var(--red);}
+  .dot-dim{background:var(--text-dimmer);}
+  .status-pill .label{color:var(--text-dim);}
+  .status-pill .val{color:var(--text);}
+
+  /* ── SECTION ── */
+  .section{margin-bottom:36px;}
+  .section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;}
+  .section-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text);}
+  .section-sub{color:var(--text-dim);font-size:13px;}
+
+  /* ── INTAKE PANEL ── */
+  .intake-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;animation:fadeUp 0.4s 0.1s ease both;}
+  .intake-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+  .intake-row label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .intake-input{flex:1;min-width:220px;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 12px;outline:none;transition:border 0.15s;}
+  .intake-input:focus{border-color:var(--teal-dim);}
+  .intake-input::placeholder{color:var(--text-dimmer);}
+  .project-select{width:200px;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 12px;outline:none;cursor:pointer;}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-body);font-size:13px;font-weight:600;padding:9px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .btn-primary{background:var(--teal);color:#0e0f0e;}
+  .btn-primary:hover:not(:disabled){background:var(--teal-dim);}
+  .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
+  .btn-ghost:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-amber{background:transparent;border:1px solid var(--amber);color:var(--amber);}
+  .btn-amber:hover:not(:disabled){background:var(--amber-glow);}
+
+  /* ── PROGRESS ── */
+  .progress-wrap{margin-top:16px;display:none;}
+  .progress-wrap.visible{display:block;}
+  .progress-bar-outer{background:var(--bg-card-2);border-radius:4px;height:6px;margin-bottom:10px;overflow:hidden;}
+  .progress-bar-inner{height:100%;background:var(--teal);border-radius:4px;width:0;transition:width 0.3s ease;}
+  .progress-log{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;max-height:160px;overflow-y:auto;font-size:12px;font-family:monospace;color:var(--text-dim);line-height:1.6;}
+  .progress-log .ok{color:var(--green);}
+  .progress-log .warn{color:var(--amber);}
+  .progress-log .err{color:var(--red);}
+
+  /* ── FILTER BAR ── */
+  .filter-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;animation:fadeUp 0.4s 0.15s ease both;}
+  .filter-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .filter-label{font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-right:2px;}
+  .filter-chip{font-size:12px;font-weight:500;padding:4px 12px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text-dim);cursor:pointer;transition:all 0.15s;}
+  .filter-chip:hover{border-color:var(--border-bright);color:var(--text);}
+  .filter-chip.active{border-color:var(--teal);background:var(--teal-glow);color:var(--teal);}
+  .filter-chip.chip-hero.active{border-color:var(--green);background:var(--green-glow);color:var(--green);}
+  .filter-chip.chip-usable.active{border-color:var(--blue);background:var(--blue-glow);color:var(--blue);}
+  .filter-chip.chip-review.active{border-color:var(--amber);background:var(--amber-glow);color:var(--amber);}
+  .filter-chip.chip-discard.active{border-color:var(--red);background:var(--red-glow);color:var(--red);}
+  .search-wrap{flex:1;min-width:180px;position:relative;}
+  .search-input{width:100%;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:7px 12px 7px 32px;outline:none;transition:border 0.15s;}
+  .search-input:focus{border-color:var(--teal-dim);}
+  .search-input::placeholder{color:var(--text-dimmer);}
+  .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-dimmer);font-size:13px;pointer-events:none;}
+  .search-spinner{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:none;}
+  .search-spinner.visible{display:block;}
+
+  /* ── FOOTAGE GRID ── */
+  .footage-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;animation:fadeUp 0.4s 0.2s ease both;}
+  .footage-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all 0.15s;}
+  .footage-card:hover{border-color:var(--border-bright);transform:translateY(-2px);}
+  .footage-thumb{width:100%;aspect-ratio:16/9;background:var(--bg-card-2);object-fit:cover;display:block;}
+  .footage-thumb-placeholder{width:100%;aspect-ratio:16/9;background:var(--bg-card-2);display:flex;align-items:center;justify-content:center;color:var(--text-dimmer);font-size:28px;}
+  .footage-body{padding:10px 12px;}
+  .footage-filename{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;}
+  .footage-desc{font-size:11px;color:var(--text-dim);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:8px;}
+  .footage-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+  .tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;letter-spacing:0.3px;}
+  .tag-broll{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+  .tag-dialogue{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(91,156,246,0.25);}
+  .tag-talkinghead{background:var(--purple-glow);color:var(--purple);border:1px solid rgba(167,139,250,0.25);}
+  .tag-action{background:var(--amber-glow);color:var(--amber);border:1px solid rgba(240,185,66,0.25);}
+  .tag-unusable{background:var(--red-glow);color:var(--red);border:1px solid rgba(224,92,92,0.25);}
+  .tag-unclassified{background:rgba(255,255,255,0.05);color:var(--text-dimmer);border:1px solid var(--border);}
+  .tag-hero{background:var(--green-glow);color:var(--green);border:1px solid rgba(92,186,138,0.25);}
+  .tag-usable{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(91,156,246,0.25);}
+  .tag-review{background:var(--amber-glow);color:var(--amber);border:1px solid rgba(240,185,66,0.25);}
+  .tag-discard{background:var(--red-glow);color:var(--red);border:1px solid rgba(224,92,92,0.25);}
+  .footage-dur{font-size:10px;color:var(--text-dimmer);margin-left:auto;}
+
+  .footage-empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-dimmer);}
+  .footage-empty-icon{font-size:40px;margin-bottom:12px;}
+  .footage-empty-text{font-size:14px;}
+
+  /* ── MODAL ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--bg-card);border:1px solid var(--border-bright);border-radius:14px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;animation:fadeUp 0.25s ease;}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border);}
+  .modal-title{font-family:var(--font-head);font-size:20px;letter-spacing:1.5px;color:var(--text);}
+  .modal-close{background:none;border:none;color:var(--text-dimmer);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;}
+  .modal-close:hover{color:var(--text);}
+  .modal-body{padding:20px;}
+  .modal-thumb{width:100%;border-radius:var(--radius-sm);margin-bottom:16px;aspect-ratio:16/9;object-fit:cover;background:var(--bg-card-2);}
+  .modal-thumb-placeholder{width:100%;border-radius:var(--radius-sm);margin-bottom:16px;aspect-ratio:16/9;background:var(--bg-card-2);display:flex;align-items:center;justify-content:center;color:var(--text-dimmer);font-size:40px;}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .meta-item{background:var(--bg-card-2);border-radius:var(--radius-sm);padding:10px 12px;}
+  .meta-item label{display:block;font-size:10px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;}
+  .meta-item span{font-size:13px;color:var(--text);}
+  .field-group{margin-bottom:14px;}
+  .field-label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .field-select,.field-textarea{width:100%;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 12px;outline:none;transition:border 0.15s;}
+  .field-select:focus,.field-textarea:focus{border-color:var(--teal-dim);}
+  .field-textarea{resize:vertical;min-height:70px;line-height:1.5;}
+  .modal-actions{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--border);flex-wrap:wrap;}
+  .organize-status{font-size:12px;color:var(--text-dim);margin-left:auto;align-self:center;}
+  .organize-status.done{color:var(--green);}
+
+  /* ── TOAST ── */
+  .toast-wrap{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+  .toast{background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:500;min-width:200px;animation:fadeUp 0.2s ease;pointer-events:auto;}
+  .toast.green{border-left:3px solid var(--green);color:var(--green);}
+  .toast.amber{border-left:3px solid var(--amber);color:var(--amber);}
+  .toast.red{border-left:3px solid var(--red);color:var(--red);}
+
+  /* ── WATCHER STATUS BADGE ── */
+  .watcher-toggle{background:none;border:none;cursor:pointer;padding:0;font-family:var(--font-body);}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="topbar">
+  <a class="logo" href="/">KRE8<span style="color:var(--teal)">Ω</span>R <span>7 Kin Homestead</span></a>
+  <div class="nav">
+    <a href="/">PipelineΩr</a>
+    <a href="/m1-approval-dashboard.html">M1 GateΩr</a>
+    <a href="/m2-package-generator.html">M2 PackageΩr</a>
+    <a href="/m3-caption-generator.html">M3 CaptionΩr</a>
+    <a href="/m4-email-generator.html">M4 MailΩr</a>
+    <a href="/vault.html" class="active">VaultΩr</a>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div class="page-title">VAULT<em>Ω</em>R</div>
+    <div class="page-sub">Footage intelligence database. Ingest, classify, search, and organize every clip.</div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar" id="statusBar">
+    <div class="status-pill">
+      <div class="status-dot dot-dim" id="ffmpegDot"></div>
+      <span class="label">ffmpeg</span>
+      <span class="val" id="ffmpegVal">—</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot dot-dim" id="watcherDot"></div>
+      <span class="label">Watcher</span>
+      <button class="watcher-toggle" id="watcherToggle"><span class="val" id="watcherVal">—</span></button>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot dot-green"></div>
+      <span class="label">Total clips</span>
+      <span class="val" id="totalClips">—</span>
+    </div>
+    <div class="status-pill" id="statHero" style="display:none">
+      <div class="status-dot dot-green"></div>
+      <span class="label">Hero</span>
+      <span class="val" id="heroCount">0</span>
+    </div>
+    <div class="status-pill" id="statBroll" style="display:none">
+      <div class="status-dot" style="background:var(--teal)"></div>
+      <span class="label">B-roll</span>
+      <span class="val" id="brollCount">0</span>
+    </div>
+  </div>
+
+  <!-- Intake -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">INGEST FOLDER</div>
+      <div class="section-sub">Scan a folder for video files and classify with Claude Vision</div>
+    </div>
+    <div class="intake-panel">
+      <div class="intake-row">
+        <div style="flex:1;min-width:200px;">
+          <label>Folder path</label>
+          <input class="intake-input" id="folderPathInput" type="text" placeholder="C:/Users/18054/Videos/intake" />
+        </div>
+        <div>
+          <label>Link to project (optional)</label>
+          <select class="project-select" id="projectSelect">
+            <option value="">— None —</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="ingestBtn" onclick="startIngest()">
+          ▶ Ingest
+        </button>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar"></div></div>
+        <div class="progress-log" id="progressLog"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footage library -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">FOOTAGE LIBRARY</div>
+      <div class="section-sub" id="footageCount">Loading…</div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">Type</span>
+        <button class="filter-chip active" data-shot="all" onclick="setFilter('shot','all',this)">All</button>
+        <button class="filter-chip" data-shot="b-roll" onclick="setFilter('shot','b-roll',this)">B-roll</button>
+        <button class="filter-chip" data-shot="talking-head" onclick="setFilter('shot','talking-head',this)">Talking Head</button>
+        <button class="filter-chip" data-shot="dialogue" onclick="setFilter('shot','dialogue',this)">Dialogue</button>
+        <button class="filter-chip" data-shot="action" onclick="setFilter('shot','action',this)">Action</button>
+        <button class="filter-chip" data-shot="unusable" onclick="setFilter('shot','unusable',this)">Unusable</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Quality</span>
+        <button class="filter-chip active" data-quality="all" onclick="setFilter('quality','all',this)">All</button>
+        <button class="filter-chip chip-hero" data-quality="hero" onclick="setFilter('quality','hero',this)">Hero</button>
+        <button class="filter-chip chip-usable" data-quality="usable" onclick="setFilter('quality','usable',this)">Usable</button>
+        <button class="filter-chip chip-review" data-quality="review" onclick="setFilter('quality','review',this)">Review</button>
+        <button class="filter-chip chip-discard" data-quality="discard" onclick="setFilter('quality','discard',this)">Discard</button>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="search-input" id="searchInput" type="text" placeholder="wide garden shots, hero b-roll…" />
+        <svg class="search-spinner" id="searchSpinner" width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="5.5" stroke="var(--teal)" stroke-width="1.5" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round">
+            <animateTransform attributeName="transform" type="rotate" from="0 7 7" to="360 7 7" dur="0.7s" repeatCount="indefinite"/>
+          </circle>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div class="footage-grid" id="footageGrid">
+      <div class="footage-empty">
+        <div class="footage-empty-icon">🎬</div>
+        <div class="footage-empty-text">Loading footage…</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── CLIP MODAL ── -->
+<div class="modal-overlay" id="clipModal" onclick="closeModalIfOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">CLIP DETAIL</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <img class="modal-thumb" id="modalThumb" src="" alt="" onerror="this.style.display='none';document.getElementById('modalThumbPlaceholder').style.display='flex'" />
+      <div class="modal-thumb-placeholder" id="modalThumbPlaceholder" style="display:none">🎬</div>
+
+      <div class="meta-grid">
+        <div class="meta-item"><label>Duration</label><span id="modalDuration">—</span></div>
+        <div class="meta-item"><label>Resolution</label><span id="modalResolution">—</span></div>
+        <div class="meta-item"><label>Codec</label><span id="modalCodec">—</span></div>
+        <div class="meta-item"><label>File size</label><span id="modalSize">—</span></div>
+        <div class="meta-item" style="grid-column:1/-1"><label>Original file</label><span id="modalFilepath" style="font-size:11px;word-break:break-all;color:var(--text-dim)">—</span></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Shot type</label>
+        <select class="field-select" id="modalShotType">
+          <option value="">— unclassified —</option>
+          <option value="b-roll">B-roll</option>
+          <option value="talking-head">Talking Head</option>
+          <option value="dialogue">Dialogue</option>
+          <option value="action">Action</option>
+          <option value="unusable">Unusable</option>
+        </select>
+      </div>
+
+      <div class="field-group" id="subcategoryGroup">
+        <label class="field-label">Subcategory <span style="font-weight:400;color:var(--text-dimmer)">(b-roll only)</span></label>
+        <select class="field-select" id="modalSubcategory">
+          <option value="">— none —</option>
+          <option value="wide">Wide</option>
+          <option value="medium">Medium</option>
+          <option value="close-up">Close-up</option>
+          <option value="detail">Detail</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Quality flag</label>
+        <select class="field-select" id="modalQuality">
+          <option value="">— unclassified —</option>
+          <option value="hero">Hero</option>
+          <option value="usable">Usable</option>
+          <option value="review">Review</option>
+          <option value="discard">Discard</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Description</label>
+        <textarea class="field-textarea" id="modalDescription" rows="3" placeholder="What is visible in this clip?"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveClipEdits()">Save changes</button>
+      <button class="btn btn-ghost" id="organizeBtn" onclick="organizeClip()">Organize file</button>
+      <span class="organize-status" id="organizeStatus"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOASTS ── -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let allFootage      = [];
+let filteredFootage = [];
+let activeFilters   = { shot: 'all', quality: 'all' };
+let searchDebounce  = null;
+let currentClip     = null;
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadStatus();
+  loadProjects();
+  loadFootage();
+
+  // Natural language search with 600ms debounce
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    clearTimeout(searchDebounce);
+    const q = e.target.value.trim();
+    if (!q) {
+      renderGrid(applyFilters(allFootage));
+      return;
+    }
+    searchDebounce = setTimeout(() => runSearch(q), 600);
+  });
+
+  // Subcategory visibility
+  document.getElementById('modalShotType').addEventListener('change', (e) => {
+    document.getElementById('subcategoryGroup').style.opacity = e.target.value === 'b-roll' ? '1' : '0.4';
+  });
+});
+
+// ── STATUS ─────────────────────────────────────────────────────────────────
+async function loadStatus() {
+  try {
+    const [status, watcher] = await Promise.all([
+      fetch('/api/vault/status').then(r => r.json()),
+      fetch('/api/vault/watcher').then(r => r.json())
+    ]);
+
+    // ffmpeg
+    const ffDot = document.getElementById('ffmpegDot');
+    const ffVal = document.getElementById('ffmpegVal');
+    if (status.ffmpeg) { ffDot.className = 'status-dot dot-green'; ffVal.textContent = 'OK'; }
+    else               { ffDot.className = 'status-dot dot-amber'; ffVal.textContent = 'Not installed'; }
+
+    // total
+    document.getElementById('totalClips').textContent = status.total ?? 0;
+
+    // hero count
+    const heroRow  = (status.by_quality  || []).find(r => r.quality_flag === 'hero');
+    const brollRow = (status.by_shot_type || []).find(r => r.shot_type === 'b-roll');
+    if (heroRow)  { document.getElementById('heroCount').textContent  = heroRow.n;  document.getElementById('statHero').style.display  = 'flex'; }
+    if (brollRow) { document.getElementById('brollCount').textContent = brollRow.n; document.getElementById('statBroll').style.display = 'flex'; }
+
+    // watcher
+    updateWatcherUI(watcher);
+  } catch(e) {
+    console.error('Status load failed:', e);
+  }
+}
+
+function updateWatcherUI(watcher) {
+  const dot = document.getElementById('watcherDot');
+  const val = document.getElementById('watcherVal');
+  if (watcher.running) {
+    dot.className = 'status-dot dot-green';
+    val.textContent = 'Watching';
+    document.getElementById('watcherToggle').title = 'Click to stop watcher';
+  } else {
+    dot.className = 'status-dot dot-amber';
+    val.textContent = 'Off — click to start';
+    document.getElementById('watcherToggle').title = 'Click to start watcher';
+  }
+}
+
+document.getElementById('watcherToggle').addEventListener('click', async () => {
+  const watcher = await fetch('/api/vault/watcher').then(r => r.json());
+  if (watcher.running) {
+    await fetch('/api/vault/watcher/stop', { method: 'POST' });
+    showToast('Watcher stopped', 'amber');
+  } else {
+    const r = await fetch('/api/vault/watcher/start', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' }).then(r => r.json());
+    if (r.ok) showToast('Watcher started → ' + r.path, 'green');
+    else      showToast('Watcher error: ' + r.error, 'red');
+  }
+  const updated = await fetch('/api/vault/watcher').then(r => r.json());
+  updateWatcherUI(updated);
+});
+
+// ── PROJECTS ───────────────────────────────────────────────────────────────
+async function loadProjects() {
+  try {
+    const projects = await fetch('/api/projects').then(r => r.json());
+    const sel = document.getElementById('projectSelect');
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title;
+      sel.appendChild(opt);
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
+// ── FOOTAGE LOAD ───────────────────────────────────────────────────────────
+async function loadFootage() {
+  try {
+    allFootage = await fetch('/api/vault/footage').then(r => r.json());
+    filteredFootage = applyFilters(allFootage);
+    renderGrid(filteredFootage);
+    updateFootageCount(filteredFootage.length, allFootage.length);
+  } catch(e) {
+    document.getElementById('footageGrid').innerHTML = '<div class="footage-empty"><div class="footage-empty-icon">⚠</div><div class="footage-empty-text">Failed to load footage</div></div>';
+  }
+}
+
+// ── FILTERS ────────────────────────────────────────────────────────────────
+function setFilter(type, value, el) {
+  activeFilters[type] = value;
+  // Update chip active states
+  el.closest('.filter-group').querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  // Clear search
+  document.getElementById('searchInput').value = '';
+  filteredFootage = applyFilters(allFootage);
+  renderGrid(filteredFootage);
+  updateFootageCount(filteredFootage.length, allFootage.length);
+}
+
+function applyFilters(footage) {
+  return footage.filter(f => {
+    if (activeFilters.shot    !== 'all' && f.shot_type    !== activeFilters.shot)    return false;
+    if (activeFilters.quality !== 'all' && f.quality_flag !== activeFilters.quality) return false;
+    return true;
+  });
+}
+
+function updateFootageCount(shown, total) {
+  const el = document.getElementById('footageCount');
+  if (shown === total) el.textContent = `${total} clip${total !== 1 ? 's' : ''}`;
+  else                 el.textContent = `${shown} of ${total} clips`;
+}
+
+// ── SEARCH ─────────────────────────────────────────────────────────────────
+async function runSearch(q) {
+  document.getElementById('searchSpinner').classList.add('visible');
+  try {
+    const results = await fetch('/api/vault/search', {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({ q })
+    }).then(r => r.json());
+
+    if (results.error) { showToast(results.error, 'amber'); return; }
+    renderGrid(results);
+    updateFootageCount(results.length, allFootage.length);
+  } catch(e) {
+    showToast('Search failed: ' + e.message, 'red');
+  } finally {
+    document.getElementById('searchSpinner').classList.remove('visible');
+  }
+}
+
+// ── RENDER GRID ────────────────────────────────────────────────────────────
+function renderGrid(footage) {
+  const grid = document.getElementById('footageGrid');
+  if (!footage.length) {
+    grid.innerHTML = '<div class="footage-empty"><div class="footage-empty-icon">🎬</div><div class="footage-empty-text">No clips match your filters.</div></div>';
+    return;
+  }
+
+  grid.innerHTML = footage.map(f => {
+    const shotTag     = shotTypeTag(f.shot_type);
+    const qualityTag  = qualityTag2(f.quality_flag);
+    const dur         = f.duration ? formatDuration(f.duration) : null;
+    const thumbHtml   = f.thumbnail_path
+      ? `<img class="footage-thumb" src="${escHtml(f.thumbnail_path)}" alt="" loading="lazy">`
+      : `<div class="footage-thumb-placeholder">🎬</div>`;
+
+    return `<div class="footage-card" onclick="openModal(${f.id})">
+      ${thumbHtml}
+      <div class="footage-body">
+        <div class="footage-filename">${escHtml(f.original_filename || f.file_path.split('/').pop())}</div>
+        ${f.description ? `<div class="footage-desc">${escHtml(f.description)}</div>` : '<div class="footage-desc" style="color:var(--text-dimmer);font-style:italic">Not classified</div>'}
+        <div class="footage-tags">
+          ${shotTag}
+          ${qualityTag}
+          ${dur ? `<span class="footage-dur">${dur}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function shotTypeTag(type) {
+  const map = {
+    'b-roll':       'tag-broll',
+    'dialogue':     'tag-dialogue',
+    'talking-head': 'tag-talkinghead',
+    'action':       'tag-action',
+    'unusable':     'tag-unusable'
+  };
+  const cls = map[type] || 'tag-unclassified';
+  return `<span class="tag ${cls}">${type || 'unclassified'}</span>`;
+}
+
+function qualityTag2(flag) {
+  const map = { hero:'tag-hero', usable:'tag-usable', review:'tag-review', discard:'tag-discard' };
+  if (!flag) return '';
+  return `<span class="tag ${map[flag] || 'tag-unclassified'}">${flag}</span>`;
+}
+
+function formatDuration(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function openModal(id) {
+  currentClip = allFootage.find(f => f.id === id);
+  if (!currentClip) return;
+  const f = currentClip;
+
+  document.getElementById('modalTitle').textContent = f.original_filename || 'CLIP DETAIL';
+
+  // Thumbnail
+  const thumb = document.getElementById('modalThumb');
+  const placeholder = document.getElementById('modalThumbPlaceholder');
+  if (f.thumbnail_path) {
+    thumb.src = f.thumbnail_path;
+    thumb.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    thumb.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
+
+  // Meta
+  document.getElementById('modalDuration').textContent   = f.duration ? formatDuration(f.duration) : '—';
+  document.getElementById('modalResolution').textContent = f.resolution || '—';
+  document.getElementById('modalCodec').textContent      = f.codec || '—';
+  document.getElementById('modalSize').textContent       = formatBytes(f.file_size);
+  document.getElementById('modalFilepath').textContent   = f.file_path || '—';
+
+  // Editable fields
+  document.getElementById('modalShotType').value    = f.shot_type    || '';
+  document.getElementById('modalSubcategory').value = f.subcategory  || '';
+  document.getElementById('modalQuality').value     = f.quality_flag || '';
+  document.getElementById('modalDescription').value = f.description  || '';
+
+  // Subcategory opacity
+  document.getElementById('subcategoryGroup').style.opacity = f.shot_type === 'b-roll' ? '1' : '0.4';
+
+  // Organize status
+  const orgStatus = document.getElementById('organizeStatus');
+  if (f.organized_path) {
+    orgStatus.className = 'organize-status done';
+    orgStatus.textContent = '✓ Organized';
+  } else {
+    orgStatus.className = 'organize-status';
+    orgStatus.textContent = '';
+  }
+
+  document.getElementById('clipModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('clipModal').classList.remove('open');
+  currentClip = null;
+}
+
+function closeModalIfOverlay(e) {
+  if (e.target === document.getElementById('clipModal')) closeModal();
+}
+
+// ── SAVE EDITS ─────────────────────────────────────────────────────────────
+async function saveClipEdits() {
+  if (!currentClip) return;
+  const body = {
+    shot_type:    document.getElementById('modalShotType').value     || null,
+    subcategory:  document.getElementById('modalSubcategory').value  || null,
+    quality_flag: document.getElementById('modalQuality').value      || null,
+    description:  document.getElementById('modalDescription').value.trim() || null
+  };
+  try {
+    const res = await fetch(`/api/vault/footage/${currentClip.id}`, {
+      method:  'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify(body)
+    });
+    if (res.ok) {
+      // Update local cache
+      Object.assign(currentClip, body);
+      const idx = allFootage.findIndex(f => f.id === currentClip.id);
+      if (idx >= 0) Object.assign(allFootage[idx], body);
+      renderGrid(applyFilters(allFootage));
+      showToast('Changes saved', 'green');
+      closeModal();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast('Save failed: ' + (err.error || res.status), 'red');
+    }
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'red');
+  }
+}
+
+// ── ORGANIZE CLIP ──────────────────────────────────────────────────────────
+async function organizeClip() {
+  if (!currentClip) return;
+  const btn = document.getElementById('organizeBtn');
+  btn.disabled = true;
+  btn.textContent = 'Organizing…';
+  try {
+    const res  = await fetch(`/api/vault/footage/${currentClip.id}/organize`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok && !data.skipped) {
+      currentClip.organized_path = data.organized_path;
+      const idx = allFootage.findIndex(f => f.id === currentClip.id);
+      if (idx >= 0) allFootage[idx].organized_path = data.organized_path;
+      document.getElementById('organizeStatus').className = 'organize-status done';
+      document.getElementById('organizeStatus').textContent = '✓ Organized';
+      showToast('File organized', 'green');
+    } else if (data.skipped) {
+      showToast('Already organized', 'amber');
+    } else {
+      showToast('Organize failed: ' + (data.error || 'unknown error'), 'red');
+    }
+  } catch(e) {
+    showToast('Organize failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Organize file';
+  }
+}
+
+// ── INGEST ─────────────────────────────────────────────────────────────────
+async function startIngest() {
+  const folderPath = document.getElementById('folderPathInput').value.trim();
+  if (!folderPath) { showToast('Enter a folder path', 'amber'); return; }
+
+  const projectId = document.getElementById('projectSelect').value || null;
+  const btn       = document.getElementById('ingestBtn');
+  const wrap      = document.getElementById('progressWrap');
+  const bar       = document.getElementById('progressBar');
+  const log       = document.getElementById('progressLog');
+
+  btn.disabled = true;
+  btn.textContent = 'Ingesting…';
+  wrap.classList.add('visible');
+  log.innerHTML = '';
+  bar.style.width = '0%';
+
+  const addLog = (cls, text) => {
+    log.innerHTML += `<div class="${cls}">${escHtml(text)}</div>`;
+    log.scrollTop = log.scrollHeight;
+  };
+
+  try {
+    const response = await fetch('/api/vault/ingest', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+      body:    JSON.stringify({ folder_path: folderPath, project_id: projectId })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      addLog('err', '✗ ' + (err.error || 'Server error ' + response.status));
+      return;
+    }
+
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let total = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        let evt;
+        try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+
+        if (evt.stage === 'discovered') {
+          total = evt.total;
+          addLog('', `Found ${total} video file${total !== 1 ? 's' : ''}`);
+        } else if (evt.stage === 'processing') {
+          const pct = Math.round((evt.index / total) * 80);
+          bar.style.width = pct + '%';
+          addLog('', `[${evt.index}/${total}] ${evt.file}`);
+        } else if (evt.stage === 'classified') {
+          const cls = evt.classification;
+          if (cls?.shot_type) addLog('ok', `  → ${cls.shot_type} · ${cls.quality_flag || '?'}`);
+        } else if (evt.stage === 'saved') {
+          addLog('ok', `  ✓ Saved (id=${evt.id})`);
+        } else if (evt.stage === 'done') {
+          bar.style.width = '100%';
+          const s = evt.summary;
+          addLog('ok', `Done — ${s.processed} ingested, ${s.skipped} skipped, ${s.errors?.length || 0} errors`);
+          // Reload footage
+          await loadFootage();
+          await loadStatus();
+        }
+      }
+    }
+  } catch(e) {
+    addLog('err', '✗ ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Ingest';
+  }
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type = 'green') {
+  const wrap = document.getElementById('toastWrap');
+  const el   = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
+</body>
+</html>

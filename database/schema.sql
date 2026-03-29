@@ -86,21 +86,23 @@ CREATE TABLE IF NOT EXISTS shots (
 -- Every clip in the VaultΩr. Heart of EditΩr.
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS footage (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id      INTEGER,  -- nullable — footage can exist before project assignment
-  file_path       TEXT NOT NULL,
-  original_filename TEXT,
-  shot_type       TEXT,
-  subcategory     TEXT,
-  description     TEXT,
-  duration        REAL,
-  resolution      TEXT,
-  codec           TEXT,
-  file_size       INTEGER,
-  thumbnail_path  TEXT,
-  quality_flag    TEXT,      -- hero | usable | review | discard
-  used_in         TEXT NOT NULL DEFAULT '[]',  -- JSON array of project_ids
-  ingested_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id          INTEGER,   -- nullable — footage can exist before project assignment
+  file_path           TEXT NOT NULL,
+  original_filename   TEXT,
+  shot_type           TEXT,      -- dialogue | talking-head | b-roll | action | unusable
+  subcategory         TEXT,      -- wide | medium | close-up | detail (b-roll only, else null)
+  description         TEXT,      -- Claude Vision content description
+  duration            REAL,      -- seconds
+  resolution          TEXT,      -- e.g. "3840x2160"
+  codec               TEXT,
+  file_size           INTEGER,   -- bytes
+  creation_timestamp  TEXT,      -- from file metadata
+  thumbnail_path      TEXT,      -- path to extracted thumbnail
+  quality_flag        TEXT,      -- hero | usable | review | discard
+  organized_path      TEXT,      -- destination path after folder reorganization (null until organized)
+  used_in             TEXT NOT NULL DEFAULT '[]',  -- JSON array of project_ids
+  ingested_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 

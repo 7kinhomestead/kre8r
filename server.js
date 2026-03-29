@@ -33,6 +33,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ─────────────────────────────────────────────
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/generate', require('./src/routes/generate'));
+app.use('/api/vault',    require('./src/routes/vault'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
@@ -66,6 +67,8 @@ app.get('/', (req, res) => {
 // ─────────────────────────────────────────────
 const { initDb } = require('./src/db');
 
+const { startWatcher } = require('./src/vault/watcher');
+
 async function start() {
   try {
     await initDb();
@@ -73,6 +76,12 @@ async function start() {
   } catch (err) {
     console.error('[DB] Failed to initialize database:', err.message);
     process.exit(1);
+  }
+
+  // Start VaultΩr folder watcher (non-fatal if intake folder missing)
+  const watchResult = startWatcher();
+  if (!watchResult.ok) {
+    console.warn(`[VaultΩr Watcher] ${watchResult.error}`);
   }
 
   app.listen(PORT, () => {
@@ -94,6 +103,7 @@ async function start() {
     console.log(`  \x1b[2m  M2 Package\u03a9r →\x1b[0m http://localhost:${PORT}/m2-package-generator.html`);
     console.log(`  \x1b[2m  M3 Caption\u03a9r →\x1b[0m http://localhost:${PORT}/m3-caption-generator.html`);
     console.log(`  \x1b[2m  M4 Mail\u03a9r  →\x1b[0m http://localhost:${PORT}/m4-email-generator.html`);
+    console.log(`  \x1b[2m  Vault\u03a9r    →\x1b[0m http://localhost:${PORT}/vault.html`);
     console.log('');
     console.log('  \x1b[2mSINE RESISTENTIA\x1b[0m');
     console.log('');

@@ -184,5 +184,12 @@
   "hardware": {
     "current": "Local machine",
     "planned": "DigitalOcean Droplet when stable"
+  },
+
+  "vault": {
+    "intake_folder": "C:/Users/18054/Videos/intake",
+    "organized_folder": "C:/Users/18054/Videos/organized",
+    "supported_extensions": [".mp4", ".mov", ".mts", ".avi", ".mkv"],
+    "thumbnail_quality": 85
   }
 }

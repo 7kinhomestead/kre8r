@@ -30,8 +30,25 @@ async function initDb() {
   db.run('PRAGMA foreign_keys=ON');
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
   db.exec(schema);
+  runMigrations();
   persist();
   return db;
+}
+
+function runMigrations() {
+  // Add columns to footage table that were introduced in Phase 2.
+  // ALTER TABLE ADD COLUMN is safe on existing data — new rows get NULL.
+  const footageCols = (db.exec('PRAGMA table_info(footage)')[0]?.values || [])
+    .map(r => r[1]);
+
+  if (!footageCols.includes('creation_timestamp')) {
+    db.run('ALTER TABLE footage ADD COLUMN creation_timestamp TEXT');
+    console.log('[DB] Migration: added footage.creation_timestamp');
+  }
+  if (!footageCols.includes('organized_path')) {
+    db.run('ALTER TABLE footage ADD COLUMN organized_path TEXT');
+    console.log('[DB] Migration: added footage.organized_path');
+  }
 }
 
 function persist() {
@@ -265,6 +282,86 @@ function approveAllEmails(projectId) {
 }
 
 // ─────────────────────────────────────────────
+// FOOTAGE HELPERS (VaultΩr)
+// ─────────────────────────────────────────────
+
+function insertFootage(record) {
+  const result = _run(
+    `INSERT INTO footage
+       (project_id, file_path, original_filename, shot_type, subcategory, description,
+        duration, resolution, codec, file_size, creation_timestamp,
+        thumbnail_path, quality_flag, organized_path, used_in)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      record.project_id || null,
+      record.file_path,
+      record.original_filename || null,
+      record.shot_type || null,
+      record.subcategory || null,
+      record.description || null,
+      record.duration || null,
+      record.resolution || null,
+      record.codec || null,
+      record.file_size || null,
+      record.creation_timestamp || null,
+      record.thumbnail_path || null,
+      record.quality_flag || null,
+      record.organized_path || null,
+      record.used_in || '[]'
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function updateFootage(id, fields) {
+  const allowed = [
+    'shot_type', 'subcategory', 'description', 'quality_flag',
+    'organized_path', 'thumbnail_path', 'project_id', 'used_in'
+  ];
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (updates.length === 0) return;
+  const setClauses = updates.map(k => `${k} = ?`).join(', ');
+  const values = updates.map(k => fields[k]);
+  _run(`UPDATE footage SET ${setClauses} WHERE id = ?`, [...values, id]);
+  persist();
+}
+
+function getFootageById(id) {
+  return _get(`SELECT * FROM footage WHERE id = ?`, [id]);
+}
+
+function getAllFootage({ shot_type, quality_flag, project_id } = {}) {
+  let sql = `SELECT * FROM footage WHERE 1=1`;
+  const params = [];
+  if (shot_type)    { sql += ` AND shot_type = ?`;    params.push(shot_type); }
+  if (quality_flag) { sql += ` AND quality_flag = ?`; params.push(quality_flag); }
+  if (project_id)   { sql += ` AND project_id = ?`;   params.push(project_id); }
+  sql += ` ORDER BY ingested_at DESC`;
+  return _all(sql, params);
+}
+
+function searchFootageByWhere(whereClause) {
+  // whereClause is a Claude-generated SQL WHERE fragment
+  // Sanitize: must not contain semicolons or common injection patterns
+  if (/;|--|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b/i.test(whereClause)) {
+    throw new Error('Invalid WHERE clause');
+  }
+  return _all(`SELECT * FROM footage WHERE ${whereClause} ORDER BY ingested_at DESC`);
+}
+
+function getFootageStats() {
+  const total    = _get(`SELECT COUNT(*) as n FROM footage`);
+  const byType   = _all(`SELECT shot_type, COUNT(*) as n FROM footage GROUP BY shot_type`);
+  const byQuality = _all(`SELECT quality_flag, COUNT(*) as n FROM footage GROUP BY quality_flag`);
+  return { total: total?.n || 0, by_shot_type: byType, by_quality: byQuality };
+}
+
+function footageFilePathExists(filePath) {
+  return !!_get(`SELECT id FROM footage WHERE file_path = ?`, [filePath]);
+}
+
+// ─────────────────────────────────────────────
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
 
@@ -294,5 +391,13 @@ module.exports = {
   saveEmails,
   getEmails,
   approveAllEmails,
-  getPipelineSummary
+  getPipelineSummary,
+  // VaultΩr
+  insertFootage,
+  updateFootage,
+  getFootageById,
+  getAllFootage,
+  searchFootageByWhere,
+  getFootageStats,
+  footageFilePathExists
 };
