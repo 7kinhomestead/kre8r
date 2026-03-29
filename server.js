@@ -6,7 +6,7 @@
  * SINE RESISTENTIA — Create without limits. Distribute without resistance.
  */
 
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const express = require('express');
 const cors = require('cors');
@@ -34,6 +34,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/generate', require('./src/routes/generate'));
 app.use('/api/vault',    require('./src/routes/vault'));
+app.use('/api/cutor',    require('./src/routes/cutor'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

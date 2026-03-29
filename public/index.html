@@ -133,6 +133,7 @@
     <a href="m3-caption-generator.html" class="m-tag m3">M3 Captions</a>
     <a href="m4-email-generator.html" class="m-tag m4">M4 Emails</a>
     <a href="vault.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">VaultΩr</a>
+    <a href="reviewr.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">ReviewΩr</a>
   </div>
 </nav>
 
@@ -147,6 +148,16 @@
 
   <!-- QUICK ACTIONS -->
   <div class="quick-actions">
+    <a href="vault.html" class="qa-card c-teal">
+      <div class="qa-icon">🎬</div>
+      <div class="qa-label">VAULT + CUT</div>
+      <div class="qa-sub">Ingest footage, transcribe, identify cuts</div>
+    </a>
+    <a href="reviewr.html" class="qa-card c-teal">
+      <div class="qa-icon">✂️</div>
+      <div class="qa-label">REVIEW<span style="font-size:10px">Ω</span>R</div>
+      <div class="qa-sub">Approve clips, extract with ffmpeg</div>
+    </a>
     <a href="m2-package-generator.html" class="qa-card c-teal">
       <div class="qa-icon">📦</div>
       <div class="qa-label">M2 PACKAGES</div>
@@ -243,6 +254,16 @@ function renderPipeline(projects) {
       ? '<span class="gate-pill done">✓ Gate C</span>'
       : (p.approved_emails > 0 ? '<span class="gate-pill waiting">⚡ Gate C</span>' : '<span class="gate-pill pending">Gate C</span>');
 
+    const cutPill = p.extracted_clips > 0
+      ? `<span class="gate-pill done">✓ ${p.extracted_clips} clip${p.extracted_clips !== 1 ? 's' : ''} extracted</span>`
+      : p.approved_cuts > 0
+        ? `<span class="gate-pill waiting">⚡ ${p.approved_cuts} approved</span>`
+        : p.social_cuts > 0
+          ? `<span class="gate-pill pending">${p.social_cuts} cuts identified</span>`
+          : p.footage_count > 0
+            ? '<span class="gate-pill pending">Footage ready</span>'
+            : '';
+
     const dateStr = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
     card.innerHTML = `
@@ -254,11 +275,12 @@ function renderPipeline(projects) {
           ${p.youtube_url ? ` · <a href="${escHtml(p.youtube_url)}" target="_blank" style="color:var(--teal);font-size:11px;">YouTube ↗</a>` : ''}
         </div>
         <div class="gate-pills">
-          ${gateA}${gateB}${gateC}
+          ${cutPill}${gateA}${gateB}${gateC}
         </div>
       </div>
       <div class="project-actions">
         <div class="stage-badge">${escHtml(p.current_stage)}</div>
+        <a href="reviewr.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">CutΩr →</a>
         <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">M2 →</a>
         <a href="m1-approval-dashboard.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">Gates →</a>
       </div>

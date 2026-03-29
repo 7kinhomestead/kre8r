@@ -18,6 +18,10 @@ const crypto = require('crypto');
 
 const db = require('../db');
 
+// Point fluent-ffmpeg at the installed binaries if PATH doesn't have them
+if (process.env.FFMPEG_PATH)  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
+if (process.env.FFPROBE_PATH) ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
+
 const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv']);
 const THUMBNAIL_DIR = path.join(__dirname, '..', '..', 'public', 'thumbnails');
 const ANTHROPIC_VERSION = '2023-06-01';

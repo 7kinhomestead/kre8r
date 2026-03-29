@@ -49,6 +49,25 @@ function runMigrations() {
     db.run('ALTER TABLE footage ADD COLUMN organized_path TEXT');
     console.log('[DB] Migration: added footage.organized_path');
   }
+  if (!footageCols.includes('transcript_path')) {
+    db.run('ALTER TABLE footage ADD COLUMN transcript_path TEXT');
+    console.log('[DB] Migration: added footage.transcript_path');
+  }
+
+  // CutΩr columns on cuts table
+  const cutsCols = (db.exec('PRAGMA table_info(cuts)')[0]?.values || []).map(r => r[1]);
+  if (!cutsCols.includes('reasoning')) {
+    db.run('ALTER TABLE cuts ADD COLUMN reasoning TEXT');
+    console.log('[DB] Migration: added cuts.reasoning');
+  }
+  if (!cutsCols.includes('clip_path')) {
+    db.run('ALTER TABLE cuts ADD COLUMN clip_path TEXT');
+    console.log('[DB] Migration: added cuts.clip_path');
+  }
+  if (!cutsCols.includes('rank')) {
+    db.run('ALTER TABLE cuts ADD COLUMN rank INTEGER');
+    console.log('[DB] Migration: added cuts.rank');
+  }
 }
 
 function persist() {
@@ -116,7 +135,11 @@ function getAllProjects() {
            ps.stage_status,
            (SELECT COUNT(*) FROM packages WHERE project_id = p.id) as package_count,
            (SELECT COUNT(*) FROM captions WHERE project_id = p.id AND approved = 1) as approved_captions,
-           (SELECT COUNT(*) FROM emails WHERE project_id = p.id AND approved = 1) as approved_emails
+           (SELECT COUNT(*) FROM emails WHERE project_id = p.id AND approved = 1) as approved_emails,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND cut_type = 'social') as social_cuts,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND cut_type = 'social' AND approved = 1) as approved_cuts,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND clip_path IS NOT NULL) as extracted_clips,
+           (SELECT COUNT(*) FROM footage WHERE project_id = p.id) as footage_count
     FROM projects p
     LEFT JOIN pipeline_state ps ON ps.project_id = p.id
     WHERE p.status != 'archived'
@@ -290,8 +313,8 @@ function insertFootage(record) {
     `INSERT INTO footage
        (project_id, file_path, original_filename, shot_type, subcategory, description,
         duration, resolution, codec, file_size, creation_timestamp,
-        thumbnail_path, quality_flag, organized_path, used_in)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        thumbnail_path, quality_flag, organized_path, used_in, transcript_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.project_id || null,
       record.file_path,
@@ -307,7 +330,8 @@ function insertFootage(record) {
       record.thumbnail_path || null,
       record.quality_flag || null,
       record.organized_path || null,
-      record.used_in || '[]'
+      record.used_in || '[]',
+      record.transcript_path || null
     ]
   );
   persist();
@@ -317,7 +341,7 @@ function insertFootage(record) {
 function updateFootage(id, fields) {
   const allowed = [
     'shot_type', 'subcategory', 'description', 'quality_flag',
-    'organized_path', 'thumbnail_path', 'project_id', 'used_in'
+    'organized_path', 'thumbnail_path', 'project_id', 'used_in', 'transcript_path'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return;
@@ -362,6 +386,87 @@ function footageFilePathExists(filePath) {
 }
 
 // ─────────────────────────────────────────────
+// CUTS HELPERS (CutΩr)
+// ─────────────────────────────────────────────
+
+function insertCut(cut) {
+  const result = _run(
+    `INSERT INTO cuts
+       (project_id, footage_id, start_timestamp, end_timestamp, duration_seconds,
+        cut_type, description, reasoning, rank, clip_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      cut.project_id,
+      cut.footage_id     || null,
+      cut.start_timestamp,
+      cut.end_timestamp,
+      cut.duration_seconds || null,
+      cut.cut_type        || 'social',
+      cut.description     || null,
+      cut.reasoning       || null,
+      cut.rank            || null,
+      cut.clip_path       || null
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getCutsByProject(projectId) {
+  return _all(
+    `SELECT * FROM cuts WHERE project_id = ? ORDER BY rank ASC, id ASC`,
+    [projectId]
+  );
+}
+
+function getCutById(id) {
+  return _get(`SELECT * FROM cuts WHERE id = ?`, [id]);
+}
+
+function approveCut(id) {
+  _run(`UPDATE cuts SET approved = 1, approved_at = CURRENT_TIMESTAMP WHERE id = ?`, [id]);
+  persist();
+}
+
+function updateCutClipPath(id, clipPath) {
+  _run(`UPDATE cuts SET clip_path = ? WHERE id = ?`, [clipPath, id]);
+  persist();
+}
+
+function deleteCutsByProject(projectId) {
+  _run(`DELETE FROM cuts WHERE project_id = ?`, [projectId]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
+// SCRIPT HELPERS (CutΩr)
+// ─────────────────────────────────────────────
+
+function getScript(projectId) {
+  return _get(`SELECT * FROM scripts WHERE project_id = ?`, [projectId]);
+}
+
+function upsertScript(projectId, { outline, full_script, approved_version }) {
+  const existing = getScript(projectId);
+  if (existing) {
+    _run(
+      `UPDATE scripts SET outline = COALESCE(?, outline),
+         full_script = COALESCE(?, full_script),
+         approved_version = COALESCE(?, approved_version)
+       WHERE project_id = ?`,
+      [outline || null, full_script || null, approved_version || null, projectId]
+    );
+  } else {
+    _run(
+      `INSERT INTO scripts (project_id, outline, full_script, approved_version)
+       VALUES (?, ?, ?, ?)`,
+      [projectId, outline || null, full_script || null, approved_version || null]
+    );
+  }
+  persist();
+}
+
+// ─────────────────────────────────────────────
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
 
@@ -399,5 +504,14 @@ module.exports = {
   getAllFootage,
   searchFootageByWhere,
   getFootageStats,
-  footageFilePathExists
+  footageFilePathExists,
+  // CutΩr
+  insertCut,
+  getCutsByProject,
+  getCutById,
+  approveCut,
+  updateCutClipPath,
+  deleteCutsByProject,
+  getScript,
+  upsertScript
 };
