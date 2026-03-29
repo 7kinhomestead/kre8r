@@ -225,6 +225,40 @@ CREATE TABLE IF NOT EXISTS analytics (
 );
 
 -- ─────────────────────────────────────────────
+-- DAVINCI TIMELINES
+-- One row per DaVinci timeline per project.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS davinci_timelines (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id     INTEGER NOT NULL,
+  timeline_name  TEXT NOT NULL,
+  timeline_index INTEGER NOT NULL DEFAULT 1,
+  state          TEXT NOT NULL DEFAULT 'pending',  -- pending | active | awaiting_creator | complete
+  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completed_at   DATETIME,
+  notes          TEXT,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+-- ─────────────────────────────────────────────
+-- CLIP DISTRIBUTION
+-- Where each VaultΩr clip has been posted.
+-- One row per footage × platform. Platform list mirrors creator-profile.json.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS clip_distribution (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  footage_id      INTEGER NOT NULL,
+  platform        TEXT NOT NULL,   -- tiktok | youtube | facebook | instagram | lemon8 | other
+  posted_at       DATETIME,        -- null = not yet posted
+  post_url        TEXT,
+  posted_manually INTEGER NOT NULL DEFAULT 1,
+  notes           TEXT,
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(footage_id, platform),
+  FOREIGN KEY (footage_id) REFERENCES footage(id) ON DELETE CASCADE
+);
+
+-- ─────────────────────────────────────────────
 -- INDEXES
 -- ─────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
@@ -240,3 +274,6 @@ CREATE INDEX IF NOT EXISTS idx_footage_quality ON footage(quality_flag);
 CREATE INDEX IF NOT EXISTS idx_cuts_project ON cuts(project_id);
 CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
 CREATE INDEX IF NOT EXISTS idx_analytics_project ON analytics(project_id);
+CREATE INDEX IF NOT EXISTS idx_davinci_timelines_project ON davinci_timelines(project_id);
+CREATE INDEX IF NOT EXISTS idx_clip_dist_footage  ON clip_distribution(footage_id);
+CREATE INDEX IF NOT EXISTS idx_clip_dist_platform ON clip_distribution(platform);

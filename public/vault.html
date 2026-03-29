@@ -26,20 +26,17 @@
   /* ── NAV ── */
   .topbar{position:sticky;top:0;z-index:100;background:rgba(14,15,14,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;}
   .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);text-decoration:none;}
-  .logo .sub{color:var(--text-dimmer);font-size:11px;font-family:var(--font-body);letter-spacing:0.5px;font-weight:500;margin-left:10px;text-transform:uppercase;}
   .nav{display:flex;gap:4px;align-items:center;}
   .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
   .nav a:hover{background:var(--bg-card-2);color:var(--text);}
   .nav a.active{background:var(--teal-glow);color:var(--teal);}
   .nav-dropdown{position:relative;display:inline-flex;}
-  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-flex;align-items:center;line-height:1.5;}
+  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-block;white-space:nowrap;line-height:1.5;}
   .nav-drop-btn:hover,.nav-dropdown:hover .nav-drop-btn{background:var(--bg-card-2);color:var(--text);}
-  .nav-drop-btn.active{background:var(--teal-glow);color:var(--teal);}
   .nav-drop-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);min-width:156px;display:none;z-index:300;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
   .nav-dropdown:hover .nav-drop-menu{display:block;}
-  .nav-drop-menu a{display:block;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:4px;transition:all 0.15s;white-space:nowrap;}
+  .nav-drop-menu a{display:block;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:4px;transition:all 0.15s;}
   .nav-drop-menu a:hover{background:var(--bg-card-2);color:var(--text);}
-  .nav-drop-menu a.active{background:var(--teal-glow);color:var(--teal);}
 
   /* ── LAYOUT ── */
   .main{max-width:1100px;margin:0 auto;padding:24px 16px 80px;}
@@ -57,10 +54,10 @@
   .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
   .dot-green{background:var(--green);}
   .dot-amber{background:var(--amber);}
-  .dot-red{background:var(--red);}
   .dot-dim{background:var(--text-dimmer);}
   .status-pill .label{color:var(--text-dim);}
   .status-pill .val{color:var(--text);}
+  .watcher-toggle{background:none;border:none;cursor:pointer;padding:0;font-family:var(--font-body);}
 
   /* ── SECTION ── */
   .section{margin-bottom:36px;}
@@ -68,7 +65,7 @@
   .section-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text);}
   .section-sub{color:var(--text-dim);font-size:13px;}
 
-  /* ── INTAKE PANEL ── */
+  /* ── INTAKE ── */
   .intake-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;animation:fadeUp 0.4s 0.1s ease both;}
   .intake-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
   .intake-row label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
@@ -76,15 +73,16 @@
   .intake-input:focus{border-color:var(--teal-dim);}
   .intake-input::placeholder{color:var(--text-dimmer);}
   .project-select{width:200px;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 12px;outline:none;cursor:pointer;}
-  .btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-body);font-size:13px;font-weight:600;padding:9px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .btn{display:inline-block;font-family:var(--font-body);font-size:13px;font-weight:600;padding:9px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
   .btn-primary{background:var(--teal);color:#0e0f0e;}
   .btn-primary:hover:not(:disabled){background:var(--teal-dim);}
   .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
   .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim);}
   .btn-ghost:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
   .btn-ghost:disabled{opacity:0.4;cursor:not-allowed;}
-  .btn-amber{background:transparent;border:1px solid var(--amber);color:var(--amber);}
-  .btn-amber:hover:not(:disabled){background:var(--amber-glow);}
+  .btn-xs{font-size:11px;padding:4px 10px;}
+  .btn-danger-xs{font-size:11px;padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--text-dimmer);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;}
+  .btn-danger-xs:hover{border-color:var(--red);color:var(--red);}
 
   /* ── PROGRESS ── */
   .progress-wrap{margin-top:16px;display:none;}
@@ -93,8 +91,16 @@
   .progress-bar-inner{height:100%;background:var(--teal);border-radius:4px;width:0;transition:width 0.3s ease;}
   .progress-log{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;max-height:160px;overflow-y:auto;font-size:12px;font-family:monospace;color:var(--text-dim);line-height:1.6;}
   .progress-log .ok{color:var(--green);}
-  .progress-log .warn{color:var(--amber);}
   .progress-log .err{color:var(--red);}
+
+  /* ── LIBRARY CONTROLS ── */
+  .library-controls{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+  .view-toggle{display:flex;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+  .view-btn{background:transparent;border:none;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:6px 14px;cursor:pointer;transition:all 0.15s;}
+  .view-btn.active{background:var(--teal-glow);color:var(--teal);}
+  .view-btn:hover:not(.active){color:var(--text);}
+  .organized-toggle{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500;color:var(--text-dim);cursor:pointer;user-select:none;padding:5px 0;}
+  .organized-toggle input[type="checkbox"]{accent-color:var(--teal);cursor:pointer;width:14px;height:14px;}
 
   /* ── FILTER BAR ── */
   .filter-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;animation:fadeUp 0.4s 0.15s ease both;}
@@ -107,6 +113,8 @@
   .filter-chip.chip-usable.active{border-color:var(--blue);background:var(--blue-glow);color:var(--blue);}
   .filter-chip.chip-review.active{border-color:var(--amber);background:var(--amber-glow);color:var(--amber);}
   .filter-chip.chip-discard.active{border-color:var(--red);background:var(--red-glow);color:var(--red);}
+  .filter-chip.chip-unposted.active{border-color:var(--amber);background:var(--amber-glow);color:var(--amber);}
+  .filter-divider{width:1px;height:20px;background:var(--border);flex-shrink:0;align-self:center;}
   .search-wrap{flex:1;min-width:180px;position:relative;}
   .search-input{width:100%;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:7px 12px 7px 32px;outline:none;transition:border 0.15s;}
   .search-input:focus{border-color:var(--teal-dim);}
@@ -117,13 +125,15 @@
 
   /* ── FOOTAGE GRID ── */
   .footage-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;animation:fadeUp 0.4s 0.2s ease both;}
+  .footage-folder{animation:fadeUp 0.4s 0.2s ease both;}
   .footage-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all 0.15s;}
   .footage-card:hover{border-color:var(--border-bright);transform:translateY(-2px);}
   .footage-thumb{width:100%;aspect-ratio:16/9;background:var(--bg-card-2);object-fit:cover;display:block;}
   .footage-thumb-placeholder{width:100%;aspect-ratio:16/9;background:var(--bg-card-2);display:flex;align-items:center;justify-content:center;color:var(--text-dimmer);font-size:28px;}
   .footage-body{padding:10px 12px;}
-  .footage-filename{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;}
-  .footage-desc{font-size:11px;color:var(--text-dim);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:8px;}
+  .footage-filename{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+  .footage-path{font-size:10px;color:var(--text-dimmer);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .footage-desc{font-size:11px;color:var(--text-dim);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:7px;}
   .footage-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
   .tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;letter-spacing:0.3px;}
   .tag-broll{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
@@ -137,15 +147,37 @@
   .tag-review{background:var(--amber-glow);color:var(--amber);border:1px solid rgba(240,185,66,0.25);}
   .tag-discard{background:var(--red-glow);color:var(--red);border:1px solid rgba(224,92,92,0.25);}
   .footage-dur{font-size:10px;color:var(--text-dimmer);margin-left:auto;}
-
   .footage-empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-dimmer);}
   .footage-empty-icon{font-size:40px;margin-bottom:12px;}
   .footage-empty-text{font-size:14px;}
 
+  /* ── DISTRIBUTION DOTS (card) ── */
+  .dist-dots{display:flex;gap:4px;margin-top:7px;flex-wrap:wrap;}
+  .dist-dot{font-size:9px;font-weight:700;padding:2px 5px;border-radius:8px;border:1px solid var(--border);color:var(--text-dimmer);background:transparent;cursor:pointer;transition:all 0.15s;letter-spacing:0.2px;line-height:1.4;}
+  .dist-dot:hover{border-color:var(--border-bright);color:var(--text-dim);}
+  .dist-dot.posted{border-color:var(--teal);color:var(--teal);background:var(--teal-glow);}
+
+  /* ── FOLDER VIEW ── */
+  .folder-section{margin-bottom:12px;}
+  .folder-section-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:border-color 0.15s;user-select:none;}
+  .folder-section-header:hover{border-color:var(--border-bright);}
+  .folder-section-header.open{border-color:var(--border-bright);border-bottom-left-radius:0;border-bottom-right-radius:0;}
+  .folder-arrow{font-size:10px;color:var(--text-dimmer);transition:transform 0.18s;flex-shrink:0;}
+  .folder-section-header.open .folder-arrow{transform:rotate(90deg);}
+  .folder-section-name{font-family:var(--font-head);font-size:15px;letter-spacing:1.5px;color:var(--text);flex:1;}
+  .folder-section-count{font-size:12px;color:var(--text-dim);}
+  .folder-hero-badge{font-size:11px;font-weight:600;color:var(--green);padding:1px 8px;border-radius:10px;background:var(--green-glow);border:1px solid rgba(92,186,138,0.25);}
+  .folder-section-body{display:none;border:1px solid var(--border-bright);border-top:none;border-bottom-left-radius:var(--radius-sm);border-bottom-right-radius:var(--radius-sm);padding:14px;}
+  .folder-section-body.open{display:block;}
+  .folder-subgroup{margin-bottom:16px;}
+  .folder-subgroup:last-child{margin-bottom:0;}
+  .folder-subgroup-label{font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+  .folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+
   /* ── MODAL ── */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;}
   .modal-overlay.open{display:flex;}
-  .modal{background:var(--bg-card);border:1px solid var(--border-bright);border-radius:14px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;animation:fadeUp 0.25s ease;}
+  .modal{background:var(--bg-card);border:1px solid var(--border-bright);border-radius:14px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;animation:fadeUp 0.25s ease;}
   .modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border);}
   .modal-title{font-family:var(--font-head);font-size:20px;letter-spacing:1.5px;color:var(--text);}
   .modal-close{background:none;border:none;color:var(--text-dimmer);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;}
@@ -158,13 +190,50 @@
   .meta-item label{display:block;font-size:10px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;}
   .meta-item span{font-size:13px;color:var(--text);}
   .field-group{margin-bottom:14px;}
-  .field-label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .field-label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
   .field-select,.field-textarea{width:100%;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 12px;outline:none;transition:border 0.15s;}
   .field-select:focus,.field-textarea:focus{border-color:var(--teal-dim);}
   .field-textarea{resize:vertical;min-height:70px;line-height:1.5;}
+  .modal-section-divider{border:none;border-top:1px solid var(--border);margin:18px 0;}
   .modal-actions{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--border);flex-wrap:wrap;}
   .organize-status{font-size:12px;color:var(--text-dim);margin-left:auto;align-self:center;}
   .organize-status.done{color:var(--green);}
+
+  /* ── DISTRIBUTION ROWS (modal) ── */
+  .dist-row{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;}
+  .dist-row:last-child{margin-bottom:0;}
+  .dist-row-head{display:flex;align-items:center;gap:8px;padding:8px 12px;}
+  .dist-dot-lg{width:8px;height:8px;border-radius:50%;background:var(--text-dimmer);flex-shrink:0;}
+  .dist-dot-lg.posted{background:var(--teal);}
+  .dist-platform-name{font-size:13px;font-weight:600;color:var(--text);min-width:90px;}
+  .dist-status-text{font-size:12px;color:var(--text-dim);flex:1;}
+  .dist-row-detail{padding:8px 12px;border-top:1px solid var(--border);background:var(--bg-card-2);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .dist-detail-input{flex:1;min-width:120px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:12px;padding:6px 10px;outline:none;transition:border 0.15s;}
+  .dist-detail-input:focus{border-color:var(--teal-dim);}
+  .dist-detail-input::placeholder{color:var(--text-dimmer);}
+
+  /* ── BRAW BADGE (card) ── */
+  .braw-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--amber-glow);border:1px solid rgba(240,185,66,0.4);color:var(--amber);letter-spacing:0.4px;margin-top:5px;}
+
+  /* ── DAVINCI PANEL ── */
+  .davinci-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;animation:fadeUp 0.4s 0.12s ease both;}
+  .dvp-empty{color:var(--text-dimmer);font-size:13px;padding:16px 0;}
+  .dvp-cards{display:flex;flex-direction:column;gap:12px;}
+  .dvp-card{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
+  .dvp-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .dvp-project-name{font-family:var(--font-head);font-size:15px;letter-spacing:1px;color:var(--text);flex:1;}
+  .dvp-state-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;letter-spacing:0.4px;text-transform:uppercase;}
+  .dvp-state-created{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.3);}
+  .dvp-state-proxies_rendering,.dvp-state-awaiting_creator_grade{background:var(--amber-glow);color:var(--amber);border:1px solid rgba(240,185,66,0.3);}
+  .dvp-state-grade_approved,.dvp-state-rough_cut_ready{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(91,156,246,0.3);}
+  .dvp-state-awaiting_creator_review{background:var(--purple-glow);color:var(--purple);border:1px solid rgba(167,139,250,0.3);}
+  .dvp-state-picture_lock,.dvp-state-delivery_ready{background:var(--green-glow);color:var(--green);border:1px solid rgba(92,186,138,0.3);}
+  .dvp-timelines{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .dvp-tl{font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;letter-spacing:0.3px;}
+  .dvp-tl-pending{background:rgba(255,255,255,0.04);color:var(--text-dimmer);border:1px solid var(--border);}
+  .dvp-tl-active,.dvp-tl-awaiting_creator{background:var(--amber-glow);color:var(--amber);border:1px solid rgba(240,185,66,0.3);}
+  .dvp-tl-complete{background:var(--green-glow);color:var(--green);border:1px solid rgba(92,186,138,0.3);}
+  .dvp-actions{display:flex;gap:8px;flex-wrap:wrap;}
 
   /* ── TOAST ── */
   .toast-wrap{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
@@ -172,20 +241,19 @@
   .toast.green{border-left:3px solid var(--green);color:var(--green);}
   .toast.amber{border-left:3px solid var(--amber);color:var(--amber);}
   .toast.red{border-left:3px solid var(--red);color:var(--red);}
-
-  /* ── WATCHER STATUS BADGE ── */
-  .watcher-toggle{background:none;border:none;cursor:pointer;padding:0;font-family:var(--font-body);}
 </style>
 </head>
 <body>
 
 <!-- ── NAV ── -->
 <nav class="topbar">
-  <a class="logo" href="/">KRE<span style="color:var(--teal)">8Ω</span>R <span class="sub">7 Kin Homestead</span></a>
+  <a class="logo" href="/">KRE<span style="color:var(--teal)">8Ω</span>R</a>
   <div class="nav">
     <a href="/">PipelineΩr</a>
     <a href="/vault.html" class="active">VaultΩr</a>
     <a href="/reviewr.html">ReviewΩr</a>
+    <a href="/m5-analytics.html">AnalytΩr</a>
+    <a href="/operator.html">OperatΩr</a>
     <div class="nav-dropdown">
       <button class="nav-drop-btn">Distribut<span style="color:var(--teal)">Ω</span>r ▾</button>
       <div class="nav-drop-menu">
@@ -198,17 +266,16 @@
   </div>
 </nav>
 
-<!-- ── MAIN ── -->
 <main class="main">
 
   <!-- Page header -->
   <div class="page-header">
     <div class="page-title">VAULT<em>Ω</em>R</div>
-    <div class="page-sub">Footage intelligence database. Ingest, classify, search, and organize every clip.</div>
+    <div class="page-sub">Footage intelligence database. Ingest, classify, track distribution across every platform.</div>
   </div>
 
   <!-- Status bar -->
-  <div class="status-bar" id="statusBar">
+  <div class="status-bar">
     <div class="status-pill">
       <div class="status-dot dot-dim" id="ffmpegDot"></div>
       <span class="label">ffmpeg</span>
@@ -221,18 +288,28 @@
     </div>
     <div class="status-pill">
       <div class="status-dot dot-green"></div>
-      <span class="label">Total clips</span>
+      <span class="label">Total</span>
       <span class="val" id="totalClips">—</span>
     </div>
-    <div class="status-pill" id="statHero" style="display:none">
+    <div class="status-pill">
+      <div class="status-dot dot-amber"></div>
+      <span class="label">Unorganized</span>
+      <span class="val" id="unorganizedCount">—</span>
+    </div>
+    <div class="status-pill">
       <div class="status-dot dot-green"></div>
       <span class="label">Hero</span>
-      <span class="val" id="heroCount">0</span>
+      <span class="val" id="heroCount">—</span>
     </div>
-    <div class="status-pill" id="statBroll" style="display:none">
+    <div class="status-pill">
       <div class="status-dot" style="background:var(--teal)"></div>
       <span class="label">B-roll</span>
-      <span class="val" id="brollCount">0</span>
+      <span class="val" id="brollCount">—</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot" style="background:var(--purple)"></div>
+      <span class="label">Talking Head</span>
+      <span class="val" id="talkingHeadCount">—</span>
     </div>
   </div>
 
@@ -254,16 +331,24 @@
             <option value="">— None —</option>
           </select>
         </div>
-        <button class="btn btn-primary" id="ingestBtn" onclick="startIngest()">
-          ▶ Ingest
-        </button>
+        <button class="btn btn-primary" id="ingestBtn" onclick="startIngest()">▶ Ingest</button>
       </div>
-
-      <!-- Progress -->
       <div class="progress-wrap" id="progressWrap">
         <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar"></div></div>
         <div class="progress-log" id="progressLog"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- DaVinci Projects panel -->
+  <div class="section" id="davinciSection" style="display:none">
+    <div class="section-header">
+      <div class="section-title">DAVINCI PROJECTS</div>
+      <div class="section-sub">Resolve projects linked to Kre8Ωr</div>
+    </div>
+    <div class="davinci-panel">
+      <div class="dvp-empty" id="dvpEmpty">Loading…</div>
+      <div class="dvp-cards" id="dvpCards" style="display:none"></div>
     </div>
   </div>
 
@@ -272,6 +357,18 @@
     <div class="section-header">
       <div class="section-title">FOOTAGE LIBRARY</div>
       <div class="section-sub" id="footageCount">Loading…</div>
+    </div>
+
+    <!-- Library controls -->
+    <div class="library-controls">
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnGrid" onclick="setViewMode('grid')">Grid</button>
+        <button class="view-btn" id="btnFolder" onclick="setViewMode('folder')">Folder</button>
+      </div>
+      <label class="organized-toggle">
+        <input type="checkbox" id="showOrganizedCheck" onchange="toggleShowOrganized(this.checked)">
+        Show organized
+      </label>
     </div>
 
     <!-- Filter bar -->
@@ -285,6 +382,7 @@
         <button class="filter-chip" data-shot="action" onclick="setFilter('shot','action',this)">Action</button>
         <button class="filter-chip" data-shot="unusable" onclick="setFilter('shot','unusable',this)">Unusable</button>
       </div>
+      <div class="filter-divider"></div>
       <div class="filter-group">
         <span class="filter-label">Quality</span>
         <button class="filter-chip active" data-quality="all" onclick="setFilter('quality','all',this)">All</button>
@@ -292,6 +390,32 @@
         <button class="filter-chip chip-usable" data-quality="usable" onclick="setFilter('quality','usable',this)">Usable</button>
         <button class="filter-chip chip-review" data-quality="review" onclick="setFilter('quality','review',this)">Review</button>
         <button class="filter-chip chip-discard" data-quality="discard" onclick="setFilter('quality','discard',this)">Discard</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">Orient.</span>
+        <button class="filter-chip active" data-orient="all" onclick="setFilter('orientation','all',this)">All</button>
+        <button class="filter-chip" data-orient="horizontal" onclick="setFilter('orientation','horizontal',this)">↔ H</button>
+        <button class="filter-chip" data-orient="vertical" onclick="setFilter('orientation','vertical',this)">↕ V</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">Posted</span>
+        <button class="filter-chip active" data-platform="all" onclick="setFilter('platform','all',this)">All</button>
+        <button class="filter-chip chip-unposted" data-platform="unposted" onclick="setFilter('platform','unposted',this)">Unposted</button>
+        <button class="filter-chip" data-platform="tiktok" onclick="setFilter('platform','tiktok',this)">TT</button>
+        <button class="filter-chip" data-platform="youtube" onclick="setFilter('platform','youtube',this)">YT</button>
+        <button class="filter-chip" data-platform="facebook" onclick="setFilter('platform','facebook',this)">FB</button>
+        <button class="filter-chip" data-platform="instagram" onclick="setFilter('platform','instagram',this)">IG</button>
+        <button class="filter-chip" data-platform="lemon8" onclick="setFilter('platform','lemon8',this)">L8</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">BRAW</span>
+        <button class="filter-chip active" data-braw="all" onclick="setFilter('braw','all',this)">All</button>
+        <button class="filter-chip chip-unposted" data-braw="needs_proxy" onclick="setFilter('braw','needs_proxy',this)">Needs Proxy</button>
+        <button class="filter-chip" data-braw="has_proxy" onclick="setFilter('braw','has_proxy',this)">Has Proxy</button>
+        <button class="filter-chip" data-braw="no_braw" onclick="setFilter('braw','no_braw',this)">No BRAW</button>
       </div>
       <div class="search-wrap">
         <span class="search-icon">⌕</span>
@@ -304,7 +428,7 @@
       </div>
     </div>
 
-    <!-- Grid -->
+    <!-- Grid / Folder container -->
     <div class="footage-grid" id="footageGrid">
       <div class="footage-empty">
         <div class="footage-empty-icon">🎬</div>
@@ -326,14 +450,20 @@
       <img class="modal-thumb" id="modalThumb" src="" alt="" onerror="this.style.display='none';document.getElementById('modalThumbPlaceholder').style.display='flex'" />
       <div class="modal-thumb-placeholder" id="modalThumbPlaceholder" style="display:none">🎬</div>
 
+      <!-- Metadata grid -->
       <div class="meta-grid">
         <div class="meta-item"><label>Duration</label><span id="modalDuration">—</span></div>
         <div class="meta-item"><label>Resolution</label><span id="modalResolution">—</span></div>
         <div class="meta-item"><label>Codec</label><span id="modalCodec">—</span></div>
         <div class="meta-item"><label>File size</label><span id="modalSize">—</span></div>
+        <div class="meta-item"><label>Orientation</label><span id="modalOrientation">—</span></div>
+        <div class="meta-item"><label>Ingested</label><span id="modalIngested">—</span></div>
+        <div class="meta-item"><label>Recorded</label><span id="modalRecorded">—</span></div>
+        <div class="meta-item"><label>Last modified</label><span id="modalModified">—</span></div>
         <div class="meta-item" style="grid-column:1/-1"><label>Original file</label><span id="modalFilepath" style="font-size:11px;word-break:break-all;color:var(--text-dim)">—</span></div>
       </div>
 
+      <!-- Shot type / quality / description -->
       <div class="field-group">
         <label class="field-label">Shot type</label>
         <select class="field-select" id="modalShotType">
@@ -345,7 +475,6 @@
           <option value="unusable">Unusable</option>
         </select>
       </div>
-
       <div class="field-group" id="subcategoryGroup">
         <label class="field-label">Subcategory <span style="font-weight:400;color:var(--text-dimmer)">(b-roll only)</span></label>
         <select class="field-select" id="modalSubcategory">
@@ -356,7 +485,6 @@
           <option value="detail">Detail</option>
         </select>
       </div>
-
       <div class="field-group">
         <label class="field-label">Quality flag</label>
         <select class="field-select" id="modalQuality">
@@ -367,53 +495,116 @@
           <option value="discard">Discard</option>
         </select>
       </div>
-
       <div class="field-group">
         <label class="field-label">Description</label>
         <textarea class="field-textarea" id="modalDescription" rows="3" placeholder="What is visible in this clip?"></textarea>
       </div>
+
+      <hr class="modal-section-divider">
+
+      <!-- Distribution section -->
+      <div class="field-group">
+        <label class="field-label">Distribution</label>
+        <div id="modalDistRows"></div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveClipEdits()">Save changes</button>
-      <button class="btn btn-ghost" id="organizeBtn" onclick="organizeClip()">Organize file</button>
+      <button class="btn btn-ghost" id="organizeBtn" onclick="organizeClip()">Tag as Organized</button>
       <span class="organize-status" id="organizeStatus"></span>
     </div>
   </div>
 </div>
 
-<!-- ── TOASTS ── -->
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const PLATFORMS = [
+  { key: 'tiktok',    short: 'TT', full: 'TikTok'    },
+  { key: 'youtube',   short: 'YT', full: 'YouTube'   },
+  { key: 'facebook',  short: 'FB', full: 'Facebook'  },
+  { key: 'instagram', short: 'IG', full: 'Instagram' },
+  { key: 'lemon8',    short: 'L8', full: 'Lemon8'    },
+  { key: 'other',     short: '+',  full: 'Other'     }
+];
+
 // ── STATE ──────────────────────────────────────────────────────────────────
 let allFootage      = [];
 let filteredFootage = [];
-let activeFilters   = { shot: 'all', quality: 'all' };
+let distMap         = {};   // { [footage_id]: { [platform]: record } }
+let activeFilters   = { shot: 'all', quality: 'all', orientation: 'all', platform: 'all', braw: 'all' };
 let searchDebounce  = null;
 let currentClip     = null;
+let viewMode        = 'grid';
+let showOrganized   = false;
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  restoreSession();
   loadStatus();
   loadProjects();
   loadFootage();
+  loadDavinciProjects();
 
-  // Natural language search with 600ms debounce
   document.getElementById('searchInput').addEventListener('input', (e) => {
     clearTimeout(searchDebounce);
     const q = e.target.value.trim();
-    if (!q) {
-      renderGrid(applyFilters(allFootage));
-      return;
-    }
+    if (!q) { renderView(applyFilters(allFootage)); return; }
     searchDebounce = setTimeout(() => runSearch(q), 600);
   });
 
-  // Subcategory visibility
   document.getElementById('modalShotType').addEventListener('change', (e) => {
     document.getElementById('subcategoryGroup').style.opacity = e.target.value === 'b-roll' ? '1' : '0.4';
   });
 });
+
+// ── SESSION PERSISTENCE ─────────────────────────────────────────────────────
+function saveSession() {
+  try {
+    sessionStorage.setItem('vault_state', JSON.stringify({
+      shot: activeFilters.shot, quality: activeFilters.quality,
+      orientation: activeFilters.orientation, platform: activeFilters.platform,
+      braw: activeFilters.braw, viewMode, showOrganized
+    }));
+  } catch(e) {}
+}
+
+function restoreSession() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('vault_state') || 'null');
+    if (!s) return;
+    if (s.shot)         activeFilters.shot        = s.shot;
+    if (s.quality)      activeFilters.quality     = s.quality;
+    if (s.orientation)  activeFilters.orientation = s.orientation;
+    if (s.platform)     activeFilters.platform    = s.platform;
+    if (s.braw)         activeFilters.braw        = s.braw;
+    if (s.viewMode)     viewMode                  = s.viewMode;
+    if (s.showOrganized !== undefined) showOrganized = !!s.showOrganized;
+  } catch(e) {}
+  applyFilterChipUI();
+  applyViewToggleUI();
+  document.getElementById('showOrganizedCheck').checked = showOrganized;
+}
+
+function applyFilterChipUI() {
+  document.querySelectorAll('[data-shot]').forEach(el =>
+    el.classList.toggle('active', el.dataset.shot === activeFilters.shot));
+  document.querySelectorAll('[data-quality]').forEach(el =>
+    el.classList.toggle('active', el.dataset.quality === activeFilters.quality));
+  document.querySelectorAll('[data-orient]').forEach(el =>
+    el.classList.toggle('active', el.dataset.orient === activeFilters.orientation));
+  document.querySelectorAll('[data-platform]').forEach(el =>
+    el.classList.toggle('active', el.dataset.platform === activeFilters.platform));
+  document.querySelectorAll('[data-braw]').forEach(el =>
+    el.classList.toggle('active', el.dataset.braw === activeFilters.braw));
+}
+
+function applyViewToggleUI() {
+  document.getElementById('btnGrid').classList.toggle('active', viewMode === 'grid');
+  document.getElementById('btnFolder').classList.toggle('active', viewMode === 'folder');
+  document.getElementById('footageGrid').className = viewMode === 'grid' ? 'footage-grid' : 'footage-folder';
+}
 
 // ── STATUS ─────────────────────────────────────────────────────────────────
 async function loadStatus() {
@@ -422,46 +613,32 @@ async function loadStatus() {
       fetch('/api/vault/status').then(r => r.json()),
       fetch('/api/vault/watcher').then(r => r.json())
     ]);
-
-    // ffmpeg
     const ffDot = document.getElementById('ffmpegDot');
     const ffVal = document.getElementById('ffmpegVal');
     if (status.ffmpeg) { ffDot.className = 'status-dot dot-green'; ffVal.textContent = 'OK'; }
     else               { ffDot.className = 'status-dot dot-amber'; ffVal.textContent = 'Not installed'; }
 
-    // total
-    document.getElementById('totalClips').textContent = status.total ?? 0;
-
-    // hero count
+    document.getElementById('totalClips').textContent       = status.total ?? 0;
     const heroRow  = (status.by_quality  || []).find(r => r.quality_flag === 'hero');
-    const brollRow = (status.by_shot_type || []).find(r => r.shot_type === 'b-roll');
-    if (heroRow)  { document.getElementById('heroCount').textContent  = heroRow.n;  document.getElementById('statHero').style.display  = 'flex'; }
-    if (brollRow) { document.getElementById('brollCount').textContent = brollRow.n; document.getElementById('statBroll').style.display = 'flex'; }
-
-    // watcher
+    const brollRow = (status.by_shot_type || []).find(r => r.shot_type   === 'b-roll');
+    const thRow    = (status.by_shot_type || []).find(r => r.shot_type   === 'talking-head');
+    document.getElementById('heroCount').textContent        = heroRow?.n  ?? 0;
+    document.getElementById('brollCount').textContent       = brollRow?.n ?? 0;
+    document.getElementById('talkingHeadCount').textContent = thRow?.n    ?? 0;
     updateWatcherUI(watcher);
-  } catch(e) {
-    console.error('Status load failed:', e);
-  }
+  } catch(e) { console.error('Status load failed:', e); }
 }
 
 function updateWatcherUI(watcher) {
   const dot = document.getElementById('watcherDot');
   const val = document.getElementById('watcherVal');
-  if (watcher.running) {
-    dot.className = 'status-dot dot-green';
-    val.textContent = 'Watching';
-    document.getElementById('watcherToggle').title = 'Click to stop watcher';
-  } else {
-    dot.className = 'status-dot dot-amber';
-    val.textContent = 'Off — click to start';
-    document.getElementById('watcherToggle').title = 'Click to start watcher';
-  }
+  if (watcher.running) { dot.className = 'status-dot dot-green'; val.textContent = 'Watching'; }
+  else                 { dot.className = 'status-dot dot-amber'; val.textContent = 'Off — click to start'; }
 }
 
 document.getElementById('watcherToggle').addEventListener('click', async () => {
-  const watcher = await fetch('/api/vault/watcher').then(r => r.json());
-  if (watcher.running) {
+  const w = await fetch('/api/vault/watcher').then(r => r.json());
+  if (w.running) {
     await fetch('/api/vault/watcher/stop', { method: 'POST' });
     showToast('Watcher stopped', 'amber');
   } else {
@@ -469,8 +646,7 @@ document.getElementById('watcherToggle').addEventListener('click', async () => {
     if (r.ok) showToast('Watcher started → ' + r.path, 'green');
     else      showToast('Watcher error: ' + r.error, 'red');
   }
-  const updated = await fetch('/api/vault/watcher').then(r => r.json());
-  updateWatcherUI(updated);
+  updateWatcherUI(await fetch('/api/vault/watcher').then(r => r.json()));
 });
 
 // ── PROJECTS ───────────────────────────────────────────────────────────────
@@ -480,50 +656,94 @@ async function loadProjects() {
     const sel = document.getElementById('projectSelect');
     projects.forEach(p => {
       const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.title;
+      opt.value = p.id; opt.textContent = p.title;
       sel.appendChild(opt);
     });
-  } catch(e) { /* non-fatal */ }
+  } catch(e) {}
 }
 
 // ── FOOTAGE LOAD ───────────────────────────────────────────────────────────
 async function loadFootage() {
   try {
-    allFootage = await fetch('/api/vault/footage').then(r => r.json());
+    const [footage, dist] = await Promise.all([
+      fetch('/api/vault/footage').then(r => r.json()),
+      fetch('/api/vault/distribution').then(r => r.json())
+    ]);
+    allFootage = footage;
+    buildDistMap(dist);
     filteredFootage = applyFilters(allFootage);
-    renderGrid(filteredFootage);
+    renderView(filteredFootage);
     updateFootageCount(filteredFootage.length, allFootage.length);
+    updateUnorganizedCount();
   } catch(e) {
     document.getElementById('footageGrid').innerHTML = '<div class="footage-empty"><div class="footage-empty-icon">⚠</div><div class="footage-empty-text">Failed to load footage</div></div>';
   }
 }
 
+function buildDistMap(records) {
+  distMap = {};
+  for (const d of records) {
+    if (!distMap[d.footage_id]) distMap[d.footage_id] = {};
+    distMap[d.footage_id][d.platform] = d;
+  }
+}
+
+function updateUnorganizedCount() {
+  document.getElementById('unorganizedCount').textContent = allFootage.filter(f => !f.organized_path).length;
+}
+
 // ── FILTERS ────────────────────────────────────────────────────────────────
 function setFilter(type, value, el) {
   activeFilters[type] = value;
-  // Update chip active states
   el.closest('.filter-group').querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
-  // Clear search
   document.getElementById('searchInput').value = '';
   filteredFootage = applyFilters(allFootage);
-  renderGrid(filteredFootage);
+  renderView(filteredFootage);
   updateFootageCount(filteredFootage.length, allFootage.length);
+  saveSession();
 }
 
 function applyFilters(footage) {
   return footage.filter(f => {
-    if (activeFilters.shot    !== 'all' && f.shot_type    !== activeFilters.shot)    return false;
-    if (activeFilters.quality !== 'all' && f.quality_flag !== activeFilters.quality) return false;
+    if (!showOrganized && f.organized_path)                                                  return false;
+    if (activeFilters.shot        !== 'all' && f.shot_type    !== activeFilters.shot)        return false;
+    if (activeFilters.quality     !== 'all' && f.quality_flag !== activeFilters.quality)     return false;
+    if (activeFilters.orientation !== 'all' && f.orientation  !== activeFilters.orientation) return false;
+    if (activeFilters.platform !== 'all') {
+      const fDist = distMap[f.id] || {};
+      if (activeFilters.platform === 'unposted') { if (Object.keys(fDist).length > 0) return false; }
+      else { if (!fDist[activeFilters.platform]) return false; }
+    }
+    if (activeFilters.braw !== 'all') {
+      const isBraw     = !!f.braw_source_path;
+      const hasProxy   = isBraw && f.codec !== 'BRAW';  // proxy has been ingested — codec updated
+      if (activeFilters.braw === 'needs_proxy' && !(isBraw && !hasProxy)) return false;
+      if (activeFilters.braw === 'has_proxy'   && !hasProxy)              return false;
+      if (activeFilters.braw === 'no_braw'     && isBraw)                 return false;
+    }
     return true;
   });
 }
 
+function setViewMode(mode) {
+  viewMode = mode;
+  applyViewToggleUI();
+  renderView(applyFilters(allFootage));
+  saveSession();
+}
+
+function toggleShowOrganized(checked) {
+  showOrganized = checked;
+  filteredFootage = applyFilters(allFootage);
+  renderView(filteredFootage);
+  updateFootageCount(filteredFootage.length, allFootage.length);
+  saveSession();
+}
+
 function updateFootageCount(shown, total) {
   const el = document.getElementById('footageCount');
-  if (shown === total) el.textContent = `${total} clip${total !== 1 ? 's' : ''}`;
-  else                 el.textContent = `${shown} of ${total} clips`;
+  el.textContent = shown === total ? `${total} clip${total !== 1 ? 's' : ''}` : `${shown} of ${total} clips`;
 }
 
 // ── SEARCH ─────────────────────────────────────────────────────────────────
@@ -531,128 +751,362 @@ async function runSearch(q) {
   document.getElementById('searchSpinner').classList.add('visible');
   try {
     const results = await fetch('/api/vault/search', {
-      method:  'POST',
-      headers: {'Content-Type':'application/json'},
-      body:    JSON.stringify({ q })
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ q })
     }).then(r => r.json());
-
     if (results.error) { showToast(results.error, 'amber'); return; }
-    renderGrid(results);
+    renderView(results);
     updateFootageCount(results.length, allFootage.length);
-  } catch(e) {
-    showToast('Search failed: ' + e.message, 'red');
-  } finally {
-    document.getElementById('searchSpinner').classList.remove('visible');
-  }
+  } catch(e) { showToast('Search failed: ' + e.message, 'red'); }
+  finally { document.getElementById('searchSpinner').classList.remove('visible'); }
+}
+
+// ── RENDER DISPATCH ────────────────────────────────────────────────────────
+function renderView(footage) {
+  if (viewMode === 'folder') renderFolder(footage);
+  else                       renderGrid(footage);
 }
 
 // ── RENDER GRID ────────────────────────────────────────────────────────────
 function renderGrid(footage) {
   const grid = document.getElementById('footageGrid');
-  if (!footage.length) {
-    grid.innerHTML = '<div class="footage-empty"><div class="footage-empty-icon">🎬</div><div class="footage-empty-text">No clips match your filters.</div></div>';
-    return;
+  grid.className = 'footage-grid';
+  if (!footage.length) { grid.innerHTML = emptyHtml(); return; }
+  grid.innerHTML = footage.map(f => renderCard(f)).join('');
+}
+
+// ── RENDER FOLDER ──────────────────────────────────────────────────────────
+function renderFolder(footage) {
+  const grid = document.getElementById('footageGrid');
+  grid.className = 'footage-folder';
+  if (!footage.length) { grid.innerHTML = emptyHtml(); return; }
+
+  const shotOrder = ['b-roll', 'talking-head', 'dialogue', 'action', 'unusable', 'unclassified'];
+  const grouped = {};
+  for (const f of footage) {
+    const k = f.shot_type || 'unclassified';
+    if (!grouped[k]) grouped[k] = [];
+    grouped[k].push(f);
   }
+  const keys = Object.keys(grouped).sort((a, b) => {
+    const ai = shotOrder.indexOf(a) >= 0 ? shotOrder.indexOf(a) : shotOrder.length;
+    const bi = shotOrder.indexOf(b) >= 0 ? shotOrder.indexOf(b) : shotOrder.length;
+    return ai - bi;
+  });
 
-  grid.innerHTML = footage.map(f => {
-    const shotTag     = shotTypeTag(f.shot_type);
-    const qualityTag  = qualityTag2(f.quality_flag);
-    const dur         = f.duration ? formatDuration(f.duration) : null;
-    const thumbHtml   = f.thumbnail_path
-      ? `<img class="footage-thumb" src="${escHtml(f.thumbnail_path)}" alt="" loading="lazy">`
-      : `<div class="footage-thumb-placeholder">🎬</div>`;
-
-    return `<div class="footage-card" onclick="openModal(${f.id})">
-      ${thumbHtml}
-      <div class="footage-body">
-        <div class="footage-filename">${escHtml(f.original_filename || f.file_path.split('/').pop())}</div>
-        ${f.description ? `<div class="footage-desc">${escHtml(f.description)}</div>` : '<div class="footage-desc" style="color:var(--text-dimmer);font-style:italic">Not classified</div>'}
-        <div class="footage-tags">
-          ${shotTag}
-          ${qualityTag}
-          ${dur ? `<span class="footage-dur">${dur}</span>` : ''}
-        </div>
+  grid.innerHTML = keys.map(k => {
+    const clips = grouped[k];
+    const heroN = clips.filter(f => f.quality_flag === 'hero').length;
+    const byDir = {};
+    for (const f of clips) {
+      const d = parentDir(f.file_path) || '—';
+      if (!byDir[d]) byDir[d] = [];
+      byDir[d].push(f);
+    }
+    const sid = 'fsec_' + k.replace(/[^a-z0-9]/g, '_');
+    const heroBadge = heroN > 0 ? `<span class="folder-hero-badge">${heroN} hero</span>` : '';
+    const subHtml = Object.keys(byDir).map(d =>
+      `<div class="folder-subgroup">
+        <div class="folder-subgroup-label">${escHtml(d)} · ${byDir[d].length} clip${byDir[d].length !== 1 ? 's' : ''}</div>
+        <div class="folder-grid">${byDir[d].map(f => renderCard(f)).join('')}</div>
+       </div>`
+    ).join('');
+    return `<div class="folder-section">
+      <div class="folder-section-header" onclick="toggleFolderSection('${sid}')">
+        <span class="folder-arrow">▶</span>
+        <span class="folder-section-name">${escHtml(k.toUpperCase())}</span>
+        <span class="folder-section-count">${clips.length} clip${clips.length !== 1 ? 's' : ''}</span>
+        ${heroBadge}
       </div>
+      <div class="folder-section-body" id="${sid}">${subHtml}</div>
     </div>`;
   }).join('');
 }
 
-function shotTypeTag(type) {
-  const map = {
-    'b-roll':       'tag-broll',
-    'dialogue':     'tag-dialogue',
-    'talking-head': 'tag-talkinghead',
-    'action':       'tag-action',
-    'unusable':     'tag-unusable'
-  };
-  const cls = map[type] || 'tag-unclassified';
-  return `<span class="tag ${cls}">${type || 'unclassified'}</span>`;
+function toggleFolderSection(id) {
+  const body = document.getElementById(id);
+  body.classList.toggle('open');
+  body.previousElementSibling.classList.toggle('open');
 }
 
-function qualityTag2(flag) {
-  const map = { hero:'tag-hero', usable:'tag-usable', review:'tag-review', discard:'tag-discard' };
-  if (!flag) return '';
-  return `<span class="tag ${map[flag] || 'tag-unclassified'}">${flag}</span>`;
+function emptyHtml() {
+  return '<div class="footage-empty"><div class="footage-empty-icon">🎬</div><div class="footage-empty-text">No clips match your filters.</div></div>';
 }
 
-function formatDuration(secs) {
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+// ── RENDER CARD ─────────────────────────────────────────────────────────────
+function renderCard(f) {
+  const thumbHtml = f.thumbnail_path
+    ? `<img class="footage-thumb" src="${escHtml(f.thumbnail_path)}" alt="" loading="lazy">`
+    : `<div class="footage-thumb-placeholder">🎬</div>`;
+  const fDist = distMap[f.id] || {};
+  const dotHtml = PLATFORMS.map(p => {
+    const posted = !!fDist[p.key];
+    return `<span class="dist-dot${posted ? ' posted' : ''}" title="${p.full}${posted ? ' — posted' : ''}" onclick="toggleDistDot(event,${f.id},'${p.key}')">${p.short}</span>`;
+  }).join('');
+  const dur = f.duration ? formatDuration(f.duration) : null;
+
+  return `<div class="footage-card" onclick="openModal(${f.id})">
+    ${thumbHtml}
+    <div class="footage-body">
+      <div class="footage-filename">${escHtml(f.original_filename || f.file_path.split(/[\\/]/).pop())}</div>
+      <div class="footage-path">${escHtml(parentDir(f.file_path))}</div>
+      ${f.description
+        ? `<div class="footage-desc">${escHtml(f.description)}</div>`
+        : `<div class="footage-desc" style="color:var(--text-dimmer);font-style:italic">Not classified</div>`}
+      <div class="footage-tags">
+        ${shotTypeTag(f.shot_type)}
+        ${qualityTag2(f.quality_flag)}
+        ${dur ? `<span class="footage-dur">${dur}</span>` : ''}
+      </div>
+      <div class="dist-dots">${dotHtml}</div>
+      ${(f.braw_source_path && f.codec === 'BRAW') ? '<span class="braw-badge">PROXY NEEDED</span>' : ''}
+    </div>
+  </div>`;
 }
 
-function formatBytes(bytes) {
-  if (!bytes) return '—';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+// ── DAVINCI PROJECTS PANEL ─────────────────────────────────────────────────
+async function loadDavinciProjects() {
+  try {
+    const projects = await fetch('/api/davinci/projects').then(r => r.json());
+    const section  = document.getElementById('davinciSection');
+    const empty    = document.getElementById('dvpEmpty');
+    const cards    = document.getElementById('dvpCards');
+    if (!projects.length) {
+      empty.textContent = 'No DaVinci projects yet. Create one from a project in PipelineΩr.';
+      section.style.display = 'block';
+      return;
+    }
+    section.style.display = 'block';
+    empty.style.display   = 'none';
+    cards.style.display   = 'flex';
+    cards.innerHTML = projects.map(p => renderDvpCard(p)).join('');
+  } catch(e) {
+    // DaVinci route may not exist yet — silently hide panel
+  }
+}
+
+function renderDvpCard(p) {
+  const state     = p.davinci_project_state || 'created';
+  const stateCls  = 'dvp-state-' + state.replace(/[^a-z0-9_]/g, '_');
+  const stateLabel = state.replace(/_/g, ' ').toUpperCase();
+  const timelines  = (p.davinci_timelines || []);
+  const tlHtml = timelines.map(t =>
+    `<span class="dvp-tl dvp-tl-${t.state}" title="${escHtml(t.notes||'')}">
+       ${escHtml(t.timeline_name)}
+     </span>`
+  ).join('');
+  const nextTl = getNextTimeline(state, timelines);
+  return `<div class="dvp-card">
+    <div class="dvp-card-head">
+      <span class="dvp-project-name">${escHtml(p.davinci_project_name || p.title)}</span>
+      <span class="dvp-state-badge ${stateCls}">${stateLabel}</span>
+    </div>
+    ${timelines.length ? `<div class="dvp-timelines">${tlHtml}</div>` : ''}
+    <div class="dvp-actions">
+      ${state === 'awaiting_creator_grade'
+        ? `<button class="btn btn-primary" style="font-size:12px;padding:7px 14px" onclick="gradeApproved(${p.id})">Mark Grade Approved</button>`
+        : ''}
+      ${nextTl
+        ? `<button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="addNextTimeline(${p.id},'${nextTl}')">Add ${nextTl}</button>`
+        : ''}
+      <span style="font-size:11px;color:var(--text-dimmer);align-self:center;margin-left:auto">${escHtml(p.title)}</span>
+    </div>
+  </div>`;
+}
+
+function getNextTimeline(state, existing) {
+  const existingNames = new Set(existing.map(t => t.timeline_name));
+  const progression = [
+    { after: 'grade_approved',          tl: '02_SELECTS'        },
+    { after: 'rough_cut_ready',         tl: '03_ROUGH_CUT'      },
+    { after: 'rough_cut_ready',         tl: '04_AUDIO'          },
+    { after: 'picture_lock',            tl: '06_DELIVERY_YT'    },
+    { after: 'picture_lock',            tl: '07_DELIVERY_SHORTS' },
+    { after: 'picture_lock',            tl: '08_DELIVERY_SOCIAL' }
+  ];
+  for (const step of progression) {
+    if (step.after === state && !existingNames.has(step.tl)) return step.tl;
+  }
+  return null;
+}
+
+async function gradeApproved(projectId) {
+  try {
+    const res = await fetch(`/api/davinci/grade-approved/${projectId}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) { showToast('Grade approved — 02_SELECTS being created in DaVinci', 'green'); loadDavinciProjects(); }
+    else         { showToast('Error: ' + data.error, 'red'); }
+  } catch(e) { showToast('Request failed: ' + e.message, 'red'); }
+}
+
+async function addNextTimeline(projectId, timelineName) {
+  try {
+    const res = await fetch('/api/davinci/add-timeline', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ project_id: projectId, timeline_name: timelineName })
+    });
+    const data = await res.json();
+    if (data.ok) { showToast(`${timelineName} added to DaVinci`, 'green'); loadDavinciProjects(); }
+    else         { showToast('Error: ' + (data.error || 'unknown'), 'red'); }
+  } catch(e) { showToast('Request failed: ' + e.message, 'red'); }
+}
+
+// ── DISTRIBUTION — CARD TOGGLE ─────────────────────────────────────────────
+async function toggleDistDot(event, footageId, platform) {
+  event.stopPropagation();
+  const fDist = distMap[footageId] || {};
+  if (fDist[platform]) {
+    // Unmark
+    const res = await fetch(`/api/vault/footage/${footageId}/distribution/${platform}`, { method: 'DELETE' });
+    if (res.ok) {
+      delete fDist[platform];
+      distMap[footageId] = fDist;
+      renderView(applyFilters(allFootage));
+      showToast(`Cleared ${platform}`, 'amber');
+    } else {
+      showToast('Error clearing distribution', 'red');
+    }
+  } else {
+    // Mark as posted now
+    const posted_at = new Date().toISOString();
+    const res = await fetch(`/api/vault/footage/${footageId}/distribution`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ platform, posted_at })
+    });
+    if (res.ok) {
+      if (!distMap[footageId]) distMap[footageId] = {};
+      distMap[footageId][platform] = { footage_id: footageId, platform, posted_at, post_url: null, notes: null };
+      renderView(applyFilters(allFootage));
+      showToast(`Marked as posted to ${platform}`, 'green');
+    } else {
+      showToast('Error saving distribution', 'red');
+    }
+  }
+}
+
+// ── DISTRIBUTION — MODAL ───────────────────────────────────────────────────
+function renderDistRows(footageId) {
+  const fDist = distMap[footageId] || {};
+  const html = PLATFORMS.map(p => {
+    const rec    = fDist[p.key];
+    const posted = !!rec;
+    const dateStr = rec?.posted_at ? formatDistDate(rec.posted_at) : '';
+    const detailHtml = posted ? `
+      <div class="dist-row-detail">
+        <input class="dist-detail-input" id="disturl-${footageId}-${p.key}" placeholder="Post URL (optional)" value="${escHtml(rec.post_url || '')}">
+        <input class="dist-detail-input" id="distnotes-${footageId}-${p.key}" placeholder="Notes (optional)" value="${escHtml(rec.notes || '')}">
+        <button class="btn btn-ghost btn-xs" onclick="saveDistDetails(${footageId},'${p.key}')">Save</button>
+      </div>` : '';
+    return `<div class="dist-row" id="distrow-${footageId}-${p.key}">
+      <div class="dist-row-head">
+        <span class="dist-dot-lg${posted ? ' posted' : ''}"></span>
+        <span class="dist-platform-name">${p.full}</span>
+        <span class="dist-status-text">${posted ? dateStr : 'Not posted'}</span>
+        ${posted
+          ? `<button class="btn-danger-xs" onclick="clearDistModal(${footageId},'${p.key}')">Clear</button>`
+          : `<button class="btn btn-ghost btn-xs" onclick="markDistModal(${footageId},'${p.key}')">Mark posted</button>`}
+      </div>
+      ${detailHtml}
+    </div>`;
+  }).join('');
+  document.getElementById('modalDistRows').innerHTML = html;
+}
+
+async function markDistModal(footageId, platform) {
+  const posted_at = new Date().toISOString();
+  const res = await fetch(`/api/vault/footage/${footageId}/distribution`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ platform, posted_at })
+  });
+  if (res.ok) {
+    if (!distMap[footageId]) distMap[footageId] = {};
+    distMap[footageId][platform] = { footage_id: footageId, platform, posted_at, post_url: null, notes: null };
+    renderDistRows(footageId);
+    renderView(applyFilters(allFootage));
+    showToast(`Marked as posted to ${platform}`, 'green');
+  } else {
+    showToast('Error saving distribution', 'red');
+  }
+}
+
+async function clearDistModal(footageId, platform) {
+  const res = await fetch(`/api/vault/footage/${footageId}/distribution/${platform}`, { method: 'DELETE' });
+  if (res.ok) {
+    delete distMap[footageId]?.[platform];
+    renderDistRows(footageId);
+    renderView(applyFilters(allFootage));
+    showToast(`Cleared ${platform}`, 'amber');
+  } else {
+    showToast('Error clearing distribution', 'red');
+  }
+}
+
+async function saveDistDetails(footageId, platform) {
+  const url   = document.getElementById(`disturl-${footageId}-${platform}`)?.value.trim() || null;
+  const notes = document.getElementById(`distnotes-${footageId}-${platform}`)?.value.trim() || null;
+  const existing = distMap[footageId]?.[platform];
+  if (!existing) return;
+  const res = await fetch(`/api/vault/footage/${footageId}/distribution`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ platform, posted_at: existing.posted_at, post_url: url, notes })
+  });
+  if (res.ok) {
+    existing.post_url = url;
+    existing.notes    = notes;
+    showToast('Distribution details saved', 'green');
+  } else {
+    showToast('Error saving details', 'red');
+  }
+}
+
+function formatDistDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // ── MODAL ──────────────────────────────────────────────────────────────────
-function openModal(id) {
-  currentClip = allFootage.find(f => f.id === id);
-  if (!currentClip) return;
-  const f = currentClip;
+async function openModal(id) {
+  // Load fresh record to get last_modified
+  let f;
+  try {
+    f = await fetch(`/api/vault/footage/${id}`).then(r => r.json());
+    // Update local cache
+    const idx = allFootage.findIndex(x => x.id === id);
+    if (idx >= 0) { Object.assign(allFootage[idx], f); }
+  } catch(e) {
+    f = allFootage.find(x => x.id === id);
+  }
+  if (!f) return;
+  currentClip = f;
 
   document.getElementById('modalTitle').textContent = f.original_filename || 'CLIP DETAIL';
 
-  // Thumbnail
   const thumb = document.getElementById('modalThumb');
-  const placeholder = document.getElementById('modalThumbPlaceholder');
-  if (f.thumbnail_path) {
-    thumb.src = f.thumbnail_path;
-    thumb.style.display = 'block';
-    placeholder.style.display = 'none';
-  } else {
-    thumb.style.display = 'none';
-    placeholder.style.display = 'flex';
-  }
+  const ph    = document.getElementById('modalThumbPlaceholder');
+  if (f.thumbnail_path) { thumb.src = f.thumbnail_path; thumb.style.display = 'block'; ph.style.display = 'none'; }
+  else                  { thumb.style.display = 'none'; ph.style.display = 'flex'; }
 
-  // Meta
-  document.getElementById('modalDuration').textContent   = f.duration ? formatDuration(f.duration) : '—';
-  document.getElementById('modalResolution').textContent = f.resolution || '—';
-  document.getElementById('modalCodec').textContent      = f.codec || '—';
-  document.getElementById('modalSize').textContent       = formatBytes(f.file_size);
-  document.getElementById('modalFilepath').textContent   = f.file_path || '—';
+  document.getElementById('modalDuration').textContent    = f.duration     ? formatDuration(f.duration)          : '—';
+  document.getElementById('modalResolution').textContent  = f.resolution   || '—';
+  document.getElementById('modalCodec').textContent       = f.codec        || '—';
+  document.getElementById('modalSize').textContent        = formatBytes(f.file_size);
+  document.getElementById('modalOrientation').textContent = f.orientation  || '—';
+  document.getElementById('modalIngested').textContent    = f.ingested_at  ? formatDistDate(f.ingested_at)       : '—';
+  document.getElementById('modalRecorded').textContent    = f.creation_timestamp ? formatDistDate(f.creation_timestamp) : '—';
+  document.getElementById('modalModified').textContent    = f.last_modified ? formatDistDate(f.last_modified)   : '—';
+  document.getElementById('modalFilepath').textContent    = f.file_path    || '—';
 
-  // Editable fields
   document.getElementById('modalShotType').value    = f.shot_type    || '';
   document.getElementById('modalSubcategory').value = f.subcategory  || '';
   document.getElementById('modalQuality').value     = f.quality_flag || '';
   document.getElementById('modalDescription').value = f.description  || '';
-
-  // Subcategory opacity
   document.getElementById('subcategoryGroup').style.opacity = f.shot_type === 'b-roll' ? '1' : '0.4';
 
-  // Organize status
   const orgStatus = document.getElementById('organizeStatus');
-  if (f.organized_path) {
-    orgStatus.className = 'organize-status done';
-    orgStatus.textContent = '✓ Organized';
-  } else {
-    orgStatus.className = 'organize-status';
-    orgStatus.textContent = '';
-  }
+  orgStatus.className = f.organized_path ? 'organize-status done' : 'organize-status';
+  orgStatus.textContent = f.organized_path ? '✓ Tagged' : '';
+
+  renderDistRows(f.id);
 
   document.getElementById('clipModal').classList.add('open');
 }
@@ -670,156 +1124,131 @@ function closeModalIfOverlay(e) {
 async function saveClipEdits() {
   if (!currentClip) return;
   const body = {
-    shot_type:    document.getElementById('modalShotType').value     || null,
-    subcategory:  document.getElementById('modalSubcategory').value  || null,
-    quality_flag: document.getElementById('modalQuality').value      || null,
+    shot_type:    document.getElementById('modalShotType').value    || null,
+    subcategory:  document.getElementById('modalSubcategory').value || null,
+    quality_flag: document.getElementById('modalQuality').value     || null,
     description:  document.getElementById('modalDescription').value.trim() || null
   };
   try {
     const res = await fetch(`/api/vault/footage/${currentClip.id}`, {
-      method:  'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body:    JSON.stringify(body)
+      method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
     });
     if (res.ok) {
-      // Update local cache
       Object.assign(currentClip, body);
       const idx = allFootage.findIndex(f => f.id === currentClip.id);
       if (idx >= 0) Object.assign(allFootage[idx], body);
-      renderGrid(applyFilters(allFootage));
+      renderView(applyFilters(allFootage));
       showToast('Changes saved', 'green');
       closeModal();
     } else {
       const err = await res.json().catch(() => ({}));
       showToast('Save failed: ' + (err.error || res.status), 'red');
     }
-  } catch(e) {
-    showToast('Save failed: ' + e.message, 'red');
-  }
+  } catch(e) { showToast('Save failed: ' + e.message, 'red'); }
 }
 
 // ── ORGANIZE CLIP ──────────────────────────────────────────────────────────
 async function organizeClip() {
   if (!currentClip) return;
   const btn = document.getElementById('organizeBtn');
-  btn.disabled = true;
-  btn.textContent = 'Organizing…';
+  btn.disabled = true; btn.textContent = 'Tagging…';
   try {
-    const res  = await fetch(`/api/vault/footage/${currentClip.id}/organize`, { method: 'POST' });
-    const data = await res.json();
+    const data = await fetch(`/api/vault/footage/${currentClip.id}/organize`, { method: 'POST' }).then(r => r.json());
     if (data.ok && !data.skipped) {
       currentClip.organized_path = data.organized_path;
       const idx = allFootage.findIndex(f => f.id === currentClip.id);
       if (idx >= 0) allFootage[idx].organized_path = data.organized_path;
       document.getElementById('organizeStatus').className = 'organize-status done';
-      document.getElementById('organizeStatus').textContent = '✓ Organized';
-      showToast('File organized', 'green');
+      document.getElementById('organizeStatus').textContent = '✓ Tagged';
+      updateUnorganizedCount();
+      showToast('Tagged as organized', 'green');
     } else if (data.skipped) {
-      showToast('Already organized', 'amber');
+      showToast('Already tagged', 'amber');
     } else {
-      showToast('Organize failed: ' + (data.error || 'unknown error'), 'red');
+      showToast('Tag failed: ' + (data.error || 'unknown error'), 'red');
     }
-  } catch(e) {
-    showToast('Organize failed: ' + e.message, 'red');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Organize file';
-  }
+  } catch(e) { showToast('Tag failed: ' + e.message, 'red'); }
+  finally { btn.disabled = false; btn.textContent = 'Tag as Organized'; }
 }
 
 // ── INGEST ─────────────────────────────────────────────────────────────────
 async function startIngest() {
   const folderPath = document.getElementById('folderPathInput').value.trim();
   if (!folderPath) { showToast('Enter a folder path', 'amber'); return; }
-
   const projectId = document.getElementById('projectSelect').value || null;
-  const btn       = document.getElementById('ingestBtn');
-  const wrap      = document.getElementById('progressWrap');
-  const bar       = document.getElementById('progressBar');
-  const log       = document.getElementById('progressLog');
-
-  btn.disabled = true;
-  btn.textContent = 'Ingesting…';
-  wrap.classList.add('visible');
-  log.innerHTML = '';
-  bar.style.width = '0%';
-
-  const addLog = (cls, text) => {
-    log.innerHTML += `<div class="${cls}">${escHtml(text)}</div>`;
-    log.scrollTop = log.scrollHeight;
-  };
-
+  const btn = document.getElementById('ingestBtn');
+  const wrap = document.getElementById('progressWrap');
+  const bar  = document.getElementById('progressBar');
+  const log  = document.getElementById('progressLog');
+  btn.disabled = true; btn.textContent = 'Ingesting…';
+  wrap.classList.add('visible'); log.innerHTML = ''; bar.style.width = '0%';
+  const addLog = (cls, text) => { log.innerHTML += `<div class="${cls}">${escHtml(text)}</div>`; log.scrollTop = log.scrollHeight; };
   try {
     const response = await fetch('/api/vault/ingest', {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-      body:    JSON.stringify({ folder_path: folderPath, project_id: projectId })
+      body: JSON.stringify({ folder_path: folderPath, project_id: projectId })
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      addLog('err', '✗ ' + (err.error || 'Server error ' + response.status));
-      return;
-    }
-
-    const reader  = response.body.getReader();
+    if (!response.ok) { addLog('err', '✗ Server error ' + response.status); return; }
+    const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let total = 0;
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
-
-      for (const line of lines) {
+      for (const line of decoder.decode(value, { stream: true }).split('\n')) {
         if (!line.startsWith('data: ')) continue;
-        let evt;
-        try { evt = JSON.parse(line.slice(6)); } catch { continue; }
-
-        if (evt.stage === 'discovered') {
-          total = evt.total;
-          addLog('', `Found ${total} video file${total !== 1 ? 's' : ''}`);
-        } else if (evt.stage === 'processing') {
-          const pct = Math.round((evt.index / total) * 80);
-          bar.style.width = pct + '%';
-          addLog('', `[${evt.index}/${total}] ${evt.file}`);
-        } else if (evt.stage === 'classified') {
-          const cls = evt.classification;
-          if (cls?.shot_type) addLog('ok', `  → ${cls.shot_type} · ${cls.quality_flag || '?'}`);
-        } else if (evt.stage === 'saved') {
-          addLog('ok', `  ✓ Saved (id=${evt.id})`);
-        } else if (evt.stage === 'done') {
-          bar.style.width = '100%';
-          const s = evt.summary;
-          addLog('ok', `Done — ${s.processed} ingested, ${s.skipped} skipped, ${s.errors?.length || 0} errors`);
-          // Reload footage
-          await loadFootage();
-          await loadStatus();
-        }
+        let evt; try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+        if (evt.stage === 'discovered')  { total = evt.total; addLog('', `Found ${total} video file${total !== 1 ? 's' : ''}`); }
+        if (evt.stage === 'processing')  { bar.style.width = Math.round((evt.index / total) * 80) + '%'; addLog('', `[${evt.index}/${total}] ${evt.file}`); }
+        if (evt.stage === 'classified' && evt.classification?.shot_type) addLog('ok', `  → ${evt.classification.shot_type} · ${evt.classification.quality_flag || '?'}`);
+        if (evt.stage === 'saved')       { addLog('ok', `  ✓ Saved (id=${evt.id})`); }
+        if (evt.stage === 'done')        { bar.style.width = '100%'; const s = evt.summary; addLog('ok', `Done — ${s.processed} ingested, ${s.skipped} skipped, ${s.errors?.length || 0} errors`); await loadFootage(); await loadStatus(); }
       }
     }
-  } catch(e) {
-    addLog('err', '✗ ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '▶ Ingest';
-  }
+  } catch(e) { addLog('err', '✗ ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '▶ Ingest'; }
 }
 
 // ── UTILS ──────────────────────────────────────────────────────────────────
+function shotTypeTag(type) {
+  const map = { 'b-roll':'tag-broll', 'dialogue':'tag-dialogue', 'talking-head':'tag-talkinghead', 'action':'tag-action', 'unusable':'tag-unusable' };
+  return `<span class="tag ${map[type] || 'tag-unclassified'}">${type || 'unclassified'}</span>`;
+}
+
+function qualityTag2(flag) {
+  const map = { hero:'tag-hero', usable:'tag-usable', review:'tag-review', discard:'tag-discard' };
+  if (!flag) return '';
+  return `<span class="tag ${map[flag] || 'tag-unclassified'}">${flag}</span>`;
+}
+
+function formatDuration(secs) {
+  const m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1048576)    return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+  return (bytes / 1073741824).toFixed(2) + ' GB';
+}
+
+function parentDir(filePath) {
+  if (!filePath) return '';
+  const parts = filePath.replace(/\\/g, '/').split('/');
+  return parts.length > 1 ? parts.slice(-2, -1)[0] + '/' : '';
+}
+
 function escHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function showToast(msg, type = 'green') {
-  const wrap = document.getElementById('toastWrap');
-  const el   = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  wrap.appendChild(el);
+  const el = document.createElement('div');
+  el.className = `toast ${type}`; el.textContent = msg;
+  document.getElementById('toastWrap').appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }
 </script>

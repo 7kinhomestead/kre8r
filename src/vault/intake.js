@@ -1,12 +1,18 @@
 /**
  * VaultΩr Intake Pipeline — src/vault/intake.js
  *
- * Accepts a folder path, finds all video files, extracts metadata + thumbnail
- * via ffprobe/ffmpeg, classifies each clip with Claude Vision, and writes
- * everything to the footage table.
+ * Accepts a folder path, finds all video files, extracts metadata + three
+ * thumbnails via ffprobe/ffmpeg, classifies each clip with Claude Vision
+ * (all three frames in one call), and writes everything to the footage table.
  *
- * Designed to be resilient: one bad file never aborts the whole batch.
- * Works gracefully when ffmpeg is not installed (surfaces clear errors).
+ * Thumbnail strategy:
+ *   Thumb A — 10% of duration (or 2s for clips under 10s)
+ *   Thumb B — 50% of duration (or 5s for clips under 10s)  ← display thumbnail
+ *   Thumb C — 80% of duration (or 8s for clips under 10s)
+ *   All three are sent to Claude Vision together. Middle frame (B) is stored
+ *   as the display thumbnail. All three files are kept on disk.
+ *
+ * Resilience: one bad file never aborts the whole batch.
  */
 
 'use strict';
@@ -18,18 +24,15 @@ const crypto = require('crypto');
 
 const db = require('../db');
 
-// Point fluent-ffmpeg at the installed binaries if PATH doesn't have them
 if (process.env.FFMPEG_PATH)  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
 if (process.env.FFPROBE_PATH) ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
 
 const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv', '.braw', '.r3d', '.ari']);
-
-// Proprietary RAW formats where ffprobe/ffmpeg may lack a decoder.
-// Files in this set fall back to filesystem-only metadata rather than failing.
-const RAW_EXTENSIONS = new Set(['.braw', '.r3d', '.ari']);
-const THUMBNAIL_DIR = path.join(__dirname, '..', '..', 'public', 'thumbnails');
-const ANTHROPIC_VERSION = '2023-06-01';
-const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
+const RAW_EXTENSIONS        = new Set(['.braw', '.r3d', '.ari']);
+const BRAW_EXTENSIONS       = new Set(['.braw']); // Blackmagic RAW — no ffprobe at all, proxy-only workflow
+const THUMBNAIL_DIR         = path.join(__dirname, '..', '..', 'public', 'thumbnails');
+const ANTHROPIC_VERSION     = '2023-06-01';
+const MODEL                 = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
 
 // ─────────────────────────────────────────────
 // FFMPEG AVAILABILITY CHECK
@@ -47,27 +50,20 @@ function checkFfmpeg() {
 
 function findVideoFiles(folderPath) {
   const results = [];
-
   function walk(dir) {
     let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch (e) {
-      return; // unreadable directory — skip silently
-    }
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
+    catch (e) { return; }
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(full);
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
-        if (SUPPORTED_EXTENSIONS.has(ext)) {
-          results.push(full);
-        }
+        if (SUPPORTED_EXTENSIONS.has(ext)) results.push(full);
       }
     }
   }
-
   walk(folderPath);
   return results;
 }
@@ -86,119 +82,167 @@ function probeFile(filePath) {
 }
 
 function parseMetadata(filePath, metadata) {
-  const fmt    = metadata.format || {};
+  const fmt     = metadata.format || {};
   const vStream = (metadata.streams || []).find(s => s.codec_type === 'video');
 
   const duration  = parseFloat(fmt.duration) || null;
   const file_size = parseInt(fmt.size, 10)   || fs.statSync(filePath).size;
-
-  const width  = vStream?.width;
-  const height = vStream?.height;
+  const width     = vStream?.width;
+  const height    = vStream?.height;
   const resolution = (width && height) ? `${width}x${height}` : null;
-  const codec = vStream?.codec_name || null;
-
-  // creation_time lives in format tags or stream tags
+  const codec      = vStream?.codec_name || null;
   const creation_timestamp =
-    fmt.tags?.creation_time ||
-    vStream?.tags?.creation_time ||
-    null;
+    fmt.tags?.creation_time || vStream?.tags?.creation_time || null;
 
   return { duration, file_size, resolution, codec, creation_timestamp };
 }
 
-// Fallback for RAW formats that ffprobe can't parse (BRAW, R3D, ARRI).
-// Returns what we can get from the filesystem — enough to ingest the record.
 function fallbackMetadata(filePath) {
   const stat = fs.statSync(filePath);
   return {
     duration:           null,
     file_size:          stat.size,
     resolution:         null,
-    codec:              path.extname(filePath).slice(1).toUpperCase(), // e.g. "BRAW"
+    codec:              path.extname(filePath).slice(1).toUpperCase(),
     creation_timestamp: stat.birthtime?.toISOString() || stat.mtime?.toISOString() || null
   };
 }
 
 // ─────────────────────────────────────────────
-// FFMPEG — THUMBNAIL EXTRACTION
+// FFMPEG — THREE-THUMBNAIL EXTRACTION
 // ─────────────────────────────────────────────
 
 function thumbnailSlug(filePath) {
-  // MD5 of the absolute path → always unique, no collisions across folders
   return crypto.createHash('md5').update(path.resolve(filePath)).digest('hex');
 }
 
-function extractThumbnail(filePath, duration) {
-  // 3s mark, or 10% of duration if the clip is shorter than 30 seconds
-  const timeOffset = (duration && duration < 30)
-    ? Math.max(0.5, duration * 0.1)
-    : 3;
-
-  const slug      = thumbnailSlug(filePath);
-  const thumbFile = slug + '.jpg';
-  const thumbPath = path.join(THUMBNAIL_DIR, thumbFile);
-  const thumbUrl  = `/thumbnails/${thumbFile}`;  // public URL
-
-  // Skip if already extracted
-  if (fs.existsSync(thumbPath)) {
-    return Promise.resolve({ thumbPath, thumbUrl });
+/**
+ * Calculate the three time offsets for a clip.
+ * Clips under 10s use fixed marks; longer clips use percentages.
+ * All marks are clamped to within 0.5s of clip end.
+ */
+function thumbnailOffsets(duration) {
+  if (!duration || duration < 10) {
+    // Fixed marks for short clips — clamped to actual duration
+    const clamp = (t) => duration ? Math.min(t, duration - 0.5) : t;
+    return [clamp(2), clamp(5), clamp(8)];
   }
+  return [duration * 0.10, duration * 0.50, duration * 0.80];
+}
 
+/**
+ * Extract a single thumbnail at `timeOffset` seconds into `filePath`.
+ * Saves to `outPath`. No-ops if the file already exists.
+ */
+function extractOneThumbnail(filePath, timeOffset, outPath) {
+  if (fs.existsSync(outPath)) return Promise.resolve();
   return new Promise((resolve, reject) => {
     ffmpeg(filePath)
       .screenshots({
-        timestamps: [timeOffset],
-        filename: thumbFile,
-        folder: THUMBNAIL_DIR,
-        size: '640x?'
+        timestamps: [Math.max(0, timeOffset)],
+        filename:   path.basename(outPath),
+        folder:     path.dirname(outPath),
+        size:       '640x?'
       })
-      .on('end', () => resolve({ thumbPath, thumbUrl }))
+      .on('end', resolve)
       .on('error', reject);
   });
 }
 
+/**
+ * Extract all three thumbnails for a clip.
+ * Returns { a, b, c } — each with { path, url } — and { displayPath, displayUrl }
+ * pointing to thumbnail B (the middle frame).
+ * On failure, returns null.
+ */
+async function extractThumbnails(filePath, duration) {
+  fs.mkdirSync(THUMBNAIL_DIR, { recursive: true });
+
+  const slug    = thumbnailSlug(filePath);
+  const offsets = thumbnailOffsets(duration);
+  const labels  = ['a', 'b', 'c'];
+
+  const thumbs = labels.map((label, i) => ({
+    label,
+    offset: offsets[i],
+    filePath: path.join(THUMBNAIL_DIR, `${slug}_thumb_${label}.jpg`),
+    url:      `/thumbnails/${slug}_thumb_${label}.jpg`
+  }));
+
+  // Extract all three — individual failures are tolerated
+  let anySuccess = false;
+  for (const t of thumbs) {
+    try {
+      await extractOneThumbnail(filePath, t.offset, t.filePath);
+      anySuccess = true;
+    } catch (e) {
+      // Mark as missing; Vision will receive whichever frames succeeded
+      t.failed = true;
+    }
+  }
+
+  if (!anySuccess) return null;
+
+  // Thumb B (index 1) is the display thumbnail
+  const display = thumbs[1].failed ? thumbs.find(t => !t.failed) : thumbs[1];
+
+  return {
+    a:           thumbs[0],
+    b:           thumbs[1],
+    c:           thumbs[2],
+    displayPath: display?.filePath || null,
+    displayUrl:  display?.url      || null
+  };
+}
+
 // ─────────────────────────────────────────────
-// CLAUDE VISION — CLIP CLASSIFICATION
+// CLAUDE VISION — MULTI-IMAGE CLASSIFICATION
 // ─────────────────────────────────────────────
 
-const VISION_PROMPT = `You are analyzing a video thumbnail from a homesteading and off-grid living content creator (7 Kin Homestead). Categorize this clip and return ONLY a JSON object with these exact fields:
+const VISION_PROMPT = `You are analyzing three thumbnails from different points in a video clip (early, middle, late) from a homesteading and off-grid living content creator (7 Kin Homestead). Use all three frames together to make your classification — do not judge on any single frame alone. A blurry early frame with sharp middle and late frames is a usable or hero clip, not a discard. Return ONLY a JSON object:
 {
   "shot_type": "one of: dialogue, talking-head, b-roll, action, unusable",
-  "subcategory": "one of: wide, medium, close-up, detail, null — only populate for b-roll, null for all others",
-  "description": "a 1-2 sentence description of what is visible in the frame — specific and useful for search",
+  "subcategory": "one of: wide, medium, close-up, detail, null — only for b-roll, null for all others",
+  "description": "1-2 sentences describing what is visible across the three frames — specific and search-useful",
   "quality_flag": "one of: hero, usable, review, discard",
-  "quality_reason": "one sentence explaining the quality flag"
+  "quality_reason": "one sentence explaining the flag",
+  "orientation": "one of: horizontal, vertical, square"
 }
 Be specific in descriptions. 'Person talking in front of trees' is not useful. 'Creator in grey shirt speaking to camera, outdoor background with forest visible, good lighting' is useful.`;
 
-async function classifyWithVision(thumbPath) {
+async function classifyWithVision(thumbs) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
 
-  const imageData = fs.readFileSync(thumbPath).toString('base64');
-
   const { default: fetch } = await import('node-fetch');
+
+  // Build content array: up to three images followed by the prompt text.
+  // Skip any thumb that failed extraction.
+  const content = [];
+  for (const t of [thumbs.a, thumbs.b, thumbs.c]) {
+    if (!t || t.failed || !fs.existsSync(t.filePath)) continue;
+    const imageData = fs.readFileSync(t.filePath).toString('base64');
+    content.push({
+      type:   'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: imageData }
+    });
+  }
+
+  if (content.length === 0) throw new Error('No thumbnail images available for Vision');
+
+  content.push({ type: 'text', text: VISION_PROMPT });
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
+      'Content-Type':      'application/json',
+      'x-api-key':         apiKey,
       'anthropic-version': ANTHROPIC_VERSION
     },
     body: JSON.stringify({
-      model: MODEL,
+      model:      MODEL,
       max_tokens: 512,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: 'image/jpeg', data: imageData }
-          },
-          { type: 'text', text: VISION_PROMPT }
-        ]
-      }]
+      messages:   [{ role: 'user', content }]
     })
   });
 
@@ -207,10 +251,8 @@ async function classifyWithVision(thumbPath) {
     throw new Error(err?.error?.message || `Claude API error ${response.status}`);
   }
 
-  const data = await response.json();
-  const raw  = data.content[0].text;
-
-  // Strip markdown fences if present
+  const data    = await response.json();
+  const raw     = data.content[0].text;
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
   return JSON.parse(cleaned);
 }
@@ -221,27 +263,67 @@ async function classifyWithVision(thumbPath) {
 
 async function processFile(filePath, options = {}) {
   const { projectId = null, onProgress = null } = options;
-
   const original_filename = path.basename(filePath);
+  const ext = path.extname(filePath).toLowerCase();
 
   // Skip duplicates
   if (db.footageFilePathExists(filePath)) {
     return { file: filePath, status: 'skipped', reason: 'already ingested' };
   }
 
-  // ── 1. ffprobe ──────────────────────────────
-  const ext = path.extname(filePath).toLowerCase();
-  const isRaw = RAW_EXTENSIONS.has(ext);
+  // ── BRAW fast path: no ffprobe, no thumbnails, no Vision ──────────────────
+  // BRAW is Blackmagic RAW — proprietary codec, ffmpeg cannot decode it.
+  // Write a minimal record immediately; proxy export via DaVinci generates
+  // the actual working file. The proxy will update this record on ingest.
+  if (BRAW_EXTENSIONS.has(ext)) {
+    const stat = fs.statSync(filePath);
+    const id = db.insertFootage({
+      project_id:         projectId,
+      file_path:          filePath,
+      original_filename,
+      shot_type:          'b-roll',
+      subcategory:        null,
+      description:        'BRAW source — proxy export required before classification',
+      quality_flag:       'review',
+      orientation:        null,
+      duration:           null,
+      resolution:         null,
+      codec:              'BRAW',
+      file_size:          stat.size,
+      creation_timestamp: stat.birthtime?.toISOString() || stat.mtime?.toISOString() || null,
+      thumbnail_path:     null,
+      organized_path:     null,
+      used_in:            '[]',
+      braw_source_path:   filePath,
+      is_proxy:           false
+    });
+    onProgress?.({ stage: 'saved', file: original_filename, id, braw: true });
+    return { id, file: filePath, status: 'ok', braw: true, shot_type: 'b-roll', quality_flag: 'review', orientation: null, thumb: null };
+  }
 
+  // ── Proxy MP4 detection: check if this matches a known BRAW source ─────────
+  // Proxy naming convention: [original_braw_name]_proxy.mp4
+  const isProxyMp4 = original_filename.endsWith('_proxy.mp4');
+  if (isProxyMp4) {
+    const brawBasename = original_filename.replace(/_proxy\.mp4$/, '.braw');
+    // Search for a matching BRAW record by filename anywhere in the DB
+    const brawRecord = db.findBrawByBasename?.(brawBasename) || null;
+    if (brawRecord) {
+      // Update the existing BRAW record with proxy data
+      return await processProxyUpdate(filePath, brawRecord, { projectId, onProgress });
+    }
+    // No matching BRAW — ingest as new proxy record
+  }
+
+  // ── Standard pipeline: ffprobe → thumbnails → Vision → insert ─────────────
+  const isRaw = RAW_EXTENSIONS.has(ext);
   let meta;
   try {
     const raw = await probeFile(filePath);
     meta = parseMetadata(filePath, raw);
   } catch (e) {
     if (isRaw) {
-      // Proprietary RAW codec — ffprobe can't decode without the vendor SDK.
-      // Fall back to filesystem metadata and continue ingesting.
-      console.warn(`[VaultΩr] ffprobe could not read ${original_filename} (${ext.slice(1).toUpperCase()} format — no native decoder). Ingesting with filesystem metadata only.`);
+      console.warn(`[VaultΩr] ffprobe could not read ${original_filename} (${ext.slice(1).toUpperCase()} — no native decoder). Using filesystem metadata.`);
       meta = fallbackMetadata(filePath);
     } else {
       return { file: filePath, status: 'error', stage: 'ffprobe', error: e.message };
@@ -250,82 +332,133 @@ async function processFile(filePath, options = {}) {
 
   onProgress?.({ stage: 'probed', file: original_filename, meta });
 
-  // ── 2. thumbnail ────────────────────────────
-  let thumbPath = null, thumbUrl = null;
+  // ── 2. Three thumbnails ──────────────────────
+  let thumbs = null;
   try {
-    fs.mkdirSync(THUMBNAIL_DIR, { recursive: true });
-    ({ thumbPath, thumbUrl } = await extractThumbnail(filePath, meta.duration));
+    thumbs = await extractThumbnails(filePath, meta.duration);
   } catch (e) {
-    // Non-fatal: store the record without a thumbnail.
-    // RAW formats (BRAW, R3D, ARRI) almost always hit this — expected.
-    const reason = isRaw ? `${ext.slice(1).toUpperCase()} requires proprietary ffmpeg plugin` : e.message;
-    console.warn(`[VaultΩr] Thumbnail skipped for ${original_filename}: ${reason}`);
+    console.warn(`[VaultΩr] Thumbnails skipped for ${original_filename}: ${e.message}`);
   }
 
-  onProgress?.({ stage: 'thumbnail', file: original_filename, thumbUrl });
+  onProgress?.({ stage: 'thumbnail', file: original_filename, displayUrl: thumbs?.displayUrl });
 
-  // ── 3. Claude Vision ─────────────────────────
+  // ── 3. Claude Vision ────────────────────────
   let classification = {};
-  if (thumbPath && fs.existsSync(thumbPath)) {
+  if (thumbs) {
     try {
-      classification = await classifyWithVision(thumbPath);
+      classification = await classifyWithVision(thumbs);
     } catch (e) {
       console.warn(`[VaultΩr] Vision failed for ${original_filename}: ${e.message}`);
-      // Store the record with null classification — can be re-run later
     }
   }
 
   onProgress?.({ stage: 'classified', file: original_filename, classification });
 
-  // ── 4. DB insert ────────────────────────────
+  // ── 4. DB insert ─────────────────────────────
   const id = db.insertFootage({
     project_id:         projectId,
     file_path:          filePath,
     original_filename,
-    shot_type:          classification.shot_type          || null,
-    subcategory:        classification.subcategory        || null,
-    description:        classification.description        || null,
-    quality_flag:       classification.quality_flag       || null,
+    shot_type:          classification.shot_type    || null,
+    subcategory:        classification.subcategory  || null,
+    description:        classification.description  || null,
+    quality_flag:       classification.quality_flag || null,
+    orientation:        classification.orientation  || null,
     duration:           meta.duration,
     resolution:         meta.resolution,
     codec:              meta.codec,
     file_size:          meta.file_size,
     creation_timestamp: meta.creation_timestamp,
-    thumbnail_path:     thumbUrl,
+    thumbnail_path:     thumbs?.displayUrl || null,
     organized_path:     null,
-    used_in:            '[]'
+    used_in:            '[]',
+    braw_source_path:   null,
+    is_proxy:           isProxyMp4 ? true : false
   });
 
   onProgress?.({ stage: 'saved', file: original_filename, id });
 
   return {
     id,
-    file: filePath,
-    status: 'ok',
+    file:         filePath,
+    status:       'ok',
     shot_type:    classification.shot_type    || null,
     quality_flag: classification.quality_flag || null,
-    thumb:        thumbUrl
+    orientation:  classification.orientation  || null,
+    thumb:        thumbs?.displayUrl || null
+  };
+}
+
+/**
+ * A _proxy.mp4 matched a known BRAW record.
+ * Run the full pipeline on the proxy, then update the original BRAW record
+ * with the metadata + thumbnails so it becomes a fully classified clip.
+ */
+async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
+  const { projectId = null, onProgress = null } = options;
+  const original_filename = path.basename(proxyPath);
+
+  let meta;
+  try {
+    const raw = await probeFile(proxyPath);
+    meta = parseMetadata(proxyPath, raw);
+  } catch (e) {
+    return { file: proxyPath, status: 'error', stage: 'ffprobe', error: e.message };
+  }
+
+  let thumbs = null;
+  try { thumbs = await extractThumbnails(proxyPath, meta.duration); } catch(e) {}
+
+  let classification = {};
+  if (thumbs) {
+    try { classification = await classifyWithVision(thumbs); } catch(e) {}
+  }
+
+  // Update the original BRAW record (not the proxy path) with all the good data
+  db.updateFootage(brawRecord.id, {
+    shot_type:          classification.shot_type    || brawRecord.shot_type,
+    subcategory:        classification.subcategory  || null,
+    description:        classification.description  || brawRecord.description,
+    quality_flag:       classification.quality_flag || brawRecord.quality_flag,
+    orientation:        classification.orientation  || null,
+    duration:           meta.duration,
+    resolution:         meta.resolution,
+    codec:              meta.codec,
+    file_size:          brawRecord.file_size,        // keep original BRAW size
+    creation_timestamp: meta.creation_timestamp || brawRecord.creation_timestamp,
+    thumbnail_path:     thumbs?.displayUrl || null
+  });
+
+  onProgress?.({ stage: 'saved', file: original_filename, id: brawRecord.id, proxy_update: true });
+
+  return {
+    id:           brawRecord.id,
+    file:         proxyPath,
+    status:       'ok',
+    proxy_update: true,
+    shot_type:    classification.shot_type    || null,
+    quality_flag: classification.quality_flag || null,
+    orientation:  classification.orientation  || null,
+    thumb:        thumbs?.displayUrl || null
   };
 }
 
 // ─────────────────────────────────────────────
-// MAIN ENTRY POINT — ingestFolder
+// INGEST FOLDER — main entry point
 // ─────────────────────────────────────────────
 
 async function ingestFolder(folderPath, options = {}) {
   const { projectId = null, onProgress = null } = options;
 
-  // 1. ffmpeg check
   const ffmpegAvailable = await checkFfmpeg();
   if (!ffmpegAvailable) {
     return {
       ok: false,
-      error: 'ffmpeg is not installed or not in PATH. See SETUP.md for installation instructions.',
+      error: 'ffmpeg is not installed or not in PATH. See SETUP.md.',
       total: 0, processed: 0, skipped: 0, errors: []
     };
   }
 
-  // 2. Folder check
   if (!fs.existsSync(folderPath)) {
     return {
       ok: false,
@@ -334,7 +467,6 @@ async function ingestFolder(folderPath, options = {}) {
     };
   }
 
-  // 3. Discover files
   const files = findVideoFiles(folderPath);
   onProgress?.({ stage: 'discovered', total: files.length });
 
@@ -342,7 +474,6 @@ async function ingestFolder(folderPath, options = {}) {
     return { ok: true, total: 0, processed: 0, skipped: 0, errors: [], by_shot_type: {} };
   }
 
-  // 4. Process each file
   const results = { processed: 0, skipped: 0, errors: [], by_shot_type: {}, by_quality: {} };
 
   for (let i = 0; i < files.length; i++) {
@@ -353,7 +484,7 @@ async function ingestFolder(folderPath, options = {}) {
 
     if (result.status === 'ok') {
       results.processed++;
-      const st = result.shot_type || 'unclassified';
+      const st = result.shot_type    || 'unclassified';
       const qf = result.quality_flag || 'unclassified';
       results.by_shot_type[st] = (results.by_shot_type[st] || 0) + 1;
       results.by_quality[qf]   = (results.by_quality[qf]   || 0) + 1;
@@ -365,18 +496,18 @@ async function ingestFolder(folderPath, options = {}) {
   }
 
   return {
-    ok: true,
-    total:    files.length,
-    processed: results.processed,
-    skipped:   results.skipped,
-    errors:    results.errors,
+    ok:          true,
+    total:       files.length,
+    processed:   results.processed,
+    skipped:     results.skipped,
+    errors:      results.errors,
     by_shot_type: results.by_shot_type,
     by_quality:   results.by_quality
   };
 }
 
 // ─────────────────────────────────────────────
-// SINGLE FILE ENTRY POINT (used by watcher)
+// INGEST SINGLE FILE — used by watcher
 // ─────────────────────────────────────────────
 
 async function ingestFile(filePath, options = {}) {

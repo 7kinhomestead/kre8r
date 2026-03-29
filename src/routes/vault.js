@@ -7,6 +7,7 @@
 const express  = require('express');
 const router   = express.Router();
 const path     = require('path');
+const fs       = require('fs');
 const multer   = require('multer');
 const db       = require('../db');
 const { ingestFolder, ingestFile, checkFfmpeg } = require('../vault/intake');
@@ -93,11 +94,18 @@ router.get('/footage', async (req, res) => {
 
 // ─────────────────────────────────────────────
 // GET /api/vault/footage/:id — single clip
+// Includes last_modified from file system (best-effort)
 // ─────────────────────────────────────────────
 router.get('/footage/:id', (req, res) => {
   try {
     const record = db.getFootageById(parseInt(req.params.id));
     if (!record) return res.status(404).json({ error: 'Not found' });
+    try {
+      const stat = fs.statSync(record.file_path);
+      record.last_modified = stat.mtime.toISOString();
+    } catch (e) {
+      record.last_modified = null;
+    }
     res.json(record);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -175,6 +183,58 @@ router.post('/footage/:id/organize', async (req, res) => {
     const result = await organizeFile(parseInt(req.params.id));
     if (!result.ok) return res.status(400).json(result);
     res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/vault/distribution — all distribution records (bulk load)
+// ─────────────────────────────────────────────
+router.get('/distribution', (req, res) => {
+  try {
+    res.json(db.getAllDistribution());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/vault/footage/:id/distribution
+// ─────────────────────────────────────────────
+router.get('/footage/:id/distribution', (req, res) => {
+  try {
+    res.json(db.getDistributionByFootage(parseInt(req.params.id)));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/footage/:id/distribution — mark as posted
+// Body: { platform, posted_at?, post_url?, notes? }
+// ─────────────────────────────────────────────
+router.post('/footage/:id/distribution', (req, res) => {
+  try {
+    const footage_id = parseInt(req.params.id);
+    const { platform, posted_at, post_url, notes } = req.body;
+    if (!platform) return res.status(400).json({ error: 'platform is required' });
+    const VALID = ['tiktok', 'youtube', 'facebook', 'instagram', 'lemon8', 'other'];
+    if (!VALID.includes(platform)) return res.status(400).json({ error: `Invalid platform: ${platform}` });
+    db.upsertDistribution({ footage_id, platform, posted_at: posted_at || new Date().toISOString(), post_url, posted_manually: 1, notes });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// DELETE /api/vault/footage/:id/distribution/:platform
+// ─────────────────────────────────────────────
+router.delete('/footage/:id/distribution/:platform', (req, res) => {
+  try {
+    db.deleteDistribution(parseInt(req.params.id), req.params.platform);
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -68,6 +68,94 @@ function runMigrations() {
     db.run('ALTER TABLE cuts ADD COLUMN rank INTEGER');
     console.log('[DB] Migration: added cuts.rank');
   }
+
+  // VaultΩr: orientation column + resolution-based backfill
+  if (!footageCols.includes('orientation')) {
+    db.run('ALTER TABLE footage ADD COLUMN orientation TEXT');
+    console.log('[DB] Migration: added footage.orientation');
+    // Backfill existing records from their resolution string (e.g. "1920x1080")
+    // width > height * 1.1 → horizontal, height > width * 1.1 → vertical, else → square
+    db.run(`
+      UPDATE footage SET orientation = CASE
+        WHEN resolution IS NULL THEN NULL
+        WHEN CAST(SUBSTR(resolution, 1, INSTR(resolution, 'x') - 1) AS REAL)
+             > CAST(SUBSTR(resolution, INSTR(resolution, 'x') + 1) AS REAL) * 1.1
+             THEN 'horizontal'
+        WHEN CAST(SUBSTR(resolution, INSTR(resolution, 'x') + 1) AS REAL)
+             > CAST(SUBSTR(resolution, 1, INSTR(resolution, 'x') - 1) AS REAL) * 1.1
+             THEN 'vertical'
+        ELSE 'square'
+      END
+      WHERE resolution IS NOT NULL AND INSTR(resolution, 'x') > 0
+    `);
+    console.log('[DB] Migration: backfilled footage.orientation from resolution');
+  }
+
+  // Projects table: DaVinci columns
+  const projectsCols = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsCols.includes('davinci_project_name')) {
+    db.run('ALTER TABLE projects ADD COLUMN davinci_project_name TEXT');
+    console.log('[DB] Migration: added projects.davinci_project_name');
+  }
+  if (!projectsCols.includes('davinci_project_state')) {
+    db.run('ALTER TABLE projects ADD COLUMN davinci_project_state TEXT');
+    console.log('[DB] Migration: added projects.davinci_project_state');
+  }
+  if (!projectsCols.includes('davinci_last_updated')) {
+    db.run('ALTER TABLE projects ADD COLUMN davinci_last_updated DATETIME');
+    console.log('[DB] Migration: added projects.davinci_last_updated');
+  }
+
+  // Footage table: BRAW proxy columns
+  if (!footageCols.includes('braw_source_path')) {
+    db.run('ALTER TABLE footage ADD COLUMN braw_source_path TEXT');
+    console.log('[DB] Migration: added footage.braw_source_path');
+  }
+  if (!footageCols.includes('is_proxy')) {
+    db.run('ALTER TABLE footage ADD COLUMN is_proxy INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added footage.is_proxy');
+  }
+
+  // DaVinci timelines table
+  db.run(`CREATE TABLE IF NOT EXISTS davinci_timelines (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id     INTEGER NOT NULL,
+    timeline_name  TEXT NOT NULL,
+    timeline_index INTEGER NOT NULL DEFAULT 1,
+    state          TEXT NOT NULL DEFAULT 'pending',
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at   DATETIME,
+    notes          TEXT,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_davinci_tl_project ON davinci_timelines(project_id)');
+
+  // VaultΩr: clip_distribution table (CREATE TABLE IF NOT EXISTS is safe)
+  db.run(`CREATE TABLE IF NOT EXISTS clip_distribution (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id      INTEGER NOT NULL,
+    platform        TEXT NOT NULL,
+    posted_at       DATETIME,
+    post_url        TEXT,
+    posted_manually INTEGER NOT NULL DEFAULT 1,
+    notes           TEXT,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(footage_id, platform),
+    FOREIGN KEY (footage_id) REFERENCES footage(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_clip_dist_footage  ON clip_distribution(footage_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_clip_dist_platform ON clip_distribution(platform)');
+
+  // AnalytΩr: add url column to posts
+  const postsCols = (db.exec('PRAGMA table_info(posts)')[0]?.values || []).map(r => r[1]);
+  if (!postsCols.includes('url')) {
+    db.run('ALTER TABLE posts ADD COLUMN url TEXT');
+    console.log('[DB] Migration: added posts.url');
+  }
+  if (!postsCols.includes('angle')) {
+    db.run('ALTER TABLE posts ADD COLUMN angle TEXT');
+    console.log('[DB] Migration: added posts.angle');
+  }
 }
 
 function persist() {
@@ -313,25 +401,29 @@ function insertFootage(record) {
     `INSERT INTO footage
        (project_id, file_path, original_filename, shot_type, subcategory, description,
         duration, resolution, codec, file_size, creation_timestamp,
-        thumbnail_path, quality_flag, organized_path, used_in, transcript_path)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        thumbnail_path, quality_flag, organized_path, used_in, transcript_path,
+        orientation, braw_source_path, is_proxy)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      record.project_id || null,
+      record.project_id         || null,
       record.file_path,
-      record.original_filename || null,
-      record.shot_type || null,
-      record.subcategory || null,
-      record.description || null,
-      record.duration || null,
-      record.resolution || null,
-      record.codec || null,
-      record.file_size || null,
+      record.original_filename  || null,
+      record.shot_type          || null,
+      record.subcategory        || null,
+      record.description        || null,
+      record.duration           || null,
+      record.resolution         || null,
+      record.codec              || null,
+      record.file_size          || null,
       record.creation_timestamp || null,
-      record.thumbnail_path || null,
-      record.quality_flag || null,
-      record.organized_path || null,
-      record.used_in || '[]',
-      record.transcript_path || null
+      record.thumbnail_path     || null,
+      record.quality_flag       || null,
+      record.organized_path     || null,
+      record.used_in            || '[]',
+      record.transcript_path    || null,
+      record.orientation        || null,
+      record.braw_source_path   || null,
+      record.is_proxy           ? 1 : 0
     ]
   );
   persist();
@@ -341,7 +433,9 @@ function insertFootage(record) {
 function updateFootage(id, fields) {
   const allowed = [
     'shot_type', 'subcategory', 'description', 'quality_flag',
-    'organized_path', 'thumbnail_path', 'project_id', 'used_in', 'transcript_path'
+    'organized_path', 'thumbnail_path', 'project_id', 'used_in', 'transcript_path',
+    'orientation', 'braw_source_path', 'is_proxy', 'resolution', 'codec',
+    'duration', 'file_size', 'creation_timestamp'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return;
@@ -383,6 +477,139 @@ function getFootageStats() {
 
 function footageFilePathExists(filePath) {
   return !!_get(`SELECT id FROM footage WHERE file_path = ?`, [filePath]);
+}
+
+// ─────────────────────────────────────────────
+// DISTRIBUTION HELPERS (VaultΩr)
+// ─────────────────────────────────────────────
+
+function upsertDistribution({ footage_id, platform, posted_at, post_url, posted_manually, notes }) {
+  _run(
+    `INSERT INTO clip_distribution (footage_id, platform, posted_at, post_url, posted_manually, notes)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(footage_id, platform) DO UPDATE SET
+       posted_at       = excluded.posted_at,
+       post_url        = excluded.post_url,
+       posted_manually = excluded.posted_manually,
+       notes           = excluded.notes`,
+    [footage_id, platform, posted_at || null, post_url || null, posted_manually ?? 1, notes || null]
+  );
+  persist();
+}
+
+function deleteDistribution(footage_id, platform) {
+  _run(`DELETE FROM clip_distribution WHERE footage_id = ? AND platform = ?`, [footage_id, platform]);
+  persist();
+}
+
+function getDistributionByFootage(footage_id) {
+  return _all(`SELECT * FROM clip_distribution WHERE footage_id = ? ORDER BY platform`, [footage_id]);
+}
+
+function getAllDistribution() {
+  return _all(`SELECT * FROM clip_distribution ORDER BY footage_id, platform`);
+}
+
+// ─────────────────────────────────────────────
+// DAVINCI HELPERS
+// ─────────────────────────────────────────────
+
+const DAVINCI_STATES = [
+  'created', 'proxies_rendering', 'awaiting_creator_grade',
+  'grade_approved', 'rough_cut_ready', 'awaiting_creator_review',
+  'picture_lock', 'delivery_ready'
+];
+
+// Legal state transitions — each key can move to any of its values
+const DAVINCI_TRANSITIONS = {
+  'created':                 ['proxies_rendering', 'awaiting_creator_grade'],
+  'proxies_rendering':       ['awaiting_creator_grade'],
+  'awaiting_creator_grade':  ['grade_approved'],
+  'grade_approved':          ['rough_cut_ready'],
+  'rough_cut_ready':         ['awaiting_creator_review'],
+  'awaiting_creator_review': ['picture_lock'],
+  'picture_lock':            ['delivery_ready'],
+  'delivery_ready':          []
+};
+
+function updateProjectDavinciState(projectId, newState, davinciProjectName) {
+  if (!DAVINCI_STATES.includes(newState)) {
+    throw new Error(`Invalid DaVinci state: ${newState}`);
+  }
+  const project = _get(`SELECT davinci_project_state FROM projects WHERE id = ?`, [projectId]);
+  if (!project) throw new Error(`Project ${projectId} not found`);
+
+  const currentState = project.davinci_project_state;
+  if (currentState) {
+    const allowed = DAVINCI_TRANSITIONS[currentState] || [];
+    if (!allowed.includes(newState)) {
+      throw new Error(`Invalid state transition: ${currentState} → ${newState}`);
+    }
+  }
+
+  const sets   = ['davinci_project_state = ?', 'davinci_last_updated = CURRENT_TIMESTAMP'];
+  const values = [newState];
+  if (davinciProjectName) { sets.push('davinci_project_name = ?'); values.push(davinciProjectName); }
+  _run(`UPDATE projects SET ${sets.join(', ')} WHERE id = ?`, [...values, projectId]);
+  persist();
+}
+
+function createDavinciTimeline({ project_id, timeline_name, timeline_index, state, notes }) {
+  const result = _run(
+    `INSERT INTO davinci_timelines (project_id, timeline_name, timeline_index, state, notes)
+     VALUES (?, ?, ?, ?, ?)`,
+    [project_id, timeline_name, timeline_index ?? 1, state ?? 'pending', notes ?? null]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getDavinciTimelines(projectId) {
+  return _all(
+    `SELECT * FROM davinci_timelines WHERE project_id = ? ORDER BY timeline_index ASC`,
+    [projectId]
+  );
+}
+
+function updateDavinciTimeline(id, fields) {
+  const allowed = ['state', 'completed_at', 'notes'];
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!updates.length) return;
+  const sets   = updates.map(k => `${k} = ?`);
+  const values = updates.map(k => fields[k]);
+  _run(`UPDATE davinci_timelines SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
+  persist();
+}
+
+function getDavinciProjectStatus(projectId) {
+  const project   = getProject(projectId);
+  if (!project) return null;
+  const timelines = getDavinciTimelines(projectId);
+  return { ...project, davinci_timelines: timelines };
+}
+
+function getFootageByBrawPath(brawPath) {
+  return _get(`SELECT * FROM footage WHERE braw_source_path = ?`, [brawPath]);
+}
+
+function findBrawByBasename(brawBasename) {
+  // Match the last segment of braw_source_path against a given filename.
+  // Used to link *_proxy.mp4 files back to their original BRAW record.
+  return _get(
+    `SELECT * FROM footage
+     WHERE braw_source_path IS NOT NULL
+       AND (braw_source_path = ? OR braw_source_path LIKE ? OR braw_source_path LIKE ?)`,
+    [brawBasename, `%/${brawBasename}`, `%\\${brawBasename}`]
+  );
+}
+
+function getAllProjectsWithDavinci() {
+  return _all(
+    `SELECT p.*, ps.stage_status FROM projects p
+     LEFT JOIN pipeline_state ps ON ps.project_id = p.id
+     WHERE p.davinci_project_name IS NOT NULL
+     ORDER BY p.created_at DESC`
+  );
 }
 
 // ─────────────────────────────────────────────
@@ -467,6 +694,126 @@ function upsertScript(projectId, { outline, full_script, approved_version }) {
 }
 
 // ─────────────────────────────────────────────
+// POST HELPERS (AnalytΩr)
+// ─────────────────────────────────────────────
+
+function savePost({ project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle }) {
+  const result = _run(
+    `INSERT INTO posts (project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      project_id,
+      caption_id   || null,
+      platform,
+      content      || null,
+      media_path   || null,
+      scheduled_at || null,
+      posted_at    || null,
+      post_id      || null,
+      status       || 'posted',
+      url          || null,
+      angle        || null
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getPostsByProject(projectId) {
+  return _all(`SELECT * FROM posts WHERE project_id = ? ORDER BY posted_at DESC, created_at DESC`, [projectId]);
+}
+
+function updatePost(id, fields) {
+  const allowed = ['status', 'posted_at', 'post_id', 'url', 'error_message', 'angle', 'content', 'media_path'];
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (updates.length === 0) return;
+  const setClauses = updates.map(k => `${k} = ?`).join(', ');
+  _run(`UPDATE posts SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), id]);
+  persist();
+}
+
+function deletePost(id) {
+  _run(`DELETE FROM analytics WHERE post_id = ?`, [id]);
+  _run(`DELETE FROM posts WHERE id = ?`, [id]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
+// ANALYTICS HELPERS (AnalytΩr)
+// ─────────────────────────────────────────────
+
+function upsertMetric(postId, projectId, platform, metricName, metricValue) {
+  const existing = _get(
+    `SELECT id FROM analytics WHERE post_id = ? AND platform = ? AND metric_name = ?`,
+    [postId, platform, metricName]
+  );
+  if (existing) {
+    _run(
+      `UPDATE analytics SET metric_value = ?, recorded_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [metricValue, existing.id]
+    );
+  } else {
+    _run(
+      `INSERT INTO analytics (post_id, project_id, platform, metric_name, metric_value)
+       VALUES (?, ?, ?, ?, ?)`,
+      [postId, projectId, platform, metricName, metricValue]
+    );
+  }
+  persist();
+}
+
+function getAnalyticsByPost(postId) {
+  return _all(`SELECT * FROM analytics WHERE post_id = ? ORDER BY metric_name`, [postId]);
+}
+
+function getAnalyticsByProject(projectId) {
+  return _all(
+    `SELECT a.*, p.platform as post_platform, p.content, p.url, p.posted_at, p.angle
+     FROM analytics a
+     JOIN posts p ON p.id = a.post_id
+     WHERE a.project_id = ?
+     ORDER BY p.posted_at DESC, a.metric_name`,
+    [projectId]
+  );
+}
+
+function getAnalyticsSummary(projectId) {
+  // Best platform by total views
+  const byPlatform = _all(
+    `SELECT platform, SUM(metric_value) as total_views
+     FROM analytics
+     WHERE project_id = ? AND metric_name = 'views'
+     GROUP BY platform
+     ORDER BY total_views DESC`,
+    [projectId]
+  );
+  // Best post by views
+  const bestPost = _get(
+    `SELECT p.id, p.platform, p.content, p.url, p.angle, a.metric_value as views
+     FROM analytics a
+     JOIN posts p ON p.id = a.post_id
+     WHERE a.project_id = ? AND a.metric_name = 'views'
+     ORDER BY a.metric_value DESC
+     LIMIT 1`,
+    [projectId]
+  );
+  // Total posts
+  const totalPosts = _get(`SELECT COUNT(*) as n FROM posts WHERE project_id = ?`, [projectId]);
+  // Posts by platform
+  const postsByPlatform = _all(
+    `SELECT platform, COUNT(*) as n FROM posts WHERE project_id = ? GROUP BY platform`,
+    [projectId]
+  );
+  return {
+    best_platform: byPlatform[0]?.platform || null,
+    platform_views: byPlatform,
+    best_post: bestPost || null,
+    total_posts: totalPosts?.n || 0,
+    posts_by_platform: postsByPlatform
+  };
+}
+
+// ─────────────────────────────────────────────
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
 
@@ -505,6 +852,21 @@ module.exports = {
   searchFootageByWhere,
   getFootageStats,
   footageFilePathExists,
+  upsertDistribution,
+  deleteDistribution,
+  getDistributionByFootage,
+  getAllDistribution,
+  getFootageByBrawPath,
+  findBrawByBasename,
+  // DaVinci
+  DAVINCI_STATES,
+  DAVINCI_TRANSITIONS,
+  updateProjectDavinciState,
+  createDavinciTimeline,
+  getDavinciTimelines,
+  updateDavinciTimeline,
+  getDavinciProjectStatus,
+  getAllProjectsWithDavinci,
   // CutΩr
   insertCut,
   getCutsByProject,
@@ -513,5 +875,14 @@ module.exports = {
   updateCutClipPath,
   deleteCutsByProject,
   getScript,
-  upsertScript
+  upsertScript,
+  // AnalytΩr
+  savePost,
+  getPostsByProject,
+  updatePost,
+  deletePost,
+  upsertMetric,
+  getAnalyticsByPost,
+  getAnalyticsByProject,
+  getAnalyticsSummary
 };

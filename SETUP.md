@@ -107,18 +107,50 @@ Open http://localhost:3000
 
 ---
 
-## VaultΩr Intake Folder
+## VaultΩr Storage Architecture
 
-Set the intake folder in `creator-profile.json` under the `vault` key:
+**Originals never move.** VaultΩr is a database layer over your existing folder
+structure — it records paths to files, extracts metadata, and generates thumbnails.
+It does not copy, move, rename, or delete any footage file at any point.
+
+### How it works
+
+- **Ingest** reads each file in place, runs ffprobe for metadata, generates a
+  thumbnail into `public/thumbnails/`, and writes a record to the database.
+  The `file_path` column stores the absolute path to the original file.
+- **Organize** computes a logical reference name following the naming convention
+  (`YYYY-MM-DD_description-slug_shottype_NNN.ext`) and writes it to the
+  `organized_path` column as a display string only. No file is created.
+- **Thumbnails** are the only files VaultΩr writes — small JPEGs in `public/thumbnails/`.
+
+### Folder config
+
+Set all three paths in `creator-profile.json` under the `vault` key:
 
 ```json
 {
   "vault": {
-    "intake_folder": "C:/Users/YourName/Videos/intake",
-    "organized_folder": "C:/Users/YourName/Videos/organized"
+    "footage_root":    "D:/Footage",
+    "intake_folder":   "D:/Footage/intake",
+    "organized_folder": "D:/Footage/organized"
   }
 }
 ```
 
-The watcher monitors `intake_folder` for new video files. Organized copies are
-written to `organized_folder`. Original files are never moved or deleted.
+| Key | Purpose |
+|-----|---------|
+| `footage_root` | Root of your footage library (typically an external drive). Point the watcher at subfolders of this. |
+| `intake_folder` | The folder the watcher monitors for new drops. Files placed here are auto-ingested. |
+| `organized_folder` | Logical root used to build `organized_path` reference strings in the DB. No files are written here. |
+
+### External drive workflow
+
+1. Point `footage_root` and `intake_folder` at your external drive:
+   ```json
+   "footage_root":  "E:/7KinFootage",
+   "intake_folder": "E:/7KinFootage/intake"
+   ```
+2. Drop footage onto the drive — the watcher picks it up automatically.
+3. Ingest reads and classifies in place. The original stays on the drive.
+4. If the drive is disconnected, the DB retains all metadata and thumbnails.
+   Re-connect the drive and paths resolve again immediately.

@@ -1,74 +1,77 @@
 # Kre8Ωr — Next Session TODO
 
-## Task 1 — End-to-end smoke test (Phase 1 + Phase 2)
+---
 
-Run a complete real-world test of both phases before building Phase 3.
+## Task 1 — Confirm color space + S-curve in Resolve 20 with real footage
 
-**Phase 1 — pipeline gate flow:**
-1. `npm start` → confirm `[DB] SQLite database ready` + `VaultΩr Watching:` in console
-2. M2: enter a YouTube URL + topic → Generate → confirm 5 packages appear
-3. M2: select a package → confirm green "Gate A approved" toast
-4. M1: load dashboard → confirm project is in **Gate B** section
-5. M3: open with `?project_id=X` → generate captions → Copy All for Gate B → green toast
-6. M1: refresh → project in **Gate C** section
-7. M4: generate emails → Copy All for Gate C → green toast
-8. M1: auto-reloads → project shows as complete
+The `create-project.py` script now probes and logs all available `GetSetting` keys to
+stderr. The next real test must include proxy footage so the S-curve path actually runs.
 
-**Phase 2 — VaultΩr:**
-1. Install ffmpeg: `winget install Gyan.FFmpeg` (if not yet installed)
-2. Drop 2-3 video files into `C:/Users/18054/Videos/intake` → confirm auto-ingest fires
-3. Open `http://localhost:3000/vault.html` → confirm thumbnails + classifications appear
-4. Test natural language search: "hero b-roll" → confirm filtered results
-5. Click a clip → edit quality flag → Save → confirm PATCH persists on reload
-6. Click "Organize file" on one clip → confirm file copied to organized folder with
-   correct `YYYY-MM-DD_slug_shottype_NNN.ext` naming
+**What to do:**
+1. Pick a project that has proxy MP4s in VaultΩr (or drop a test MP4 into the intake
+   folder and let it ingest)
+2. Call `POST /api/davinci/create-project` with that `project_id`
+3. Watch the server console for these lines:
+   ```
+   [probe] GetSetting('colorSpaceInput') = '...'   ← confirms key exists + current value
+   [color] colorSpaceInput: SetSetting('colorSpaceInput', '...') OK
+   [resolve] colorAdj keys (first 12): [...]        ← shows S-curve key format
+   ```
+4. If color space still fails: the probe output will show the exact Resolve 20 key names
+   to use — update `try_set_color_space()` calls in `create-project.py` with the correct keys
+5. If S-curve still fails: the colorAdj key list will show what Resolve 20 exposes —
+   add the correct key format as "Format D" in the S-curve section
+
+**Success criteria:** `errors: []` in the JSON response, color management visible in
+Resolve Project Settings → Color Management tab.
 
 ---
 
-## Task 2 — Build M5 AnalytΩr (`public/m5-analytics.html`)
+## Task 2 — Update `public/index.html` PipelineΩr dashboard
 
-Phase 3, first module. Per-project performance tracking across all platforms.
+The home screen was not updated this session. A `--blue` CSS variable was added but
+the quick-action cards and project card links were not completed.
 
-**Schema audit first** — read `posts` and `analytics` tables in `database/schema.sql`.
-Verify columns cover: platform, post date, views/likes/comments/shares at 24h/7d/30d,
-link clicks, ROCK RICH signups (manual), creator notes. Add missing columns.
+**Quick-action cards** — add two missing cards (AnalytΩr, OperatΩr):
+```
+AnalytΩr:  chart icon (📊), c-blue,   "Track performance across platforms"  → m5-analytics.html
+OperatΩr:  grid icon  (🗂️), c-green,  "Queue, publish, and archive projects" → operator.html
+```
+The `c-blue` class needs to be added to the CSS (the `--blue: #5b9cf6` var already exists).
 
-**`src/db.js` additions:**
-- `savePost(projectId, platform, postedAt, url)` → inserts into posts
-- `updateAnalytics(postId, metrics)` → upserts into analytics
-- `getAnalyticsByProject(projectId)` → all posts + analytics for a project
-- `getAggregateAnalytics()` → best angle + best platform across all projects
+**Pipeline project cards** — add two action links to each card:
+- "Analytics →" linking to `m5-analytics.html?project_id=X` (always shown)
+- "OperatΩr →" linking to `operator.html?project_id=X` (shown only when `gate_c_approved`)
 
-**`src/routes/projects.js` additions:**
-- `POST /:id/posts` — log a new post
-- `PUT /:id/posts/:postId/analytics` — update metrics
-- `GET /:id/analytics` — get all analytics for a project
-
-**UI** (`public/m5-analytics.html`): same dark design system. Project picker via
-`?project_id=X`. Per-platform entry cards with post date, URL, 24h/7d/30d metric
-inputs. Summary card: best-performing angle across all projects.
+**Grid layout** — 8 cards total; keep 4-column grid (2 rows of 4). Confirm it doesn't
+overflow at 1280px width.
 
 ---
 
-## Task 3 — Build OperatΩr dashboard (`public/operator.html`)
+## Task 3 — CutΩr Whisper path hardening + ReviewΩr UX fixes
 
-Master pipeline view. One screen showing the health of every project simultaneously.
+The CutΩr route uses `python -m whisper` which depends on the user's Python environment.
+This needs to be robust before first real use.
 
-**Three-column layout:**
+**Whisper path detection (`src/routes/cutor.js`):**
+- Check `py -m whisper --help` first (Windows Python Launcher), then `python3`, then `python`
+- If Whisper not found, return a clear error immediately rather than a spawn that hangs
+- Log which Python binary is being used so debugging is easy
+- Add a `GET /api/cutor/check` health endpoint: returns ffmpeg status + Whisper status
+  (similar to `/api/vault/status`) — ReviewΩr can call this on load and show a warning
+  banner if Whisper is missing
 
-**Left — Queue** (not yet at Gate C):
-- Projects by stage: M2 → M3 → M4
-- Card: title, current stage, days since created, blocking gate
-- Quick-jump links to the correct tool for each project
+**ReviewΩr UI fixes:**
+- On load, call `/api/cutor/check` and show a setup warning if ffmpeg or Whisper is
+  missing (with install instructions)
+- The "Transcribe + Analyze" button should be disabled with a tooltip explaining why
+  if the check fails
+- Add a "Re-run Analysis" button that clears existing cuts for a project and re-runs
+  the full pipeline (currently there is no way to reprocess footage)
+- Fix: after extraction, the clip_path links should be clickable `file://` links so the
+  user can open the extracted clip directly from the browser
 
-**Center — Ready to Publish** (Gate C approved, not yet posted):
-- Platform checklist per project: TikTok / YouTube / Instagram / Facebook / Lemon8
-- "Mark Posted" checkboxes → write to `posts` table
-- Links to M5 analytics per project
-
-**Right — Archive** (all platforms posted):
-- Completed projects with post dates
-- M5 analytics summary per project (top metric)
-
-**Nav:** add OperatΩr to all tool navbars (M1–M5 + VaultΩr + index).
-Update `public/index.html` grid to show all seven tools.
+**Robustness:**
+- If Whisper times out (>10 min), emit a timeout error event and mark job failed
+- If Claude cut analysis returns malformed JSON, show a parse error in the SSE log
+  rather than silently failing

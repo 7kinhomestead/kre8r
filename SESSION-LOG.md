@@ -383,3 +383,304 @@ winget install Gyan.FFmpeg
 
 **CLAUDE_MODEL note:** `.env` currently has `claude-sonnet-4-20250514`. Update to
 `claude-sonnet-4-6` at the start of the next session.
+
+---
+
+# Kre8Ωr Session Log — 2026-03-29 (Session 2)
+
+## Summary
+
+Phase 2 extensions and Phase 3 completion. CutΩr wired end-to-end (route + ReviewΩr UI
++ nav deep-linking), VaultΩr extended with RAW format support, the full nav consolidated
+into a DistributΩr dropdown, M5 AnalytΩr built from scratch, OperatΩr master dashboard
+built, and several UI polish fixes applied across all 9 pages.
+
+---
+
+## What Was Built / Changed
+
+### CutΩr — Steps 4-6 (`src/routes/cutor.js`, `public/reviewr.html`, nav)
+
+**Route (`src/routes/cutor.js`)** — job-based SSE pipeline:
+- In-memory `Map<jobId, { status, events[], emitter }>` — events buffered so late SSE
+  subscribers receive all prior events on connect
+- `POST /api/cutor/start` — spawns Whisper transcription then Claude cut analysis async,
+  returns `{ job_id }` immediately
+- `GET /api/cutor/status/:job_id` — SSE stream, flushes buffer then streams live
+- `GET /api/cutor/cuts/:project_id` — fetch saved cuts from DB
+- `POST /api/cutor/approve/:cut_id` — mark cut approved
+- `POST /api/cutor/extract/:project_id` — ffmpeg stream-copy extracts approved cuts,
+  SSE progress, updates `clip_path` in DB
+
+**ReviewΩr UI (`public/reviewr.html`)**:
+- Project + footage selectors; `?project_id=X` deep-link auto-selects on load
+- SSE progress log for transcribe + analyze pipeline
+- Ranked social clip cards with approve button, expandable Claude reasoning
+- Retention cuts + CTA placement sections (hidden if none)
+- Extract panel with SSE progress bar; clip_path links update post-extraction
+- Advance-to-M2 banner appears after successful extraction
+
+**Nav (Step 6)**: ReviewΩr linked from all navbars with `?project_id=` threading;
+`getAllProjects()` extended with `social_cuts`, `approved_cuts`, `extracted_clips`,
+`footage_count` subquery columns; pipeline cards show cut status pills + CutΩr button.
+
+---
+
+### VaultΩr RAW format support (`src/vault/intake.js`)
+
+- `.braw` (Blackmagic), `.r3d` (RED), `.ari` (ARRI) added to `SUPPORTED_EXTENSIONS`
+- `RAW_EXTENSIONS` Set separates formats where ffprobe may legitimately fail
+- `fallbackMetadata(filePath)` uses `fs.statSync` for file size + birthtime
+- Three-tier fallback: ffprobe → filesystem metadata → null fields; file always ingests
+
+---
+
+### DistributΩr dropdown nav consolidation (all pages)
+
+M1-M4 individual nav links collapsed into a single hover dropdown labeled `DistributΩr`.
+Sub-items: GateΩr, PackageΩr, CaptionΩr, MailΩr. Active state on button when on any
+M1-M4 page; matching item highlighted inside menu.
+
+Bugs fixed during this work:
+- `.logo span { font-size:11px }` was hitting the teal color span, making `8Ω` render
+  small. Fixed: renamed selector to `.logo .sub`, added `class="sub"` only to subtitles.
+- `inline-flex` + `gap:4px` on `.nav-drop-btn` placed "Distribut", `<span>Ω</span>`,
+  and "r" as three flex items with visible gaps. Fixed: removed `gap:4px`.
+
+---
+
+### M5 AnalytΩr (`public/m5-analytics.html`, `src/routes/analytics.js`, `src/db.js`)
+
+**DB migrations**: `posts.url TEXT` and `posts.angle TEXT` added via `runMigrations()`.
+
+**DB helpers added**: `savePost`, `getPostsByProject`, `updatePost`, `deletePost`,
+`upsertMetric`, `getAnalyticsByPost`, `getAnalyticsByProject`, `getAnalyticsSummary`.
+
+**Route** mounted at `/api/analytics`: 6 endpoints covering post CRUD, metric upsert
+(EAV into analytics table), project summary, and full analytics with post context.
+
+**UI**: project selector, summary cards (total posts / best platform / top post),
+platform filter chips, per-post cards with inline metric editors per platform:
+- TikTok: views, completion_rate, shares, followers_gained
+- YouTube: views, watch_time, ctr, avg_view_duration, subscribers_gained
+- Instagram: reach, saves, shares, profile_visits
+- Facebook: reach, engagement, link_clicks
+- Lemon8: views, engagement, follower_growth
+- Email: open_rate, click_rate, unsubscribes
+- Rock Rich: new_members
+
+---
+
+### OperatΩr dashboard (`public/operator.html`, `src/routes/operator.js`)
+
+**Route** mounted at `/api/operator`:
+- `GET /api/operator` — projects bucketed into queue / ready / archive in one request.
+  Archive = all 5 core platforms (TikTok/YouTube/Instagram/Facebook/Lemon8) posted.
+- `POST /api/operator/mark-posted` / `unmark-posted` — toggle platform posted status
+
+**UI** — three-column kanban:
+- **Queue**: stage badge, days old, blocking gate warning, quick-jump to correct tool
+- **Ready to Publish**: per-platform checkboxes; checking all 5 auto-moves card to Archive
+- **Archive**: last post date, total views from analytics, link to AnalytΩr
+
+---
+
+### Nav additions + UI polish (all 9 pages)
+
+- AnalytΩr added as standalone nav link (not inside DistributΩr — analytics is
+  post-distribution, not a distribution step)
+- OperatΩr added as standalone nav link after AnalytΩr
+- Logo subtitles removed from all pages ("7 Kin Homestead", "Pipeline", tool names)
+- `.nav-drop-btn` changed from `display:inline-flex;align-items:center` to
+  `display:inline-block;white-space:nowrap` — fixes the floating `r` rendering bug
+  where inline-flex was splitting button text into separate flex children
+
+---
+
+## System State at End of Session
+
+```
+src/routes/cutor.js               Job-based SSE CutΩr pipeline (5 endpoints)
+src/routes/analytics.js           M5 AnalytΩr API (6 endpoints)
+src/routes/operator.js            OperatΩr dashboard API (3 endpoints)
+src/db.js                         posts.url + posts.angle migrations;
+                                  8 new analytics/post helpers
+src/vault/intake.js               .braw / .r3d / .ari with graceful fallback
+public/reviewr.html               Full ReviewΩr UI (SSE + cut cards + extract)
+public/m5-analytics.html          AnalytΩr — per-platform post tracking
+public/operator.html              OperatΩr — Queue/Ready/Archive kanban
+All public/*.html (9 files)       AnalytΩr + OperatΩr in nav; logo cleaned;
+                                  DistributΩr button rendering fixed
+```
+
+**Nav order on all pages:**
+PipelineΩr · VaultΩr · ReviewΩr · AnalytΩr · OperatΩr · DistributΩr▾
+
+**Server health:** `GET /api/health` → `{"status":"ok","anthropic_configured":true}`
+
+---
+
+# Kre8Ωr Session Log — 2026-03-29 (Session 3)
+
+## Summary
+
+DaVinci Resolve integration built end-to-end (Parts A–H), VaultΩr extended with
+distribution tracking, folder view, and session persistence. All DaVinci scripting
+confirmed working on Resolve Studio 20.3.2.9.
+
+---
+
+## What Was Built / Changed
+
+### VaultΩr — Distribution Tracking Layer
+
+**DB** (`src/db.js`, `database/schema.sql`):
+- `clip_distribution` table: `(footage_id, platform, posted_at, post_url,
+  posted_manually, notes)` with `UNIQUE(footage_id, platform)` and cascade delete
+- Helpers: `upsertDistribution`, `deleteDistribution`, `getDistributionByFootage`,
+  `getAllDistribution`
+
+**API** (`src/routes/vault.js`):
+- `GET /api/vault/distribution` — bulk load all records (avoids N+1 on page load)
+- `POST /api/vault/footage/:id/distribution` — upsert per platform
+- `DELETE /api/vault/footage/:id/distribution/:platform`
+- `GET /api/vault/footage/:id` extended with `last_modified` from `fs.statSync`
+
+**UI** (`public/vault.html`):
+- Platform indicator dots on clip cards (TT · YT · FB · IG · L8 · +) — teal when posted
+- Distribution section in clip modal with per-platform toggle, date, URL, notes
+- `buildDistMap(records)` — indexes all distribution as `{ [footage_id]: { [platform]: record } }` for O(1) card rendering
+- New filter groups: Orientation (All / ↔ H / ↕ V) and Distribution (All / Unposted / TT / YT / FB / IG / L8)
+- Expanded status bar: Total | Unorganized | Hero | B-roll | Talking Head
+- Folder view mode toggle (Grid | Folder) — collapsible sections by shot_type then parent dir, collapsed by default
+- Persistent filter + view state via `sessionStorage` key `vault_state`
+- "Show organized" toggle (default off) — hides clips where `organized_path` is not null
+
+---
+
+### DaVinci Resolve Integration (Parts A–H)
+
+**Part A — DB migrations** (`src/db.js`):
+- `projects`: added `davinci_project_name`, `davinci_project_state`, `davinci_last_updated`
+- `footage`: added `braw_source_path`, `is_proxy`
+- `davinci_timelines` table: `(project_id, timeline_name, timeline_index, state,
+  created_at, completed_at, notes)` with cascade delete
+- `DAVINCI_STATES` (8 states) and `DAVINCI_TRANSITIONS` dict — strict state machine,
+  illegal transitions throw before any DB write
+- Helpers: `updateProjectDavinciState`, `createDavinciTimeline`, `getDavinciTimelines`,
+  `updateDavinciTimeline`, `getDavinciProjectStatus`, `getAllProjectsWithDavinci`
+- `findBrawByBasename(brawBasename)` — matches proxy MP4s back to BRAW source records
+
+**Part B — `scripts/davinci/create-project.py`**:
+- DaVinci Resolve scripting API bootstrap with Windows DLL path handling
+- `check_studio(resolve)` — logs product name + version to stderr; confirms Studio license
+- Full bin structure (7 top-level bins + sub-bins) via `AddSubFolder`
+- Color science: `davinciYRGBColorManaged` set first, then color spaces via
+  `try_set_color_space()` — tries multiple key name formats and string values to handle
+  Resolve API differences across versions; probes available keys and logs them to stderr
+- S-curve (lift blacks 5%, highlights 95%) via `GetColorAdjustments` / `SetColorAdjustments`
+  — all method calls use `callable(getattr(...))` not `hasattr()` to handle Resolve 20
+  attributes that exist as None rather than as real methods
+- Project metadata `.txt` file written to `00_PROJECT_DOCS` bin
+- `01_PROXY_GRADE` timeline created with 4K/24fps settings and orange marker
+- Returns `{ ok, project_name, timeline_name, clip_count, scurve_clips, resolve_version, resolve_studio, errors }`
+
+**Part C — `scripts/davinci/braw-proxy-export.py`**:
+- Scans recursively for `.braw` files; H.265 4K 80Mbps proxy render via Resolve render queue
+- `wait_for_render()` polls `IsRenderingInProgress()` every 5s up to 7200s (2hr timeout)
+
+**Part D — `scripts/davinci/add-timeline.py`**:
+- Creates `02_SELECTS` through `08_DELIVERY` timelines progressively
+- `skip_if_exists` logic; DaVinci markers from `cuts_json`; platform-specific delivery specs
+
+**Part E — `src/vault/intake.js` BRAW update**:
+- `BRAW_EXTENSIONS = new Set(['.braw'])` fast-path — skips ffprobe entirely
+- Writes stub record immediately with `codec: 'BRAW'`, `quality_flag: 'review'`
+- Proxy detection: `*_proxy.mp4` suffix → `findBrawByBasename()` → `processProxyUpdate()`
+  updates original BRAW record with full metadata (no duplicate row)
+
+**Part F — `src/routes/davinci.js`** (new file):
+- `runScript(scriptName, args, timeoutMs)` — spawns Python, parses stdout JSON, logs stderr
+- 6 endpoints: `GET /projects`, `GET /project/:id`, `POST /create-project`,
+  `POST /export-proxies`, `POST /add-timeline`, `POST /update-state`,
+  `POST /grade-approved/:project_id`
+- Mounted in `server.js` at `/api/davinci`
+
+**Part G — `public/vault.html` DaVinci panel**:
+- BRAW filter chips: All / Needs Proxy / Has Proxy / No BRAW
+- PROXY NEEDED badge on clip cards for BRAW stubs without a proxy
+- DaVinci Projects panel (hidden until projects exist): state badge, timeline chips,
+  action buttons (Create Proxies, Grade Approved, Add Timeline, Update State)
+
+**Part H — `docs/davinci-workflow.md`**:
+- Complete workflow reference: shoot → ingest → proxy → grade → selects → delivery
+- DaVinci scripting setup (corrected: Local mode uses socket, no port required)
+- Timeline progression, bin structure, state machine, recovery procedures
+
+---
+
+### DaVinci Scripting Setup — Key Corrections
+
+Two errors in original docs corrected after real-world testing:
+
+1. **No port field in Local mode**: Original docs said to enter port `9237`. Incorrect —
+   Local mode uses a named socket, not TCP. Port only applies to Network mode.
+   `docs/davinci-workflow.md` updated; socket verification test replaced with
+   `DaVinciResolveScript.scriptapp('Resolve').GetVersionString()`.
+
+2. **Color science mode key**: `"davinciYRGB"` (unmanaged) → `"davinciYRGBColorManaged"`.
+   Color space input/output settings are silently ignored in unmanaged mode.
+
+3. **Resolve 20 callable attributes**: `hasattr()` returns True for attributes that are
+   `None` in Resolve 20's scripting proxy. All method existence checks changed to
+   `callable(getattr(obj, method_name, None))`.
+
+---
+
+## Confirmed Working on Resolve Studio 20.3.2.9
+
+- `check_studio()` correctly detects "DaVinci Resolve Studio" and logs version string
+- Project creation succeeds: bins, timeline, metadata doc all created
+- `colorScienceMode: "davinciYRGBColorManaged"` sets correctly
+- Color space key probe logging active — will confirm exact Resolve 20 key names
+  on next test run with footage
+
+---
+
+## DB Reset Utility
+
+For test resets (no exported helper — use sql.js directly):
+```bash
+node -e "
+const fs = require('fs'), path = require('path'), initSqlJs = require('sql.js');
+const DB_PATH = path.join(__dirname, 'database', 'kre8r.db');
+initSqlJs().then(SQL => {
+  const db = new SQL.Database(fs.readFileSync(DB_PATH));
+  db.run('UPDATE projects SET davinci_project_name=NULL, davinci_project_state=NULL, davinci_last_updated=NULL WHERE id=N');
+  db.run('DELETE FROM davinci_timelines WHERE project_id=N');
+  fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
+  db.close();
+});
+"
+```
+
+---
+
+## System State at End of Session
+
+```
+scripts/davinci/create-project.py    Resolve project + bins + grade timeline (confirmed working)
+scripts/davinci/braw-proxy-export.py BRAW → H.265 proxy render via Resolve queue
+scripts/davinci/add-timeline.py      Progressive timeline builder (02–08)
+src/routes/davinci.js                6 API endpoints, Python spawn bridge
+src/db.js                            DaVinci state machine + 6 new helpers;
+                                     distribution tracking + 4 helpers;
+                                     BRAW-specific footage helpers
+src/vault/intake.js                  BRAW fast-path + proxy detection
+src/routes/vault.js                  Distribution API (3 new endpoints)
+public/vault.html                    Distribution dots/modal, folder view,
+                                     session persistence, BRAW filters,
+                                     DaVinci Projects panel
+docs/davinci-workflow.md             Complete workflow reference (corrected)
+server.js                            /api/davinci route mounted
+```

@@ -4,3 +4,10 @@ database/kre8r.db
 database/kre8r.db-shm
 database/kre8r.db-wal
 *.log
+public/thumbnails/
+public/clips/
+database/transcripts/
+docs/bible_extracted.txt
+__pycache__/
+*.pyc
+.claude/

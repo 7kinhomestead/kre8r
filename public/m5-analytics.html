@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — AnalytΩr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
+    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10); --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  /* ── NAV ── */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(14,15,14,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;}
+  .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);text-decoration:none;}
+  .logo .sub{color:var(--text-dimmer);font-size:11px;font-family:var(--font-body);letter-spacing:0.5px;font-weight:500;margin-left:10px;text-transform:uppercase;}
+  .nav{display:flex;gap:4px;align-items:center;}
+  .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
+  .nav a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav a.active{background:var(--teal-glow);color:var(--teal);}
+  .nav-dropdown{position:relative;display:inline-flex;}
+  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-block;white-space:nowrap;line-height:1.5;}
+  .nav-drop-btn:hover,.nav-dropdown:hover .nav-drop-btn{background:var(--bg-card-2);color:var(--text);}
+  .nav-drop-btn.active{background:var(--teal-glow);color:var(--teal);}
+  .nav-drop-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);min-width:156px;display:none;z-index:300;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .nav-dropdown:hover .nav-drop-menu{display:block;}
+  .nav-drop-menu a{display:block;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:4px;transition:all 0.15s;white-space:nowrap;}
+  .nav-drop-menu a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav-drop-menu a.active{background:var(--teal-glow);color:var(--teal);}
+  .nav a.m-tag{font-size:11px;font-weight:700;letter-spacing:0.5px;padding:4px 9px;border-radius:20px;border:1px solid;}
+
+  /* ── LAYOUT ── */
+  .main{max-width:1100px;margin:0 auto;padding:24px 16px 80px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ── PAGE HEADER ── */
+  .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(32px,7vw,52px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;line-height:1.6;}
+
+  /* ── CONTROLS ── */
+  .controls-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:24px;animation:fadeUp 0.4s 0.05s ease both;}
+  .project-select{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 14px;outline:none;cursor:pointer;min-width:220px;}
+  .btn{display:inline-block;white-space:nowrap;gap:7px;font-family:var(--font-body);font-size:13px;font-weight:600;padding:9px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .btn-primary{background:var(--teal);color:#0e0f0e;}
+  .btn-primary:hover:not(:disabled){background:var(--teal-dim);}
+  .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
+  .btn-danger{background:transparent;border:1px solid var(--red);color:var(--red);}
+  .btn-danger:hover{background:var(--red-glow);}
+  .ml-auto{margin-left:auto;}
+
+  /* ── SUMMARY CARDS ── */
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:28px;animation:fadeUp 0.4s 0.1s ease both;}
+  .summary-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
+  .summary-label{font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
+  .summary-value{font-family:var(--font-head);font-size:32px;letter-spacing:1px;color:var(--teal);line-height:1.1;}
+  .summary-sub{font-size:12px;color:var(--text-dim);margin-top:4px;}
+  .summary-card.best-platform .summary-value{color:var(--amber);}
+  .summary-card.best-post .summary-value{font-size:18px;font-family:var(--font-body);font-weight:600;color:var(--green);}
+
+  /* ── FILTER BAR ── */
+  .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;animation:fadeUp 0.4s 0.15s ease both;}
+  .filter-chip{font-size:12px;font-weight:500;padding:5px 14px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text-dim);cursor:pointer;transition:all 0.15s;}
+  .filter-chip:hover{border-color:var(--border-bright);color:var(--text);}
+  .filter-chip.active{border-color:var(--teal);background:var(--teal-glow);color:var(--teal);}
+
+  /* ── EMPTY STATE ── */
+  .empty-state{text-align:center;padding:60px 20px;color:var(--text-dim);animation:fadeUp 0.4s ease both;}
+  .empty-icon{font-size:48px;margin-bottom:16px;opacity:0.4;}
+  .empty-title{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text-dimmer);margin-bottom:8px;}
+
+  /* ── POST CARDS ── */
+  .posts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;animation:fadeUp 0.4s 0.2s ease both;}
+  .post-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color 0.15s;}
+  .post-card:hover{border-color:var(--border-bright);}
+  .post-card-top{padding:16px 16px 12px;}
+  .post-card-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .platform-badge{font-size:11px;font-weight:700;letter-spacing:0.5px;padding:3px 10px;border-radius:12px;text-transform:uppercase;}
+  .badge-tiktok{background:rgba(255,0,80,0.12);color:#ff0050;border:1px solid rgba(255,0,80,0.25);}
+  .badge-youtube{background:rgba(255,70,70,0.12);color:#ff4646;border:1px solid rgba(255,70,70,0.25);}
+  .badge-instagram{background:rgba(228,64,95,0.12);color:#e4405f;border:1px solid rgba(228,64,95,0.25);}
+  .badge-facebook{background:rgba(66,103,178,0.15);color:#4267B2;border:1px solid rgba(66,103,178,0.3);}
+  .badge-lemon8{background:rgba(255,212,0,0.12);color:#e8b800;border:1px solid rgba(255,212,0,0.25);}
+  .badge-email{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(91,156,246,0.25);}
+  .badge-rockrich{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+  .post-date{font-size:11px;color:var(--text-dimmer);margin-left:auto;}
+  .post-angle{font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px;line-height:1.4;}
+  .post-url{font-size:12px;color:var(--teal-dim);text-decoration:none;word-break:break-all;display:block;margin-bottom:4px;}
+  .post-url:hover{color:var(--teal);}
+
+  /* ── METRICS DISPLAY ── */
+  .metrics-row{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;background:var(--bg-card-2);border-top:1px solid var(--border);}
+  .metric-pill{display:flex;flex-direction:column;align-items:center;min-width:60px;}
+  .metric-val{font-family:var(--font-head);font-size:20px;letter-spacing:0.5px;color:var(--teal);line-height:1;}
+  .metric-val.pct{color:var(--green);}
+  .metric-val.sub-val{font-size:14px;color:var(--amber);}
+  .metric-name{font-size:10px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.3px;margin-top:2px;text-align:center;}
+  .no-metrics{font-size:12px;color:var(--text-dimmer);padding:12px 16px;background:var(--bg-card-2);border-top:1px solid var(--border);}
+
+  /* ── METRICS EDITOR ── */
+  .metrics-editor{border-top:1px solid var(--border);padding:14px 16px;}
+  .metrics-editor.hidden{display:none;}
+  .metrics-editor-title{font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;}
+  .metrics-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:12px;}
+  .metric-field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;}
+  .metric-field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:6px 10px;outline:none;transition:border 0.15s;}
+  .metric-field input:focus{border-color:var(--teal-dim);}
+  .metrics-actions{display:flex;gap:8px;align-items:center;}
+
+  /* ── POST CARD FOOTER ── */
+  .post-card-footer{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--border);}
+  .btn-sm{font-size:12px;padding:5px 12px;}
+
+  /* ── MODAL ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius);max-width:520px;width:100%;max-height:90vh;overflow-y:auto;animation:fadeUp 0.25s ease both;}
+  .modal-head{padding:20px 22px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .modal-title{font-family:var(--font-head);font-size:24px;letter-spacing:2px;}
+  .modal-close{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:20px;line-height:1;padding:4px;}
+  .modal-close:hover{color:var(--text);}
+  .modal-body{padding:20px 22px;}
+  .form-group{margin-bottom:16px;}
+  .form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .form-input{width:100%;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 12px;outline:none;transition:border 0.15s;}
+  .form-input:focus{border-color:var(--teal-dim);}
+  .form-input::placeholder{color:var(--text-dimmer);}
+  .form-select{width:100%;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 12px;outline:none;cursor:pointer;}
+  .modal-footer{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+  .form-hint{font-size:11px;color:var(--text-dimmer);margin-top:4px;}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:24px;right:24px;z-index:600;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:12px 18px;font-size:13px;font-weight:500;transform:translateY(100px);opacity:0;transition:all 0.25s;pointer-events:none;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast.ok{border-color:var(--green);color:var(--green);}
+  .toast.err{border-color:var(--red);color:var(--red);}
+
+  /* ── SECTION ── */
+  .section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;}
+  .section-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text);}
+  .section-count{font-size:13px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<header class="topbar">
+  <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R</a>
+  <nav class="nav">
+    <a href="/">PipelineΩr</a>
+    <a href="vault.html">VaultΩr</a>
+    <a href="reviewr.html">ReviewΩr</a>
+    <a href="m5-analytics.html" class="active">AnalytΩr</a>
+    <a href="operator.html">OperatΩr</a>
+    <div class="nav-dropdown">
+      <button class="nav-drop-btn m-tag" style="background:rgba(62,207,178,0.08);color:var(--teal-dim);border:1px solid rgba(62,207,178,0.25);">Distribut<span style="color:var(--teal)">Ω</span>r ▾</button>
+      <div class="nav-drop-menu">
+        <a href="m1-approval-dashboard.html">GateΩr</a>
+        <a href="m2-package-generator.html">PackageΩr</a>
+        <a href="m3-caption-generator.html">CaptionΩr</a>
+        <a href="m4-email-generator.html">MailΩr</a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <h1 class="page-title">ANALYT<em>Ω</em>R</h1>
+    <p class="page-sub">Track post performance across platforms. Log metrics, spot winning angles, and know what's working.</p>
+  </div>
+
+  <!-- Controls bar -->
+  <div class="controls-bar">
+    <select class="project-select" id="project-select">
+      <option value="">— Select a project —</option>
+    </select>
+    <button class="btn btn-primary ml-auto" id="btn-log-post" disabled>+ Log Post</button>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="summary-grid" id="summary-grid" style="display:none;">
+    <div class="summary-card">
+      <div class="summary-label">Total Posts Logged</div>
+      <div class="summary-value" id="sum-total-posts">0</div>
+      <div class="summary-sub" id="sum-posts-sub">across all platforms</div>
+    </div>
+    <div class="summary-card best-platform">
+      <div class="summary-label">Best Platform</div>
+      <div class="summary-value" id="sum-best-platform">—</div>
+      <div class="summary-sub" id="sum-best-platform-sub">by total views</div>
+    </div>
+    <div class="summary-card best-post">
+      <div class="summary-label">Top Post</div>
+      <div class="summary-value" id="sum-best-post">—</div>
+      <div class="summary-sub" id="sum-best-post-sub">no metrics yet</div>
+    </div>
+  </div>
+
+  <!-- Platform filter -->
+  <div class="filter-bar" id="filter-bar" style="display:none;">
+    <button class="filter-chip active" data-platform="all">All</button>
+    <button class="filter-chip" data-platform="tiktok">TikTok</button>
+    <button class="filter-chip" data-platform="youtube">YouTube</button>
+    <button class="filter-chip" data-platform="instagram">Instagram</button>
+    <button class="filter-chip" data-platform="facebook">Facebook</button>
+    <button class="filter-chip" data-platform="lemon8">Lemon8</button>
+    <button class="filter-chip" data-platform="email">Email</button>
+    <button class="filter-chip" data-platform="rockrich">Rock Rich</button>
+  </div>
+
+  <!-- Posts section -->
+  <div id="posts-section" style="display:none;">
+    <div class="section-header">
+      <span class="section-title">POSTS</span>
+      <span class="section-count" id="posts-count"></span>
+    </div>
+    <div class="posts-grid" id="posts-grid"></div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">📊</div>
+    <div class="empty-title">Select a project to begin</div>
+    <p>Choose a project above, then log your first post to start tracking performance.</p>
+  </div>
+
+</main>
+
+<!-- ── LOG POST MODAL ── -->
+<div class="modal-overlay" id="modal-log">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">LOG POST</span>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Platform</label>
+        <select class="form-select" id="log-platform">
+          <option value="tiktok">TikTok</option>
+          <option value="youtube">YouTube</option>
+          <option value="instagram">Instagram</option>
+          <option value="facebook">Facebook</option>
+          <option value="lemon8">Lemon8</option>
+          <option value="email">Email</option>
+          <option value="rockrich">Rock Rich</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Angle / Content</label>
+        <input class="form-input" id="log-angle" type="text" placeholder="What angle or hook did this post use?" />
+        <div class="form-hint">Optional — helps you spot which angles perform best</div>
+      </div>
+      <div class="form-group">
+        <label>Post URL</label>
+        <input class="form-input" id="log-url" type="text" placeholder="https://..." />
+      </div>
+      <div class="form-group">
+        <label>Date Posted</label>
+        <input class="form-input" id="log-date" type="date" />
+      </div>
+      <div class="form-group">
+        <label>Notes / Caption Snippet</label>
+        <input class="form-input" id="log-content" type="text" placeholder="Optional caption or notes" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-save">Save Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// PLATFORM CONFIG
+// ─────────────────────────────────────────────
+const PLATFORM_METRICS = {
+  tiktok:   ['views','completion_rate','shares','followers_gained','likes','comments'],
+  youtube:  ['views','watch_time','ctr','avg_view_duration','subscribers_gained','likes'],
+  instagram:['reach','saves','shares','profile_visits','likes','comments'],
+  facebook: ['reach','engagement','link_clicks','likes','comments','shares'],
+  lemon8:   ['views','engagement','follower_growth','likes','saves'],
+  email:    ['open_rate','click_rate','unsubscribes','sends','opens','clicks'],
+  rockrich: ['new_members','views','engagement']
+};
+
+// Which metrics are percentages (display as "X%")
+const PCT_METRICS = new Set(['completion_rate','ctr','open_rate','click_rate']);
+// Friendlier labels
+const METRIC_LABELS = {
+  views:'Views', completion_rate:'Completion %', shares:'Shares', followers_gained:'Followers+',
+  likes:'Likes', comments:'Comments', watch_time:'Watch Time (min)', ctr:'CTR %',
+  avg_view_duration:'Avg View (s)', subscribers_gained:'Subs+', reach:'Reach', saves:'Saves',
+  profile_visits:'Profile Visits', engagement:'Engagement', link_clicks:'Link Clicks',
+  follower_growth:'Follower Growth', open_rate:'Open Rate %', click_rate:'Click Rate %',
+  unsubscribes:'Unsubs', sends:'Sends', opens:'Opens', clicks:'Clicks', new_members:'New Members'
+};
+
+// Platform badge classes
+const BADGE_CLASS = {
+  tiktok:'badge-tiktok', youtube:'badge-youtube', instagram:'badge-instagram',
+  facebook:'badge-facebook', lemon8:'badge-lemon8', email:'badge-email', rockrich:'badge-rockrich'
+};
+const PLATFORM_DISPLAY = {
+  tiktok:'TikTok', youtube:'YouTube', instagram:'Instagram',
+  facebook:'Facebook', lemon8:'Lemon8', email:'Email', rockrich:'Rock Rich'
+};
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentProjectId = null;
+let allPosts = [];
+let currentFilter = 'all';
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadProjects();
+
+  const params = new URLSearchParams(location.search);
+  const pid = params.get('project_id');
+  if (pid) {
+    document.getElementById('project-select').value = pid;
+    await selectProject(Number(pid));
+  }
+
+  document.getElementById('project-select').addEventListener('change', async e => {
+    const id = e.target.value;
+    if (id) await selectProject(Number(id));
+    else resetView();
+  });
+
+  document.getElementById('btn-log-post').addEventListener('click', openModal);
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('modal-save').addEventListener('click', savePost);
+
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.platform;
+      renderPosts();
+    });
+  });
+
+  // Set today as default date in modal
+  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+});
+
+// ─────────────────────────────────────────────
+// PROJECT LOADING
+// ─────────────────────────────────────────────
+async function loadProjects() {
+  try {
+    const res = await fetch('/api/projects');
+    const projects = await res.json();
+    const sel = document.getElementById('project-select');
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title;
+      sel.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Failed to load projects:', err);
+  }
+}
+
+async function selectProject(id) {
+  currentProjectId = id;
+  document.getElementById('project-select').value = id;
+  document.getElementById('btn-log-post').disabled = false;
+  await refreshData();
+}
+
+function resetView() {
+  currentProjectId = null;
+  allPosts = [];
+  document.getElementById('btn-log-post').disabled = true;
+  document.getElementById('summary-grid').style.display = 'none';
+  document.getElementById('filter-bar').style.display = 'none';
+  document.getElementById('posts-section').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'block';
+  document.getElementById('empty-state').querySelector('p').textContent =
+    'Choose a project above, then log your first post to start tracking performance.';
+}
+
+// ─────────────────────────────────────────────
+// DATA REFRESH
+// ─────────────────────────────────────────────
+async function refreshData() {
+  if (!currentProjectId) return;
+  try {
+    const [postsRes, summaryRes] = await Promise.all([
+      fetch(`/api/analytics/posts/${currentProjectId}`),
+      fetch(`/api/analytics/summary/${currentProjectId}`)
+    ]);
+    allPosts = await postsRes.json();
+    const summary = await summaryRes.json();
+
+    renderSummary(summary);
+    renderPosts();
+
+    document.getElementById('summary-grid').style.display = '';
+    document.getElementById('filter-bar').style.display = '';
+  } catch (err) {
+    showToast('Failed to load analytics: ' + err.message, 'err');
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER SUMMARY
+// ─────────────────────────────────────────────
+function renderSummary(summary) {
+  document.getElementById('sum-total-posts').textContent = summary.total_posts || 0;
+
+  const byPlatform = summary.posts_by_platform || [];
+  const parts = byPlatform.map(r => `${PLATFORM_DISPLAY[r.platform] || r.platform} (${r.n})`).join(', ');
+  document.getElementById('sum-posts-sub').textContent = parts || 'no posts yet';
+
+  const bestPlatform = summary.best_platform;
+  document.getElementById('sum-best-platform').textContent =
+    bestPlatform ? (PLATFORM_DISPLAY[bestPlatform] || bestPlatform) : '—';
+
+  const platformViews = summary.platform_views || [];
+  const topPlatformRow = platformViews[0];
+  document.getElementById('sum-best-platform-sub').textContent =
+    topPlatformRow ? `${fmtNum(topPlatformRow.total_views)} total views` : 'no view data yet';
+
+  const bestPost = summary.best_post;
+  if (bestPost) {
+    const label = bestPost.angle || bestPost.content || `${PLATFORM_DISPLAY[bestPost.platform]} post`;
+    document.getElementById('sum-best-post').textContent =
+      label.length > 40 ? label.slice(0, 40) + '…' : label;
+    document.getElementById('sum-best-post-sub').textContent =
+      `${fmtNum(bestPost.views)} views · ${PLATFORM_DISPLAY[bestPost.platform] || bestPost.platform}`;
+  } else {
+    document.getElementById('sum-best-post').textContent = '—';
+    document.getElementById('sum-best-post-sub').textContent = 'no metric data yet';
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER POSTS
+// ─────────────────────────────────────────────
+function renderPosts() {
+  const filtered = currentFilter === 'all'
+    ? allPosts
+    : allPosts.filter(p => p.platform === currentFilter);
+
+  const grid = document.getElementById('posts-grid');
+  const section = document.getElementById('posts-section');
+  const empty = document.getElementById('empty-state');
+
+  if (allPosts.length === 0) {
+    section.style.display = 'none';
+    empty.style.display = 'block';
+    empty.querySelector('.empty-title').textContent = 'No posts logged yet';
+    empty.querySelector('p').textContent = 'Click "Log Post" to record your first published post.';
+    return;
+  }
+
+  empty.style.display = 'none';
+  section.style.display = 'block';
+  document.getElementById('posts-count').textContent =
+    filtered.length + ' post' + (filtered.length !== 1 ? 's' : '');
+
+  grid.innerHTML = '';
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:20px 0;">No posts on this platform yet.</div>`;
+    return;
+  }
+
+  filtered.forEach(post => {
+    grid.appendChild(buildPostCard(post));
+  });
+}
+
+// ─────────────────────────────────────────────
+// BUILD POST CARD
+// ─────────────────────────────────────────────
+function buildPostCard(post) {
+  const card = document.createElement('div');
+  card.className = 'post-card';
+  card.dataset.id = post.id;
+
+  const platformKey = post.platform?.toLowerCase() || 'tiktok';
+  const platformLabel = PLATFORM_DISPLAY[platformKey] || post.platform;
+  const badgeClass = BADGE_CLASS[platformKey] || 'badge-tiktok';
+  const dateStr = post.posted_at
+    ? new Date(post.posted_at).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'})
+    : '';
+
+  const metrics = post.metrics || {};
+  const metricKeys = PLATFORM_METRICS[platformKey] || [];
+
+  // Build metrics display
+  let metricsHtml = '';
+  const hasMetrics = metricKeys.some(k => metrics[k] !== undefined);
+  if (hasMetrics) {
+    const pills = metricKeys
+      .filter(k => metrics[k] !== undefined)
+      .map(k => {
+        const val = metrics[k];
+        const isPct = PCT_METRICS.has(k);
+        const displayVal = isPct
+          ? (val * (val <= 1 ? 100 : 1)).toFixed(1) + '%'
+          : fmtNum(val);
+        const cls = isPct ? 'metric-val pct' : (val > 9999 ? 'metric-val sub-val' : 'metric-val');
+        return `<div class="metric-pill">
+          <span class="${cls}">${displayVal}</span>
+          <span class="metric-name">${METRIC_LABELS[k] || k}</span>
+        </div>`;
+      }).join('');
+    metricsHtml = `<div class="metrics-row">${pills}</div>`;
+  } else {
+    metricsHtml = `<div class="no-metrics">No metrics logged yet — expand to add below</div>`;
+  }
+
+  // Build metrics editor fields
+  const editorFields = metricKeys.map(k => `
+    <div class="metric-field">
+      <label>${METRIC_LABELS[k] || k}</label>
+      <input type="number" step="any" min="0" placeholder="—"
+        data-metric="${k}" value="${metrics[k] !== undefined ? metrics[k] : ''}">
+    </div>
+  `).join('');
+
+  card.innerHTML = `
+    <div class="post-card-top">
+      <div class="post-card-header">
+        <span class="platform-badge ${badgeClass}">${platformLabel}</span>
+        <span class="post-date">${dateStr}</span>
+      </div>
+      ${post.angle ? `<div class="post-angle">${escHtml(post.angle)}</div>` : ''}
+      ${post.content && post.content !== post.angle ? `<div style="font-size:12px;color:var(--text-dim);margin-bottom:4px;">${escHtml(post.content.slice(0,120))}${post.content.length > 120 ? '…' : ''}</div>` : ''}
+      ${post.url ? `<a href="${escHtml(post.url)}" target="_blank" rel="noopener" class="post-url">${escHtml(post.url)}</a>` : ''}
+    </div>
+    ${metricsHtml}
+    <div class="metrics-editor hidden" id="editor-${post.id}">
+      <div class="metrics-editor-title">Update Metrics</div>
+      <div class="metrics-fields">${editorFields}</div>
+      <div class="metrics-actions">
+        <button class="btn btn-primary btn-sm" onclick="saveMetrics(${post.id}, '${platformKey}')">Save Metrics</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleEditor(${post.id})">Cancel</button>
+      </div>
+    </div>
+    <div class="post-card-footer">
+      <button class="btn btn-ghost btn-sm" onclick="toggleEditor(${post.id})">Edit Metrics</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="deletePost(${post.id})">Delete</button>
+    </div>
+  `;
+  return card;
+}
+
+// ─────────────────────────────────────────────
+// METRICS EDITOR
+// ─────────────────────────────────────────────
+function toggleEditor(postId) {
+  const editor = document.getElementById(`editor-${postId}`);
+  editor.classList.toggle('hidden');
+}
+
+async function saveMetrics(postId, platform) {
+  const editor = document.getElementById(`editor-${postId}`);
+  const inputs = editor.querySelectorAll('input[data-metric]');
+  const metrics = {};
+  inputs.forEach(input => {
+    const val = input.value.trim();
+    if (val !== '') metrics[input.dataset.metric] = parseFloat(val);
+  });
+
+  if (Object.keys(metrics).length === 0) {
+    showToast('No metrics to save', 'err');
+    return;
+  }
+
+  try {
+    const post = allPosts.find(p => p.id === postId);
+    const res = await fetch('/api/analytics/metrics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        post_id: postId,
+        project_id: currentProjectId,
+        platform,
+        metrics
+      })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to save');
+    showToast('Metrics saved', 'ok');
+    editor.classList.add('hidden');
+    await refreshData();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'err');
+  }
+}
+
+// ─────────────────────────────────────────────
+// DELETE POST
+// ─────────────────────────────────────────────
+async function deletePost(postId) {
+  if (!confirm('Delete this post and all its metrics?')) return;
+  try {
+    const res = await fetch(`/api/analytics/posts/${postId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    showToast('Post deleted', 'ok');
+    await refreshData();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'err');
+  }
+}
+
+// ─────────────────────────────────────────────
+// LOG POST MODAL
+// ─────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal-log').classList.add('open');
+  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+}
+
+function closeModal() {
+  document.getElementById('modal-log').classList.remove('open');
+}
+
+async function savePost() {
+  const platform = document.getElementById('log-platform').value;
+  const angle    = document.getElementById('log-angle').value.trim();
+  const url      = document.getElementById('log-url').value.trim();
+  const date     = document.getElementById('log-date').value;
+  const content  = document.getElementById('log-content').value.trim();
+
+  if (!platform) {
+    showToast('Select a platform', 'err');
+    return;
+  }
+
+  const btn = document.getElementById('modal-save');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const res = await fetch('/api/analytics/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: currentProjectId,
+        platform,
+        angle:      angle   || null,
+        url:        url     || null,
+        content:    content || null,
+        posted_at:  date    ? new Date(date).toISOString() : new Date().toISOString()
+      })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    // Clear form
+    document.getElementById('log-angle').value = '';
+    document.getElementById('log-url').value = '';
+    document.getElementById('log-content').value = '';
+    closeModal();
+    showToast('Post logged', 'ok');
+    await refreshData();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Post';
+  }
+}
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function fmtNum(n) {
+  if (n === null || n === undefined) return '—';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  return String(Math.round(n));
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); }, 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('modal-log').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+</script>
+</body>
+</html>

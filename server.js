@@ -33,8 +33,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ─────────────────────────────────────────────
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/generate', require('./src/routes/generate'));
-app.use('/api/vault',    require('./src/routes/vault'));
-app.use('/api/cutor',    require('./src/routes/cutor'));
+app.use('/api/vault',      require('./src/routes/vault'));
+app.use('/api/cutor',      require('./src/routes/cutor'));
+app.use('/api/analytics',  require('./src/routes/analytics'));
+app.use('/api/operator',   require('./src/routes/operator'));
+app.use('/api/davinci',    require('./src/routes/davinci'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
@@ -105,6 +108,7 @@ async function start() {
     console.log(`  \x1b[2m  M3 Caption\u03a9r →\x1b[0m http://localhost:${PORT}/m3-caption-generator.html`);
     console.log(`  \x1b[2m  M4 Mail\u03a9r  →\x1b[0m http://localhost:${PORT}/m4-email-generator.html`);
     console.log(`  \x1b[2m  Vault\u03a9r    →\x1b[0m http://localhost:${PORT}/vault.html`);
+    console.log(`  \x1b[2m  Analyt\u03a9r   →\x1b[0m http://localhost:${PORT}/m5-analytics.html`);
     console.log('');
     console.log('  \x1b[2mSINE RESISTENTIA\x1b[0m');
     console.log('');

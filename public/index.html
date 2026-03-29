@@ -16,6 +16,7 @@
     --red: #e05c5c; --red-glow: rgba(224,92,92,0.10);
     --green: #5cba8a; --green-glow: rgba(92,186,138,0.10);
     --purple: #a78bfa; --purple-glow: rgba(167,139,250,0.10);
+    --blue: #5b9cf6; --blue-glow: rgba(91,156,246,0.10);
     --text: #e8ebe6; --text-dim: #8a9487; --text-dimmer: #4e5349;
     --font-head: 'Bebas Neue', sans-serif; --font-body: 'DM Sans', sans-serif;
     --radius: 10px; --radius-sm: 6px;
@@ -34,7 +35,7 @@
   .nav a:hover { background:var(--bg-card-2); color:var(--text); }
   .nav a.active { background:var(--teal-glow); color:var(--teal); }
   .nav-dropdown{position:relative;display:inline-flex;}
-  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-flex;align-items:center;line-height:1.5;}
+  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-block;white-space:nowrap;line-height:1.5;}
   .nav-drop-btn:hover,.nav-dropdown:hover .nav-drop-btn{background:var(--bg-card-2);color:var(--text);}
   .nav-drop-btn.active{background:var(--teal-glow);color:var(--teal);}
   .nav-drop-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);min-width:156px;display:none;z-index:300;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
@@ -135,10 +136,12 @@
 <body>
 
 <nav class="topbar">
-  <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R <span class="sub">Pipeline</span></a>
+  <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R</a>
   <div class="nav">
     <a href="vault.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">VaultΩr</a>
     <a href="reviewr.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">ReviewΩr</a>
+    <a href="m5-analytics.html">AnalytΩr</a>
+    <a href="operator.html">OperatΩr</a>
     <div class="nav-dropdown">
       <button class="nav-drop-btn m-tag" style="background:rgba(62,207,178,0.08);color:var(--teal-dim);border:1px solid rgba(62,207,178,0.25);">Distribut<span style="color:var(--teal)">Ω</span>r ▾</button>
       <div class="nav-drop-menu">
