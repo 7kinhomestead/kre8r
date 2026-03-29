@@ -31,6 +31,15 @@
   .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
   .nav a:hover{background:var(--bg-card-2);color:var(--text);}
   .nav a.active{background:var(--purple-glow);color:var(--purple);}
+  .nav-dropdown{position:relative;display:inline-flex;}
+  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-flex;align-items:center;gap:4px;line-height:1.5;}
+  .nav-drop-btn:hover,.nav-dropdown:hover .nav-drop-btn{background:var(--bg-card-2);color:var(--text);}
+  .nav-drop-btn.active{background:var(--teal-glow);color:var(--teal);}
+  .nav-drop-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);min-width:156px;display:none;z-index:300;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .nav-dropdown:hover .nav-drop-menu{display:block;}
+  .nav-drop-menu a{display:block;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:4px;transition:all 0.15s;white-space:nowrap;}
+  .nav-drop-menu a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav-drop-menu a.active{background:var(--teal-glow);color:var(--teal);}
 
   /* LAYOUT */
   .main{max-width:900px;margin:0 auto;padding:32px 16px 100px;}
@@ -209,12 +218,17 @@
   <a href="/" class="logo">KRE8<span style="color:var(--teal)">Ω</span>R <span>Email Sequence Generator</span></a>
   <div class="nav">
     <a href="/">Home</a>
-    <a href="m1-approval-dashboard.html">M1 Gates</a>
-    <a href="m2-package-generator.html">M2 Packages</a>
-    <a href="m3-caption-generator.html">M3 Captions</a>
-    <a href="m4-email-generator.html" class="active">M4 Emails</a>
     <a href="vault.html">VaultΩr</a>
     <a href="reviewr.html">ReviewΩr</a>
+    <div class="nav-dropdown">
+      <button class="nav-drop-btn active">DISTRIBUT<span style="color:var(--teal)">Ω</span>R ▾</button>
+      <div class="nav-drop-menu">
+        <a href="m1-approval-dashboard.html">GateΩr</a>
+        <a href="m2-package-generator.html">PackageΩr</a>
+        <a href="m3-caption-generator.html">CaptionΩr</a>
+        <a href="m4-email-generator.html" class="active">MailΩr</a>
+      </div>
+    </div>
   </div>
 </nav>
 
