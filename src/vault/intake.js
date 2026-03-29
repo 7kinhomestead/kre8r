@@ -22,7 +22,11 @@ const db = require('../db');
 if (process.env.FFMPEG_PATH)  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
 if (process.env.FFPROBE_PATH) ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
 
-const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv']);
+const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv', '.braw', '.r3d', '.ari']);
+
+// Proprietary RAW formats where ffprobe/ffmpeg may lack a decoder.
+// Files in this set fall back to filesystem-only metadata rather than failing.
+const RAW_EXTENSIONS = new Set(['.braw', '.r3d', '.ari']);
 const THUMBNAIL_DIR = path.join(__dirname, '..', '..', 'public', 'thumbnails');
 const ANTHROPIC_VERSION = '2023-06-01';
 const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
@@ -100,6 +104,19 @@ function parseMetadata(filePath, metadata) {
     null;
 
   return { duration, file_size, resolution, codec, creation_timestamp };
+}
+
+// Fallback for RAW formats that ffprobe can't parse (BRAW, R3D, ARRI).
+// Returns what we can get from the filesystem — enough to ingest the record.
+function fallbackMetadata(filePath) {
+  const stat = fs.statSync(filePath);
+  return {
+    duration:           null,
+    file_size:          stat.size,
+    resolution:         null,
+    codec:              path.extname(filePath).slice(1).toUpperCase(), // e.g. "BRAW"
+    creation_timestamp: stat.birthtime?.toISOString() || stat.mtime?.toISOString() || null
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -213,12 +230,22 @@ async function processFile(filePath, options = {}) {
   }
 
   // ── 1. ffprobe ──────────────────────────────
+  const ext = path.extname(filePath).toLowerCase();
+  const isRaw = RAW_EXTENSIONS.has(ext);
+
   let meta;
   try {
     const raw = await probeFile(filePath);
     meta = parseMetadata(filePath, raw);
   } catch (e) {
-    return { file: filePath, status: 'error', stage: 'ffprobe', error: e.message };
+    if (isRaw) {
+      // Proprietary RAW codec — ffprobe can't decode without the vendor SDK.
+      // Fall back to filesystem metadata and continue ingesting.
+      console.warn(`[VaultΩr] ffprobe could not read ${original_filename} (${ext.slice(1).toUpperCase()} format — no native decoder). Ingesting with filesystem metadata only.`);
+      meta = fallbackMetadata(filePath);
+    } else {
+      return { file: filePath, status: 'error', stage: 'ffprobe', error: e.message };
+    }
   }
 
   onProgress?.({ stage: 'probed', file: original_filename, meta });
@@ -229,8 +256,10 @@ async function processFile(filePath, options = {}) {
     fs.mkdirSync(THUMBNAIL_DIR, { recursive: true });
     ({ thumbPath, thumbUrl } = await extractThumbnail(filePath, meta.duration));
   } catch (e) {
-    // Non-fatal: store the record without a thumbnail
-    console.warn(`[VaultΩr] Thumbnail failed for ${original_filename}: ${e.message}`);
+    // Non-fatal: store the record without a thumbnail.
+    // RAW formats (BRAW, R3D, ARRI) almost always hit this — expected.
+    const reason = isRaw ? `${ext.slice(1).toUpperCase()} requires proprietary ffmpeg plugin` : e.message;
+    console.warn(`[VaultΩr] Thumbnail skipped for ${original_filename}: ${reason}`);
   }
 
   onProgress?.({ stage: 'thumbnail', file: original_filename, thumbUrl });
