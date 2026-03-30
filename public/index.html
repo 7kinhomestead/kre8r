@@ -155,6 +155,9 @@
   .beat-tag.oos { background: var(--red-glow); border-color: rgba(224,92,92,0.4); color: var(--red); }
   .beat-tag.ok { background: var(--green-glow); border-color: rgba(92,186,138,0.4); color: var(--green); }
   .pipr-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--purple); color: var(--purple); background: var(--purple-glow); margin-left: 6px; }
+  .writr-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--teal); color: var(--teal); background: var(--teal-glow); margin-left: 4px; }
+  .writr-badge.pending { border-color: var(--amber); color: var(--amber); background: var(--amber-glow); }
+  .writr-badge.missing { border-color: var(--red); color: var(--red); background: var(--red-glow); }
 </style>
 </head>
 <body>
@@ -162,6 +165,8 @@
 <nav class="topbar">
   <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R</a>
   <div class="nav">
+    <a href="pipr.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">PipΩr</a>
+    <a href="writr.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">WritΩr</a>
     <a href="vault.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">VaultΩr</a>
     <a href="editor.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">EditΩr</a>
     <a href="composor.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">ComposΩr</a>
@@ -201,6 +206,11 @@
       <div class="qa-icon">🎬</div>
       <div class="qa-label">VAULT + CUT</div>
       <div class="qa-sub">Ingest footage, transcribe, identify cuts</div>
+    </a>
+    <a href="writr.html" class="qa-card c-teal">
+      <div class="qa-icon">✍️</div>
+      <div class="qa-label">WRIT<span style="font-size:10px">Ω</span>R</div>
+      <div class="qa-sub">Find the story, write the script</div>
     </a>
     <a href="editor.html" class="qa-card c-teal">
       <div class="qa-icon">🎬</div>
@@ -363,6 +373,25 @@ function renderPipeline(projects) {
     // Beat coverage from PipΩr report
     const beatData   = _beatReport[p.id];
     const piprBadge  = p.pipr_complete ? '<span class="pipr-badge">PipΩr ✓</span>' : '';
+
+    // WritΩr status badge
+    let writrBadge = '';
+    if (p.writr_complete) {
+      writrBadge = '<span class="writr-badge">WritΩr ✓</span>';
+    } else if (p.pipr_complete) {
+      writrBadge = '<span class="writr-badge pending">WritΩr →</span>';
+    }
+
+    // Missing beats reshoot prompt
+    let reshootPill = '';
+    if (beatData && beatData.missing?.length && !p.writr_complete) {
+      const coverageCount = beatData.missing.filter(b =>
+        ['All Is Lost','Hook','Catalyst','CTA','Break into Three'].includes(b)
+      ).length;
+      if (coverageCount > 0) {
+        reshootPill = `<span class="beat-tag missing">🎬 ${coverageCount} beat${coverageCount !== 1 ? 's' : ''} need coverage</span>`;
+      }
+    }
     let beatSection  = '';
     if (beatData && beatData.beats_total > 0) {
       const pct   = beatData.coverage_pct;
@@ -385,20 +414,21 @@ function renderPipeline(projects) {
 
     card.innerHTML = `
       <div>
-        <div class="project-title">${escHtml(p.title)}${piprBadge}</div>
+        <div class="project-title">${escHtml(p.title)}${piprBadge}${writrBadge}</div>
         <div class="project-meta">
           <span class="status-dot ${needsAttention ? 'dot-amber' : 'dot-green'}"></span>
           Stage ${escHtml(p.current_stage)} · Created ${dateStr}
           ${p.youtube_url ? ` · <a href="${escHtml(p.youtube_url)}" target="_blank" style="color:var(--teal);font-size:11px;">YouTube ↗</a>` : ''}
         </div>
         <div class="gate-pills">
-          ${cutPill}${gateA}${gateB}${gateC}
+          ${cutPill}${gateA}${gateB}${gateC}${reshootPill}
         </div>
         ${beatSection}
       </div>
       <div class="project-actions">
         <div class="stage-badge">${escHtml(p.current_stage)}</div>
         <a href="pipr.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;color:var(--purple);border-color:var(--purple);">PipΩr →</a>
+        ${p.pipr_complete ? `<a href="writr.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;color:var(--teal);border-color:var(--teal);">WritΩr →</a>` : ''}
         <a href="reviewr.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">CutΩr →</a>
         <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">M2 →</a>
         <a href="m1-approval-dashboard.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">Gates →</a>

@@ -763,8 +763,25 @@ async function buildSelects(projectId, onProgress = null) {
   }
 
   // ── 3. PULL SCRIPT / CONCEPT ─────────────────────────────────────────────
+  // Prefer WritΩr-approved script if one exists — it has full beat mapping
+  // and is the creator's locked intent for this video.
+  // Fall back to the legacy scripts table entry, then concept note.
 
-  const script  = db.getScript(projectId);
+  let script  = db.getScript(projectId);
+  const writrScript = db.getApprovedWritrScript(projectId);
+  if (writrScript?.generated_script) {
+    // WritΩr-approved scripts sync their text into the scripts table via
+    // approveWritrScript(), so getScript() already returns it. But if for
+    // any reason the sync didn't run, use the writr_scripts row directly.
+    if (!script?.approved_version) {
+      script = {
+        approved_version: writrScript.generated_script,
+        full_script:      writrScript.generated_script,
+        outline:          writrScript.generated_outline || null
+      };
+      console.log(`[SelectsΩr] Using WritΩr-approved script (writr_scripts id=${writrScript.id})`);
+    }
+  }
   const concept = project.concept_note || project.logline || null;
 
   // ── 4. ASK CLAUDE (CHUNKED) ───────────────────────────────────────────────

@@ -41,6 +41,7 @@ app.use('/api/davinci',    require('./src/routes/davinci'));
 app.use('/api/editor',     require('./src/routes/editor'));
 app.use('/api/composor',   require('./src/routes/composor'));
 app.use('/api/pipr',       require('./src/routes/pipr'));
+app.use('/api/writr',      require('./src/routes/writr'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
@@ -111,6 +112,7 @@ async function start() {
     console.log(`  \x1b[2m  M3 Caption\u03a9r →\x1b[0m http://localhost:${PORT}/m3-caption-generator.html`);
     console.log(`  \x1b[2m  M4 Mail\u03a9r  →\x1b[0m http://localhost:${PORT}/m4-email-generator.html`);
     console.log(`  \x1b[2m  Pip\u03a9r      →\x1b[0m http://localhost:${PORT}/pipr.html`);
+    console.log(`  \x1b[2m  Writ\u03a9r     →\x1b[0m http://localhost:${PORT}/writr.html`);
     console.log(`  \x1b[2m  Vault\u03a9r    →\x1b[0m http://localhost:${PORT}/vault.html`);
     console.log(`  \x1b[2m  Analyt\u03a9r   →\x1b[0m http://localhost:${PORT}/m5-analytics.html`);
     console.log('');

@@ -243,6 +243,29 @@ function runMigrations() {
   )`);
   db.run('CREATE INDEX IF NOT EXISTS idx_selects_project ON selects(project_id)');
 
+  // WritΩr: writr_scripts table
+  db.run(`CREATE TABLE IF NOT EXISTS writr_scripts (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id        INTEGER NOT NULL,
+    entry_point       TEXT    NOT NULL DEFAULT 'shoot_first',
+    input_type        TEXT    NOT NULL DEFAULT 'what_happened',
+    raw_input         TEXT,
+    generated_outline TEXT,
+    generated_script  TEXT,
+    beat_map_json     TEXT,
+    hook_variations   TEXT,
+    story_found       TEXT,
+    anchor_moment     TEXT,
+    missing_beats     TEXT,
+    iteration_count   INTEGER NOT NULL DEFAULT 0,
+    approved          INTEGER NOT NULL DEFAULT 0,
+    approved_at       DATETIME,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_writr_scripts_project ON writr_scripts(project_id)');
+
   // PipΩr: project config columns
   const projectsCols4 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
   if (!projectsCols4.includes('setup_depth')) {
@@ -272,6 +295,14 @@ function runMigrations() {
   if (!projectsCols4.includes('pipr_complete')) {
     db.run('ALTER TABLE projects ADD COLUMN pipr_complete INTEGER NOT NULL DEFAULT 0');
     console.log('[DB] Migration: added projects.pipr_complete');
+  }
+  if (!projectsCols4.includes('writr_complete')) {
+    db.run('ALTER TABLE projects ADD COLUMN writr_complete INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added projects.writr_complete');
+  }
+  if (!projectsCols4.includes('active_script_id')) {
+    db.run('ALTER TABLE projects ADD COLUMN active_script_id INTEGER');
+    console.log('[DB] Migration: added projects.active_script_id');
   }
 }
 
@@ -1079,6 +1110,123 @@ function updateProjectPipr(projectId, fields) {
   persist();
 }
 
+function updateProjectWritr(projectId, fields) {
+  const allowed = ['writr_complete', 'active_script_id'];
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!updates.length) return;
+  const setClauses = updates.map(k => `${k} = ?`).join(', ');
+  _run(`UPDATE projects SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), projectId]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
+// WRITΩR — Script helpers
+// ─────────────────────────────────────────────
+
+function insertWritrScript(data) {
+  const result = _run(
+    `INSERT INTO writr_scripts
+       (project_id, entry_point, input_type, raw_input,
+        generated_outline, generated_script, beat_map_json,
+        hook_variations, story_found, anchor_moment, missing_beats,
+        iteration_count, approved)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      data.project_id,
+      data.entry_point       || 'shoot_first',
+      data.input_type        || 'what_happened',
+      data.raw_input         || null,
+      data.generated_outline || null,
+      data.generated_script  || null,
+      data.beat_map_json     ? JSON.stringify(data.beat_map_json)    : null,
+      data.hook_variations   ? JSON.stringify(data.hook_variations)  : null,
+      data.story_found       || null,
+      data.anchor_moment     ? JSON.stringify(data.anchor_moment)    : null,
+      data.missing_beats     ? JSON.stringify(data.missing_beats)    : null,
+      data.iteration_count   || 0,
+      data.approved          ? 1 : 0
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getWritrScript(id) {
+  const row = _get(`SELECT * FROM writr_scripts WHERE id = ?`, [id]);
+  return row ? _parseWritrScript(row) : null;
+}
+
+function getWritrScriptsByProject(projectId) {
+  return _all(
+    `SELECT * FROM writr_scripts WHERE project_id = ? ORDER BY created_at DESC`,
+    [projectId]
+  ).map(_parseWritrScript);
+}
+
+function getApprovedWritrScript(projectId) {
+  const row = _get(
+    `SELECT * FROM writr_scripts WHERE project_id = ? AND approved = 1 ORDER BY approved_at DESC LIMIT 1`,
+    [projectId]
+  );
+  return row ? _parseWritrScript(row) : null;
+}
+
+function _parseWritrScript(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    approved:        !!row.approved,
+    beat_map_json:   row.beat_map_json   ? JSON.parse(row.beat_map_json)   : null,
+    hook_variations: row.hook_variations ? JSON.parse(row.hook_variations) : null,
+    anchor_moment:   row.anchor_moment   ? JSON.parse(row.anchor_moment)   : null,
+    missing_beats:   row.missing_beats   ? JSON.parse(row.missing_beats)   : null
+  };
+}
+
+function updateWritrScript(id, fields) {
+  const allowed = [
+    'generated_outline', 'generated_script', 'beat_map_json',
+    'hook_variations', 'story_found', 'anchor_moment', 'missing_beats',
+    'iteration_count', 'approved', 'approved_at', 'raw_input'
+  ];
+  const json_fields = new Set(['beat_map_json', 'hook_variations', 'anchor_moment', 'missing_beats']);
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!updates.length) return;
+  const sets   = updates.map(k => `${k} = ?`);
+  const values = updates.map(k => json_fields.has(k) && fields[k] !== null
+    ? JSON.stringify(fields[k])
+    : fields[k]
+  );
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  _run(`UPDATE writr_scripts SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
+  persist();
+}
+
+function approveWritrScript(projectId, scriptId) {
+  // Mark approved in writr_scripts
+  _run(
+    `UPDATE writr_scripts SET approved = 1, approved_at = CURRENT_TIMESTAMP,
+       updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [scriptId]
+  );
+  // Set active on project
+  _run(
+    `UPDATE projects SET active_script_id = ?, writr_complete = 1
+     WHERE id = ?`,
+    [scriptId, projectId]
+  );
+  // Sync approved script text into the scripts table so SelectsΩr reads it
+  const ws = getWritrScript(scriptId);
+  if (ws?.generated_script) {
+    upsertScript(projectId, {
+      full_script:      ws.generated_script,
+      approved_version: ws.generated_script,
+      outline:          ws.generated_outline || null
+    });
+  }
+  persist();
+}
+
 // ─────────────────────────────────────────────
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
@@ -1165,5 +1313,13 @@ module.exports = {
   deleteSelectsByProject,
   updateProjectEditorState,
   // PipΩr
-  updateProjectPipr
+  updateProjectPipr,
+  updateProjectWritr,
+  // WritΩr
+  insertWritrScript,
+  getWritrScript,
+  getWritrScriptsByProject,
+  getApprovedWritrScript,
+  updateWritrScript,
+  approveWritrScript
 };
