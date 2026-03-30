@@ -2,9 +2,10 @@
  * WritΩr — Hybrid entry point
  * src/writr/hybrid.js
  *
- * Split into two Claude calls to prevent JSON truncation:
- *   Call 1 — Beat reconciliation (returns beat_map JSON, ~4k output tokens)
- *   Call 2 — Script writing (returns plain text, separate token budget)
+ * Split into up to three Claude calls to prevent token-limit truncation:
+ *   Call 1  — Beat reconciliation (returns beat_map JSON, ~4k output tokens)
+ *   Call 2a — Script writing, beats 1-8 (plain text, separate token budget)
+ *   Call 2b — Script writing, beats 9-end (plain text, only when beat count > 8)
  *
  * JSON repair strategy:
  *   Call 1 uses raw:true so we receive the full (possibly-truncated) text,
@@ -271,17 +272,16 @@ Return ONLY valid JSON (no markdown fences):
 }
 
 // ─────────────────────────────────────────────
-// PROMPT 2 — SCRIPT WRITING ONLY (plain text)
+// PROMPT 2A — SCRIPT BEATS 1-8
+// PROMPT 2B — SCRIPT BEATS 9-END
+// Split to avoid output token limits on long beat maps
 // ─────────────────────────────────────────────
 
-function buildScriptPrompt({ reconcileResult, concept, whatCaptured, config, profile }) {
-  const voiceSummary = buildVoiceSummary(profile);
-  const structure    = config?.story_structure || 'free_form';
-  const contentType  = config?.content_type    || 'unknown';
-  const brand        = profile?.creator?.brand || '7 Kin Homestead';
+const SCRIPT_SPLIT_AT = 8; // beats 1-8 in Part A, 9+ in Part B
 
-  // Compact beat map summary — coverage status + prompts only
-  const beatSummary = (reconcileResult.beat_map || []).map(b => {
+/** Format a subset of beat_map items into the compact summary block */
+function formatBeatSummary(beats) {
+  return beats.map(b => {
     const lines = [`[Beat ${b.beat_index}: ${b.beat_name}] ${b.covered ? '✓' : '✗ NEEDS COVERAGE'}`];
     if (b.coverage_description || b.real_moment) {
       lines.push(`  Content: ${b.coverage_description || b.real_moment}`);
@@ -290,9 +290,27 @@ function buildScriptPrompt({ reconcileResult, concept, whatCaptured, config, pro
     if (b.talking_head_prompt) lines.push(`  Talking head: ${b.talking_head_prompt}`);
     return lines.join('\n');
   }).join('\n');
+}
 
-  const missingBeats = (reconcileResult.missing_beats || []).join(', ') || 'none';
-  const gaps         = (reconcileResult.gaps_to_capture || []).map((g, i) => `${i + 1}. ${g}`).join('\n') || 'none';
+function buildScriptPromptA({ reconcileResult, concept, whatCaptured, config, profile }) {
+  const voiceSummary = buildVoiceSummary(profile);
+  const structure    = config?.story_structure || 'free_form';
+  const contentType  = config?.content_type    || 'unknown';
+  const brand        = profile?.creator?.brand || '7 Kin Homestead';
+
+  const beatMap    = reconcileResult.beat_map || [];
+  const beatsA     = beatMap.slice(0, SCRIPT_SPLIT_AT);
+  const beatsB     = beatMap.slice(SCRIPT_SPLIT_AT);
+  const beatSummaryA = formatBeatSummary(beatsA);
+
+  const upcomingNames = beatsB.map(b => `Beat ${b.beat_index}: ${b.beat_name}`).join(', ');
+  const missingBeats  = (reconcileResult.missing_beats || []).join(', ') || 'none';
+  const gaps          = (reconcileResult.gaps_to_capture || []).map((g, i) => `${i + 1}. ${g}`).join('\n') || 'none';
+
+  const continuationNote = beatsB.length > 0
+    ? `\nIMPORTANT: Stop cleanly after Beat ${beatsA[beatsA.length - 1]?.beat_index ?? SCRIPT_SPLIT_AT}. ` +
+      `Do NOT write a conclusion or sign-off — the script continues in Part B with: ${upcomingNames}.`
+    : '';
 
   return `You are WritΩr — a script developer for ${brand}.
 
@@ -305,8 +323,8 @@ ${voiceSummary}
 Content type: ${contentType}
 Story structure: ${structure}
 
-## BEAT MAP WITH COVERAGE (from reconciliation step)
-${beatSummary}
+## BEATS TO WRITE NOW (Part A — Beats 1-${beatsA.length})
+${beatSummaryA}
 
 Missing beats: ${missingBeats}
 Gaps to capture: ${gaps}
@@ -317,9 +335,8 @@ ${concept || '(No concept provided)'}
 ## WHAT WAS CAPTURED
 ${whatCaptured || '(No description provided)'}
 
-## TASK — WRITE THE UNIFIED SCRIPT
-
-Write the complete script using the beat map above as your structure.
+## TASK — WRITE BEATS 1-${beatsA.length} OF THE SCRIPT
+${continuationNote}
 
 Rules:
 - Open with the strongest real hook from what was captured
@@ -331,6 +348,67 @@ Rules:
 
 Return ONLY the script text — no JSON, no preamble, no explanation.
 Start directly with the first beat/hook.`;
+}
+
+function buildScriptPromptB({ reconcileResult, concept, whatCaptured, config, profile, partAScript }) {
+  const voiceSummary = buildVoiceSummary(profile);
+  const structure    = config?.story_structure || 'free_form';
+  const contentType  = config?.content_type    || 'unknown';
+  const brand        = profile?.creator?.brand || '7 Kin Homestead';
+
+  const beatMap      = reconcileResult.beat_map || [];
+  const beatsB       = beatMap.slice(SCRIPT_SPLIT_AT);
+  const beatSummaryB = formatBeatSummary(beatsB);
+
+  const missingBeats = (reconcileResult.missing_beats || []).join(', ') || 'none';
+  const gaps         = (reconcileResult.gaps_to_capture || []).map((g, i) => `${i + 1}. ${g}`).join('\n') || 'none';
+
+  // Trim Part A to last ~300 words for context — avoids blowing the input budget
+  const partAWords   = (partAScript || '').split(/\s+/);
+  const partAContext = partAWords.length > 300
+    ? '…\n' + partAWords.slice(-300).join(' ')
+    : partAScript;
+
+  return `You are WritΩr — a script developer for ${brand}.
+
+${REALITY_RULE}
+
+## CREATOR VOICE
+${voiceSummary}
+
+## PROJECT
+Content type: ${contentType}
+Story structure: ${structure}
+
+## BEATS TO WRITE NOW (Part B — Beats ${beatsB[0]?.beat_index ?? SCRIPT_SPLIT_AT + 1}-${beatsB[beatsB.length - 1]?.beat_index ?? '?'})
+${beatSummaryB}
+
+Missing beats: ${missingBeats}
+Gaps to capture: ${gaps}
+
+## ORIGINAL CONCEPT
+${concept || '(No concept provided)'}
+
+## WHAT WAS CAPTURED
+${whatCaptured || '(No description provided)'}
+
+## PART A (already written — for continuity context only, do NOT rewrite)
+${partAContext}
+
+## TASK — CONTINUE THE SCRIPT FROM BEAT ${beatsB[0]?.beat_index ?? SCRIPT_SPLIT_AT + 1} TO END
+
+Pick up exactly where Part A ended. Write only the remaining beats.
+Include the strong call-to-action / sign-off at the end.
+
+Rules:
+- Use [● BEAT: name] to start each beat section
+- Prefix talking head lines with 🎤
+- B-roll cues in parentheses: (b-roll: description)
+- For uncovered beats: [BEAT NEEDED: name — specific real moment to capture]
+- Stay entirely in the creator's authentic voice
+
+Return ONLY the script continuation — no JSON, no preamble, no explanation.
+Do NOT repeat any content from Part A.`;
 }
 
 // ─────────────────────────────────────────────
@@ -356,7 +434,7 @@ async function generateHybrid({ projectId, concept, whatCaptured, footageRows, e
   const transcriptBlock = summariseTranscripts(footageRows || []);
 
   // ── CALL 1: BEAT RECONCILIATION ──────────────────────────────────────────
-  emit?.({ stage: 'beat_mapping', message: 'Call 1/2 — Reconciling plan vs. reality…' });
+  emit?.({ stage: 'beat_mapping', message: 'Call 1 — Reconciling plan vs. reality…' });
 
   const reconcilePrompt = buildReconcilePrompt({
     concept, whatCaptured, transcriptBlock, config, profile
@@ -403,22 +481,59 @@ async function generateHybrid({ projectId, concept, whatCaptured, footageRows, e
     message: `Beat map ready — ${coveredCount}/${totalBeats} beats covered`
   });
 
-  // Keepalive ping — SSE connection stays alive between calls
-  emit?.({ stage: 'writing', message: 'Call 2/2 — Writing unified script…' });
+  // ── CALL 2A: SCRIPT — BEATS 1-8 ─────────────────────────────────────────
+  const totalBeatsInMap = reconcileResult.beat_map.length;
+  const hasPartB        = totalBeatsInMap > SCRIPT_SPLIT_AT;
 
-  // ── CALL 2: SCRIPT WRITING ────────────────────────────────────────────────
-  const scriptPrompt = buildScriptPrompt({
+  emit?.({
+    stage:   'writing',
+    message: hasPartB
+      ? `Call 2a/3 — Writing beats 1-${SCRIPT_SPLIT_AT}…`
+      : 'Call 2/2 — Writing unified script…'
+  });
+
+  const scriptPromptA = buildScriptPromptA({
     reconcileResult, concept, whatCaptured, config, profile
   });
 
-  // raw:true — script is plain text, no JSON overhead
-  const scriptText = await callClaude(scriptPrompt, {
+  const scriptPartA = await callClaude(scriptPromptA, {
     maxTokens: MAX_TOKENS_SCRIPT,
     raw:       true
   });
 
-  if (!scriptText?.trim()) {
-    throw new Error('Script writing returned empty response');
+  if (!scriptPartA?.trim()) {
+    throw new Error('Script writing (Part A) returned empty response');
+  }
+
+  let scriptText;
+
+  if (!hasPartB) {
+    // Fewer than 9 beats — Part A is the whole script
+    scriptText = scriptPartA;
+  } else {
+    // ── CALL 2B: SCRIPT — BEATS 9-END ──────────────────────────────────────
+    // Keepalive ping — SSE connection stays alive between calls
+    emit?.({
+      stage:   'writing',
+      message: `Call 2b/3 — Writing beats ${SCRIPT_SPLIT_AT + 1}-${totalBeatsInMap}…`
+    });
+
+    const scriptPromptB = buildScriptPromptB({
+      reconcileResult, concept, whatCaptured, config, profile,
+      partAScript: scriptPartA
+    });
+
+    const scriptPartB = await callClaude(scriptPromptB, {
+      maxTokens: MAX_TOKENS_SCRIPT,
+      raw:       true
+    });
+
+    if (!scriptPartB?.trim()) {
+      throw new Error('Script writing (Part B) returned empty response');
+    }
+
+    // Join with a single blank line — no duplicate beat headers
+    scriptText = scriptPartA.trimEnd() + '\n\n' + scriptPartB.trimStart();
   }
 
   const gapCount = reconcileResult.gaps_to_capture.length;

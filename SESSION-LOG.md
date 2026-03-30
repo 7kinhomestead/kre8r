@@ -1,3 +1,44 @@
+# Kre8Ωr Session Log — 2026-03-30 (Session 9 — WritΩr Script Splitting)
+
+## What Was Built — Session 9
+
+### WritΩr hybrid.js — 3-call script split to defeat token-limit truncation
+
+**Problem:** Projects with 12–15 beats hit the 8192-token output ceiling mid-script
+(typically around Beat 12), producing truncated scripts that cut off without a
+conclusion or call-to-action.
+
+**Fix — Call 2 split into Part A + Part B (`src/writr/hybrid.js`)**
+
+The single script-writing call was replaced with a conditional two-call strategy:
+
+| Call | Beats written | Condition |
+|------|--------------|-----------|
+| Call 1 | Beat reconciliation (JSON) | Always |
+| Call 2a | Beats 1-8 | Always |
+| Call 2b | Beats 9-end | Only when `beat_map.length > 8` |
+
+Projects with ≤8 beats are unaffected — they still use a single script call.
+
+**Key implementation details:**
+- `SCRIPT_SPLIT_AT = 8` constant at top of file — change one number to re-tune the split
+- `formatBeatSummary(beats)` helper extracted — used by both prompt builders
+- `buildScriptPromptA`: instructs Claude to stop cleanly after Beat 8 and NOT write a
+  conclusion ("the script continues in Part B with: Beat 9: X, Beat 10: Y…")
+- `buildScriptPromptB`: receives last 300 words of Part A as continuity context (avoids
+  blowing the input budget), told explicitly not to repeat Part A content
+- Keepalive `emit` fires before Call 2b — identical to the existing pattern between
+  Call 1 and Call 2, prevents SSE stream from timing out during the inter-call gap
+- Final join: `partA.trimEnd() + '\n\n' + partB.trimStart()` — clean seam regardless
+  of how Claude ends/starts each half
+- SSE messages updated: `Call 2a/3 — Writing beats 1-8…` → `Call 2b/3 — Writing beats 9-N…`
+- Stale `Call 1/2` label in reconciliation emit corrected to `Call 1`
+
+**Files changed:**
+- `src/writr/hybrid.js` — only file touched this session
+
+---
+
 # Kre8Ωr Session Log — 2026-03-30 (Session 8 — WritΩr + PM2)
 
 ## What Was Built — Session 8 Addendum
