@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — AnalytΩr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/global.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size:128px 128px; z-index:1000; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+  .main { max-width: 680px; margin: 0 auto; padding: 80px 24px 120px; text-align: center; }
+
+  .cs-phase {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 20px;
+    background: var(--bg-card-2); border: 1px solid var(--border-bright); color: var(--text-dimmer);
+    margin-bottom: 28px; animation: fadeUp 0.3s ease both;
+  }
+  .cs-phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
+
+  .cs-icon { font-size: 64px; margin-bottom: 20px; animation: fadeUp 0.3s 0.05s ease both; }
+
+  .cs-title {
+    font-family: var(--font-head); font-size: clamp(48px, 12vw, 96px);
+    letter-spacing: 4px; line-height: 0.9; color: var(--text);
+    margin-bottom: 16px; animation: fadeUp 0.3s 0.08s ease both;
+  }
+  .cs-title em { font-style: normal; color: var(--teal); }
+
+  .cs-desc {
+    font-size: 16px; color: var(--text-mid, #8a9487); line-height: 1.7;
+    max-width: 480px; margin: 0 auto 36px;
+    animation: fadeUp 0.3s 0.11s ease both;
+  }
+
+  .cs-pipeline {
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    margin-bottom: 48px; animation: fadeUp 0.3s 0.14s ease both;
+  }
+  .cs-stage {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--text-dimmer);
+  }
+  .cs-stage.active { color: var(--teal); }
+  .cs-stage-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
+  .cs-stage.active .cs-stage-dot { background: var(--teal); box-shadow: 0 0 0 4px var(--teal-glow); }
+  .cs-stage-line { width: 48px; height: 2px; background: var(--border); margin-bottom: 14px; }
+
+  .cs-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: var(--text-dim);
+    text-decoration: none; padding: 10px 18px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-bright); transition: all 0.15s;
+    animation: fadeUp 0.3s 0.17s ease both;
+  }
+  .cs-back:hover { border-color: var(--teal); color: var(--teal); }
+</style>
+</head>
+<body>
+<div id="kre8r-nav"></div>
+<main class="main">
+  <div class="cs-phase"><span class="cs-phase-dot"></span>Coming in Phase 5</div>
+  <div class="cs-icon">📊</div>
+  <div class="cs-title">ANALYT<em>Ω</em>R</div>
+  <p class="cs-desc">Cross-platform analytics that connects TikTok, YouTube, and Lemon8 data to your production pipeline — so you know what worked and what to make more of.</p>
+
+  <div class="cs-pipeline">
+    <div class="cs-stage"><div class="cs-stage-dot"></div>Pre</div>
+    <div class="cs-stage-line"></div>
+    <div class="cs-stage"><div class="cs-stage-dot"></div>Prod</div>
+    <div class="cs-stage-line"></div>
+    <div class="cs-stage"><div class="cs-stage-dot"></div>Post</div>
+    <div class="cs-stage-line"></div>
+    <div class="cs-stage active"><div class="cs-stage-dot"></div>Dist</div>
+  </div>
+
+  <a href="/" class="cs-back">← Back to Dashboard</a>
+</main>
+<script src="/js/nav.js"></script>
+<script>initNav();</script>
+</body>
+</html>
