@@ -282,6 +282,11 @@
           <div class="progress-wrap" id="generateProgress">
             <div class="progress-bar-outer"><div class="progress-bar-inner" id="generateBar"></div></div>
             <div class="progress-log" id="generateLog"></div>
+            <div id="generateRetry" style="display:none;margin-top:10px;">
+              <button class="btn btn-ghost btn-full" id="generateRetryBtn" onclick="onRetry()">
+                ↺ Retry — resubmit the same request
+              </button>
+            </div>
           </div>
 
         </div><!-- /inputArea -->
@@ -633,24 +638,33 @@ async function onGenerate() {
 
   isGenerating = true;
   setGenerateLoading(true);
+  hideRetry();
   showProgress('generateProgress', 'generateBar');
   resetBeatMap();
   resetScriptPanel();
 
-  try {
-    const sse = new EventSource(
-      `/api/writr/generate?project_id=${currentProjectId}` +
-      `&entry_point=${encodeURIComponent(currentEntryPoint || 'shoot_first')}` +
-      `&input_text=${encodeURIComponent(inputText)}`
-    );
+  // Build body — hybrid sends concept and what_happened as separate fields
+  const ep = currentEntryPoint || 'shoot_first';
+  let generateBody;
+  if (ep === 'hybrid') {
+    generateBody = {
+      project_id:    currentProjectId,
+      entry_point:   'hybrid',
+      concept:       document.getElementById('hybridConceptText')?.value?.trim()   || '',
+      what_happened: document.getElementById('hybridCapturedText')?.value?.trim()  || ''
+    };
+  } else {
+    generateBody = {
+      project_id:  currentProjectId,
+      entry_point: ep,
+      input_text:  inputText
+    };
+  }
 
-    // Kick off a POST first (SSE may come from POST-triggered job)
-    // The spec says POST /api/writr/generate with SSE streaming
-    // We'll use fetch + ReadableStream pattern for POST with SSE
-    sse.close();
+  try {
     await streamWritr({
-      url: '/api/writr/generate',
-      body: { project_id: currentProjectId, input_text: inputText, entry_point: currentEntryPoint || 'shoot_first' },
+      url:  '/api/writr/generate',
+      body: generateBody,
       barId: 'generateBar',
       logId: 'generateLog',
       onEvent: (ev) => {
@@ -660,18 +674,19 @@ async function onGenerate() {
         if (ev.stage === 'beat_update' && ev.beat) updateBeatCard(ev.beat);
       },
       onComplete: (ev) => {
-        appendLog('generateLog', 'Script generated.', 'ok');
-        currentScript = ev.script;
-        draftNumber   = ev.script?.draft_number || 1;
-        const beatMap = ev.beat_map || [];
-        renderBeatMap(beatMap);
-        renderScript(ev.script);
+        appendLog('generateLog', 'Script generated ✓', 'ok');
+        // currentScript must be an object with .id so iterate can reference it
+        currentScript = { id: ev.script_id, content: ev.script, approved: false };
+        draftNumber   = 1;
+        renderBeatMap(ev.beat_map || []);
+        renderScript(currentScript);
         setGenerateLoading(false);
         isGenerating = false;
       },
       onError: (msg) => {
         appendLog('generateLog', 'Error: ' + msg, 'err');
         showToast(msg, 'error');
+        showRetry();
         setGenerateLoading(false);
         isGenerating = false;
       }
@@ -679,9 +694,25 @@ async function onGenerate() {
   } catch(e) {
     appendLog('generateLog', 'Request failed: ' + e.message, 'err');
     showToast('Generation failed — ' + e.message, 'error');
+    showRetry();
     setGenerateLoading(false);
     isGenerating = false;
   }
+}
+
+function onRetry() {
+  hideRetry();
+  onGenerate();
+}
+
+function showRetry() {
+  const r = document.getElementById('generateRetry');
+  if (r) r.style.display = 'block';
+}
+
+function hideRetry() {
+  const r = document.getElementById('generateRetry');
+  if (r) r.style.display = 'none';
 }
 
 function setGenerateLoading(loading) {
@@ -715,12 +746,11 @@ async function onRevise() {
         if (ev.stage === 'beat_update' && ev.beat) updateBeatCard(ev.beat);
       },
       onComplete: (ev) => {
-        appendLog('reviseLog', 'Revision complete.', 'ok');
-        currentScript = ev.script;
-        draftNumber   = ev.script?.draft_number || (draftNumber + 1);
-        const beatMap = ev.beat_map || currentBeatMap;
-        renderBeatMap(beatMap);
-        renderScript(ev.script);
+        appendLog('reviseLog', 'Revision complete ✓', 'ok');
+        currentScript = { id: ev.script_id, content: ev.script, approved: false };
+        draftNumber   = ev.iteration_count || (draftNumber + 1);
+        renderBeatMap(ev.beat_map || currentBeatMap);
+        renderScript(currentScript);
         document.getElementById('reviseInput').value = '';
         document.getElementById('reviseBtn').disabled = true;
         setReviseLoading(false);
@@ -943,12 +973,17 @@ function renderScript(script) {
 function buildScriptHTML(script) {
   if (!script) return '';
 
-  // If beats array
+  // Plain string (raw script text passed directly)
+  if (typeof script === 'string') {
+    return formatRawScript(script);
+  }
+
+  // Object with beats array
   if (Array.isArray(script.beats)) {
     return script.beats.map(beat => buildBeatHTML(beat)).join('');
   }
 
-  // If raw string content
+  // Object with content string
   if (typeof script.content === 'string') {
     return formatRawScript(script.content);
   }
@@ -999,25 +1034,29 @@ function formatRawScript(raw) {
 // ─────────────────────────────────────────────
 
 async function streamWritr({ url, body, barId, logId, onEvent, onComplete, onError }) {
-  let pct = 5;
+  let pct       = 5;
+  let settled   = false; // true once complete or error event handled
   setBar(barId, pct);
 
   try {
     const r = await fetch(url, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body:    JSON.stringify(body)
     });
 
     if (!r.ok) {
-      const errText = await r.text();
-      onError(`HTTP ${r.status}: ${errText}`);
+      const ct      = r.headers.get('content-type') || '';
+      const errText = ct.includes('application/json')
+        ? (await r.json().catch(() => ({}))).error || `HTTP ${r.status}`
+        : `HTTP ${r.status}`;
+      onError(errText);
       return;
     }
 
     const reader  = r.body.getReader();
     const decoder = new TextDecoder();
-    let buffer    = '';
+    let   buffer  = '';
 
     while (true) {
       const { done, value } = await reader.read();
@@ -1025,42 +1064,47 @@ async function streamWritr({ url, body, barId, logId, onEvent, onComplete, onErr
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete line in buffer
+      buffer = lines.pop(); // hold incomplete last line
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith(':')) continue; // skip comments/keep-alives
+        if (!trimmed || trimmed.startsWith(':')) continue; // skip blank / keepalive
 
         if (trimmed.startsWith('data:')) {
           const raw = trimmed.slice(5).trim();
-          if (raw === '[DONE]') continue;
+          if (!raw || raw === '[DONE]') continue;
           try {
             const ev = JSON.parse(raw);
 
             if (ev.stage === 'complete') {
+              settled = true;
               setBar(barId, 100);
               onComplete(ev);
               return;
             }
             if (ev.stage === 'error') {
+              settled = true;
               setBar(barId, 100);
-              onError(ev.error || 'Unknown error');
+              onError(ev.error || 'Generation failed');
               return;
             }
 
             pct = Math.min(pct + 12, 88);
             setBar(barId, pct);
             onEvent(ev);
-          } catch(parseErr) {
-            // Non-JSON line — ignore
+          } catch (parseErr) {
+            // Non-JSON data line — ignore
           }
         }
       }
     }
-    // Stream ended without complete event
-    onError('Stream ended unexpectedly');
-  } catch(e) {
-    onError(e.message);
+
+    // Stream ended — only report unexpected if we never got complete/error
+    if (!settled) {
+      onError('Stream ended unexpectedly — the request may have timed out. Click Retry to try again.');
+    }
+  } catch (e) {
+    if (!settled) onError(e.message);
   }
 }
 

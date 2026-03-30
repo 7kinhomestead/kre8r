@@ -64,25 +64,64 @@ function failJob(job, errorMsg) {
 }
 
 function sseStream(job, req, res) {
+  req.setTimeout(120_000);
   res.setHeader('Content-Type',  'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection',    'keep-alive');
   res.flushHeaders();
 
-  const send    = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const send    = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
   const onEvent = (data) => send(data);
-  const onDone  = () => res.end();
+
+  // Keepalive ping every 15 s — prevents proxy/browser from closing idle streams
+  const keepalive = setInterval(() => {
+    if (res.writableEnded) return clearInterval(keepalive);
+    res.write(': keepalive\n\n');
+  }, 15_000);
+
+  const onDone = () => { clearInterval(keepalive); if (!res.writableEnded) res.end(); };
 
   for (const ev of job.events) send(ev);
 
-  if (job.status !== 'running') { res.end(); return; }
+  if (job.status !== 'running') { clearInterval(keepalive); res.end(); return; }
 
   job.emitter.on('event', onEvent);
   job.emitter.once('done', onDone);
   req.on('close', () => {
+    clearInterval(keepalive);
     job.emitter.off('event', onEvent);
     job.emitter.off('done', onDone);
   });
+}
+
+// ─────────────────────────────────────────────
+// SSE RESPONSE HELPER — for POST routes that stream directly
+// Sets headers, starts keepalive, returns { write, end }
+// ─────────────────────────────────────────────
+function startSseResponse(req, res) {
+  req.setTimeout(120_000);
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const write = (data) => {
+    if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  const keepalive = setInterval(() => {
+    if (res.writableEnded) return clearInterval(keepalive);
+    res.write(': keepalive\n\n');
+  }, 15_000);
+
+  const end = () => {
+    clearInterval(keepalive);
+    if (!res.writableEnded) res.end();
+  };
+
+  req.on('close', () => clearInterval(keepalive));
+
+  return { write, end };
 }
 
 // ─────────────────────────────────────────────
@@ -163,99 +202,102 @@ router.get('/:project_id/scripts', (req, res) => {
 // Body: { project_id, entry_point, input_text, what_happened, concept, footage_text }
 // ─────────────────────────────────────────────
 
-router.post('/generate', (req, res) => {
+router.post('/generate', async (req, res) => {
   const { project_id, entry_point, input_text, what_happened, concept, footage_text } = req.body;
 
+  // Validate synchronously before switching to SSE (so we can return proper HTTP errors)
   const projectId = parseInt(project_id, 10);
   if (!projectId) return res.status(400).json({ error: 'project_id required' });
 
   const project = db.getProject(projectId);
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  const job = createJob();
-  res.json({ ok: true, job_id: job.id });
+  // Switch to SSE stream — client reads this response body directly
+  const { write, end } = startSseResponse(req, res);
 
-  (async () => {
-    try {
-      const ep     = entry_point || readConfig(projectId)?.entry_point || 'shoot_first';
-      const footage = db.getAllFootage({ project_id: projectId });
+  try {
+    const ep      = entry_point || readConfig(projectId)?.entry_point || 'shoot_first';
+    const footage = db.getAllFootage({ project_id: projectId });
 
-      pushEvent(job, { stage: 'analyzing', message: `Starting ${ep.replace('_', ' ')} analysis…` });
+    write({ stage: 'analyzing', message: `Starting ${ep.replace(/_/g, ' ')} analysis…` });
 
-      let result;
+    let result;
 
-      if (ep === 'script_first') {
-        result = await generateScriptFirst({
-          projectId,
-          inputText: input_text || '',
-          emit: (ev) => pushEvent(job, ev)
-        });
-      } else if (ep === 'shoot_first') {
-        result = await generateShootFirst({
-          projectId,
-          whatHappened: what_happened || '',
-          footageRows:  footage,
-          emit: (ev) => pushEvent(job, ev)
-        });
-      } else {
-        // hybrid
-        result = await generateHybrid({
-          projectId,
-          concept:      concept || input_text || '',
-          whatCaptured: what_happened || footage_text || '',
-          footageRows:  footage,
-          emit: (ev) => pushEvent(job, ev)
-        });
-      }
+    // emit helper — filters out module 'complete' progress msgs (we send our own at the end)
+    const emit = (ev) => { if (ev.stage !== 'complete') write(ev); };
 
-      // Determine which script text field to use
-      const scriptText    = result.script || result.shooting_script || '';
-      const outlineText   = result.outline || null;
-      const rawInput      = ep === 'script_first'
-        ? (input_text || '')
-        : ep === 'hybrid'
-          ? `CONCEPT: ${concept || ''}\n\nFOOTAGE: ${what_happened || ''}`
-          : (what_happened || '');
-
-      // Save to DB
-      const scriptId = db.insertWritrScript({
-        project_id:        projectId,
-        entry_point:       ep,
-        input_type:        ep === 'script_first' ? 'script' : ep === 'shoot_first' ? 'what_happened' : 'hybrid',
-        raw_input:         rawInput,
-        generated_outline: outlineText,
-        generated_script:  scriptText,
-        beat_map_json:     result.beat_map        || [],
-        hook_variations:   result.hook_variations || [],
-        story_found:       result.story_found     || null,
-        anchor_moment:     result.anchor_moment   || null,
-        missing_beats:     result.missing_beats   || [],
-        iteration_count:   0
+    if (ep === 'script_first') {
+      result = await generateScriptFirst({
+        projectId,
+        inputText: input_text || '',
+        emit
       });
-
-      // Link as active script on the project (not yet approved — just the latest draft)
-      db.updateProjectWritr(projectId, { active_script_id: scriptId });
-
-      finishJob(job, {
-        script_id:       scriptId,
-        entry_point:     ep,
-        script:          scriptText,
-        outline:         outlineText,
-        beat_map:        result.beat_map        || [],
-        missing_beats:   result.missing_beats   || [],
-        hook_variations: result.hook_variations || [],
-        story_found:     result.story_found     || null,
-        anchor_moment:   result.anchor_moment   || null,
-        reconciliation:  result.reconciliation  || null,
-        gaps_to_capture: result.gaps_to_capture || [],
-        changes_made:    result.changes_made    || []
+    } else if (ep === 'shoot_first') {
+      result = await generateShootFirst({
+        projectId,
+        whatHappened: what_happened || input_text || '',
+        footageRows:  footage,
+        emit
       });
-
-    } catch (err) {
-      console.error('[WritΩr] generate error:', err.message);
-      failJob(job, err.message);
+    } else {
+      // hybrid — concept and what_happened arrive as separate fields from the client
+      result = await generateHybrid({
+        projectId,
+        concept:      concept || input_text || '',
+        whatCaptured: what_happened || footage_text || '',
+        footageRows:  footage,
+        emit
+      });
     }
-  })();
+
+    const scriptText  = result.script || result.shooting_script || '';
+    const outlineText = result.outline || null;
+    const rawInput    = ep === 'script_first'
+      ? (input_text || '')
+      : ep === 'hybrid'
+        ? `CONCEPT: ${concept || input_text || ''}\n\nFOOTAGE: ${what_happened || ''}`
+        : (what_happened || input_text || '');
+
+    const scriptId = db.insertWritrScript({
+      project_id:        projectId,
+      entry_point:       ep,
+      input_type:        ep === 'script_first' ? 'script' : ep === 'shoot_first' ? 'what_happened' : 'hybrid',
+      raw_input:         rawInput,
+      generated_outline: outlineText,
+      generated_script:  scriptText,
+      beat_map_json:     result.beat_map        || [],
+      hook_variations:   result.hook_variations || [],
+      story_found:       result.story_found     || null,
+      anchor_moment:     result.anchor_moment   || null,
+      missing_beats:     result.missing_beats   || [],
+      iteration_count:   0
+    });
+
+    db.updateProjectWritr(projectId, { active_script_id: scriptId });
+
+    // Send final completion event with all result data at top level
+    write({
+      stage:           'complete',
+      script_id:       scriptId,
+      entry_point:     ep,
+      script:          scriptText,
+      outline:         outlineText,
+      beat_map:        result.beat_map        || [],
+      missing_beats:   result.missing_beats   || [],
+      hook_variations: result.hook_variations || [],
+      story_found:     result.story_found     || null,
+      anchor_moment:   result.anchor_moment   || null,
+      reconciliation:  result.reconciliation  || null,
+      gaps_to_capture: result.gaps_to_capture || [],
+    });
+
+    end();
+
+  } catch (err) {
+    console.error('[WritΩr] generate error:', err.message);
+    write({ stage: 'error', error: err.message });
+    end();
+  }
 });
 
 // ─────────────────────────────────────────────
@@ -275,7 +317,7 @@ router.get('/status/:job_id', (req, res) => {
 // Body: { project_id, script_id, feedback }
 // ─────────────────────────────────────────────
 
-router.post('/iterate', (req, res) => {
+router.post('/iterate', async (req, res) => {
   const { project_id, script_id, feedback } = req.body;
 
   const projectId = parseInt(project_id, 10);
@@ -288,54 +330,56 @@ router.post('/iterate', (req, res) => {
   const existing = db.getWritrScript(scriptId);
   if (!existing) return res.status(404).json({ error: 'Script not found' });
 
-  const job = createJob();
-  res.json({ ok: true, job_id: job.id });
+  const { write, end } = startSseResponse(req, res);
 
-  (async () => {
-    try {
-      const currentScript = existing.generated_script || existing.shooting_script || '';
-      if (!currentScript) throw new Error('No script text to iterate on');
+  try {
+    const currentScript = existing.generated_script || existing.shooting_script || '';
+    if (!currentScript) throw new Error('No script text to iterate on');
 
-      const result = await iterateScript({
-        projectId,
-        currentScript,
-        feedback,
-        iterationCount: existing.iteration_count || 0,
-        emit: (ev) => pushEvent(job, ev)
-      });
+    // emit helper — filters module 'complete' progress msgs
+    const emit = (ev) => { if (ev.stage !== 'complete') write(ev); };
 
-      const newIterCount = (existing.iteration_count || 0) + 1;
+    const result = await iterateScript({
+      projectId,
+      currentScript,
+      feedback,
+      iterationCount: existing.iteration_count || 0,
+      emit
+    });
 
-      // Save new iteration as a new script row (preserves history)
-      const newScriptId = db.insertWritrScript({
-        project_id:        projectId,
-        entry_point:       existing.entry_point,
-        input_type:        'iteration',
-        raw_input:         feedback,
-        generated_script:  result.script,
-        beat_map_json:     result.beat_map      || [],
-        missing_beats:     result.missing_beats || [],
-        iteration_count:   newIterCount,
-        // Carry forward metadata from parent
-        story_found:       existing.story_found || null,
-        anchor_moment:     existing.anchor_moment || null,
-        hook_variations:   existing.hook_variations || []
-      });
+    const newIterCount = (existing.iteration_count || 0) + 1;
 
-      finishJob(job, {
-        script_id:       newScriptId,
-        iteration_count: newIterCount,
-        script:          result.script,
-        beat_map:        result.beat_map      || [],
-        missing_beats:   result.missing_beats || [],
-        changes_made:    result.changes_made  || []
-      });
+    const newScriptId = db.insertWritrScript({
+      project_id:        projectId,
+      entry_point:       existing.entry_point,
+      input_type:        'iteration',
+      raw_input:         feedback,
+      generated_script:  result.script,
+      beat_map_json:     result.beat_map      || [],
+      missing_beats:     result.missing_beats || [],
+      iteration_count:   newIterCount,
+      story_found:       existing.story_found    || null,
+      anchor_moment:     existing.anchor_moment  || null,
+      hook_variations:   existing.hook_variations || []
+    });
 
-    } catch (err) {
-      console.error('[WritΩr] iterate error:', err.message);
-      failJob(job, err.message);
-    }
-  })();
+    write({
+      stage:           'complete',
+      script_id:       newScriptId,
+      iteration_count: newIterCount,
+      script:          result.script,
+      beat_map:        result.beat_map      || [],
+      missing_beats:   result.missing_beats || [],
+      changes_made:    result.changes_made  || []
+    });
+
+    end();
+
+  } catch (err) {
+    console.error('[WritΩr] iterate error:', err.message);
+    write({ stage: 'error', error: err.message });
+    end();
+  }
 });
 
 // ─────────────────────────────────────────────
