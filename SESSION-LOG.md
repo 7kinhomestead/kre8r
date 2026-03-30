@@ -1,3 +1,23 @@
+# Kre8Ωr Session Log — 2026-03-30 (Session 8 — WritΩr + PM2)
+
+## What Was Built — Session 8 Addendum
+
+### PM2 Auto-start (server never needs manual launch)
+
+- Installed PM2 globally (`npm install -g pm2`)
+- Started server: `pm2 start server.js --name kre8r`
+- Saved process list: `pm2 save` → `~/.pm2/dump.pm2`
+- `pm2 startup` fails on Windows — fixed with `pm2-windows-startup`:
+  - `npm install -g pm2-windows-startup`
+  - `pm2-startup install` → added Windows Registry logon entry
+  - On every Windows logon, `pm2 resurrect` reloads the saved process list
+- Created `C:\Users\18054\Desktop\Kre8r.bat` — double-click opens app in browser
+- Updated `SETUP.md` with PM2 section (commands, how autostart works, fallback)
+
+**Result:** Jason never needs to open Terminal. Boot → app is running. Click bat → browser opens.
+
+---
+
 # Kre8Ωr Session Log — 2026-03-30 (Session 8 — WritΩr)
 
 ## What Was Built — Session 8

@@ -106,10 +106,40 @@ To enable automatic audio generation:
 
 ---
 
-## Running the App
+## Running the App — PM2 (Auto-start on Boot)
+
+Kre8Ωr runs under **PM2** — a Node.js process manager that keeps the server alive
+and restarts it automatically on Windows boot. You never need to open Terminal.
+
+### Normal use
+
+1. Boot your computer — Kre8Ωr starts automatically in the background
+2. Double-click **`Kre8r.bat`** on your Desktop to open the app in your browser
+3. That's it.
+
+### PM2 commands (if you ever need them)
+
+Open PowerShell or Command Prompt:
 
 ```
-npm start        # production
+pm2 status              # see if kre8r is running
+pm2 logs kre8r          # live server logs (Ctrl+C to exit)
+pm2 restart kre8r       # restart after pulling new code
+pm2 stop kre8r          # stop the server
+pm2 start kre8r         # start it again
+```
+
+### How the autostart works
+
+- `pm2-windows-startup` installs a Windows Registry run-on-logon entry
+- On login it runs `pm2 resurrect` which reloads the saved process list
+- The saved list lives at `C:\Users\18054\.pm2\dump.pm2`
+- If you ever add or remove a PM2 process, run `pm2 save` to update the list
+
+### Manual fallback (legacy)
+
+```
+npm start        # run directly without PM2
 npm run dev      # development (nodemon auto-restart)
 ```
 
