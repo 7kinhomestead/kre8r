@@ -368,7 +368,8 @@ def run(args):
                 "mediaPoolItem": winner_item,
                 "startFrame":    sf,
                 "endFrame":      ef,
-                "mediaType":     1,
+                # mediaType intentionally omitted — specifying 1 adds video-only
+                # and silences the audio track. Omitting includes all tracks (V+A).
                 "trackIndex":    1
             }
 

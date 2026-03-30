@@ -221,10 +221,10 @@ router.post('/davinci/build/:project_id', (req, res) => {
         allFootage.map(f => [f.id, f.organized_path || f.file_path || ''])
       );
 
-      // Find DaVinci project name
-      const davinciTimelines = db.getDavinciTimelines(projectId);
-      const davinciName      = davinciTimelines?.[0]?.resolve_project_name || project.title;
-      const fps              = project.fps || 24;
+      // Find DaVinci project name — read from projects table
+      // (davinci_timelines has no resolve_project_name column)
+      const davinciName = project.davinci_project_name || project.title;
+      const fps         = project.fps || 24;  // projects table has no fps column — defaults to 24
 
       const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'davinci', 'build-selects.py');
 
