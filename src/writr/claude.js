@@ -11,7 +11,14 @@ const ANTHROPIC_VERSION = '2023-06-01';
 const MODEL             = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
 const MAX_TOKENS        = 16384;
 
-async function callClaude(prompt, { systemPrompt = null, maxTokens = MAX_TOKENS } = {}) {
+/**
+ * @param {string} prompt
+ * @param {object} [opts]
+ * @param {string}  [opts.systemPrompt]
+ * @param {number}  [opts.maxTokens]   — defaults to 16384
+ * @param {boolean} [opts.raw]         — if true, return cleaned text instead of parsing JSON
+ */
+async function callClaude(prompt, { systemPrompt = null, maxTokens = MAX_TOKENS, raw = false } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
 
@@ -40,18 +47,20 @@ async function callClaude(prompt, { systemPrompt = null, maxTokens = MAX_TOKENS 
   }
 
   const data = await response.json();
-  const raw  = data.content[0].text.trim();
+  const text = data.content[0].text.trim();
 
   // Strip markdown code fences if present
-  const cleaned = raw
+  const cleaned = text
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```\s*$/i, '')
     .trim();
 
+  // Raw mode — caller wants plain text (script writing, etc.)
+  if (raw) return cleaned;
+
   try {
     return JSON.parse(cleaned);
   } catch (_) {
-    // Return raw string if JSON parse fails — caller can decide what to do
     throw new Error(
       `Claude returned non-JSON response. First 400 chars: ${cleaned.slice(0, 400)}`
     );
