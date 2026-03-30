@@ -1,3 +1,78 @@
+# Kre8Ωr Session Log — 2026-03-30 (Session 8 — WritΩr)
+
+## What Was Built — Session 8
+
+### WritΩr — Script Generation & Story-Finding Module
+
+Full 7-part WritΩr system with Reality Rule at the core.
+
+**Core constraint — The Reality Rule**
+Embedded as a named constant (`REALITY_RULE` in `src/writr/claude.js`) and
+included in every single Claude prompt. WritΩr never invents story moments.
+Missing beats are flagged as `[BEAT NEEDED]` — never fabricated.
+
+**Part A — DB (`src/db.js`)**
+- `writr_scripts` table: project_id, entry_point, input_type, raw_input,
+  generated_outline, generated_script, beat_map_json, hook_variations,
+  story_found, anchor_moment, missing_beats, iteration_count, approved
+- `projects.writr_complete`, `projects.active_script_id` columns
+- Helpers: insertWritrScript, getWritrScript, getWritrScriptsByProject,
+  getApprovedWritrScript, updateWritrScript, approveWritrScript, updateProjectWritr
+
+**Part B — Script First (`src/writr/script-first.js`)**
+- Maps existing script/outline to beat structure
+- Identifies covered vs missing beats
+- Writes full beat-mapped draft in creator voice
+- Generates 3 hook variations (direct / curiosity / result-first)
+- Flags missing beats: `[BEAT NEEDED: name — authentic prompt]`
+
+**Part C — Shoot First (`src/writr/shoot-first.js`)**
+- Story archaeology: finds the real story in footage transcripts
+- Maps real moments (with footage_id) to each beat
+- Generates talking head prompts (authentic questions, not scripts)
+- Identifies the anchor moment — strongest scene in the footage
+- Shooting script with b-roll direction embedded
+
+**Part D — Hybrid (`src/writr/hybrid.js`)**
+- Reconciliation analysis: plan vs reality, per beat
+- Winner selection: plan / footage / talking_head / needs_coverage
+- Unified script bridging both worlds
+- Gaps to capture list for remaining coverage
+
+**Part E — Iteration Engine (`src/writr/iterate.js`)**
+- Conversational refinement from plain-English feedback
+- Changes only what feedback requests
+- Beat structure preserved across revisions
+- Each iteration saved as new row (history preserved)
+
+**Part F — WritΩr UI (`public/writr.html`)**
+- Three-panel layout: Input | Beat Map | Script
+- Panel 1: project selector (pipr_complete only), entry-point-aware inputs,
+  SSE progress log, load transcripts button
+- Panel 2: beat cards (green/amber/red), talking head prompts on expand,
+  coverage summary bar, anchor moment display
+- Panel 3: formatted script with beat headers, [BEAT NEEDED] in red,
+  talking head prompts in teal, iteration bar, Approve + Export buttons
+- Approve → syncs to SelectsΩr, redirects to editor.html
+
+**Part G — Pipeline Connection**
+- `server.js`: `/api/writr` route mounted, WritΩr in startup log
+- `src/editor/selects.js`: checks for WritΩr-approved script first;
+  falls back to legacy scripts table, then concept note
+- `public/index.html`:
+  - WritΩr nav link + quick action card
+  - WritΩr ✓ / WritΩr → badges on project cards
+  - 🎬 N beats need coverage pill for critical missing beats
+  - WritΩr → button on projects with pipr_complete
+
+**Also fixed in this session**
+- `scripts/davinci/build-selects.py`: removed mediaType:1 (video-only) — audio fix
+- `scripts/davinci/import-broll.py`: same mediaType fix
+- `src/routes/editor.js`: resolve_project_name → davinci_project_name column fix
+- `public/pipr.html`: Beat map now client-side (no server round-trip), better error messages
+
+---
+
 # Kre8Ωr Session Log — 2026-03-30 (Session 7)
 
 ## What Was Built — Session 7
