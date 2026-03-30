@@ -199,6 +199,15 @@
   .organize-status{font-size:12px;color:var(--text-dim);margin-left:auto;align-self:center;}
   .organize-status.done{color:var(--green);}
 
+  /* ── PROJECT LINK (modal) ── */
+  .project-link-row{display:flex;gap:8px;align-items:flex-end;}
+  .project-link-row .field-select{flex:1;}
+  .btn-save-project{font-size:12px;padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--teal);background:transparent;color:var(--teal);font-family:var(--font-body);font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0;}
+  .btn-save-project:hover{background:var(--teal-glow);}
+  .btn-save-project:disabled{opacity:0.4;cursor:not-allowed;}
+  .project-link-status{font-size:11px;color:var(--text-dimmer);margin-top:5px;}
+  .project-link-status.linked{color:var(--teal);}
+
   /* ── DISTRIBUTION ROWS (modal) ── */
   .dist-row{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;}
   .dist-row:last-child{margin-bottom:0;}
@@ -211,6 +220,26 @@
   .dist-detail-input{flex:1;min-width:120px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:12px;padding:6px 10px;outline:none;transition:border 0.15s;}
   .dist-detail-input:focus{border-color:var(--teal-dim);}
   .dist-detail-input::placeholder{color:var(--text-dimmer);}
+
+  /* ── CARD SELECTION ── */
+  .card-wrap{position:relative;}
+  .card-wrap .card-checkbox{position:absolute;top:8px;left:8px;z-index:10;width:18px;height:18px;accent-color:var(--teal);cursor:pointer;opacity:0;transition:opacity 0.15s;pointer-events:auto;}
+  .card-wrap:hover .card-checkbox,
+  .card-wrap.selected .card-checkbox{opacity:1;}
+  .card-wrap.selected .footage-card{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal-glow);}
+  .card-wrap.selected .footage-card:hover{border-color:var(--teal);}
+
+  /* ── BULK ACTION BAR ── */
+  .bulk-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border-top:1px solid var(--border-bright);padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:150;transform:translateY(100%);transition:transform 0.2s ease;flex-wrap:wrap;}
+  .bulk-bar.visible{transform:translateY(0);}
+  .bulk-count{font-family:var(--font-head);font-size:16px;letter-spacing:1px;color:var(--teal);flex-shrink:0;}
+  .bulk-select{background:var(--bg-card-2);border:1px solid var(--border-bright);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:7px 12px;outline:none;cursor:pointer;min-width:200px;}
+  .bulk-select:focus{border-color:var(--teal-dim);}
+  .bulk-assign-btn{background:var(--teal);color:#0e0f0e;font-family:var(--font-body);font-size:13px;font-weight:700;padding:8px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .bulk-assign-btn:hover:not(:disabled){background:var(--teal-dim);}
+  .bulk-assign-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .bulk-clear-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-body);font-size:12px;padding:7px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;}
+  .bulk-clear-btn:hover{border-color:var(--red);color:var(--red);}
 
   /* ── BRAW BADGE (card) ── */
   .braw-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--amber-glow);border:1px solid rgba(240,185,66,0.4);color:var(--amber);letter-spacing:0.4px;margin-top:5px;}
@@ -251,6 +280,7 @@
   <div class="nav">
     <a href="/">PipelineΩr</a>
     <a href="/vault.html" class="active">VaultΩr</a>
+    <a href="/editor.html">EditΩr</a>
     <a href="/reviewr.html">ReviewΩr</a>
     <a href="/m5-analytics.html">AnalytΩr</a>
     <a href="/operator.html">OperatΩr</a>
@@ -439,6 +469,16 @@
 
 </main>
 
+<!-- ── BULK ACTION BAR ── -->
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-count" id="bulkCount">0 selected</span>
+  <select class="bulk-select" id="bulkProjectSelect">
+    <option value="">— Assign to project —</option>
+  </select>
+  <button class="bulk-assign-btn" id="bulkAssignBtn" onclick="bulkAssign()">Assign to Project</button>
+  <button class="bulk-clear-btn" onclick="clearSelection()">✕ Clear</button>
+</div>
+
 <!-- ── CLIP MODAL ── -->
 <div class="modal-overlay" id="clipModal" onclick="closeModalIfOverlay(event)">
   <div class="modal">
@@ -502,6 +542,20 @@
 
       <hr class="modal-section-divider">
 
+      <!-- Project link -->
+      <div class="field-group">
+        <label class="field-label">Link to Project</label>
+        <div class="project-link-row">
+          <select class="field-select" id="modalProjectLink">
+            <option value="">— Unassigned —</option>
+          </select>
+          <button class="btn-save-project" id="saveProjectLinkBtn" onclick="saveProjectLink()">Save</button>
+        </div>
+        <div class="project-link-status" id="projectLinkStatus"></div>
+      </div>
+
+      <hr class="modal-section-divider">
+
       <!-- Distribution section -->
       <div class="field-group">
         <label class="field-label">Distribution</label>
@@ -538,6 +592,7 @@ let searchDebounce  = null;
 let currentClip     = null;
 let viewMode        = 'grid';
 let showOrganized   = false;
+let selectedIds     = new Set();
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -650,15 +705,22 @@ document.getElementById('watcherToggle').addEventListener('click', async () => {
 });
 
 // ── PROJECTS ───────────────────────────────────────────────────────────────
+let allProjects = [];
+
 async function loadProjects() {
   try {
-    const projects = await fetch('/api/projects').then(r => r.json());
-    const sel = document.getElementById('projectSelect');
-    projects.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id; opt.textContent = p.title;
-      sel.appendChild(opt);
-    });
+    allProjects = await fetch('/api/projects').then(r => r.json());
+    const targets = [document.getElementById('projectSelect'), document.getElementById('modalProjectLink'), document.getElementById('bulkProjectSelect')];
+    for (const sel of targets) {
+      if (!sel) continue;
+      // Keep first option (— None — / — Unassigned —), clear the rest
+      while (sel.options.length > 1) sel.remove(1);
+      allProjects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id; opt.textContent = p.title;
+        sel.appendChild(opt);
+      });
+    }
   } catch(e) {}
 }
 
@@ -843,22 +905,27 @@ function renderCard(f) {
     return `<span class="dist-dot${posted ? ' posted' : ''}" title="${p.full}${posted ? ' — posted' : ''}" onclick="toggleDistDot(event,${f.id},'${p.key}')">${p.short}</span>`;
   }).join('');
   const dur = f.duration ? formatDuration(f.duration) : null;
+  const isSelected = selectedIds.has(f.id);
 
-  return `<div class="footage-card" onclick="openModal(${f.id})">
-    ${thumbHtml}
-    <div class="footage-body">
-      <div class="footage-filename">${escHtml(f.original_filename || f.file_path.split(/[\\/]/).pop())}</div>
-      <div class="footage-path">${escHtml(parentDir(f.file_path))}</div>
-      ${f.description
-        ? `<div class="footage-desc">${escHtml(f.description)}</div>`
-        : `<div class="footage-desc" style="color:var(--text-dimmer);font-style:italic">Not classified</div>`}
-      <div class="footage-tags">
-        ${shotTypeTag(f.shot_type)}
-        ${qualityTag2(f.quality_flag)}
-        ${dur ? `<span class="footage-dur">${dur}</span>` : ''}
+  return `<div class="card-wrap${isSelected ? ' selected' : ''}">
+    <input type="checkbox" class="card-checkbox" ${isSelected ? 'checked' : ''}
+      onclick="toggleSelect(event,${f.id})" title="Select clip">
+    <div class="footage-card" onclick="openModal(${f.id})">
+      ${thumbHtml}
+      <div class="footage-body">
+        <div class="footage-filename">${escHtml(f.original_filename || f.file_path.split(/[\\/]/).pop())}</div>
+        <div class="footage-path">${escHtml(parentDir(f.file_path))}</div>
+        ${f.description
+          ? `<div class="footage-desc">${escHtml(f.description)}</div>`
+          : `<div class="footage-desc" style="color:var(--text-dimmer);font-style:italic">Not classified</div>`}
+        <div class="footage-tags">
+          ${shotTypeTag(f.shot_type)}
+          ${qualityTag2(f.quality_flag)}
+          ${dur ? `<span class="footage-dur">${dur}</span>` : ''}
+        </div>
+        <div class="dist-dots">${dotHtml}</div>
+        ${(f.braw_source_path && f.codec === 'BRAW') ? '<span class="braw-badge">PROXY NEEDED</span>' : ''}
       </div>
-      <div class="dist-dots">${dotHtml}</div>
-      ${(f.braw_source_path && f.codec === 'BRAW') ? '<span class="braw-badge">PROXY NEEDED</span>' : ''}
     </div>
   </div>`;
 }
@@ -1102,6 +1169,18 @@ async function openModal(id) {
   document.getElementById('modalDescription').value = f.description  || '';
   document.getElementById('subcategoryGroup').style.opacity = f.shot_type === 'b-roll' ? '1' : '0.4';
 
+  const projSel = document.getElementById('modalProjectLink');
+  projSel.value = f.project_id || '';
+  const projStatus = document.getElementById('projectLinkStatus');
+  if (f.project_id) {
+    const linked = allProjects.find(p => p.id == f.project_id);
+    projStatus.textContent = linked ? `✓ Linked to "${linked.title}"` : `✓ Linked to project ${f.project_id}`;
+    projStatus.className = 'project-link-status linked';
+  } else {
+    projStatus.textContent = '';
+    projStatus.className = 'project-link-status';
+  }
+
   const orgStatus = document.getElementById('organizeStatus');
   orgStatus.className = f.organized_path ? 'organize-status done' : 'organize-status';
   orgStatus.textContent = f.organized_path ? '✓ Tagged' : '';
@@ -1145,6 +1224,31 @@ async function saveClipEdits() {
       showToast('Save failed: ' + (err.error || res.status), 'red');
     }
   } catch(e) { showToast('Save failed: ' + e.message, 'red'); }
+}
+
+// ── SAVE PROJECT LINK ──────────────────────────────────────────────────────
+async function saveProjectLink() {
+  if (!currentClip) return;
+  const btn = document.getElementById('saveProjectLinkBtn');
+  const status = document.getElementById('projectLinkStatus');
+  const projectId = document.getElementById('modalProjectLink').value || null;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/vault/footage/${currentClip.id}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ project_id: projectId ? parseInt(projectId) : null })
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+    currentClip.project_id = projectId ? parseInt(projectId) : null;
+    const idx = allFootage.findIndex(f => f.id === currentClip.id);
+    if (idx >= 0) allFootage[idx].project_id = currentClip.project_id;
+    const linked = projectId ? allProjects.find(p => p.id == projectId) : null;
+    status.textContent = linked ? `✓ Linked to "${linked.title}"` : (projectId ? `✓ Saved` : 'Unassigned');
+    status.className = 'project-link-status' + (projectId ? ' linked' : '');
+    showToast(linked ? `Linked to "${linked.title}"` : 'Project link cleared', 'green');
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'red');
+  } finally { btn.disabled = false; }
 }
 
 // ── ORGANIZE CLIP ──────────────────────────────────────────────────────────
@@ -1208,6 +1312,67 @@ async function startIngest() {
     }
   } catch(e) { addLog('err', '✗ ' + e.message); }
   finally { btn.disabled = false; btn.textContent = '▶ Ingest'; }
+}
+
+// ── SELECTION & BULK ASSIGN ────────────────────────────────────────────────
+function toggleSelect(event, id) {
+  event.stopPropagation();
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  updateBulkBar();
+  // Update just this card's wrapper without full re-render
+  const wrap = event.target.closest('.card-wrap');
+  if (wrap) {
+    wrap.classList.toggle('selected', selectedIds.has(id));
+    wrap.querySelector('.card-checkbox').checked = selectedIds.has(id);
+  }
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const count = selectedIds.size;
+  document.getElementById('bulkCount').textContent = `${count} clip${count !== 1 ? 's' : ''} selected`;
+  bar.classList.toggle('visible', count > 0);
+  document.getElementById('bulkAssignBtn').disabled = count === 0;
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  updateBulkBar();
+  renderView(applyFilters(allFootage));
+}
+
+async function bulkAssign() {
+  const projectId = document.getElementById('bulkProjectSelect').value;
+  if (!projectId) { showToast('Select a project first', 'amber'); return; }
+  if (selectedIds.size === 0) { showToast('No clips selected', 'amber'); return; }
+
+  const btn = document.getElementById('bulkAssignBtn');
+  btn.disabled = true;
+  btn.textContent = 'Assigning…';
+
+  try {
+    const res = await fetch('/api/vault/footage/bulk-assign', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ footage_ids: [...selectedIds], project_id: parseInt(projectId) })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.status);
+
+    // Update local cache
+    for (const id of selectedIds) {
+      const f = allFootage.find(x => x.id === id);
+      if (f) f.project_id = parseInt(projectId);
+    }
+    const proj = allProjects.find(p => p.id == projectId);
+    showToast(`${data.updated} clip${data.updated !== 1 ? 's' : ''} assigned to "${proj?.title || projectId}"`, 'green');
+    clearSelection();
+  } catch(e) {
+    showToast('Bulk assign failed: ' + e.message, 'red');
+    btn.disabled = false;
+    btn.textContent = 'Assign to Project';
+  }
 }
 
 // ── UTILS ──────────────────────────────────────────────────────────────────

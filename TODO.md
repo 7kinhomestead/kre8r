@@ -2,76 +2,78 @@
 
 ---
 
-## Task 1 — Confirm color space + S-curve in Resolve 20 with real footage
+## Task 1 — Fix two bugs in broll-bridge.js before first real use
 
-The `create-project.py` script now probes and logs all available `GetSetting` keys to
-stderr. The next real test must include proxy footage so the S-curve path actually runs.
+Both are silent runtime failures that won't crash the server but will produce wrong
+behaviour when `importBroll()` is called.
 
-**What to do:**
-1. Pick a project that has proxy MP4s in VaultΩr (or drop a test MP4 into the intake
-   folder and let it ingest)
-2. Call `POST /api/davinci/create-project` with that `project_id`
-3. Watch the server console for these lines:
-   ```
-   [probe] GetSetting('colorSpaceInput') = '...'   ← confirms key exists + current value
-   [color] colorSpaceInput: SetSetting('colorSpaceInput', '...') OK
-   [resolve] colorAdj keys (first 12): [...]        ← shows S-curve key format
-   ```
-4. If color space still fails: the probe output will show the exact Resolve 20 key names
-   to use — update `try_set_color_space()` calls in `create-project.py` with the correct keys
-5. If S-curve still fails: the colorAdj key list will show what Resolve 20 exposes —
-   add the correct key format as "Format D" in the S-curve section
+**Bug 1 — wrong column name for Resolve project name:**
+`src/editor/broll-bridge.js` line ~85:
+```js
+const davinciName = davinciTimelines?.[0]?.resolve_project_name || project.title;
+```
+`davinci_timelines` has no `resolve_project_name` column. The name lives on
+`projects.davinci_project_name`. Fix:
+```js
+const davinciName = project.davinci_project_name || project.title;
+```
 
-**Success criteria:** `errors: []` in the JSON response, color management visible in
-Resolve Project Settings → Color Management tab.
+**Bug 2 — `project.fps` doesn't exist:**
+`src/editor/broll-bridge.js` line ~92:
+```js
+'--fps', String(project.fps || 24)
+```
+The `projects` table has no `fps` column — this always silently defaults to 24.
+That's fine for now (all footage is 24fps) but document it clearly. If multi-fps
+support is ever needed, add `fps INTEGER DEFAULT 24` to the `projects` table via
+`runMigrations()`.
+
+**Fix both in broll-bridge.js, add a one-line comment on the fps default.**
 
 ---
 
-## Task 2 — Update `public/index.html` PipelineΩr dashboard
+## Task 2 — Update PipelineΩr dashboard (`public/index.html`)
 
-The home screen was not updated this session. A `--blue` CSS variable was added but
-the quick-action cards and project card links were not completed.
+This was on the TODO from Session 3 and was skipped again. The home screen is stale.
 
-**Quick-action cards** — add two missing cards (AnalytΩr, OperatΩr):
+**Quick-action cards** — add two missing cards:
 ```
-AnalytΩr:  chart icon (📊), c-blue,   "Track performance across platforms"  → m5-analytics.html
-OperatΩr:  grid icon  (🗂️), c-green,  "Queue, publish, and archive projects" → operator.html
+EditΩr:   film icon,  c-teal,  "Map takes to script sections, push selects to DaVinci"  → editor.html
+AnalytΩr: chart icon, c-blue,  "Track performance across platforms"                      → m5-analytics.html
+OperatΩr: grid icon,  c-green, "Queue, publish, and archive projects"                    → operator.html
 ```
-The `c-blue` class needs to be added to the CSS (the `--blue: #5b9cf6` var already exists).
+`c-blue` and `c-green` classes need to be added to CSS (vars `--blue` and `--green`
+already exist). `c-teal` already exists.
 
-**Pipeline project cards** — add two action links to each card:
-- "Analytics →" linking to `m5-analytics.html?project_id=X` (always shown)
-- "OperatΩr →" linking to `operator.html?project_id=X` (shown only when `gate_c_approved`)
+**Pipeline project cards** — add action links to each card:
+- "EditΩr →" → `editor.html?project_id=X` (show when talking-head footage exists)
+- "Analytics →" → `m5-analytics.html?project_id=X` (always shown)
 
-**Grid layout** — 8 cards total; keep 4-column grid (2 rows of 4). Confirm it doesn't
-overflow at 1280px width.
+**Server startup banner** (`server.js`) — add EditΩr line:
+```
+  EditΩr     → http://localhost:3000/editor.html
+```
 
 ---
 
-## Task 3 — CutΩr Whisper path hardening + ReviewΩr UX fixes
+## Task 3 — End-to-end EditΩr test with real footage
 
-The CutΩr route uses `python -m whisper` which depends on the user's Python environment.
-This needs to be robust before first real use.
+The EditΩr pipeline has never been run against actual clips. First real test:
 
-**Whisper path detection (`src/routes/cutor.js`):**
-- Check `py -m whisper --help` first (Windows Python Launcher), then `python3`, then `python`
-- If Whisper not found, return a clear error immediately rather than a spawn that hangs
-- Log which Python binary is being used so debugging is easy
-- Add a `GET /api/cutor/check` health endpoint: returns ffmpeg status + Whisper status
-  (similar to `/api/vault/status`) — ReviewΩr can call this on load and show a warning
-  banner if Whisper is missing
+1. Open VaultΩr → confirm at least 2-3 clips are tagged `talking-head` for a project
+2. Open `http://localhost:3000/editor.html?project_id=X`
+3. Click **Build Selects** — watch SSE log for:
+   - Whisper running on each clip (`transcribing`, `transcribed` stages)
+   - `claude_start` → `claude_done` with section count
+   - `saved` confirmation
+4. Check section cards rendered correctly — takes listed, winner highlighted
+5. Click **Push to DaVinci** — confirm Resolve is open and the `02_SELECTS` timeline
+   appears with Blue/Green/Red/Orange markers
+6. If Claude sections look wrong, inspect the prompt in `src/editor/selects.js`
+   `buildSelectsPrompt()` and adjust the script/concept section logic
 
-**ReviewΩr UI fixes:**
-- On load, call `/api/cutor/check` and show a setup warning if ffmpeg or Whisper is
-  missing (with install instructions)
-- The "Transcribe + Analyze" button should be disabled with a tooltip explaining why
-  if the check fails
-- Add a "Re-run Analysis" button that clears existing cuts for a project and re-runs
-  the full pipeline (currently there is no way to reprocess footage)
-- Fix: after extraction, the clip_path links should be clickable `file://` links so the
-  user can open the extracted clip directly from the browser
-
-**Robustness:**
-- If Whisper times out (>10 min), emit a timeout error event and mark job failed
-- If Claude cut analysis returns malformed JSON, show a parse error in the SSE log
-  rather than silently failing
+**Expected failure modes to watch for:**
+- `No talking-head or dialogue clips found` → tag clips in VaultΩr first
+- Whisper timeout on long clips → check `WHISPER_MODEL=medium` vs `base` tradeoff
+- DaVinci `Could not find Resolve project` → confirm project was created via DaVinci panel in VaultΩr first
+- B-roll panel shows "No b-roll footage" → ingest b-roll clips tagged correctly in VaultΩr

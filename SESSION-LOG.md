@@ -684,3 +684,177 @@ public/vault.html                    Distribution dots/modal, folder view,
 docs/davinci-workflow.md             Complete workflow reference (corrected)
 server.js                            /api/davinci route mounted
 ```
+
+---
+
+# Kre8Ωr Session Log — 2026-03-29 (Session 4)
+
+## Summary
+
+CutΩr TODO Task 3 completed (Whisper path hardening, ReviewΩr UX, malformed JSON
+surfacing). Whisper model upgraded to `medium`. M2 PackageΩr connected to CutΩr output
+with server-side context injection. EditΩr built in full — 7 parts covering DB, SelectsΩr
+engine, DaVinci timeline builder, B-roll Bridge, API routes, UI, and global nav update.
+
+---
+
+## What Was Built / Changed
+
+### CutΩr — Task 3 completion
+
+**Whisper binary detection (`src/vault/transcribe.js`)**:
+- Replaced hardcoded `PYTHON_PATH` with a fallback chain: `py → python3 → python`
+- `WHISPER_CANDIDATES` uses `[PYTHON_PATH]` if env var set, else full chain
+- `_testWhisperBinary(bin)` probes `bin -m whisper --help` with 10s timeout; resolves version string or null
+- `detectWhisperBinary()` iterates candidates, caches result in module-level `_whisperBinary`
+- `checkWhisper()` exported — returns `{ whisper, whisper_binary, whisper_version }`
+- `runWhisper()` made async; throws descriptive error if no binary found
+- Whisper spawn gets `timeout: 600_000` (10 minutes)
+- Default model changed: `WHISPER_MODEL = process.env.WHISPER_MODEL || 'medium'`
+
+**`GET /api/cutor/check`** added to `src/routes/cutor.js`:
+- Runs `checkFfmpeg()` + `checkWhisper()` in parallel
+- Returns `{ ffmpeg, whisper, whisper_binary, whisper_version }`
+
+**ReviewΩr UX (`public/reviewr.html`)**:
+- Dependency banner (`.dep-banner`) — shown on load if ffmpeg or Whisper missing
+- `checkDependencies()` called on init; disables Transcribe button with explanation
+- "Re-run Analysis" button — clears cuts and re-runs full pipeline
+- `clipUrl(p)` helper — converts absolute path to `/clips/${filename}` for browser-safe links
+- Advance banner now passes `?project_id=` to M2
+
+**Claude JSON safety** (`src/vault/cutor.js`):
+- `callClaude()` wraps `JSON.parse` in try/catch — surfaces parse error + first 300 chars of raw response
+
+---
+
+### Whisper model upgrade
+
+Changed `src/vault/transcribe.js` line 39:
+```
+const WHISPER_MODEL = process.env.WHISPER_MODEL || 'medium'
+```
+Previously `'base'`. Medium is significantly more accurate for real-world audio.
+
+---
+
+### M2 PackageΩr ↔ CutΩr connection (`src/routes/generate.js`, `public/m2-package-generator.html`, `public/reviewr.html`)
+
+**Server-side context injection** (`src/routes/generate.js`):
+- When `project_id` is present in `/api/generate/packages`, pulls approved social clips via `db.getCutsByProject()`
+- Filters `cut_type === 'social' && approved`, sorts by rank
+- Injects timestamped clip list with description + reasoning into Claude `userPrompt`
+- `fmtTs(s)` helper formats seconds as `M:SS.s`
+
+**CutΩr context panel** (`public/m2-package-generator.html`):
+- `.cutor-panel` div (teal-bordered) shown when `project_id` present + approved clips exist
+- `loadProject()` fetches `/api/cutor/cuts/:id` in parallel with project load
+- `renderCutorPanel(clips)` renders ranked clip list with timestamps + reasoning
+
+**ReviewΩr advance banner**:
+- "Go to PackageΩr" link now sets `href` to include `?project_id=X` after extraction
+
+---
+
+### EditΩr — Full build (Parts A–G)
+
+**Part A — DB (`src/db.js`)**:
+- `footage.transcript TEXT` migration — cached Whisper JSON to avoid re-transcribing
+- `projects.editor_state TEXT` migration — tracks `selects_ready`, `broll_imported`
+- `selects` table: `(project_id, script_section, section_index, takes TEXT, selected_takes TEXT, winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position)`
+- Helper functions: `insertSelect`, `getSelectsByProject`, `deleteSelectsByProject`, `updateProjectEditorState`
+- All four functions exported
+
+**Part B — `src/editor/selects.js`** (SelectsΩr engine):
+- Accepts `project_id` + `onProgress` callback
+- Pulls all talking-head / dialogue footage for the project
+- Checks `footage.transcript` (DB) → `footage.transcript_path` (disk) → runs Whisper
+- Caches new transcripts back to `footage.transcript` column
+- Sends all transcripts + approved script / concept to Claude (`max_tokens: 4096`)
+- Claude maps segments → script sections, picks winner takes, flags gold nuggets, adds fire suggestions
+- Saves to `selects` table; sets `editor_state = 'selects_ready'`
+
+**Part C — `scripts/davinci/build-selects.py`**:
+- Opens existing Resolve project by exact name or `_NNN` suffix scan
+- Creates `02_SELECTS` timeline (versioned `_v2`, `_v3` if exists — Resolve has no delete API)
+- Clips placed on Track 1 with specific start/end timestamps from selects takes
+- Markers: Purple (overview), Blue (section header), Green (winner), Red (gold nugget + 20-frame gap), Orange (fire suggestion / b-roll)
+
+**Part D — `src/editor/broll-bridge.js` + `scripts/davinci/import-broll.py`**:
+- `getBrollSuggestions(projectId)` — filters sections whose `fire_suggestion` mentions b-roll keywords; returns sections + all b-roll footage candidates
+- `importBroll(projectId, assignments, onProgress)` — resolves file paths, spawns `import-broll.py`
+- Python script: finds `02_SELECTS` timeline, reads Blue markers to find section positions, places b-roll clips on Track 2 with Orange markers
+
+**Part E — `src/routes/editor.js`** (new file):
+- Same SSE job pattern as `cutor.js` (shared `jobs` Map, `createJob/pushEvent/finishJob/failJob`)
+- `POST /api/editor/selects/build/:project_id` — SelectsΩr engine
+- `GET /api/editor/selects/status/:job_id` — SSE stream (also used for DaVinci jobs)
+- `GET /api/editor/selects/:project_id` — load selects data
+- `DELETE /api/editor/selects/:project_id` — clear + reset state
+- `POST /api/editor/davinci/build/:project_id` — build `02_SELECTS` in Resolve
+- `GET /api/editor/broll/:project_id` — b-roll suggestions + candidates
+- `POST /api/editor/broll/import/:project_id` — import b-roll (SSE job)
+- `GET /api/editor/broll/status/:job_id` — SSE stream
+- Mounted in `server.js` at `/api/editor`
+
+**Part F — `public/editor.html`**:
+- Two-panel layout: SelectsΩr (left) + B-Roll Importer (right)
+- Project dropdown with `?project_id=` URL param support
+- Build Selects button → SSE progress log → section cards rendered
+- Section cards: section index, label, takes count, winner badge, gold nugget badge, fire note badge; expandable body shows takes list with winner highlighted + fire note box
+- Push to DaVinci button → SSE progress log
+- B-roll panel: per-section dropdowns populated from VaultΩr b-roll footage; Import B-Roll button
+- Status pills: state, sections count, gold nuggets, fire notes
+- Advance banner → ReviewΩr with `?project_id=`
+
+**Part G — Nav update (9 files)**:
+- `EditΩr` link added between VaultΩr and ReviewΩr in all pages
+- `index.html`: uses `m-tag` teal style to match VaultΩr + ReviewΩr
+- All other pages: plain `<a>` matching existing nav style
+
+---
+
+## DB Migrations Applied This Session
+
+```
+[DB] Migration: added footage.transcript
+[DB] Migration: added projects.editor_state
+```
+`selects` table created via `CREATE TABLE IF NOT EXISTS` (no migration log line — runs at schema init).
+
+---
+
+## Known Issues / Watch for Next Session
+
+- `broll-bridge.js:importBroll()` reads `db.getDavinciTimelines(projectId)[0]?.resolve_project_name`
+  but the `davinci_timelines` table has no such column. The Resolve project name is on
+  `projects.davinci_project_name`. Fix: use `project.davinci_project_name` directly.
+- `project.fps` used in `broll-bridge.js` — this column doesn't exist in the `projects` table.
+  Currently defaults to 24 gracefully. If per-project fps is needed, add the column.
+- Server startup banner does not yet list EditΩr.
+
+---
+
+## System State at End of Session
+
+```
+src/editor/selects.js               SelectsΩr engine (Whisper + Claude selects)
+src/editor/broll-bridge.js          B-roll suggestion + Resolve import bridge
+scripts/davinci/build-selects.py    02_SELECTS timeline builder (Blue/Green/Red/Orange markers)
+scripts/davinci/import-broll.py     B-roll → Track 2 of 02_SELECTS
+src/routes/editor.js                9 API endpoints, SSE job system
+src/db.js                           selects table + 4 helpers; footage.transcript +
+                                    projects.editor_state migrations + exports
+src/vault/transcribe.js             Binary fallback chain; medium model; checkWhisper()
+src/routes/cutor.js                 GET /check endpoint
+src/vault/cutor.js                  Malformed JSON surfaced in callClaude()
+src/routes/generate.js              CutΩr context injection into M2 package prompt
+public/editor.html                  Full EditΩr UI (two-panel)
+public/reviewr.html                 Dep banner; Re-run button; clipUrl(); project_id threading
+public/m2-package-generator.html    CutΩr context panel; EditΩr in nav
+All public/*.html (9 files)         EditΩr in nav (VaultΩr → EditΩr → ReviewΩr)
+server.js                           /api/editor mounted
+```
+
+**Nav order on all pages:**
+PipelineΩr · VaultΩr · EditΩr · ReviewΩr · AnalytΩr · OperatΩr · DistributΩr▾

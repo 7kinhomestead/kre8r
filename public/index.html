@@ -71,6 +71,7 @@
   .qa-card.c-amber { color:var(--amber); border-color:var(--amber); }
   .qa-card.c-purple { color:var(--purple); border-color:var(--purple); }
   .qa-card.c-green { color:var(--green); border-color:var(--green); }
+  .qa-card.c-blue { color:var(--blue); border-color:var(--blue); }
   .qa-icon { font-size:26px; margin-bottom:10px; }
   .qa-label { font-family:var(--font-head); font-size:18px; letter-spacing:1.5px; margin-bottom:4px; }
   .qa-sub { font-size:11px; color:var(--text-dim); font-weight:500; }
@@ -139,6 +140,7 @@
   <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R</a>
   <div class="nav">
     <a href="vault.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">VaultΩr</a>
+    <a href="editor.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">EditΩr</a>
     <a href="reviewr.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">ReviewΩr</a>
     <a href="m5-analytics.html">AnalytΩr</a>
     <a href="operator.html">OperatΩr</a>
@@ -194,6 +196,16 @@
       <div class="qa-icon">✅</div>
       <div class="qa-label">M1 GATES</div>
       <div class="qa-sub">Approve packages, clips, emails</div>
+    </a>
+    <a href="m5-analytics.html" class="qa-card c-blue">
+      <div class="qa-icon">📈</div>
+      <div class="qa-label">ANALYT<span style="font-size:10px">Ω</span>R</div>
+      <div class="qa-sub">Track performance across platforms</div>
+    </a>
+    <a href="operator.html" class="qa-card c-green">
+      <div class="qa-icon">🛠️</div>
+      <div class="qa-label">OPERAT<span style="font-size:10px">Ω</span>R</div>
+      <div class="qa-sub">Queue, publish, and archive projects</div>
     </a>
   </div>
 
@@ -300,6 +312,8 @@ function renderPipeline(projects) {
         <a href="reviewr.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">CutΩr →</a>
         <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">M2 →</a>
         <a href="m1-approval-dashboard.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">Gates →</a>
+        <a href="m5-analytics.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">Analytics →</a>
+        ${p.gate_c_approved ? `<a href="operator.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;color:var(--green);border-color:var(--green);">OperatΩr →</a>` : ''}
       </div>
     `;
     list.appendChild(card);

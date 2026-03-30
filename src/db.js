@@ -68,6 +68,22 @@ function runMigrations() {
     db.run('ALTER TABLE cuts ADD COLUMN rank INTEGER');
     console.log('[DB] Migration: added cuts.rank');
   }
+  if (!cutsCols.includes('transcript_excerpt')) {
+    db.run('ALTER TABLE cuts ADD COLUMN transcript_excerpt TEXT');
+    console.log('[DB] Migration: added cuts.transcript_excerpt');
+  }
+  if (!cutsCols.includes('why_it_matters')) {
+    db.run('ALTER TABLE cuts ADD COLUMN why_it_matters TEXT');
+    console.log('[DB] Migration: added cuts.why_it_matters');
+  }
+  if (!cutsCols.includes('suggested_use')) {
+    db.run('ALTER TABLE cuts ADD COLUMN suggested_use TEXT');
+    console.log('[DB] Migration: added cuts.suggested_use');
+  }
+  if (!cutsCols.includes('saved_for_later')) {
+    db.run('ALTER TABLE cuts ADD COLUMN saved_for_later INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added cuts.saved_for_later');
+  }
 
   // VaultΩr: orientation column + resolution-based backfill
   if (!footageCols.includes('orientation')) {
@@ -104,6 +120,12 @@ function runMigrations() {
   if (!projectsCols.includes('davinci_last_updated')) {
     db.run('ALTER TABLE projects ADD COLUMN davinci_last_updated DATETIME');
     console.log('[DB] Migration: added projects.davinci_last_updated');
+  }
+
+  // CutΩr: off_script_gold flag on footage (set when gold moments are found)
+  if (!footageCols.includes('off_script_gold')) {
+    db.run('ALTER TABLE footage ADD COLUMN off_script_gold INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added footage.off_script_gold');
   }
 
   // Footage table: BRAW proxy columns
@@ -156,6 +178,36 @@ function runMigrations() {
     db.run('ALTER TABLE posts ADD COLUMN angle TEXT');
     console.log('[DB] Migration: added posts.angle');
   }
+
+  // EditΩr: footage.transcript — full Whisper text stored inline for fast multi-clip analysis
+  if (!footageCols.includes('transcript')) {
+    db.run('ALTER TABLE footage ADD COLUMN transcript TEXT');
+    console.log('[DB] Migration: added footage.transcript');
+  }
+
+  // EditΩr: projects.editor_state
+  const projectsCols2 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsCols2.includes('editor_state')) {
+    db.run('ALTER TABLE projects ADD COLUMN editor_state TEXT');
+    console.log('[DB] Migration: added projects.editor_state');
+  }
+
+  // EditΩr: selects table
+  db.run(`CREATE TABLE IF NOT EXISTS selects (
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id                INTEGER NOT NULL,
+    script_section            TEXT    NOT NULL,
+    section_index             INTEGER NOT NULL DEFAULT 0,
+    takes                     TEXT    NOT NULL DEFAULT '[]',
+    selected_takes            TEXT    NOT NULL DEFAULT '[]',
+    winner_footage_id         INTEGER,
+    gold_nugget               INTEGER NOT NULL DEFAULT 0,
+    fire_suggestion           TEXT,
+    davinci_timeline_position INTEGER NOT NULL DEFAULT 0,
+    created_at                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_selects_project ON selects(project_id)');
 }
 
 function persist() {
@@ -435,7 +487,7 @@ function updateFootage(id, fields) {
     'shot_type', 'subcategory', 'description', 'quality_flag',
     'organized_path', 'thumbnail_path', 'project_id', 'used_in', 'transcript_path',
     'orientation', 'braw_source_path', 'is_proxy', 'resolution', 'codec',
-    'duration', 'file_size', 'creation_timestamp'
+    'duration', 'file_size', 'creation_timestamp', 'transcript', 'off_script_gold'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return;
@@ -620,19 +672,23 @@ function insertCut(cut) {
   const result = _run(
     `INSERT INTO cuts
        (project_id, footage_id, start_timestamp, end_timestamp, duration_seconds,
-        cut_type, description, reasoning, rank, clip_path)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        cut_type, description, reasoning, rank, clip_path,
+        transcript_excerpt, why_it_matters, suggested_use)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       cut.project_id,
-      cut.footage_id     || null,
+      cut.footage_id          || null,
       cut.start_timestamp,
       cut.end_timestamp,
-      cut.duration_seconds || null,
-      cut.cut_type        || 'social',
-      cut.description     || null,
-      cut.reasoning       || null,
-      cut.rank            || null,
-      cut.clip_path       || null
+      cut.duration_seconds    || null,
+      cut.cut_type            || 'social',
+      cut.description         || null,
+      cut.reasoning           || null,
+      cut.rank                || null,
+      cut.clip_path           || null,
+      cut.transcript_excerpt  || null,
+      cut.why_it_matters      || null,
+      cut.suggested_use       || null
     ]
   );
   persist();
@@ -661,7 +717,18 @@ function updateCutClipPath(id, clipPath) {
 }
 
 function deleteCutsByProject(projectId) {
-  _run(`DELETE FROM cuts WHERE project_id = ?`, [projectId]);
+  // Preserve off_script_gold entries the creator explicitly saved for later
+  // (saved_for_later = 1 or approved = 1). Re-runs should not wipe the library.
+  _run(
+    `DELETE FROM cuts WHERE project_id = ?
+     AND NOT (cut_type = 'off_script_gold' AND (saved_for_later = 1 OR approved = 1))`,
+    [projectId]
+  );
+  persist();
+}
+
+function saveOffScriptGoldForLater(cutId) {
+  _run(`UPDATE cuts SET saved_for_later = 1 WHERE id = ?`, [cutId]);
   persist();
 }
 
@@ -814,6 +881,54 @@ function getAnalyticsSummary(projectId) {
 }
 
 // ─────────────────────────────────────────────
+// EDITΩR — Selects helpers
+// ─────────────────────────────────────────────
+
+function insertSelect(section) {
+  const result = _run(
+    `INSERT INTO selects
+       (project_id, script_section, section_index, takes, selected_takes,
+        winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      section.project_id,
+      section.script_section,
+      section.section_index             ?? 0,
+      JSON.stringify(section.takes          || []),
+      JSON.stringify(section.selected_takes || []),
+      section.winner_footage_id         || null,
+      section.gold_nugget               ? 1 : 0,
+      section.fire_suggestion           || null,
+      section.davinci_timeline_position ?? section.section_index ?? 0
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getSelectsByProject(projectId) {
+  return _all(
+    `SELECT * FROM selects WHERE project_id = ? ORDER BY section_index ASC`,
+    [projectId]
+  ).map(s => ({
+    ...s,
+    takes:          JSON.parse(s.takes          || '[]'),
+    selected_takes: JSON.parse(s.selected_takes || '[]'),
+    gold_nugget:    !!s.gold_nugget
+  }));
+}
+
+function deleteSelectsByProject(projectId) {
+  _run(`DELETE FROM selects WHERE project_id = ?`, [projectId]);
+  persist();
+}
+
+function updateProjectEditorState(projectId, state) {
+  _run(`UPDATE projects SET editor_state = ? WHERE id = ?`, [state, projectId]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
 
@@ -874,6 +989,7 @@ module.exports = {
   approveCut,
   updateCutClipPath,
   deleteCutsByProject,
+  saveOffScriptGoldForLater,
   getScript,
   upsertScript,
   // AnalytΩr
@@ -884,5 +1000,10 @@ module.exports = {
   upsertMetric,
   getAnalyticsByPost,
   getAnalyticsByProject,
-  getAnalyticsSummary
+  getAnalyticsSummary,
+  // EditΩr
+  insertSelect,
+  getSelectsByProject,
+  deleteSelectsByProject,
+  updateProjectEditorState
 };

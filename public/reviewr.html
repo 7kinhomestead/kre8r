@@ -136,6 +136,40 @@
   .clip-link{display:inline-block;white-space:nowrap;gap:6px;margin-top:10px;font-size:12px;color:var(--teal);text-decoration:none;background:var(--teal-glow);padding:5px 12px;border-radius:var(--radius-sm);transition:all 0.15s;}
   .clip-link:hover{background:var(--teal-glow-strong);}
 
+  /* ── OFF-SCRIPT GOLD ── */
+  .osg-section{margin-bottom:36px;animation:fadeUp 0.4s ease both;}
+  .osg-section-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;padding:14px 16px;background:linear-gradient(135deg,rgba(240,185,66,0.07),rgba(240,185,66,0.03));border:1px solid var(--amber-border);border-radius:var(--radius);}
+  .osg-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--amber);}
+  .osg-sub{color:var(--text-dim);font-size:13px;flex:1;}
+  .osg-count{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--amber-glow);border:1px solid var(--amber-border);color:var(--amber);}
+  .osg-list{display:flex;flex-direction:column;gap:10px;}
+  .osg-card{background:var(--bg-card);border:1px solid var(--amber-border);border-left:3px solid var(--amber);border-radius:var(--radius);overflow:hidden;transition:all 0.15s;}
+  .osg-card.osg-approved{border-color:var(--green-border);border-left-color:var(--green);}
+  .osg-card.osg-saved{border-color:rgba(167,139,250,0.3);border-left-color:var(--purple);}
+  .osg-card.osg-skipped{opacity:0.35;pointer-events:none;}
+  .osg-card-header{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;}
+  .osg-sparkle{font-size:22px;flex-shrink:0;margin-top:2px;}
+  .osg-info{flex:1;min-width:0;}
+  .osg-excerpt{font-size:13px;color:var(--text);font-style:italic;line-height:1.6;margin-bottom:8px;}
+  .osg-why{font-size:12px;color:var(--amber);font-weight:600;margin-bottom:8px;line-height:1.5;}
+  .osg-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .osg-ts{font-size:11px;color:var(--teal);font-family:monospace;background:var(--teal-glow);padding:2px 8px;border-radius:10px;}
+  .osg-use-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;}
+  .use-replace{background:rgba(240,185,66,0.12);color:var(--amber);border:1px solid var(--amber-border);}
+  .use-rough{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+  .use-social{background:rgba(224,92,92,0.10);color:var(--red);border:1px solid rgba(224,92,92,0.3);}
+  .use-future{background:var(--purple-glow);color:var(--purple);border:1px solid rgba(167,139,250,0.25);}
+  .osg-actions{display:flex;gap:6px;flex-shrink:0;flex-direction:column;align-items:flex-end;}
+  .osg-btn{font-family:var(--font-body);font-size:11px;font-weight:600;padding:5px 11px;border-radius:var(--radius-sm);cursor:pointer;border:1px solid;transition:all 0.15s;white-space:nowrap;}
+  .osg-btn-approve{border-color:var(--green-border);color:var(--green);background:transparent;}
+  .osg-btn-approve:hover{background:var(--green-glow);}
+  .osg-btn-approve.active{background:var(--green);color:#0e0f0e;border-color:var(--green);}
+  .osg-btn-save{border-color:rgba(167,139,250,0.3);color:var(--purple);background:transparent;}
+  .osg-btn-save:hover{background:var(--purple-glow);}
+  .osg-btn-save.active{background:var(--purple);color:#0e0f0e;border-color:var(--purple);}
+  .osg-btn-skip{border-color:var(--border);color:var(--text-dimmer);background:transparent;}
+  .osg-btn-skip:hover{border-color:var(--red);color:var(--red);}
+
   /* ── CTA CARD ── */
   .cta-card{background:var(--bg-card);border:1px solid rgba(167,139,250,0.25);border-left:3px solid var(--purple);border-radius:var(--radius);padding:14px 16px;}
   .cta-card h4{font-family:var(--font-head);font-size:16px;letter-spacing:1.5px;color:var(--purple);margin-bottom:6px;}
@@ -168,6 +202,14 @@
   .toast.show{transform:translateY(0);opacity:1;}
   .toast.toast-ok{border-color:var(--green-border);color:var(--green);}
   .toast.toast-err{border-color:var(--red-border);color:var(--red);}
+
+  /* ── DEPENDENCY WARNING BANNER ── */
+  .dep-banner{background:linear-gradient(135deg,rgba(224,92,92,0.08),rgba(240,185,66,0.06));border:1px solid var(--red-border);border-left:3px solid var(--red);border-radius:var(--radius);padding:14px 16px;margin-bottom:24px;display:none;animation:fadeUp 0.3s ease both;}
+  .dep-banner.visible{display:block;}
+  .dep-banner-title{font-family:var(--font-head);font-size:14px;letter-spacing:1px;color:var(--red);margin-bottom:6px;}
+  .dep-banner-body{font-size:13px;color:var(--text-dim);line-height:1.7;}
+  .dep-banner-body code{color:var(--amber);font-size:12px;background:rgba(240,185,66,0.1);padding:1px 6px;border-radius:3px;}
+  .dep-banner-body a{color:var(--teal);}
 </style>
 </head>
 <body>
@@ -177,6 +219,7 @@
   <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R</a>
   <div class="nav">
     <a href="/vault.html">VaultΩr</a>
+    <a href="/editor.html">EditΩr</a>
     <a href="/reviewr.html" class="active">ReviewΩr</a>
     <a href="/m5-analytics.html">AnalytΩr</a>
     <a href="/operator.html">OperatΩr</a>
@@ -193,6 +236,12 @@
 </nav>
 
 <div class="main">
+
+  <!-- DEPENDENCY WARNING BANNER -->
+  <div class="dep-banner" id="depBanner">
+    <div class="dep-banner-title">⚠ MISSING DEPENDENCIES</div>
+    <div class="dep-banner-body" id="depBannerBody"></div>
+  </div>
 
   <!-- PAGE HEADER -->
   <div class="page-header">
@@ -211,6 +260,7 @@
     <button class="btn btn-primary" id="runCutorBtn" disabled>
       <span id="runBtnLabel">▶ Transcribe &amp; Analyze</span>
     </button>
+    <button class="btn btn-ghost" id="rerunBtn" disabled title="Clear existing cuts and re-run full pipeline">↺ Re-run Analysis</button>
     <button class="btn btn-ghost" id="reloadCutsBtn" disabled>↻ Reload Cuts</button>
   </div>
 
@@ -227,6 +277,7 @@
     <div class="status-pill"><span class="status-dot dot-green"></span><span class="label">Social clips</span>&nbsp;<span class="val" id="pillSocial">0</span></div>
     <div class="status-pill"><span class="status-dot dot-amber"></span><span class="label">Retention cuts</span>&nbsp;<span class="val" id="pillRetention">0</span></div>
     <div class="status-pill"><span class="status-dot dot-dim"></span><span class="label">Approved</span>&nbsp;<span class="val" id="pillApproved">0</span></div>
+    <div class="status-pill" id="pillGoldWrap" style="display:none"><span style="font-size:13px">✨</span>&nbsp;<span class="label">Off-Script Gold</span>&nbsp;<span class="val" id="pillGold">0</span></div>
   </div>
 
   <!-- MAIN CONTENT (hidden until project loaded) -->
@@ -266,6 +317,16 @@
       <div id="ctaCard"></div>
     </div>
 
+    <!-- OFF-SCRIPT GOLD -->
+    <div class="osg-section" id="osgSection" style="display:none">
+      <div class="osg-section-header">
+        <div class="osg-title">OFF-SCRIPT GOLD ✨</div>
+        <div class="osg-sub">Moments where the creator went off-script — often more authentic than what was planned.</div>
+        <span class="osg-count" id="osgCount">0 moments</span>
+      </div>
+      <div class="osg-list" id="osgList"></div>
+    </div>
+
     <!-- EXTRACT -->
     <div class="section">
       <div class="extract-panel">
@@ -289,7 +350,7 @@
         <h3>READY FOR M2</h3>
         <p>Clips extracted. Head to M2 PackageΩr to select a content angle and generate your package.</p>
       </div>
-      <a class="btn btn-green" href="/m2-package-generator.html">Go to M2 PackageΩr →</a>
+      <a class="btn btn-green" id="goM2Btn" href="/m2-package-generator.html">Go to M2 PackageΩr →</a>
     </div>
 
   </div>
@@ -309,7 +370,7 @@
 // STATE
 // ─────────────────────────────────────────────
 let currentProjectId = null;
-let cutsData = { social: [], retention: [], cta: null };
+let cutsData = { social: [], retention: [], cta: null, offScriptGold: [] };
 let extractedCount = 0;
 
 // ─────────────────────────────────────────────
@@ -404,7 +465,7 @@ function renderSocialClips(clips) {
       </div>
       <div class="cut-card-body">
         ${cut.reasoning ? `<div class="reasoning-label">Claude's Reasoning</div><div class="reasoning-text">${escHtml(cut.reasoning)}</div>` : ''}
-        ${cut.clip_path ? `<a class="clip-link" href="${cut.clip_path}" target="_blank">▶ Play extracted clip</a>` : ''}
+        ${cut.clip_path ? `<a class="clip-link" href="${clipUrl(cut.clip_path)}" target="_blank">▶ Play extracted clip</a>` : ''}
       </div>
     `;
     list.appendChild(card);
@@ -460,8 +521,140 @@ function renderCta(cta) {
   `;
 }
 
+const OSG_USE_LABELS = {
+  replace_scripted_moment: { cls: 'use-replace', label: 'Replace Scripted' },
+  add_to_rough_cut:        { cls: 'use-rough',   label: 'Add to Rough Cut' },
+  best_social_clip:        { cls: 'use-social',  label: 'Best Social Clip' },
+  save_for_future_video:   { cls: 'use-future',  label: 'Future Video' }
+};
+
+function renderOffScriptGold(items) {
+  const section = document.getElementById('osgSection');
+  const list    = document.getElementById('osgList');
+  const count   = document.getElementById('osgCount');
+  list.innerHTML = '';
+
+  if (!items || !items.length) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  count.textContent = `${items.length} moment${items.length !== 1 ? 's' : ''}`;
+
+  items.forEach(item => {
+    const use = OSG_USE_LABELS[item.suggested_use] || { cls: 'use-future', label: item.suggested_use || '—' };
+    const isApproved   = !!item.approved;
+    const isSaved      = !!item.saved_for_later;
+    const isSkipped    = !isApproved && !isSaved && item._skipped;
+
+    let stateClass = '';
+    if (isApproved) stateClass = 'osg-approved';
+    else if (isSaved) stateClass = 'osg-saved';
+
+    const card = document.createElement('div');
+    card.className = `osg-card ${stateClass}`;
+    card.dataset.osgId = item.id;
+
+    card.innerHTML = `
+      <div class="osg-card-header">
+        <div class="osg-sparkle">✨</div>
+        <div class="osg-info">
+          <div class="osg-excerpt">"${escHtml(item.transcript_excerpt || item.description || '')}"</div>
+          <div class="osg-why">${escHtml(item.why_it_matters || item.reasoning || '')}</div>
+          <div class="osg-meta">
+            <span class="osg-ts">${fmtTs(item.start_timestamp)} → ${fmtTs(item.end_timestamp)}</span>
+            <span class="osg-use-badge ${use.cls}">${use.label}</span>
+            ${isApproved ? '<span class="osg-use-badge use-rough">✓ In Rough Cut</span>' : ''}
+            ${isSaved    ? '<span class="osg-use-badge use-future">✓ Saved for Later</span>' : ''}
+          </div>
+        </div>
+        <div class="osg-actions">
+          <button class="osg-btn osg-btn-approve ${isApproved ? 'active' : ''}"
+            data-osg-id="${item.id}" data-action="approve">
+            ${isApproved ? '✓ In Rough Cut' : 'Approve for Rough Cut'}
+          </button>
+          <button class="osg-btn osg-btn-save ${isSaved ? 'active' : ''}"
+            data-osg-id="${item.id}" data-action="save-later">
+            ${isSaved ? '✓ Saved' : 'Save for Later'}
+          </button>
+          <button class="osg-btn osg-btn-skip" data-osg-id="${item.id}" data-action="skip">Skip</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+async function osgApprove(id) {
+  try {
+    const r = await fetch(`/api/cutor/off-script-gold/${id}/approve`, { method: 'POST' });
+    if (!r.ok) throw new Error('Approve failed');
+    const item = cutsData.offScriptGold.find(g => g.id == id);
+    if (item) { item.approved = 1; item.saved_for_later = 0; }
+    renderOffScriptGold(cutsData.offScriptGold);
+    showToast('Approved for rough cut', 'ok');
+  } catch(e) { showToast('Error: ' + e.message, 'err'); }
+}
+
+async function osgSaveLater(id) {
+  try {
+    const r = await fetch(`/api/cutor/off-script-gold/${id}/save-later`, { method: 'POST' });
+    if (!r.ok) throw new Error('Save failed');
+    const item = cutsData.offScriptGold.find(g => g.id == id);
+    if (item) { item.saved_for_later = 1; }
+    renderOffScriptGold(cutsData.offScriptGold);
+    showToast('Saved to off-script gold library', 'ok');
+  } catch(e) { showToast('Error: ' + e.message, 'err'); }
+}
+
+function osgSkip(id) {
+  const card = document.querySelector(`.osg-card[data-osg-id="${id}"]`);
+  if (card) card.classList.add('osg-skipped');
+  const item = cutsData.offScriptGold.find(g => g.id == id);
+  if (item) item._skipped = true;
+}
+
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Convert absolute clip_path to a browser-accessible URL under /clips/
+function clipUrl(p) {
+  if (!p) return '#';
+  // Already a relative or http URL — use as-is
+  if (p.startsWith('/') || p.startsWith('http')) return p;
+  // Extract filename from absolute path (Windows or POSIX)
+  const filename = p.replace(/\\/g, '/').split('/').pop();
+  return `/clips/${encodeURIComponent(filename)}`;
+}
+
+// ─────────────────────────────────────────────
+// DEPENDENCY CHECK
+// ─────────────────────────────────────────────
+async function checkDependencies() {
+  try {
+    const res = await fetch('/api/cutor/check');
+    if (!res.ok) return;
+    const d = await res.json();
+
+    const missing = [];
+    if (!d.ffmpeg) missing.push('<strong>ffmpeg</strong> — install from <a href="https://ffmpeg.org/download.html" target="_blank">ffmpeg.org</a> and ensure it is on your PATH');
+    if (!d.whisper) missing.push('<strong>openai-whisper</strong> — install with <code>pip install openai-whisper</code>');
+
+    if (missing.length) {
+      const banner = document.getElementById('depBanner');
+      const body   = document.getElementById('depBannerBody');
+      body.innerHTML = 'The following dependencies are missing — transcription will fail:<br>' +
+        missing.map(m => `&nbsp;• ${m}`).join('<br>');
+      banner.classList.add('visible');
+      // Disable the Transcribe & Analyze button
+      document.getElementById('runCutorBtn').disabled = true;
+      document.getElementById('runCutorBtn').title = 'Missing dependencies — see banner above';
+    } else {
+      // Confirm all good in console
+      console.log(`[CutΩr] Deps OK — ffmpeg ✓, whisper ${d.whisper_binary} ${d.whisper_version}`);
+    }
+  } catch(e) {
+    console.warn('[CutΩr] Could not reach /api/cutor/check:', e.message);
+  }
 }
 
 function updateStatusBar() {
@@ -475,6 +668,11 @@ function updateStatusBar() {
   // Enable extract button if any approved
   document.getElementById('extractBtn').disabled = approved === 0;
   document.getElementById('extractForceBtn').disabled = cutsData.social.length === 0;
+
+  const goldCount = cutsData.offScriptGold.length;
+  const goldWrap  = document.getElementById('pillGoldWrap');
+  goldWrap.style.display = goldCount > 0 ? 'flex' : 'none';
+  document.getElementById('pillGold').textContent = goldCount;
 }
 
 // ─────────────────────────────────────────────
@@ -486,13 +684,15 @@ async function loadCuts(projectId) {
     if (!res.ok) throw new Error('Failed to load cuts');
     const data = await res.json();
 
-    cutsData.social    = data.social    || [];
-    cutsData.retention = data.retention || [];
-    cutsData.cta       = data.cta       || null;
+    cutsData.social       = data.social          || [];
+    cutsData.retention    = data.retention       || [];
+    cutsData.cta          = data.cta             || null;
+    cutsData.offScriptGold = data.off_script_gold || [];
 
     renderSocialClips(cutsData.social);
     renderRetentionCuts(cutsData.retention);
     renderCta(cutsData.cta);
+    renderOffScriptGold(cutsData.offScriptGold);
     updateStatusBar();
 
     document.getElementById('cutsContent').style.display = 'block';
@@ -569,8 +769,19 @@ async function runCutor() {
         if (d.step) logLine(progressLog, `  ↳ Loading ${d.step}…`);
         progress = Math.min(progress + 3, 85);
         progressBar.style.width = progress + '%';
+      } else if (d.stage === 'off_script_analyzing') {
+        progressTitle.textContent = 'SCANNING FOR OFF-SCRIPT GOLD…';
+        logLine(progressLog, '✨ Running off-script gold detection…');
+        progressBar.style.width = '88%';
+      } else if (d.stage === 'off_script_identified') {
+        const msg = d.count > 0
+          ? `✨ Found ${d.count} off-script gold moment${d.count !== 1 ? 's' : ''}`
+          : '✨ No off-script gold moments found';
+        logLine(progressLog, msg, d.count > 0 ? 'ok' : '');
+        progressBar.style.width = '93%';
       } else if (d.stage === 'analyzed') {
-        logLine(progressLog, `✓ ${d.social_clips} social clips · ${d.retention_cuts} retention cuts · CTA: ${d.cta ? 'yes' : 'no'}`, 'ok');
+        const goldMsg = d.off_script_gold > 0 ? ` · ✨ ${d.off_script_gold} gold` : '';
+        logLine(progressLog, `✓ ${d.social_clips} social clips · ${d.retention_cuts} retention cuts · CTA: ${d.cta ? 'yes' : 'no'}${goldMsg}`, 'ok');
         progressBar.style.width = '95%';
       } else if (d.stage === 'done') {
         progressBar.style.width = '100%';
@@ -733,6 +944,9 @@ async function runExtract(force = false) {
 
   if (extractedCount > 0) {
     document.getElementById('advanceBanner').style.display = 'flex';
+    if (currentProjectId) {
+      document.getElementById('goM2Btn').href = `/m2-package-generator.html?project_id=${currentProjectId}`;
+    }
     showToast(`${extractedCount} clip(s) extracted`, 'ok');
   }
 }
@@ -762,6 +976,17 @@ document.addEventListener('click', (e) => {
     const approved = btn.dataset.approved === 'true';
     toggleApprove(cutId, approved);
   }
+
+  // Off-script gold buttons
+  const osgBtn = e.target.closest('.osg-btn');
+  if (osgBtn) {
+    e.stopPropagation();
+    const id     = osgBtn.dataset.osgId;
+    const action = osgBtn.dataset.action;
+    if (action === 'approve')    osgApprove(id);
+    else if (action === 'save-later') osgSaveLater(id);
+    else if (action === 'skip')  osgSkip(id);
+  }
 });
 
 // ─────────────────────────────────────────────
@@ -770,6 +995,7 @@ document.addEventListener('click', (e) => {
 document.getElementById('projectSelect').addEventListener('change', async (e) => {
   const id = parseInt(e.target.value, 10);
   document.getElementById('runCutorBtn').disabled = !id;
+  document.getElementById('rerunBtn').disabled = !id;
   document.getElementById('reloadCutsBtn').disabled = !id;
 
   if (!id) {
@@ -794,6 +1020,7 @@ document.getElementById('projectSelect').addEventListener('change', async (e) =>
 });
 
 document.getElementById('runCutorBtn').addEventListener('click', runCutor);
+document.getElementById('rerunBtn').addEventListener('click', runCutor);
 document.getElementById('reloadCutsBtn').addEventListener('click', () => { if (currentProjectId) loadCuts(currentProjectId); });
 document.getElementById('approveAllBtn').addEventListener('click', approveAll);
 document.getElementById('extractBtn').addEventListener('click', () => runExtract(false));
@@ -803,7 +1030,7 @@ document.getElementById('extractForceBtn').addEventListener('click', () => runEx
 // INIT — auto-select project_id from URL param
 // ─────────────────────────────────────────────
 async function init() {
-  await loadProjects();
+  await Promise.all([loadProjects(), checkDependencies()]);
   const urlProjectId = new URLSearchParams(window.location.search).get('project_id');
   if (urlProjectId) {
     const sel = document.getElementById('projectSelect');

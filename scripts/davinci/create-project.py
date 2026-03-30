@@ -435,40 +435,58 @@ def run(args):
     # between Resolve versions, so we probe for both known formats.
     scurve_applied = 0
     try:
-        # Use callable() not hasattr() — in Resolve 20 some API attributes exist
-        # as None on the object, making hasattr() return True but calls raise TypeError.
-        get_track_item_count = getattr(timeline, "GetTrackItemCount", None)
-        track1_count = 0
-        if callable(get_track_item_count):
-            track1_count = get_track_item_count("video", 1) or 0
-        else:
-            print("[scurve] GetTrackItemCount not callable — skipping S-curve", file=sys.stderr)
+        # Resolve 20: use GetItemListInTrack — gather clips from all video tracks.
+        # Applying base grade to every clip regardless of track makes sense here:
+        # all clips get the same Blackmagic Film → Rec.709 lift/gain baseline.
+        get_item_list  = getattr(timeline, "GetItemListInTrack", None)
+        get_track_count = getattr(timeline, "GetTrackCount", None)
 
-        if track1_count == 0:
+        timeline_items = []
+        if callable(get_item_list):
+            track_count = 2  # default: always try at least 2 tracks
+            if callable(get_track_count):
+                track_count = get_track_count("video") or 2
+            for track_idx in range(1, track_count + 1):
+                items = get_item_list("video", track_idx) or []
+                print(f"[scurve] Track {track_idx}: {len(items)} clips", file=sys.stderr)
+                timeline_items.extend(items)
+        else:
+            print("[scurve] GetItemListInTrack not callable — S-curve skipped", file=sys.stderr)
+
+        if not timeline_items:
             print(
-                "[scurve] No clips in track 1 — S-curve skipped. "
-                "It will be applied when proxy footage is added via the DaVinci panel in VaultΩr.",
+                "[scurve] No clips found on any video track — S-curve skipped.",
                 file=sys.stderr
             )
 
-        for idx in range(1, track1_count + 1):
+        scurve_api_available = True
+
+        for idx, ti in enumerate(timeline_items, start=1):
             try:
-                get_item = getattr(timeline, "GetItemInTrack", None)
-                ti = get_item("video", 1, idx) if callable(get_item) else None
                 if ti is None:
                     continue
 
                 get_adj = getattr(ti, "GetColorAdjustments", None)
                 if not callable(get_adj):
-                    errors.append(f"Clip {idx}: GetColorAdjustments not callable on this Resolve version")
+                    # GetColorAdjustments was removed in Resolve 20.
+                    # This is a known API change — not a project error.
+                    # Log to stderr and skip; creator applies grade manually.
+                    if scurve_api_available:
+                        print(
+                            "[scurve] GetColorAdjustments not available in Resolve 20 — "
+                            "S-curve must be applied manually in the Color page.\n"
+                            "  Suggested node: Lift Master +0.05 / Gain Master -0.05 "
+                            "(Primaries Wheels or Custom Curves in the Color page).",
+                            file=sys.stderr
+                        )
+                        scurve_api_available = False
                     break
 
                 adj = get_adj()
                 if adj is None or not isinstance(adj, dict):
-                    errors.append(f"Clip {idx}: GetColorAdjustments returned {adj!r}")
+                    print(f"[scurve] Clip {idx}: GetColorAdjustments returned {adj!r}", file=sys.stderr)
                     continue
 
-                # Log key set on first clip so we can debug format differences
                 if idx == 1:
                     print(f"[resolve] colorAdj keys (first 12): {list(adj.keys())[:12]}", file=sys.stderr)
 
@@ -479,14 +497,12 @@ def run(args):
                     adj["colorAdjLiftMaster"] = 0.05
                     adj["colorAdjGainMaster"] = 0.95
                     updated = True
-
-                # Format B: flat keys with "master" suffix (some builds)
+                # Format B: lowercase suffix
                 elif "colorAdjLiftmaster" in adj:
                     adj["colorAdjLiftmaster"] = 0.05
                     adj["colorAdjGainmaster"] = 0.95
                     updated = True
-
-                # Format C: nested dicts {lift: {master: ...}, gain: {master: ...}}
+                # Format C: nested dicts
                 elif "lift" in adj and isinstance(adj.get("lift"), dict):
                     adj["lift"]["master"] = 0.05
                     adj["gain"]["master"] = 0.95
@@ -498,21 +514,28 @@ def run(args):
                     if result:
                         scurve_applied += 1
                     else:
-                        errors.append(f"Clip {idx}: SetColorAdjustments returned False")
+                        print(f"[scurve] Clip {idx}: SetColorAdjustments returned False", file=sys.stderr)
                 else:
-                    errors.append(
-                        f"Clip {idx}: could not find lift/gain keys in colorAdj dict. "
-                        f"Keys present: {list(adj.keys())}"
+                    print(
+                        f"[scurve] Clip {idx}: unknown key format. Keys: {list(adj.keys())}",
+                        file=sys.stderr
                     )
 
             except Exception as exc:
-                errors.append(f"S-curve on clip {idx}: {exc}")
+                print(f"[scurve] Clip {idx} exception: {exc}", file=sys.stderr)
 
     except Exception as exc:
-        errors.append(f"S-curve pass skipped: {exc}")
+        print(f"[scurve] Pass skipped: {exc}", file=sys.stderr)
 
     # ---- Save project ------------------------------------------------------
     project_manager.SaveProject()
+
+    warnings = []
+    if scurve_applied == 0 and timeline_items:
+        warnings.append(
+            "S-curve not applied via scripting (Resolve 20 removed GetColorAdjustments). "
+            "Apply manually in Color page: Primaries Wheels → Lift Master +0.05 / Gain Master -0.05."
+        )
 
     return {
         "ok": True,
@@ -522,6 +545,7 @@ def run(args):
         "scurve_clips": scurve_applied,
         "resolve_version": version,
         "resolve_studio": is_studio,
+        "warnings": warnings,
         "errors": errors,
     }
 

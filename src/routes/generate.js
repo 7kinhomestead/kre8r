@@ -47,6 +47,13 @@ function parseJson(text) {
   return JSON.parse(cleaned);
 }
 
+function fmtTs(s) {
+  s = parseFloat(s);
+  const m = Math.floor(s / 60);
+  const sec = (s % 60).toFixed(1).padStart(4, '0');
+  return `${String(m).padStart(2, '0')}:${sec}`;
+}
+
 // ─────────────────────────────────────────────
 // POST /api/generate/packages — M2 PackageΩr
 // ─────────────────────────────────────────────
@@ -118,6 +125,30 @@ Generate exactly 5 packages. Each must be a distinct angle — not variations of
     if (youtube_video_id) userPrompt += `Video ID: ${youtube_video_id}\n`;
     if (topic) userPrompt += `Video topic: ${topic}\n`;
     if (extra_context) userPrompt += `Creator direction: ${extra_context}\n`;
+
+    // Inject CutΩr approved clips if project has been through ReviewΩr
+    if (project_id) {
+      const allCuts = db.getCutsByProject(parseInt(project_id));
+      const approvedClips = allCuts
+        .filter(c => c.cut_type === 'social' && c.approved)
+        .sort((a, b) => (a.rank || 99) - (b.rank || 99));
+
+      if (approvedClips.length > 0) {
+        userPrompt += `\nCUTΩR ANALYSIS — APPROVED CLIPS FROM TRANSCRIPT:\n`;
+        userPrompt += `The following clips have been identified as the strongest moments in this video by transcript analysis. Build all 5 packages around these specific moments — each package should lead with one of these clips as the primary hook:\n\n`;
+        approvedClips.forEach((clip, i) => {
+          const ts = clip.start_timestamp != null
+            ? `${fmtTs(clip.start_timestamp)} → ${fmtTs(clip.end_timestamp)}`
+            : 'timestamp unknown';
+          userPrompt += `[CLIP ${i + 1}${clip.rank != null ? ` — ranked #${clip.rank}` : ''}]\n`;
+          userPrompt += `Timestamp: ${ts}\n`;
+          userPrompt += `Description: "${clip.description}"\n`;
+          if (clip.reasoning) userPrompt += `Why it works: ${clip.reasoning}\n`;
+          userPrompt += '\n';
+        });
+      }
+    }
+
     userPrompt += `\nGenerate all 5 packages now. JSON only.`;
 
     const rawText = await callClaude(systemPrompt, userPrompt, 4000);
