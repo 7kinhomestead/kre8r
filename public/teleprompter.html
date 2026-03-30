@@ -246,6 +246,64 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 
 .tp-ctrl-spacer { flex: 1; }
 
+/* ── Voice Sync ────────────────────────────────────────────── */
+#tp-voice-btn { flex-shrink: 0; }
+#tp-voice-btn.listening {
+  background: rgba(62,207,178,0.15); border-color: var(--teal); color: var(--teal);
+  animation: tp-pulse 1.8s ease-in-out infinite;
+}
+#tp-voice-btn.paused-speech {
+  background: rgba(255,180,50,0.12); border-color: rgba(255,180,50,0.5);
+  color: #ffb432;
+}
+@keyframes tp-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(62,207,178,0); }
+  50%      { box-shadow: 0 0 0 5px rgba(62,207,178,0.18); }
+}
+
+/* Mic indicator — floats top-left of display, always visible when voice active */
+#tp-mic-indicator {
+  position: fixed; top: 16px; left: 16px; z-index: 50;
+  display: none; align-items: center; gap: 7px;
+  padding: 7px 13px; border-radius: 20px;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+#tp-mic-indicator.visible { display: flex; }
+#tp-mic-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--teal); transition: background 0.2s;
+}
+#tp-mic-indicator.speech-paused #tp-mic-dot { background: #ffb432; }
+#tp-mic-indicator.speech-paused { border-color: rgba(255,180,50,0.3); color: #ffb432; }
+#tp-mic-label { color: var(--teal); transition: color 0.2s; }
+#tp-mic-indicator.speech-paused #tp-mic-label { color: #ffb432; }
+
+/* Voice sensitivity row (shown when voice is active, inside controls) */
+#tp-voice-sense-row {
+  display: none; align-items: center; gap: 7px; flex-shrink: 0;
+}
+#tp-voice-sense-row.visible { display: flex; }
+#tp-sense-slider {
+  -webkit-appearance: none; width: 80px; height: 4px;
+  background: rgba(62,207,178,0.25); border-radius: 2px; outline: none; cursor: pointer;
+}
+#tp-sense-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--teal); cursor: pointer;
+}
+
+/* Browser compat warning */
+#tp-voice-warn {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 60;
+  background: rgba(255,100,50,0.15); border: 1px solid rgba(255,100,50,0.4);
+  border-radius: 10px; padding: 10px 18px; font-size: 13px; color: rgba(255,180,160,0.95);
+  display: none; white-space: nowrap; backdrop-filter: blur(8px);
+}
+#tp-voice-warn.visible { display: block; }
+
 /* ═══════════════════════════════════════
    REMOTE CONTROL SCREEN (phone)
 ═══════════════════════════════════════ */
@@ -386,6 +444,15 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 <div id="tp-display">
   <div id="tp-reading-guide"></div>
 
+  <!-- Mic status indicator — top-left, only when voice sync is active -->
+  <div id="tp-mic-indicator">
+    <div id="tp-mic-dot"></div>
+    <span id="tp-mic-label">LISTENING</span>
+  </div>
+
+  <!-- Browser compat warning -->
+  <div id="tp-voice-warn">⚠ Voice Sync requires Chrome or Edge — not supported in this browser.</div>
+
   <div id="tp-session-badge">
     <div class="tp-session-lbl">Remote code</div>
     <div id="tp-session-code">----</div>
@@ -416,6 +483,14 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     </div>
 
     <button class="tp-ctrl-btn" id="tp-mirror-btn" onclick="toggleMirror()">⇆ Mirror</button>
+    <button class="tp-ctrl-btn" id="tp-voice-btn" onclick="toggleVoiceSync()">🎤 Voice</button>
+
+    <div id="tp-voice-sense-row">
+      <span class="tp-ctrl-lbl">Sens</span>
+      <input type="range" id="tp-sense-slider" min="1" max="10" step="1" value="5"
+             title="Matching sensitivity: low = confident matches only, high = partial matches">
+    </div>
+
     <button class="tp-ctrl-btn" onclick="backToSelector()">📋 Scripts</button>
 
     <div class="tp-ctrl-spacer"></div>
@@ -863,6 +938,7 @@ function backToSelector() {
   if (rafId)      { cancelAnimationFrame(rafId); rafId = null; }
   if (wsConn)     { wsConn.close(); wsConn = null; }
   if (stateTimer) { clearInterval(stateTimer); stateTimer = null; }
+  if (voiceActive) stopVoiceSync();
   doExitFullscreen();
   document.getElementById('tp-display').classList.remove('active');
   document.getElementById('tp-selector').style.display = '';
@@ -1075,6 +1151,271 @@ function remoteAdjustSpeed(delta) {
   const next = Math.max(0, Math.min(10, remoteSpeed + delta));
   remoteSend('speed', next);
   applyRemState({ speed: next });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VOICE SYNC — Web Speech API word matching
+// ═══════════════════════════════════════════════════════════════
+
+let voiceActive      = false;
+let voiceRecognition = null;
+let voiceSilTimer    = null;   // fires when no speech for 2 s
+let scriptWords      = [];     // flat array of { word, lineIdx, wordIdx }
+let vsPosition       = 0;      // cursor in scriptWords (last confirmed match)
+let vsLastMatchTime  = 0;
+
+// Normalise a word for fuzzy comparison
+function normWord(w) {
+  return (w || '').toLowerCase().replace(/[^a-z0-9']/g, '');
+}
+
+// Build a flat word list from rendered lines (called once at start)
+function buildScriptWordList() {
+  scriptWords = [];
+  const lines = document.querySelectorAll('.tp-line');
+  lines.forEach((line, lineIdx) => {
+    const words = (line.textContent || '').trim().split(/\s+/);
+    words.forEach((w, wordIdx) => {
+      const n = normWord(w);
+      if (n) scriptWords.push({ word: n, lineIdx, lineEl: line, wordIdx });
+    });
+  });
+}
+
+// Check if SpeechRecognition is available
+function voiceSyncSupported() {
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+function toggleVoiceSync() {
+  if (!voiceSyncSupported()) {
+    const warn = document.getElementById('tp-voice-warn');
+    warn.classList.add('visible');
+    setTimeout(() => warn.classList.remove('visible'), 4000);
+    return;
+  }
+  if (voiceActive) {
+    stopVoiceSync();
+  } else {
+    startVoiceSync();
+  }
+}
+
+function startVoiceSync() {
+  if (voiceActive) return;
+
+  buildScriptWordList();
+  if (!scriptWords.length) return;
+
+  // Snap cursor to approximate current scroll position
+  vsPosition = estimateCursorFromScroll();
+  voiceActive = true;
+
+  const btn = document.getElementById('tp-voice-btn');
+  btn.classList.add('listening');
+  btn.textContent = '🎤 Voice On';
+
+  document.getElementById('tp-voice-sense-row').classList.add('visible');
+  setMicIndicator('listening');
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  voiceRecognition = new SR();
+  voiceRecognition.continuous     = true;
+  voiceRecognition.interimResults = true;
+  voiceRecognition.lang           = 'en-US';
+  voiceRecognition.maxAlternatives = 3;
+
+  voiceRecognition.onresult = (event) => {
+    clearTimeout(voiceSilTimer);
+    voiceSilTimer = setTimeout(onVoiceSilence, 2000);
+
+    // Resume if we were in silence-pause
+    if (!isPlaying && voiceActive) {
+      isPlaying = true; lastTs = null;
+      updatePPBtn();
+    }
+    setMicIndicator('listening');
+    document.getElementById('tp-voice-btn').classList.remove('paused-speech');
+    document.getElementById('tp-voice-btn').classList.add('listening');
+
+    // Collect most recent transcript chunk
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript + ' ';
+    }
+
+    processVoiceTranscript(transcript.trim());
+  };
+
+  voiceRecognition.onerror = (e) => {
+    if (e.error === 'no-speech') return; // handled by silence timer
+    if (e.error === 'not-allowed') {
+      stopVoiceSync();
+      const w = document.getElementById('tp-voice-warn');
+      w.textContent = '⚠ Microphone permission denied. Allow mic access and try again.';
+      w.classList.add('visible');
+      setTimeout(() => w.classList.remove('visible'), 5000);
+    }
+  };
+
+  voiceRecognition.onend = () => {
+    // Auto-restart as long as voice sync is active (recognition stops on silence)
+    if (voiceActive) {
+      try { voiceRecognition.start(); } catch (_) {}
+    }
+  };
+
+  try {
+    voiceRecognition.start();
+    // Start silence timer — will pause if no speech in 2s from the very beginning
+    voiceSilTimer = setTimeout(onVoiceSilence, 2000);
+  } catch (e) {
+    stopVoiceSync();
+  }
+}
+
+function stopVoiceSync() {
+  voiceActive = false;
+  clearTimeout(voiceSilTimer);
+  if (voiceRecognition) {
+    try { voiceRecognition.stop(); } catch (_) {}
+    voiceRecognition = null;
+  }
+
+  const btn = document.getElementById('tp-voice-btn');
+  btn.classList.remove('listening', 'paused-speech');
+  btn.textContent = '🎤 Voice';
+
+  document.getElementById('tp-voice-sense-row').classList.remove('visible');
+  setMicIndicator('off');
+}
+
+function onVoiceSilence() {
+  if (!voiceActive) return;
+  setMicIndicator('paused');
+  document.getElementById('tp-voice-btn').classList.remove('listening');
+  document.getElementById('tp-voice-btn').classList.add('paused-speech');
+  // Pause auto-scroll when speaker stops
+  if (isPlaying) {
+    isPlaying = false; lastTs = null; updatePPBtn();
+  }
+}
+
+function setMicIndicator(state) {
+  const ind  = document.getElementById('tp-mic-indicator');
+  const lbl  = document.getElementById('tp-mic-label');
+  if (state === 'off') {
+    ind.classList.remove('visible', 'speech-paused');
+  } else {
+    ind.classList.add('visible');
+    ind.classList.toggle('speech-paused', state === 'paused');
+    lbl.textContent = state === 'paused' ? 'PAUSED' : 'LISTENING';
+  }
+}
+
+// ─── Word Matching ────────────────────────────────────────────
+
+function processVoiceTranscript(transcript) {
+  if (!transcript || !scriptWords.length) return;
+
+  const sensitivity = parseInt(document.getElementById('tp-sense-slider').value, 10) || 5;
+  // matchThreshold: how many words in a run must match before we advance
+  // sensitivity 1 = need 3 consecutive matches, 10 = 1 match suffices
+  const matchThreshold = Math.max(1, 4 - Math.floor(sensitivity / 3));
+
+  const spokenWords = transcript.toLowerCase()
+    .replace(/[^a-z0-9'\s]/g, '')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!spokenWords.length) return;
+
+  // Search window: look ±30 words around current position (wider ahead)
+  const windowBack = 8;
+  const windowFwd  = 40;
+  const searchStart = Math.max(0, vsPosition - windowBack);
+  const searchEnd   = Math.min(scriptWords.length - 1, vsPosition + windowFwd);
+
+  let bestMatchIdx = -1;
+  let bestRunLen   = 0;
+
+  // Slide the spoken words across the search window looking for consecutive matches
+  for (let i = searchStart; i <= searchEnd; i++) {
+    let run = 0;
+    for (let j = 0; j < spokenWords.length && i + j < scriptWords.length; j++) {
+      if (scriptWords[i + j].word === spokenWords[j]) {
+        run++;
+      } else {
+        break;
+      }
+    }
+    if (run > bestRunLen) {
+      bestRunLen   = run;
+      bestMatchIdx = i;
+    }
+  }
+
+  // Only act if we hit the threshold
+  if (bestRunLen < matchThreshold || bestMatchIdx === -1) return;
+
+  const matchedEnd = bestMatchIdx + bestRunLen - 1;
+
+  // Check if talent jumped backward (more than 5 words behind cursor)
+  if (matchedEnd < vsPosition - 5) {
+    scrollToWordIdx(matchedEnd);
+    vsPosition = matchedEnd;
+    return;
+  }
+
+  // Check if talent jumped far ahead (more than 10 words)
+  if (bestMatchIdx > vsPosition + 10) {
+    scrollToWordIdx(matchedEnd);
+    vsPosition = matchedEnd;
+    return;
+  }
+
+  // Normal forward advance: move cursor to where spoken words ended
+  if (matchedEnd > vsPosition) {
+    vsPosition = matchedEnd;
+    // Target scroll: 2-3 lines ahead of the matched word's line
+    const targetLineEl = scriptWords[vsPosition]?.lineEl;
+    if (targetLineEl) {
+      scrollAheadOfLine(targetLineEl, 2);
+    }
+  }
+}
+
+// Estimate current word-cursor position from current scroll
+function estimateCursorFromScroll() {
+  if (!scriptWords.length) return 0;
+  const focusY = window.innerHeight * 0.38;
+  let best = 0, bestDist = Infinity;
+  scriptWords.forEach((sw, i) => {
+    const r = sw.lineEl?.getBoundingClientRect();
+    if (!r) return;
+    const d = Math.abs(r.top + r.height / 2 - focusY);
+    if (d < bestDist) { bestDist = d; best = i; }
+  });
+  return best;
+}
+
+// Scroll so that targetLine is at the reading position,
+// with `ahead` extra line-heights of lookahead
+function scrollAheadOfLine(targetLineEl, ahead) {
+  if (!targetLineEl) return;
+  const wrap = document.getElementById('tp-scroll-wrap');
+  const rect = targetLineEl.getBoundingClientRect();
+  const lineH = rect.height;
+  // Target: move the line to the focus point (38vh), then nudge back by `ahead` lines
+  // so we're showing text ahead of what was just spoken
+  const focusY  = window.innerHeight * 0.38;
+  const scrollTo = wrap.scrollTop + rect.top - focusY - (ahead * lineH * 1.42);
+  wrap.scrollTop = Math.max(0, scrollTo);
+}
+
+function scrollToWordIdx(idx) {
+  const sw = scriptWords[idx];
+  if (sw?.lineEl) scrollAheadOfLine(sw.lineEl, 2);
 }
 
 // ═══════════════════════════════════════════════════════════════
