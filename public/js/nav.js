@@ -40,7 +40,7 @@
         items: [
           { label: 'DirectΩr',     href: '/director.html',    soon: true, phase: 3 },
           { label: 'ShootDay',     href: '/shootday.html',    soon: true, phase: 3 },
-          { label: 'TeleprΩmpter', href: '/teleprompter.html',soon: true, phase: 3 },
+          { label: 'TeleprΩmpter', href: '/teleprompter.html' },
           { label: 'CoverageΩr',  href: '/coverager.html',   soon: true, phase: 3 },
         ]
       },

@@ -380,6 +380,7 @@
         <div class="script-actions" id="scriptActions" style="display:none">
           <button class="btn btn-green" id="approveBtn">✓ Approve Script</button>
           <button class="btn btn-ghost" id="exportBtn">⬇ Export .txt</button>
+          <button class="btn btn-ghost" id="teleprompterBtn" style="display:none" onclick="openTeleprompter()">📺 TeleprΩmpter</button>
         </div>
 
       </div>
@@ -789,13 +790,26 @@ async function onApprove() {
       body: JSON.stringify({ script_id: currentScript.id })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    showToast('Script approved — heading to EditΩr…', 'success');
-    setTimeout(() => {
-      window.location.href = `/editor.html?project_id=${currentProjectId}`;
-    }, 1200);
+
+    // Mark approved in local state and update UI
+    currentScript.approved = true;
+    document.getElementById('approveBtn').disabled = true;
+    document.getElementById('approveBtn').textContent = '✓ Approved';
+    document.getElementById('reviseBtn').disabled = true;
+    document.getElementById('reviseInput').disabled = true;
+
+    // Show TeleprΩmpter button now that script is approved
+    document.getElementById('teleprompterBtn').style.display = '';
+
+    showToast('Script approved! Open in TeleprΩmpter or continue to EditΩr.', 'success');
   } catch(e) {
     showToast('Approve failed — ' + e.message, 'error');
   }
+}
+
+function openTeleprompter() {
+  if (!currentProjectId) return;
+  window.open(`/teleprompter.html?project_id=${currentProjectId}`, '_blank');
 }
 
 // ─────────────────────────────────────────────

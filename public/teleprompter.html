@@ -2,90 +2,1085 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kre8Ωr — TeleprΩmpter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TeleprΩmpter — Kre8Ωr</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/global.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-  body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size:128px 128px; z-index:1000; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+/* ── Reset & base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .main { max-width: 680px; margin: 0 auto; padding: 80px 24px 120px; text-align: center; }
+:root {
+  --teal:       #3ecfb2;
+  --teal-dim:   rgba(62,207,178,0.35);
+  --bg:         #000000;
+  --bg-sel:     #0e0f0e;
+  --bg-card:    #161916;
+  --border:     #2a2e28;
+  --text:       #ffffff;
+  --font:       'DM Sans', sans-serif;
+  --font-size:  64px;
+  --ctrl-h:     72px;
+}
 
-  .cs-phase {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-    padding: 4px 12px; border-radius: 20px;
-    background: var(--bg-card-2); border: 1px solid var(--border-bright); color: var(--text-dimmer);
-    margin-bottom: 28px; animation: fadeUp 0.3s ease both;
-  }
-  .cs-phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
 
-  .cs-icon { font-size: 64px; margin-bottom: 20px; animation: fadeUp 0.3s 0.05s ease both; }
+/* ═══════════════════════════════════════
+   SELECTOR SCREEN
+═══════════════════════════════════════ */
+#tp-selector {
+  position: fixed; inset: 0; z-index: 10;
+  background: var(--bg-sel); overflow-y: auto;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 20px 80px;
+}
+.tp-sel-inner { width: 100%; max-width: 640px; }
 
-  .cs-title {
-    font-family: var(--font-head); font-size: clamp(48px, 12vw, 96px);
-    letter-spacing: 4px; line-height: 0.9; color: var(--text);
-    margin-bottom: 16px; animation: fadeUp 0.3s 0.08s ease both;
-  }
-  .cs-title em { font-style: normal; color: var(--teal); }
+.tp-sel-header {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 36px;
+}
+.tp-back {
+  color: rgba(255,255,255,0.4); font-size: 13px; text-decoration: none;
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.tp-back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+.tp-sel-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 2px;
+}
+.tp-sel-title span { color: var(--teal); }
 
-  .cs-desc {
-    font-size: 16px; color: var(--text-mid, #8a9487); line-height: 1.7;
-    max-width: 480px; margin: 0 auto 36px;
-    animation: fadeUp 0.3s 0.11s ease both;
-  }
+/* Tabs */
+.tp-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+.tp-tab {
+  flex: 1; padding: 10px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: rgba(255,255,255,0.5); font-family: var(--font); font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.tp-tab:hover { background: #1c1f1b; color: var(--text); }
+.tp-tab.active { color: var(--teal); border-color: var(--teal-dim); background: rgba(62,207,178,0.06); }
 
-  .cs-pipeline {
-    display: flex; align-items: center; justify-content: center; gap: 0;
-    margin-bottom: 48px; animation: fadeUp 0.3s 0.14s ease both;
-  }
-  .cs-stage {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-    color: var(--text-dimmer);
-  }
-  .cs-stage.active { color: var(--teal); }
-  .cs-stage-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
-  .cs-stage.active .cs-stage-dot { background: var(--teal); box-shadow: 0 0 0 4px var(--teal-glow); }
-  .cs-stage-line { width: 48px; height: 2px; background: var(--border); margin-bottom: 14px; }
+/* Form elements */
+.tp-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 8px;
+}
+.tp-select {
+  width: 100%; padding: 12px 16px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--font); font-size: 15px;
+  cursor: pointer; outline: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a9487' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.tp-select:focus { border-color: var(--teal-dim); }
 
-  .cs-back {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600; color: var(--text-dim);
-    text-decoration: none; padding: 10px 18px; border-radius: var(--radius-sm);
-    border: 1px solid var(--border-bright); transition: all 0.15s;
-    animation: fadeUp 0.3s 0.17s ease both;
-  }
-  .cs-back:hover { border-color: var(--teal); color: var(--teal); }
+#tp-preview {
+  margin-top: 12px; padding: 14px 16px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; line-height: 1.7; color: rgba(255,255,255,0.6);
+  min-height: 72px; white-space: pre-wrap;
+}
+#tp-preview.empty { color: rgba(255,255,255,0.25); font-style: italic; }
+
+#tp-paste-wrap textarea {
+  width: 100%; height: 200px; padding: 14px 16px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.7;
+  resize: vertical; outline: none;
+}
+#tp-paste-wrap textarea:focus { border-color: var(--teal-dim); }
+#tp-paste-wrap textarea::placeholder { color: rgba(255,255,255,0.25); }
+
+/* Network / QR */
+.tp-network {
+  margin-top: 28px; padding: 18px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  display: flex; align-items: center; gap: 18px;
+}
+#tp-qr-canvas { flex-shrink: 0; width: 84px; height: 84px;
+  display: flex; align-items: center; justify-content: center; }
+#tp-qr-canvas canvas, #tp-qr-canvas img { border-radius: 5px; display: block; }
+.tp-network-text { flex: 1; min-width: 0; }
+.tp-network-text h4 { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+.tp-network-text p  { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+.tp-ip-url { font-size: 11px; font-family: monospace; color: var(--teal); word-break: break-all; margin-top: 6px; }
+.tp-offline-note { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 4px; font-style: italic; }
+
+#tp-start-btn {
+  width: 100%; margin-top: 24px; padding: 16px;
+  background: var(--teal); border: none; border-radius: 10px;
+  color: #000; font-family: var(--font); font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+}
+#tp-start-btn:hover { background: #52dfc5; }
+#tp-start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════
+   DISPLAY SCREEN
+═══════════════════════════════════════ */
+#tp-display {
+  position: fixed; inset: 0; z-index: 20;
+  background: var(--bg); display: none; flex-direction: column;
+}
+#tp-display.active { display: flex; }
+
+/* Scroll container */
+#tp-scroll-wrap {
+  flex: 1; overflow-y: scroll; overflow-x: hidden; scroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#tp-scroll-wrap::-webkit-scrollbar { width: 3px; }
+#tp-scroll-wrap::-webkit-scrollbar-track { background: transparent; }
+#tp-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+/* Mirror mode */
+#tp-scroll-wrap.mirror #tp-text-wrap { transform: scaleX(-1); }
+
+/* Text area — width limited, centered */
+#tp-text-wrap { max-width: 65%; margin: 0 auto; padding-bottom: 45vh; }
+@media (max-width: 900px) { #tp-text-wrap { max-width: 84%; } }
+@media (max-width: 600px) { #tp-text-wrap { max-width: 93%; } }
+
+/* Spacer pushes first line to reading position */
+#tp-spacer-top { height: 38vh; }
+
+/* Script lines */
+.tp-line {
+  font-size: var(--font-size); line-height: 1.42;
+  color: var(--text); opacity: 0.7; padding: 5px 0 5px 19px;
+  cursor: pointer; transition: opacity 0.1s; user-select: none;
+}
+.tp-line.tp-above  { opacity: 0.45; }
+.tp-line.tp-below  { opacity: 0.70; }
+.tp-line.tp-current {
+  opacity: 1;
+  border-left: 3px solid var(--teal);
+  padding-left: 16px;
+  margin-left: 0;
+}
+
+/* Paragraph break */
+.tp-break { height: calc(var(--font-size) * 0.55); }
+
+/* Beat marker — thin teal rule across full text width */
+.tp-beat-marker {
+  display: flex; align-items: center; gap: 14px;
+  margin: calc(var(--font-size) * 0.55) 0;
+  padding-left: 19px;
+}
+.tp-beat-rule { flex: 1; height: 1px; background: var(--teal); opacity: 0.28; }
+.tp-beat-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--teal); opacity: 0.45;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* Subtle reading guide line */
+#tp-reading-guide {
+  position: fixed; left: 0; right: 0; top: 38vh;
+  height: 1px; background: rgba(62,207,178,0.06);
+  pointer-events: none; z-index: 5;
+}
+
+/* Session badge */
+#tp-session-badge {
+  position: fixed; top: 16px; right: 16px; z-index: 50;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+  padding: 8px 14px; display: none;
+  flex-direction: column; align-items: flex-end; gap: 2px;
+}
+#tp-session-badge.visible { display: flex; }
+.tp-session-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.3); font-weight: 600; }
+#tp-session-code { font-family: 'Bebas Neue', sans-serif; font-size: 34px; letter-spacing: 7px; color: var(--teal); line-height: 1; }
+#tp-peer-status { font-size: 10px; color: rgba(255,255,255,0.3); transition: color 0.3s; }
+#tp-peer-status.connected { color: var(--teal); }
+
+/* ═══════════════════════════════════════
+   CONTROLS OVERLAY
+═══════════════════════════════════════ */
+#tp-controls {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+  height: var(--ctrl-h);
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 10px; padding: 0 20px;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+#tp-controls.visible { opacity: 1; pointer-events: all; }
+
+.tp-ctrl-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; color: var(--text); font-family: var(--font);
+  font-size: 13px; font-weight: 500; padding: 8px 13px;
+  cursor: pointer; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
+}
+.tp-ctrl-btn:hover   { background: rgba(255,255,255,0.11); }
+.tp-ctrl-btn.active  { background: rgba(62,207,178,0.15); border-color: var(--teal); color: var(--teal); }
+#tp-play-pause { font-size: 17px; width: 44px; padding: 8px; text-align: center; }
+
+/* Speed */
+.tp-speed-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.tp-ctrl-lbl { font-size: 11px; color: rgba(255,255,255,0.38); font-weight: 600; letter-spacing: 0.4px; }
+#tp-speed-slider {
+  -webkit-appearance: none; width: 110px; height: 4px;
+  background: rgba(255,255,255,0.15); border-radius: 2px; outline: none; cursor: pointer;
+}
+#tp-speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--teal); cursor: pointer;
+}
+#tp-speed-val { font-size: 13px; font-weight: 600; color: var(--teal); min-width: 22px; text-align: right; }
+
+/* Font */
+.tp-font-group { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.tp-font-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; color: var(--text); font-family: var(--font);
+  font-size: 11px; font-weight: 700; padding: 5px 9px; cursor: pointer; transition: all 0.12s;
+}
+.tp-font-btn:hover { background: rgba(255,255,255,0.11); }
+#tp-font-val { font-size: 11px; color: rgba(255,255,255,0.45); min-width: 36px; text-align: center; }
+
+.tp-ctrl-spacer { flex: 1; }
+
+/* ═══════════════════════════════════════
+   REMOTE CONTROL SCREEN (phone)
+═══════════════════════════════════════ */
+#tp-remote {
+  position: fixed; inset: 0; z-index: 20; background: #050705;
+  display: none; flex-direction: column; align-items: center;
+  padding: 36px 24px 40px; overflow-y: auto;
+}
+#tp-remote.active { display: flex; }
+
+.tp-rem-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.6); margin-bottom: 20px;
+}
+.tp-rem-title span { color: var(--teal); }
+
+/* Connection status */
+#tp-remote-status {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 28px;
+  padding: 8px 16px; border-radius: 20px; font-size: 13px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+}
+.tp-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a; transition: background 0.3s; }
+.tp-status-dot.ok { background: var(--teal); }
+
+/* Code input */
+.tp-rem-connect { width: 100%; max-width: 380px; margin-bottom: 28px; }
+.tp-rem-connect label {
+  display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.38); font-weight: 600; margin-bottom: 10px; text-align: center;
+}
+.tp-code-row { display: flex; gap: 8px; }
+#tp-rem-code {
+  flex: 1; padding: 13px 14px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--teal); font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px; letter-spacing: 8px; text-align: center; outline: none;
+}
+#tp-rem-code:focus { border-color: var(--teal-dim); }
+#tp-rem-connect-btn {
+  padding: 13px 18px; background: var(--teal); border: none; border-radius: 8px;
+  color: #000; font-family: var(--font); font-size: 14px; font-weight: 700;
+  cursor: pointer;
+}
+#tp-rem-err { margin-top: 10px; font-size: 13px; color: #ff5a5a; text-align: center; display: none; }
+#tp-rem-err.on { display: block; }
+
+/* Progress */
+.tp-rem-prog-wrap { width: 100%; max-width: 380px; margin-bottom: 24px; }
+.tp-rem-prog-label { display: flex; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 7px; }
+.tp-rem-prog-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+#tp-rem-prog-fill { height: 100%; background: var(--teal); border-radius: 2px; width: 0%; transition: width 0.6s; }
+
+/* Big play/pause */
+#tp-rem-pp {
+  width: 100%; max-width: 380px; height: 110px;
+  background: rgba(62,207,178,0.1); border: 2px solid var(--teal);
+  border-radius: 14px; color: var(--teal); font-size: 44px;
+  cursor: pointer; margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s;
+}
+#tp-rem-pp:active { background: rgba(62,207,178,0.22); }
+
+/* Speed row */
+.tp-rem-speed-row { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 380px; margin-bottom: 12px; }
+.tp-rem-spd-btn {
+  width: 60px; height: 60px; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+  color: var(--text); font-size: 22px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; transition: all 0.1s;
+}
+.tp-rem-spd-btn:active { background: rgba(255,255,255,0.14); transform: scale(0.93); }
+.tp-rem-spd-label { flex: 1; text-align: center; font-size: 15px; color: rgba(255,255,255,0.6); }
+.tp-rem-spd-label span { color: var(--teal); font-weight: 600; font-size: 20px; }
+
+/* Restart */
+#tp-rem-restart {
+  width: 100%; max-width: 380px; padding: 13px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; color: rgba(255,255,255,0.55);
+  font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.12s;
+}
+#tp-rem-restart:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 </style>
 </head>
 <body>
-<div id="kre8r-nav"></div>
-<main class="main">
-  <div class="cs-phase"><span class="cs-phase-dot"></span>Coming in Phase 3</div>
-  <div class="cs-icon">📜</div>
-  <div class="cs-title">TELEPR<em>Ω</em>MPTER</div>
-  <p class="cs-desc">In-app teleprompter that syncs your WritΩr script directly to a smooth-scrolling display — no third-party app needed.</p>
 
-  <div class="cs-pipeline">
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Pre</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage active"><div class="cs-stage-dot"></div>Prod</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Post</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Dist</div>
+<!-- ══════════════════════════════════════════
+     SCREEN 1 — SELECTOR
+══════════════════════════════════════════ -->
+<div id="tp-selector">
+  <div class="tp-sel-inner">
+
+    <div class="tp-sel-header">
+      <a href="/" class="tp-back">← Dashboard</a>
+      <h1 class="tp-sel-title">TELEPR<span>Ω</span>MPTER</h1>
+    </div>
+
+    <div class="tp-tabs">
+      <button class="tp-tab active" id="tab-project" onclick="switchTab('project')">Load Script</button>
+      <button class="tp-tab" id="tab-paste"   onclick="switchTab('paste')">Paste Text</button>
+    </div>
+
+    <div id="tp-mode-project">
+      <div class="tp-label">Project</div>
+      <select class="tp-select" id="tp-project-select" onchange="onProjectChange()">
+        <option value="">Loading approved scripts…</option>
+      </select>
+      <div id="tp-preview" class="empty">Select a project above to preview the script.</div>
+    </div>
+
+    <div id="tp-mode-paste" style="display:none">
+      <div id="tp-paste-wrap">
+        <div class="tp-label">Script Text</div>
+        <textarea id="tp-paste-text" placeholder="Paste any script here — production notes will be automatically stripped."></textarea>
+      </div>
+    </div>
+
+    <div class="tp-network">
+      <div id="tp-qr-canvas"></div>
+      <div class="tp-network-text">
+        <h4>Remote Control</h4>
+        <p>Camera op scans QR code or types the URL on their phone to open Remote Control mode.</p>
+        <div class="tp-ip-url" id="tp-ip-url">Detecting network address…</div>
+        <div class="tp-offline-note" id="tp-offline-note"></div>
+      </div>
+    </div>
+
+    <button id="tp-start-btn" disabled onclick="startTeleprompter()">Start Teleprompter →</button>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 2 — DISPLAY
+══════════════════════════════════════════ -->
+<div id="tp-display">
+  <div id="tp-reading-guide"></div>
+
+  <div id="tp-session-badge">
+    <div class="tp-session-lbl">Remote code</div>
+    <div id="tp-session-code">----</div>
+    <div id="tp-peer-status">Waiting for remote…</div>
   </div>
 
-  <a href="/" class="cs-back">← Back to Dashboard</a>
-</main>
-<script src="/js/nav.js"></script>
-<script>initNav();</script>
+  <div id="tp-scroll-wrap">
+    <div id="tp-text-wrap">
+      <div id="tp-spacer-top"></div>
+      <div id="tp-script-lines"></div>
+    </div>
+  </div>
+
+  <div id="tp-controls">
+    <button class="tp-ctrl-btn" id="tp-play-pause" onclick="togglePlayPause()" title="Space">⏸</button>
+
+    <div class="tp-speed-group">
+      <span class="tp-ctrl-lbl">Speed</span>
+      <input type="range" id="tp-speed-slider" min="0" max="10" step="0.5" value="3"
+             oninput="setSpeed(parseFloat(this.value))">
+      <span id="tp-speed-val">3</span>
+    </div>
+
+    <div class="tp-font-group">
+      <button class="tp-font-btn" onclick="adjustFont(-6)">A−</button>
+      <span id="tp-font-val">64px</span>
+      <button class="tp-font-btn" onclick="adjustFont(6)">A+</button>
+    </div>
+
+    <button class="tp-ctrl-btn" id="tp-mirror-btn" onclick="toggleMirror()">⇆ Mirror</button>
+    <button class="tp-ctrl-btn" onclick="backToSelector()">📋 Scripts</button>
+
+    <div class="tp-ctrl-spacer"></div>
+
+    <button class="tp-ctrl-btn" onclick="doExitFullscreen()">✕ Exit</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 3 — REMOTE CONTROL (phone)
+══════════════════════════════════════════ -->
+<div id="tp-remote">
+  <div class="tp-rem-title">REMOTE <span>CONTROL</span></div>
+
+  <div id="tp-remote-status">
+    <div class="tp-status-dot" id="tp-rem-dot"></div>
+    <span id="tp-rem-status-txt">Not connected</span>
+  </div>
+
+  <div class="tp-rem-connect">
+    <label>4-digit session code</label>
+    <div class="tp-code-row">
+      <input type="text" id="tp-rem-code" maxlength="4" placeholder="1234"
+             inputmode="numeric" pattern="[0-9]*">
+      <button id="tp-rem-connect-btn" onclick="connectRemote()">Connect</button>
+    </div>
+    <div id="tp-rem-err"></div>
+  </div>
+
+  <div class="tp-rem-prog-wrap">
+    <div class="tp-rem-prog-label">
+      <span>Start</span><span id="tp-rem-pct">0%</span><span>End</span>
+    </div>
+    <div class="tp-rem-prog-bar"><div id="tp-rem-prog-fill"></div></div>
+  </div>
+
+  <button id="tp-rem-pp" onclick="remoteSend('toggle_pause')">⏸</button>
+
+  <div class="tp-rem-speed-row">
+    <button class="tp-rem-spd-btn" onclick="remoteAdjustSpeed(-0.5)">−</button>
+    <div class="tp-rem-spd-label">Speed <span id="tp-rem-spd-val">3</span></div>
+    <button class="tp-rem-spd-btn" onclick="remoteAdjustSpeed(0.5)">+</button>
+  </div>
+
+  <button id="tp-rem-restart" onclick="remoteSend('restart')">↺ Restart from beginning</button>
+</div>
+
+<!-- QR library from CDN — graceful fallback if offline -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+        crossorigin="anonymous" onerror="window.QRCode=null"></script>
+<script>
+'use strict';
+
+// ─── Constants ────────────────────────────────────────────────
+const MIN_FONT = 32, MAX_FONT = 120, DEF_FONT = 64;
+
+// ─── State ────────────────────────────────────────────────────
+let currentMode    = 'selector';
+let activeTab      = 'project';
+let loadedScript   = null;
+let fontSize       = DEF_FONT;
+let scrollSpeed    = 3;
+let isPlaying      = false;
+let isMirror       = false;
+let rafId          = null;
+let lastTs         = null;
+let scrollRem      = 0;
+let currentLineEl  = null;
+let ctrlHideTimer  = null;
+let wsConn         = null;
+let wsSession      = null;
+let stateTimer     = null;
+let remoteWS       = null;
+let remoteSpeed    = 3;
+let remotePaused   = true;
+let networkInfo    = { ip: null, port: 3000 };
+let displayEventsOn = false;
+
+// ─── URL params ───────────────────────────────────────────────
+const PARAMS   = new URLSearchParams(window.location.search);
+const P_MODE   = PARAMS.get('mode');
+const P_SESS   = PARAMS.get('session');
+const P_PROJ   = PARAMS.get('project_id');
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+
+async function init() {
+  await loadNetworkInfo();
+
+  if (P_MODE === 'control') {
+    showRemoteScreen(P_SESS);
+    return;
+  }
+
+  // Selector flow
+  await loadScriptList();
+  if (P_PROJ) {
+    document.getElementById('tp-project-select').value = P_PROJ;
+    await onProjectChange();
+  }
+  if (P_MODE === 'display' && loadedScript) {
+    startTeleprompter();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NETWORK INFO + QR
+// ═══════════════════════════════════════════════════════════════
+
+async function loadNetworkInfo() {
+  try {
+    const r = await fetch('/api/teleprompter/network-info');
+    if (r.ok) { const d = await r.json(); if (d.ok) networkInfo = d; }
+  } catch (_) {}
+
+  const ip   = networkInfo.ip   || window.location.hostname;
+  const port = networkInfo.port || window.location.port || 3000;
+  const base = `http://${ip}:${port}`;
+
+  document.getElementById('tp-ip-url').textContent = `${base}/teleprompter.html?mode=control&session=XXXX`;
+
+  if (!networkInfo.ip) {
+    document.getElementById('tp-offline-note').textContent = 'Could not detect local IP — check network connection.';
+  }
+
+  // QR shows base control URL; session code filled in after WS connects
+  buildQR(`${base}/teleprompter.html?mode=control`);
+}
+
+function buildQR(url) {
+  const c = document.getElementById('tp-qr-canvas');
+  c.innerHTML = '';
+  if (window.QRCode) {
+    try {
+      new QRCode(c, { text: url, width: 80, height: 80,
+        colorDark: '#e8ebe6', colorLight: '#161916',
+        correctLevel: QRCode.CorrectLevel.M });
+    } catch (_) { c.textContent = 'QR'; }
+  } else {
+    c.style.cssText = 'width:80px;height:80px;background:#1c1f1b;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,0.3);';
+    c.textContent = 'QR offline';
+  }
+}
+
+function updateQRForSession(code) {
+  const ip   = networkInfo.ip   || window.location.hostname;
+  const port = networkInfo.port || window.location.port || 3000;
+  buildQR(`http://${ip}:${port}/teleprompter.html?mode=control&session=${code}`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCRIPT LIST
+// ═══════════════════════════════════════════════════════════════
+
+async function loadScriptList() {
+  try {
+    const r = await fetch('/api/teleprompter/scripts');
+    const d = await r.json();
+    const sel = document.getElementById('tp-project-select');
+    if (!d.scripts?.length) {
+      sel.innerHTML = '<option value="">No approved scripts — approve one in WritΩr</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— Select a project —</option>';
+    for (const s of d.scripts) {
+      const opt = document.createElement('option');
+      opt.value = s.project_id;
+      opt.textContent = s.project_name;
+      opt.dataset.preview = s.preview || '';
+      sel.appendChild(opt);
+    }
+  } catch (_) {
+    document.getElementById('tp-project-select').innerHTML =
+      '<option value="">Error loading scripts</option>';
+  }
+}
+
+async function onProjectChange() {
+  const sel  = document.getElementById('tp-project-select');
+  const pid  = sel.value;
+  const prev = document.getElementById('tp-preview');
+  const btn  = document.getElementById('tp-start-btn');
+
+  if (!pid) {
+    prev.textContent = 'Select a project above to preview the script.';
+    prev.className = 'empty';
+    loadedScript = null; btn.disabled = true; return;
+  }
+
+  prev.textContent = 'Loading…'; prev.className = '';
+  try {
+    const r = await fetch(`/api/teleprompter/script/${pid}`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+
+    const segs = processScript(d.script_text);
+    loadedScript = { projectId: parseInt(pid), text: d.script_text, segments: segs };
+
+    const preview = segs.filter(s => s.type === 'text').slice(0, 4).map(s => s.content).join('\n');
+    prev.textContent = preview || '(Script is empty after stripping production notes)';
+    btn.disabled = false;
+  } catch (e) {
+    prev.textContent = 'Error: ' + e.message; prev.className = 'empty';
+    loadedScript = null; btn.disabled = true;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tp-mode-project').style.display = tab === 'project' ? '' : 'none';
+  document.getElementById('tp-mode-paste').style.display   = tab === 'paste'   ? '' : 'none';
+  document.getElementById('tab-project').classList.toggle('active', tab === 'project');
+  document.getElementById('tab-paste').classList.toggle('active', tab === 'paste');
+  if (tab === 'paste') document.getElementById('tp-start-btn').disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCRIPT PROCESSING — strip all production cues
+// Talent NEVER sees beat labels, b-roll notes, or directions
+// ═══════════════════════════════════════════════════════════════
+
+function processScript(rawText) {
+  if (!rawText) return [];
+
+  // Remove PRODUCTION NOTES section entirely (everything from marker onward)
+  let text = rawText.replace(/\*{1,2}PRODUCTION NOTES:?\*{0,2}[\s\S]*$/im, '');
+
+  const segs = [];
+  let beatN  = 0;
+  let lastT  = null;
+
+  for (let line of text.split('\n')) {
+    // Beat marker line: [● BEAT: name] or [● BEAT N: name]
+    const bm = line.match(/^\s*\[●\s*BEAT(?:\s+\d+)?:\s*([^\]]+)\]\s*$/i);
+    if (bm) {
+      beatN++;
+      segs.push({ type: 'beat_marker', beatName: bm[1].trim(), beatN });
+      lastT = 'beat_marker';
+      continue;
+    }
+
+    // Skip [BEAT NEEDED: ...] lines
+    if (/\[BEAT NEEDED:/i.test(line)) continue;
+
+    // Skip --- dividers
+    if (/^-{3,}\s*$/.test(line.trim())) continue;
+
+    // Strip 🎤 emoji
+    line = line.replace(/^🎤\s*/u, '');
+
+    // Remove production notes in various formats
+    line = line.replace(/\(b-roll:[^)]*\)/gi, '');
+    line = line.replace(/\(INSERT[^)]+\)/gi, '');
+    line = line.replace(/\*\[[^\]]*\]\*/g, '');
+    line = line.replace(/\[[^\]]*\]/g, '');
+    line = line.replace(/\([a-z][^)]*\)/g, '');
+    line = line.replace(/\*{1,2}[^*\n]+\*{1,2}/g, '');
+    line = line.replace(/\s{2,}/g, ' ').trim();
+
+    if (!line) {
+      if (lastT === 'text') { segs.push({ type: 'break' }); lastT = 'break'; }
+    } else {
+      segs.push({ type: 'text', content: line });
+      lastT = 'text';
+    }
+  }
+
+  return segs;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+
+function renderScript(segs) {
+  const c = document.getElementById('tp-script-lines');
+  c.innerHTML = '';
+
+  for (const seg of segs) {
+    if (seg.type === 'text') {
+      const d = document.createElement('div');
+      d.className   = 'tp-line tp-below';
+      d.textContent = seg.content;
+      c.appendChild(d);
+    } else if (seg.type === 'beat_marker') {
+      const d = document.createElement('div');
+      d.className = 'tp-beat-marker';
+      d.innerHTML = `<div class="tp-beat-rule"></div>` +
+        `<div class="tp-beat-label">— ${esc(seg.beatName)} —</div>` +
+        `<div class="tp-beat-rule"></div>`;
+      c.appendChild(d);
+    } else if (seg.type === 'break') {
+      const d = document.createElement('div');
+      d.className = 'tp-break';
+      c.appendChild(d);
+    }
+  }
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// START TELEPROMPTER
+// ═══════════════════════════════════════════════════════════════
+
+function startTeleprompter() {
+  let segs;
+  if (activeTab === 'paste') {
+    const raw = (document.getElementById('tp-paste-text').value || '').trim();
+    if (!raw) { alert('Please paste some script text first.'); return; }
+    segs = processScript(raw);
+    loadedScript = { projectId: null, text: raw, segments: segs };
+  } else {
+    if (!loadedScript) { alert('Please select a project first.'); return; }
+    segs = loadedScript.segments;
+  }
+  if (!segs.length) { alert('No displayable content after stripping production notes.'); return; }
+
+  renderScript(segs);
+  document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+  document.getElementById('tp-font-val').textContent = fontSize + 'px';
+
+  document.getElementById('tp-selector').style.display = 'none';
+  document.getElementById('tp-display').classList.add('active');
+
+  document.getElementById('tp-scroll-wrap').scrollTop = 0;
+  isPlaying = false; updatePPBtn();
+  currentMode = 'display';
+
+  attachDisplayEvents();
+  connectDisplayWS();
+  reqFS(document.getElementById('tp-display'));
+
+  if (rafId) cancelAnimationFrame(rafId);
+  lastTs = null; scrollRem = 0;
+  rafId = requestAnimationFrame(animTick);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANIMATION LOOP
+// speed * 20 px/s  (speed 5 = 100 px/s ≈ comfortable speaking pace)
+// ═══════════════════════════════════════════════════════════════
+
+function animTick(ts) {
+  if (isPlaying && scrollSpeed > 0) {
+    if (lastTs !== null) {
+      scrollRem += scrollSpeed * 20 * ((ts - lastTs) / 1000);
+      const px = Math.floor(scrollRem);
+      if (px >= 1) {
+        scrollRem -= px;
+        const w = document.getElementById('tp-scroll-wrap');
+        w.scrollTop += px;
+        if (w.scrollTop + w.clientHeight >= w.scrollHeight - 8) {
+          isPlaying = false; updatePPBtn();
+        }
+      }
+    }
+    lastTs = ts;
+  } else {
+    lastTs = null; scrollRem = 0;
+  }
+
+  updateCurrentLine();
+  rafId = requestAnimationFrame(animTick);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CURRENT LINE
+// Focus point at 38% from top of viewport
+// ═══════════════════════════════════════════════════════════════
+
+function updateCurrentLine() {
+  const focusY = window.innerHeight * 0.38;
+  const lines  = document.querySelectorAll('.tp-line');
+  if (!lines.length) return;
+
+  let best = null, bestD = Infinity;
+  for (const l of lines) {
+    const r = l.getBoundingClientRect();
+    const d = Math.abs(r.top + r.height / 2 - focusY);
+    if (d < bestD) { bestD = d; best = l; }
+  }
+
+  if (best === currentLineEl) return;
+  currentLineEl = best;
+
+  const all = Array.from(lines);
+  const idx  = all.indexOf(best);
+  all.forEach((l, i) => {
+    l.classList.remove('tp-current', 'tp-above', 'tp-below');
+    if      (i < idx) l.classList.add('tp-above');
+    else if (i > idx) l.classList.add('tp-below');
+    else              l.classList.add('tp-current');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════════
+
+function togglePlayPause() {
+  isPlaying = !isPlaying;
+  lastTs = null; scrollRem = 0;
+  updatePPBtn();
+  sendDisplayState();
+}
+
+function updatePPBtn() {
+  const b = document.getElementById('tp-play-pause');
+  if (b) b.textContent = isPlaying ? '⏸' : '▶';
+}
+
+function setSpeed(v) {
+  scrollSpeed = Math.max(0, Math.min(10, v));
+  const sl = document.getElementById('tp-speed-slider');
+  const vl = document.getElementById('tp-speed-val');
+  if (sl) sl.value = scrollSpeed;
+  if (vl) vl.textContent = scrollSpeed % 1 === 0 ? String(scrollSpeed) : scrollSpeed.toFixed(1);
+  sendDisplayState();
+}
+
+function adjustFont(delta) {
+  fontSize = Math.max(MIN_FONT, Math.min(MAX_FONT, fontSize + delta));
+  document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+  const vl = document.getElementById('tp-font-val');
+  if (vl) vl.textContent = fontSize + 'px';
+}
+
+function toggleMirror() {
+  isMirror = !isMirror;
+  document.getElementById('tp-scroll-wrap').classList.toggle('mirror', isMirror);
+  document.getElementById('tp-mirror-btn').classList.toggle('active', isMirror);
+}
+
+function backToSelector() {
+  isPlaying = false;
+  if (rafId)      { cancelAnimationFrame(rafId); rafId = null; }
+  if (wsConn)     { wsConn.close(); wsConn = null; }
+  if (stateTimer) { clearInterval(stateTimer); stateTimer = null; }
+  doExitFullscreen();
+  document.getElementById('tp-display').classList.remove('active');
+  document.getElementById('tp-selector').style.display = '';
+  document.getElementById('tp-session-badge').classList.remove('visible');
+  currentMode = 'selector';
+}
+
+function doExitFullscreen() {
+  try {
+    if (document.fullscreenElement || document.webkitFullscreenElement)
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } catch (_) {}
+}
+
+function reqFS(el) {
+  try {
+    if (el.requestFullscreen)            el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch (_) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DISPLAY EVENTS
+// ═══════════════════════════════════════════════════════════════
+
+function attachDisplayEvents() {
+  if (displayEventsOn) return;
+  displayEventsOn = true;
+
+  const display = document.getElementById('tp-display');
+  const wrap    = document.getElementById('tp-scroll-wrap');
+
+  display.addEventListener('mousemove',  showCtrl);
+  display.addEventListener('touchstart', showCtrl, { passive: true });
+
+  wrap.addEventListener('click', function (e) {
+    if (!e.target.closest('#tp-controls')) togglePlayPause();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (currentMode !== 'display') return;
+    if (e.code === 'Space')     { e.preventDefault(); togglePlayPause(); }
+    if (e.code === 'ArrowUp')   { e.preventDefault(); setSpeed(Math.min(10, scrollSpeed + 0.5)); }
+    if (e.code === 'ArrowDown') { e.preventDefault(); setSpeed(Math.max(0,  scrollSpeed - 0.5)); }
+    if (e.code === 'Escape')    { backToSelector(); }
+  });
+
+  display.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    setSpeed(e.deltaY < 0 ? Math.min(10, scrollSpeed + 0.5) : Math.max(0, scrollSpeed - 0.5));
+  }, { passive: false });
+}
+
+function showCtrl() {
+  const c = document.getElementById('tp-controls');
+  if (!c) return;
+  c.classList.add('visible');
+  clearTimeout(ctrlHideTimer);
+  ctrlHideTimer = setTimeout(() => c.classList.remove('visible'), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEBSOCKET — DISPLAY MODE
+// ═══════════════════════════════════════════════════════════════
+
+function connectDisplayWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+  catch (_) { return; }
+
+  wsConn.onopen = () => {
+    const code = P_SESS && P_SESS.length === 4 ? P_SESS : null;
+    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code }));
+  };
+
+  wsConn.onmessage = (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+
+    if (msg.type === 'registered') {
+      wsSession = msg.session;
+      document.getElementById('tp-session-code').textContent = wsSession;
+      document.getElementById('tp-session-badge').classList.add('visible');
+      updateQRForSession(wsSession);
+      if (stateTimer) clearInterval(stateTimer);
+      stateTimer = setInterval(sendDisplayState, 2000);
+    }
+
+    if (msg.type === 'peer_connected' && msg.role === 'control') {
+      const el = document.getElementById('tp-peer-status');
+      el.textContent = '● Remote connected'; el.classList.add('connected');
+    }
+    if (msg.type === 'peer_disconnected') {
+      const el = document.getElementById('tp-peer-status');
+      el.textContent = 'Waiting for remote…'; el.classList.remove('connected');
+    }
+
+    if (msg.type === 'command') {
+      const a = msg.action;
+      if (a === 'pause')        { isPlaying = false; lastTs = null; updatePPBtn(); }
+      if (a === 'play')         { isPlaying = true;  lastTs = null; updatePPBtn(); }
+      if (a === 'toggle_pause') { togglePlayPause(); }
+      if (a === 'speed')        { setSpeed(msg.value); }
+      if (a === 'restart')      {
+        document.getElementById('tp-scroll-wrap').scrollTop = 0;
+        isPlaying = false; lastTs = null; updatePPBtn();
+      }
+    }
+  };
+
+  wsConn.onerror = () => {};
+  wsConn.onclose = () => {
+    const el = document.getElementById('tp-peer-status');
+    if (el) { el.textContent = 'Remote disconnected'; el.classList.remove('connected'); }
+  };
+}
+
+function sendDisplayState() {
+  if (!wsConn || wsConn.readyState !== WebSocket.OPEN) return;
+  const w   = document.getElementById('tp-scroll-wrap');
+  const max = w.scrollHeight - w.clientHeight;
+  const pos = max > 0 ? Math.round((w.scrollTop / max) * 100) : 0;
+  wsConn.send(JSON.stringify({
+    type: 'state',
+    state: { speed: scrollSpeed, paused: !isPlaying, position: pos }
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REMOTE CONTROL SCREEN
+// ═══════════════════════════════════════════════════════════════
+
+function showRemoteScreen(prefillCode) {
+  currentMode = 'remote';
+  document.getElementById('tp-selector').style.display = 'none';
+  document.getElementById('tp-remote').classList.add('active');
+  if (prefillCode) {
+    document.getElementById('tp-rem-code').value = prefillCode;
+    connectRemote();
+  }
+}
+
+function connectRemote() {
+  const code = (document.getElementById('tp-rem-code').value || '').trim();
+  const err  = document.getElementById('tp-rem-err');
+  err.classList.remove('on');
+
+  if (!/^\d{4}$/.test(code)) {
+    err.textContent = 'Enter the 4-digit code shown on the prompter screen.';
+    err.classList.add('on'); return;
+  }
+
+  if (remoteWS && remoteWS.readyState === WebSocket.OPEN) remoteWS.close();
+
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try { remoteWS = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+  catch (_) { return; }
+
+  remoteWS.onopen = () => {
+    remoteWS.send(JSON.stringify({ type: 'register', role: 'control', session: code }));
+  };
+
+  remoteWS.onmessage = (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+    if (msg.type === 'error') {
+      err.textContent = msg.message; err.classList.add('on');
+      setRemStatus(false); return;
+    }
+    if (msg.type === 'registered') {
+      setRemStatus(true);
+      if (msg.state) applyRemState(msg.state);
+    }
+    if (msg.type === 'peer_connected')    setRemStatus(true);
+    if (msg.type === 'peer_disconnected' && msg.role === 'display') setRemStatus(false);
+    if (msg.type === 'state') applyRemState(msg);
+  };
+
+  remoteWS.onerror = () => setRemStatus(false);
+  remoteWS.onclose = () => setRemStatus(false);
+}
+
+function applyRemState(s) {
+  if (s.speed !== undefined) {
+    remoteSpeed = s.speed;
+    document.getElementById('tp-rem-spd-val').textContent =
+      remoteSpeed % 1 === 0 ? String(remoteSpeed) : remoteSpeed.toFixed(1);
+  }
+  if (s.paused !== undefined) {
+    remotePaused = s.paused;
+    document.getElementById('tp-rem-pp').textContent = remotePaused ? '▶' : '⏸';
+  }
+  if (s.position !== undefined) {
+    document.getElementById('tp-rem-prog-fill').style.width = s.position + '%';
+    document.getElementById('tp-rem-pct').textContent = s.position + '%';
+  }
+}
+
+function setRemStatus(ok) {
+  document.getElementById('tp-rem-dot').classList.toggle('ok', ok);
+  document.getElementById('tp-rem-status-txt').textContent = ok ? 'Connected to prompter' : 'Not connected';
+}
+
+function remoteSend(action, value) {
+  if (!remoteWS || remoteWS.readyState !== WebSocket.OPEN) return;
+  const m = { type: 'command', action };
+  if (value !== undefined) m.value = value;
+  remoteWS.send(JSON.stringify(m));
+}
+
+function remoteAdjustSpeed(delta) {
+  const next = Math.max(0, Math.min(10, remoteSpeed + delta));
+  remoteSend('speed', next);
+  applyRemState({ speed: next });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>
