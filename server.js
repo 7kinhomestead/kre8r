@@ -39,6 +39,7 @@ app.use('/api/analytics',  require('./src/routes/analytics'));
 app.use('/api/operator',   require('./src/routes/operator'));
 app.use('/api/davinci',    require('./src/routes/davinci'));
 app.use('/api/editor',     require('./src/routes/editor'));
+app.use('/api/composor',   require('./src/routes/composor'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

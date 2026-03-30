@@ -47,8 +47,9 @@ const path = require('path');
 const db                        = require('../db');
 const { transcribeFile }        = require('../vault/transcribe');
 
-const ANTHROPIC_VERSION = '2023-06-01';
-const MODEL             = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
+const ANTHROPIC_VERSION    = '2023-06-01';
+const MODEL                = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
+const TRANSCRIPT_WORD_LIMIT = 6000;  // summarize if total transcript words exceeds this
 
 // ─────────────────────────────────────────────
 // HELPERS
@@ -69,6 +70,45 @@ function transcriptToText(transcript) {
       .join('\n');
   }
   return transcript.text || '[empty transcript]';
+}
+
+function countWords(text) {
+  return text ? text.trim().split(/\s+/).length : 0;
+}
+
+/**
+ * Trim a transcript down to maxWords, keeping leading segments + the final
+ * segment so Claude still knows where the clip ends.
+ */
+function truncateTranscript(transcript, maxWords) {
+  if (!transcript) return null;
+
+  if (transcript.segments && transcript.segments.length > 0) {
+    const segs   = transcript.segments;
+    const kept   = [];
+    let wordCount = 0;
+
+    for (let i = 0; i < segs.length; i++) {
+      const segWords = segs[i].text.trim().split(/\s+/).length;
+      // Always include the last segment as a tail anchor
+      const isLast = (i === segs.length - 1);
+      if (!isLast && wordCount + segWords > maxWords && kept.length > 0) {
+        // Append tail if not already captured
+        const tail = segs[segs.length - 1];
+        kept.push({ ...tail, text: '[…] ' + tail.text.trim() });
+        break;
+      }
+      kept.push(segs[i]);
+      wordCount += segWords;
+    }
+
+    return { ...transcript, segments: kept };
+  }
+
+  // Plain-text fallback
+  const words = (transcript.text || '').trim().split(/\s+/);
+  if (words.length <= maxWords) return transcript;
+  return { ...transcript, text: words.slice(0, maxWords).join(' ') + ' […]' };
 }
 
 // ─────────────────────────────────────────────
@@ -154,6 +194,64 @@ Be surgical. If a section has no good take, still include it with winner_footage
 // CALL CLAUDE
 // ─────────────────────────────────────────────
 
+/**
+ * Walk the sections array in a potentially-truncated JSON string and return
+ * the index of the last character that closes a complete section object.
+ * Returns -1 if no complete object was found.
+ */
+function findLastCompleteSection(cleaned) {
+  const arrayMatch = cleaned.match(/"sections"\s*:\s*\[/);
+  if (!arrayMatch) return -1;
+
+  const arrayOpenIdx = cleaned.indexOf('[', arrayMatch.index);
+  let depth = 0;
+  let inStr = false;
+  let esc   = false;
+  let lastCompleteEnd = -1;
+
+  for (let i = arrayOpenIdx + 1; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (esc)              { esc = false; continue; }
+    if (ch === '\\' && inStr) { esc = true;  continue; }
+    if (ch === '"')       { inStr = !inStr;  continue; }
+    if (inStr)            continue;
+    if (ch === '{')       depth++;
+    if (ch === '}') {
+      depth--;
+      if (depth === 0) lastCompleteEnd = i;
+    }
+    if (depth < 0) break;  // exited the array
+  }
+
+  return lastCompleteEnd;
+}
+
+/**
+ * If direct JSON.parse fails, try to recover the last complete section object
+ * from a response that was cut off mid-stream.
+ */
+function repairJSON(cleaned) {
+  const lastEnd = findLastCompleteSection(cleaned);
+  if (lastEnd === -1) return null;
+
+  const outerOpen = cleaned.indexOf('{');
+  if (outerOpen === -1) return null;
+
+  // Rebuild: keep everything up to the last complete section, close the array,
+  // add a placeholder overall_notes, close the outer object.
+  const repaired =
+    cleaned.slice(outerOpen, lastEnd + 1) +
+    '\n  ],' +
+    '"overall_notes":"[Note: Claude response was truncated — some sections may be missing. ' +
+    'Consider reducing transcript size or re-running.]"\n}';
+
+  try {
+    return JSON.parse(repaired);
+  } catch (_) {
+    return null;
+  }
+}
+
 async function callClaude(prompt) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
@@ -169,7 +267,7 @@ async function callClaude(prompt) {
     },
     body: JSON.stringify({
       model:      MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages:   [{ role: 'user', content: prompt }]
     })
   });
@@ -189,6 +287,10 @@ async function callClaude(prompt) {
   try {
     return JSON.parse(cleaned);
   } catch (parseErr) {
+    // Attempt graceful repair before giving up
+    const repaired = repairJSON(cleaned);
+    if (repaired) return repaired;
+
     throw new Error(
       `Claude returned malformed JSON: ${parseErr.message}. ` +
       `First 300 chars: ${cleaned.slice(0, 300)}`
@@ -311,11 +413,25 @@ async function buildSelects(projectId, onProgress = null) {
   const script  = db.getScript(projectId);
   const concept = project.concept_note || project.logline || null;
 
-  onProgress?.({ stage: 'claude_start', clips: transcribedCount });
+  // ── 3b. SUMMARIZE TRANSCRIPTS IF DATA IS TOO LARGE ──────────────────────
+
+  const totalWords = clips.reduce((sum, c) => sum + countWords(transcriptToText(c.transcript)), 0);
+
+  let clipsForPrompt = clips;
+  if (totalWords > TRANSCRIPT_WORD_LIMIT) {
+    const budgetPerClip = Math.max(100, Math.floor(TRANSCRIPT_WORD_LIMIT / clips.length));
+    onProgress?.({ stage: 'transcript_trim', total_words: totalWords, budget_per_clip: budgetPerClip });
+    clipsForPrompt = clips.map(c => ({
+      ...c,
+      transcript: truncateTranscript(c.transcript, budgetPerClip)
+    }));
+  }
+
+  onProgress?.({ stage: 'claude_start', clips: transcribedCount, words: Math.min(totalWords, TRANSCRIPT_WORD_LIMIT) });
 
   // ── 4. ASK CLAUDE ─────────────────────────────────────────────────────────
 
-  const prompt   = buildSelectsPrompt({ clips, script, concept, projectTitle: project.title });
+  const prompt   = buildSelectsPrompt({ clips: clipsForPrompt, script, concept, projectTitle: project.title });
   const analysis = await callClaude(prompt);
 
   if (!analysis.sections || !Array.isArray(analysis.sections)) {

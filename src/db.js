@@ -192,6 +192,32 @@ function runMigrations() {
     console.log('[DB] Migration: added projects.editor_state');
   }
 
+  // ComposΩr: projects.composor_state
+  const projectsCols3 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsCols3.includes('composor_state')) {
+    db.run('ALTER TABLE projects ADD COLUMN composor_state TEXT');
+    console.log('[DB] Migration: added projects.composor_state');
+  }
+
+  // ComposΩr: composor_tracks table
+  db.run(`CREATE TABLE IF NOT EXISTS composor_tracks (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id        INTEGER NOT NULL,
+    scene_label       TEXT    NOT NULL,
+    scene_index       INTEGER NOT NULL DEFAULT 0,
+    scene_type        TEXT    NOT NULL DEFAULT 'buildup',
+    duration_seconds  REAL,
+    suno_prompt       TEXT,
+    suno_job_id       TEXT,
+    suno_track_url    TEXT,
+    suno_track_path   TEXT,
+    selected          INTEGER NOT NULL DEFAULT 0,
+    generation_index  INTEGER NOT NULL DEFAULT 1,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_composor_project ON composor_tracks(project_id)');
+
   // EditΩr: selects table
   db.run(`CREATE TABLE IF NOT EXISTS selects (
     id                        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -881,6 +907,75 @@ function getAnalyticsSummary(projectId) {
 }
 
 // ─────────────────────────────────────────────
+// COMPOSΩR — Track helpers
+// ─────────────────────────────────────────────
+
+function insertComposorTrack(track) {
+  const result = _run(
+    `INSERT INTO composor_tracks
+       (project_id, scene_label, scene_index, scene_type, duration_seconds,
+        suno_prompt, suno_job_id, suno_track_url, suno_track_path,
+        selected, generation_index)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      track.project_id,
+      track.scene_label,
+      track.scene_index        ?? 0,
+      track.scene_type         || 'buildup',
+      track.duration_seconds   || null,
+      track.suno_prompt        || null,
+      track.suno_job_id        || null,
+      track.suno_track_url     || null,
+      track.suno_track_path    || null,
+      track.selected           ? 1 : 0,
+      track.generation_index   ?? 1
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function updateComposorTrack(id, fields) {
+  const allowed = ['suno_job_id', 'suno_track_url', 'suno_track_path', 'selected', 'suno_prompt'];
+  const sets    = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!sets.length) return;
+  const sql     = `UPDATE composor_tracks SET ${sets.map(k => `${k} = ?`).join(', ')} WHERE id = ?`;
+  _run(sql, [...sets.map(k => fields[k]), id]);
+  persist();
+}
+
+function getComposorTracksByProject(projectId) {
+  return _all(
+    `SELECT * FROM composor_tracks WHERE project_id = ? ORDER BY scene_index ASC, generation_index ASC`,
+    [projectId]
+  );
+}
+
+function selectComposorTrack(trackId) {
+  // Get the track to find project + scene
+  const track = _get(`SELECT * FROM composor_tracks WHERE id = ?`, [trackId]);
+  if (!track) return;
+  // Unselect all tracks in same scene
+  _run(
+    `UPDATE composor_tracks SET selected = 0 WHERE project_id = ? AND scene_index = ?`,
+    [track.project_id, track.scene_index]
+  );
+  // Select this one
+  _run(`UPDATE composor_tracks SET selected = 1 WHERE id = ?`, [trackId]);
+  persist();
+}
+
+function deleteComposorTracksByProject(projectId) {
+  _run(`DELETE FROM composor_tracks WHERE project_id = ?`, [projectId]);
+  persist();
+}
+
+function updateProjectComposorState(projectId, state) {
+  _run(`UPDATE projects SET composor_state = ? WHERE id = ?`, [state, projectId]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
 // EDITΩR — Selects helpers
 // ─────────────────────────────────────────────
 
@@ -1001,6 +1096,13 @@ module.exports = {
   getAnalyticsByPost,
   getAnalyticsByProject,
   getAnalyticsSummary,
+  // ComposΩr
+  insertComposorTrack,
+  updateComposorTrack,
+  getComposorTracksByProject,
+  selectComposorTrack,
+  deleteComposorTracksByProject,
+  updateProjectComposorState,
   // EditΩr
   insertSelect,
   getSelectsByProject,

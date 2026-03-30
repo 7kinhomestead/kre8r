@@ -90,9 +90,19 @@ Copy `.env.example` to `.env` and fill in:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-api03-...   # Required for M2/M3/M4 generation and VaultΩr Vision
+SUNO_API_KEY=your-key-here           # Optional — ComposΩr music generation (api.sunoapi.org Pro)
 PORT=3000                             # Optional, defaults to 3000
 CLAUDE_MODEL=claude-sonnet-4-20250514 # Optional, defaults to this value
 ```
+
+### ComposΩr — Suno API Key
+
+`SUNO_API_KEY` is optional. Without it, ComposΩr runs in **Prompt Mode**: Claude still analyzes scenes and writes optimized Suno prompts, but no audio is generated automatically. Each track card shows a "Copy Prompt" button and a link to [suno.com](https://suno.com) for manual generation.
+
+To enable automatic audio generation:
+1. Sign up for a Pro account at [sunoapi.org](https://sunoapi.org)
+2. Copy your API key into `.env` as `SUNO_API_KEY=...`
+3. Restart the server — the ComposΩr UI will show **● Suno API Active**
 
 ---
 

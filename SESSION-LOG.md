@@ -1,3 +1,131 @@
+# Kre8Ωr Session Log — 2026-03-29
+
+## Summary
+
+Session 5 completed ComposΩr (Phase 2) in full, fixed a critical SelectsΩr JSON
+truncation bug, added Prompt Mode manual workflow tooling to ComposΩr, fixed the
+braw-proxy-export.py timeline collision error, and fixed a data-mapping bug that
+was silently preventing ComposΩr tracks from rendering in the UI at all.
+
+---
+
+## What Was Built / Changed
+
+### ComposΩr — Parts E–H (completion of Phase 2)
+
+**`server.js`**
+- Mounted `/api/composor` route.
+
+**`scripts/davinci/place-music.py`** — NEW FILE
+- Opens DaVinci project by name (with `_NNN` suffix scan fallback).
+- Gets or creates `04_AUDIO` timeline.
+- Imports each selected MP3 via `media_pool.ImportMedia`, appends to audio track 1.
+- Places Blue markers at each scene's approximate start position.
+- Renames audio track to `Music -6dB` as a volume reminder.
+- Outputs JSON result to stdout; all logs to stderr.
+
+**`public/composor.html`** — NEW FILE (full UI, 3 sections)
+- **Scene Analysis section**: scene cards with type badge, energy level, emotional direction, genre direction, duration hint.
+- **Track Selection section**: per-scene blocks with 3 variation rows; audio player when audio exists; generating spinner; suno-fallback message; Select button; Copy Prompt button; Open in Suno → link.
+- **DaVinci Status section**: info block, Push to DaVinci button (unlocks when all scenes selected), advance banner.
+- SSE job stream for both generation and DaVinci push.
+- Suno key status pill in project bar (Active / Prompt Mode).
+
+**Nav updated on all 9 pages** — ComposΩr link added between EditΩr and ReviewΩr.
+
+**`public/index.html`** — Added ComposΩr quick-action card; ComposΩr nav tag.
+
+**`SETUP.md`** — Added `SUNO_API_KEY` documentation with Prompt Mode explanation.
+
+---
+
+### ComposΩr — Prompt Mode manual workflow improvements
+
+**`src/routes/composor.js`**
+- Added `POST /api/composor/upload/:project_id` endpoint.
+  - Accepts multipart `file` + `scene_label` + `scene_index`.
+  - Multer saves to `public/music/<project_id>/<scene_slug>/uploaded_<ts>_<name>`.
+  - Inserts track row, marks it selected via `selectComposorTrack()`.
+  - Advances `composor_state` to `complete` if all scenes now have a selection.
+  - 50 MB file size limit; audio MIME + extension filter.
+
+**`public/composor.html`** (Prompt Mode additions)
+- **"Open in Suno →"** link button (purple) per track — opens `suno.com/create` in new tab, appears whenever a prompt exists.
+- **"⬆ Upload Track"** button per scene block — triggers hidden file input, POSTs to `/api/composor/upload`, shows inline status (`Uploading…` → `✓ Uploaded & selected` or error), then reloads tracks.
+- **Data mapping bug fixed**: `loadTracks` was reading `d.groups` (never returned by the API); now correctly builds from `d.scenes[].tracks[]` and derives `public_path` from `suno_track_url` for local files. This was silently preventing all track rendering.
+- **`updateStatusBar` fixed**: was using `d.groups` for track counts — now uses `scenes.flatMap(sc => sc.tracks)`.
+- **`renderTracks` refactored**: now accepts scenes array directly (needed `scene_index` per block for upload targeting).
+
+---
+
+### SelectsΩr — JSON truncation fix (`src/editor/selects.js`)
+
+Three changes to prevent "Claude returned malformed JSON: Unterminated string":
+
+1. **`max_tokens` raised from 4096 → 8192** — previous limit was being hit with dense multi-clip selects output.
+
+2. **Transcript summarization** (`TRANSCRIPT_WORD_LIMIT = 6000`):
+   - Before building the Claude prompt, counts total words across all transcripts.
+   - If > 6000 words: each clip's transcript is trimmed to `max(100, floor(6000 / clipCount))` words.
+   - `truncateTranscript()` keeps leading segments plus the final segment as a tail anchor (so Claude still knows clip duration).
+   - Progress event `transcript_trim` emitted with `total_words` and `budget_per_clip`.
+
+3. **JSON repair** (`repairJSON` + `findLastCompleteSection`):
+   - If `JSON.parse` fails, walks the `sections` array character-by-character tracking brace depth.
+   - Finds the last `}` that closes a complete section object.
+   - Appends `],"overall_notes":"[truncated...]"}` and attempts a second parse.
+   - Falls through to the original error only if repair also fails.
+
+---
+
+### braw-proxy-export.py — Timeline collision fix
+
+**`scripts/davinci/braw-proxy-export.py`** — `create_proxy_source_timeline()` rewritten:
+
+**Root cause**: `DeleteTimelines()` was called but its return value was discarded. When deletion silently failed (Resolve returns `False` for timelines that are current or locked), `CreateEmptyTimeline` was called with the same name → returned `None` → bare `RuntimeError`.
+
+**Fix (4-step strategy)**:
+1. Scan all timelines by index, find existing match — log index found.
+2. Call `DeleteTimelines([tl])`, capture return value, log `succeeded` or `FAILED`.
+3. Create with original name only if nothing existed or deletion confirmed.
+   - If `CreateEmptyTimeline` still returns `None` after reported success → log and fall through.
+4. Timestamp fallback: `00_PROXY_SOURCE_<unix_timestamp>` — guaranteed unique.
+   - If this also fails → `RuntimeError` with manual instructions.
+
+Every decision path produces a `[timeline]` log line to stderr.
+
+---
+
+## Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `server.js` | Mount `/api/composor` |
+| `scripts/davinci/place-music.py` | NEW — DaVinci 04_AUDIO timeline placement |
+| `scripts/davinci/braw-proxy-export.py` | Fix timeline collision (4-step deletion strategy) |
+| `src/routes/composor.js` | Add `/upload/:project_id` endpoint + multer |
+| `src/editor/selects.js` | max_tokens 8192, transcript trim, JSON repair |
+| `public/composor.html` | NEW — full ComposΩr UI; fixed data mapping bugs |
+| `public/index.html` | ComposΩr quick-action card + nav tag |
+| `public/vault.html` | ComposΩr nav link |
+| `public/editor.html` | ComposΩr nav link |
+| `public/reviewr.html` | ComposΩr nav link |
+| `public/m1-approval-dashboard.html` | ComposΩr nav link |
+| `public/m2-package-generator.html` | ComposΩr nav link |
+| `public/m3-caption-generator.html` | ComposΩr nav link |
+| `public/m4-email-generator.html` | ComposΩr nav link |
+| `public/m5-analytics.html` | ComposΩr nav link |
+| `public/operator.html` | ComposΩr nav link |
+| `SETUP.md` | SUNO_API_KEY docs + Prompt Mode explanation |
+
+## Known Issues Carried Forward
+
+- `broll-bridge.js` line ~85: wrong column `resolve_project_name` → should be `project.davinci_project_name` (silent fallback to `project.title`, functionally OK for now).
+- `broll-bridge.js` line ~92: `project.fps` doesn't exist → silently defaults to 24 (fine for current footage).
+- ComposΩr `suno_track_path` (local disk path) is saved to DB but `public_path` (`/music/...` URL) is never persisted for Suno-generated tracks — only works for uploaded tracks. Will need a DB column or route-level derivation if Suno generation is enabled.
+
+---
+
 # Kre8Ωr Session Log — 2026-03-28
 
 ## Summary

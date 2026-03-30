@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — ComposΩr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10); --amber-border:rgba(240,185,66,0.30);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10); --red-border:rgba(224,92,92,0.30);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10); --green-border:rgba(92,186,138,0.30);
+    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10); --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  /* ── NAV ── */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(14,15,14,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;}
+  .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);text-decoration:none;}
+  .nav{display:flex;gap:4px;align-items:center;}
+  .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
+  .nav a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav a.active{background:var(--teal-glow);color:var(--teal);}
+  .nav-dropdown{position:relative;display:inline-flex;}
+  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-block;white-space:nowrap;line-height:1.5;}
+  .nav-drop-btn:hover,.nav-dropdown:hover .nav-drop-btn{background:var(--bg-card-2);color:var(--text);}
+  .nav-drop-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);min-width:156px;display:none;z-index:300;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .nav-dropdown:hover .nav-drop-menu{display:block;}
+  .nav-drop-menu a{display:block;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:4px;transition:all 0.15s;white-space:nowrap;}
+  .nav-drop-menu a:hover{background:var(--bg-card-2);color:var(--text);}
+
+  /* ── LAYOUT ── */
+  .main{max-width:1100px;margin:0 auto;padding:24px 16px 80px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+  /* ── PAGE HEADER ── */
+  .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(32px,7vw,52px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;line-height:1.6;}
+
+  /* ── PROJECT SELECTOR ── */
+  .project-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;animation:fadeUp 0.4s 0.05s ease both;}
+  .field-wrap{display:flex;flex-direction:column;gap:5px;}
+  .field-label{font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;}
+  .project-select{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 12px;outline:none;cursor:pointer;min-width:220px;}
+  .project-select:focus{border-color:var(--teal-dim);}
+
+  /* ── BUTTONS ── */
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-body);font-size:13px;font-weight:600;padding:9px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .btn-primary{background:var(--teal);color:#0e0f0e;}
+  .btn-primary:hover:not(:disabled){background:var(--teal-dim);}
+  .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
+  .btn-ghost:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-green{background:var(--green);color:#0e0f0e;}
+  .btn-green:hover:not(:disabled){filter:brightness(1.1);}
+  .btn-green:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-amber{background:transparent;border:1px solid var(--amber-border);color:var(--amber);}
+  .btn-amber:hover:not(:disabled){background:var(--amber-glow);}
+  .btn-amber:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-danger{background:transparent;border:1px solid var(--red-border);color:var(--red);}
+  .btn-danger:hover:not(:disabled){background:var(--red-glow);}
+  .btn-danger:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-selected{background:var(--green-glow);border:1px solid var(--green-border);color:var(--green);}
+  .btn-sm{padding:6px 12px;font-size:12px;}
+  .spinner{width:14px;height:14px;border:2px solid rgba(14,15,14,0.3);border-top-color:#0e0f0e;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0;}
+  .spinner-teal{border-color:var(--teal-glow);border-top-color:var(--teal);}
+
+  /* ── STATUS PILLS ── */
+  .status-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;animation:fadeUp 0.4s 0.1s ease both;}
+  .status-pill{display:flex;align-items:center;gap:7px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:500;}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .dot-green{background:var(--green);} .dot-amber{background:var(--amber);} .dot-teal{background:var(--teal);} .dot-dim{background:var(--text-dimmer);} .dot-red{background:var(--red);}
+  .status-pill .label{color:var(--text-dim);} .status-pill .val{color:var(--text);}
+
+  /* ── PROGRESS PANEL ── */
+  .progress-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;display:none;animation:fadeUp 0.3s ease both;}
+  .progress-wrap.visible{display:block;}
+  .progress-title{font-family:var(--font-head);font-size:16px;letter-spacing:1.5px;color:var(--teal);margin-bottom:10px;}
+  .progress-bar-outer{background:var(--bg-card-2);border-radius:4px;height:5px;margin-bottom:10px;overflow:hidden;}
+  .progress-bar-inner{height:100%;background:var(--teal);border-radius:4px;width:0;transition:width 0.4s ease;}
+  .progress-log{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;max-height:180px;overflow-y:auto;font-size:12px;font-family:monospace;color:var(--text-dim);line-height:1.7;}
+  .progress-log .ok{color:var(--green);}
+  .progress-log .warn{color:var(--amber);}
+  .progress-log .err{color:var(--red);}
+
+  /* ── SECTIONS ── */
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .section-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text);}
+  .section-title em{font-style:normal;color:var(--teal);}
+  .section-divider{border:none;border-top:1px solid var(--border);margin:32px 0;}
+
+  /* ── SCENE ANALYSIS SECTION ── */
+  .analyze-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;animation:fadeUp 0.4s 0.1s ease both;}
+
+  /* ── SCENE CARDS ── */
+  .scenes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;animation:fadeUp 0.4s 0.15s ease both;}
+  .scene-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:border-color 0.15s;}
+  .scene-card:hover{border-color:var(--border-bright);}
+  .scene-card-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;}
+  .scene-num{font-family:var(--font-head);font-size:28px;color:var(--text-dimmer);line-height:1;min-width:32px;}
+  .scene-info{flex:1;}
+  .scene-label{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .scene-badges{display:flex;gap:6px;flex-wrap:wrap;}
+  .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;}
+  .badge-type{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+  .badge-energy{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-border);}
+  .scene-field-label{font-size:10px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-top:10px;margin-bottom:3px;}
+  .scene-field-val{font-size:12px;color:var(--text-dim);line-height:1.5;}
+  .scene-duration{font-size:11px;color:var(--text-dimmer);margin-top:6px;}
+
+  /* ── TRACK SELECTION SECTION ── */
+  .tracks-outer{display:flex;flex-direction:column;gap:20px;animation:fadeUp 0.4s 0.1s ease both;}
+  .track-scene-block{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .track-scene-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--bg-card-2);}
+  .track-scene-name{font-family:var(--font-head);font-size:18px;letter-spacing:1.5px;color:var(--text);}
+  .track-scene-meta{font-size:11px;color:var(--text-dimmer);}
+  .track-scene-selected{font-size:11px;color:var(--green);font-weight:600;}
+  .tracks-list{display:flex;flex-direction:column;gap:0;}
+  .track-row{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);transition:background 0.15s;}
+  .track-row:last-child{border-bottom:none;}
+  .track-row:hover{background:rgba(255,255,255,0.02);}
+  .track-row.is-selected{background:var(--green-glow);border-left:3px solid var(--green);}
+  .track-row.is-generating{opacity:0.7;}
+  .track-var{font-family:var(--font-head);font-size:22px;color:var(--text-dimmer);min-width:28px;line-height:1.4;}
+  .track-content{flex:1;min-width:0;}
+  .track-prompt{font-size:12px;color:var(--text-dim);line-height:1.6;margin-bottom:10px;}
+  .track-audio{width:100%;height:32px;border-radius:4px;accent-color:var(--teal);margin-bottom:8px;}
+  .track-audio-placeholder{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dimmer);margin-bottom:8px;padding:6px 0;}
+  .track-audio-placeholder .spinner-teal{width:12px;height:12px;}
+  .track-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .suno-fallback{display:flex;align-items:center;gap:8px;background:var(--amber-glow);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:8px 12px;font-size:11px;color:var(--amber);line-height:1.4;}
+  .suno-fallback a{color:var(--amber);font-weight:600;}
+  .btn-suno{background:transparent;border:1px solid rgba(167,139,250,0.35);color:var(--purple);font-size:12px;}
+  .btn-suno:hover{background:var(--purple-glow);border-color:var(--purple);}
+  .upload-scene-bar{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--border);background:rgba(92,186,138,0.03);}
+  .upload-scene-label{font-size:11px;color:var(--text-dimmer);flex:1;}
+  .upload-input{display:none;}
+  .upload-status{font-size:11px;color:var(--green);display:none;}
+
+  /* ── ADVANCE BANNER ── */
+  .advance-banner{background:linear-gradient(135deg,var(--teal-glow) 0%,var(--bg-card) 100%);border:1px solid rgba(62,207,178,0.3);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;display:none;animation:fadeUp 0.4s ease both;}
+  .advance-banner.visible{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .advance-text{flex:1;}
+  .advance-title{font-family:var(--font-head);font-size:18px;letter-spacing:2px;color:var(--teal);margin-bottom:4px;}
+  .advance-sub{font-size:13px;color:var(--text-dim);}
+
+  /* ── DAVINCI SECTION ── */
+  .davinci-block{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;animation:fadeUp 0.4s 0.1s ease both;}
+  .davinci-info{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:16px;}
+  .davinci-info strong{color:var(--text);}
+
+  /* ── EMPTY STATE ── */
+  .empty-state{text-align:center;padding:48px 20px;color:var(--text-dim);}
+  .empty-icon{font-size:44px;margin-bottom:14px;opacity:0.5;}
+  .empty-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;margin-bottom:8px;color:var(--text);}
+  .empty-sub{font-size:13px;line-height:1.6;max-width:360px;margin:0 auto;}
+
+  /* ── SUNO STATUS ── */
+  .suno-key-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;}
+  .suno-key-ok{background:var(--green-glow);color:var(--green);border:1px solid var(--green-border);}
+  .suno-key-missing{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-border);}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R</a>
+  <div class="nav">
+    <a href="/vault.html">VaultΩr</a>
+    <a href="/editor.html">EditΩr</a>
+    <a href="/composor.html" class="active">ComposΩr</a>
+    <a href="/reviewr.html">ReviewΩr</a>
+    <a href="/m5-analytics.html">AnalytΩr</a>
+    <a href="/operator.html">OperatΩr</a>
+    <div class="nav-dropdown">
+      <button class="nav-drop-btn">Distribut<span style="color:var(--teal)">Ω</span>r ▾</button>
+      <div class="nav-drop-menu">
+        <a href="/m1-approval-dashboard.html">GateΩr</a>
+        <a href="/m2-package-generator.html">PackageΩr</a>
+        <a href="/m3-caption-generator.html">CaptionΩr</a>
+        <a href="/m4-email-generator.html">MailΩr</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-title">COMPOS<em>Ω</em>R</div>
+    <div class="page-sub">AI film scoring. Claude identifies scenes → writes Suno prompts → generates music → one click to DaVinci.</div>
+  </div>
+
+  <!-- PROJECT SELECTOR -->
+  <div class="project-bar">
+    <div class="field-wrap">
+      <div class="field-label">Project</div>
+      <select class="project-select" id="projectSelect">
+        <option value="">— select a project —</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="generateBtn" disabled>
+      <span class="spinner" id="generateSpinner" style="display:none"></span>
+      Generate Music
+    </button>
+    <button class="btn btn-ghost" id="reanalyzeBtn" disabled title="Re-run scene analysis only (no Suno)">
+      Analyze Scenes
+    </button>
+    <button class="btn btn-danger btn-sm" id="clearBtn" disabled style="margin-left:auto">Clear</button>
+    <span id="sunoKeyStatus"></span>
+  </div>
+
+  <!-- STATUS PILLS -->
+  <div class="status-bar" id="statusBar" style="display:none">
+    <div class="status-pill">
+      <div class="status-dot" id="stateDot"></div>
+      <span class="label">State:</span>
+      <span class="val" id="stateVal">—</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot dot-teal"></div>
+      <span class="label">Scenes:</span>
+      <span class="val" id="scenesCount">0</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot dot-amber"></div>
+      <span class="label">Tracks:</span>
+      <span class="val" id="tracksCount">0</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot dot-green"></div>
+      <span class="label">Selected:</span>
+      <span class="val" id="selectedCount">0</span>
+    </div>
+  </div>
+
+  <!-- ADVANCE BANNER -->
+  <div class="advance-banner" id="advanceBanner">
+    <div class="advance-text">
+      <div class="advance-title">ALL SCENES SELECTED</div>
+      <div class="advance-sub">Push your music to DaVinci Resolve 04_AUDIO timeline to complete the score.</div>
+    </div>
+    <button class="btn btn-green" id="davinciBtn">
+      <span class="spinner" id="davinciSpinner" style="display:none"></span>
+      Push to DaVinci
+    </button>
+  </div>
+
+  <!-- GENERATION PROGRESS -->
+  <div class="progress-wrap" id="genProgress">
+    <div class="progress-title">COMPOSING</div>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="genBar"></div></div>
+    <div class="progress-log" id="genLog"></div>
+  </div>
+
+  <!-- DAVINCI PROGRESS -->
+  <div class="progress-wrap" id="davinciProgress">
+    <div class="progress-title">PLACING IN DAVINCI</div>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="davinciBar"></div></div>
+    <div class="progress-log" id="davinciLog"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SECTION 1 — SCENE ANALYSIS
+  ════════════════════════════════════════════ -->
+  <div id="sceneSection">
+    <div class="section-header">
+      <div class="section-title">SCENE ANALY<em>Ω</em>SIS</div>
+    </div>
+
+    <div id="scenesEmpty" class="empty-state">
+      <div class="empty-icon">🎼</div>
+      <div class="empty-title">NO SCENES YET</div>
+      <div class="empty-sub">Select a project and click "Generate Music" to run full scene analysis and music generation. Or click "Analyze Scenes" for a preview first.</div>
+    </div>
+
+    <div class="scenes-grid" id="scenesGrid" style="display:none"></div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- ═══════════════════════════════════════════
+       SECTION 2 — TRACK SELECTION
+  ════════════════════════════════════════════ -->
+  <div id="trackSection">
+    <div class="section-header">
+      <div class="section-title">TRACK SELECTI<em>Ω</em>N</div>
+      <div style="font-size:12px;color:var(--text-dim)">Pick one track per scene. Audio generates in background.</div>
+    </div>
+
+    <div id="tracksEmpty" class="empty-state">
+      <div class="empty-icon">🎵</div>
+      <div class="empty-title">NO TRACKS YET</div>
+      <div class="empty-sub">Run music generation to see tracks here. Each scene gets 3 variations to choose from.</div>
+    </div>
+
+    <div class="tracks-outer" id="tracksOuter" style="display:none"></div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- ═══════════════════════════════════════════
+       SECTION 3 — DAVINCI STATUS
+  ════════════════════════════════════════════ -->
+  <div id="davinciSection">
+    <div class="section-header">
+      <div class="section-title">DAVINCI STATU<em>Ω</em>S</div>
+    </div>
+    <div class="davinci-block">
+      <div class="davinci-info">
+        <strong>04_AUDIO Timeline</strong> — Once all scenes have a selected track, click <em>Push to DaVinci</em> to create the <code>04_AUDIO</code> timeline in your Resolve project. Each selected track is placed at its scene's approximate start position on the Music audio track at −6 dB.
+      </div>
+      <div id="davinciStatusMsg" style="font-size:13px;color:var(--text-dim)">Select all scenes to unlock the DaVinci push.</div>
+    </div>
+  </div>
+
+</div><!-- /.main -->
+
+<script>
+'use strict';
+
+// ─── STATE ───────────────────────────────────
+let projectId   = null;
+let scenes      = [];
+let trackGroups = {};   // { scene_label: [track, ...] }
+let sunoOk      = false;
+let pollTimer   = null;
+
+// ─── DOM REFS ─────────────────────────────────
+const projectSelect  = document.getElementById('projectSelect');
+const generateBtn    = document.getElementById('generateBtn');
+const generateSpinner= document.getElementById('generateSpinner');
+const reanalyzeBtn   = document.getElementById('reanalyzeBtn');
+const clearBtn       = document.getElementById('clearBtn');
+const sunoKeyStatus  = document.getElementById('sunoKeyStatus');
+const statusBar      = document.getElementById('statusBar');
+const stateDot       = document.getElementById('stateDot');
+const stateVal       = document.getElementById('stateVal');
+const scenesCount    = document.getElementById('scenesCount');
+const tracksCount    = document.getElementById('tracksCount');
+const selectedCount  = document.getElementById('selectedCount');
+const advanceBanner  = document.getElementById('advanceBanner');
+const davinciBtn     = document.getElementById('davinciBtn');
+const davinciSpinner = document.getElementById('davinciSpinner');
+const genProgress    = document.getElementById('genProgress');
+const genBar         = document.getElementById('genBar');
+const genLog         = document.getElementById('genLog');
+const davinciProgress= document.getElementById('davinciProgress');
+const davinciBar     = document.getElementById('davinciBar');
+const davinciLog     = document.getElementById('davinciLog');
+const scenesEmpty    = document.getElementById('scenesEmpty');
+const scenesGrid     = document.getElementById('scenesGrid');
+const tracksEmpty    = document.getElementById('tracksEmpty');
+const tracksOuter    = document.getElementById('tracksOuter');
+const davinciStatusMsg=document.getElementById('davinciStatusMsg');
+
+// ─── INIT ─────────────────────────────────────
+async function init() {
+  await checkSunoKey();
+  await loadProjects();
+}
+
+async function checkSunoKey() {
+  try {
+    const r = await fetch('/api/composor/check');
+    const d = await r.json();
+    sunoOk = d.suno_configured;
+    sunoKeyStatus.innerHTML = sunoOk
+      ? '<span class="suno-key-pill suno-key-ok">● Suno API Active</span>'
+      : '<span class="suno-key-pill suno-key-missing">⚠ No Suno Key — Prompt Mode</span>';
+  } catch(e) {
+    sunoKeyStatus.innerHTML = '<span class="suno-key-pill suno-key-missing">⚠ API Offline</span>';
+  }
+}
+
+async function loadProjects() {
+  const r = await fetch('/api/projects');
+  const d = await r.json();
+  projectSelect.innerHTML = '<option value="">— select a project —</option>';
+  (d.projects || []).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.title || `Project ${p.id}`;
+    projectSelect.appendChild(opt);
+  });
+}
+
+projectSelect.addEventListener('change', () => {
+  projectId = projectSelect.value || null;
+  generateBtn.disabled = !projectId;
+  reanalyzeBtn.disabled = !projectId;
+  clearBtn.disabled = !projectId;
+  if (projectId) loadTracks();
+});
+
+// ─── LOAD TRACKS ──────────────────────────────
+async function loadTracks() {
+  if (!projectId) return;
+  try {
+    const r = await fetch(`/api/composor/tracks/${projectId}`);
+    const d = await r.json();
+    if (!r.ok) return;
+
+    // API returns d.scenes = [{ scene_index, scene_label, ..., tracks: [...] }]
+    // Build flat trackGroups and decorate each track with public_path
+    scenes = d.scenes || [];
+    for (const sc of scenes) {
+      sc.tracks = (sc.tracks || []).map(t => ({
+        ...t,
+        project_id:  projectId,
+        // suno_track_url is the local /music/... URL for uploaded/downloaded tracks
+        public_path: (t.suno_track_url && t.suno_track_url.startsWith('/'))
+                     ? t.suno_track_url : null
+      }));
+    }
+    trackGroups = {};
+    for (const sc of scenes) trackGroups[sc.scene_label] = sc.tracks;
+
+    renderScenes(scenes);
+    renderTracks(scenes);
+    updateStatusBar(d);
+
+    // If job is running, start polling
+    if (d.state === 'generating') {
+      // just keep polling tracks every 10s
+      startTrackPoll();
+    }
+  } catch(e) {
+    console.error('loadTracks error:', e);
+  }
+}
+
+function startTrackPoll() {
+  if (pollTimer) return;
+  pollTimer = setInterval(async () => {
+    await loadTracks();
+    const bar = document.querySelector('.progress-bar-inner');
+    if (scenes.length > 0 && Object.keys(trackGroups).length >= scenes.length) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }, 8000);
+}
+
+// ─── RENDER SCENES ────────────────────────────
+function renderScenes(scenes) {
+  if (!scenes || scenes.length === 0) {
+    scenesEmpty.style.display = '';
+    scenesGrid.style.display  = 'none';
+    return;
+  }
+  scenesEmpty.style.display = 'none';
+  scenesGrid.style.display  = '';
+  scenesGrid.innerHTML = scenes.map(s => `
+    <div class="scene-card">
+      <div class="scene-card-head">
+        <div class="scene-num">${String(s.scene_index + 1).padStart(2, '0')}</div>
+        <div class="scene-info">
+          <div class="scene-label">${esc(s.scene_label)}</div>
+          <div class="scene-badges">
+            <span class="badge badge-type">${esc(s.scene_type || 'buildup')}</span>
+            <span class="badge badge-energy">E${s.energy_level || '?'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-field-label">Emotional Direction</div>
+      <div class="scene-field-val">${esc(s.emotional_direction || '—')}</div>
+      <div class="scene-field-label">Genre Direction</div>
+      <div class="scene-field-val">${esc(s.genre_direction || '—')}</div>
+      ${s.duration_seconds ? `<div class="scene-duration">${s.duration_seconds}s${s.start_hint ? ' · ' + esc(s.start_hint) : ''}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ─── RENDER TRACKS ────────────────────────────
+function renderTracks(sceneList) {
+  const active = (sceneList || []).filter(sc => (sc.tracks || []).length > 0);
+  if (active.length === 0) {
+    tracksEmpty.style.display = '';
+    tracksOuter.style.display = 'none';
+    return;
+  }
+  tracksEmpty.style.display = 'none';
+  tracksOuter.style.display = '';
+
+  tracksOuter.innerHTML = active.map(sc => {
+    const tracks   = sc.tracks || [];
+    const selected = tracks.find(t => t.selected);
+    const scIdx    = sc.scene_index;
+    return `
+      <div class="track-scene-block">
+        <div class="track-scene-head">
+          <div>
+            <div class="track-scene-name">${esc(sc.scene_label)}</div>
+            <div class="track-scene-meta">${tracks.length} variation${tracks.length !== 1 ? 's' : ''}</div>
+          </div>
+          ${selected ? '<div class="track-scene-selected">✓ SELECTED</div>' : ''}
+        </div>
+        <div class="tracks-list">
+          ${tracks.map(t => renderTrackRow(t)).join('')}
+        </div>
+        <div class="upload-scene-bar">
+          <span class="upload-scene-label">Upload your own MP3 for this scene</span>
+          <input type="file" class="upload-input" id="upload-input-${scIdx}"
+                 accept="audio/*,.mp3,.wav,.m4a" onchange="uploadTrack(${scIdx}, '${esc(sc.scene_label).replace(/'/g,"\\'")}', this)">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('upload-input-${scIdx}').click()">⬆ Upload Track</button>
+          <span class="upload-status" id="upload-status-${scIdx}"></span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTrackRow(t) {
+  const hasAudio   = !!t.public_path;
+  const isSelected = !!t.selected;
+  const isGenning  = !hasAudio && !!t.suno_prompt;
+
+  let audioEl = '';
+  if (hasAudio) {
+    audioEl = `<audio class="track-audio" controls src="${esc(t.public_path)}" preload="none"></audio>`;
+  } else if (isGenning && sunoOk) {
+    audioEl = `<div class="track-audio-placeholder"><span class="spinner spinner-teal"></span> Generating audio…</div>`;
+  } else if (t.suno_prompt && !sunoOk) {
+    audioEl = `<div class="suno-fallback">No Suno key — generate manually then upload above</div>`;
+  }
+
+  const selectBtnClass = isSelected ? 'btn btn-selected btn-sm' : 'btn btn-ghost btn-sm';
+  const selectBtnText  = isSelected ? '✓ Selected' : 'Select';
+  const promptAttr     = t.suno_prompt ? esc(t.suno_prompt).replace(/'/g, '&#39;') : '';
+
+  return `
+    <div class="track-row${isSelected ? ' is-selected' : ''}${isGenning ? ' is-generating' : ''}" id="track-row-${t.id}">
+      <div class="track-var">V${t.generation_index}</div>
+      <div class="track-content">
+        ${t.suno_prompt ? `<div class="track-prompt">${esc(t.suno_prompt)}</div>` : '<div class="track-prompt" style="color:var(--text-dimmer);font-style:italic">No prompt generated</div>'}
+        ${audioEl}
+        <div class="track-actions">
+          <button class="${selectBtnClass}" onclick="selectTrack(${t.id}, ${t.project_id})" ${isSelected ? 'disabled' : ''}>
+            ${selectBtnText}
+          </button>
+          ${t.suno_prompt ? `<button class="btn btn-ghost btn-sm" onclick="copyPrompt(this, '${promptAttr}')">Copy Prompt</button>` : ''}
+          ${t.suno_prompt ? `<a href="https://suno.com/create" target="_blank" rel="noopener" class="btn btn-suno btn-sm">Open in Suno →</a>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── UPDATE STATUS BAR ────────────────────────
+function updateStatusBar(d) {
+  statusBar.style.display = projectId ? '' : 'none';
+  const state = d.state || 'idle';
+  stateVal.textContent = state;
+
+  const dotMap = { idle:'dot-dim', analyzing:'dot-amber', generating:'dot-amber', complete:'dot-green', error:'dot-red' };
+  stateDot.className = 'status-dot ' + (dotMap[state] || 'dot-dim');
+
+  const allScenes = d.scenes || [];
+  const allTracks = allScenes.flatMap(sc => sc.tracks || []);
+  const selTracks = allTracks.filter(t => t.selected);
+
+  scenesCount.textContent   = allScenes.length;
+  tracksCount.textContent   = allTracks.length;
+  selectedCount.textContent = selTracks.length;
+
+  // Advance banner: all scenes covered
+  const allSelected = allScenes.length > 0 && selTracks.length >= allScenes.length;
+  advanceBanner.classList.toggle('visible', allSelected);
+  davinciStatusMsg.textContent = allSelected
+    ? 'All scenes scored. Ready to push to DaVinci.'
+    : `${selTracks.length} of ${allScenes.length} scenes selected.`;
+}
+
+// ─── SELECT TRACK ─────────────────────────────
+async function selectTrack(trackId, pid) {
+  try {
+    const r = await fetch('/api/composor/select', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ track_id: trackId, project_id: pid })
+    });
+    if (!r.ok) { alert('Selection failed'); return; }
+    await loadTracks();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ─── UPLOAD TRACK ─────────────────────────────
+async function uploadTrack(sceneIndex, sceneLabel, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById(`upload-status-${sceneIndex}`);
+  statusEl.textContent = 'Uploading…';
+  statusEl.style.display = '';
+  statusEl.style.color = 'var(--text-dim)';
+
+  const form = new FormData();
+  form.append('file',        file);
+  form.append('scene_label', sceneLabel);
+  form.append('scene_index', String(sceneIndex));
+
+  try {
+    const r = await fetch(`/api/composor/upload/${projectId}`, { method: 'POST', body: form });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Upload failed');
+
+    statusEl.textContent = '✓ Uploaded & selected';
+    statusEl.style.color = 'var(--green)';
+    input.value = '';          // reset so same file can be re-uploaded if needed
+    await loadTracks();
+  } catch(e) {
+    statusEl.textContent = '✗ ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+// ─── COPY PROMPT ──────────────────────────────
+function copyPrompt(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+// ─── GENERATE ─────────────────────────────────
+generateBtn.addEventListener('click', async () => {
+  if (!projectId) return;
+  setGenerating(true);
+  showProgress(genProgress, genBar, genLog, 0, '');
+
+  const r = await fetch(`/api/composor/generate/${projectId}`, { method: 'POST' });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    logLine(genLog, 'err', `Error: ${err.error || 'Unknown'}`);
+    setGenerating(false);
+    return;
+  }
+  const { job_id } = await r.json();
+  streamJob(job_id, genBar, genLog, () => {
+    setGenerating(false);
+    genProgress.classList.remove('visible');
+    loadTracks();
+  });
+});
+
+// ─── ANALYZE ONLY ─────────────────────────────
+reanalyzeBtn.addEventListener('click', async () => {
+  if (!projectId) return;
+  reanalyzeBtn.disabled = true;
+  reanalyzeBtn.textContent = 'Analyzing…';
+  try {
+    const r = await fetch(`/api/composor/analyze/${projectId}`, { method: 'POST' });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || 'Analysis failed'); return; }
+    scenes = d.scenes || [];
+    renderScenes(scenes);
+    updateStatusBar({ state: 'analyzed', scenes, groups: trackGroups });
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    reanalyzeBtn.disabled = false;
+    reanalyzeBtn.textContent = 'Analyze Scenes';
+  }
+});
+
+// ─── CLEAR ────────────────────────────────────
+clearBtn.addEventListener('click', async () => {
+  if (!projectId) return;
+  if (!confirm('Clear all tracks and analysis for this project?')) return;
+  await fetch(`/api/composor/tracks/${projectId}`, { method: 'DELETE' });
+  scenes = []; trackGroups = {};
+  renderScenes([]);
+  renderTracks({});
+  updateStatusBar({ state: 'idle', scenes: [], groups: {} });
+});
+
+// ─── DAVINCI PUSH ─────────────────────────────
+davinciBtn.addEventListener('click', async () => {
+  if (!projectId) return;
+  davinciSpinner.style.display = '';
+  davinciBtn.disabled = true;
+  showProgress(davinciProgress, davinciBar, davinciLog, 0, '');
+
+  const r = await fetch(`/api/composor/import-to-davinci/${projectId}`, { method: 'POST' });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    logLine(davinciLog, 'err', `Error: ${err.error || 'Unknown'}`);
+    davinciSpinner.style.display = 'none';
+    davinciBtn.disabled = false;
+    return;
+  }
+  const { job_id } = await r.json();
+  streamJob(job_id, davinciBar, davinciLog, () => {
+    davinciSpinner.style.display = 'none';
+    davinciBtn.disabled = false;
+  });
+});
+
+// ─── SSE JOB STREAM ───────────────────────────
+function streamJob(jobId, barEl, logEl, onDone) {
+  const es = new EventSource(`/api/composor/status/${jobId}`);
+
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === 'progress') {
+      const pct = msg.data?.percent ?? 0;
+      barEl.style.width = pct + '%';
+      if (msg.data?.message) logLine(logEl, '', msg.data.message);
+    }
+
+    if (msg.type === 'event') {
+      const d = msg.data || {};
+      const line = formatStageLog(d);
+      if (line) logLine(logEl, stageClass(d.stage), line);
+      if (d.percent != null) barEl.style.width = d.percent + '%';
+      // Refresh tracks whenever a track is ready
+      if (d.stage === 'track_saved' || d.stage === 'suno_downloaded') {
+        loadTracks();
+      }
+    }
+
+    if (msg.type === 'done') {
+      barEl.style.width = '100%';
+      logLine(logEl, 'ok', '✓ Complete');
+      es.close();
+      onDone?.();
+    }
+
+    if (msg.type === 'error') {
+      logLine(logEl, 'err', `✗ ${msg.data?.error || 'Failed'}`);
+      es.close();
+      onDone?.();
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    onDone?.();
+  };
+}
+
+function formatStageLog(d) {
+  switch(d.stage) {
+    case 'start':            return `Starting analysis for "${d.project}"`;
+    case 'data_loaded':      return `Loaded ${d.sections} sections`;
+    case 'claude_start':     return 'Asking Claude to identify scenes…';
+    case 'analysis_done':    return `Found ${d.scenes} scenes`;
+    case 'scene_start':      return `Scene: ${d.scene_label}`;
+    case 'writing_prompt':   return `Writing variation ${d.generation_index}…`;
+    case 'prompt_written':   return `V${d.generation_index}: ${d.prompt_preview}…`;
+    case 'track_saved':      return `Saved track: ${d.scene_label} V${d.generation_index}`;
+    case 'suno_submit':      return `Submitting to Suno: ${d.scene_label} V${d.generation_index}`;
+    case 'suno_submitted':   return `Suno job queued (${d.taskId})`;
+    case 'suno_poll':        return `Waiting for audio… (${d.status})`;
+    case 'suno_downloading': return `Downloading ${d.dest}`;
+    case 'suno_downloaded':  return `✓ Audio ready: ${d.path}`;
+    case 'suno_skip':        return `No Suno key — prompt only for ${d.scene_label}`;
+    case 'all_done':         return `Done — ${d.scenes} scenes, ${d.tracks} tracks`;
+    case 'davinci_start':    return 'Connecting to DaVinci Resolve…';
+    case 'davinci_done':     return `✓ ${d.placed} track${d.placed !== 1 ? 's' : ''} placed in ${d.timeline}`;
+    default:                 return d.stage ? `[${d.stage}]` : null;
+  }
+}
+
+function stageClass(stage) {
+  if (!stage) return '';
+  if (stage.includes('error') || stage.includes('fail')) return 'err';
+  if (stage === 'suno_downloaded' || stage === 'all_done' || stage === 'davinci_done') return 'ok';
+  if (stage === 'suno_skip') return 'warn';
+  return '';
+}
+
+// ─── HELPERS ──────────────────────────────────
+function setGenerating(on) {
+  generateBtn.disabled   = on;
+  generateSpinner.style.display = on ? '' : 'none';
+  reanalyzeBtn.disabled  = on;
+  clearBtn.disabled      = on;
+}
+
+function showProgress(wrap, bar, log, pct, msg) {
+  wrap.classList.add('visible');
+  bar.style.width = pct + '%';
+  if (msg) logLine(log, '', msg);
+}
+
+function logLine(logEl, cls, text) {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = text;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ─── BOOT ─────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -125,28 +125,104 @@ def find_or_create_bin(media_pool, parent_folder, bin_name):
 def create_proxy_source_timeline(project, media_pool, root_folder,
                                   timeline_name="00_PROXY_SOURCE"):
     """
-    Delete any existing 00_PROXY_SOURCE timeline and create a fresh one.
+    Create a fresh proxy source timeline for this run.
+
+    Strategy:
+      1. Scan all timelines and find any existing match by name.
+      2. If found, call DeleteTimelines([tl]) and check the return value.
+      3. If deletion confirmed → create with the original name.
+      4. If deletion failed or CreateEmptyTimeline still returns None →
+         fall back to '00_PROXY_SOURCE_<unix_timestamp>' to guarantee uniqueness.
+      5. Every decision is logged to stderr.
+
     Returns the new Timeline object.
     """
-    get_count = getattr(project, "GetTimelineCount", None)
+    get_count  = getattr(project, "GetTimelineCount",  None)
     get_by_idx = getattr(project, "GetTimelineByIndex", None)
-    delete_tls = getattr(project, "DeleteTimelines", None)
+    delete_tls = getattr(project, "DeleteTimelines",    None)
 
-    if callable(get_count) and callable(get_by_idx) and callable(delete_tls):
+    # ── 1. Find existing timeline ─────────────────────────────────────────────
+    existing_tl = None
+
+    if callable(get_count) and callable(get_by_idx):
         count = get_count() or 0
         for i in range(1, count + 1):
             tl = get_by_idx(i)
             get_name = getattr(tl, "GetName", None) if tl else None
             if callable(get_name) and get_name() == timeline_name:
-                delete_tls([tl])
-                print(f"[timeline] Deleted existing '{timeline_name}'", file=sys.stderr)
+                existing_tl = tl
+                print(
+                    f"[timeline] Found existing '{timeline_name}' at index {i}",
+                    file=sys.stderr
+                )
                 break
+    else:
+        print(
+            "[timeline] GetTimelineCount/GetTimelineByIndex not callable — "
+            "skipping existence check",
+            file=sys.stderr
+        )
 
+    # ── 2. Attempt deletion ───────────────────────────────────────────────────
+    deletion_ok = False
+
+    if existing_tl is not None:
+        if callable(delete_tls):
+            try:
+                result     = delete_tls([existing_tl])
+                deletion_ok = bool(result)
+                print(
+                    f"[timeline] DeleteTimelines(['{timeline_name}']) → {result} "
+                    f"({'succeeded' if deletion_ok else 'FAILED — will use timestamped name'})",
+                    file=sys.stderr
+                )
+            except Exception as exc:
+                print(
+                    f"[timeline] DeleteTimelines raised: {exc} — will use timestamped name",
+                    file=sys.stderr
+                )
+        else:
+            print(
+                "[timeline] DeleteTimelines not callable — cannot remove existing timeline, "
+                "will use timestamped name",
+                file=sys.stderr
+            )
+
+    # ── 3. Create with original name (no conflict, or deletion confirmed) ─────
     media_pool.SetCurrentFolder(root_folder)
-    timeline = media_pool.CreateEmptyTimeline(timeline_name)
+    timeline = None
+    use_name = timeline_name
+
+    if existing_tl is None or deletion_ok:
+        timeline = media_pool.CreateEmptyTimeline(use_name)
+        if timeline is not None:
+            print(f"[timeline] Created '{use_name}' (fresh)", file=sys.stderr)
+        else:
+            # Deletion reported success but timeline is still blocking creation —
+            # log it and fall through to the timestamp fallback below.
+            print(
+                f"[timeline] CreateEmptyTimeline('{use_name}') returned None "
+                "even after reported deletion — falling back to timestamped name",
+                file=sys.stderr
+            )
+
+    # ── 4. Timestamp fallback ─────────────────────────────────────────────────
     if timeline is None:
-        raise RuntimeError(f"Could not create timeline '{timeline_name}'")
-    print(f"[timeline] Created '{timeline_name}'", file=sys.stderr)
+        ts       = int(time.time())
+        use_name = f"{timeline_name}_{ts}"
+        timeline  = media_pool.CreateEmptyTimeline(use_name)
+        if timeline is not None:
+            print(
+                f"[timeline] Created '{use_name}' (timestamped fallback)",
+                file=sys.stderr
+            )
+        else:
+            raise RuntimeError(
+                f"Could not create timeline '{use_name}'. "
+                f"Original '{timeline_name}' still exists and could not be removed. "
+                "Delete it manually in DaVinci Resolve and try again."
+            )
+
     return timeline
 
 
