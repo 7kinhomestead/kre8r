@@ -1,3 +1,74 @@
+# Kre8Ωr Session Log — 2026-03-30 (Session 7)
+
+## What Was Built — Session 7
+
+### PipΩr — Complete Project Configuration & Creative Contract System
+
+Full 8-part PipΩr system built from scratch:
+
+**Part A — DB Migrations (`src/db.js`)**
+- 7 new columns on `projects` table: `setup_depth`, `entry_point`, `story_structure`,
+  `content_type`, `high_concept`, `estimated_duration_minutes`, `pipr_complete`
+- `updateProjectPipr(projectId, fields)` helper + exported
+- All columns migrated on first server start (confirmed live)
+
+**Part B — Beat Maps (`src/pipr/beats.js`)**
+- `SAVE_THE_CAT` — 15 beats with emotional function + reality notes
+- `STORY_CIRCLE` — 8 beats (Dan Harmon)
+- `VSL_ARC` — 7 beats for sales/conversion videos
+- `FREE_FORM` — empty (no structure)
+- `getBeats(structure)` + `buildBeatMap(structure, durationMinutes)` — includes `target_seconds`
+
+**Part C — Beat Tracker (`src/pipr/beat-tracker.js`)**
+- `readConfig(projectId)` / `writeConfig(projectId, config)` — file-system JSON store at `database/projects/[id]/project-config.json`
+- `matchSectionToBeat()` — keyword matching (score ≥ 2) + pct proximity fallback
+- `updateBeatCoverage(projectId)` — maps selects → beats, detects out-of-sequence, writes updated config
+
+**Part D — PipΩr Wizard UI (`public/pipr.html`)**
+- 5-screen wizard: Entry Point → Project Basics → Story Structure → Content Input → Beat Map Preview
+- Deep-mode beat editing (override name + target_pct per beat)
+- POST /api/pipr/create on completion → redirect to /?project=id
+
+**Part E — PipelineΩr Integration (`public/index.html`)**
+- Global alert bar above main when any project has unmet beats or no PipΩr setup
+- NEW PROJECT section replaced with "Start New Project in PipΩr →" link card
+- Each project card now shows: PipΩr ✓ badge, beat progress bar, missing/OOS beat tags
+- `PipΩr →` action button per project card
+- `loadPipeline()` now fetches `/api/pipr/report` in parallel with projects
+
+**Part F — DaVinci Beat Markers (`scripts/davinci/build-selects.py`)**
+- `load_project_config(project_id)` reads project-config.json from database/projects/
+- After placing all clips, adds colored beat markers at `target_pct × total_timeline_frames`:
+  - Green = covered beat
+  - Orange = out-of-sequence beat
+  - Red = critical missing beat (Hook, CTA, All Is Lost, Catalyst, Finale, Break into Three)
+  - Cyan = other missing beat
+- Summary marker now includes beat count
+
+**Part G — API Routes (`src/routes/pipr.js`)**
+- `POST /api/pipr/create` — create project + config + write JSON
+- `GET  /api/pipr/beats-preview` — beat template preview (no project needed)
+- `GET  /api/pipr/report` — all-projects beat coverage summary
+- `POST /api/pipr/mine` — run config miner
+- `GET  /api/pipr/:project_id` — full config
+- `PATCH /api/pipr/:project_id` — update config + sync DB fields
+- `GET  /api/pipr/:project_id/beats` — beat map with coverage
+- `POST /api/pipr/:project_id/beats/update` — re-run beat coverage from selects
+
+**Part H — Config Miner (`src/pipr/config-miner.js`)**
+- `minePatterns()` — reads all project-config.json files, computes structure frequencies,
+  avg duration, emotional palette patterns, writes to `creator-profile.json.storytelling_patterns`
+
+**server.js**
+- Mounted `app.use('/api/pipr', require('./src/routes/pipr'))`
+- Added PipΩr URL to terminal startup output
+
+### Also Fixed (continuation from previous session)
+- ComposΩr `public_path` persistence: DB column + route populate + client fallback chain
+- broll-bridge.js: wrong column name (`resolve_project_name` → `davinci_project_name`), fps comment
+
+---
+
 # Kre8Ωr Session Log — 2026-03-30
 
 ## Summary

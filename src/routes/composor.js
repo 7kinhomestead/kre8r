@@ -227,9 +227,10 @@ router.post('/generate/:project_id', async (req, res) => {
 
         if (result.ok) {
           db.updateComposorTrack(trackDbId, {
-            suno_job_id:    result.suno_job_id,
-            suno_track_url: result.suno_track_url,
-            suno_track_path: result.suno_track_path
+            suno_job_id:     result.suno_job_id,
+            suno_track_url:  result.suno_track_url,
+            suno_track_path: result.suno_track_path,
+            public_path:     result.public_path || null
           });
           generatedCount++;
 
@@ -564,7 +565,8 @@ router.post('/upload/:project_id', uploadMiddleware.single('file'), (req, res) =
   // Store the path and mark selected (selectComposorTrack handles unselecting peers)
   db.updateComposorTrack(trackId, {
     suno_track_path: absPath,
-    suno_track_url:  publicPath
+    suno_track_url:  publicPath,
+    public_path:     publicPath     // web-accessible path for the HTML5 audio player
   });
   db.selectComposorTrack(trackId);
 

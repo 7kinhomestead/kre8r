@@ -211,11 +211,19 @@ function runMigrations() {
     suno_job_id       TEXT,
     suno_track_url    TEXT,
     suno_track_path   TEXT,
+    public_path       TEXT,
     selected          INTEGER NOT NULL DEFAULT 0,
     generation_index  INTEGER NOT NULL DEFAULT 1,
     created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   )`);
+
+  // ComposΩr: public_path column (added after initial table creation)
+  const composorCols = (db.exec('PRAGMA table_info(composor_tracks)')[0]?.values || []).map(r => r[1]);
+  if (!composorCols.includes('public_path')) {
+    db.run('ALTER TABLE composor_tracks ADD COLUMN public_path TEXT');
+    console.log('[DB] Migration: added composor_tracks.public_path');
+  }
   db.run('CREATE INDEX IF NOT EXISTS idx_composor_project ON composor_tracks(project_id)');
 
   // EditΩr: selects table
@@ -234,6 +242,37 @@ function runMigrations() {
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   )`);
   db.run('CREATE INDEX IF NOT EXISTS idx_selects_project ON selects(project_id)');
+
+  // PipΩr: project config columns
+  const projectsCols4 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsCols4.includes('setup_depth')) {
+    db.run('ALTER TABLE projects ADD COLUMN setup_depth TEXT');
+    console.log('[DB] Migration: added projects.setup_depth');
+  }
+  if (!projectsCols4.includes('entry_point')) {
+    db.run('ALTER TABLE projects ADD COLUMN entry_point TEXT');
+    console.log('[DB] Migration: added projects.entry_point');
+  }
+  if (!projectsCols4.includes('story_structure')) {
+    db.run('ALTER TABLE projects ADD COLUMN story_structure TEXT');
+    console.log('[DB] Migration: added projects.story_structure');
+  }
+  if (!projectsCols4.includes('content_type')) {
+    db.run('ALTER TABLE projects ADD COLUMN content_type TEXT');
+    console.log('[DB] Migration: added projects.content_type');
+  }
+  if (!projectsCols4.includes('high_concept')) {
+    db.run('ALTER TABLE projects ADD COLUMN high_concept TEXT');
+    console.log('[DB] Migration: added projects.high_concept');
+  }
+  if (!projectsCols4.includes('estimated_duration_minutes')) {
+    db.run('ALTER TABLE projects ADD COLUMN estimated_duration_minutes INTEGER');
+    console.log('[DB] Migration: added projects.estimated_duration_minutes');
+  }
+  if (!projectsCols4.includes('pipr_complete')) {
+    db.run('ALTER TABLE projects ADD COLUMN pipr_complete INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added projects.pipr_complete');
+  }
 }
 
 function persist() {
@@ -914,9 +953,9 @@ function insertComposorTrack(track) {
   const result = _run(
     `INSERT INTO composor_tracks
        (project_id, scene_label, scene_index, scene_type, duration_seconds,
-        suno_prompt, suno_job_id, suno_track_url, suno_track_path,
+        suno_prompt, suno_job_id, suno_track_url, suno_track_path, public_path,
         selected, generation_index)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       track.project_id,
       track.scene_label,
@@ -927,6 +966,7 @@ function insertComposorTrack(track) {
       track.suno_job_id        || null,
       track.suno_track_url     || null,
       track.suno_track_path    || null,
+      track.public_path        || null,
       track.selected           ? 1 : 0,
       track.generation_index   ?? 1
     ]
@@ -936,7 +976,7 @@ function insertComposorTrack(track) {
 }
 
 function updateComposorTrack(id, fields) {
-  const allowed = ['suno_job_id', 'suno_track_url', 'suno_track_path', 'selected', 'suno_prompt'];
+  const allowed = ['suno_job_id', 'suno_track_url', 'suno_track_path', 'public_path', 'selected', 'suno_prompt'];
   const sets    = Object.keys(fields).filter(k => allowed.includes(k));
   if (!sets.length) return;
   const sql     = `UPDATE composor_tracks SET ${sets.map(k => `${k} = ?`).join(', ')} WHERE id = ?`;
@@ -1024,6 +1064,22 @@ function updateProjectEditorState(projectId, state) {
 }
 
 // ─────────────────────────────────────────────
+// PIPΩR — Project config helpers
+// ─────────────────────────────────────────────
+
+function updateProjectPipr(projectId, fields) {
+  const allowed = [
+    'setup_depth', 'entry_point', 'story_structure', 'content_type',
+    'high_concept', 'estimated_duration_minutes', 'pipr_complete'
+  ];
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!updates.length) return;
+  const setClauses = updates.map(k => `${k} = ?`).join(', ');
+  _run(`UPDATE projects SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), projectId]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
 
@@ -1107,5 +1163,7 @@ module.exports = {
   insertSelect,
   getSelectsByProject,
   deleteSelectsByProject,
-  updateProjectEditorState
+  updateProjectEditorState,
+  // PipΩr
+  updateProjectPipr
 };

@@ -214,6 +214,24 @@ MARKER_COLORS = {
 
 GAP_GOLD_FRAMES = 20   # visual breathing room before gold nugget sections
 
+BEAT_CRITICAL = {'All Is Lost', 'Break into Three', 'CTA', 'Hook', 'Catalyst', 'Finale'}
+
+
+def load_project_config(project_id):
+    """Load project-config.json from database/projects/<project_id>/ if it exists."""
+    script_dir   = os.path.dirname(os.path.abspath(__file__))
+    config_path  = os.path.normpath(
+        os.path.join(script_dir, '..', '..', 'database', 'projects', str(project_id), 'project-config.json')
+    )
+    if not os.path.isfile(config_path):
+        return None
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as exc:
+        print(f"[warn] Could not load project-config.json: {exc}", file=sys.stderr)
+        return None
+
 
 def add_marker(timeline, frame, color, name, note="", duration=1):
     try:
@@ -414,10 +432,65 @@ def run(args):
                 fire_note
             )
 
+    # ---- Beat markers from PipΩr project-config.json ----------------------
+    config = load_project_config(args.project_id)
+    beats_placed = 0
+    if config and config.get('beats') and current_frame > 0:
+        total_frames = current_frame
+        beats = config['beats']
+        structure = config.get('story_structure', 'unknown')
+        print(f"[pipr] Adding {len(beats)} beat markers ({structure})", file=sys.stderr)
+
+        for beat in beats:
+            pct          = beat.get('target_pct', 0)
+            beat_name    = beat.get('name', f"Beat {beat.get('index','?')}")
+            covered      = bool(beat.get('covered', False))
+            out_of_seq   = bool(beat.get('out_of_sequence', False))
+            is_critical  = beat_name in BEAT_CRITICAL
+
+            beat_frame   = max(0, int(round((pct / 100.0) * total_frames)))
+
+            # Color logic: Green=covered, Orange=out-of-sequence, Red=critical missing, Cyan=missing
+            if covered and not out_of_seq:
+                color = "Green"
+                status = "✓"
+            elif out_of_seq:
+                color = "Orange"
+                status = "↕ OOS"
+            elif is_critical:
+                color = "Red"
+                status = "✗ MISSING"
+            else:
+                color = "Cyan"
+                status = "○ missing"
+
+            em_note = beat.get('emotional_function', '')
+            rn_note = beat.get('reality_note', '')
+            note    = f"[{status}] {em_note}"
+            if rn_note:
+                note += f" | Q: {rn_note}"
+
+            add_marker(
+                timeline,
+                beat_frame,
+                color,
+                f"BEAT: {beat_name}",
+                note[:200],
+                duration=max(1, ts_to_frame(3, fps))
+            )
+            beats_placed += 1
+
+        print(f"[pipr] {beats_placed} beat markers placed", file=sys.stderr)
+    elif config and config.get('beats'):
+        print("[pipr] Project config found but timeline is empty — skipping beat markers", file=sys.stderr)
+    else:
+        print("[pipr] No project-config.json found — skipping beat markers", file=sys.stderr)
+
     # ---- Summary marker at head --------------------------------------------
     summary_note = (
         f"02_SELECTS — {clips_placed} clips placed, {clips_missing} missing. "
         f"Built by SelectsΩr from {len(sections_sorted)} script sections."
+        + (f" | {beats_placed} PipΩr beat markers." if beats_placed else "")
     )
     add_marker(timeline, 0, "Purple", "SELECTS OVERVIEW", summary_note)
 

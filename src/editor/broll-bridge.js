@@ -145,10 +145,9 @@ async function importBroll(projectId, assignments, onProgress = null) {
     return { ok: false, error: 'No valid file paths found for assigned footage' };
   }
 
-  // Find DaVinci project name
-  const davinciTimelines = db.getDavinciTimelines(projectId);
-  const projectRecord    = davinciTimelines?.[0];
-  const davinciName      = projectRecord?.resolve_project_name || project.title;
+  // Find DaVinci project name — read from projects table, not davinci_timelines
+  // (davinci_timelines has no resolve_project_name column)
+  const davinciName = project.davinci_project_name || project.title;
 
   onProgress?.({ stage: 'davinci_start', assignments: resolvedAssignments.length });
 
@@ -158,7 +157,7 @@ async function importBroll(projectId, assignments, onProgress = null) {
       '--project_id',       String(projectId),
       '--project_name',     davinciName,
       '--assignments_json', JSON.stringify(resolvedAssignments),
-      '--fps',              String(project.fps || 24)
+      '--fps',              String(project.fps || 24)  // projects table has no fps column — defaults to 24
     ];
 
     const proc = spawn(binary, args, { windowsHide: true, timeout: 120_000 });

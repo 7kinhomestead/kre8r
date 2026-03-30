@@ -132,6 +132,29 @@
   .dot-amber { background:var(--amber); box-shadow:0 0 6px var(--amber); }
   .dot-dim { background:var(--text-dimmer); }
   @media(max-width:480px) { .main{padding:20px 12px 80px;} .topbar{padding:0 12px;} .project-card{grid-template-columns:1fr;} .project-actions{flex-direction:row; align-items:center;} }
+
+  /* ALERT BAR */
+  .alert-bar { background: rgba(240,185,66,0.08); border-bottom: 1px solid rgba(240,185,66,0.3); padding: 10px 20px; display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--amber); }
+  .alert-bar-icon { font-size: 16px; flex-shrink: 0; }
+  .alert-bar-text { flex: 1; font-weight: 500; }
+  .alert-bar-link { color: var(--amber); text-decoration: underline; cursor: pointer; white-space: nowrap; font-weight: 600; }
+
+  /* PIPR LAUNCH */
+  .pipr-launch { background: var(--bg-card); border: 1px solid var(--teal); border-radius: var(--radius); padding: 20px; margin-bottom: 32px; animation: fadeUp 0.4s 0.08s ease both; text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: space-between; gap: 16px; transition: border-color 0.15s, background 0.15s; }
+  .pipr-launch:hover { background: var(--teal-glow); }
+  .pipr-launch-text h3 { font-family: var(--font-head); font-size: 20px; letter-spacing: 1.5px; color: var(--teal); margin-bottom: 4px; }
+  .pipr-launch-text p { font-size: 13px; color: var(--text-dim); }
+
+  /* BEAT COVERAGE */
+  .beat-bar { margin-top: 10px; }
+  .beat-bar-track { background: var(--bg-card-2); border-radius: 3px; height: 4px; overflow: hidden; margin-bottom: 6px; }
+  .beat-bar-fill { height: 100%; border-radius: 3px; background: var(--teal); transition: width 0.4s; }
+  .beat-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .beat-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; letter-spacing: 0.2px; border: 1px solid; }
+  .beat-tag.missing { background: var(--amber-glow); border-color: rgba(240,185,66,0.4); color: var(--amber); }
+  .beat-tag.oos { background: var(--red-glow); border-color: rgba(224,92,92,0.4); color: var(--red); }
+  .beat-tag.ok { background: var(--green-glow); border-color: rgba(92,186,138,0.4); color: var(--green); }
+  .pipr-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--purple); color: var(--purple); background: var(--purple-glow); margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -156,6 +179,12 @@
     </div>
   </div>
 </nav>
+
+<div id="alert-bar" class="alert-bar" style="display:none;">
+  <span class="alert-bar-icon">⚠️</span>
+  <span class="alert-bar-text" id="alert-bar-text"></span>
+  <a class="alert-bar-link" href="/api/pipr/report" target="_blank">View Report →</a>
+</div>
 
 <main class="main">
 
@@ -220,15 +249,14 @@
     </a>
   </div>
 
-  <!-- NEW PROJECT -->
-  <div class="new-project-bar">
-    <h3>NEW PROJECT</h3>
-    <div class="new-project-row">
-      <input type="text" class="np-input" id="new-title" placeholder="Video title or topic…">
-      <input type="url" class="np-input" id="new-url" placeholder="YouTube URL (optional)">
-      <button class="btn btn-teal" onclick="createProject()">+ Create Project</button>
+  <!-- NEW PROJECT via PipΩr -->
+  <a href="pipr.html" class="pipr-launch">
+    <div class="pipr-launch-text">
+      <h3>🎬 START NEW PROJECT IN PIP<span style="font-size:14px">Ω</span>R</h3>
+      <p>Set story structure, beat map, and creative intent before touching footage.</p>
     </div>
-  </div>
+    <div class="btn btn-teal" style="flex-shrink:0;">PipΩr Wizard →</div>
+  </a>
 
   <!-- PIPELINE -->
   <div class="section-header">
@@ -253,14 +281,40 @@
 // ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', loadPipeline);
 
+let _beatReport = {};
+
 async function loadPipeline() {
   try {
-    const res = await fetch('/api/projects');
-    const projects = await res.json();
+    const [projRes, beatRes] = await Promise.allSettled([
+      fetch('/api/projects'),
+      fetch('/api/pipr/report')
+    ]);
+    const projects = projRes.status === 'fulfilled' ? await projRes.value.json() : [];
+
+    if (beatRes.status === 'fulfilled' && beatRes.value.ok) {
+      const beatData = await beatRes.value.json();
+      if (beatData.ok) {
+        _beatReport = Object.fromEntries((beatData.projects || []).map(p => [p.project_id, p]));
+        renderAlertBar(beatData.attention_count || 0, beatData.projects || []);
+      }
+    }
+
     renderPipeline(projects);
   } catch (e) {
     console.error('Failed to load pipeline:', e);
   }
+}
+
+function renderAlertBar(count, projects) {
+  const bar  = document.getElementById('alert-bar');
+  const text = document.getElementById('alert-bar-text');
+  if (!bar || !text) return;
+  if (count === 0) { bar.style.display = 'none'; return; }
+
+  const names = projects.filter(p => p.needs_attention).map(p => p.title).slice(0, 3);
+  const extra = count > 3 ? ` + ${count - 3} more` : '';
+  text.textContent = `${count} project${count !== 1 ? 's' : ''} need${count === 1 ? 's' : ''} attention: ${names.join(', ')}${extra}`;
+  bar.style.display = 'flex';
 }
 
 function renderPipeline(projects) {
@@ -306,9 +360,32 @@ function renderPipeline(projects) {
 
     const dateStr = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
+    // Beat coverage from PipΩr report
+    const beatData   = _beatReport[p.id];
+    const piprBadge  = p.pipr_complete ? '<span class="pipr-badge">PipΩr ✓</span>' : '';
+    let beatSection  = '';
+    if (beatData && beatData.beats_total > 0) {
+      const pct   = beatData.coverage_pct;
+      const tags  = [];
+      if (beatData.out_of_sequence?.length) {
+        beatData.out_of_sequence.slice(0, 2).forEach(b => tags.push(`<span class="beat-tag oos">↕ ${escHtml(b)}</span>`));
+      }
+      if (beatData.missing?.length) {
+        beatData.missing.slice(0, 3).forEach(b => tags.push(`<span class="beat-tag missing">✗ ${escHtml(b)}</span>`));
+      }
+      if (pct === 100) tags.push('<span class="beat-tag ok">All beats covered ✓</span>');
+      beatSection = `
+        <div class="beat-bar">
+          <div class="beat-bar-track"><div class="beat-bar-fill" style="width:${pct}%"></div></div>
+          <div class="beat-tags">${tags.join('')}
+            <span style="font-size:10px;color:var(--text-dimmer);margin-left:2px;">${beatData.beats_covered}/${beatData.beats_total} beats · ${pct}%</span>
+          </div>
+        </div>`;
+    }
+
     card.innerHTML = `
       <div>
-        <div class="project-title">${escHtml(p.title)}</div>
+        <div class="project-title">${escHtml(p.title)}${piprBadge}</div>
         <div class="project-meta">
           <span class="status-dot ${needsAttention ? 'dot-amber' : 'dot-green'}"></span>
           Stage ${escHtml(p.current_stage)} · Created ${dateStr}
@@ -317,9 +394,11 @@ function renderPipeline(projects) {
         <div class="gate-pills">
           ${cutPill}${gateA}${gateB}${gateC}
         </div>
+        ${beatSection}
       </div>
       <div class="project-actions">
         <div class="stage-badge">${escHtml(p.current_stage)}</div>
+        <a href="pipr.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;color:var(--purple);border-color:var(--purple);">PipΩr →</a>
         <a href="reviewr.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">CutΩr →</a>
         <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">M2 →</a>
         <a href="m1-approval-dashboard.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">Gates →</a>
@@ -329,41 +408,6 @@ function renderPipeline(projects) {
     `;
     list.appendChild(card);
   });
-}
-
-// ─────────────────────────────────────────────
-// CREATE PROJECT
-// ─────────────────────────────────────────────
-async function createProject() {
-  const title = document.getElementById('new-title').value.trim();
-  const url = document.getElementById('new-url').value.trim();
-
-  if (!title) { showToast('Add a video title first', 'amber'); return; }
-
-  let videoId = null;
-  if (url) {
-    try {
-      const u = new URL(url);
-      videoId = u.searchParams.get('v') || (u.hostname === 'youtu.be' ? u.pathname.slice(1) : null);
-    } catch(e) {}
-  }
-
-  try {
-    const res = await fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, youtube_url: url || null, youtube_video_id: videoId })
-    });
-    const project = await res.json();
-    if (project.error) throw new Error(project.error);
-
-    document.getElementById('new-title').value = '';
-    document.getElementById('new-url').value = '';
-    showToast('Project created — start in M2 to generate packages', 'teal');
-    loadPipeline();
-  } catch (e) {
-    showToast('Failed to create project: ' + e.message, 'red');
-  }
 }
 
 // ─────────────────────────────────────────────

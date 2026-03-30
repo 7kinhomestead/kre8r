@@ -422,10 +422,11 @@ async function loadTracks() {
     for (const sc of scenes) {
       sc.tracks = (sc.tracks || []).map(t => ({
         ...t,
-        project_id:  projectId,
-        // suno_track_url is the local /music/... URL for uploaded/downloaded tracks
-        public_path: (t.suno_track_url && t.suno_track_url.startsWith('/'))
-                     ? t.suno_track_url : null
+        project_id: projectId,
+        // Prefer DB-stored public_path (populated for all tracks since the migration).
+        // Fall back to suno_track_url starting with '/' for legacy rows only.
+        public_path: t.public_path
+                     || (t.suno_track_url && t.suno_track_url.startsWith('/') ? t.suno_track_url : null)
       }));
     }
     trackGroups = {};
