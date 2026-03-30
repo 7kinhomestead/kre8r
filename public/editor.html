@@ -423,8 +423,11 @@ async function onBuildSelects() {
         if (ev.stage === 'transcribing') appendLog('selectsLog', `Transcribing ${ev.file}…`, 'dim');
         if (ev.stage === 'transcribed')  appendLog('selectsLog', `Transcribed: ${ev.segments} segments`, 'ok');
         if (ev.stage === 'transcript_skipped') appendLog('selectsLog', `Skipped: ${ev.file} (${ev.reason})`, 'warn');
-        if (ev.stage === 'claude_start')  appendLog('selectsLog', `Claude analyzing ${ev.clips} clips…`, 'dim');
-        if (ev.stage === 'claude_done')   appendLog('selectsLog', `Claude found ${ev.sections} sections`, 'ok');
+        if (ev.stage === 'chunks_planned')   appendLog('selectsLog', `Claude: ${ev.total_clips} clip(s) → ${ev.total_chunks} chunk(s)`, 'dim');
+        if (ev.stage === 'analyzing_chunk')  appendLog('selectsLog', ev.message, 'dim');
+        if (ev.stage === 'chunk_done')       appendLog('selectsLog', ev.message, 'ok');
+        if (ev.stage === 'merging')          appendLog('selectsLog', ev.message, 'dim');
+        if (ev.stage === 'merge_done')       appendLog('selectsLog', ev.message, 'ok');
         if (ev.stage === 'saved')         appendLog('selectsLog', `Saved ${ev.sections} sections to DB`, 'ok');
         if (ev.stage === 'whisper')       { if (ev.line) appendLog('selectsLog', ev.line, 'dim'); }
       },

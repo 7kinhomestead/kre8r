@@ -1,3 +1,105 @@
+# Kre8Ωr Session Log — 2026-03-30
+
+## Summary
+
+Session 6 completed the SelectsΩr chunked-analysis architecture (four iterations to
+final working state), hardened transcript summarization aggressiveness, and fixed
+the BRAW proxy export audio silence bug (root cause: `mediaType:1` in AppendToTimeline
+was stripping audio from the timeline before render).
+
+---
+
+## What Was Built / Changed
+
+### SelectsΩr — Chunked Claude analysis (`src/editor/selects.js`)
+
+Complete rewrite of the Claude call layer. Replaced single large prompt (was
+hitting the 8192-token output limit with 5 VSL clips) with a self-contained
+`analyzeTranscripts(clips, context, emit)` function.
+
+**Module-level constants:**
+```js
+const CHUNK_SIZE          = 2;     // max clips per Claude call
+const MAX_WORDS_PER_CHUNK = 3000;  // hard word limit per chunk prompt
+```
+Startup log confirms both are live: `[SelectsΩr] Module loaded — CHUNK_SIZE=2, MAX_WORDS_PER_CHUNK=3000`
+
+**`analyzeTranscripts(clips, context, emit)`** — new sole entry point for Claude:
+1. Summarizes every clip transcript (filler drop + compression) before chunking
+2. Splits clips into chunks respecting both CHUNK_SIZE and MAX_WORDS_PER_CHUNK
+3. Calls `analyzeChunk()` once per chunk (prompt includes "chunk N of M" header so
+   Claude knows to identify all sections without worrying about completeness)
+4. Collects all sections from all chunks
+5. If > 1 chunk: calls `mergeChunkedSections()` — sends only section labels + footage_ids
+   (no transcripts) to Claude for deduplication and script-order unification
+6. Returns `{ sections[], overall_notes }`
+
+`buildSelects()` step 4 replaced with a single clean call:
+```js
+const analysis = await analyzeTranscripts(
+  transcribedClips,
+  { script, concept, projectTitle: project.title },
+  (ev) => onProgress?.(ev)
+);
+```
+
+**Summarization aggressiveness increased:**
+- `isFiller()`: drops any segment with fewer than 4 words (was: only pure filler vocab)
+- `summarizeSegment()`: compresses on word count > 50 (was: sentence count > 2)
+  - Single run-on sentence > 50 words: first 25 words + `[…]` + last 5 words
+
+**Old single-call path removed entirely.** No fallback. No `buildChunks()` helper.
+No inline step 3b/4 block in `buildSelects`.
+
+**SSE progress stages (new names):**
+- `chunks_planned` — `{ total_chunks, total_clips }`
+- `analyzing_chunk` — `{ current, total, clip_count, word_count, message }`
+- `chunk_done` — `{ current, total, sections, message }`
+- `merging` — `{ total_sections, message }`
+- `merge_done` — `{ sections, message }`
+
+**`public/editor.html`** — UI handlers updated to match new stage names. Each chunk
+logs to the browser panel with clip range and word count.
+
+---
+
+### BRAW proxy export — audio silence fix (`scripts/davinci/braw-proxy-export.py`)
+
+**Root cause:** `AppendToTimeline` was called with `"mediaType": 1` which tells
+DaVinci Resolve to add the video stream only. Audio was never placed on the
+timeline so render produced silent MP4s regardless of what codec settings were set.
+
+**Fix 1 — Remove `mediaType` from clip_dicts (the actual bug):**
+```python
+# Before (video-only — root cause of silence):
+{"mediaPoolItem": item, "startFrame": 0, "endFrame": -1, "mediaType": 1}
+
+# After (video + audio — all tracks included):
+{"mediaPoolItem": item, "startFrame": 0, "endFrame": -1}
+```
+
+**Fix 2 — Explicit audio render settings (belt-and-suspenders):**
+```python
+"ExportAudio":     True,
+"AudioCodec":      "AAC",    # uppercase — Resolve 20 is case-sensitive
+"AudioBitrate":    320,      # kbps
+"AudioChannels":   2,        # stereo
+"AudioSampleRate": 48000,    # Hz
+```
+Per-clip log: `[audio] Settings for <stem>: ExportAudio=True, Codec=AAC, Bitrate=320kbps, Channels=2 (stereo), SampleRate=48000Hz`
+
+---
+
+## Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `src/editor/selects.js` | Full chunk architecture rewrite — `analyzeTranscripts` function |
+| `public/editor.html` | SSE stage name handlers updated for new chunk events |
+| `scripts/davinci/braw-proxy-export.py` | Audio silence fix: removed `mediaType:1`, added explicit AAC render settings |
+
+---
+
 # Kre8Ωr Session Log — 2026-03-29
 
 ## Summary

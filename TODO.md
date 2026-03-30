@@ -2,90 +2,81 @@
 
 ---
 
-## Task 1 — Fix ComposΩr public_path persistence for Suno-generated tracks
+## Task 1 — End-to-end SelectsΩr test with chunking live
 
-When a Suno API track is successfully downloaded, `suno-client.js` returns a
-`public_path` (`/music/<project_id>/<slug>/<file>.mp3`) but the generate pipeline
-in `src/routes/composor.js` only saves `suno_job_id`, `suno_track_url` (CDN URL),
-and `suno_track_path` (local disk path) — the local web-accessible path is never
-stored.
+SelectsΩr chunked analysis has never been successfully run against real footage.
+First real test to confirm the full pipeline works:
 
-In `loadTracks` (`public/composor.html`) we currently derive `public_path` only
-when `suno_track_url` starts with `/` — which is only true for uploaded tracks.
-Suno-generated tracks have a CDN URL (`https://cdn.suno.com/...`) so audio players
-never render for them.
+1. Restart server — confirm terminal shows:
+   `[SelectsΩr] Module loaded — CHUNK_SIZE=2, MAX_WORDS_PER_CHUNK=3000`
+2. Open EditΩr, select a project with 3+ talking-head clips already transcribed.
+3. Click **Build Selects** — watch terminal for:
+   ```
+   [SelectsΩr] analyzeTranscripts: N clips → M chunk(s)
+   [SelectsΩr]   chunk 1: 2 clip(s), XXXX words
+   [SelectsΩr] → chunk 1/M (clips 1–2, XXXX words)
+   [SelectsΩr] ✓ chunk 1 → N section(s)
+   ...
+   [SelectsΩr] Merging N raw sections from M chunks
+   [SelectsΩr] ✓ merge done — N final section(s)
+   ```
+4. Confirm browser log panel shows all chunk progress events.
+5. Confirm section cards render correctly in EditΩr after completion.
+6. If merge call fails or produces duplicate sections, tune `buildMergePrompt` — the
+   deduplication instructions may need tightening for the specific script structure.
 
-**Fix — two-part:**
+---
 
-**Part A — Store `public_path` in the DB.**
-Add `public_path TEXT` column to `composor_tracks` via `runMigrations()` in `src/db.js`:
+## Task 2 — Fix ComposΩr `public_path` persistence for Suno-generated tracks
+
+When a Suno API track downloads, `suno-client.js` returns `public_path`
+(`/music/<project_id>/<slug>/<file>.mp3`) but the generate pipeline in
+`src/routes/composor.js` never saves it — only `suno_track_url` (CDN URL) is stored.
+Audio players in the UI only work for uploaded tracks; Suno-generated tracks are silent.
+
+**Part A — DB column:** Add `public_path TEXT` to `composor_tracks` in `src/db.js`:
 ```sql
 ALTER TABLE composor_tracks ADD COLUMN public_path TEXT;
 ```
-Add `'public_path'` to the allowed-fields whitelist in `updateComposorTrack`.
+Add `'public_path'` to the `updateComposorTrack` allowed-fields whitelist.
 
-**Part B — Populate it in the generate pipeline.**
-In `src/routes/composor.js`, after `generateTrack()` succeeds:
+**Part B — Populate in route:** In `src/routes/composor.js` after `generateTrack()`:
 ```js
 db.updateComposorTrack(trackDbId, {
   suno_job_id:     result.suno_job_id,
   suno_track_url:  result.suno_track_url,
   suno_track_path: result.suno_track_path,
-  public_path:     result.public_path       // ← add this
+  public_path:     result.public_path    // ← add this
 });
 ```
 
-**Part C — Simplify the client derivation.**
-In `loadTracks` (`composor.html`), replace the `/`-prefix heuristic:
+**Part C — Client fix:** In `composor.html` `loadTracks`, replace the `/`-prefix heuristic:
 ```js
 public_path: t.public_path || (t.suno_track_url?.startsWith('/') ? t.suno_track_url : null)
 ```
 
 ---
 
-## Task 2 — Fix two bugs in broll-bridge.js before first real use
+## Task 3 — Fix two silent bugs in broll-bridge.js before first real use
 
-Both are silent runtime failures that won't crash the server but will produce wrong
-behaviour when `importBroll()` is called.
+Neither bug crashes the server but both produce wrong behaviour on first real use.
 
-**Bug 1 — wrong column name for Resolve project name:**
-`src/editor/broll-bridge.js` line ~85:
+**Bug 1 — Wrong column name for Resolve project name (`src/editor/broll-bridge.js` ~line 85):**
 ```js
+// Wrong — davinci_timelines has no resolve_project_name column:
 const davinciName = davinciTimelines?.[0]?.resolve_project_name || project.title;
-```
-`davinci_timelines` has no `resolve_project_name` column. Fix:
-```js
+
+// Fix:
 const davinciName = project.davinci_project_name || project.title;
 ```
 
 **Bug 2 — `project.fps` doesn't exist:**
 ```js
-'--fps', String(project.fps || 24)
+// projects table has no fps column — add a comment so it's not confusing:
+'--fps', String(project.fps || 24)   // projects table has no fps column — defaults to 24
 ```
-The `projects` table has no `fps` column — silently defaults to 24. Fine for now
-but add a comment: `// projects table has no fps column — defaults to 24`.
 
----
-
-## Task 3 — End-to-end ComposΩr test in Prompt Mode
-
-ComposΩr has never been run against a real project. First real test with Suno API
-key absent (Prompt Mode):
-
-1. Select a project that has EditΩr selects already built (so `getSelectsByProject`
-   returns data for the scene analyzer).
-2. Click **Analyze Scenes** — confirm 4–7 scene cards render with emotional direction
-   and genre direction filled in.
-3. Click **Generate Music** — watch SSE log for:
-   - `scene_analysis` events with section labels
-   - `writing_prompt` → `prompt_written` × 3 per scene
-   - `tracks_saved_to_db` count
-   - `suno_skipped` events (one per track — expected in Prompt Mode)
-4. Confirm track rows render: 3 variations per scene, each with prompt text,
-   "Copy Prompt" button, "Open in Suno →" link, "Select" button.
-5. Copy a prompt, open Suno manually, download the MP3.
-6. Click **⬆ Upload Track** for that scene — confirm `✓ Uploaded & selected` status
-   and the audio player appears.
-7. Select all scenes via upload or Select buttons — confirm advance banner appears.
-8. Optionally click **Push to DaVinci** if Resolve is open — confirm `04_AUDIO`
-   timeline is created with the uploaded MP3.
+After both fixes, do a live b-roll import test:
+1. Open a project with selects built and b-roll tagged in VaultΩr.
+2. Click **Import B-Roll** in EditΩr — confirm `04_BROLL` timeline is created in Resolve
+   with clips placed at the correct timeline positions.

@@ -49,7 +49,10 @@ const { transcribeFile }        = require('../vault/transcribe');
 
 const ANTHROPIC_VERSION    = '2023-06-01';
 const MODEL                = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
-const TRANSCRIPT_WORD_LIMIT = 6000;  // summarize if total transcript words exceeds this
+const CHUNK_SIZE           = 2;     // max clips per Claude call
+const MAX_WORDS_PER_CHUNK  = 3000;  // max transcript words per chunk
+
+console.log(`[SelectsΩr] Module loaded — CHUNK_SIZE=${CHUNK_SIZE}, MAX_WORDS_PER_CHUNK=${MAX_WORDS_PER_CHUNK}`);
 
 // ─────────────────────────────────────────────
 // HELPERS
@@ -76,39 +79,86 @@ function countWords(text) {
   return text ? text.trim().split(/\s+/).length : 0;
 }
 
+// Whisper segments that carry zero editorial information when they appear alone
+const PURE_FILLER = new Set([
+  'um', 'umm', 'uh', 'uhh', 'hm', 'hmm', 'mm', 'mmm',
+  'ah', 'ahh', 'oh', 'ohh', 'mhm', 'uh-huh', 'uhhuh', 'er', 'err'
+]);
+
+function isFiller(text) {
+  const words = text.trim().toLowerCase()
+    .replace(/[.,!?…\-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  // Drop segments with fewer than 4 words (too short to carry editorial value)
+  if (words.length < 4) return true;
+  return words.every(w => PURE_FILLER.has(w));
+}
+
 /**
- * Trim a transcript down to maxWords, keeping leading segments + the final
- * segment so Claude still knows where the clip ends.
+ * Split text into sentences on ". ", "? ", "! " boundaries.
+ * Returns array of non-empty strings.
  */
-function truncateTranscript(transcript, maxWords) {
+function splitSentences(text) {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 3);
+}
+
+/**
+ * Summarize a single Whisper segment to its most important content:
+ * - Drop segments under 4 words (isFiller returns true) — returns null
+ * - If ≤50 words: keep as-is
+ * - If >50 words: compress to first sentence + last sentence
+ * Timestamps are always preserved from the original segment.
+ */
+function summarizeSegment(seg) {
+  const text = (seg.text || '').trim();
+  if (!text || isFiller(text)) return null;
+
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  if (wordCount <= 50) return seg;
+
+  const sentences = splitSentences(text);
+  if (sentences.length <= 1) {
+    // Single run-on sentence: keep first 25 words + last 5 words
+    const words = text.split(/\s+/);
+    return { ...seg, text: words.slice(0, 25).join(' ') + ' […] ' + words.slice(-5).join(' ') };
+  }
+  return {
+    ...seg,
+    text: sentences[0] + ' […] ' + sentences[sentences.length - 1]
+  };
+}
+
+/**
+ * Summarize all segments in a transcript, dropping filler and compressing
+ * long segments to first+last sentence. Preserves every timestamp so Claude
+ * can still make precise in/out point decisions.
+ *
+ * Plain-text fallback (no segments): keep first 2 + last 2 sentences.
+ */
+function summarizeTranscript(transcript) {
   if (!transcript) return null;
 
   if (transcript.segments && transcript.segments.length > 0) {
-    const segs   = transcript.segments;
-    const kept   = [];
-    let wordCount = 0;
-
-    for (let i = 0; i < segs.length; i++) {
-      const segWords = segs[i].text.trim().split(/\s+/).length;
-      // Always include the last segment as a tail anchor
-      const isLast = (i === segs.length - 1);
-      if (!isLast && wordCount + segWords > maxWords && kept.length > 0) {
-        // Append tail if not already captured
-        const tail = segs[segs.length - 1];
-        kept.push({ ...tail, text: '[…] ' + tail.text.trim() });
-        break;
-      }
-      kept.push(segs[i]);
-      wordCount += segWords;
-    }
-
-    return { ...transcript, segments: kept };
+    const summarized = transcript.segments
+      .map(summarizeSegment)
+      .filter(Boolean);
+    return { ...transcript, segments: summarized };
   }
 
   // Plain-text fallback
-  const words = (transcript.text || '').trim().split(/\s+/);
-  if (words.length <= maxWords) return transcript;
-  return { ...transcript, text: words.slice(0, maxWords).join(' ') + ' […]' };
+  const sentences = splitSentences(transcript.text || '').filter(s => !isFiller(s));
+  if (sentences.length <= 4) {
+    return { ...transcript, text: sentences.join(' ') };
+  }
+  return {
+    ...transcript,
+    text: [...sentences.slice(0, 2), '[…]', ...sentences.slice(-2)].join(' ')
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -188,6 +238,159 @@ Return ONLY a valid JSON object — no markdown, no explanation, no code fences:
 }
 
 Be surgical. If a section has no good take, still include it with winner_footage_id: null and explain in fire_suggestion what to do. section_index must be sequential starting from 0.`;
+}
+
+/**
+ * Prompt for a single chunk (subset of clips). Tells Claude it is looking at
+ * chunk N of M so it knows the section list may be incomplete.
+ */
+function buildChunkPrompt({ clips, script, concept, projectTitle, chunkIndex, totalChunks }) {
+
+  const scriptSection = script?.approved_version
+    ? `## APPROVED SCRIPT\n${script.approved_version}\n`
+    : script?.full_script
+      ? `## FULL SCRIPT (not yet approved)\n${script.full_script}\n`
+      : script?.outline
+        ? `## SCRIPT OUTLINE\n${script.outline}\n`
+        : concept
+          ? `## CONCEPT NOTE\n${concept}\n`
+          : `## SCRIPT\nNo script found. Identify natural content sections from the transcripts.\n`;
+
+  const clipsText = clips.map((c, i) => {
+    const transcriptText = transcriptToText(c.transcript);
+    return [
+      `### CLIP ${i + 1} — footage_id: ${c.footage_id}`,
+      `File: ${c.filename}`,
+      `Shot type: ${c.shot_type || 'unknown'} | Duration: ${c.duration ? c.duration + 's' : 'unknown'}`,
+      ``,
+      transcriptText
+    ].join('\n');
+  }).join('\n\n---\n\n');
+
+  return `You are SelectsΩr, the editing intelligence for 7 Kin Homestead — a homesteading and off-grid living channel with 725K TikTok followers.
+
+## PROJECT: ${projectTitle || 'Unnamed Project'}
+## ANALYSIS CHUNK ${chunkIndex + 1} of ${totalChunks}
+
+This is a partial analysis. You are seeing ${clips.length} clip(s) from a larger set. Identify ALL script sections visible in these clips — sections may repeat across chunks and will be merged later.
+
+${scriptSection}
+## FOOTAGE CLIPS (${clips.length} in this chunk)
+
+${clipsText}
+
+## YOUR TASK
+
+1. **MAP TO SCRIPT SECTIONS** — Using the script/outline, identify each section covered by these clips.
+2. **ASSIGN TAKES** — For each section, list which clips contain a take (by footage_id).
+3. **PICK WINNERS** — For each section, pick the best take. Note start/end timestamps.
+4. **GOLD NUGGETS** — Flag off-script moments worth keeping (gold_nugget: true).
+5. **FIRE SUGGESTIONS** — Add specific editing notes per section.
+
+## OUTPUT FORMAT
+
+Return ONLY a valid JSON object — no markdown, no explanation, no code fences:
+
+{
+  "sections": [
+    {
+      "script_section": "Intro — hook",
+      "section_index": 0,
+      "takes": [
+        {
+          "footage_id": 3,
+          "filename": "A001_clip.mp4",
+          "start": 0.0,
+          "end": 18.5,
+          "transcript_excerpt": "first few words of this take..."
+        }
+      ],
+      "selected_takes": [3],
+      "winner_footage_id": 3,
+      "gold_nugget": false,
+      "fire_suggestion": "Start on the word 'actually'",
+      "davinci_timeline_position": 0
+    }
+  ],
+  "overall_notes": "brief notes on this chunk's footage quality"
+}
+
+section_index must be sequential from 0 within this chunk only — indices will be reassigned during merge.`;
+}
+
+/**
+ * Prompt for the final merge step. Receives all sections from all chunks
+ * (without transcripts) and asks Claude to deduplicate, unify, and produce
+ * the final ordered section list.
+ */
+function buildMergePrompt({ allSections, projectTitle, script, concept }) {
+
+  const scriptSection = script?.approved_version
+    ? `## APPROVED SCRIPT\n${script.approved_version}\n`
+    : script?.full_script
+      ? `## FULL SCRIPT (not yet approved)\n${script.full_script}\n`
+      : script?.outline
+        ? `## SCRIPT OUTLINE\n${script.outline}\n`
+        : concept
+          ? `## CONCEPT NOTE\n${concept}\n`
+          : '';
+
+  // Serialize sections without transcript data (they're already stripped)
+  const sectionsText = allSections.map((s, i) =>
+    JSON.stringify({
+      script_section:    s.script_section,
+      takes:             (s.takes || []).map(t => ({ footage_id: t.footage_id, filename: t.filename, start: t.start, end: t.end })),
+      selected_takes:    s.selected_takes,
+      winner_footage_id: s.winner_footage_id,
+      gold_nugget:       s.gold_nugget,
+      fire_suggestion:   s.fire_suggestion
+    }, null, 2)
+  ).join(',\n');
+
+  return `You are SelectsΩr, the editing intelligence for 7 Kin Homestead.
+
+## PROJECT: ${projectTitle || 'Unnamed Project'}
+## MERGE TASK
+
+Multiple chunks of footage have been analyzed. Below are ALL sections identified across all chunks. Many sections will be duplicates (the same script section found in multiple clips across chunks).
+
+${scriptSection}
+## ALL RAW SECTIONS (${allSections.length} total, may include duplicates)
+
+[
+${sectionsText}
+]
+
+## YOUR TASK
+
+1. **DEDUPLICATE** — Merge sections with the same or very similar script_section labels into a single entry.
+2. **COMBINE TAKES** — For merged sections, include ALL takes from all duplicate entries in the takes array.
+3. **PICK BEST WINNER** — Across all takes for a merged section, select the single best winner_footage_id.
+4. **ORDER** — Arrange final sections in script order (matching the script/outline above). Assign sequential section_index starting from 0.
+5. **GOLD NUGGETS + FIRE SUGGESTIONS** — Keep the best fire_suggestion; set gold_nugget: true if any duplicate had it true.
+6. **OVERALL NOTES** — Write one paragraph assessing the full footage set.
+
+## OUTPUT FORMAT
+
+Return ONLY a valid JSON object — no markdown, no explanation, no code fences:
+
+{
+  "sections": [
+    {
+      "script_section": "Intro — hook",
+      "section_index": 0,
+      "takes": [
+        { "footage_id": 3, "filename": "A001.mp4", "start": 0.0, "end": 18.5, "transcript_excerpt": "" }
+      ],
+      "selected_takes": [3, 7],
+      "winner_footage_id": 3,
+      "gold_nugget": false,
+      "fire_suggestion": "Start on the word 'actually'",
+      "davinci_timeline_position": 0
+    }
+  ],
+  "overall_notes": "one paragraph — final assessment"
+}`;
 }
 
 // ─────────────────────────────────────────────
@@ -296,6 +499,157 @@ async function callClaude(prompt) {
       `First 300 chars: ${cleaned.slice(0, 300)}`
     );
   }
+}
+
+/**
+ * Analyze a single chunk of clips. Returns { sections[], overall_notes }.
+ */
+async function analyzeChunk({ clips, script, concept, projectTitle, chunkIndex, totalChunks }) {
+  const prompt = buildChunkPrompt({ clips, script, concept, projectTitle, chunkIndex, totalChunks });
+  const result = await callClaude(prompt);
+  if (!result.sections || !Array.isArray(result.sections)) {
+    throw new Error(`Chunk ${chunkIndex + 1} returned unexpected structure — missing sections array`);
+  }
+  return result;
+}
+
+/**
+ * Final merge call: takes all sections from all chunks (no transcripts), asks
+ * Claude to deduplicate and produce the final ordered section list.
+ */
+async function mergeChunkedSections(allSections, projectTitle, script, concept) {
+  const prompt = buildMergePrompt({ allSections, projectTitle, script, concept });
+  const result = await callClaude(prompt);
+  if (!result.sections || !Array.isArray(result.sections)) {
+    throw new Error('Merge call returned unexpected structure — missing sections array');
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────
+// ANALYZE TRANSCRIPTS — chunked entry point
+// ─────────────────────────────────────────────
+
+/**
+ * analyzeTranscripts(clips, context, emit)
+ *
+ * Summarizes, chunks, calls Claude per chunk, then merges.
+ * All SSE events go through emit(). No inline logic in buildSelects.
+ *
+ * @param {Array}    clips    — array of clip objects with .transcript
+ * @param {Object}   context  — { script, concept, projectTitle }
+ * @param {Function} emit     — onProgress callback
+ * @returns {{ sections[], overall_notes }}
+ */
+async function analyzeTranscripts(clips, context, emit) {
+  const { script, concept, projectTitle } = context;
+
+  // Step 1: summarize each clip transcript
+  const summarized = clips.map(clip => ({
+    ...clip,
+    transcript: summarizeTranscript(clip.transcript)
+  }));
+
+  // Step 2: split into chunks of CHUNK_SIZE, also respecting MAX_WORDS_PER_CHUNK
+  const chunks       = [];
+  let   current      = [];
+  let   currentWords = 0;
+
+  for (const clip of summarized) {
+    const w             = countWords(transcriptToText(clip.transcript));
+    const exceedsSize   = current.length >= CHUNK_SIZE;
+    const exceedsWords  = current.length > 0 && (currentWords + w) > MAX_WORDS_PER_CHUNK;
+
+    if (exceedsSize || exceedsWords) {
+      chunks.push(current);
+      current      = [];
+      currentWords = 0;
+    }
+
+    current.push(clip);
+    currentWords += w;
+  }
+  if (current.length > 0) chunks.push(current);
+
+  // Log chunk plan to terminal
+  console.log(`[SelectsΩr] analyzeTranscripts: ${clips.length} clips → ${chunks.length} chunk(s)`);
+  chunks.forEach((ch, i) => {
+    const w = ch.reduce((s, c) => s + countWords(transcriptToText(c.transcript)), 0);
+    console.log(`[SelectsΩr]   chunk ${i + 1}: ${ch.length} clip(s), ${w} words`);
+  });
+
+  emit({
+    stage:        'chunks_planned',
+    total_chunks: chunks.length,
+    total_clips:  clips.length,
+    message:      `${clips.length} clip(s) split into ${chunks.length} chunk(s)`
+  });
+
+  // Step 3: analyze each chunk
+  const allSections = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk      = chunks[i];
+    const clipCount  = chunk.length;
+    const wordCount  = chunk.reduce((s, c) => s + countWords(transcriptToText(c.transcript)), 0);
+    const clipOffset = chunks.slice(0, i).reduce((s, ch) => s + ch.length, 0);
+    const label      = clipCount === 1
+      ? `clip ${clipOffset + 1}`
+      : `clips ${clipOffset + 1}–${clipOffset + clipCount}`;
+
+    console.log(`[SelectsΩr] → chunk ${i + 1}/${chunks.length} (${label}, ${wordCount} words)`);
+    emit({
+      stage:     'analyzing_chunk',
+      current:   i + 1,
+      total:     chunks.length,
+      clip_count: clipCount,
+      word_count: wordCount,
+      message:   `Analyzing chunk ${i + 1} of ${chunks.length} (${label}, ${wordCount} words)...`
+    });
+
+    const result = await analyzeChunk({
+      clips:       chunk,
+      script,
+      concept,
+      projectTitle,
+      chunkIndex:  i,
+      totalChunks: chunks.length
+    });
+
+    console.log(`[SelectsΩr] ✓ chunk ${i + 1} → ${result.sections.length} section(s)`);
+    emit({
+      stage:    'chunk_done',
+      current:  i + 1,
+      total:    chunks.length,
+      sections: result.sections.length,
+      message:  `Chunk ${i + 1} of ${chunks.length} complete — ${result.sections.length} section(s)`
+    });
+
+    allSections.push(...result.sections);
+  }
+
+  // Step 4: merge if multiple chunks
+  if (chunks.length > 1) {
+    console.log(`[SelectsΩr] Merging ${allSections.length} raw sections from ${chunks.length} chunks`);
+    emit({
+      stage:          'merging',
+      total_sections: allSections.length,
+      message:        `Merging sections from ${chunks.length} chunks...`
+    });
+
+    const merged = await mergeChunkedSections(allSections, projectTitle, script, concept);
+
+    console.log(`[SelectsΩr] ✓ merge done — ${merged.sections.length} final section(s)`);
+    emit({
+      stage:    'merge_done',
+      sections: merged.sections.length,
+      message:  `Merge complete — ${merged.sections.length} final section(s)`
+    });
+
+    return merged;
+  }
+
+  return { sections: allSections, overall_notes: null };
 }
 
 // ─────────────────────────────────────────────
@@ -413,32 +767,15 @@ async function buildSelects(projectId, onProgress = null) {
   const script  = db.getScript(projectId);
   const concept = project.concept_note || project.logline || null;
 
-  // ── 3b. SUMMARIZE TRANSCRIPTS IF DATA IS TOO LARGE ──────────────────────
+  // ── 4. ASK CLAUDE (CHUNKED) ───────────────────────────────────────────────
 
-  const totalWords = clips.reduce((sum, c) => sum + countWords(transcriptToText(c.transcript)), 0);
+  const transcribedClips = clips.filter(c => c.transcript);
 
-  let clipsForPrompt = clips;
-  if (totalWords > TRANSCRIPT_WORD_LIMIT) {
-    const budgetPerClip = Math.max(100, Math.floor(TRANSCRIPT_WORD_LIMIT / clips.length));
-    onProgress?.({ stage: 'transcript_trim', total_words: totalWords, budget_per_clip: budgetPerClip });
-    clipsForPrompt = clips.map(c => ({
-      ...c,
-      transcript: truncateTranscript(c.transcript, budgetPerClip)
-    }));
-  }
-
-  onProgress?.({ stage: 'claude_start', clips: transcribedCount, words: Math.min(totalWords, TRANSCRIPT_WORD_LIMIT) });
-
-  // ── 4. ASK CLAUDE ─────────────────────────────────────────────────────────
-
-  const prompt   = buildSelectsPrompt({ clips: clipsForPrompt, script, concept, projectTitle: project.title });
-  const analysis = await callClaude(prompt);
-
-  if (!analysis.sections || !Array.isArray(analysis.sections)) {
-    throw new Error('Claude returned unexpected structure — missing sections array');
-  }
-
-  onProgress?.({ stage: 'claude_done', sections: analysis.sections.length });
+  const analysis = await analyzeTranscripts(
+    transcribedClips,
+    { script, concept, projectTitle: project.title },
+    (ev) => onProgress?.(ev)
+  );
 
   // ── 5. SAVE TO DB ─────────────────────────────────────────────────────────
 

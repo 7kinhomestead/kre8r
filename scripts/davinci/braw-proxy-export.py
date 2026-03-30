@@ -628,10 +628,14 @@ def run(args):
     project.SetCurrentTimeline(timeline)
 
     # ---- Add all BRAW clips to timeline ------------------------------------
+    # mediaType is intentionally omitted — specifying mediaType:1 adds video
+    # only and silences the audio track entirely in the exported proxy.
+    # Omitting the key tells Resolve to include all available tracks (V+A).
     clip_dicts = [
-        {"mediaPoolItem": item, "startFrame": 0, "endFrame": -1, "mediaType": 1}
+        {"mediaPoolItem": item, "startFrame": 0, "endFrame": -1}
         for (_, _, item) in ordered_items
     ]
+    print(f"[timeline] AppendToTimeline: {len(clip_dicts)} clip(s), mediaType omitted (video+audio)", file=sys.stderr)
     result = media_pool.AppendToTimeline(clip_dicts)
     if not result:
         errors.append("AppendToTimeline returned falsy — timeline may be empty")
@@ -716,24 +720,37 @@ def run(args):
             errors.append("SetRenderSettings or AddRenderJob not callable")
             break
 
-        set_render({
-            "SelectAllFrames":      False,
-            "MarkIn":               start,
-            "MarkOut":              end,
-            "TargetDir":            args.proxy_output,
-            "CustomName":           proxy_name,
-            "UniqueFilenameStyle":  0,
-            "ExportVideo":          True,
-            "ExportAudio":          True,
-            "FormatWidth":          src_width,
-            "FormatHeight":         src_height,
-            "VideoMaxBitrate":      80,
-            "VideoMinBitrate":      40,
-            "VideoBitDepth":        10,
-            "AudioCodec":           "aac",
-            "AudioSampleRate":      48000,
+        render_settings = {
+            "SelectAllFrames":       False,
+            "MarkIn":                start,
+            "MarkOut":               end,
+            "TargetDir":             args.proxy_output,
+            "CustomName":            proxy_name,
+            "UniqueFilenameStyle":   0,
+            # Video
+            "ExportVideo":           True,
+            "FormatWidth":           src_width,
+            "FormatHeight":          src_height,
+            "VideoMaxBitrate":       80,
+            "VideoMinBitrate":       40,
+            "VideoBitDepth":         10,
+            # Audio — explicit mapping required for BRAW sources on Windows
+            "ExportAudio":           True,
+            "AudioCodec":            "AAC",     # uppercase — Resolve 20 is case-sensitive
+            "AudioBitrate":          320,        # kbps
+            "AudioChannels":         2,          # stereo
+            "AudioSampleRate":       48000,      # Hz
             "SeparateVideoAndAudio": False,
-        })
+        }
+
+        print(
+            f"[audio] Settings for {orig_stem}: "
+            f"ExportAudio=True, Codec=AAC, Bitrate=320kbps, "
+            f"Channels=2 (stereo), SampleRate=48000Hz",
+            file=sys.stderr
+        )
+
+        set_render(render_settings)
 
         job_id = add_job()
         if job_id:
