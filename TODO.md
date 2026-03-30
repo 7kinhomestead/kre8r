@@ -2,76 +2,53 @@
 
 ---
 
-## Task 1 — Confirm color space + S-curve in Resolve 20 with real footage
+## Task 1 — End-to-end PipΩr + WritΩr test
 
-The `create-project.py` script now probes and logs all available `GetSetting` keys to
-stderr. The next real test must include proxy footage so the S-curve path actually runs.
+Server is running under PM2. No restart needed unless code changes.
 
-**What to do:**
-1. Pick a project that has proxy MP4s in VaultΩr (or drop a test MP4 into the intake
-   folder and let it ingest)
-2. Call `POST /api/davinci/create-project` with that `project_id`
-3. Watch the server console for these lines:
-   ```
-   [probe] GetSetting('colorSpaceInput') = '...'   ← confirms key exists + current value
-   [color] colorSpaceInput: SetSetting('colorSpaceInput', '...') OK
-   [resolve] colorAdj keys (first 12): [...]        ← shows S-curve key format
-   ```
-4. If color space still fails: the probe output will show the exact Resolve 20 key names
-   to use — update `try_set_color_space()` calls in `create-project.py` with the correct keys
-5. If S-curve still fails: the colorAdj key list will show what Resolve 20 exposes —
-   add the correct key format as "Format D" in the S-curve section
+To verify server is up: open http://localhost:3000 or run `pm2 status`
 
-**Success criteria:** `errors: []` in the JSON response, color management visible in
-Resolve Project Settings → Color Management tab.
+1. Open pipr.html — walk all 5 wizard screens for a real upcoming video
+2. Confirm redirect to /?project=N with PipΩr ✓ badge
+3. Confirm database/projects/N/project-config.json was written
+4. Click WritΩr → on the project card
+5. Select the project in writr.html — entry point should auto-populate from config
+6. Use the "Find the Story" or "Map the Beats" button
+7. Watch SSE progress events in the log panel
+8. Confirm beat map panel populates with green/amber/red cards
+9. Confirm script appears in Panel 3 with [● BEAT] headers
+10. Test one iteration: type feedback → Revise → confirm Draft 2 appears
+11. Approve the script → confirm redirect to editor.html
 
 ---
 
-## Task 2 — Update `public/index.html` PipelineΩr dashboard
+## Task 2 — End-to-end SelectsΩr test with approved WritΩr script
 
-The home screen was not updated this session. A `--blue` CSS variable was added but
-the quick-action cards and project card links were not completed.
+After approving a WritΩr script for a project that has footage:
 
-**Quick-action cards** — add two missing cards (AnalytΩr, OperatΩr):
-```
-AnalytΩr:  chart icon (📊), c-blue,   "Track performance across platforms"  → m5-analytics.html
-OperatΩr:  grid icon  (🗂️), c-green,  "Queue, publish, and archive projects" → operator.html
-```
-The `c-blue` class needs to be added to the CSS (the `--blue: #5b9cf6` var already exists).
-
-**Pipeline project cards** — add two action links to each card:
-- "Analytics →" linking to `m5-analytics.html?project_id=X` (always shown)
-- "OperatΩr →" linking to `operator.html?project_id=X` (shown only when `gate_c_approved`)
-
-**Grid layout** — 8 cards total; keep 4-column grid (2 rows of 4). Confirm it doesn't
-overflow at 1280px width.
+1. Open editor.html for that project
+2. Click Build Selects — watch terminal (`pm2 logs kre8r`) for:
+   `[SelectsΩr] Using WritΩr-approved script (writr_scripts id=N)`
+3. Confirm selects build correctly using the approved script as reference
+4. Beat coverage from SelectsΩr should map back to the WritΩr beat map
 
 ---
 
-## Task 3 — CutΩr Whisper path hardening + ReviewΩr UX fixes
+## Task 3 — DaVinci build-selects with audio (project 10)
 
-The CutΩr route uses `python -m whisper` which depends on the user's Python environment.
-This needs to be robust before first real use.
+For project 10 (The Garden VSL):
+1. Open EditΩr for project 10
+2. Click Build Selects Timeline — should create 02_SELECTS_v2
+3. Confirm audio is present in DaVinci timeline
+4. Confirm colored beat markers appear (if project has a project-config.json)
 
-**Whisper path detection (`src/routes/cutor.js`):**
-- Check `py -m whisper --help` first (Windows Python Launcher), then `python3`, then `python`
-- If Whisper not found, return a clear error immediately rather than a spawn that hangs
-- Log which Python binary is being used so debugging is easy
-- Add a `GET /api/cutor/check` health endpoint: returns ffmpeg status + Whisper status
-  (similar to `/api/vault/status`) — ReviewΩr can call this on load and show a warning
-  banner if Whisper is missing
+---
 
-**ReviewΩr UI fixes:**
-- On load, call `/api/cutor/check` and show a setup warning if ffmpeg or Whisper is
-  missing (with install instructions)
-- The "Transcribe + Analyze" button should be disabled with a tooltip explaining why
-  if the check fails
-- Add a "Re-run Analysis" button that clears existing cuts for a project and re-runs
-  the full pipeline (currently there is no way to reprocess footage)
-- Fix: after extraction, the clip_path links should be clickable `file://` links so the
-  user can open the extracted clip directly from the browser
+## PM2 Quick Reference
 
-**Robustness:**
-- If Whisper times out (>10 min), emit a timeout error event and mark job failed
-- If Claude cut analysis returns malformed JSON, show a parse error in the SSE log
-  rather than silently failing
+```
+pm2 status              # check kre8r is running
+pm2 logs kre8r          # live server logs (replaces watching terminal)
+pm2 restart kre8r       # after pulling code changes
+pm2 save                # save process list after any pm2 changes
+```

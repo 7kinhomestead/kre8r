@@ -1,3 +1,399 @@
+# Kre8Ωr Session Log — 2026-03-30 (Session 8 — WritΩr + PM2)
+
+## What Was Built — Session 8 Addendum
+
+### PM2 Auto-start (server never needs manual launch)
+
+- Installed PM2 globally (`npm install -g pm2`)
+- Started server: `pm2 start server.js --name kre8r`
+- Saved process list: `pm2 save` → `~/.pm2/dump.pm2`
+- `pm2 startup` fails on Windows — fixed with `pm2-windows-startup`:
+  - `npm install -g pm2-windows-startup`
+  - `pm2-startup install` → added Windows Registry logon entry
+  - On every Windows logon, `pm2 resurrect` reloads the saved process list
+- Created `C:\Users\18054\Desktop\Kre8r.bat` — double-click opens app in browser
+- Updated `SETUP.md` with PM2 section (commands, how autostart works, fallback)
+
+**Result:** Jason never needs to open Terminal. Boot → app is running. Click bat → browser opens.
+
+---
+
+# Kre8Ωr Session Log — 2026-03-30 (Session 8 — WritΩr)
+
+## What Was Built — Session 8
+
+### WritΩr — Script Generation & Story-Finding Module
+
+Full 7-part WritΩr system with Reality Rule at the core.
+
+**Core constraint — The Reality Rule**
+Embedded as a named constant (`REALITY_RULE` in `src/writr/claude.js`) and
+included in every single Claude prompt. WritΩr never invents story moments.
+Missing beats are flagged as `[BEAT NEEDED]` — never fabricated.
+
+**Part A — DB (`src/db.js`)**
+- `writr_scripts` table: project_id, entry_point, input_type, raw_input,
+  generated_outline, generated_script, beat_map_json, hook_variations,
+  story_found, anchor_moment, missing_beats, iteration_count, approved
+- `projects.writr_complete`, `projects.active_script_id` columns
+- Helpers: insertWritrScript, getWritrScript, getWritrScriptsByProject,
+  getApprovedWritrScript, updateWritrScript, approveWritrScript, updateProjectWritr
+
+**Part B — Script First (`src/writr/script-first.js`)**
+- Maps existing script/outline to beat structure
+- Identifies covered vs missing beats
+- Writes full beat-mapped draft in creator voice
+- Generates 3 hook variations (direct / curiosity / result-first)
+- Flags missing beats: `[BEAT NEEDED: name — authentic prompt]`
+
+**Part C — Shoot First (`src/writr/shoot-first.js`)**
+- Story archaeology: finds the real story in footage transcripts
+- Maps real moments (with footage_id) to each beat
+- Generates talking head prompts (authentic questions, not scripts)
+- Identifies the anchor moment — strongest scene in the footage
+- Shooting script with b-roll direction embedded
+
+**Part D — Hybrid (`src/writr/hybrid.js`)**
+- Reconciliation analysis: plan vs reality, per beat
+- Winner selection: plan / footage / talking_head / needs_coverage
+- Unified script bridging both worlds
+- Gaps to capture list for remaining coverage
+
+**Part E — Iteration Engine (`src/writr/iterate.js`)**
+- Conversational refinement from plain-English feedback
+- Changes only what feedback requests
+- Beat structure preserved across revisions
+- Each iteration saved as new row (history preserved)
+
+**Part F — WritΩr UI (`public/writr.html`)**
+- Three-panel layout: Input | Beat Map | Script
+- Panel 1: project selector (pipr_complete only), entry-point-aware inputs,
+  SSE progress log, load transcripts button
+- Panel 2: beat cards (green/amber/red), talking head prompts on expand,
+  coverage summary bar, anchor moment display
+- Panel 3: formatted script with beat headers, [BEAT NEEDED] in red,
+  talking head prompts in teal, iteration bar, Approve + Export buttons
+- Approve → syncs to SelectsΩr, redirects to editor.html
+
+**Part G — Pipeline Connection**
+- `server.js`: `/api/writr` route mounted, WritΩr in startup log
+- `src/editor/selects.js`: checks for WritΩr-approved script first;
+  falls back to legacy scripts table, then concept note
+- `public/index.html`:
+  - WritΩr nav link + quick action card
+  - WritΩr ✓ / WritΩr → badges on project cards
+  - 🎬 N beats need coverage pill for critical missing beats
+  - WritΩr → button on projects with pipr_complete
+
+**Also fixed in this session**
+- `scripts/davinci/build-selects.py`: removed mediaType:1 (video-only) — audio fix
+- `scripts/davinci/import-broll.py`: same mediaType fix
+- `src/routes/editor.js`: resolve_project_name → davinci_project_name column fix
+- `public/pipr.html`: Beat map now client-side (no server round-trip), better error messages
+
+---
+
+# Kre8Ωr Session Log — 2026-03-30 (Session 7)
+
+## What Was Built — Session 7
+
+### PipΩr — Complete Project Configuration & Creative Contract System
+
+Full 8-part PipΩr system built from scratch:
+
+**Part A — DB Migrations (`src/db.js`)**
+- 7 new columns on `projects` table: `setup_depth`, `entry_point`, `story_structure`,
+  `content_type`, `high_concept`, `estimated_duration_minutes`, `pipr_complete`
+- `updateProjectPipr(projectId, fields)` helper + exported
+- All columns migrated on first server start (confirmed live)
+
+**Part B — Beat Maps (`src/pipr/beats.js`)**
+- `SAVE_THE_CAT` — 15 beats with emotional function + reality notes
+- `STORY_CIRCLE` — 8 beats (Dan Harmon)
+- `VSL_ARC` — 7 beats for sales/conversion videos
+- `FREE_FORM` — empty (no structure)
+- `getBeats(structure)` + `buildBeatMap(structure, durationMinutes)` — includes `target_seconds`
+
+**Part C — Beat Tracker (`src/pipr/beat-tracker.js`)**
+- `readConfig(projectId)` / `writeConfig(projectId, config)` — file-system JSON store at `database/projects/[id]/project-config.json`
+- `matchSectionToBeat()` — keyword matching (score ≥ 2) + pct proximity fallback
+- `updateBeatCoverage(projectId)` — maps selects → beats, detects out-of-sequence, writes updated config
+
+**Part D — PipΩr Wizard UI (`public/pipr.html`)**
+- 5-screen wizard: Entry Point → Project Basics → Story Structure → Content Input → Beat Map Preview
+- Deep-mode beat editing (override name + target_pct per beat)
+- POST /api/pipr/create on completion → redirect to /?project=id
+
+**Part E — PipelineΩr Integration (`public/index.html`)**
+- Global alert bar above main when any project has unmet beats or no PipΩr setup
+- NEW PROJECT section replaced with "Start New Project in PipΩr →" link card
+- Each project card now shows: PipΩr ✓ badge, beat progress bar, missing/OOS beat tags
+- `PipΩr →` action button per project card
+- `loadPipeline()` now fetches `/api/pipr/report` in parallel with projects
+
+**Part F — DaVinci Beat Markers (`scripts/davinci/build-selects.py`)**
+- `load_project_config(project_id)` reads project-config.json from database/projects/
+- After placing all clips, adds colored beat markers at `target_pct × total_timeline_frames`:
+  - Green = covered beat
+  - Orange = out-of-sequence beat
+  - Red = critical missing beat (Hook, CTA, All Is Lost, Catalyst, Finale, Break into Three)
+  - Cyan = other missing beat
+- Summary marker now includes beat count
+
+**Part G — API Routes (`src/routes/pipr.js`)**
+- `POST /api/pipr/create` — create project + config + write JSON
+- `GET  /api/pipr/beats-preview` — beat template preview (no project needed)
+- `GET  /api/pipr/report` — all-projects beat coverage summary
+- `POST /api/pipr/mine` — run config miner
+- `GET  /api/pipr/:project_id` — full config
+- `PATCH /api/pipr/:project_id` — update config + sync DB fields
+- `GET  /api/pipr/:project_id/beats` — beat map with coverage
+- `POST /api/pipr/:project_id/beats/update` — re-run beat coverage from selects
+
+**Part H — Config Miner (`src/pipr/config-miner.js`)**
+- `minePatterns()` — reads all project-config.json files, computes structure frequencies,
+  avg duration, emotional palette patterns, writes to `creator-profile.json.storytelling_patterns`
+
+**server.js**
+- Mounted `app.use('/api/pipr', require('./src/routes/pipr'))`
+- Added PipΩr URL to terminal startup output
+
+### Also Fixed (continuation from previous session)
+- ComposΩr `public_path` persistence: DB column + route populate + client fallback chain
+- broll-bridge.js: wrong column name (`resolve_project_name` → `davinci_project_name`), fps comment
+
+---
+
+# Kre8Ωr Session Log — 2026-03-30
+
+## Summary
+
+Session 6 completed the SelectsΩr chunked-analysis architecture (four iterations to
+final working state), hardened transcript summarization aggressiveness, and fixed
+the BRAW proxy export audio silence bug (root cause: `mediaType:1` in AppendToTimeline
+was stripping audio from the timeline before render).
+
+---
+
+## What Was Built / Changed
+
+### SelectsΩr — Chunked Claude analysis (`src/editor/selects.js`)
+
+Complete rewrite of the Claude call layer. Replaced single large prompt (was
+hitting the 8192-token output limit with 5 VSL clips) with a self-contained
+`analyzeTranscripts(clips, context, emit)` function.
+
+**Module-level constants:**
+```js
+const CHUNK_SIZE          = 2;     // max clips per Claude call
+const MAX_WORDS_PER_CHUNK = 3000;  // hard word limit per chunk prompt
+```
+Startup log confirms both are live: `[SelectsΩr] Module loaded — CHUNK_SIZE=2, MAX_WORDS_PER_CHUNK=3000`
+
+**`analyzeTranscripts(clips, context, emit)`** — new sole entry point for Claude:
+1. Summarizes every clip transcript (filler drop + compression) before chunking
+2. Splits clips into chunks respecting both CHUNK_SIZE and MAX_WORDS_PER_CHUNK
+3. Calls `analyzeChunk()` once per chunk (prompt includes "chunk N of M" header so
+   Claude knows to identify all sections without worrying about completeness)
+4. Collects all sections from all chunks
+5. If > 1 chunk: calls `mergeChunkedSections()` — sends only section labels + footage_ids
+   (no transcripts) to Claude for deduplication and script-order unification
+6. Returns `{ sections[], overall_notes }`
+
+`buildSelects()` step 4 replaced with a single clean call:
+```js
+const analysis = await analyzeTranscripts(
+  transcribedClips,
+  { script, concept, projectTitle: project.title },
+  (ev) => onProgress?.(ev)
+);
+```
+
+**Summarization aggressiveness increased:**
+- `isFiller()`: drops any segment with fewer than 4 words (was: only pure filler vocab)
+- `summarizeSegment()`: compresses on word count > 50 (was: sentence count > 2)
+  - Single run-on sentence > 50 words: first 25 words + `[…]` + last 5 words
+
+**Old single-call path removed entirely.** No fallback. No `buildChunks()` helper.
+No inline step 3b/4 block in `buildSelects`.
+
+**SSE progress stages (new names):**
+- `chunks_planned` — `{ total_chunks, total_clips }`
+- `analyzing_chunk` — `{ current, total, clip_count, word_count, message }`
+- `chunk_done` — `{ current, total, sections, message }`
+- `merging` — `{ total_sections, message }`
+- `merge_done` — `{ sections, message }`
+
+**`public/editor.html`** — UI handlers updated to match new stage names. Each chunk
+logs to the browser panel with clip range and word count.
+
+---
+
+### BRAW proxy export — audio silence fix (`scripts/davinci/braw-proxy-export.py`)
+
+**Root cause:** `AppendToTimeline` was called with `"mediaType": 1` which tells
+DaVinci Resolve to add the video stream only. Audio was never placed on the
+timeline so render produced silent MP4s regardless of what codec settings were set.
+
+**Fix 1 — Remove `mediaType` from clip_dicts (the actual bug):**
+```python
+# Before (video-only — root cause of silence):
+{"mediaPoolItem": item, "startFrame": 0, "endFrame": -1, "mediaType": 1}
+
+# After (video + audio — all tracks included):
+{"mediaPoolItem": item, "startFrame": 0, "endFrame": -1}
+```
+
+**Fix 2 — Explicit audio render settings (belt-and-suspenders):**
+```python
+"ExportAudio":     True,
+"AudioCodec":      "AAC",    # uppercase — Resolve 20 is case-sensitive
+"AudioBitrate":    320,      # kbps
+"AudioChannels":   2,        # stereo
+"AudioSampleRate": 48000,    # Hz
+```
+Per-clip log: `[audio] Settings for <stem>: ExportAudio=True, Codec=AAC, Bitrate=320kbps, Channels=2 (stereo), SampleRate=48000Hz`
+
+---
+
+## Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `src/editor/selects.js` | Full chunk architecture rewrite — `analyzeTranscripts` function |
+| `public/editor.html` | SSE stage name handlers updated for new chunk events |
+| `scripts/davinci/braw-proxy-export.py` | Audio silence fix: removed `mediaType:1`, added explicit AAC render settings |
+
+---
+
+# Kre8Ωr Session Log — 2026-03-29
+
+## Summary
+
+Session 5 completed ComposΩr (Phase 2) in full, fixed a critical SelectsΩr JSON
+truncation bug, added Prompt Mode manual workflow tooling to ComposΩr, fixed the
+braw-proxy-export.py timeline collision error, and fixed a data-mapping bug that
+was silently preventing ComposΩr tracks from rendering in the UI at all.
+
+---
+
+## What Was Built / Changed
+
+### ComposΩr — Parts E–H (completion of Phase 2)
+
+**`server.js`**
+- Mounted `/api/composor` route.
+
+**`scripts/davinci/place-music.py`** — NEW FILE
+- Opens DaVinci project by name (with `_NNN` suffix scan fallback).
+- Gets or creates `04_AUDIO` timeline.
+- Imports each selected MP3 via `media_pool.ImportMedia`, appends to audio track 1.
+- Places Blue markers at each scene's approximate start position.
+- Renames audio track to `Music -6dB` as a volume reminder.
+- Outputs JSON result to stdout; all logs to stderr.
+
+**`public/composor.html`** — NEW FILE (full UI, 3 sections)
+- **Scene Analysis section**: scene cards with type badge, energy level, emotional direction, genre direction, duration hint.
+- **Track Selection section**: per-scene blocks with 3 variation rows; audio player when audio exists; generating spinner; suno-fallback message; Select button; Copy Prompt button; Open in Suno → link.
+- **DaVinci Status section**: info block, Push to DaVinci button (unlocks when all scenes selected), advance banner.
+- SSE job stream for both generation and DaVinci push.
+- Suno key status pill in project bar (Active / Prompt Mode).
+
+**Nav updated on all 9 pages** — ComposΩr link added between EditΩr and ReviewΩr.
+
+**`public/index.html`** — Added ComposΩr quick-action card; ComposΩr nav tag.
+
+**`SETUP.md`** — Added `SUNO_API_KEY` documentation with Prompt Mode explanation.
+
+---
+
+### ComposΩr — Prompt Mode manual workflow improvements
+
+**`src/routes/composor.js`**
+- Added `POST /api/composor/upload/:project_id` endpoint.
+  - Accepts multipart `file` + `scene_label` + `scene_index`.
+  - Multer saves to `public/music/<project_id>/<scene_slug>/uploaded_<ts>_<name>`.
+  - Inserts track row, marks it selected via `selectComposorTrack()`.
+  - Advances `composor_state` to `complete` if all scenes now have a selection.
+  - 50 MB file size limit; audio MIME + extension filter.
+
+**`public/composor.html`** (Prompt Mode additions)
+- **"Open in Suno →"** link button (purple) per track — opens `suno.com/create` in new tab, appears whenever a prompt exists.
+- **"⬆ Upload Track"** button per scene block — triggers hidden file input, POSTs to `/api/composor/upload`, shows inline status (`Uploading…` → `✓ Uploaded & selected` or error), then reloads tracks.
+- **Data mapping bug fixed**: `loadTracks` was reading `d.groups` (never returned by the API); now correctly builds from `d.scenes[].tracks[]` and derives `public_path` from `suno_track_url` for local files. This was silently preventing all track rendering.
+- **`updateStatusBar` fixed**: was using `d.groups` for track counts — now uses `scenes.flatMap(sc => sc.tracks)`.
+- **`renderTracks` refactored**: now accepts scenes array directly (needed `scene_index` per block for upload targeting).
+
+---
+
+### SelectsΩr — JSON truncation fix (`src/editor/selects.js`)
+
+Three changes to prevent "Claude returned malformed JSON: Unterminated string":
+
+1. **`max_tokens` raised from 4096 → 8192** — previous limit was being hit with dense multi-clip selects output.
+
+2. **Transcript summarization** (`TRANSCRIPT_WORD_LIMIT = 6000`):
+   - Before building the Claude prompt, counts total words across all transcripts.
+   - If > 6000 words: each clip's transcript is trimmed to `max(100, floor(6000 / clipCount))` words.
+   - `truncateTranscript()` keeps leading segments plus the final segment as a tail anchor (so Claude still knows clip duration).
+   - Progress event `transcript_trim` emitted with `total_words` and `budget_per_clip`.
+
+3. **JSON repair** (`repairJSON` + `findLastCompleteSection`):
+   - If `JSON.parse` fails, walks the `sections` array character-by-character tracking brace depth.
+   - Finds the last `}` that closes a complete section object.
+   - Appends `],"overall_notes":"[truncated...]"}` and attempts a second parse.
+   - Falls through to the original error only if repair also fails.
+
+---
+
+### braw-proxy-export.py — Timeline collision fix
+
+**`scripts/davinci/braw-proxy-export.py`** — `create_proxy_source_timeline()` rewritten:
+
+**Root cause**: `DeleteTimelines()` was called but its return value was discarded. When deletion silently failed (Resolve returns `False` for timelines that are current or locked), `CreateEmptyTimeline` was called with the same name → returned `None` → bare `RuntimeError`.
+
+**Fix (4-step strategy)**:
+1. Scan all timelines by index, find existing match — log index found.
+2. Call `DeleteTimelines([tl])`, capture return value, log `succeeded` or `FAILED`.
+3. Create with original name only if nothing existed or deletion confirmed.
+   - If `CreateEmptyTimeline` still returns `None` after reported success → log and fall through.
+4. Timestamp fallback: `00_PROXY_SOURCE_<unix_timestamp>` — guaranteed unique.
+   - If this also fails → `RuntimeError` with manual instructions.
+
+Every decision path produces a `[timeline]` log line to stderr.
+
+---
+
+## Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `server.js` | Mount `/api/composor` |
+| `scripts/davinci/place-music.py` | NEW — DaVinci 04_AUDIO timeline placement |
+| `scripts/davinci/braw-proxy-export.py` | Fix timeline collision (4-step deletion strategy) |
+| `src/routes/composor.js` | Add `/upload/:project_id` endpoint + multer |
+| `src/editor/selects.js` | max_tokens 8192, transcript trim, JSON repair |
+| `public/composor.html` | NEW — full ComposΩr UI; fixed data mapping bugs |
+| `public/index.html` | ComposΩr quick-action card + nav tag |
+| `public/vault.html` | ComposΩr nav link |
+| `public/editor.html` | ComposΩr nav link |
+| `public/reviewr.html` | ComposΩr nav link |
+| `public/m1-approval-dashboard.html` | ComposΩr nav link |
+| `public/m2-package-generator.html` | ComposΩr nav link |
+| `public/m3-caption-generator.html` | ComposΩr nav link |
+| `public/m4-email-generator.html` | ComposΩr nav link |
+| `public/m5-analytics.html` | ComposΩr nav link |
+| `public/operator.html` | ComposΩr nav link |
+| `SETUP.md` | SUNO_API_KEY docs + Prompt Mode explanation |
+
+## Known Issues Carried Forward
+
+- `broll-bridge.js` line ~85: wrong column `resolve_project_name` → should be `project.davinci_project_name` (silent fallback to `project.title`, functionally OK for now).
+- `broll-bridge.js` line ~92: `project.fps` doesn't exist → silently defaults to 24 (fine for current footage).
+- ComposΩr `suno_track_path` (local disk path) is saved to DB but `public_path` (`/music/...` URL) is never persisted for Suno-generated tracks — only works for uploaded tracks. Will need a DB column or route-level derivation if Suno generation is enabled.
+
+---
+
 # Kre8Ωr Session Log — 2026-03-28
 
 ## Summary
@@ -684,3 +1080,177 @@ public/vault.html                    Distribution dots/modal, folder view,
 docs/davinci-workflow.md             Complete workflow reference (corrected)
 server.js                            /api/davinci route mounted
 ```
+
+---
+
+# Kre8Ωr Session Log — 2026-03-29 (Session 4)
+
+## Summary
+
+CutΩr TODO Task 3 completed (Whisper path hardening, ReviewΩr UX, malformed JSON
+surfacing). Whisper model upgraded to `medium`. M2 PackageΩr connected to CutΩr output
+with server-side context injection. EditΩr built in full — 7 parts covering DB, SelectsΩr
+engine, DaVinci timeline builder, B-roll Bridge, API routes, UI, and global nav update.
+
+---
+
+## What Was Built / Changed
+
+### CutΩr — Task 3 completion
+
+**Whisper binary detection (`src/vault/transcribe.js`)**:
+- Replaced hardcoded `PYTHON_PATH` with a fallback chain: `py → python3 → python`
+- `WHISPER_CANDIDATES` uses `[PYTHON_PATH]` if env var set, else full chain
+- `_testWhisperBinary(bin)` probes `bin -m whisper --help` with 10s timeout; resolves version string or null
+- `detectWhisperBinary()` iterates candidates, caches result in module-level `_whisperBinary`
+- `checkWhisper()` exported — returns `{ whisper, whisper_binary, whisper_version }`
+- `runWhisper()` made async; throws descriptive error if no binary found
+- Whisper spawn gets `timeout: 600_000` (10 minutes)
+- Default model changed: `WHISPER_MODEL = process.env.WHISPER_MODEL || 'medium'`
+
+**`GET /api/cutor/check`** added to `src/routes/cutor.js`:
+- Runs `checkFfmpeg()` + `checkWhisper()` in parallel
+- Returns `{ ffmpeg, whisper, whisper_binary, whisper_version }`
+
+**ReviewΩr UX (`public/reviewr.html`)**:
+- Dependency banner (`.dep-banner`) — shown on load if ffmpeg or Whisper missing
+- `checkDependencies()` called on init; disables Transcribe button with explanation
+- "Re-run Analysis" button — clears cuts and re-runs full pipeline
+- `clipUrl(p)` helper — converts absolute path to `/clips/${filename}` for browser-safe links
+- Advance banner now passes `?project_id=` to M2
+
+**Claude JSON safety** (`src/vault/cutor.js`):
+- `callClaude()` wraps `JSON.parse` in try/catch — surfaces parse error + first 300 chars of raw response
+
+---
+
+### Whisper model upgrade
+
+Changed `src/vault/transcribe.js` line 39:
+```
+const WHISPER_MODEL = process.env.WHISPER_MODEL || 'medium'
+```
+Previously `'base'`. Medium is significantly more accurate for real-world audio.
+
+---
+
+### M2 PackageΩr ↔ CutΩr connection (`src/routes/generate.js`, `public/m2-package-generator.html`, `public/reviewr.html`)
+
+**Server-side context injection** (`src/routes/generate.js`):
+- When `project_id` is present in `/api/generate/packages`, pulls approved social clips via `db.getCutsByProject()`
+- Filters `cut_type === 'social' && approved`, sorts by rank
+- Injects timestamped clip list with description + reasoning into Claude `userPrompt`
+- `fmtTs(s)` helper formats seconds as `M:SS.s`
+
+**CutΩr context panel** (`public/m2-package-generator.html`):
+- `.cutor-panel` div (teal-bordered) shown when `project_id` present + approved clips exist
+- `loadProject()` fetches `/api/cutor/cuts/:id` in parallel with project load
+- `renderCutorPanel(clips)` renders ranked clip list with timestamps + reasoning
+
+**ReviewΩr advance banner**:
+- "Go to PackageΩr" link now sets `href` to include `?project_id=X` after extraction
+
+---
+
+### EditΩr — Full build (Parts A–G)
+
+**Part A — DB (`src/db.js`)**:
+- `footage.transcript TEXT` migration — cached Whisper JSON to avoid re-transcribing
+- `projects.editor_state TEXT` migration — tracks `selects_ready`, `broll_imported`
+- `selects` table: `(project_id, script_section, section_index, takes TEXT, selected_takes TEXT, winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position)`
+- Helper functions: `insertSelect`, `getSelectsByProject`, `deleteSelectsByProject`, `updateProjectEditorState`
+- All four functions exported
+
+**Part B — `src/editor/selects.js`** (SelectsΩr engine):
+- Accepts `project_id` + `onProgress` callback
+- Pulls all talking-head / dialogue footage for the project
+- Checks `footage.transcript` (DB) → `footage.transcript_path` (disk) → runs Whisper
+- Caches new transcripts back to `footage.transcript` column
+- Sends all transcripts + approved script / concept to Claude (`max_tokens: 4096`)
+- Claude maps segments → script sections, picks winner takes, flags gold nuggets, adds fire suggestions
+- Saves to `selects` table; sets `editor_state = 'selects_ready'`
+
+**Part C — `scripts/davinci/build-selects.py`**:
+- Opens existing Resolve project by exact name or `_NNN` suffix scan
+- Creates `02_SELECTS` timeline (versioned `_v2`, `_v3` if exists — Resolve has no delete API)
+- Clips placed on Track 1 with specific start/end timestamps from selects takes
+- Markers: Purple (overview), Blue (section header), Green (winner), Red (gold nugget + 20-frame gap), Orange (fire suggestion / b-roll)
+
+**Part D — `src/editor/broll-bridge.js` + `scripts/davinci/import-broll.py`**:
+- `getBrollSuggestions(projectId)` — filters sections whose `fire_suggestion` mentions b-roll keywords; returns sections + all b-roll footage candidates
+- `importBroll(projectId, assignments, onProgress)` — resolves file paths, spawns `import-broll.py`
+- Python script: finds `02_SELECTS` timeline, reads Blue markers to find section positions, places b-roll clips on Track 2 with Orange markers
+
+**Part E — `src/routes/editor.js`** (new file):
+- Same SSE job pattern as `cutor.js` (shared `jobs` Map, `createJob/pushEvent/finishJob/failJob`)
+- `POST /api/editor/selects/build/:project_id` — SelectsΩr engine
+- `GET /api/editor/selects/status/:job_id` — SSE stream (also used for DaVinci jobs)
+- `GET /api/editor/selects/:project_id` — load selects data
+- `DELETE /api/editor/selects/:project_id` — clear + reset state
+- `POST /api/editor/davinci/build/:project_id` — build `02_SELECTS` in Resolve
+- `GET /api/editor/broll/:project_id` — b-roll suggestions + candidates
+- `POST /api/editor/broll/import/:project_id` — import b-roll (SSE job)
+- `GET /api/editor/broll/status/:job_id` — SSE stream
+- Mounted in `server.js` at `/api/editor`
+
+**Part F — `public/editor.html`**:
+- Two-panel layout: SelectsΩr (left) + B-Roll Importer (right)
+- Project dropdown with `?project_id=` URL param support
+- Build Selects button → SSE progress log → section cards rendered
+- Section cards: section index, label, takes count, winner badge, gold nugget badge, fire note badge; expandable body shows takes list with winner highlighted + fire note box
+- Push to DaVinci button → SSE progress log
+- B-roll panel: per-section dropdowns populated from VaultΩr b-roll footage; Import B-Roll button
+- Status pills: state, sections count, gold nuggets, fire notes
+- Advance banner → ReviewΩr with `?project_id=`
+
+**Part G — Nav update (9 files)**:
+- `EditΩr` link added between VaultΩr and ReviewΩr in all pages
+- `index.html`: uses `m-tag` teal style to match VaultΩr + ReviewΩr
+- All other pages: plain `<a>` matching existing nav style
+
+---
+
+## DB Migrations Applied This Session
+
+```
+[DB] Migration: added footage.transcript
+[DB] Migration: added projects.editor_state
+```
+`selects` table created via `CREATE TABLE IF NOT EXISTS` (no migration log line — runs at schema init).
+
+---
+
+## Known Issues / Watch for Next Session
+
+- `broll-bridge.js:importBroll()` reads `db.getDavinciTimelines(projectId)[0]?.resolve_project_name`
+  but the `davinci_timelines` table has no such column. The Resolve project name is on
+  `projects.davinci_project_name`. Fix: use `project.davinci_project_name` directly.
+- `project.fps` used in `broll-bridge.js` — this column doesn't exist in the `projects` table.
+  Currently defaults to 24 gracefully. If per-project fps is needed, add the column.
+- Server startup banner does not yet list EditΩr.
+
+---
+
+## System State at End of Session
+
+```
+src/editor/selects.js               SelectsΩr engine (Whisper + Claude selects)
+src/editor/broll-bridge.js          B-roll suggestion + Resolve import bridge
+scripts/davinci/build-selects.py    02_SELECTS timeline builder (Blue/Green/Red/Orange markers)
+scripts/davinci/import-broll.py     B-roll → Track 2 of 02_SELECTS
+src/routes/editor.js                9 API endpoints, SSE job system
+src/db.js                           selects table + 4 helpers; footage.transcript +
+                                    projects.editor_state migrations + exports
+src/vault/transcribe.js             Binary fallback chain; medium model; checkWhisper()
+src/routes/cutor.js                 GET /check endpoint
+src/vault/cutor.js                  Malformed JSON surfaced in callClaude()
+src/routes/generate.js              CutΩr context injection into M2 package prompt
+public/editor.html                  Full EditΩr UI (two-panel)
+public/reviewr.html                 Dep banner; Re-run button; clipUrl(); project_id threading
+public/m2-package-generator.html    CutΩr context panel; EditΩr in nav
+All public/*.html (9 files)         EditΩr in nav (VaultΩr → EditΩr → ReviewΩr)
+server.js                           /api/editor mounted
+```
+
+**Nav order on all pages:**
+PipelineΩr · VaultΩr · EditΩr · ReviewΩr · AnalytΩr · OperatΩr · DistributΩr▾

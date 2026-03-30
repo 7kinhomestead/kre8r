@@ -99,6 +99,66 @@ Use exact decimal timestamps from the transcript. rank 1 = strongest clip.`;
 }
 
 // ─────────────────────────────────────────────
+// OFF-SCRIPT GOLD PROMPT
+// Only called when an approved script exists.
+// ─────────────────────────────────────────────
+
+function buildOffScriptPrompt({ transcript, script, contentAngle, packageTitle }) {
+  const scriptSection = `## APPROVED SCRIPT\n${script}\n`;
+
+  const angleSection = contentAngle
+    ? `## CONTENT ANGLE\nPackage: "${packageTitle}"\nAngle: ${contentAngle}\n`
+    : '';
+
+  const transcriptText = transcript.segments
+    .map(s => `[${s.start.toFixed(2)}s → ${s.end.toFixed(2)}s] ${s.text}`)
+    .join('\n');
+
+  return `You are CutΩr, analyzing footage for 7 Kin Homestead — a homesteading channel with 725K TikTok followers. Their audience values authenticity, real numbers, and genuine personality over polished delivery.
+
+${angleSection}
+${scriptSection}
+## TRANSCRIPT (word-level timestamps available)
+${transcriptText}
+
+## YOUR TASK
+
+Read this transcript alongside the approved script. Identify every moment where the creator went significantly off-script. For each off-script moment, evaluate: does this have more authentic energy than the scripted version? Is this a story, joke, revelation, or genuine moment that would resonate with the 7 Kin Homestead audience? Flag anything that feels more REAL than the script around it.
+
+High-value signals to detect:
+- Unscripted personal stories or anecdotes
+- Unexpected humor or genuine laughter
+- Moments of visible emotion or authenticity
+- Spontaneous demonstrations or discoveries ("oh wait, look at this...")
+- Strong opinion statements not in the script
+- Real numbers, costs, or specifics mentioned off the cuff
+- Self-correction moments that reveal real thinking ("actually no, what I really mean is...")
+- Direct audience address that wasn't scripted
+
+Only flag moments with genuine content value. Ignore minor verbal stumbles, filler words, or trivial deviations.
+
+## OUTPUT FORMAT
+
+Return ONLY a valid JSON object — no markdown, no explanation, no code fences:
+
+{
+  "off_script_gold": [
+    {
+      "start_timestamp": 42.1,
+      "end_timestamp": 67.3,
+      "transcript_excerpt": "the actual words spoken, verbatim",
+      "why_it_matters": "one sentence — what makes this moment valuable",
+      "suggested_use": "replace_scripted_moment | add_to_rough_cut | best_social_clip | save_for_future_video"
+    }
+  ]
+}
+
+If no off-script moments have genuine value, return: { "off_script_gold": [] }
+
+Use exact decimal timestamps from the transcript.`;
+}
+
+// ─────────────────────────────────────────────
 // CALL CLAUDE
 // ─────────────────────────────────────────────
 
@@ -134,7 +194,14 @@ async function callClaude(prompt) {
     .replace(/\s*```\s*$/i, '')
     .trim();
 
-  return JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch (parseErr) {
+    throw new Error(
+      `Claude returned malformed JSON: ${parseErr.message}. ` +
+      `First 300 chars: ${cleaned.slice(0, 300)}`
+    );
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -197,6 +264,35 @@ function writeCuts(projectId, footageId, analysis) {
     ids.cta = id;
   }
 
+  return ids;
+}
+
+// ─────────────────────────────────────────────
+// WRITE OFF-SCRIPT GOLD TO DB
+// ─────────────────────────────────────────────
+
+function writeOffScriptGold(projectId, footageId, items) {
+  const ids = [];
+  for (const item of items) {
+    const duration = parseFloat((item.end_timestamp - item.start_timestamp).toFixed(3));
+    const id = db.insertCut({
+      project_id:         projectId,
+      footage_id:         footageId,
+      start_timestamp:    String(item.start_timestamp),
+      end_timestamp:      String(item.end_timestamp),
+      duration_seconds:   duration,
+      cut_type:           'off_script_gold',
+      description:        item.transcript_excerpt
+        ? item.transcript_excerpt.slice(0, 120) + (item.transcript_excerpt.length > 120 ? '…' : '')
+        : 'Off-script moment',
+      reasoning:          item.why_it_matters,
+      transcript_excerpt: item.transcript_excerpt,
+      why_it_matters:     item.why_it_matters,
+      suggested_use:      item.suggested_use,
+      rank:               null
+    });
+    ids.push(id);
+  }
   return ids;
 }
 
@@ -288,10 +384,33 @@ async function identifyCuts(projectId, options = {}) {
     cta:             !!analysis.cta
   });
 
-  // ── 6. Write cuts to DB ──────────────────────
-  const cutIds = writeCuts(projectId, targetFootageId, analysis);
+  // ── 6. Off-Script Gold pass (only when script exists) ─────
+  let offScriptGold = [];
+  if (script) {
+    onProgress?.({ stage: 'off_script_analyzing' });
+    try {
+      const offScriptPrompt = buildOffScriptPrompt({
+        transcript:   transcriptData,
+        script,
+        contentAngle,
+        packageTitle: pkg?.title || null
+      });
+      const offScriptAnalysis = await callClaude(offScriptPrompt);
+      offScriptGold = offScriptAnalysis.off_script_gold || [];
+    } catch (e) {
+      // Non-fatal — log and continue without off-script gold
+      console.warn('[CutΩr] Off-script gold pass failed:', e.message);
+    }
+    onProgress?.({ stage: 'off_script_identified', count: offScriptGold.length });
+  }
 
-  onProgress?.({ stage: 'saved', cut_ids: cutIds });
+  // ── 7. Write cuts to DB ──────────────────────
+  const cutIds = writeCuts(projectId, targetFootageId, analysis);
+  const goldIds = offScriptGold.length
+    ? writeOffScriptGold(projectId, targetFootageId, offScriptGold)
+    : [];
+
+  onProgress?.({ stage: 'saved', cut_ids: cutIds, gold_ids: goldIds });
 
   return {
     ok:              true,
@@ -301,7 +420,9 @@ async function identifyCuts(projectId, options = {}) {
     retention_cuts:  analysis.retention_cuts  || [],
     cta:             analysis.cta             || null,
     overall_notes:   analysis.overall_notes   || '',
+    off_script_gold: offScriptGold,
     cut_ids:         cutIds,
+    gold_ids:        goldIds,
     db_cuts:         db.getCutsByProject(projectId)
   };
 }

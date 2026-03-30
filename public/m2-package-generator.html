@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/global.css">
 <style>
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
@@ -58,6 +59,20 @@
   .project-bar-info{flex:1;}
   .project-bar-title{font-weight:600;font-size:14px;color:var(--teal);}
   .project-bar-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+
+  /* CUTOR CONTEXT PANEL */
+  .cutor-panel{background:linear-gradient(135deg,rgba(62,207,178,0.05),rgba(62,207,178,0.02));border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:none;animation:fadeUp 0.4s ease both;}
+  .cutor-panel.show{display:block;}
+  .cutor-panel-title{font-family:var(--font-head);font-size:13px;letter-spacing:1.5px;color:var(--teal);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .cutor-panel-title span{font-size:10px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.3);color:var(--teal);padding:2px 8px;border-radius:20px;font-family:var(--font-body);font-weight:700;letter-spacing:0.5px;}
+  .cutor-clips{display:flex;flex-direction:column;gap:7px;}
+  .cutor-clip{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;display:flex;gap:12px;align-items:flex-start;}
+  .cutor-clip-rank{font-family:var(--font-head);font-size:18px;color:var(--text-dimmer);min-width:24px;flex-shrink:0;}
+  .cutor-clip-rank.r1{color:var(--amber);}
+  .cutor-clip-info{flex:1;min-width:0;}
+  .cutor-clip-desc{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;}
+  .cutor-clip-ts{font-size:11px;color:var(--teal);font-family:monospace;background:var(--teal-glow);padding:1px 7px;border-radius:8px;display:inline-block;}
+  .cutor-clip-reasoning{font-size:12px;color:var(--text-dim);margin-top:5px;line-height:1.5;}
 
   /* INPUT SECTION */
   .input-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:24px;animation:fadeUp 0.4s 0.05s ease both;}
@@ -202,25 +217,7 @@
 </head>
 <body>
 
-<nav class="topbar">
-  <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R</a>
-  <div class="nav">
-    <a href="/">Home</a>
-    <a href="vault.html">VaultΩr</a>
-    <a href="reviewr.html">ReviewΩr</a>
-    <a href="m5-analytics.html">AnalytΩr</a>
-    <a href="operator.html">OperatΩr</a>
-    <div class="nav-dropdown">
-      <button class="nav-drop-btn active">Distribut<span style="color:var(--teal)">Ω</span>r ▾</button>
-      <div class="nav-drop-menu">
-        <a href="m1-approval-dashboard.html">GateΩr</a>
-        <a href="m2-package-generator.html" class="active">PackageΩr</a>
-        <a href="m3-caption-generator.html">CaptionΩr</a>
-        <a href="m4-email-generator.html">MailΩr</a>
-      </div>
-    </div>
-  </div>
-</nav>
+<div id="kre8r-nav"></div>
 
 <main class="main">
 
@@ -237,6 +234,12 @@
       <div class="project-bar-sub">Packages will be saved to this project. Gate A approval flows to M3 and M4 automatically.</div>
     </div>
     <a href="/" class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">← Pipeline</a>
+  </div>
+
+  <!-- CUTOR CONTEXT PANEL -->
+  <div class="cutor-panel" id="cutor-panel">
+    <div class="cutor-panel-title">CUTΩR OUTPUT <span id="cutor-clip-count">0 APPROVED CLIPS</span></div>
+    <div class="cutor-clips" id="cutor-clips"></div>
   </div>
 
   <!-- INPUT -->
@@ -367,8 +370,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
 async function loadProject(id) {
   try {
-    const res = await fetch(`/api/projects/${id}`);
-    const project = await res.json();
+    const [projRes, cutsRes] = await Promise.all([
+      fetch(`/api/projects/${id}`),
+      fetch(`/api/cutor/cuts/${id}`)
+    ]);
+    const project = await projRes.json();
     if (project.error) return;
     document.getElementById('project-bar').classList.remove('hidden');
     document.getElementById('project-bar-title').textContent = project.title;
@@ -378,7 +384,51 @@ async function loadProject(id) {
     // Update M3/M4 links with project_id
     document.getElementById('go-m3').href = `m3-caption-generator.html?project_id=${id}`;
     document.getElementById('go-m4').href = `m4-email-generator.html?project_id=${id}`;
+
+    // Load CutΩr approved clips
+    if (cutsRes.ok) {
+      const cutsData = await cutsRes.json();
+      const approved = (cutsData.social || [])
+        .filter(c => c.approved)
+        .sort((a, b) => (a.rank || 99) - (b.rank || 99));
+      renderCutorPanel(approved);
+    }
   } catch(e) { console.error('loadProject:', e); }
+}
+
+function fmtTs(s) {
+  s = parseFloat(s);
+  const m = Math.floor(s / 60);
+  const sec = (s % 60).toFixed(1).padStart(4, '0');
+  return `${String(m).padStart(2, '0')}:${sec}`;
+}
+
+function renderCutorPanel(clips) {
+  const panel = document.getElementById('cutor-panel');
+  const list  = document.getElementById('cutor-clips');
+  const count = document.getElementById('cutor-clip-count');
+  if (!clips.length) return;
+
+  count.textContent = `${clips.length} APPROVED CLIP${clips.length !== 1 ? 'S' : ''}`;
+  list.innerHTML = '';
+  clips.forEach((clip, i) => {
+    const rankClass = clip.rank === 1 ? 'r1' : '';
+    const ts = clip.start_timestamp != null
+      ? `${fmtTs(clip.start_timestamp)} → ${fmtTs(clip.end_timestamp)}`
+      : '';
+    const div = document.createElement('div');
+    div.className = 'cutor-clip';
+    div.innerHTML = `
+      <div class="cutor-clip-rank ${rankClass}">#${clip.rank != null ? clip.rank : i + 1}</div>
+      <div class="cutor-clip-info">
+        <div class="cutor-clip-desc">${escHtml(clip.description || 'Untitled clip')}</div>
+        ${ts ? `<span class="cutor-clip-ts">${ts}</span>` : ''}
+        ${clip.reasoning ? `<div class="cutor-clip-reasoning">${escHtml(clip.reasoning)}</div>` : ''}
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  panel.classList.add('show');
 }
 
 // ─────────────────────────────────────────────
@@ -662,5 +712,7 @@ function showToast(msg, type='') {
   setTimeout(() => t.remove(), 3000);
 }
 </script>
+<script src="/js/nav.js"></script>
+<script>initNav();</script>
 </body>
 </html>

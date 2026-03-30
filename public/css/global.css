@@ -1,0 +1,62 @@
+/**
+ * Kre8Ωr — Global Design Tokens
+ * Import this as the FIRST stylesheet on every page.
+ * Pages may override :root variables in their own <style> blocks.
+ *
+ * SINE RESISTENTIA — Create without limits. Distribute without resistance.
+ */
+
+:root {
+  /* ── FONTS ── */
+  --font-head: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  /* ── BRAND ── */
+  --teal: #3ecfb2;
+  --teal-dim: #2aa893;
+  --teal-hover: #4ddfc4;
+  --teal-glow: rgba(62,207,178,0.10);
+  --teal-glow-strong: rgba(62,207,178,0.22);
+
+  /* ── SURFACES ── */
+  --bg: #0e0f0e;
+  --bg-card: #161916;
+  --bg-card-2: #1c1f1b;
+  --surface: #161916;
+  --surface-2: #1c1f1b;
+  --surface-3: #252525;
+
+  /* ── BORDERS ── */
+  --border: #2a2e28;
+  --border-bright: #3d4439;
+
+  /* ── TEXT ── */
+  --text: #e8ebe6;
+  --text-mid: #8a9487;
+  --text-dim: #8a9487;
+  --text-dimmer: #4e5349;
+  --text-faint: #3a3e38;
+
+  /* ── STATUS COLORS ── */
+  --green: #5cba8a;
+  --green-glow: rgba(92,186,138,0.10);
+  --green-border: rgba(92,186,138,0.30);
+  --amber: #f0b942;
+  --amber-glow: rgba(240,185,66,0.10);
+  --amber-border: rgba(240,185,66,0.30);
+  --red: #e05c5c;
+  --red-glow: rgba(224,92,92,0.10);
+  --red-border: rgba(224,92,92,0.30);
+  --blue: #5b9cf6;
+  --blue-glow: rgba(91,156,246,0.10);
+  --purple: #a78bfa;
+  --purple-glow: rgba(167,139,250,0.10);
+  --purple-border: rgba(167,139,250,0.30);
+
+  /* ── LAYOUT ── */
+  --nav-height: 54px;
+  --page-padding: 24px;
+  --card-radius: 10px;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
