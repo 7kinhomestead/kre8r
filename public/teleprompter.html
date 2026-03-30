@@ -454,6 +454,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   <div id="tp-voice-warn">⚠ Voice Sync requires Chrome or Edge — not supported in this browser.</div>
 
   <div id="tp-session-badge">
+    <div id="tp-session-title" style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:600;text-align:right;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none;"></div>
     <div class="tp-session-lbl">Remote code</div>
     <div id="tp-session-code">----</div>
     <div id="tp-peer-status">Waiting for remote…</div>
@@ -504,6 +505,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 ══════════════════════════════════════════ -->
 <div id="tp-remote">
   <div class="tp-rem-title">REMOTE <span>CONTROL</span></div>
+  <div id="tp-rem-project-name" style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.55);margin-bottom:16px;margin-top:-12px;display:none;"></div>
 
   <div id="tp-remote-status">
     <div class="tp-status-dot" id="tp-rem-dot"></div>
@@ -689,7 +691,12 @@ async function onProjectChange() {
     if (!d.ok) throw new Error(d.error);
 
     const segs = processScript(d.script_text);
-    loadedScript = { projectId: parseInt(pid), text: d.script_text, segments: segs };
+    loadedScript = {
+      projectId:   parseInt(pid),
+      projectName: d.project_name || 'Untitled',
+      text:        d.script_text,
+      segments:    segs
+    };
 
     const preview = segs.filter(s => s.type === 'text').slice(0, 4).map(s => s.content).join('\n');
     prev.textContent = preview || '(Script is empty after stripping production notes)';
@@ -721,16 +728,38 @@ function switchTab(tab) {
 function processScript(rawText) {
   if (!rawText) return [];
 
-  // Remove PRODUCTION NOTES section entirely (everything from marker onward)
-  let text = rawText.replace(/\*{1,2}PRODUCTION NOTES:?\*{0,2}[\s\S]*$/im, '');
+  // ── Phase 1: whole-document cuts ─────────────────────────────
+  // Drop everything from PRODUCTION NOTES onward (any capitalisation/markdown)
+  let text = rawText.replace(/\*{0,2}PRODUCTION NOTES:?\*{0,2}[\s\S]*$/im, '');
 
+  // ── Phase 2: line-by-line ─────────────────────────────────────
   const segs = [];
-  let beatN  = 0;
-  let lastT  = null;
+  let beatN = 0;
+  let lastT = null;
+
+  // Bail-out keywords — if the TRIMMED line contains any of these after
+  // removing the mic emoji it gets dropped entirely (no partial salvage)
+  const DROP_KEYWORDS = [
+    /\bBEAT NEEDED\b/i,
+    /\bb-roll\b/i,
+    /\bINSERT\b/,
+    /\bPRODUCTION NOTES?\b/i,
+    /\bBridge line\b/i,
+    /\bRecord this\b/i,
+  ];
 
   for (let line of text.split('\n')) {
-    // Beat marker line: [● BEAT: name] or [● BEAT N: name]
-    const bm = line.match(/^\s*\[●\s*BEAT(?:\s+\d+)?:\s*([^\]]+)\]\s*$/i);
+    const raw = line;
+    const trimmed = line.trim();
+
+    // ── 1. Skip blank lines (handled at end after processing) ──
+    if (!trimmed) {
+      if (lastT === 'text') { segs.push({ type: 'break' }); lastT = 'break'; }
+      continue;
+    }
+
+    // ── 2. Beat marker: [● BEAT …] → teal divider, no text ──────
+    const bm = trimmed.match(/^\[●\s*BEAT(?:\s+\d+)?:\s*([^\]]+)\]$/i);
     if (bm) {
       beatN++;
       segs.push({ type: 'beat_marker', beatName: bm[1].trim(), beatN });
@@ -738,30 +767,40 @@ function processScript(rawText) {
       continue;
     }
 
-    // Skip [BEAT NEEDED: ...] lines
-    if (/\[BEAT NEEDED:/i.test(line)) continue;
+    // ── 3. Drop entire lines that start with a production cue ───
+    //    Covers [anything], (anything), *, **, ---, emoji-only
+    const fc = trimmed[0]; // first char
+    if (fc === '[')  continue;   // any bracketed line
+    if (fc === '(')  continue;   // any paren-started line
+    if (fc === '*')  continue;   // * or ** markdown notes
+    if (/^-{2,}/.test(trimmed)) continue; // --- dividers
 
-    // Skip --- dividers
-    if (/^-{3,}\s*$/.test(line.trim())) continue;
+    // Drop lines that are only emoji / symbols (no latin/number content)
+    if (/^[\p{Emoji}\p{S}\s]+$/u.test(trimmed) && !/[a-zA-Z0-9]/.test(trimmed)) continue;
 
-    // Strip 🎤 emoji
-    line = line.replace(/^🎤\s*/u, '');
+    // ── 4. Strip 🎤 and apply keyword bail-out ───────────────────
+    line = trimmed.replace(/^🎤\s*/u, '').trim();
 
-    // Remove production notes in various formats
+    // After stripping the mic emoji, check drop keywords
+    if (DROP_KEYWORDS.some(re => re.test(line))) continue;
+
+    // ── 5. Inline production-note removal (within spoken lines) ──
     line = line.replace(/\(b-roll:[^)]*\)/gi, '');
+    line = line.replace(/\([^)]*b-roll[^)]*\)/gi, '');
     line = line.replace(/\(INSERT[^)]+\)/gi, '');
-    line = line.replace(/\*\[[^\]]*\]\*/g, '');
-    line = line.replace(/\[[^\]]*\]/g, '');
-    line = line.replace(/\([a-z][^)]*\)/g, '');
-    line = line.replace(/\*{1,2}[^*\n]+\*{1,2}/g, '');
+    line = line.replace(/\[[^\]]*\]/g, '');             // [anything in brackets]
+    line = line.replace(/\([a-z][^)]{0,80}\)/g, '');    // (lowercase-starting note)
+    line = line.replace(/\*{1,2}[^*\n]+\*{1,2}/g, ''); // **bold** or *italic* notes
     line = line.replace(/\s{2,}/g, ' ').trim();
 
+    // ── 6. Reject if nothing spoken remains ──────────────────────
     if (!line) {
       if (lastT === 'text') { segs.push({ type: 'break' }); lastT = 'break'; }
-    } else {
-      segs.push({ type: 'text', content: line });
-      lastT = 'text';
+      continue;
     }
+
+    segs.push({ type: 'text', content: line });
+    lastT = 'text';
   }
 
   return segs;
@@ -1010,8 +1049,9 @@ function connectDisplayWS() {
   catch (_) { return; }
 
   wsConn.onopen = () => {
-    const code = P_SESS && P_SESS.length === 4 ? P_SESS : null;
-    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code }));
+    const code  = P_SESS && P_SESS.length === 4 ? P_SESS : null;
+    const title = loadedScript?.projectName || null;
+    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, title }));
   };
 
   wsConn.onmessage = (e) => {
@@ -1021,6 +1061,13 @@ function connectDisplayWS() {
       wsSession = msg.session;
       document.getElementById('tp-session-code').textContent = wsSession;
       document.getElementById('tp-session-badge').classList.add('visible');
+      // Show project title above the code if available
+      const titleEl = document.getElementById('tp-session-title');
+      const title   = loadedScript?.projectName || msg.title || null;
+      if (title && title !== 'Untitled') {
+        titleEl.textContent = title;
+        titleEl.style.display = '';
+      }
       updateQRForSession(wsSession);
       if (stateTimer) clearInterval(stateTimer);
       stateTimer = setInterval(sendDisplayState, 2000);
@@ -1061,8 +1108,9 @@ function sendDisplayState() {
   const max = w.scrollHeight - w.clientHeight;
   const pos = max > 0 ? Math.round((w.scrollTop / max) * 100) : 0;
   wsConn.send(JSON.stringify({
-    type: 'state',
-    state: { speed: scrollSpeed, paused: !isPlaying, position: pos }
+    type:  'state',
+    state: { speed: scrollSpeed, paused: !isPlaying, position: pos },
+    title: loadedScript?.projectName || null
   }));
 }
 
@@ -1110,7 +1158,13 @@ function connectRemote() {
       setRemStatus(true);
       if (msg.state) applyRemState(msg.state);
     }
-    if (msg.type === 'peer_connected')    setRemStatus(true);
+    if (msg.type === 'peer_connected') {
+      setRemStatus(true);
+      if (msg.title && msg.title !== 'Untitled') {
+        const el = document.getElementById('tp-rem-project-name');
+        if (el) { el.textContent = msg.title; el.style.display = ''; }
+      }
+    }
     if (msg.type === 'peer_disconnected' && msg.role === 'display') setRemStatus(false);
     if (msg.type === 'state') applyRemState(msg);
   };
@@ -1132,6 +1186,12 @@ function applyRemState(s) {
   if (s.position !== undefined) {
     document.getElementById('tp-rem-prog-fill').style.width = s.position + '%';
     document.getElementById('tp-rem-pct').textContent = s.position + '%';
+  }
+  // Show project name when received from display
+  const title = s.title || (s.state && s.state.title);
+  if (title && title !== 'Untitled') {
+    const el = document.getElementById('tp-rem-project-name');
+    if (el) { el.textContent = title; el.style.display = ''; }
   }
 }
 

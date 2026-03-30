@@ -151,11 +151,15 @@ function createTeleprompterWS(httpServer) {
           if (!sessions.has(sessionCode)) {
             sessions.set(sessionCode, {
               display: null, control: null,
-              state: { speed: 3, paused: true, position: 0 }
+              state: { speed: 3, paused: true, position: 0 },
+              title: null
             });
           }
 
           const sess = sessions.get(sessionCode);
+          // Store project title if provided
+          if (msg.title) sess.title = msg.title;
+
           // Disconnect old display if still open
           if (sess.display && sess.display.readyState === WebSocket.OPEN) sess.display.close();
 
@@ -163,11 +167,11 @@ function createTeleprompterWS(httpServer) {
           myCode = sessionCode;
           myRole = 'display';
 
-          safeSend(ws, { type: 'registered', session: sessionCode, state: sess.state });
+          safeSend(ws, { type: 'registered', session: sessionCode, state: sess.state, title: sess.title });
 
           // Notify each other if control already connected
           if (sess.control && sess.control.readyState === WebSocket.OPEN) {
-            safeSend(sess.control, { type: 'peer_connected', role: 'display' });
+            safeSend(sess.control, { type: 'peer_connected', role: 'display', title: sess.title });
             safeSend(ws,          { type: 'peer_connected', role: 'control' });
           }
 
@@ -184,12 +188,12 @@ function createTeleprompterWS(httpServer) {
           myCode = code;
           myRole = 'control';
 
-          safeSend(ws, { type: 'registered', session: code, state: sess.state });
+          safeSend(ws, { type: 'registered', session: code, state: sess.state, title: sess.title });
 
           // Cross-notify
           if (sess.display && sess.display.readyState === WebSocket.OPEN) {
             safeSend(sess.display, { type: 'peer_connected', role: 'control' });
-            safeSend(ws,          { type: 'peer_connected', role: 'display' });
+            safeSend(ws,          { type: 'peer_connected', role: 'display', title: sess.title });
           }
         }
         return;
@@ -211,7 +215,8 @@ function createTeleprompterWS(httpServer) {
       // ── DISPLAY → CONTROL: state updates ───────────────────────
       if (msg.type === 'state' && myRole === 'display') {
         if (msg.state) Object.assign(sess.state, msg.state);
-        safeSend(sess.control, { type: 'state', ...sess.state });
+        if (msg.title) sess.title = msg.title;
+        safeSend(sess.control, { type: 'state', ...sess.state, title: sess.title });
       }
     });
 
