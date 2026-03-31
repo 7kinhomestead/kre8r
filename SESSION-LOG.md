@@ -1,3 +1,79 @@
+# Kre8Ωr Session Log — 2026-03-30 (Session 10 — TeleprΩmpter Multi-Device + Voice Sync)
+
+## What Was Built — Session 10
+
+### TeleprΩmpter — Multi-device display mode (`public/teleprompter.html` + `src/routes/teleprompter.js`)
+
+**Problem:** Any device that scanned the QR code went straight to Remote Control. There
+was no way to add a second display (phone, tablet, laptop) that mirrored the main prompter.
+
+**Fix — Join choice screen + secondary display sync**
+
+`src/routes/teleprompter.js` was rewritten from single-socket sessions to Set-based sessions:
+- `displays: Set<ws>` and `controls: Set<ws>` instead of single sockets
+- New broadcast helpers: `broadcastToAll()`, `broadcastToDisplays()`, `broadcastToControls()`
+- `getCount()` returns `{ displays: N, controls: N }` for the badge
+- `count_update` message broadcast on every join and leave
+- State relay sends to all controls AND all non-originating displays for scroll sync
+- `registered` response now includes `count` and `projectId`
+
+`public/teleprompter.html` additions:
+- **Screen 4 — Join choice** (`#tp-join`): shown when URL has `?session=XXXX` with no mode.
+  Two large buttons: "📺 Display — Show the script" and "🎮 Control — Remote control"
+- **`showJoinScreen(code)`**: hides selector, shows join screen with session code displayed
+- **`joinAsDisplay()`**: sets `isSecondaryDisplay = true`, calls `connectSecondaryDisplayWS()`
+- **`joinAsControl()`**: drops straight to remote control screen with code prefilled
+- **`connectSecondaryDisplayWS(code)`**: async function — connects with `role:'display'` +
+  existing code, fetches and renders the script from `projectId` in `registered` response,
+  receives `state` messages and applies scroll position / speed / paused, never broadcasts
+  back to avoid feedback loops. Commands from control also apply to secondary displays.
+- **`updateCountBadge(count)`**: updates `#tp-peer-status` to show "2 displays · 1 control"
+- **`sendDisplayState()`**: skips if `isSecondaryDisplay` — follower never broadcasts
+- **`backToSelector()`**: resets `isSecondaryDisplay = false` on exit
+- **QR code**: now points to `?session=XXXX` (no mode) so scanner always gets choice screen
+- Network info card text updated to "Join on Any Device" with both options explained
+- `init()` updated: if `P_SESS` present with no `P_MODE`, shows join screen instead of selector
+
+---
+
+### TeleprΩmpter — Voice Sync rebuilt (Web Audio API replacing SpeechRecognition)
+
+**Problem 1 — SpeechRecognition `onresult` never fired.** The browser granted mic access and
+showed the "in use" indicator, but the Web Speech API on Chrome/Windows localhost silently
+failed to deliver transcription results. No word matching was possible.
+
+**Problem 2 — Even with the previous fix (animTick guard), the approaches were architecturally
+incompatible.** SpeechRecognition + timer scroll cannot cleanly coexist.
+
+**Fix — Full replacement with Web Audio API volume detection**
+
+Entire SpeechRecognition stack removed: `voiceRecognition`, `buildScriptWordList`,
+`processVoiceTranscript`, `normWord`, `estimateCursorFromScroll`, `scrollAheadOfLine`,
+`scrollToWordIdx`, `vsPosition`, `scriptWords`, word-matching algorithm — all gone.
+
+New system (`sampleVoiceVolume()` called every animation frame via `animTick`):
+- `getUserMedia({ audio: true })` → `AudioContext` → `AnalyserNode` → `getByteFrequencyData()`
+- RMS of frequency bins → exponential moving average (`smoothedVol`, EMA coeff 0.18)
+- **Speaking** (smoothedVol > threshold): scroll runs at `scrollSpeed × speedMult`
+- **450ms silence debounce**: scroll pauses, mic indicator shows PAUSED
+- **Volume → speed mapping**: threshold = 0.6×, 2× threshold = 1.0×, 3× threshold = 1.5×
+  (louder speech naturally scrolls faster)
+- **`animTick` rewritten**: `spd = voiceActive ? voiceEffectiveSpd : (isPlaying ? scrollSpeed : 0)`
+  — single clean speed source, no conflicts
+- **Threshold slider** (was "Sens"): 1 = responds to whisper, 10 = needs loud voice
+- **Debug overlay** (`#tp-voice-debug`): shows volume bar + computed speed when active.
+  Example: `🎤 ████░░░░ vol 28 · speed 3.2×` / `🎤 Silence — scroll paused`
+- Works in all browsers that support Web Audio (everything except IE11)
+- Console logs: `[Voice Sync] Active`, `[Voice Sync] Speaking — scroll start`, `[Voice Sync] Silence`
+
+---
+
+## Files Changed — Session 10
+- `public/teleprompter.html` — multi-device join screen, secondary display WS, voice sync rebuild
+- `src/routes/teleprompter.js` — Set-based multi-device sessions, count_update broadcasts
+
+---
+
 # Kre8Ωr Session Log — 2026-03-30 (Session 9 — WritΩr Script Splitting)
 
 ## What Was Built — Session 9

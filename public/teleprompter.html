@@ -295,6 +295,55 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   background: var(--teal); cursor: pointer;
 }
 
+/* ═══════════════════════════════════════
+   JOIN CHOICE SCREEN
+═══════════════════════════════════════ */
+#tp-join {
+  position: fixed; inset: 0; z-index: 10;
+  background: var(--bg-sel);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 24px; text-align: center;
+}
+#tp-join.active { display: flex; }
+.tp-join-heading {
+  font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 3px;
+  color: rgba(255,255,255,0.3); margin-bottom: 8px; text-transform: uppercase;
+}
+.tp-join-code-display {
+  font-family: 'Bebas Neue', sans-serif; font-size: 64px; letter-spacing: 12px;
+  color: var(--teal); line-height: 1; margin-bottom: 6px;
+}
+.tp-join-subtitle {
+  font-size: 14px; color: rgba(255,255,255,0.4); margin-bottom: 40px;
+}
+.tp-join-choices { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 320px; }
+.tp-join-btn {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 22px;
+  border: 2px solid var(--border); border-radius: 14px;
+  background: var(--bg-card); cursor: pointer; transition: all 0.15s;
+  font-family: var(--font); color: var(--text); text-align: left;
+}
+.tp-join-btn:hover { border-color: var(--teal); background: rgba(62,207,178,0.07); }
+.tp-join-btn-icon  { font-size: 30px; line-height: 1; flex-shrink: 0; }
+.tp-join-btn-text  { display: flex; flex-direction: column; gap: 3px; }
+.tp-join-btn-label { font-size: 17px; font-weight: 700; }
+.tp-join-btn-desc  { font-size: 12px; color: rgba(255,255,255,0.38); }
+
+/* Voice debug readout — floats top-center, visible when voice is active */
+#tp-voice-debug {
+  position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 55;
+  background: rgba(0,0,0,0.78); backdrop-filter: blur(10px);
+  border: 1px solid rgba(62,207,178,0.22); border-radius: 20px;
+  padding: 5px 16px; font-size: 12px; color: rgba(255,255,255,0.6);
+  display: none; white-space: nowrap; max-width: 80vw;
+  overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+}
+#tp-voice-debug.visible { display: block; }
+#tp-voice-debug .vd-heard { color: var(--teal); font-weight: 600; }
+#tp-voice-debug .vd-pos   { color: rgba(255,255,255,0.3); margin-left: 8px; font-size: 10px; }
+
 /* Browser compat warning */
 #tp-voice-warn {
   position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 60;
@@ -426,8 +475,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     <div class="tp-network">
       <div id="tp-qr-canvas"></div>
       <div class="tp-network-text">
-        <h4>Remote Control</h4>
-        <p>Camera op scans QR code or types the URL on their phone to open Remote Control mode.</p>
+        <h4>Join on Any Device</h4>
+        <p>Scan QR code or type the URL — choose Display to mirror the script, or Control to remote-control the prompter.</p>
         <div class="tp-ip-url" id="tp-ip-url">Detecting network address…</div>
         <div class="tp-offline-note" id="tp-offline-note"></div>
       </div>
@@ -450,8 +499,11 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     <span id="tp-mic-label">LISTENING</span>
   </div>
 
+  <!-- Voice debug readout — shows last recognized words when voice sync active -->
+  <div id="tp-voice-debug"></div>
+
   <!-- Browser compat warning -->
-  <div id="tp-voice-warn">⚠ Voice Sync requires Chrome or Edge — not supported in this browser.</div>
+  <div id="tp-voice-warn">⚠ Voice Sync requires microphone access — allow it in your browser settings.</div>
 
   <div id="tp-session-badge">
     <div id="tp-session-title" style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:600;text-align:right;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none;"></div>
@@ -487,9 +539,9 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     <button class="tp-ctrl-btn" id="tp-voice-btn" onclick="toggleVoiceSync()">🎤 Voice</button>
 
     <div id="tp-voice-sense-row">
-      <span class="tp-ctrl-lbl">Sens</span>
+      <span class="tp-ctrl-lbl">Threshold</span>
       <input type="range" id="tp-sense-slider" min="1" max="10" step="1" value="5"
-             title="Matching sensitivity: low = confident matches only, high = partial matches">
+             title="Mic sensitivity: low = starts scrolling on whisper, high = needs loud voice">
     </div>
 
     <button class="tp-ctrl-btn" onclick="backToSelector()">📋 Scripts</button>
@@ -540,6 +592,31 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   <button id="tp-rem-restart" onclick="remoteSend('restart')">↺ Restart from beginning</button>
 </div>
 
+<!-- ══════════════════════════════════════════
+     SCREEN 4 — JOIN CHOICE
+══════════════════════════════════════════ -->
+<div id="tp-join">
+  <div class="tp-join-heading">Session</div>
+  <div class="tp-join-code-display" id="tp-join-code">----</div>
+  <div class="tp-join-subtitle">How do you want to use this device?</div>
+  <div class="tp-join-choices">
+    <button class="tp-join-btn" onclick="joinAsDisplay()">
+      <div class="tp-join-btn-icon">📺</div>
+      <div class="tp-join-btn-text">
+        <div class="tp-join-btn-label">Display</div>
+        <div class="tp-join-btn-desc">Show the script — synced with the main prompter</div>
+      </div>
+    </button>
+    <button class="tp-join-btn" onclick="joinAsControl()">
+      <div class="tp-join-btn-icon">🎮</div>
+      <div class="tp-join-btn-text">
+        <div class="tp-join-btn-label">Control</div>
+        <div class="tp-join-btn-desc">Remote control — play, pause, adjust speed</div>
+      </div>
+    </button>
+  </div>
+</div>
+
 <!-- QR library from CDN — graceful fallback if offline -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
         crossorigin="anonymous" onerror="window.QRCode=null"></script>
@@ -569,7 +646,8 @@ let remoteWS       = null;
 let remoteSpeed    = 3;
 let remotePaused   = true;
 let networkInfo    = { ip: null, port: 3000 };
-let displayEventsOn = false;
+let displayEventsOn    = false;
+let isSecondaryDisplay = false;
 
 // ─── URL params ───────────────────────────────────────────────
 const PARAMS   = new URLSearchParams(window.location.search);
@@ -586,6 +664,12 @@ async function init() {
 
   if (P_MODE === 'control') {
     showRemoteScreen(P_SESS);
+    return;
+  }
+
+  // Session code in URL but no explicit mode → show join choice screen
+  if (P_SESS && P_SESS.length === 4 && !P_MODE) {
+    showJoinScreen(P_SESS);
     return;
   }
 
@@ -614,14 +698,14 @@ async function loadNetworkInfo() {
   const port = networkInfo.port || window.location.port || 3000;
   const base = `http://${ip}:${port}`;
 
-  document.getElementById('tp-ip-url').textContent = `${base}/teleprompter.html?mode=control&session=XXXX`;
+  document.getElementById('tp-ip-url').textContent = `${base}/teleprompter.html?session=XXXX`;
 
   if (!networkInfo.ip) {
     document.getElementById('tp-offline-note').textContent = 'Could not detect local IP — check network connection.';
   }
 
-  // QR shows base control URL; session code filled in after WS connects
-  buildQR(`${base}/teleprompter.html?mode=control`);
+  // QR shows base URL; updated to session-specific URL after WS connects
+  buildQR(`${base}/teleprompter.html`);
 }
 
 function buildQR(url) {
@@ -642,7 +726,10 @@ function buildQR(url) {
 function updateQRForSession(code) {
   const ip   = networkInfo.ip   || window.location.hostname;
   const port = networkInfo.port || window.location.port || 3000;
-  buildQR(`http://${ip}:${port}/teleprompter.html?mode=control&session=${code}`);
+  const url  = `http://${ip}:${port}/teleprompter.html?session=${code}`;
+  buildQR(url);
+  const urlEl = document.getElementById('tp-ip-url');
+  if (urlEl) urlEl.textContent = url;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -882,16 +969,25 @@ function startTeleprompter() {
 // ═══════════════════════════════════════════════════════════════
 
 function animTick(ts) {
-  if (isPlaying && scrollSpeed > 0) {
+  // In voice mode, speed comes from volume; otherwise from the play/speed controls
+  const spd = voiceActive ? voiceEffectiveSpd
+            : (isPlaying ? scrollSpeed : 0);
+
+  // Sample mic volume every frame when voice sync is active
+  if (voiceActive) sampleVoiceVolume();
+
+  if (spd > 0) {
     if (lastTs !== null) {
-      scrollRem += scrollSpeed * 20 * ((ts - lastTs) / 1000);
+      scrollRem += spd * 20 * ((ts - lastTs) / 1000);
       const px = Math.floor(scrollRem);
       if (px >= 1) {
         scrollRem -= px;
         const w = document.getElementById('tp-scroll-wrap');
         w.scrollTop += px;
         if (w.scrollTop + w.clientHeight >= w.scrollHeight - 8) {
-          isPlaying = false; updatePPBtn();
+          // Reached end — stop whichever mode is active
+          if (voiceActive) { voiceEffectiveSpd = 0; voiceScrolling = false; }
+          else              { isPlaying = false; updatePPBtn(); }
         }
       }
     }
@@ -974,6 +1070,7 @@ function toggleMirror() {
 
 function backToSelector() {
   isPlaying = false;
+  isSecondaryDisplay = false;
   if (rafId)      { cancelAnimationFrame(rafId); rafId = null; }
   if (wsConn)     { wsConn.close(); wsConn = null; }
   if (stateTimer) { clearInterval(stateTimer); stateTimer = null; }
@@ -1069,17 +1166,13 @@ function connectDisplayWS() {
         titleEl.style.display = '';
       }
       updateQRForSession(wsSession);
+      updateCountBadge(msg.count);
       if (stateTimer) clearInterval(stateTimer);
       stateTimer = setInterval(sendDisplayState, 2000);
     }
 
-    if (msg.type === 'peer_connected' && msg.role === 'control') {
-      const el = document.getElementById('tp-peer-status');
-      el.textContent = '● Remote connected'; el.classList.add('connected');
-    }
-    if (msg.type === 'peer_disconnected') {
-      const el = document.getElementById('tp-peer-status');
-      el.textContent = 'Waiting for remote…'; el.classList.remove('connected');
+    if (msg.type === 'count_update') {
+      updateCountBadge(msg.count);
     }
 
     if (msg.type === 'command') {
@@ -1104,6 +1197,7 @@ function connectDisplayWS() {
 
 function sendDisplayState() {
   if (!wsConn || wsConn.readyState !== WebSocket.OPEN) return;
+  if (isSecondaryDisplay) return; // follower — never broadcasts state
   const w   = document.getElementById('tp-scroll-wrap');
   const max = w.scrollHeight - w.clientHeight;
   const pos = max > 0 ? Math.round((w.scrollTop / max) * 100) : 0;
@@ -1126,6 +1220,154 @@ function showRemoteScreen(prefillCode) {
     document.getElementById('tp-rem-code').value = prefillCode;
     connectRemote();
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// JOIN CHOICE SCREEN
+// ═══════════════════════════════════════════════════════════════
+
+function showJoinScreen(code) {
+  currentMode = 'join';
+  document.getElementById('tp-selector').style.display = 'none';
+  document.getElementById('tp-join').classList.add('active');
+  document.getElementById('tp-join-code').textContent = code;
+}
+
+function joinAsDisplay() {
+  isSecondaryDisplay = true;
+  document.getElementById('tp-join').classList.remove('active');
+  connectSecondaryDisplayWS(P_SESS);
+}
+
+function joinAsControl() {
+  document.getElementById('tp-join').classList.remove('active');
+  showRemoteScreen(P_SESS);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DEVICE COUNT BADGE
+// ═══════════════════════════════════════════════════════════════
+
+function updateCountBadge(count) {
+  if (!count) return;
+  const el = document.getElementById('tp-peer-status');
+  if (!el) return;
+  const d = count.displays || 0;
+  const c = count.controls || 0;
+  const parts = [];
+  if (d > 0) parts.push(`${d} display${d !== 1 ? 's' : ''}`);
+  if (c > 0) parts.push(`${c} control${c !== 1 ? 's' : ''}`);
+  if (parts.length) {
+    el.textContent = parts.join(' · ');
+    el.classList.toggle('connected', c > 0 || d > 1);
+  } else {
+    el.textContent = 'Waiting for devices…';
+    el.classList.remove('connected');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEBSOCKET — SECONDARY DISPLAY (follower mode)
+// Joins an existing session, receives state, never broadcasts back
+// ═══════════════════════════════════════════════════════════════
+
+async function connectSecondaryDisplayWS(code) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+  catch (_) { return; }
+
+  wsConn.onopen = () => {
+    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code }));
+  };
+
+  wsConn.onmessage = async (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+
+    if (msg.type === 'registered') {
+      wsSession  = msg.session;
+      const pid  = msg.projectId;
+
+      // Load the script from this session's project
+      if (pid) {
+        try {
+          const r = await fetch(`/api/teleprompter/script/${pid}`);
+          const d = await r.json();
+          if (!d.ok) throw new Error(d.error);
+          const segs = processScript(d.script_text);
+          loadedScript = {
+            projectId:   pid,
+            projectName: d.project_name || msg.title || 'Untitled',
+            text:        d.script_text,
+            segments:    segs
+          };
+        } catch (_) { loadedScript = null; }
+      }
+
+      // Render and show display
+      if (loadedScript?.segments?.length) renderScript(loadedScript.segments);
+      document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+      document.getElementById('tp-selector').style.display = 'none';
+      document.getElementById('tp-display').classList.add('active');
+      document.getElementById('tp-scroll-wrap').scrollTop = 0;
+      currentMode = 'display';
+
+      // Apply initial session state
+      if (msg.state) {
+        scrollSpeed = msg.state.speed  ?? scrollSpeed;
+        isPlaying   = !(msg.state.paused ?? true);
+        setSpeed(scrollSpeed);
+        updatePPBtn();
+      }
+
+      // Show session badge
+      document.getElementById('tp-session-code').textContent = wsSession;
+      document.getElementById('tp-session-badge').classList.add('visible');
+      const titleEl = document.getElementById('tp-session-title');
+      const title   = loadedScript?.projectName || msg.title || null;
+      if (title && title !== 'Untitled') {
+        titleEl.textContent = title; titleEl.style.display = '';
+      }
+      updateCountBadge(msg.count);
+
+      reqFS(document.getElementById('tp-display'));
+      attachDisplayEvents();
+      if (rafId) cancelAnimationFrame(rafId);
+      lastTs = null; scrollRem = 0;
+      rafId = requestAnimationFrame(animTick);
+    }
+
+    // State sync — secondary display follows primary scroll position
+    if (msg.type === 'state') {
+      if (msg.speed  !== undefined) { scrollSpeed = msg.speed; setSpeed(scrollSpeed); }
+      if (msg.paused !== undefined) { isPlaying = !msg.paused; lastTs = null; updatePPBtn(); }
+      if (msg.position !== undefined) {
+        const w   = document.getElementById('tp-scroll-wrap');
+        const max = w.scrollHeight - w.clientHeight;
+        if (max > 0) w.scrollTop = Math.round((msg.position / 100) * max);
+      }
+    }
+
+    if (msg.type === 'count_update') updateCountBadge(msg.count);
+
+    // Commands from control also apply to secondary displays
+    if (msg.type === 'command') {
+      const a = msg.action;
+      if (a === 'pause')        { isPlaying = false; lastTs = null; updatePPBtn(); }
+      if (a === 'play')         { isPlaying = true;  lastTs = null; updatePPBtn(); }
+      if (a === 'toggle_pause') { togglePlayPause(); }
+      if (a === 'speed')        { setSpeed(msg.value); }
+      if (a === 'restart')      {
+        document.getElementById('tp-scroll-wrap').scrollTop = 0;
+        isPlaying = false; lastTs = null; updatePPBtn();
+      }
+    }
+  };
+
+  wsConn.onerror = () => {};
+  wsConn.onclose = () => {
+    const el = document.getElementById('tp-peer-status');
+    if (el) { el.textContent = 'Disconnected'; el.classList.remove('connected'); }
+  };
 }
 
 function connectRemote() {
@@ -1214,42 +1456,40 @@ function remoteAdjustSpeed(delta) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// VOICE SYNC — Web Speech API word matching
+// VOICE SYNC — Web Audio API volume detection
+// Speaking → scroll moves  |  Silence → scroll pauses
+// Volume level modulates speed: loud = faster, quiet = base speed
 // ═══════════════════════════════════════════════════════════════
 
-let voiceActive      = false;
-let voiceRecognition = null;
-let voiceSilTimer    = null;   // fires when no speech for 2 s
-let scriptWords      = [];     // flat array of { word, lineIdx, wordIdx }
-let vsPosition       = 0;      // cursor in scriptWords (last confirmed match)
-let vsLastMatchTime  = 0;
+let voiceActive       = false;
+let voicePrePlayState = false;  // isPlaying before voice mode started
+let voiceEffectiveSpd = 0;      // scroll speed set by voice volume
+let voiceScrolling    = false;  // true while volume is above threshold
+let audioCtx          = null;
+let analyserNode      = null;
+let micStream         = null;
+let micSource         = null;
+let volBuffer         = null;   // Uint8Array for analyser frequency data
+let silenceTimer      = null;   // debounce before stopping scroll
+let voiceDebugTimer   = null;
+let smoothedVol       = 0;      // EMA of volume for stable detection
+const VOL_SMOOTH      = 0.18;   // EMA coefficient — lower = smoother
 
-// Normalise a word for fuzzy comparison
-function normWord(w) {
-  return (w || '').toLowerCase().replace(/[^a-z0-9']/g, '');
+function getVolumeThreshold() {
+  // Sense slider: 1 = very sensitive (starts on whisper), 10 = needs loud voice
+  // Maps slider 1-10 → threshold 4-28
+  const v = parseInt(document.getElementById('tp-sense-slider').value, 10) || 5;
+  return 4 + (v - 1) * (24 / 9);
 }
 
-// Build a flat word list from rendered lines (called once at start)
-function buildScriptWordList() {
-  scriptWords = [];
-  const lines = document.querySelectorAll('.tp-line');
-  lines.forEach((line, lineIdx) => {
-    const words = (line.textContent || '').trim().split(/\s+/);
-    words.forEach((w, wordIdx) => {
-      const n = normWord(w);
-      if (n) scriptWords.push({ word: n, lineIdx, lineEl: line, wordIdx });
-    });
-  });
-}
-
-// Check if SpeechRecognition is available
 function voiceSyncSupported() {
-  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
 function toggleVoiceSync() {
   if (!voiceSyncSupported()) {
     const warn = document.getElementById('tp-voice-warn');
+    warn.textContent = '⚠ Microphone access requires a secure context (HTTPS or localhost).';
     warn.classList.add('visible');
     setTimeout(() => warn.classList.remove('visible'), 4000);
     return;
@@ -1257,19 +1497,47 @@ function toggleVoiceSync() {
   if (voiceActive) {
     stopVoiceSync();
   } else {
-    startVoiceSync();
+    startVoiceSync(); // async — errors handled internally
   }
 }
 
-function startVoiceSync() {
+async function startVoiceSync() {
   if (voiceActive) return;
 
-  buildScriptWordList();
-  if (!scriptWords.length) return;
+  // Request mic access
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (e) {
+    const warn = document.getElementById('tp-voice-warn');
+    warn.textContent = e.name === 'NotAllowedError'
+      ? '⚠ Microphone permission denied — allow mic access in browser settings.'
+      : `⚠ Mic error: ${e.message}`;
+    warn.classList.add('visible');
+    setTimeout(() => warn.classList.remove('visible'), 5000);
+    return;
+  }
 
-  // Snap cursor to approximate current scroll position
-  vsPosition = estimateCursorFromScroll();
-  voiceActive = true;
+  micStream = stream;
+
+  // Audio graph: mic source → analyser (never connected to destination — no feedback)
+  audioCtx     = new (window.AudioContext || window.webkitAudioContext)();
+  analyserNode = audioCtx.createAnalyser();
+  analyserNode.fftSize               = 256;
+  analyserNode.smoothingTimeConstant = 0.75;
+  volBuffer    = new Uint8Array(analyserNode.frequencyBinCount);
+  micSource    = audioCtx.createMediaStreamSource(stream);
+  micSource.connect(analyserNode);
+
+  // Pause timer scroll — volume is now the scroll driver
+  voicePrePlayState = isPlaying;
+  isPlaying         = false;
+  lastTs            = null;
+  scrollRem         = 0;
+  voiceActive       = true;
+  voiceScrolling    = false;
+  voiceEffectiveSpd = 0;
+  smoothedVol       = 0;
 
   const btn = document.getElementById('tp-voice-btn');
   btn.classList.add('listening');
@@ -1277,70 +1545,30 @@ function startVoiceSync() {
 
   document.getElementById('tp-voice-sense-row').classList.add('visible');
   setMicIndicator('listening');
+  updatePPBtn();
 
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  voiceRecognition = new SR();
-  voiceRecognition.continuous     = true;
-  voiceRecognition.interimResults = true;
-  voiceRecognition.lang           = 'en-US';
-  voiceRecognition.maxAlternatives = 3;
-
-  voiceRecognition.onresult = (event) => {
-    clearTimeout(voiceSilTimer);
-    voiceSilTimer = setTimeout(onVoiceSilence, 2000);
-
-    // Resume if we were in silence-pause
-    if (!isPlaying && voiceActive) {
-      isPlaying = true; lastTs = null;
-      updatePPBtn();
-    }
-    setMicIndicator('listening');
-    document.getElementById('tp-voice-btn').classList.remove('paused-speech');
-    document.getElementById('tp-voice-btn').classList.add('listening');
-
-    // Collect most recent transcript chunk
-    let transcript = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript + ' ';
-    }
-
-    processVoiceTranscript(transcript.trim());
-  };
-
-  voiceRecognition.onerror = (e) => {
-    if (e.error === 'no-speech') return; // handled by silence timer
-    if (e.error === 'not-allowed') {
-      stopVoiceSync();
-      const w = document.getElementById('tp-voice-warn');
-      w.textContent = '⚠ Microphone permission denied. Allow mic access and try again.';
-      w.classList.add('visible');
-      setTimeout(() => w.classList.remove('visible'), 5000);
-    }
-  };
-
-  voiceRecognition.onend = () => {
-    // Auto-restart as long as voice sync is active (recognition stops on silence)
-    if (voiceActive) {
-      try { voiceRecognition.start(); } catch (_) {}
-    }
-  };
-
-  try {
-    voiceRecognition.start();
-    // Start silence timer — will pause if no speech in 2s from the very beginning
-    voiceSilTimer = setTimeout(onVoiceSilence, 2000);
-  } catch (e) {
-    stopVoiceSync();
-  }
+  console.log('[Voice Sync] Active — audio running, sample rate:', audioCtx.sampleRate);
 }
 
 function stopVoiceSync() {
-  voiceActive = false;
-  clearTimeout(voiceSilTimer);
-  if (voiceRecognition) {
-    try { voiceRecognition.stop(); } catch (_) {}
-    voiceRecognition = null;
-  }
+  voiceActive       = false;
+  voiceScrolling    = false;
+  voiceEffectiveSpd = 0;
+  clearTimeout(silenceTimer);  silenceTimer = null;
+  clearTimeout(voiceDebugTimer); voiceDebugTimer = null;
+
+  // Tear down audio graph
+  if (micSource)    { try { micSource.disconnect();   } catch (_) {} micSource    = null; }
+  if (analyserNode) { try { analyserNode.disconnect(); } catch (_) {} analyserNode = null; }
+  if (audioCtx)     { try { audioCtx.close();          } catch (_) {} audioCtx     = null; }
+  if (micStream)    { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  volBuffer = null;
+
+  // Restore pre-voice play state
+  isPlaying = voicePrePlayState;
+  lastTs    = null;
+  updatePPBtn();
+  console.log('[Voice Sync] Stopped — timer scroll restored, isPlaying:', isPlaying);
 
   const btn = document.getElementById('tp-voice-btn');
   btn.classList.remove('listening', 'paused-speech');
@@ -1348,16 +1576,71 @@ function stopVoiceSync() {
 
   document.getElementById('tp-voice-sense-row').classList.remove('visible');
   setMicIndicator('off');
+
+  const dbg = document.getElementById('tp-voice-debug');
+  if (dbg) { dbg.classList.remove('visible'); dbg.innerHTML = ''; }
 }
 
-function onVoiceSilence() {
-  if (!voiceActive) return;
-  setMicIndicator('paused');
-  document.getElementById('tp-voice-btn').classList.remove('listening');
-  document.getElementById('tp-voice-btn').classList.add('paused-speech');
-  // Pause auto-scroll when speaker stops
-  if (isPlaying) {
-    isPlaying = false; lastTs = null; updatePPBtn();
+// ─── Volume sampling — called every animation frame ──────────
+
+function sampleVoiceVolume() {
+  if (!analyserNode || !volBuffer) return;
+
+  analyserNode.getByteFrequencyData(volBuffer);
+
+  // RMS across all frequency bins (0–128 range)
+  let sum = 0;
+  for (let i = 0; i < volBuffer.length; i++) sum += volBuffer[i] * volBuffer[i];
+  const rawVol = Math.sqrt(sum / volBuffer.length);
+
+  // Exponential moving average — smooths out transient spikes
+  smoothedVol = smoothedVol * (1 - VOL_SMOOTH) + rawVol * VOL_SMOOTH;
+
+  const threshold = getVolumeThreshold();
+
+  if (smoothedVol > threshold) {
+    // ── Speaking ─────────────────────────────────────────────
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+
+    if (!voiceScrolling) {
+      voiceScrolling = true;
+      setMicIndicator('listening');
+      document.getElementById('tp-voice-btn').classList.remove('paused-speech');
+      document.getElementById('tp-voice-btn').classList.add('listening');
+      console.log('[Voice Sync] Speaking — scroll start, vol:', smoothedVol.toFixed(1), 'threshold:', threshold.toFixed(1));
+    }
+
+    // Volume → speed mapping:
+    //   at threshold   → 0.6× base speed  (just started speaking, cautious)
+    //   at 2× threshold → 1.0× base speed  (normal speaking volume)
+    //   at 3× threshold → 1.5× base speed  (louder delivery = faster scroll)
+    const overage     = Math.max(0, (smoothedVol - threshold) / threshold); // 0 at threshold, 1 at 2×
+    const speedMult   = 0.6 + Math.min(overage, 2) * 0.45;                  // 0.6 → 1.5
+    voiceEffectiveSpd = Math.max(0.3, scrollSpeed * speedMult);
+
+    // Throttled debug update (max ~10fps)
+    if (!voiceDebugTimer) {
+      voiceDebugTimer = setTimeout(() => {
+        voiceDebugTimer = null;
+        showVoiceDebug(smoothedVol, threshold);
+      }, 100);
+    }
+
+  } else {
+    // ── Silence ───────────────────────────────────────────────
+    if (voiceScrolling && !silenceTimer) {
+      silenceTimer = setTimeout(() => {
+        voiceScrolling    = false;
+        voiceEffectiveSpd = 0;
+        silenceTimer      = null;
+        setMicIndicator('paused');
+        document.getElementById('tp-voice-btn').classList.remove('listening');
+        document.getElementById('tp-voice-btn').classList.add('paused-speech');
+        console.log('[Voice Sync] Silence — scroll paused');
+        showVoiceDebug(0, threshold);
+      }, 450); // 450ms debounce — brief pauses between words don't stop scroll
+    }
   }
 }
 
@@ -1373,109 +1656,22 @@ function setMicIndicator(state) {
   }
 }
 
-// ─── Word Matching ────────────────────────────────────────────
+// ─── Debug readout ────────────────────────────────────────────
 
-function processVoiceTranscript(transcript) {
-  if (!transcript || !scriptWords.length) return;
+function showVoiceDebug(vol, threshold) {
+  const dbg = document.getElementById('tp-voice-debug');
+  if (!dbg || !voiceActive) return;
 
-  const sensitivity = parseInt(document.getElementById('tp-sense-slider').value, 10) || 5;
-  // matchThreshold: how many words in a run must match before we advance
-  // sensitivity 1 = need 3 consecutive matches, 10 = 1 match suffices
-  const matchThreshold = Math.max(1, 4 - Math.floor(sensitivity / 3));
-
-  const spokenWords = transcript.toLowerCase()
-    .replace(/[^a-z0-9'\s]/g, '')
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (!spokenWords.length) return;
-
-  // Search window: look ±30 words around current position (wider ahead)
-  const windowBack = 8;
-  const windowFwd  = 40;
-  const searchStart = Math.max(0, vsPosition - windowBack);
-  const searchEnd   = Math.min(scriptWords.length - 1, vsPosition + windowFwd);
-
-  let bestMatchIdx = -1;
-  let bestRunLen   = 0;
-
-  // Slide the spoken words across the search window looking for consecutive matches
-  for (let i = searchStart; i <= searchEnd; i++) {
-    let run = 0;
-    for (let j = 0; j < spokenWords.length && i + j < scriptWords.length; j++) {
-      if (scriptWords[i + j].word === spokenWords[j]) {
-        run++;
-      } else {
-        break;
-      }
-    }
-    if (run > bestRunLen) {
-      bestRunLen   = run;
-      bestMatchIdx = i;
-    }
+  if (!voiceScrolling || vol <= 0) {
+    dbg.innerHTML = '🎤 <span class="vd-heard">Silence</span><span class="vd-pos"> — scroll paused</span>';
+  } else {
+    // 8-block volume bar
+    const filled = Math.min(8, Math.round((vol / Math.max(threshold * 3, 1)) * 8));
+    const bar    = '█'.repeat(filled) + '░'.repeat(8 - filled);
+    const spd    = voiceEffectiveSpd.toFixed(1);
+    dbg.innerHTML = `🎤 <span class="vd-heard">${bar}</span><span class="vd-pos"> vol ${vol.toFixed(0)} · speed ${spd}×</span>`;
   }
-
-  // Only act if we hit the threshold
-  if (bestRunLen < matchThreshold || bestMatchIdx === -1) return;
-
-  const matchedEnd = bestMatchIdx + bestRunLen - 1;
-
-  // Check if talent jumped backward (more than 5 words behind cursor)
-  if (matchedEnd < vsPosition - 5) {
-    scrollToWordIdx(matchedEnd);
-    vsPosition = matchedEnd;
-    return;
-  }
-
-  // Check if talent jumped far ahead (more than 10 words)
-  if (bestMatchIdx > vsPosition + 10) {
-    scrollToWordIdx(matchedEnd);
-    vsPosition = matchedEnd;
-    return;
-  }
-
-  // Normal forward advance: move cursor to where spoken words ended
-  if (matchedEnd > vsPosition) {
-    vsPosition = matchedEnd;
-    // Target scroll: 2-3 lines ahead of the matched word's line
-    const targetLineEl = scriptWords[vsPosition]?.lineEl;
-    if (targetLineEl) {
-      scrollAheadOfLine(targetLineEl, 2);
-    }
-  }
-}
-
-// Estimate current word-cursor position from current scroll
-function estimateCursorFromScroll() {
-  if (!scriptWords.length) return 0;
-  const focusY = window.innerHeight * 0.38;
-  let best = 0, bestDist = Infinity;
-  scriptWords.forEach((sw, i) => {
-    const r = sw.lineEl?.getBoundingClientRect();
-    if (!r) return;
-    const d = Math.abs(r.top + r.height / 2 - focusY);
-    if (d < bestDist) { bestDist = d; best = i; }
-  });
-  return best;
-}
-
-// Scroll so that targetLine is at the reading position,
-// with `ahead` extra line-heights of lookahead
-function scrollAheadOfLine(targetLineEl, ahead) {
-  if (!targetLineEl) return;
-  const wrap = document.getElementById('tp-scroll-wrap');
-  const rect = targetLineEl.getBoundingClientRect();
-  const lineH = rect.height;
-  // Target: move the line to the focus point (38vh), then nudge back by `ahead` lines
-  // so we're showing text ahead of what was just spoken
-  const focusY  = window.innerHeight * 0.38;
-  const scrollTo = wrap.scrollTop + rect.top - focusY - (ahead * lineH * 1.42);
-  wrap.scrollTop = Math.max(0, scrollTo);
-}
-
-function scrollToWordIdx(idx) {
-  const sw = scriptWords[idx];
-  if (sw?.lineEl) scrollAheadOfLine(sw.lineEl, 2);
+  dbg.classList.add('visible');
 }
 
 // ═══════════════════════════════════════════════════════════════

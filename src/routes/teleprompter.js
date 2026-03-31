@@ -8,16 +8,24 @@
  *   GET /api/teleprompter/network-info   — local IP for QR code generation
  *
  * WebSocket: ws://[host]/ws/teleprompter
- *   - Display registers → gets 4-digit session code
- *   - Control connects with session code → receives commands relayed to display
+ *   Roles:
+ *     'display'  — creates or joins as synced display (first = session owner)
+ *     'control'  — remote controller; sends commands, receives state
+ *
+ *   Session structure:
+ *     displays:  Set<ws>  — all display devices (any can receive commands)
+ *     controls:  Set<ws>  — all control devices
+ *     state:     { speed, paused, position }
+ *     title:     project name
+ *     projectId: number | null
  */
 
 'use strict';
 
-const express = require('express');
-const os      = require('os');
+const express   = require('express');
+const os        = require('os');
 const WebSocket = require('ws');
-const db      = require('../db');
+const db        = require('../db');
 
 const router = express.Router();
 
@@ -40,7 +48,6 @@ function getLocalIP() {
 // ─────────────────────────────────────────────
 
 // GET /api/teleprompter/scripts
-// Returns all projects that have an approved WritΩr script
 router.get('/scripts', (req, res) => {
   const projects = db.getAllProjects();
   const result   = [];
@@ -50,7 +57,6 @@ router.get('/scripts', (req, res) => {
     const script = db.getApprovedWritrScript(p.id);
     if (!script) continue;
 
-    // Quick clean preview — strip beat markers and production cues
     const preview = (script.generated_script || '')
       .replace(/\*{1,2}PRODUCTION NOTES:?\*{0,2}[\s\S]*$/im, '')
       .replace(/\[●[^\]]*\]/g, '')
@@ -60,7 +66,7 @@ router.get('/scripts', (req, res) => {
       .replace(/\(b-roll:[^)]*\)/gi, '')
       .split('\n')
       .map(l => l.trim())
-      .filter(l => l && !/^-{2,}$/.test(l))
+      .filter(l => l && !/^-{2,}$/.test(l) && !/^\(/.test(l) && !/^\[/.test(l) && !/^\*/.test(l))
       .slice(0, 4)
       .join('\n');
 
@@ -106,7 +112,7 @@ router.get('/network-info', (req, res) => {
 
 // ─────────────────────────────────────────────
 // WEBSOCKET SESSION STORE
-// Map<sessionCode, { display, control, state }>
+// Map<sessionCode, { displays, controls, state, title, projectId }>
 // ─────────────────────────────────────────────
 
 const sessions = new Map();
@@ -124,6 +130,23 @@ function safeSend(ws, data) {
   }
 }
 
+function broadcastToAll(sess, data, except = null) {
+  for (const ws of sess.displays) { if (ws !== except) safeSend(ws, data); }
+  for (const ws of sess.controls) { if (ws !== except) safeSend(ws, data); }
+}
+
+function broadcastToControls(sess, data) {
+  for (const ws of sess.controls) safeSend(ws, data);
+}
+
+function broadcastToDisplays(sess, data) {
+  for (const ws of sess.displays) safeSend(ws, data);
+}
+
+function getCount(sess) {
+  return { displays: sess.displays.size, controls: sess.controls.size };
+}
+
 // ─────────────────────────────────────────────
 // WEBSOCKET SERVER FACTORY
 // Called from server.js with the HTTP server instance
@@ -134,7 +157,7 @@ function createTeleprompterWS(httpServer) {
 
   wss.on('connection', (ws) => {
     let myCode = null;
-    let myRole = null;
+    let myRole = null;  // 'display' | 'control'
 
     ws.on('message', (raw) => {
       let msg;
@@ -142,59 +165,72 @@ function createTeleprompterWS(httpServer) {
 
       // ── REGISTER ──────────────────────────────────────────────
       if (msg.type === 'register') {
-        const role   = msg.role;    // 'display' | 'control'
-        const code   = msg.session; // provided session code or null
+        const role      = msg.role;
+        const code      = msg.session;
+        const isDisplay = role === 'display';
+        const isControl = role === 'control';
 
-        if (role === 'display') {
-          const sessionCode = code && code.length === 4 ? code : generateCode();
+        if (isDisplay) {
+          // Determine session: join existing if code provided, else create new
+          const joining    = code && code.length === 4 && sessions.has(code);
+          const sessionCode = joining ? code : (code && code.length === 4 ? code : generateCode());
 
           if (!sessions.has(sessionCode)) {
             sessions.set(sessionCode, {
-              display: null, control: null,
-              state: { speed: 3, paused: true, position: 0 },
-              title: null
+              displays:  new Set(),
+              controls:  new Set(),
+              state:     { speed: 3, paused: true, position: 0 },
+              title:     null,
+              projectId: null
             });
           }
 
           const sess = sessions.get(sessionCode);
-          // Store project title if provided
-          if (msg.title) sess.title = msg.title;
+          if (msg.title)     sess.title     = msg.title;
+          if (msg.projectId) sess.projectId = msg.projectId;
 
-          // Disconnect old display if still open
-          if (sess.display && sess.display.readyState === WebSocket.OPEN) sess.display.close();
-
-          sess.display = ws;
+          sess.displays.add(ws);
           myCode = sessionCode;
           myRole = 'display';
 
-          safeSend(ws, { type: 'registered', session: sessionCode, state: sess.state, title: sess.title });
+          const count = getCount(sess);
 
-          // Notify each other if control already connected
-          if (sess.control && sess.control.readyState === WebSocket.OPEN) {
-            safeSend(sess.control, { type: 'peer_connected', role: 'display', title: sess.title });
-            safeSend(ws,          { type: 'peer_connected', role: 'control' });
-          }
+          safeSend(ws, {
+            type:      'registered',
+            session:   sessionCode,
+            state:     sess.state,
+            title:     sess.title,
+            projectId: sess.projectId,
+            count
+          });
 
-        } else if (role === 'control') {
+          // Notify all other peers
+          broadcastToAll(sess, { type: 'count_update', count }, ws);
+
+        } else if (isControl) {
           if (!code || !sessions.has(code)) {
             safeSend(ws, { type: 'error', message: 'Session not found. Check the 4-digit code on the prompter screen.' });
             return;
           }
 
           const sess = sessions.get(code);
-          if (sess.control && sess.control.readyState === WebSocket.OPEN) sess.control.close();
-
-          sess.control = ws;
+          sess.controls.add(ws);
           myCode = code;
           myRole = 'control';
 
-          safeSend(ws, { type: 'registered', session: code, state: sess.state, title: sess.title });
+          const count = getCount(sess);
 
-          // Cross-notify
-          if (sess.display && sess.display.readyState === WebSocket.OPEN) {
-            safeSend(sess.display, { type: 'peer_connected', role: 'control' });
-            safeSend(ws,          { type: 'peer_connected', role: 'display', title: sess.title });
-          }
+          safeSend(ws, {
+            type:      'registered',
+            session:   code,
+            state:     sess.state,
+            title:     sess.title,
+            projectId: sess.projectId,
+            count
+          });
+
+          // Notify all other peers
+          broadcastToAll(sess, { type: 'count_update', count }, ws);
         }
         return;
       }
@@ -202,21 +238,29 @@ function createTeleprompterWS(httpServer) {
       if (!myCode || !sessions.has(myCode)) return;
       const sess = sessions.get(myCode);
 
-      // ── CONTROL → DISPLAY: relay commands ──────────────────────
+      // ── CONTROL → ALL DISPLAYS: relay commands ─────────────────
       if (msg.type === 'command' && myRole === 'control') {
-        safeSend(sess.display, msg);
-        // Mirror state in session
-        if (msg.action === 'speed')        sess.state.speed  = msg.value;
-        if (msg.action === 'pause')        sess.state.paused = true;
-        if (msg.action === 'play')         sess.state.paused = false;
-        if (msg.action === 'toggle_pause') sess.state.paused = !sess.state.paused;
+        broadcastToDisplays(sess, msg);
+        // Mirror state
+        if (msg.action === 'speed')        sess.state.speed   = msg.value;
+        if (msg.action === 'pause')        sess.state.paused  = true;
+        if (msg.action === 'play')         sess.state.paused  = false;
+        if (msg.action === 'toggle_pause') sess.state.paused  = !sess.state.paused;
+        if (msg.action === 'restart')      sess.state.position = 0;
+        // Echo updated state to all controls
+        broadcastToControls(sess, { type: 'state', ...sess.state, title: sess.title });
       }
 
-      // ── DISPLAY → CONTROL: state updates ───────────────────────
+      // ── DISPLAY → CONTROLS + OTHER DISPLAYS: state sync ────────
       if (msg.type === 'state' && myRole === 'display') {
         if (msg.state) Object.assign(sess.state, msg.state);
         if (msg.title) sess.title = msg.title;
-        safeSend(sess.control, { type: 'state', ...sess.state, title: sess.title });
+        const stateMsg = { type: 'state', ...sess.state, title: sess.title };
+        broadcastToControls(sess, stateMsg);
+        // Relay to secondary displays for position sync
+        for (const disp of sess.displays) {
+          if (disp !== ws) safeSend(disp, stateMsg);
+        }
       }
     });
 
@@ -225,19 +269,26 @@ function createTeleprompterWS(httpServer) {
       const sess = sessions.get(myCode);
 
       if (myRole === 'display') {
-        sess.display = null;
-        safeSend(sess.control, { type: 'peer_disconnected', role: 'display' });
-        // Clean up orphaned sessions after 2 minutes
-        if (!sess.control || sess.control.readyState !== WebSocket.OPEN) {
-          setTimeout(() => { if (!sess.display) sessions.delete(myCode); }, 120_000);
-        }
+        sess.displays.delete(ws);
       } else if (myRole === 'control') {
-        sess.control = null;
-        safeSend(sess.display, { type: 'peer_disconnected', role: 'control' });
+        sess.controls.delete(ws);
+      }
+
+      const count = getCount(sess);
+      broadcastToAll(sess, { type: 'count_update', count });
+
+      // Clean up empty sessions after 2 minutes
+      if (sess.displays.size === 0 && sess.controls.size === 0) {
+        setTimeout(() => {
+          const s = sessions.get(myCode);
+          if (s && s.displays.size === 0 && s.controls.size === 0) {
+            sessions.delete(myCode);
+          }
+        }, 120_000);
       }
     });
 
-    ws.on('error', () => { /* suppress unhandled ws errors */ });
+    ws.on('error', () => {});
   });
 
   console.log('[TeleprΩmpter] WebSocket ready at /ws/teleprompter');
