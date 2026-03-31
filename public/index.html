@@ -253,6 +253,88 @@
   .empty-title { font-family: var(--font-head); font-size: 28px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 8px; }
   .empty-sub { font-size: 13px; color: var(--text-dimmer); max-width: 360px; margin: 0 auto; line-height: 1.7; }
 
+  /* ─── PROJECT CARD MENU ─── */
+  .pc-menu-wrap { position: relative; align-self: flex-start; }
+  .pc-menu-btn {
+    background: none; border: none; color: rgba(255,255,255,0.2);
+    font-size: 18px; cursor: pointer; padding: 0 6px; line-height: 1.4;
+    border-radius: 4px; transition: all 0.12s;
+  }
+  .pc-menu-btn:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+  .pc-menu {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 200;
+    background: #1a1d1a; border: 1px solid var(--border-bright);
+    border-radius: 8px; padding: 4px; min-width: 168px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6); display: none;
+  }
+  .pc-menu.open { display: block; }
+  .pc-menu-item {
+    display: flex; align-items: center; gap: 9px; padding: 8px 12px;
+    border-radius: 5px; font-size: 13px; cursor: pointer; width: 100%;
+    background: none; border: none; text-align: left; color: var(--text-dim);
+    font-family: var(--font-body); transition: all 0.1s;
+  }
+  .pc-menu-item:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .pc-menu-item.danger:hover { background: rgba(220,60,60,0.12); color: #f87171; }
+  .pc-menu-sep { height: 1px; background: var(--border); margin: 3px 4px; }
+
+  /* ─── CONFIRMATION MODAL ─── */
+  #confirm-modal {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  #confirm-modal.open { display: flex; }
+  .confirm-dialog {
+    background: #161916; border: 1px solid var(--border-bright);
+    border-radius: 12px; padding: 28px 28px 22px; max-width: 420px; width: 100%;
+    animation: fadeUp 0.18s ease;
+  }
+  .confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .confirm-msg { font-size: 13px; color: var(--text-dim); line-height: 1.65; margin-bottom: 24px; }
+  .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .confirm-cancel {
+    padding: 9px 18px; background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-bright); border-radius: 7px;
+    color: var(--text-dim); font-family: var(--font-body); font-size: 13px;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .confirm-cancel:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+  .confirm-ok {
+    padding: 9px 18px; background: rgba(200,40,40,0.2);
+    border: 1px solid rgba(220,60,60,0.4); border-radius: 7px;
+    color: #f87171; font-family: var(--font-body); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .confirm-ok:hover { background: rgba(200,40,40,0.35); }
+  .confirm-ok.archive {
+    background: rgba(180,130,20,0.15); border-color: rgba(200,150,40,0.4); color: var(--amber);
+  }
+  .confirm-ok.archive:hover { background: rgba(180,130,20,0.28); }
+
+  /* ─── ARCHIVED SECTION ─── */
+  .archived-toggle {
+    display: none; align-items: center; gap: 8px; margin-top: 20px;
+    cursor: pointer; color: var(--text-dimmer); font-size: 11px;
+    font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    user-select: none; padding: 4px 0;
+  }
+  .archived-toggle.visible { display: flex; }
+  .archived-toggle:hover { color: var(--text-dim); }
+  .archived-arrow { display: inline-block; transition: transform 0.2s; font-size: 10px; }
+  .archived-toggle.open .archived-arrow { transform: rotate(90deg); }
+  #archived-section { display: none; margin-top: 12px; }
+  #archived-section.open { display: block; }
+  .archived-card { opacity: 0.6; border-color: rgba(255,255,255,0.05) !important; }
+  .archived-card:hover { opacity: 0.85; }
+  .pc-restore-btn {
+    padding: 6px 12px; background: rgba(62,207,178,0.08);
+    border: 1px solid rgba(62,207,178,0.3); border-radius: 6px;
+    color: var(--teal); font-family: var(--font-body); font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: all 0.12s; white-space: nowrap;
+  }
+  .pc-restore-btn:hover { background: rgba(62,207,178,0.18); }
+
   /* ─── SYSTEM STATUS BAR ─── */
   .status-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -345,6 +427,17 @@
         <div class="empty-sub">No active projects yet. Click PipΩr Wizard above to start your first video.</div>
       </div>
     </div>
+
+    <!-- Archived projects — collapsed by default, shown when archives exist -->
+    <div class="archived-toggle" id="archived-toggle" onclick="toggleArchivedSection()">
+      <span class="archived-arrow">▶</span>
+      <span>Archived Projects</span>
+      <span id="archived-count" style="color:var(--text-faint)"></span>
+    </div>
+    <div id="archived-section">
+      <div class="projects-grid" id="archived-grid"></div>
+    </div>
+
   </div>
 
 </main>
@@ -360,6 +453,18 @@
 </div>
 
 <div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Confirmation modal -->
+<div id="confirm-modal" onclick="if(event.target===this)closeConfirm()">
+  <div class="confirm-dialog">
+    <div class="confirm-title" id="confirm-title"></div>
+    <div class="confirm-msg"   id="confirm-msg"></div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-ok"     id="confirm-ok-btn" onclick="runConfirm()"></button>
+    </div>
+  </div>
+</div>
 
 <script src="/js/nav.js"></script>
 <script>
@@ -442,6 +547,7 @@ async function loadDashboard() {
 
     renderAttentionZone();
     renderProjectsZone();
+    checkArchivedCount();
   } catch (e) {
     console.error('[Dashboard] Failed to load:', e);
   }
@@ -666,6 +772,17 @@ function buildProjectCard(p, i) {
       ${tagsHTML}
     </div>
     <div class="pc-right">
+      <div class="pc-menu-wrap">
+        <button class="pc-menu-btn" title="Project options"
+                onclick="togglePcMenu(${p.id},event)">⋯</button>
+        <div class="pc-menu" id="pc-menu-${p.id}">
+          <button class="pc-menu-item" onclick="window.location='/pipr.html?project_id=${p.id}'">⚙ Settings</button>
+          <div class="pc-menu-sep"></div>
+          <button class="pc-menu-item" onclick="confirmArchive(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">📦 Archive</button>
+          <div class="pc-menu-sep"></div>
+          <button class="pc-menu-item danger" onclick="confirmDelete(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">🗑 Delete</button>
+        </div>
+      </div>
       <div class="pc-updated">${dateStr}</div>
       <a href="${nextAction.href}" class="pc-next-action ${nextAction.color}">${nextAction.label}</a>
     </div>
@@ -753,6 +870,202 @@ function showToast(msg, type = '') {
   t.textContent = msg;
   wrap.appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+
+// ─────────────────────────────────────────────
+// PROJECT CARD MENU
+// ─────────────────────────────────────────────
+
+function togglePcMenu(id, e) {
+  e.stopPropagation();
+  const menu = document.getElementById(`pc-menu-${id}`);
+  const wasOpen = menu.classList.contains('open');
+  // Close all open menus first
+  document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) menu.classList.add('open');
+}
+
+// Close any open menu when clicking elsewhere
+document.addEventListener('click', () => {
+  document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+});
+
+// ─────────────────────────────────────────────
+// CONFIRMATION MODAL
+// ─────────────────────────────────────────────
+
+let _confirmCb = null;
+
+function showConfirm({ title, msg, okLabel, okClass, onConfirm }) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent   = msg;
+  const btn = document.getElementById('confirm-ok-btn');
+  btn.textContent = okLabel;
+  btn.className   = `confirm-ok ${okClass || ''}`.trim();
+  _confirmCb = onConfirm;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  _confirmCb = null;
+}
+
+function runConfirm() {
+  const cb = _confirmCb;
+  closeConfirm();
+  if (cb) cb();
+}
+
+// Esc to dismiss
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeConfirm();
+});
+
+// ─────────────────────────────────────────────
+// ARCHIVE
+// ─────────────────────────────────────────────
+
+function confirmArchive(id, title) {
+  showConfirm({
+    title:     `Archive "${title}"?`,
+    msg:       'The project will be hidden from the dashboard. You can restore it any time from the Archived Projects section below.',
+    okLabel:   'Archive',
+    okClass:   'archive',
+    onConfirm: () => doArchive(id)
+  });
+}
+
+async function doArchive(id) {
+  try {
+    const r = await fetch(`/api/projects/${id}/archive`, { method: 'PATCH' });
+    if (!r.ok) throw new Error();
+    await loadDashboard();
+    checkArchivedCount();
+    showToast('Project archived');
+  } catch {
+    showToast('Could not archive project', 'amber');
+  }
+}
+
+async function doUnarchive(id) {
+  try {
+    await fetch(`/api/projects/${id}/unarchive`, { method: 'PATCH' });
+    await loadDashboard();
+    loadArchivedGrid();   // refresh the archived list in place
+    showToast('Project restored');
+  } catch {
+    showToast('Could not restore project', 'amber');
+  }
+}
+
+// ─────────────────────────────────────────────
+// DELETE
+// ─────────────────────────────────────────────
+
+function confirmDelete(id, title) {
+  showConfirm({
+    title:     `Delete "${title}"?`,
+    msg:       'This permanently deletes the project, all scripts, packages, captions, and emails. Footage in VaultΩr is not affected. This cannot be undone.',
+    okLabel:   'Delete Forever',
+    okClass:   '',
+    onConfirm: () => doDelete(id)
+  });
+}
+
+function confirmDeleteArchived(id, title) {
+  showConfirm({
+    title:     `Delete "${title}"?`,
+    msg:       'This permanently deletes the archived project and all its data. Footage in VaultΩr is not affected. This cannot be undone.',
+    okLabel:   'Delete Forever',
+    okClass:   '',
+    onConfirm: () => doDeleteArchived(id)
+  });
+}
+
+async function doDelete(id) {
+  try {
+    const r = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error();
+    await loadDashboard();
+    checkArchivedCount();
+    showToast('Project deleted');
+  } catch {
+    showToast('Could not delete project', 'amber');
+  }
+}
+
+async function doDeleteArchived(id) {
+  try {
+    const r = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error();
+    loadArchivedGrid();
+    checkArchivedCount();
+    showToast('Project deleted');
+  } catch {
+    showToast('Could not delete project', 'amber');
+  }
+}
+
+// ─────────────────────────────────────────────
+// ARCHIVED SECTION
+// ─────────────────────────────────────────────
+
+async function checkArchivedCount() {
+  try {
+    const r = await fetch('/api/projects/archived');
+    const list = await r.json();
+    const toggle = document.getElementById('archived-toggle');
+    const badge  = document.getElementById('archived-count');
+    if (list.length > 0) {
+      toggle.classList.add('visible');
+      badge.textContent = `(${list.length})`;
+    } else {
+      toggle.classList.remove('visible', 'open');
+      document.getElementById('archived-section').classList.remove('open');
+      badge.textContent = '';
+    }
+  } catch { /* silent */ }
+}
+
+function toggleArchivedSection() {
+  const toggle  = document.getElementById('archived-toggle');
+  const section = document.getElementById('archived-section');
+  const opening = toggle.classList.toggle('open');
+  section.classList.toggle('open', opening);
+  if (opening) loadArchivedGrid();
+}
+
+async function loadArchivedGrid() {
+  const grid = document.getElementById('archived-grid');
+  try {
+    const r    = await fetch('/api/projects/archived');
+    const list = await r.json();
+    if (!list.length) {
+      grid.innerHTML = '<div class="empty-state" style="padding:32px 20px"><div class="empty-icon">📦</div><div class="empty-title" style="font-size:14px">NO ARCHIVED PROJECTS</div></div>';
+      return;
+    }
+    grid.innerHTML = list.map(p => `
+      <div class="project-card archived-card">
+        <div class="pc-left">
+          <div class="pc-title-row">
+            <span class="pc-title">${esc(p.title)}</span>
+            <span class="pc-type-badge default" style="opacity:0.5">Archived</span>
+          </div>
+          <div class="pc-meta">
+            <span class="pc-dot" style="background:var(--text-faint)"></span>
+            <span>Created ${relativeDate(p.created_at)}</span>
+          </div>
+        </div>
+        <div class="pc-right">
+          <button class="pc-restore-btn" onclick="doUnarchive(${p.id})">↩ Restore</button>
+          <button class="pc-next-action dim" style="font-size:12px"
+                  onclick="confirmDeleteArchived(${p.id},${JSON.stringify(p.title)})">🗑 Delete</button>
+        </div>
+      </div>`).join('');
+  } catch {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-sub">Could not load archived projects.</div></div>';
+  }
 }
 </script>
 </body>

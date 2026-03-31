@@ -56,6 +56,7 @@ app.use('/api/pipr',          require('./src/routes/pipr'));
 app.use('/api/writr',         require('./src/routes/writr'));
 const { router: teleprompterRouter, createTeleprompterWS } = require('./src/routes/teleprompter');
 app.use('/api/teleprompter',  teleprompterRouter);
+app.use('/api/shootday',      require('./src/routes/shootday'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
@@ -134,6 +135,8 @@ async function start() {
     console.log(`  \x1b[2m  Pip\u03a9r          →\x1b[0m http://localhost:${PORT}/pipr.html`);
     console.log(`  \x1b[2m  Writ\u03a9r         →\x1b[0m http://localhost:${PORT}/writr.html`);
     console.log(`  \x1b[2m  TeleprΩmpter   →\x1b[0m http://localhost:${PORT}/teleprompter.html`);
+    console.log(`  \x1b[2m  Direct\u03a9r       →\x1b[0m http://localhost:${PORT}/director.html`);
+    console.log(`  \x1b[2m  ShootDay       →\x1b[0m http://localhost:${PORT}/shootday.html`);
     if (localIP) {
       console.log(`  \x1b[36m  TeleprΩmpter   →\x1b[0m \x1b[36mhttp://${localIP}:${PORT}/teleprompter.html\x1b[0m  ← use on tablet`);
     }

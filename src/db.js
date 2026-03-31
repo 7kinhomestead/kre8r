@@ -266,6 +266,22 @@ function runMigrations() {
   )`);
   db.run('CREATE INDEX IF NOT EXISTS idx_writr_scripts_project ON writr_scripts(project_id)');
 
+  // DirectΩr / ShootDay: shoot_takes table
+  db.run(`CREATE TABLE IF NOT EXISTS shoot_takes (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id  INTEGER NOT NULL,
+    beat_index  INTEGER NOT NULL,
+    beat_name   TEXT    NOT NULL DEFAULT '',
+    take_number INTEGER NOT NULL DEFAULT 1,
+    status      TEXT    NOT NULL DEFAULT 'needed',
+    note        TEXT,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_shoot_takes_project ON shoot_takes(project_id)');
+  db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_shoot_takes_beat ON shoot_takes(project_id, beat_index)');
+
   // PipΩr: project config columns
   const projectsCols4 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
   if (!projectsCols4.includes('setup_depth')) {
@@ -1228,6 +1244,37 @@ function approveWritrScript(projectId, scriptId) {
 }
 
 // ─────────────────────────────────────────────
+// ARCHIVE / DELETE
+// ─────────────────────────────────────────────
+
+function archiveProject(id) {
+  _run(`UPDATE projects SET status = 'archived' WHERE id = ?`, [id]);
+  persist();
+}
+
+function unarchiveProject(id) {
+  _run(`UPDATE projects SET status = 'active' WHERE id = ?`, [id]);
+  persist();
+}
+
+function deleteProject(id) {
+  // ON DELETE CASCADE in schema handles all child table cleanup automatically
+  _run(`DELETE FROM projects WHERE id = ?`, [id]);
+  persist();
+}
+
+function getArchivedProjects() {
+  return _all(`
+    SELECT p.*, ps.gate_a_approved, ps.gate_b_approved, ps.gate_c_approved,
+           ps.stage_status
+    FROM projects p
+    LEFT JOIN pipeline_state ps ON ps.project_id = p.id
+    WHERE p.status = 'archived'
+    ORDER BY p.created_at DESC
+  `);
+}
+
+// ─────────────────────────────────────────────
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
 
@@ -1257,6 +1304,10 @@ module.exports = {
   saveEmails,
   getEmails,
   approveAllEmails,
+  archiveProject,
+  unarchiveProject,
+  deleteProject,
+  getArchivedProjects,
   getPipelineSummary,
   // VaultΩr
   insertFootage,
@@ -1321,5 +1372,56 @@ module.exports = {
   getWritrScriptsByProject,
   getApprovedWritrScript,
   updateWritrScript,
-  approveWritrScript
+  approveWritrScript,
+  // ShootDay
+  getShootTakes,
+  upsertShootTake,
+  resetShootTakes
 };
+
+
+// ─────────────────────────────────────────────
+// SHOOTDAY — Take helpers
+// ─────────────────────────────────────────────
+
+function getShootTakes(projectId) {
+  return _all(
+    `SELECT * FROM shoot_takes WHERE project_id = ? ORDER BY beat_index ASC`,
+    [projectId]
+  );
+}
+
+function upsertShootTake(projectId, beatIndex, beatName, status, note) {
+  const existing = _get(
+    `SELECT id, take_number FROM shoot_takes WHERE project_id = ? AND beat_index = ?`,
+    [projectId, beatIndex]
+  );
+  if (existing) {
+    const newTake = status === 'needed'
+      ? existing.take_number              // reset doesn't increment
+      : (existing.take_number + 1);      // good/skip = new take attempt
+    _run(
+      `UPDATE shoot_takes SET status = ?, note = ?, take_number = ?,
+         beat_name = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE project_id = ? AND beat_index = ?`,
+      [status, note || null, newTake, beatName || '', projectId, beatIndex]
+    );
+  } else {
+    _run(
+      `INSERT INTO shoot_takes (project_id, beat_index, beat_name, take_number, status, note)
+       VALUES (?, ?, ?, 1, ?, ?)`,
+      [projectId, beatIndex, beatName || '', status, note || null]
+    );
+  }
+  persist();
+  return _get(
+    `SELECT * FROM shoot_takes WHERE project_id = ? AND beat_index = ?`,
+    [projectId, beatIndex]
+  );
+}
+
+function resetShootTakes(projectId) {
+  _run(`DELETE FROM shoot_takes WHERE project_id = ?`, [projectId]);
+  persist();
+}
+

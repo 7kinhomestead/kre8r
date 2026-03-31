@@ -38,8 +38,8 @@
         id: 'prod',
         label: 'Prod',
         items: [
-          { label: 'DirectΩr',     href: '/director.html',    soon: true, phase: 3 },
-          { label: 'ShootDay',     href: '/shootday.html',    soon: true, phase: 3 },
+          { label: 'DirectΩr',     href: '/director.html' },
+          { label: 'ShootDay',     href: '/shootday.html' },
           { label: 'TeleprΩmpter', href: '/teleprompter.html' },
           { label: 'CoverageΩr',  href: '/coverager.html',   soon: true, phase: 3 },
         ]

@@ -7,85 +7,855 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <link rel="stylesheet" href="/css/global.css">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-  body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size:128px 128px; z-index:1000; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-
-  .main { max-width: 680px; margin: 0 auto; padding: 80px 24px 120px; text-align: center; }
-
-  .cs-phase {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-    padding: 4px 12px; border-radius: 20px;
-    background: var(--bg-card-2); border: 1px solid var(--border-bright); color: var(--text-dimmer);
-    margin-bottom: 28px; animation: fadeUp 0.3s ease both;
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b;
+    --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --green:#5cba8a; --red:#e05c5c;
+    --text:#e8ebe6; --text-dim:#8a9487; --text-faint:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
   }
-  .cs-phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
 
-  .cs-icon { font-size: 64px; margin-bottom: 20px; animation: fadeUp 0.3s 0.05s ease both; }
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 
-  .cs-title {
-    font-family: var(--font-head); font-size: clamp(48px, 12vw, 96px);
-    letter-spacing: 4px; line-height: 0.9; color: var(--text);
-    margin-bottom: 16px; animation: fadeUp 0.3s 0.08s ease both;
-  }
-  .cs-title em { font-style: normal; color: var(--teal); }
+  /* ── LAYOUT ── */
+  .main{max-width:1400px;margin:0 auto;padding:24px 16px 80px;}
 
-  .cs-desc {
-    font-size: 16px; color: var(--text-mid, #8a9487); line-height: 1.7;
-    max-width: 480px; margin: 0 auto 36px;
-    animation: fadeUp 0.3s 0.11s ease both;
+  .page-header{margin-bottom:20px;animation:fadeUp 0.35s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(32px,6vw,52px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:4px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;}
+
+  /* ── PROJECT SELECTOR BAR ── */
+  .selector-bar{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 20px;margin-bottom:20px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    animation:fadeUp 0.35s 0.05s ease both;
+  }
+  .selector-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-faint);white-space:nowrap;}
+  .selector-bar select{
+    flex:1;min-width:200px;background:var(--bg-card-2);border:1px solid var(--border-bright);
+    border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;
+    padding:8px 12px;outline:none;cursor:pointer;transition:border-color 0.15s;
+  }
+  .selector-bar select:hover,
+  .selector-bar select:focus{border-color:var(--teal);}
+  .selector-bar select option{background:var(--bg-card-2);}
+
+  .structure-tag{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    padding:4px 10px;border-radius:20px;
+    background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);color:var(--teal);
+    white-space:nowrap;
   }
 
-  .cs-pipeline {
-    display: flex; align-items: center; justify-content: center; gap: 0;
-    margin-bottom: 48px; animation: fadeUp 0.3s 0.14s ease both;
-  }
-  .cs-stage {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-    color: var(--text-dimmer);
-  }
-  .cs-stage.active { color: var(--teal); }
-  .cs-stage-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
-  .cs-stage.active .cs-stage-dot { background: var(--teal); box-shadow: 0 0 0 4px var(--teal-glow); }
-  .cs-stage-line { width: 48px; height: 2px; background: var(--border); margin-bottom: 14px; }
+  /* ── TWO-COLUMN GRID ── */
+  .two-col{display:grid;grid-template-columns:60% 40%;gap:16px;align-items:start;animation:fadeUp 0.35s 0.1s ease both;}
+  @media(max-width:900px){.two-col{grid-template-columns:1fr;}}
 
-  .cs-back {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600; color: var(--text-dim);
-    text-decoration: none; padding: 10px 18px; border-radius: var(--radius-sm);
-    border: 1px solid var(--border-bright); transition: all 0.15s;
-    animation: fadeUp 0.3s 0.17s ease both;
+  /* ── PANEL / CARD ── */
+  .panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .panel-header{
+    padding:14px 20px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   }
-  .cs-back:hover { border-color: var(--teal); color: var(--teal); }
+  .panel-title{font-family:var(--font-head);font-size:16px;letter-spacing:2px;color:var(--text);}
+  .panel-body{padding:20px;}
+
+  /* ── SHOT LIST TOP BAR ── */
+  .shotlist-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .beat-count{font-size:13px;color:var(--text-dim);}
+  .coverage-badge{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;
+    background:var(--bg-card-2);border:1px solid var(--border-bright);color:var(--text-dim);
+  }
+  .coverage-badge.covered{background:rgba(92,186,138,0.12);border-color:rgba(92,186,138,0.3);color:var(--green);}
+  .coverage-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+  /* ── BTN ── */
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;
+    font-family:var(--font-body);font-size:13px;font-weight:600;
+    padding:9px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;
+    transition:all 0.15s;text-decoration:none;white-space:nowrap;
+  }
+  .btn-teal{background:var(--teal);color:#0e0f0e;}
+  .btn-teal:hover{background:var(--teal-dim);transform:translateY(-1px);box-shadow:0 4px 16px rgba(62,207,178,0.25);}
+  .btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border-bright);}
+  .btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
+  .btn:disabled{opacity:0.45;cursor:not-allowed;transform:none !important;}
+
+  /* ── SHOT CARDS ── */
+  .shot-list{display:flex;flex-direction:column;gap:10px;padding:16px 20px 20px;}
+  .shot-card{
+    background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:14px 16px 14px 20px;
+    display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:start;
+    transition:border-color 0.15s;position:relative;overflow:hidden;
+  }
+  .shot-card:hover{border-color:var(--border-bright);}
+  .shot-card.hero{border-left:3px solid var(--amber);}
+  .shot-card.covered-good{border-left:3px solid var(--green);opacity:0.75;}
+  .shot-card.covered-skip{opacity:0.5;}
+
+  .shot-card-num{
+    font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text-faint);
+    line-height:1;padding-top:2px;
+  }
+  .shot-card.hero .shot-card-num{color:var(--amber);}
+
+  .shot-card-body{min-width:0;}
+  .shot-card-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px;}
+  .shot-card-desc{font-size:13px;color:var(--text-dim);line-height:1.55;margin-bottom:6px;}
+  .shot-card-prompt{font-size:12px;color:var(--teal);font-style:italic;line-height:1.5;margin-bottom:6px;}
+  .shot-card-dur{font-size:11px;color:var(--text-faint);}
+
+  .shot-card-badges{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
+
+  /* ── BADGES ── */
+  .badge{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
+    padding:3px 8px;border-radius:20px;white-space:nowrap;
+  }
+  .badge-teal{background:rgba(62,207,178,0.12);border:1px solid rgba(62,207,178,0.3);color:var(--teal);}
+  .badge-amber{background:rgba(240,185,66,0.12);border:1px solid rgba(240,185,66,0.3);color:var(--amber);}
+  .badge-green{background:rgba(92,186,138,0.12);border:1px solid rgba(92,186,138,0.3);color:var(--green);}
+  .badge-dim{background:var(--bg-card);border:1px solid var(--border);color:var(--text-faint);}
+  .badge-red{background:rgba(224,92,92,0.12);border:1px solid rgba(224,92,92,0.3);color:var(--red);}
+
+  /* ── SHOT STATUS OVERLAY ── */
+  .shot-status-icon{
+    position:absolute;top:10px;right:10px;font-size:16px;opacity:0.7;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state{
+    text-align:center;padding:60px 20px;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+  }
+  .empty-icon{font-size:48px;opacity:0.4;}
+  .empty-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text-faint);}
+  .empty-sub{font-size:13px;color:var(--text-faint);max-width:280px;line-height:1.6;}
+
+  /* ── CREW BRIEF ── */
+  .brief-row{margin-bottom:14px;}
+  .brief-row:last-child{margin-bottom:0;}
+  .brief-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:3px;}
+  .brief-value{font-size:14px;color:var(--text);line-height:1.55;}
+  .brief-value.dim{color:var(--text-dim);}
+  .brief-arc{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);flex-wrap:wrap;}
+  .brief-arc-arrow{color:var(--text-faint);}
+
+  .key-moments{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+  .key-moment{
+    display:flex;align-items:flex-start;gap:8px;
+    background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:8px 12px;font-size:13px;color:var(--text-dim);
+  }
+  .key-moment-num{font-family:var(--font-head);font-size:15px;color:var(--teal);flex-shrink:0;}
+
+  /* ── DIVIDER ── */
+  .divider{height:1px;background:var(--border);margin:20px 0;}
+
+  /* ── PACKAGE SECTION ── */
+  .pkg-instructions{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:16px;}
+
+  #qr-wrap{
+    display:none;margin-top:16px;
+    background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:20px;text-align:center;
+  }
+  #qr-wrap.visible{display:block;animation:fadeIn 0.3s ease both;}
+  #qr-container{display:inline-block;padding:10px;background:#fff;border-radius:6px;margin-bottom:12px;}
+  #qr-container canvas,
+  #qr-container img{display:block;}
+  .qr-instructions{font-size:12px;color:var(--text-dim);line-height:1.6;}
+  .qr-url{font-size:11px;color:var(--text-faint);margin-top:4px;word-break:break-all;}
+
+  /* ── COVERAGE MIRROR ── */
+  .mirror-panel{margin-top:16px;}
+  .mirror-live-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--green);box-shadow:0 0 0 3px rgba(92,186,138,0.2);
+    animation:pulse 2s infinite;
+    display:inline-block;flex-shrink:0;
+  }
+  .mirror-live-dot.inactive{background:var(--text-faint);box-shadow:none;animation:none;}
+
+  .mirror-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;
+    padding:16px 20px;
+  }
+  .mirror-card{
+    background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:10px 12px;
+  }
+  .mirror-card.good{border-color:rgba(92,186,138,0.35);background:rgba(92,186,138,0.06);}
+  .mirror-card.skip{border-color:rgba(224,92,92,0.25);background:rgba(224,92,92,0.04);opacity:0.7;}
+  .mirror-card.needed{border-color:var(--border);}
+  .mirror-card-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mirror-card-status{font-size:11px;font-weight:700;letter-spacing:0.5px;}
+  .mirror-card.good .mirror-card-status{color:var(--green);}
+  .mirror-card.skip .mirror-card-status{color:var(--red);}
+  .mirror-card.needed .mirror-card-status{color:var(--text-faint);}
+  .mirror-card-take{font-size:10px;color:var(--text-faint);margin-top:2px;}
+
+  .mirror-summary{
+    display:flex;gap:16px;padding:0 20px 16px;flex-wrap:wrap;
+  }
+  .mirror-stat{display:flex;flex-direction:column;gap:2px;}
+  .mirror-stat-num{font-family:var(--font-head);font-size:22px;letter-spacing:1px;}
+  .mirror-stat-num.green{color:var(--green);}
+  .mirror-stat-num.amber{color:var(--amber);}
+  .mirror-stat-num.dim{color:var(--text-faint);}
+  .mirror-stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-faint);}
+
+  .mirror-empty{padding:24px 20px;text-align:center;font-size:13px;color:var(--text-faint);}
+
+  /* ── LOADING SPINNER ── */
+  .spinner{
+    width:20px;height:20px;border-radius:50%;
+    border:2px solid var(--border-bright);border-top-color:var(--teal);
+    animation:spin 0.6s linear infinite;display:inline-block;
+  }
+  .loading-row{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px 20px;color:var(--text-dim);font-size:13px;}
+
+  /* ── TOAST ── */
+  #toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+  .toast{
+    background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);
+    padding:10px 16px;font-size:13px;font-weight:500;color:var(--text);
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);animation:fadeUp 0.2s ease both;
+    display:flex;align-items:center;gap:8px;pointer-events:auto;
+  }
+  .toast.ok{border-color:rgba(62,207,178,0.4);color:var(--teal);}
+  .toast.err{border-color:rgba(224,92,92,0.4);color:var(--red);}
+  .toast.info{border-color:rgba(240,185,66,0.35);color:var(--amber);}
 </style>
 </head>
 <body>
 <div id="kre8r-nav"></div>
-<main class="main">
-  <div class="cs-phase"><span class="cs-phase-dot"></span>Coming in Phase 3</div>
-  <div class="cs-icon">🎬</div>
-  <div class="cs-title">DIRECT<em>Ω</em>R</div>
-  <p class="cs-desc">Production day management — shot lists, scene checklists, and real-time coverage tracking so nothing gets left on the table.</p>
 
-  <div class="cs-pipeline">
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Pre</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage active"><div class="cs-stage-dot"></div>Prod</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Post</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Dist</div>
+<main class="main">
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-title">DIRECT<em>Ω</em>R</div>
+    <div class="page-sub">Pre-production shot list, crew brief &amp; ShootDay package generator</div>
   </div>
 
-  <a href="/" class="cs-back">← Back to Dashboard</a>
+  <!-- PROJECT SELECTOR BAR -->
+  <div class="selector-bar">
+    <span class="selector-label">Project</span>
+    <select id="project-select">
+      <option value="">— select a project —</option>
+    </select>
+    <span id="structure-tag" class="structure-tag" style="display:none;"></span>
+  </div>
+
+  <!-- TWO-COLUMN LAYOUT -->
+  <div class="two-col">
+
+    <!-- LEFT: SHOT LIST + COVERAGE MIRROR -->
+    <div id="left-col">
+
+      <!-- SHOT LIST PANEL -->
+      <div class="panel" id="shot-list-panel">
+        <div class="panel-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="panel-title">SHOT LIST</span>
+            <div class="shotlist-meta">
+              <span id="beat-count" class="beat-count" style="display:none;"></span>
+              <span id="coverage-badge" class="coverage-badge" style="display:none;">
+                <span class="coverage-dot"></span>
+                <span id="coverage-text">0/0 covered</span>
+              </span>
+            </div>
+          </div>
+          <button class="btn btn-teal" id="btn-generate-pkg" style="display:none;" onclick="generatePackage()">
+            Generate ShootDay Package ↓
+          </button>
+        </div>
+
+        <div id="shot-list-body">
+          <div class="empty-state">
+            <div class="empty-icon">🎬</div>
+            <div class="empty-title">NO PROJECT SELECTED</div>
+            <div class="empty-sub">Select a project above to load the shot list and crew brief.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COVERAGE MIRROR PANEL -->
+      <div class="panel mirror-panel" id="mirror-panel" style="display:none;margin-top:16px;">
+        <div class="panel-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="panel-title">COVERAGE MIRROR</span>
+            <span class="mirror-live-dot inactive" id="mirror-dot"></span>
+          </div>
+          <span style="font-size:11px;color:var(--text-faint);">Live · updates every 5s</span>
+        </div>
+        <div id="mirror-summary" class="mirror-summary"></div>
+        <div id="mirror-grid" class="mirror-grid"></div>
+      </div>
+
+    </div><!-- /left-col -->
+
+    <!-- RIGHT: CREW BRIEF + SHOOTDAY PACKAGE -->
+    <div id="right-col">
+
+      <!-- CREW BRIEF -->
+      <div class="panel" id="crew-brief-panel">
+        <div class="panel-header">
+          <span class="panel-title">CREW BRIEF</span>
+        </div>
+        <div class="panel-body" id="crew-brief-body">
+          <div class="empty-state" style="padding:40px 20px;">
+            <div class="empty-icon">📋</div>
+            <div class="empty-title">AWAITING PROJECT</div>
+            <div class="empty-sub">Select a project to generate the crew brief.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SHOOTDAY PACKAGE -->
+      <div class="panel" id="pkg-panel" style="margin-top:16px;">
+        <div class="panel-header">
+          <span class="panel-title">SHOOTDAY PACKAGE</span>
+        </div>
+        <div class="panel-body">
+          <p class="pkg-instructions">
+            Generate a self-contained HTML file Cari can open on her phone — no wifi needed.
+            The file includes the full shot list, beat prompts, and script.
+          </p>
+          <button class="btn btn-teal" id="btn-pkg-download" onclick="generatePackage()" disabled>
+            Generate + Download
+          </button>
+
+          <div id="qr-wrap">
+            <div id="qr-container"></div>
+            <div class="qr-instructions">Scan before leaving WiFi range. Opens in any browser offline.</div>
+            <div class="qr-url" id="qr-url-text"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right-col -->
+  </div><!-- /two-col -->
 </main>
+
+<div id="toast-wrap"></div>
+
 <script src="/js/nav.js"></script>
-<script>initNav();</script>
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let currentProjectId = null;
+let currentBeats     = [];
+let mirrorInterval   = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'ok') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3500);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOAD PROJECTS
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadProjects() {
+  try {
+    const res = await fetch('/api/projects');
+    if (!res.ok) throw new Error('Failed to load projects');
+    const projects = await res.json();
+    const sel = document.getElementById('project-select');
+    sel.innerHTML = '<option value="">— select a project —</option>';
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title || `Project #${p.id}`;
+      sel.appendChild(opt);
+    });
+  } catch (err) {
+    showToast('Could not load projects: ' + err.message, 'err');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROJECT CHANGE
+// ─────────────────────────────────────────────────────────────────────────────
+async function onProjectChange(id) {
+  currentProjectId = id ? parseInt(id) : null;
+  stopMirror();
+
+  if (!currentProjectId) {
+    resetUI();
+    return;
+  }
+
+  // Show loading state in shot list
+  document.getElementById('shot-list-body').innerHTML = `
+    <div class="loading-row"><div class="spinner"></div>Loading shot list…</div>`;
+  document.getElementById('crew-brief-body').innerHTML = `
+    <div class="loading-row"><div class="spinner"></div>Building crew brief…</div>`;
+
+  try {
+    const res = await fetch(`/api/shootday/${currentProjectId}/beats`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    currentBeats = data.beats || [];
+
+    buildShotList(data);
+    buildCrewBrief(data);
+    updateStructureTag(data);
+    enablePackageButtons();
+    showMirrorPanel();
+    startMirror(currentProjectId);
+  } catch (err) {
+    document.getElementById('shot-list-body').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">LOAD ERROR</div>
+        <div class="empty-sub">${err.message}</div>
+      </div>`;
+    document.getElementById('crew-brief-body').innerHTML = `
+      <div class="empty-state" style="padding:40px 20px;">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">ERROR</div>
+        <div class="empty-sub">${err.message}</div>
+      </div>`;
+    showToast('Error loading beats: ' + err.message, 'err');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESET UI
+// ─────────────────────────────────────────────────────────────────────────────
+function resetUI() {
+  document.getElementById('structure-tag').style.display = 'none';
+  document.getElementById('beat-count').style.display = 'none';
+  document.getElementById('coverage-badge').style.display = 'none';
+  document.getElementById('btn-generate-pkg').style.display = 'none';
+  document.getElementById('btn-pkg-download').disabled = true;
+  document.getElementById('mirror-panel').style.display = 'none';
+  document.getElementById('qr-wrap').classList.remove('visible');
+  document.getElementById('qr-container').innerHTML = '';
+  document.getElementById('qr-url-text').textContent = '';
+
+  document.getElementById('shot-list-body').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">🎬</div>
+      <div class="empty-title">NO PROJECT SELECTED</div>
+      <div class="empty-sub">Select a project above to load the shot list and crew brief.</div>
+    </div>`;
+  document.getElementById('crew-brief-body').innerHTML = `
+    <div class="empty-state" style="padding:40px 20px;">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">AWAITING PROJECT</div>
+      <div class="empty-sub">Select a project to generate the crew brief.</div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STRUCTURE TAG
+// ─────────────────────────────────────────────────────────────────────────────
+function updateStructureTag(data) {
+  const tag = document.getElementById('structure-tag');
+  const structure = data.config?.structure || data.project?.story_structure || null;
+  if (structure) {
+    tag.textContent = structure;
+    tag.style.display = 'inline-flex';
+  } else {
+    tag.style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUILD SHOT LIST
+// ─────────────────────────────────────────────────────────────────────────────
+function shotTypeBadge(beat) {
+  if (beat.talking_head_prompt || beat.shot_type === 'talking_head') {
+    return '<span class="badge badge-teal">Talking Head</span>';
+  }
+  if (beat.shot_type === 'action') {
+    return '<span class="badge badge-green">Action</span>';
+  }
+  return '<span class="badge badge-amber">B-Roll</span>';
+}
+
+function priorityBadge(beat, total) {
+  const pct = beat.index / total;
+  const ef  = (beat.emotional_function || '').toLowerCase();
+  const isHero = pct <= 0.2 || pct >= 0.85 ||
+    ef.includes('catalyst') || ef.includes('climax') || ef.includes('hook');
+  if (isHero) return '<span class="badge badge-amber">HERO</span>';
+  return '<span class="badge badge-dim">REQUIRED</span>';
+}
+
+function statusIcon(status) {
+  if (status === 'good') return '<span class="shot-status-icon" title="Covered">✅</span>';
+  if (status === 'skip') return '<span class="shot-status-icon" title="Skipped">⏭</span>';
+  return '';
+}
+
+function estimatedDur(beat, projectDuration) {
+  if (beat.target_seconds) return `~${beat.target_seconds}s`;
+  if (beat.target_pct && projectDuration) {
+    const secs = Math.round(beat.target_pct * projectDuration);
+    return `~${secs}s`;
+  }
+  return null;
+}
+
+function buildShotList(data) {
+  const beats = data.beats || [];
+  const total = beats.length;
+  const proj  = data.project || {};
+  const projDuration = proj.target_duration_seconds || proj.duration_seconds || null;
+
+  // Count coverage
+  const covered = beats.filter(b => b.status === 'good').length;
+
+  // Update header UI
+  const beatCountEl = document.getElementById('beat-count');
+  beatCountEl.textContent = `${total} beat${total !== 1 ? 's' : ''}`;
+  beatCountEl.style.display = 'inline';
+
+  const covBadge = document.getElementById('coverage-badge');
+  const covText  = document.getElementById('coverage-text');
+  covText.textContent = `${covered}/${total} covered`;
+  covBadge.className = `coverage-badge${covered > 0 ? ' covered' : ''}`;
+  covBadge.style.display = 'inline-flex';
+
+  document.getElementById('btn-generate-pkg').style.display = 'inline-flex';
+
+  if (beats.length === 0) {
+    document.getElementById('shot-list-body').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <div class="empty-title">NO BEATS YET</div>
+        <div class="empty-sub">Run PipΩr or WritΩr first to generate the story structure.</div>
+      </div>`;
+    return;
+  }
+
+  const cards = beats.map((beat, idx) => {
+    const numStr = String(beat.index).padStart(2, '0');
+    const pct = beat.index / total;
+    const ef  = (beat.emotional_function || '').toLowerCase();
+    const isHero = pct <= 0.2 || pct >= 0.85 ||
+      ef.includes('catalyst') || ef.includes('climax') || ef.includes('hook');
+    const cardClass = [
+      'shot-card',
+      isHero ? 'hero' : '',
+      beat.status === 'good' ? 'covered-good' : '',
+      beat.status === 'skip' ? 'covered-skip' : '',
+    ].filter(Boolean).join(' ');
+
+    const dur = estimatedDur(beat, projDuration);
+    const durHtml = dur ? `<div class="shot-card-dur">${dur} estimated</div>` : '';
+    const descHtml = beat.reality_note
+      ? `<div class="shot-card-desc">${escHtml(beat.reality_note)}</div>` : '';
+    const promptHtml = beat.talking_head_prompt
+      ? `<div class="shot-card-prompt">"${escHtml(beat.talking_head_prompt)}"</div>` : '';
+
+    const delay = Math.min(idx * 0.04, 0.5);
+
+    return `
+      <div class="${cardClass}" style="animation:fadeUp 0.3s ${delay}s ease both;opacity:0;">
+        ${statusIcon(beat.status)}
+        <div class="shot-card-num">${numStr}</div>
+        <div class="shot-card-body">
+          <div class="shot-card-name">${escHtml(beat.name)}</div>
+          ${descHtml}
+          ${promptHtml}
+          ${durHtml}
+        </div>
+        <div class="shot-card-badges">
+          ${shotTypeBadge(beat)}
+          ${priorityBadge(beat, total)}
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('shot-list-body').innerHTML =
+    `<div class="shot-list">${cards}</div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUILD CREW BRIEF
+// ─────────────────────────────────────────────────────────────────────────────
+function buildCrewBrief(data) {
+  const proj   = data.project || {};
+  const beats  = data.beats   || [];
+  const config = data.config  || {};
+
+  const title       = proj.title        || 'Untitled Project';
+  const concept     = proj.high_concept || proj.topic || config.high_concept || '—';
+  const structure   = config.structure  || proj.story_structure || '—';
+  const firstBeat   = beats[0];
+  const midBeat     = beats[Math.floor(beats.length / 2)];
+  const lastBeat    = beats[beats.length - 1];
+  const totalBeats  = beats.length;
+  const coveredCnt  = beats.filter(b => b.status === 'good').length;
+
+  // Key moments: beats with a talking_head_prompt
+  const keyBeats = beats.filter(b => b.talking_head_prompt);
+
+  const arcHtml = (firstBeat && midBeat && lastBeat)
+    ? `<div class="brief-arc">
+        <span style="color:var(--text);">${escHtml(firstBeat.name)}</span>
+        <span class="brief-arc-arrow">→</span>
+        <span>${escHtml(midBeat.name)}</span>
+        <span class="brief-arc-arrow">→</span>
+        <span>${escHtml(lastBeat.name)}</span>
+      </div>`
+    : '<span class="brief-value dim">No beats loaded</span>';
+
+  const keyMomentsHtml = keyBeats.length > 0
+    ? `<div class="key-moments">
+        ${keyBeats.map(b => `
+          <div class="key-moment">
+            <span class="key-moment-num">${String(b.index).padStart(2,'0')}</span>
+            <span>${escHtml(b.name)}</span>
+          </div>`).join('')}
+       </div>`
+    : '<span class="brief-value dim">None flagged</span>';
+
+  const coverageStatusHtml = totalBeats > 0
+    ? `<span class="badge ${coveredCnt > 0 ? 'badge-green' : 'badge-dim'}">${coveredCnt}/${totalBeats} shots covered</span>`
+    : '<span class="brief-value dim">No coverage data</span>';
+
+  document.getElementById('crew-brief-body').innerHTML = `
+    <div class="brief-row" style="margin-bottom:18px;">
+      <div style="font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);line-height:1;">
+        ${escHtml(title)}
+      </div>
+    </div>
+
+    <div class="brief-row">
+      <div class="brief-label">Story Structure</div>
+      <div class="brief-value">${escHtml(structure)}</div>
+    </div>
+
+    <div class="brief-row">
+      <div class="brief-label">What We're Making</div>
+      <div class="brief-value dim">${escHtml(concept)}</div>
+    </div>
+
+    <div class="brief-row">
+      <div class="brief-label">The Story Arc</div>
+      ${arcHtml}
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="brief-row">
+      <div class="brief-label">Key Moments to Capture</div>
+      ${keyMomentsHtml}
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="brief-row">
+      <div class="brief-label">Coverage Status</div>
+      ${coverageStatusHtml}
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENABLE PACKAGE BUTTONS
+// ─────────────────────────────────────────────────────────────────────────────
+function enablePackageButtons() {
+  document.getElementById('btn-pkg-download').disabled = false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GENERATE PACKAGE
+// ─────────────────────────────────────────────────────────────────────────────
+function generatePackage() {
+  if (!currentProjectId) return;
+  const url = `/api/shootday/package/${currentProjectId}`;
+  window.open(url, '_blank');
+  showToast('ShootDay package downloading…', 'ok');
+
+  // Generate QR code pointing to the download URL
+  const qrUrl = window.location.origin + url;
+  generateQR(qrUrl);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GENERATE QR
+// ─────────────────────────────────────────────────────────────────────────────
+function generateQR(url) {
+  const container = document.getElementById('qr-container');
+  const urlText   = document.getElementById('qr-url-text');
+  const wrap      = document.getElementById('qr-wrap');
+
+  // Clear existing
+  container.innerHTML = '';
+  urlText.textContent = url;
+
+  try {
+    new QRCode(container, {
+      text:          url,
+      width:         160,
+      height:        160,
+      colorDark:     '#000000',
+      colorLight:    '#ffffff',
+      correctLevel:  QRCode.CorrectLevel.M,
+    });
+    wrap.classList.add('visible');
+  } catch (err) {
+    showToast('QR generation failed: ' + err.message, 'err');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MIRROR PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+function showMirrorPanel() {
+  document.getElementById('mirror-panel').style.display = 'block';
+}
+
+function stopMirror() {
+  if (mirrorInterval) {
+    clearInterval(mirrorInterval);
+    mirrorInterval = null;
+  }
+  const dot = document.getElementById('mirror-dot');
+  if (dot) {
+    dot.classList.add('inactive');
+    dot.classList.remove('active');
+  }
+}
+
+function startMirror(projectId) {
+  stopMirror();
+  fetchMirror(projectId); // immediate first fetch
+  mirrorInterval = setInterval(() => fetchMirror(projectId), 5000);
+
+  const dot = document.getElementById('mirror-dot');
+  if (dot) {
+    dot.classList.remove('inactive');
+  }
+}
+
+async function fetchMirror(projectId) {
+  try {
+    const res = await fetch(`/api/shootday/${projectId}/summary`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    renderMirror(data);
+  } catch (err) {
+    // Silently fail mirror — don't distract with errors during shoot
+    console.warn('Mirror fetch error:', err.message);
+  }
+}
+
+function renderMirror(data) {
+  const beats   = data.beats   || currentBeats;
+  const summary = data.summary || {};
+
+  const good   = summary.good    || beats.filter(b => b.status === 'good').length;
+  const skip   = summary.skip    || beats.filter(b => b.status === 'skip').length;
+  const needed = summary.needed  != null ? summary.needed : beats.filter(b => !b.status || b.status === 'needed').length;
+  const total  = summary.total   || beats.length;
+
+  // Update coverage badge in shot list header too
+  const covText = document.getElementById('coverage-text');
+  if (covText) covText.textContent = `${good}/${total} covered`;
+  const covBadge = document.getElementById('coverage-badge');
+  if (covBadge) covBadge.className = `coverage-badge${good > 0 ? ' covered' : ''}`;
+
+  // Summary stats
+  document.getElementById('mirror-summary').innerHTML = `
+    <div class="mirror-stat">
+      <div class="mirror-stat-num green">${good}</div>
+      <div class="mirror-stat-label">Good</div>
+    </div>
+    <div class="mirror-stat">
+      <div class="mirror-stat-num amber">${needed}</div>
+      <div class="mirror-stat-label">Needed</div>
+    </div>
+    <div class="mirror-stat">
+      <div class="mirror-stat-num dim">${skip}</div>
+      <div class="mirror-stat-label">Skipped</div>
+    </div>
+    <div class="mirror-stat">
+      <div class="mirror-stat-num" style="color:var(--text-dim);">${total}</div>
+      <div class="mirror-stat-label">Total</div>
+    </div>`;
+
+  // Per-beat grid — use beats from response or fall back to current
+  const beatList = data.beats || currentBeats;
+  if (!beatList || beatList.length === 0) {
+    document.getElementById('mirror-grid').innerHTML =
+      '<div class="mirror-empty">No shoot data yet</div>';
+    return;
+  }
+
+  const cards = beatList.map(beat => {
+    const st = beat.status || 'needed';
+    const statusLabel = st === 'good' ? 'GOOD' : st === 'skip' ? 'SKIP' : 'NEEDED';
+    const takeLabel = beat.take_number > 0 ? `Take ${beat.take_number}` : '';
+    return `
+      <div class="mirror-card ${st}">
+        <div class="mirror-card-name">${escHtml(beat.name || `Beat ${beat.index}`)}</div>
+        <div class="mirror-card-status">${statusLabel}</div>
+        ${takeLabel ? `<div class="mirror-card-take">${takeLabel}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  document.getElementById('mirror-grid').innerHTML = cards;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UTIL
+// ─────────────────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('project-select').addEventListener('change', function() {
+  onProjectChange(this.value);
+});
+
+loadProjects();
+initNav();
+</script>
 </body>
 </html>

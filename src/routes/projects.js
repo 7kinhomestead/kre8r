@@ -3,8 +3,10 @@
  */
 
 const express = require('express');
-const router = express.Router();
-const db = require('../db');
+const fs      = require('fs');
+const path    = require('path');
+const router  = express.Router();
+const db      = require('../db');
 
 // GET /api/projects — all active projects
 router.get('/', (req, res) => {
@@ -22,6 +24,59 @@ router.post('/', (req, res) => {
     const { title, topic, youtube_url, youtube_video_id } = req.body;
     const project = db.createProject(title, topic, youtube_url, youtube_video_id);
     res.json(project);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/projects/archived — must come before /:id to avoid id='archived'
+router.get('/archived', (req, res) => {
+  try {
+    res.json(db.getArchivedProjects());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/projects/:id/archive
+router.patch('/:id/archive', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!db.getProject(id)) return res.status(404).json({ error: 'Project not found' });
+    db.archiveProject(id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/projects/:id/unarchive
+router.patch('/:id/unarchive', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    db.unarchiveProject(id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/projects/:id — deletes project + all cascade data + filesystem config
+router.delete('/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!db.getProject(id)) return res.status(404).json({ error: 'Project not found' });
+
+    db.deleteProject(id);
+
+    // Clean up database/projects/{id}/ directory (project-config.json etc.)
+    const configDir = path.join(__dirname, '../../database/projects', String(id));
+    if (fs.existsSync(configDir)) {
+      try { fs.rmSync(configDir, { recursive: true, force: true }); }
+      catch (fsErr) { console.warn(`[Projects] Could not remove config dir ${id}:`, fsErr.message); }
+    }
+
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
