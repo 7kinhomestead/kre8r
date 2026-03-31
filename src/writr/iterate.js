@@ -37,17 +37,14 @@ function loadProjectConfig(projectId) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (_) { return null; }
 }
 
-function buildVoiceSummary(profile) {
-  if (!profile?.voice) return 'Straight-talking, warm, funny, never corporate.';
-  return [
-    `Summary: ${profile.voice.summary}`,
-    `Traits: ${(profile.voice.traits || []).join('; ')}`,
-    `Never: ${(profile.voice.never || []).join('; ')}`
-  ].join('\n');
+const { buildVoiceSummaryFromProfiles } = require('./voice-analyzer');
+
+function buildVoiceSummary(profile, voiceProfiles) {
+  return buildVoiceSummaryFromProfiles(profile, voiceProfiles);
 }
 
-function buildPrompt({ currentScript, feedback, iterationCount, config, profile }) {
-  const voiceSummary = buildVoiceSummary(profile);
+function buildPrompt({ currentScript, feedback, iterationCount, config, profile, voiceProfiles }) {
+  const voiceSummary = buildVoiceSummary(profile, voiceProfiles);
   const structure    = config?.story_structure || 'free_form';
   const brand        = profile?.creator?.brand || '7 Kin Homestead';
   const draftLabel   = `Draft ${iterationCount}`;
@@ -107,7 +104,7 @@ Return ONLY valid JSON:
  * @param {number}   opts.iterationCount  — current iteration count (0-based)
  * @param {Function} [opts.emit]          — SSE progress callback
  */
-async function iterateScript({ projectId, currentScript, feedback, iterationCount, emit }) {
+async function iterateScript({ projectId, currentScript, feedback, iterationCount, voiceProfiles, emit }) {
   if (!feedback?.trim()) throw new Error('No feedback provided');
   if (!currentScript?.trim()) throw new Error('No current script to revise');
 
@@ -116,7 +113,7 @@ async function iterateScript({ projectId, currentScript, feedback, iterationCoun
   const config  = loadProjectConfig(projectId);
   const profile = loadCreatorProfile();
 
-  const prompt = buildPrompt({ currentScript, feedback, iterationCount, config, profile });
+  const prompt = buildPrompt({ currentScript, feedback, iterationCount, config, profile, voiceProfiles });
 
   emit?.({ stage: 'writing', message: 'Rewriting…' });
 

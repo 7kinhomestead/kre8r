@@ -57,6 +57,7 @@ app.use('/api/writr',         require('./src/routes/writr'));
 const { router: teleprompterRouter, createTeleprompterWS } = require('./src/routes/teleprompter');
 app.use('/api/teleprompter',  teleprompterRouter);
 app.use('/api/shootday',      require('./src/routes/shootday'));
+app.use('/api/voice-library', require('./src/routes/voice-library'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

@@ -26,13 +26,25 @@ const router = express.Router();
 // ─────────────────────────────────────────────
 
 function getLocalIP() {
+  // Collect all non-internal IPv4 addresses across all interfaces
+  // (WiFi, wired Ethernet, etc.) — return the first usable one.
+  // Prefer addresses in the 192.168/10./172.16-31 private ranges.
   const ifaces = os.networkInterfaces();
+  const candidates = [];
   for (const name of Object.keys(ifaces)) {
     for (const iface of ifaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+      if (iface.family === 'IPv4' && !iface.internal) {
+        candidates.push(iface.address);
+      }
     }
   }
-  return 'localhost';
+  // Prefer RFC-1918 private addresses over link-local (169.254.x.x)
+  const privateIp = candidates.find(ip =>
+    ip.startsWith('192.168.') ||
+    ip.startsWith('10.')      ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
+  );
+  return privateIp || candidates[0] || 'localhost';
 }
 
 /** Merge pipr beats + writr beat_map + take records into unified beat list */
@@ -68,7 +80,12 @@ function buildBeatList(projectId) {
       talking_head_prompt: b.talking_head_prompt || null,
       target_pct:         b.target_pct || null,
       target_seconds:     b.target_seconds || null,
-      shot_type:          b.shot_type || (b.talking_head_prompt ? 'talking_head' : 'broll'),
+      // Infer shot type: explicit > talking_head_prompt > footage IDs = broll > default talking_head
+      // Beats with footage_ids are b-roll captures; beats without are talking head by default
+      shot_type:          b.shot_type
+                            || (b.talking_head_prompt ? 'talking_head'
+                            : (b.coverage_footage_ids?.length ? 'broll'
+                            : 'talking_head')),
       // take state
       status:             take?.status     || 'needed',
       take_number:        take?.take_number || 0,
@@ -156,14 +173,35 @@ router.get('/:project_id/beats', (req, res) => {
   if (!data) return res.status(404).json({ error: 'Project not found' });
 
   const { beats, project, script_approved, config } = data;
-  const covered   = beats.filter(b => b.status === 'good').length;
+  const covered         = beats.filter(b => b.status === 'good').length;
+  const pipr_configured = !!(config && config.beats && config.beats.length > 0);
 
   res.json({
     ok: true,
-    project_id:     projectId,
-    project_title:  project.title,
-    story_structure: config?.story_structure || null,
+    project_id:      projectId,
+    project_title:   project.title,
+    high_concept:    project.high_concept || project.topic || config?.high_concept || null,
+    story_structure: config?.story_structure || project.story_structure || null,
+    content_type:    project.content_type  || config?.content_type  || null,
     script_approved,
+    pipr_configured,
+    // Full objects for crew brief / package builder
+    project: {
+      id:             project.id,
+      title:          project.title,
+      high_concept:   project.high_concept || project.topic || null,
+      story_structure: project.story_structure || config?.story_structure || null,
+      content_type:   project.content_type || null,
+      estimated_duration_minutes: project.estimated_duration_minutes || null,
+    },
+    config: {
+      story_structure:  config?.story_structure || null,
+      high_concept:     config?.high_concept    || null,
+      content_type:     config?.content_type    || null,
+      emotional_palette: config?.emotional_palette || null,
+      musical_theme:    config?.musical_theme    || null,
+      estimated_duration_minutes: config?.estimated_duration_minutes || null,
+    },
     beats,
     coverage: { covered, total: beats.length, pct: beats.length ? Math.round(covered / beats.length * 100) : 0 }
   });

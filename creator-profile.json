@@ -2,13 +2,11 @@
   "instance": "7-kin-homestead",
   "version": "1.0",
   "created": "2026-03-28",
-
   "creator": {
     "brand": "7 Kin Homestead",
     "tagline": "Off-grid living. Real numbers. No fluff.",
     "mission": "Show regular people that financial independence and self-sufficient living are achievable — with real numbers, real mistakes, and zero corporate speak."
   },
-
   "platforms": {
     "tiktok": {
       "handle": "@7kinhomestead",
@@ -34,7 +32,6 @@
       "content_type": "Community discussion, link posts, longer stories"
     }
   },
-
   "community": {
     "platform": "Kajabi",
     "name": "ROCK RICH",
@@ -75,7 +72,6 @@
       }
     }
   },
-
   "voice": {
     "summary": "Straight-talking, warm, genuinely funny. The most unserious serious person to ever make a video.",
     "traits": [
@@ -95,7 +91,6 @@
     ],
     "email_tone": "Plain text, personal heads-up energy. Feels like a text from a friend who happens to homestead."
   },
-
   "content_angles": {
     "financial": {
       "label": "Financial Take",
@@ -138,14 +133,36 @@
       "description": "Build toward ROCK RICH. The video makes the viewer feel like they're on the outside of something they want to be part of."
     }
   },
-
   "seasonal_logic": {
-    "winter": ["wood stove", "cold storage", "winter food prep", "heating costs", "firewood"],
-    "spring": ["composting", "garden prep", "seed starting", "soil building", "planting"],
-    "summer": ["harvest", "water systems", "solar", "preservation", "canning"],
-    "autumn": ["root cellar", "harvest storage", "winter prep", "animal care", "firewood"]
+    "winter": [
+      "wood stove",
+      "cold storage",
+      "winter food prep",
+      "heating costs",
+      "firewood"
+    ],
+    "spring": [
+      "composting",
+      "garden prep",
+      "seed starting",
+      "soil building",
+      "planting"
+    ],
+    "summer": [
+      "harvest",
+      "water systems",
+      "solar",
+      "preservation",
+      "canning"
+    ],
+    "autumn": [
+      "root cellar",
+      "harvest storage",
+      "winter prep",
+      "animal care",
+      "firewood"
+    ]
   },
-
   "existing_integrations": {
     "suno": {
       "status": "active",
@@ -174,23 +191,234 @@
       "use": "Content calendar scheduling"
     }
   },
-
   "existing_agents": {
     "blog_writer": "Currently active — do not replace, coordinate",
     "fb_ig_poster": "Currently active — will be superseded by PostΩr in M5",
     "email_drafter": "Currently active — do not replace, coordinate"
   },
-
+  "voice_profiles": [
+    {
+      "id": "fd58b7d5ab59a0eb",
+      "name": "3 Myths about off grid living",
+      "source_file": "3 Myths about off grid living.mp4",
+      "analyzed_at": "2026-03-31",
+      "word_count": 1142,
+      "characteristics": {
+        "sentence_rhythm": "Alternates deliberately between short punchy bursts ('Listen here, Kevin.' / 'No.' / 'Shh.') and long, winding, clause-stacked sentences that build momentum and accumulate examples before landing a point. Short sentences are used for comic emphasis, dismissal, or declarations. Long sentences are used to lay out reasoning, describe scenarios, or build an argument — often with parenthetical asides mid-flow that feel unplanned but are purposeful. Rhythm is conversational and oral-first, like someone thinking out loud who happens to always land on their feet.",
+        "humor_style": "Dry, deadpan, and character-based — a recurring fictional antagonist named 'Kevin' carries most of the comedic weight, serving as a stand-in for all skeptics. Humor appears through absurdist specificity (tinfoil hat linings, squirrel pelt loincloths), unexpected pop culture references dropped without fanfare (Gene Hackman, Enemy of the State), and self-aware asides that wink at the audience. Comic timing comes from sudden gear-shifts — building a serious point then undercutting it with a one-liner. Frequency is high; almost every paragraph has a comedic beat.",
+        "directness": 8,
+        "formality": 2,
+        "audience_address": "Peer and friend simultaneously — speaks as someone who has been where the viewer is, not above them. No lecturing tone. Uses 'we' and 'us' to collapse the distance. Occasional warm authority appears when sharing hard-won personal data, but it never tips into preachiness. The viewer is treated as a capable adult who just needs the right framing.",
+        "characteristic_phrases": [
+          "Listen here, Kevin.",
+          "I got no use for discouragers.",
+          "that's a subject for another video",
+          "as close to $0 as humanly possible",
+          "and if you got it like that, throw buckets of money in the fire",
+          "three-dimensional space between us and them",
+          "human handbrake",
+          "whoopsie doodles",
+          "it didn't take but a couple of years",
+          "I'll catch you in the next one"
+        ],
+        "never_says": [
+          "utilize",
+          "synergy",
+          "in conclusion",
+          "it's important to note that",
+          "leverage",
+          "at the end of the day",
+          "content creator",
+          "optimal",
+          "sustainable living solutions",
+          "please like and subscribe"
+        ],
+        "numbers_and_specifics": "Highly specific with numbers when making an argument — cites exact figures ($300 down payment, $45,000 over 13 years, 430 definitions of 'set') to give credibility and ground abstract claims in lived reality. Specificity is always in service of a point, never just data-dumping. Pairs hard numbers with rhetorical questions that make the viewer do the math themselves, which increases persuasive impact.",
+        "emotional_range": "Mostly operates in a warm, wry instructional register but vulnerability surfaces when talking about personal financial history — there's quiet pride and real stakes when discussing 13 years of building something from nothing. Emotion doesn't spike dramatically; it seeps through in phrases like 'that was never really an option for us' and 'a lifestyle like this to have paid for itself.' The closest thing to warmth without sentimentality. Ends videos with genuine goodwill ('I wish you the absolute best on your adventure') that feels earned rather than performative.",
+        "sample_sentences": [
+          "If you would just shh, shut your mouth, shut up — shh, be quiet for just a little while — the cut under your nose might finally heal.",
+          "You're going to have some human handbrake, no doubt by the name of Kevin, telling you that if you have a cell phone, you don't live off-grid.",
+          "The word set has 430 different definitions — three-letter word, 430 definitions — and off-grid is no different.",
+          "I personally love people, especially now that I have some three-dimensional space between us and them.",
+          "A philosophy which is like a muscle that gets stronger the more you use it.",
+          "We started by having a yard sale that we made enough money to pay the $300 that we put down on this owner finance property.",
+          "If you got it like that, throw buckets of money in the fire — you'll get there really, really fast.",
+          "And it's okay, Kevin, I'm not good with context clues either.",
+          "When you've had enough people, you just go home to your quiet place.",
+          "Now let me ask you — what do you pay for rent in a year to live the way you do now?"
+        ],
+        "summary": "This voice is a self-taught, plainspoken pragmatist who uses dry wit, recurring comic foils, and hard personal numbers to dismantle conventional thinking without ever sounding preachy. He writes and speaks the way a sharp-tongued neighbor talks over a fence — casual, warm, occasionally profane in spirit if not in word, with a gift for landing big ideas in small, specific images. To reproduce this voice: stay conversational and oral-first, let humor do the heavy persuasive lifting, and always anchor abstract points in exact real-world details."
+      }
+    },
+    {
+      "id": "9c672f2bcf39952b",
+      "name": "Five Stages Of Grief 4k",
+      "source_file": "Five Stages Of Grief 4k.mp4",
+      "analyzed_at": "2026-03-31",
+      "word_count": 1029,
+      "characteristics": {
+        "sentence_rhythm": "Alternates between short punchy declaratives and long winding observational sentences. Short sentences land conclusions or emotional beats ('And that's the goal.' / 'And I'm like...'). Long sentences build momentum through lists and cascading observations, mimicking the feeling of a thought unfolding in real time. Pacing speeds up when cataloguing examples, then slows to a deliberate stop for the key point.",
+        "humor_style": "Dry observational humor delivered deadpan, often embedded inside serious analysis. Unexpected absurdist drops ('the difference between a gigabyte and an overbite'). Self-aware understatement ('somebody significantly smarter than me'). Low frequency but well-placed — humor punctuates rather than dominates. Never performs the joke; just states it and moves on.",
+        "directness": 7,
+        "formality": 3,
+        "audience_address": "peer — speaks as someone figuring things out alongside the viewer, not above them. Shares personal vulnerability and admits uncertainty while still guiding the audience toward a conclusion. Occasional light teacher energy when walking through a framework, but always returns to peer footing.",
+        "characteristic_phrases": [
+          "And I'm like...",
+          "in a million years",
+          "blah, blah, blah",
+          "I just thought that maybe...",
+          "that's when I started to notice a pattern",
+          "I don't really know if... but...",
+          "I'll leave that to somebody significantly smarter than me",
+          "And that's the goal."
+        ],
+        "never_says": [
+          "utilize",
+          "leverage (as a verb)",
+          "in conclusion",
+          "it is important to note",
+          "circling back",
+          "at the end of the day",
+          "synergy",
+          "going forward (in a corporate sense)",
+          "one might argue"
+        ],
+        "numbers_and_specifics": "Uses real proper nouns and named individuals for credibility (Jeff Jackson, Steve Mnuchin, Mr. Wonderful, Meta) but avoids hard statistics or data citations entirely. Specificity comes from named examples and cultural references, not numbers. When quantities appear they are rhetorical ('dozens of people', 'a million years') rather than precise.",
+        "emotional_range": "Moves fluidly from analytical to genuinely vulnerable without announcement. Starts instructional, lets frustration surface naturally mid-thought ('I was really mad about this'), then lands in something almost melancholy and hopeful at the end. Vulnerability arrives through personal anecdotes (wife story, the nagging feeling) rather than explicit emotional declarations. The final lines carry quiet idealism that contrasts with the skepticism throughout.",
+        "sample_sentences": [
+          "Usually, when I make a video about something that bothers me, it's cathartic — but after that video, something just kept nagging at me.",
+          "You had all these people who wouldn't know the difference between a gigabyte and an overbite, and they were absolutely hyperventilating.",
+          "I saw dozens of people essentially negotiating with themselves to come up with ways to prevent this from happening.",
+          "I don't really know if our leaders are smart enough to come up with this as a strategy themselves, but the people who control them probably are.",
+          "And that's the goal. They want us to sit back and accept it.",
+          "I'll leave that to somebody significantly smarter than me.",
+          "Creative people historically have been notoriously difficult to control.",
+          "I just thought that maybe if you saw the same pattern and recognized it for the manipulation that it is, then maybe we collectively could build up our own immunity to it going forward.",
+          "Before the video cut off, there was the sound of the singer going — and to me, that sounded like depression.",
+          "In five years we're going to have so many cherries."
+        ],
+        "summary": "This voice is a curious, self-aware everyman who thinks out loud — building analysis through personal story, named examples, and dry humor rather than data or authority. He speaks in casual rhythms that speed up through lists and land hard on short conclusions, always positioning himself as a peer discovering something alongside the viewer rather than lecturing them. To reproduce this voice: stay conversational and slightly unpolished, let frustration and idealism coexist, drop the occasional absurdist line without explaining it, and end on something unexpectedly quiet and human."
+      }
+    },
+    {
+      "id": "13dcbad485e1527a",
+      "name": "How do I buy land 4k",
+      "source_file": "How do I buy land 4k.mp4",
+      "analyzed_at": "2026-03-31",
+      "word_count": 929,
+      "characteristics": {
+        "sentence_rhythm": "Alternates between short punchy declarations and long rolling compound sentences. Short sentences land punchlines or key truths ('It is a business.' / 'I had zero interest.'). Long sentences build momentum through stacked clauses, often listing things in threes or fours before dropping a payoff. Pacing feels conversational and oral — written the way a person actually talks, with run-ons used deliberately for comic or emotional effect.",
+        "humor_style": "Primarily self-deprecating, delivered deadpan inside otherwise serious instruction. Humor appears as unexpected absurdist detours (the dead horse/dead cat/dead mouse metaphor), mock-mathematical self-roasts about his wife, and casual admissions of incompetence. Never waits for a laugh — just drops it and keeps moving. Frequency is high but never at the expense of the actual point. Vulnerability is often the setup for a joke, which makes both land harder.",
+        "directness": 8,
+        "formality": 2,
+        "audience_address": "Peer and friend simultaneously — never talks down, never performs authority. Speaks like someone who figured something out the hard way and genuinely wants you to not have to. Occasional teacher energy but always undercut by self-deprecation so it never becomes preachy.",
+        "characteristic_phrases": [
+          "beat a dead horse with a dead cat that recently choked on a dead mouse",
+          "first and foremost",
+          "if we... can do it, there's no reason why you can't too",
+          "Kerry — the she's way better looking than you",
+          "I did some quick calculations",
+          "no money, no credit, no skills, and what most would consider no sense",
+          "a story for another video",
+          "that equation added up to",
+          "I took the certainty of knowing"
+        ],
+        "never_says": [
+          "leverage your assets",
+          "at the end of the day",
+          "synergy",
+          "actionable steps",
+          "empower yourself",
+          "financial freedom journey",
+          "pro tip",
+          "touch base",
+          "utilize"
+        ],
+        "numbers_and_specifics": "Uses exact real numbers constantly and without hesitation — $300 down payment, negative $27 in the bank, 22-foot travel trailer, 34 days, two kids. Specificity is a core trust-building tool. Numbers are never rounded for comfort or vagueness — the precision is the point, making the story feel verifiable and the advice feel earned.",
+        "emotional_range": "Starts instructional, shifts into personal narrative mid-piece, and lands in quiet vulnerability. Emotion doesn't arrive through dramatic language — it arrives through specific detail (selling the computer, the $300 gift card, the lady named Crystalline who's still there). The most vulnerable moments are wrapped in humor or stated almost offhandedly, which makes them hit harder. The closing line to his wife is the only moment pure emotion surfaces without a joke attached.",
+        "sample_sentences": [
+          "If Mama passed one skill onto her oldest boy, it's the ability to beat a dead horse with a dead cat that recently choked on a dead mouse.",
+          "I had zero interest. I was a city boy, a flat lander, I loved my technology and I had lived a couple miles away from the beach for my entire life.",
+          "She's a way better person than you plus she's way smarter than you plus she's way more responsible than you — and wouldn't you know it, the answer to that equation was sure, I can do that.",
+          "A quick check of the bank account confirmed we still had negative 27 in there.",
+          "We decided if we were gonna do this, we didn't need all the stuff that we had. So we had a yard sale.",
+          "If you want to be a farmer, search for farm land. But if you want to be a homesteader, search for raw, undeveloped, owner finance land.",
+          "34 days after we put the down payment on the property, Kerry, myself, and our two oldest daughters arrived here.",
+          "I could barely start a campfire. And what happened next is probably a story for another video.",
+          "You can pay whatever you want for it, even if what you want to pay is nothing.",
+          "That equation added up to — I'd follow you anywhere, even into the scowy woods."
+        ],
+        "summary": "This voice is a working-class oral storyteller — plain-spoken, specific, funny in a self-deprecating deadpan way, and deeply anti-pretension. He builds trust through exact numbers and personal embarrassment, instructs by telling what actually happened to him rather than what you should theoretically do, and wraps vulnerability inside humor so it never feels like a speech. To write in this voice: use real numbers, make the writer the butt of the joke, keep sentences either very short or rolling-and-stacked, and never use a word you wouldn't say out loud to a friend on a porch."
+      }
+    },
+    {
+      "id": "a7d3afceff556da6",
+      "name": "Living in fear hor no caps",
+      "source_file": "Living in fear hor no caps.mp4",
+      "analyzed_at": "2026-03-31",
+      "word_count": 647,
+      "characteristics": {
+        "sentence_rhythm": "Alternates between short punchy statements and longer flowing narrative sequences. Short sentences land punchlines or conclusions ('Nothing.' 'Still nothing.' 'It was only a butterfly.'). Long sentences build suspense or context during storytelling. The rhythm mimics spoken campfire storytelling — slow build, tight payoff. Lists and triplets appear frequently as a pacing device.",
+        "humor_style": "Primarily self-deprecating with deadpan unexpected drops. Humor arrives via anti-climax — the terror builds elaborately and the punchline deflates it completely. Physical comedy is described in detail before the absurd reveal. Frequency is moderate but precisely placed; he never jokes when making a serious point. The cough-grunt moment is observational physical humor, the butterfly is pure structure-based surprise.",
+        "directness": 8,
+        "formality": 3,
+        "audience_address": "Peer who has earned the right to give advice — speaks like a slightly-ahead friend, not a teacher or authority. Shares his own failures openly before offering guidance. Never condescending, but unambiguous about what he believes.",
+        "characteristic_phrases": [
+          "you only fear the things that you're not prepared for",
+          "all I had to do was...",
+          "just look around a little bit",
+          "and so should you",
+          "what's coming",
+          "more than likely",
+          "in what feels like slow motion",
+          "kind of like this",
+          "all the things"
+        ],
+        "never_says": [
+          "utilize",
+          "leverage",
+          "in conclusion",
+          "it is important to note",
+          "statistically speaking",
+          "best practices",
+          "going forward",
+          "at the end of the day",
+          "synergy",
+          "optimize"
+        ],
+        "numbers_and_specifics": "Uses specifics to ground stories in reality but avoids citing statistics or sourced data. Time references are approximate and casual ('within a few hours,' 'after about an hour or so'). When he gives a specific fact — like rattlesnake bites happening around the ankle — it lands hard because it's the rare precise claim. Numbers feel earned and personal rather than researched.",
+        "emotional_range": "Moves fluidly from self-mocking humor to genuine vulnerability to quiet conviction. Vulnerability surfaces through honest admission of incompetence ('I couldn't even start a campfire'). The most emotional beat is subtle — 'Who was going to take care of my family?' dropped mid-slapstick. Instructional tone is calm and confident, never preachy. Ends with a firm but non-aggressive challenge to the audience.",
+        "sample_sentences": [
+          "I couldn't even start a campfire.",
+          "What's out in the dark? What was that sound? All the things.",
+          "I smacked it with a stick. Nothing. I stomped my feet on it. Nothing. I cough-grunted at it. Still nothing.",
+          "It was only a butterfly.",
+          "You only fear the things that you're not prepared for.",
+          "Who was going to take care of my family? What about all the goals I had?",
+          "All I had to do was get a good pair of leather boots.",
+          "If you're both not prepared for what's coming, and not even the slightest bit anxious about it, you're not living in peace, you're just not very aware.",
+          "He could tell I was out of my depth, and more than likely, in an effort to prevent me and my family from freezing over the winter, decided to mentor me.",
+          "I just prepare for what I can and so should you."
+        ],
+        "summary": "This voice is a self-aware, plain-spoken storyteller who earns trust by admitting his own failures before offering hard-won wisdom. He builds tension through narrative pacing and releases it with deadpan anti-climax, then pivots cleanly to a direct, unadorned life lesson. Write in conversational rhythms with deliberate short-sentence payoffs, avoid all corporate or academic language, and let vulnerability and humor coexist without explanation."
+      }
+    }
+  ],
   "hardware": {
     "current": "Local machine",
     "planned": "DigitalOcean Droplet when stable"
   },
-
   "vault": {
     "intake_folder": "C:/Users/18054/Videos/intake",
     "footage_root": "C:/Users/18054/Videos",
     "organized_folder": "C:/Users/18054/Videos/organized",
-    "supported_extensions": [".mp4", ".mov", ".mts", ".avi", ".mkv"],
+    "supported_extensions": [
+      ".mp4",
+      ".mov",
+      ".mts",
+      ".avi",
+      ".mkv"
+    ],
     "thumbnail_quality": 85
   }
 }

@@ -201,6 +201,74 @@
   .draft-meta{font-size:11px;color:var(--text-dim);}
   .draft-approved{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.5px;}
 
+  /* ── PIPR PRE-FILL NOTICE ── */
+  .pipr-notice{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(62,207,178,0.06);border:1px solid rgba(62,207,178,0.2);border-radius:var(--radius-sm);margin-bottom:10px;font-size:11px;color:var(--text-dim);}
+  .pipr-notice-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+  .pipr-notice-text{flex:1;}
+  .pipr-notice a{color:var(--teal);cursor:pointer;text-decoration:underline;}
+  .input-truncated{display:none;font-size:11px;margin-top:4px;color:var(--teal);cursor:pointer;}
+  .input-truncated:hover{opacity:0.8;}
+
+  /* ── SCRIPT TABS ── */
+  .script-tabs{display:flex;gap:2px;margin-bottom:12px;}
+  .script-tab{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:6px 14px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;position:relative;}
+  .script-tab:hover{border-color:var(--border-bright);color:var(--text);}
+  .script-tab.active{border-color:var(--teal);color:var(--teal);background:var(--teal-glow);}
+  .script-tab.loading .tab-spinner{display:inline-block;}
+  .script-tab.loaded .tab-spinner{display:none;}
+  .tab-spinner{width:10px;height:10px;border:1.5px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+  .tab-dot{width:6px;height:6px;border-radius:50%;background:var(--border-bright);flex-shrink:0;}
+  .script-tab.loaded .tab-dot{background:var(--teal);}
+  .script-tab.active .tab-dot{background:var(--teal);}
+
+  /* ── BEAT CARD ENHANCEMENTS ── */
+  .beat-status-bar{height:3px;border-radius:2px 2px 0 0;margin:-1px -1px 10px -1px;flex-shrink:0;}
+  .beat-card.covered      .beat-status-bar{background:var(--green);}
+  .beat-card.covered-amber .beat-status-bar{background:var(--amber);}
+  .beat-card.needs-coverage .beat-status-bar{background:var(--red);}
+  .beat-card:not(.covered):not(.covered-amber):not(.needs-coverage) .beat-status-bar{background:var(--border);}
+  .beat-filming-order{font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .beat-transcript-excerpt{font-size:11px;color:var(--text-dimmer);font-style:italic;margin-top:4px;line-height:1.4;}
+  .beat-footage-pill{display:inline-flex;align-items:center;gap:4px;background:var(--green-glow);border:1px solid var(--green-border);border-radius:3px;padding:2px 8px;font-size:10px;color:var(--green);font-weight:600;margin-top:6px;}
+
+  /* ── SCRIPT SECTION COLORED BORDERS ── */
+  .beat-section{margin-bottom:14px;padding:10px 12px 10px 14px;border-left:3px solid var(--border);border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:var(--bg-card-2);}
+  .beat-section-green{border-left-color:var(--green);}
+  .beat-section-red{border-left-color:var(--red);background:rgba(224,92,92,0.04);}
+  .beat-section-amber{border-left-color:var(--amber);background:rgba(240,185,66,0.04);}
+
+  /* ── VOICE SELECTOR BAR ── */
+  .voice-selector-bar{margin-bottom:12px;padding:12px;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .voice-selector-row{display:flex;gap:10px;align-items:flex-end;}
+  .voice-selector-col{flex:1;}
+  .voice-blend-col{flex:1;}
+
+  /* ── VOICE LIBRARY SECTION ── */
+  .voice-library-section{margin-top:24px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .voice-library-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-card);cursor:pointer;user-select:none;transition:background 0.15s;}
+  .voice-library-header:hover{background:var(--bg-card-2);}
+  .voice-library-title{font-family:var(--font-head);font-size:14px;letter-spacing:1px;color:var(--text);flex:1;}
+  .voice-library-count{font-size:11px;color:var(--text-dimmer);}
+  .voice-library-chevron{font-size:10px;color:var(--text-dimmer);transition:transform 0.2s;}
+  .voice-library-chevron.open{transform:rotate(180deg);}
+  .voice-library-body{border-top:1px solid var(--border);}
+  .voice-library-inner{padding:16px;display:flex;flex-direction:column;gap:16px;}
+  .vl-profiles{display:flex;flex-direction:column;gap:8px;}
+  .vl-profile-card{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .vl-profile-card:hover{border-color:var(--border-bright);}
+  .vl-profile-info{flex:1;min-width:0;}
+  .vl-profile-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .vl-profile-meta{font-size:11px;color:var(--text-dimmer);margin-top:2px;}
+  .vl-profile-summary{font-size:11px;color:var(--text-dim);margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .vl-profile-actions{display:flex;gap:6px;flex-shrink:0;}
+  .vl-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;font-family:var(--font-body);padding:4px 10px;cursor:pointer;transition:all 0.15s;}
+  .vl-btn:hover{border-color:var(--border-bright);color:var(--text);}
+  .vl-btn.danger:hover{border-color:var(--red-border);color:var(--red);}
+  .vl-add-form{padding-top:12px;border-top:1px solid var(--border);}
+  .vl-add-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dimmer);margin-bottom:10px;}
+  .vl-add-row{display:flex;gap:10px;align-items:flex-start;}
+  .vl-analyze-status{margin-top:10px;}
+
   /* ── TOAST ── */
   .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:11px 20px;font-size:13px;font-weight:500;color:var(--text);box-shadow:0 8px 28px rgba(0,0,0,0.4);opacity:0;transition:all 0.25s;z-index:999;pointer-events:none;white-space:nowrap;}
   .toast.error{border-color:var(--red-border);color:var(--red);}
@@ -247,12 +315,22 @@
         <!-- Conditional input area (shown after project selected) -->
         <div id="inputArea" style="display:none">
 
+          <!-- PIPR PRE-FILL NOTICE (shown when fields pre-filled from config) -->
+          <div class="pipr-notice" id="piprNotice" style="display:none">
+            <span class="pipr-notice-icon">🔗</span>
+            <span class="pipr-notice-text">
+              Pre-filled from PipΩr — edit if needed.
+              <span id="piprPaletteInfo"></span>
+            </span>
+          </div>
+
           <!-- SCRIPT FIRST -->
           <div id="inputScriptFirst" style="display:none">
             <div class="field-group">
               <div class="field-label">Your Script or Outline</div>
               <textarea class="field-input" id="scriptFirstText" rows="8" style="min-height:200px"
                 placeholder="Paste your script, outline, or bullet points here. WritΩr will map it to your beat structure and fill the gaps."></textarea>
+              <span class="input-truncated" id="scriptFirstShowFull" onclick="showFullInput('scriptFirstText','scriptFirstShowFull')">Show full ↓</span>
             </div>
           </div>
 
@@ -262,6 +340,7 @@
               <div class="field-label">What Happened</div>
               <textarea class="field-input" id="shootFirstText" rows="8" style="min-height:200px"
                 placeholder="Describe what happened when you filmed. What did you do? What went wrong? What surprised you? What moments stand out?"></textarea>
+              <span class="input-truncated" id="shootFirstShowFull" onclick="showFullInput('shootFirstText','shootFirstShowFull')">Show full ↓</span>
             </div>
             <div class="transcript-row">
               <button class="btn btn-ghost btn-sm" id="loadTranscriptsBtn">Load Footage Transcripts</button>
@@ -278,12 +357,39 @@
                 <div class="field-label">Your Concept</div>
                 <textarea class="field-input" id="hybridConceptText" rows="6" style="min-height:160px"
                   placeholder="What were you planning to make?"></textarea>
+                <span class="input-truncated" id="hybridConceptShowFull" onclick="showFullInput('hybridConceptText','hybridConceptShowFull')">Show full ↓</span>
               </div>
               <div class="field-group">
                 <div class="field-label">What Was Captured</div>
                 <textarea class="field-input" id="hybridCapturedText" rows="6" style="min-height:160px"
                   placeholder="What footage do you have?"></textarea>
+                <span class="input-truncated" id="hybridCapturedShowFull" onclick="showFullInput('hybridCapturedText','hybridCapturedShowFull')">Show full ↓</span>
               </div>
+            </div>
+          </div>
+
+          <!-- VOICE SELECTOR -->
+          <div class="voice-selector-bar" id="voiceSelectorBar" style="display:none">
+            <div class="voice-selector-row">
+              <div class="voice-selector-col">
+                <div class="field-label" style="font-size:10px;margin-bottom:4px">VOICE</div>
+                <select class="field-input field-select" id="voicePrimary" style="font-size:12px;padding:6px 8px" onchange="onVoiceChange()">
+                  <option value="">Default (creator profile)</option>
+                </select>
+              </div>
+              <div class="voice-blend-col" id="voiceBlendCol" style="display:none">
+                <div class="field-label" style="font-size:10px;margin-bottom:4px">BLEND</div>
+                <select class="field-input field-select" id="voiceSecondary" style="font-size:12px;padding:6px 8px" onchange="onVoiceChange()">
+                  <option value="">+ Add 2nd voice</option>
+                </select>
+              </div>
+            </div>
+            <div id="voiceBlendSliderRow" style="display:none;margin-top:8px">
+              <div class="field-label" style="font-size:10px;margin-bottom:4px">
+                PRIMARY WEIGHT: <strong id="voiceBlendLabel">70%</strong>
+              </div>
+              <input type="range" id="voiceBlend" min="10" max="90" value="70" step="10"
+                style="width:100%;accent-color:var(--teal)" oninput="document.getElementById('voiceBlendLabel').textContent=this.value+'%'">
             </div>
           </div>
 
@@ -357,6 +463,19 @@
       </div>
       <div class="panel-body">
 
+        <!-- Output mode tabs (shown when script exists) -->
+        <div class="script-tabs" id="scriptTabs" style="display:none">
+          <button class="script-tab active" id="tab-full"    onclick="switchTab('full')">
+            <span class="tab-spinner"></span><span class="tab-dot"></span> Full Script
+          </button>
+          <button class="script-tab" id="tab-bullets" onclick="switchTab('bullets')">
+            <span class="tab-spinner"></span><span class="tab-dot"></span> Bullets
+          </button>
+          <button class="script-tab" id="tab-hybrid"  onclick="switchTab('hybrid')">
+            <span class="tab-spinner"></span><span class="tab-dot"></span> Hybrid
+          </button>
+        </div>
+
         <!-- Talking-head indicator (shown when script exists) -->
         <div class="th-indicator" id="thIndicator" style="display:none">
           <span>🎤</span>
@@ -412,6 +531,52 @@
 
   </div><!-- /three-panels -->
 
+  <!-- ── VOICE LIBRARY PANEL ── -->
+  <div class="voice-library-section" id="voiceLibrarySection">
+    <div class="voice-library-header" onclick="toggleVoiceLibrary()">
+      <span class="voice-library-title">🎙 VOICE LIBRARY</span>
+      <span class="voice-library-count" id="voiceLibraryCount">0 profiles</span>
+      <span class="voice-library-chevron" id="voiceLibraryChevron">▼</span>
+    </div>
+    <div class="voice-library-body" id="voiceLibraryBody" style="display:none">
+      <div class="voice-library-inner">
+
+        <!-- Profile list -->
+        <div class="vl-profiles" id="vlProfiles">
+          <div style="color:var(--text-dimmer);font-size:12px;padding:16px 0">
+            No voice profiles yet. Add a profile below.
+          </div>
+        </div>
+
+        <!-- Add profile form -->
+        <div class="vl-add-form">
+          <div class="vl-add-title">+ Analyze Video for Voice Profile</div>
+          <div class="vl-add-row">
+            <div class="field-group" style="flex:1;margin-bottom:0">
+              <input type="text" class="field-input" id="vlFilePath"
+                placeholder="C:\path\to\video.mp4"
+                style="font-size:12px;font-family:monospace">
+            </div>
+            <div class="field-group" style="width:180px;margin-bottom:0">
+              <input type="text" class="field-input" id="vlProfileName"
+                placeholder="Profile name (optional)"
+                style="font-size:12px">
+            </div>
+            <button class="btn btn-ghost" id="vlAnalyzeBtn" onclick="onAnalyzeVoice()" style="white-space:nowrap;padding:0 16px">
+              <span class="spinner" id="vlSpinner" style="display:none"></span>
+              Analyze →
+            </button>
+          </div>
+          <div class="vl-analyze-status" id="vlAnalyzeStatus" style="display:none">
+            <div class="progress-bar-outer" style="margin:8px 0 4px"><div class="progress-bar-inner" id="vlAnalyzeBar" style="width:0%"></div></div>
+            <div class="progress-log" id="vlAnalyzeLog" style="max-height:80px"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
 </div><!-- /main -->
 
 <!-- TOAST -->
@@ -426,11 +591,17 @@
 
 let currentProjectId  = null;
 let currentEntryPoint = null;  // 'script_first' | 'shoot_first' | 'hybrid'
-let currentScript     = null;  // { id, draft_number, content (beats array or raw), beat_map, approved }
+let currentScript     = null;  // active script { id, content, beat_map, approved, mode }
+let currentScripts    = { full: null, bullets: null, hybrid: null }; // per-tab script state
+let activeScriptTab   = 'full';
 let currentBeatMap    = [];
 let draftNumber       = 0;
 let isGenerating      = false;
 let isRevising        = false;
+let voiceLibrary      = [];    // array of voice profile objects from /api/voice-library/profiles
+let vlAnalyzeJobId    = null;  // active voice analyze job id
+// Full original values for truncated pre-fill fields
+const _prefillFull    = {};
 
 // ─────────────────────────────────────────────
 // INIT
@@ -438,6 +609,21 @@ let isRevising        = false;
 
 async function init() {
   await loadProjects();
+  await loadVoiceLibrary();
+
+  // Pre-fill voice analyzer if launched from ReviewΩr with ?voice_file=...
+  const voiceFileParam = new URLSearchParams(window.location.search).get('voice_file');
+  if (voiceFileParam) {
+    const fp = document.getElementById('vlFilePath');
+    if (fp) fp.value = decodeURIComponent(voiceFileParam);
+    // Open Voice Library panel
+    const body    = document.getElementById('voiceLibraryBody');
+    const chevron = document.getElementById('voiceLibraryChevron');
+    if (body)    body.style.display = 'block';
+    if (chevron) chevron.classList.add('open');
+    // Scroll to it
+    setTimeout(() => document.getElementById('voiceLibrarySection')?.scrollIntoView({ behavior: 'smooth' }), 200);
+  }
 
   document.getElementById('projectSelect').addEventListener('change', e => {
     const pid = parseInt(e.target.value, 10);
@@ -514,21 +700,24 @@ async function onProjectChange(pid) {
 
     // Pre-populate text from config
     if (data.config) {
-      prefillInputs(currentEntryPoint, data.config);
+      prefillInputs(currentEntryPoint, data.config, data.active_script || null);
     }
 
-    // If existing script, render it
+    // If existing script, render it and restore sibling tabs
     if (data.active_script) {
       const s = data.active_script;
-      currentScript = {
-        ...s,
-        content:  s.generated_script || s.content || '',
-        beat_map: s.beat_map_json    || s.beat_map || []
-      };
+      const beatMap = s.beat_map_json || s.beat_map || [];
+      currentScript = { ...s, content: s.generated_script || s.content || '', beat_map: beatMap };
+      const mode    = s.mode || 'full';
+      currentScripts[mode] = { ...currentScript, mode };
+      activeScriptTab = mode;
+      setTabState(mode, 'loaded');
       draftNumber = (s.iteration_count || 0) + 1;
-      renderBeatMap(currentScript.beat_map);
+      renderBeatMap(beatMap);
       renderScript(currentScript);
       loadDraftsHistory(pid);
+      // Load sibling tabs in background (non-blocking)
+      if (s.session_id) loadSiblingTabs(s.session_id, beatMap);
     }
   } catch(e) {
     console.error('Failed to load project config:', e);
@@ -538,24 +727,68 @@ async function onProjectChange(pid) {
   }
 }
 
-function prefillInputs(entryPoint, config) {
+const PREFILL_TRUNCATE = 500;
+
+function prefillField(taId, toggleId, fullText) {
+  if (!fullText?.trim()) return false;
+  const ta = document.getElementById(taId);
+  const tog = document.getElementById(toggleId);
+  if (!ta || ta.value) return false; // skip if already has content
+  _prefillFull[taId] = fullText;
+  if (fullText.length > PREFILL_TRUNCATE) {
+    ta.value = fullText.slice(0, PREFILL_TRUNCATE) + '…';
+    if (tog) tog.style.display = 'inline';
+  } else {
+    ta.value = fullText;
+  }
+  return true;
+}
+
+function showFullInput(taId, toggleId) {
+  const ta = document.getElementById(taId);
+  const tog = document.getElementById(toggleId);
+  if (ta && _prefillFull[taId]) ta.value = _prefillFull[taId];
+  if (tog) tog.style.display = 'none';
+}
+
+function prefillInputs(entryPoint, config, activeScript) {
+  let anyPrefilled = false;
+
+  // Determine the concept text — PipΩr stores in high_concept; script content in script field
+  const conceptText = config.script || config.high_concept || config.concept || '';
+
+  // Determine the footage/capture text — config stores what_happened; fall back to last script's raw_input
+  function extractFootageText(script) {
+    if (!script?.raw_input) return '';
+    const raw = script.raw_input;
+    // Hybrid format: "CONCEPT: ...\n\nFOOTAGE: ..."
+    const footageMatch = raw.match(/FOOTAGE:\s*([\s\S]+)$/i);
+    if (footageMatch) return footageMatch[1].trim();
+    // Shoot-first: raw_input IS the footage description
+    if (script.input_type === 'what_happened' || script.input_type === 'shoot_first') return raw.trim();
+    return '';
+  }
+  const footageText = config.what_happened || extractFootageText(activeScript) || '';
+
   if (entryPoint === 'script_first') {
-    const ta = document.getElementById('scriptFirstText');
-    if (!ta.value && (config.script || config.what_happened)) {
-      ta.value = config.script || config.what_happened || '';
-    }
+    anyPrefilled = prefillField('scriptFirstText', 'scriptFirstShowFull', conceptText) || anyPrefilled;
   } else if (entryPoint === 'shoot_first') {
-    const ta = document.getElementById('shootFirstText');
-    if (!ta.value && config.what_happened) {
-      ta.value = config.what_happened;
-    }
-  } else if (entryPoint === 'hybrid') {
-    if (config.concept && !document.getElementById('hybridConceptText').value) {
-      document.getElementById('hybridConceptText').value = config.concept;
-    }
-    if (config.what_happened && !document.getElementById('hybridCapturedText').value) {
-      document.getElementById('hybridCapturedText').value = config.what_happened;
-    }
+    anyPrefilled = prefillField('shootFirstText', 'shootFirstShowFull', footageText) || anyPrefilled;
+  } else {
+    // hybrid (default if unrecognized)
+    anyPrefilled = prefillField('hybridConceptText',  'hybridConceptShowFull',  conceptText) || anyPrefilled;
+    anyPrefilled = prefillField('hybridCapturedText', 'hybridCapturedShowFull', footageText) || anyPrefilled;
+  }
+
+  // Show pre-fill notice with emotional/musical context if available
+  const notice   = document.getElementById('piprNotice');
+  const palInfo  = document.getElementById('piprPaletteInfo');
+  if (notice && anyPrefilled) {
+    const parts = [];
+    if (config.emotional_palette) parts.push(`Mood: ${config.emotional_palette.replace(/_/g, ' ')}`);
+    if (config.musical_theme)     parts.push(`Music: ${config.musical_theme.replace(/_/g, ' ')}`);
+    if (palInfo && parts.length)  palInfo.textContent = parts.join(' · ');
+    notice.style.display = 'flex';
   }
 }
 
@@ -672,22 +905,28 @@ async function onGenerate() {
   showProgress('generateProgress', 'generateBar');
   resetBeatMap();
   resetScriptPanel();
+  // Show tabs in loading state
+  document.getElementById('scriptTabs').style.display = 'flex';
+  setAllTabsLoading();
 
   // Build body — hybrid sends concept and what_happened as separate fields
   const ep = currentEntryPoint || 'shoot_first';
   let generateBody;
+  const voiceParams = getVoiceParams();
   if (ep === 'hybrid') {
     generateBody = {
       project_id:    currentProjectId,
       entry_point:   'hybrid',
       concept:       document.getElementById('hybridConceptText')?.value?.trim()   || '',
-      what_happened: document.getElementById('hybridCapturedText')?.value?.trim()  || ''
+      what_happened: document.getElementById('hybridCapturedText')?.value?.trim()  || '',
+      ...voiceParams
     };
   } else {
     generateBody = {
       project_id:  currentProjectId,
       entry_point: ep,
-      input_text:  inputText
+      input_text:  inputText,
+      ...voiceParams
     };
   }
 
@@ -702,12 +941,40 @@ async function onGenerate() {
         if (ev.stage === 'beat_mapping') appendLog('generateLog', ev.message, 'dim');
         if (ev.stage === 'writing')      appendLog('generateLog', ev.message, 'dim');
         if (ev.stage === 'beat_update' && ev.beat) updateBeatCard(ev.beat);
+        // Three-tab: populate each tab as it arrives
+        if (ev.stage === 'tab_complete' && ev.mode) {
+          currentScripts[ev.mode] = { id: null, content: ev.script, beat_map: [], approved: false, mode: ev.mode };
+          setTabState(ev.mode, 'loaded');
+          if (ev.mode === activeScriptTab) {
+            // Render this tab immediately if it's the active one
+            renderScript(currentScripts[ev.mode]);
+          }
+        }
       },
       onComplete: (ev) => {
         appendLog('generateLog', 'Script generated ✓', 'ok');
-        currentScript = { id: ev.script_id, content: ev.script, beat_map: ev.beat_map || [], approved: false };
-        draftNumber   = 1;
-        renderBeatMap(ev.beat_map || []);
+        draftNumber = 1;
+
+        // Assign saved script IDs to tab state
+        if (ev.script_ids) {
+          ['full', 'bullets', 'hybrid'].forEach(m => {
+            if (currentScripts[m] && ev.script_ids[m]) currentScripts[m].id = ev.script_ids[m];
+          });
+        } else if (ev.script_id) {
+          // Fallback for single-script response
+          if (currentScripts.full) currentScripts.full.id = ev.script_id;
+        }
+
+        // Store beat_map on all tabs
+        const beatMap = ev.beat_map || [];
+        Object.values(currentScripts).forEach(s => { if (s) s.beat_map = beatMap; });
+
+        // Sync currentScript to active tab
+        currentScript = currentScripts[activeScriptTab] || {
+          id: ev.script_id, content: ev.script, beat_map: beatMap, approved: false
+        };
+
+        renderBeatMap(beatMap);
         renderScript(currentScript);
         loadDraftsHistory(currentProjectId);
         setGenerateLoading(false);
@@ -755,9 +1022,14 @@ function setGenerateLoading(loading) {
 // ─────────────────────────────────────────────
 
 async function onRevise() {
-  if (!currentProjectId || !currentScript || isRevising) return;
+  // Iterate on the active tab's script
+  const activeScript = currentScripts[activeScriptTab] || currentScript;
+  if (!currentProjectId || !activeScript || isRevising) return;
+  if (!activeScript.id) { showToast('Save the script first before revising', 'error'); return; }
   const feedback = document.getElementById('reviseInput').value.trim();
   if (!feedback) return;
+  // Use active tab script as the base for iteration
+  currentScript = activeScript;
 
   isRevising = true;
   setReviseLoading(true);
@@ -766,7 +1038,7 @@ async function onRevise() {
   try {
     await streamWritr({
       url: '/api/writr/iterate',
-      body: { project_id: currentProjectId, script_id: currentScript.id, feedback },
+      body: { project_id: currentProjectId, script_id: currentScript.id, feedback, ...getVoiceParams() },
       barId: 'reviseBar',
       logId: 'reviseLog',
       onEvent: (ev) => {
@@ -777,7 +1049,15 @@ async function onRevise() {
       },
       onComplete: (ev) => {
         appendLog('reviseLog', 'Revision complete ✓', 'ok');
-        currentScript = { id: ev.script_id, content: ev.script, beat_map: ev.beat_map || currentBeatMap, approved: false };
+        const updatedScript = {
+          id:       ev.script_id,
+          content:  ev.script,
+          beat_map: ev.beat_map || currentBeatMap,
+          approved: false,
+          mode:     ev.mode || activeScriptTab
+        };
+        currentScript = updatedScript;
+        currentScripts[ev.mode || activeScriptTab] = updatedScript;
         draftNumber   = ev.iteration_count || (draftNumber + 1);
         renderBeatMap(ev.beat_map || currentBeatMap);
         renderScript(currentScript);
@@ -979,31 +1259,62 @@ function updateCoverageSummary(beatMap) {
 }
 
 function buildBeatCard(beat, idx) {
-  const div  = document.createElement('div');
-  const cls  = beatCardClass(beat);
-  div.className = 'beat-card ' + cls;
+  const div = document.createElement('div');
+  div.className = 'beat-card ' + beatCardClass(beat);
   div.dataset.beatIdx = idx;
 
   const tagHtml = beatTagHtml(beat);
   const pct     = beat.position_pct != null ? beat.position_pct + '%' : (Math.round((idx / Math.max(currentBeatMap.length - 1, 1)) * 100)) + '%';
+  const name    = esc(beat.name || beat.beat_name || 'Beat ' + (idx + 1));
+
+  // Filming order for needs-coverage beats
+  const needsBeats    = currentBeatMap.filter(b => b.needs_coverage);
+  const filmingOrder  = beat.needs_coverage
+    ? needsBeats.findIndex(b => (b.name || b.beat_name) === (beat.name || beat.beat_name)) + 1
+    : 0;
+
+  let detailHTML = '';
+
+  if (beat.needs_coverage) {
+    // RED — filming order + full talking head prompt
+    if (filmingOrder > 0)
+      detailHTML += `<div class="beat-filming-order">📹 Shoot this ${filmingOrder === 1 ? 'first' : '#' + filmingOrder}</div>`;
+    if (beat.talking_head_prompt)
+      detailHTML += `<div class="beat-detail-label">Say to camera</div><div class="beat-talking-head" style="font-size:13px;line-height:1.5">🎤 ${esc(beat.talking_head_prompt)}</div>`;
+    if (beat.coverage_description)
+      detailHTML += `<div class="beat-detail-label" style="margin-top:8px">What to capture</div><div class="beat-coverage-need">📸 ${esc(beat.coverage_description)}</div>`;
+  } else if (beat.covered && beat.talking_head_prompt && !beat.real_moment) {
+    // AMBER — intent exists, camera still needed
+    if (beat.real_moment)
+      detailHTML += `<div class="beat-detail-label">Footage</div><div class="beat-moment">${esc(beat.real_moment)}</div>`;
+    detailHTML += `<div class="beat-detail-label" style="margin-top:8px">Still needed</div><div class="beat-talking-head">🎤 ${esc(beat.talking_head_prompt)}</div>`;
+  } else {
+    // GREEN — covered, show evidence
+    if (beat.real_moment) {
+      const excerpt = beat.real_moment.length > 100 ? beat.real_moment.slice(0, 100) + '…' : beat.real_moment;
+      detailHTML += `<div class="beat-transcript-excerpt">"${esc(excerpt)}"</div>`;
+    }
+    if (beat.footage_id)
+      detailHTML += `<span class="beat-footage-pill">🎬 footage #${esc(String(beat.footage_id))}</span>`;
+    if (beat.talking_head_prompt)
+      detailHTML += `<div class="beat-detail-label" style="margin-top:8px">Say to camera</div><div class="beat-talking-head">🎤 ${esc(beat.talking_head_prompt)}</div>`;
+  }
+
+  if (!detailHTML)
+    detailHTML = '<div style="font-size:12px;color:var(--text-dimmer);font-style:italic">Generate a script to fill this beat.</div>';
 
   div.innerHTML = `
+    <div class="beat-status-bar"></div>
     <div class="beat-head" onclick="toggleBeat(this)">
       <div class="beat-dot"></div>
       <div class="beat-name-wrap">
-        <div class="beat-name">${esc(beat.name || beat.beat_name || 'Beat ' + (idx + 1))}</div>
+        <div class="beat-name">${name}</div>
         <div class="beat-pct">${pct}</div>
       </div>
       ${tagHtml}
       <button class="beat-expand" tabindex="-1">▾</button>
     </div>
-    <div class="beat-detail">
-      ${beat.real_moment ? `<div class="beat-detail-label">Real Moment</div><div class="beat-moment">${esc(beat.real_moment)}</div>` : ''}
-      ${beat.footage_id ? `<div class="beat-footage-id">footage #${esc(String(beat.footage_id))}</div>` : ''}
-      ${beat.talking_head_prompt ? `<div class="beat-detail-label">Say This to Camera</div><div class="beat-talking-head">🎤 ${esc(beat.talking_head_prompt)}</div>` : ''}
-      ${beat.needs_coverage && beat.coverage_description ? `<div class="beat-detail-label">Need to Capture</div><div class="beat-coverage-need">📸 ${esc(beat.coverage_description)}</div>` : ''}
-      ${!beat.real_moment && !beat.talking_head_prompt && !beat.needs_coverage ? '<div style="font-size:12px;color:var(--text-dimmer);font-style:italic">No detail yet — run analysis to fill this beat.</div>' : ''}
-    </div>
+    <div class="beat-detail">${detailHTML}</div>
   `;
   return div;
 }
@@ -1056,14 +1367,16 @@ function renderScript(script) {
   const thInd   = document.getElementById('thIndicator');
   const iterBar = document.getElementById('iterationBar');
   const actions = document.getElementById('scriptActions');
+  const tabs    = document.getElementById('scriptTabs');
 
-  empty.style.display   = 'none';
-  display.style.display = 'block';
+  empty.style.display      = 'none';
+  display.style.display    = 'block';
   draftBadge.style.display = 'inline-block';
   draftBadge.textContent   = `Draft ${draftNumber}`;
-  thInd.style.display   = 'flex';
-  iterBar.style.display = 'block';
-  actions.style.display = 'flex';
+  thInd.style.display      = 'flex';
+  iterBar.style.display    = 'block';
+  actions.style.display    = 'flex';
+  if (tabs) tabs.style.display = 'flex';
 
   // Build HTML content
   display.innerHTML = buildScriptHTML(script);
@@ -1131,9 +1444,65 @@ function buildBeatHTML(beat) {
   return html + '\n';
 }
 
+function getBeatCoverageStatus(beatName) {
+  if (!beatName || !currentBeatMap.length) return '';
+  const name = beatName.toLowerCase().trim();
+  const beat = currentBeatMap.find(b =>
+    (b.beat_name || b.name || '').toLowerCase().trim() === name
+  );
+  if (!beat) return '';
+  if (beat.needs_coverage) return 'needs';
+  if (beat.covered && beat.talking_head_prompt && !beat.real_moment) return 'partial';
+  if (beat.covered) return 'covered';
+  return 'needs';
+}
+
 function formatRawScript(raw) {
-  // Simple pass: escape and preserve whitespace
-  return esc(raw);
+  if (!raw) return '';
+
+  const BEAT_RE = /^\[●\s*(?:BEAT:\s*)?(.+?)\]\s*$/;
+  const lines   = raw.split('\n');
+  const sections = [];
+  let currentName = null;
+  let buffer      = [];
+
+  const flushSection = () => {
+    const status = getBeatCoverageStatus(currentName);
+    const cls    = status === 'covered' ? 'beat-section-green'
+                 : status === 'needs'   ? 'beat-section-red'
+                 : status === 'partial' ? 'beat-section-amber'
+                 : '';
+    const header = currentName
+      ? `<span class="script-beat-header">[● ${esc(currentName)}]</span>\n`
+      : '';
+    const body = buffer.map(line => {
+      const t = line.trim();
+      if (!t) return '';
+      if (t.startsWith('🎤') || t.toLowerCase().startsWith('[say'))
+        return `<span class="script-talking-head">${esc(t)}</span>`;
+      if (t.startsWith('(b-roll:') || t.startsWith('(B-roll:') || t.startsWith('(b-Roll:'))
+        return `<span style="color:var(--text-dimmer);font-style:italic;font-size:12px;display:block">${esc(t)}</span>`;
+      if (t.startsWith('[BEAT NEEDED'))
+        return `<span class="script-beat-needed">${esc(t)}</span>`;
+      return `<span class="script-beat-body">${esc(t)}</span>`;
+    }).filter(Boolean).join('\n');
+
+    sections.push(`<div class="beat-section ${cls}">${header}${body}</div>`);
+    buffer = [];
+  };
+
+  for (const line of lines) {
+    const m = line.match(BEAT_RE);
+    if (m) {
+      if (currentName !== null || buffer.length > 0) flushSection();
+      currentName = m[1].trim();
+    } else {
+      buffer.push(line);
+    }
+  }
+  if (currentName !== null || buffer.length > 0) flushSection();
+
+  return sections.join('') || `<span style="white-space:pre-wrap;font-size:13px">${esc(raw)}</span>`;
 }
 
 // ─────────────────────────────────────────────
@@ -1258,9 +1627,17 @@ function resetScriptPanel() {
   document.getElementById('thIndicator').style.display   = 'none';
   document.getElementById('iterationBar').style.display  = 'none';
   document.getElementById('scriptActions').style.display = 'none';
+  document.getElementById('scriptTabs').style.display    = 'none';
   document.getElementById('reviseInput').value           = '';
   document.getElementById('reviseBtn').disabled          = true;
   hideProgress('reviseProgress');
+  // Reset tab states
+  currentScripts  = { full: null, bullets: null, hybrid: null };
+  activeScriptTab = 'full';
+  ['full', 'bullets', 'hybrid'].forEach(m => {
+    const tab = document.getElementById('tab-' + m);
+    if (tab) { tab.classList.remove('active', 'loading', 'loaded'); }
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -1335,6 +1712,261 @@ function esc(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ─────────────────────────────────────────────
+// THREE-TAB SCRIPT MANAGEMENT
+// ─────────────────────────────────────────────
+
+function switchTab(mode) {
+  if (activeScriptTab === mode && currentScripts[mode]) return;
+  activeScriptTab = mode;
+
+  // Update tab button active state
+  ['full', 'bullets', 'hybrid'].forEach(m => {
+    const tab = document.getElementById('tab-' + m);
+    if (tab) tab.classList.toggle('active', m === mode);
+  });
+
+  const script = currentScripts[mode];
+  if (!script) {
+    // Tab hasn't arrived yet — show spinner in display area
+    const display = document.getElementById('scriptDisplay');
+    if (display) display.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-dimmer);font-size:13px">Generating…</div>';
+    return;
+  }
+
+  currentScript = script;
+  renderScript(script);
+}
+
+function setTabState(mode, state) {
+  const tab = document.getElementById('tab-' + mode);
+  if (!tab) return;
+  tab.classList.remove('loading', 'loaded');
+  if (state) tab.classList.add(state);
+}
+
+/** Mark all tabs as loading (called when generation starts) */
+function setAllTabsLoading() {
+  ['full', 'bullets', 'hybrid'].forEach(m => setTabState(m, 'loading'));
+}
+
+/**
+ * Restore all three tab scripts when loading a project from the DB.
+ * Looks for sibling scripts with the same session_id.
+ */
+async function loadSiblingTabs(session_id, activeBeatMap) {
+  if (!session_id || !currentProjectId) return;
+  try {
+    const r    = await fetch(`/api/writr/${currentProjectId}/scripts`);
+    const data = await r.json();
+    const siblings = (data.scripts || []).filter(s => s.session_id === session_id);
+    siblings.forEach(s => {
+      const mode = s.mode || 'full';
+      const content = s.generated_script || s.content || '';
+      currentScripts[mode] = {
+        id:       s.id,
+        content,
+        beat_map: s.beat_map_json || activeBeatMap || [],
+        approved: !!s.approved,
+        mode
+      };
+      setTabState(mode, 'loaded');
+    });
+  } catch (_) { /* non-fatal */ }
+}
+
+// ─────────────────────────────────────────────
+// VOICE LIBRARY
+// ─────────────────────────────────────────────
+
+async function loadVoiceLibrary() {
+  try {
+    const res  = await fetch('/api/voice-library/profiles');
+    const data = await res.json();
+    voiceLibrary = data.profiles || [];
+  } catch (_) {
+    voiceLibrary = [];
+  }
+  renderVoiceLibrary();
+}
+
+function renderVoiceLibrary() {
+  const count   = voiceLibrary.length;
+  const countEl = document.getElementById('voiceLibraryCount');
+  if (countEl) countEl.textContent = `${count} profile${count !== 1 ? 's' : ''}`;
+
+  // Populate dropdowns
+  const primarySel   = document.getElementById('voicePrimary');
+  const secondarySel = document.getElementById('voiceSecondary');
+  if (primarySel) {
+    const prev = primarySel.value;
+    primarySel.innerHTML = '<option value="">Default (creator profile)</option>' +
+      voiceLibrary.map(p => `<option value="${p.id}"${p.id === prev ? ' selected' : ''}>${escHtml(p.name)}</option>`).join('');
+  }
+  if (secondarySel) {
+    const prev = secondarySel.value;
+    secondarySel.innerHTML = '<option value="">None</option>' +
+      voiceLibrary.map(p => `<option value="${p.id}"${p.id === prev ? ' selected' : ''}>${escHtml(p.name)}</option>`).join('');
+  }
+
+  // Show voice selector bar only when there's at least one profile
+  const bar = document.getElementById('voiceSelectorBar');
+  if (bar) bar.style.display = count > 0 ? 'block' : 'none';
+
+  // Render profile cards
+  const container = document.getElementById('vlProfiles');
+  if (!container) return;
+  if (!count) {
+    container.innerHTML = '<div style="color:var(--text-dimmer);font-size:12px;padding:8px 0">No voice profiles yet. Analyze a video below to create one.</div>';
+    return;
+  }
+  container.innerHTML = voiceLibrary.map(p => {
+    const c    = p.characteristics || {};
+    const meta = [p.source_file, p.analyzed_at, p.word_count ? `${p.word_count.toLocaleString()} words` : null].filter(Boolean).join(' · ');
+    return `
+    <div class="vl-profile-card">
+      <div class="vl-profile-info">
+        <div class="vl-profile-name">${escHtml(p.name)}</div>
+        <div class="vl-profile-meta">${escHtml(meta)}</div>
+        ${c.summary ? `<div class="vl-profile-summary">${escHtml(c.summary)}</div>` : ''}
+      </div>
+      <div class="vl-profile-actions">
+        <button class="vl-btn" onclick="onRenameProfile('${p.id}')">Rename</button>
+        <button class="vl-btn danger" onclick="onDeleteProfile('${p.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleVoiceLibrary() {
+  const body    = document.getElementById('voiceLibraryBody');
+  const chevron = document.getElementById('voiceLibraryChevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  if (chevron) chevron.classList.toggle('open', !open);
+}
+
+function onVoiceChange() {
+  const primary   = document.getElementById('voicePrimary')?.value;
+  const blendCol  = document.getElementById('voiceBlendCol');
+  const blendRow  = document.getElementById('voiceBlendSliderRow');
+  const secondary = document.getElementById('voiceSecondary')?.value;
+
+  if (blendCol)  blendCol.style.display  = primary ? 'block' : 'none';
+  if (blendRow)  blendRow.style.display  = (primary && secondary) ? 'block' : 'none';
+}
+
+function getVoiceParams() {
+  const primary   = document.getElementById('voicePrimary')?.value   || '';
+  const secondary = document.getElementById('voiceSecondary')?.value || '';
+  const blend     = parseInt(document.getElementById('voiceBlend')?.value || '70', 10);
+  if (!primary) return {};
+  return {
+    voice_primary:   primary,
+    voice_secondary: secondary || undefined,
+    voice_blend:     blend
+  };
+}
+
+async function onAnalyzeVoice() {
+  const filePath = document.getElementById('vlFilePath')?.value?.trim();
+  const name     = document.getElementById('vlProfileName')?.value?.trim();
+  if (!filePath) { showToast('Enter a file path to analyze', 'error'); return; }
+
+  const btn = document.getElementById('vlAnalyzeBtn');
+  const sp  = document.getElementById('vlSpinner');
+  btn.disabled = true;
+  if (sp) sp.style.display = 'inline-block';
+
+  const statusEl = document.getElementById('vlAnalyzeStatus');
+  const logEl    = document.getElementById('vlAnalyzeLog');
+  const barEl    = document.getElementById('vlAnalyzeBar');
+  if (statusEl) statusEl.style.display = 'block';
+  if (logEl)    logEl.innerHTML = '';
+  if (barEl)    barEl.style.width = '5%';
+
+  const stages = { transcribing: 15, transcribed: 35, analyzing: 55, saved: 90, complete: 100 };
+
+  try {
+    const startRes = await fetch('/api/voice-library/analyze', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ file_path: filePath, name: name || null, save: true })
+    });
+    const startData = await startRes.json();
+    if (!startData.ok) throw new Error(startData.error || 'Failed to start analysis');
+
+    vlAnalyzeJobId = startData.job_id;
+
+    // Stream SSE
+    await new Promise((resolve, reject) => {
+      const es = new EventSource(`/api/voice-library/status/${vlAnalyzeJobId}`);
+      es.onmessage = (e) => {
+        const ev = JSON.parse(e.data);
+        if (ev.stage === 'error') { es.close(); reject(new Error(ev.error)); return; }
+        if (ev.stage === 'done')  { es.close(); resolve(ev.result); return; }
+        if (ev.message && logEl) appendLog('vlAnalyzeLog', ev.message, 'dim');
+        if (ev.stage && stages[ev.stage] && barEl) barEl.style.width = stages[ev.stage] + '%';
+      };
+      es.onerror = () => { es.close(); reject(new Error('SSE connection lost')); };
+    });
+
+    if (barEl) barEl.style.width = '100%';
+    appendLog('vlAnalyzeLog', 'Profile saved ✓', 'ok');
+    showToast(`"${name || filePath.split(/[\\/]/).pop()}" added to Voice Library`, 'success');
+
+    // Clear form, reload library
+    if (document.getElementById('vlFilePath'))    document.getElementById('vlFilePath').value    = '';
+    if (document.getElementById('vlProfileName')) document.getElementById('vlProfileName').value = '';
+    await loadVoiceLibrary();
+
+  } catch (err) {
+    appendLog('vlAnalyzeLog', 'Error: ' + err.message, 'err');
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    if (sp) sp.style.display = 'none';
+  }
+}
+
+async function onDeleteProfile(id) {
+  const profile = voiceLibrary.find(p => p.id === id);
+  if (!profile) return;
+  if (!confirm(`Delete voice profile "${profile.name}"?\nThis cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/voice-library/profiles/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    showToast(`"${profile.name}" deleted`, 'success');
+    await loadVoiceLibrary();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function onRenameProfile(id) {
+  const profile = voiceLibrary.find(p => p.id === id);
+  if (!profile) return;
+  const newName = prompt('New name for this voice profile:', profile.name);
+  if (!newName || newName.trim() === profile.name) return;
+  try {
+    const res = await fetch(`/api/voice-library/profiles/${id}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ name: newName.trim() })
+    });
+    if (!res.ok) throw new Error('Rename failed');
+    showToast('Profile renamed', 'success');
+    await loadVoiceLibrary();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ─────────────────────────────────────────────

@@ -168,6 +168,7 @@
     padding:8px 12px;font-size:13px;color:var(--text-dim);
   }
   .key-moment-num{font-family:var(--font-head);font-size:15px;color:var(--teal);flex-shrink:0;}
+  .key-moment-note{display:block;font-size:11px;color:var(--text-dim);opacity:0.7;margin-top:2px;}
 
   /* ── DIVIDER ── */
   .divider{height:1px;background:var(--border);margin:20px 0;}
@@ -429,6 +430,25 @@ async function onProjectChange(id) {
     const data = await res.json();
     currentBeats = data.beats || [];
 
+    // Graceful fallback: PipΩr not set up yet for this project
+    if (!data.pipr_configured && currentBeats.length === 0) {
+      const pid = currentProjectId;
+      document.getElementById('shot-list-body').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🌱</div>
+          <div class="empty-title">PIPR SETUP NEEDED</div>
+          <div class="empty-sub">This project doesn't have a story structure or beat map yet. Complete PipΩr setup first, then come back here to build the shot list.</div>
+          <a href="/pipr.html" style="display:inline-block;margin-top:16px;padding:11px 22px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.35);border-radius:var(--radius-sm);color:var(--teal);font-size:13px;font-weight:700;text-decoration:none;">→ Open PipΩr</a>
+        </div>`;
+      document.getElementById('crew-brief-body').innerHTML = `
+        <div class="empty-state" style="padding:40px 20px;">
+          <div class="empty-icon">🌱</div>
+          <div class="empty-title">NO BRIEF YET</div>
+          <div class="empty-sub">Crew brief generates from the PipΩr beat map. Finish PipΩr first.</div>
+        </div>`;
+      return;
+    }
+
     buildShotList(data);
     buildCrewBrief(data);
     updateStructureTag(data);
@@ -614,27 +634,37 @@ function buildCrewBrief(data) {
   const beats  = data.beats   || [];
   const config = data.config  || {};
 
-  const title       = proj.title        || 'Untitled Project';
-  const concept     = proj.high_concept || proj.topic || config.high_concept || '—';
-  const structure   = config.structure  || proj.story_structure || '—';
-  const firstBeat   = beats[0];
-  const midBeat     = beats[Math.floor(beats.length / 2)];
-  const lastBeat    = beats[beats.length - 1];
+  const title       = proj.title
+                        || data.project_title
+                        || 'Untitled Project';
+  const concept     = proj.high_concept
+                        || data.high_concept
+                        || proj.topic
+                        || config.high_concept
+                        || '—';
+  const structure   = config.story_structure
+                        || proj.story_structure
+                        || data.story_structure
+                        || '—';
   const totalBeats  = beats.length;
   const coveredCnt  = beats.filter(b => b.status === 'good').length;
 
-  // Key moments: beats with a talking_head_prompt
-  const keyBeats = beats.filter(b => b.talking_head_prompt);
-
-  const arcHtml = (firstBeat && midBeat && lastBeat)
-    ? `<div class="brief-arc">
-        <span style="color:var(--text);">${escHtml(firstBeat.name)}</span>
-        <span class="brief-arc-arrow">→</span>
-        <span>${escHtml(midBeat.name)}</span>
-        <span class="brief-arc-arrow">→</span>
-        <span>${escHtml(lastBeat.name)}</span>
+  // Full arc: all beat names joined with arrows
+  const arcHtml = beats.length > 0
+    ? `<div class="brief-arc" style="flex-wrap:wrap;gap:4px 2px;">
+        ${beats.map((b, i) => `
+          <span style="color:${i===0||i===beats.length-1?'var(--text)':'inherit'}">${escHtml(b.name)}</span>
+          ${i < beats.length - 1 ? '<span class="brief-arc-arrow">→</span>' : ''}
+        `).join('')}
       </div>`
     : '<span class="brief-value dim">No beats loaded</span>';
+
+  // Key moments: beats that need coverage (talking head shots)
+  const keyBeats = beats.filter(b =>
+    b.talking_head_prompt ||
+    b.shot_type === 'talking_head' ||
+    b.needs_coverage
+  );
 
   const keyMomentsHtml = keyBeats.length > 0
     ? `<div class="key-moments">
@@ -642,6 +672,7 @@ function buildCrewBrief(data) {
           <div class="key-moment">
             <span class="key-moment-num">${String(b.index).padStart(2,'0')}</span>
             <span>${escHtml(b.name)}</span>
+            ${b.reality_note ? `<span class="key-moment-note">${escHtml(b.reality_note)}</span>` : ''}
           </div>`).join('')}
        </div>`
     : '<span class="brief-value dim">None flagged</span>';
@@ -697,13 +728,37 @@ function enablePackageButtons() {
 // ─────────────────────────────────────────────────────────────────────────────
 // GENERATE PACKAGE
 // ─────────────────────────────────────────────────────────────────────────────
-function generatePackage() {
+async function generatePackage() {
   if (!currentProjectId) return;
   const url = `/api/shootday/package/${currentProjectId}`;
-  window.open(url, '_blank');
-  showToast('ShootDay package downloading…', 'ok');
 
-  // Generate QR code pointing to the download URL
+  showToast('Generating ShootDay package…', 'ok');
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+    // Force a proper .html file download via Blob — avoids browser text/nav behaviour
+    const blob     = await res.blob();
+    const blobUrl  = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+    const filename = res.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1]
+                     || `shootday_${currentProjectId}.html`;
+
+    const a = document.createElement('a');
+    a.href     = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
+    showToast('ShootDay package downloaded ✓', 'ok');
+  } catch (err) {
+    showToast('Download failed: ' + err.message, 'err');
+    return;
+  }
+
+  // Generate QR code pointing to the live endpoint (for phones on same network)
   const qrUrl = window.location.origin + url;
   generateQR(qrUrl);
 }

@@ -32,13 +32,10 @@ function loadProjectConfig(projectId) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (_) { return null; }
 }
 
-function buildVoiceSummary(profile) {
-  if (!profile?.voice) return 'Straight-talking, warm, funny, never corporate.';
-  return [
-    `Summary: ${profile.voice.summary}`,
-    `Traits: ${(profile.voice.traits || []).join('; ')}`,
-    `Never: ${(profile.voice.never || []).join('; ')}`
-  ].join('\n');
+const { buildVoiceSummaryFromProfiles } = require('./voice-analyzer');
+
+function buildVoiceSummary(profile, voiceProfiles) {
+  return buildVoiceSummaryFromProfiles(profile, voiceProfiles);
 }
 
 function beatMapToText(beats) {
@@ -80,8 +77,8 @@ function summariseTranscripts(footageRows) {
   return combined;
 }
 
-function buildPrompt({ whatHappened, transcriptBlock, config, profile }) {
-  const voiceSummary  = buildVoiceSummary(profile);
+function buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProfiles }) {
+  const voiceSummary  = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText   = beatMapToText(config?.beats);
   const structure     = config?.story_structure || 'free_form';
   const contentType   = config?.content_type || 'unknown';
@@ -182,7 +179,7 @@ Return ONLY valid JSON — no markdown, no preamble:
  * @param {object[]}   opts.footageRows     — footage records with .transcript fields
  * @param {Function}   [opts.emit]          — SSE progress callback
  */
-async function generateShootFirst({ projectId, whatHappened, footageRows, emit }) {
+async function generateShootFirst({ projectId, whatHappened, footageRows, voiceProfiles, emit }) {
   emit?.({ stage: 'analyzing', message: 'Reading project config and footage transcripts…' });
 
   const config  = loadProjectConfig(projectId);
@@ -196,7 +193,7 @@ async function generateShootFirst({ projectId, whatHappened, footageRows, emit }
     message: `Finding story in ${transcriptCount} transcribed clip${transcriptCount !== 1 ? 's' : ''}…`
   });
 
-  const prompt = buildPrompt({ whatHappened, transcriptBlock, config, profile });
+  const prompt = buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProfiles });
 
   emit?.({ stage: 'writing', message: 'Writing shooting script and talking head prompts…' });
 

@@ -40,13 +40,10 @@ function loadProjectConfig(projectId) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (_) { return null; }
 }
 
-function buildVoiceSummary(profile) {
-  if (!profile?.voice) return 'Straight-talking, warm, funny, never corporate.';
-  return [
-    `Summary: ${profile.voice.summary}`,
-    `Traits: ${(profile.voice.traits || []).join('; ')}`,
-    `Never: ${(profile.voice.never || []).join('; ')}`
-  ].join('\n');
+const { buildVoiceSummaryFromProfiles } = require('./voice-analyzer');
+
+function buildVoiceSummary(profile, voiceProfiles) {
+  return buildVoiceSummaryFromProfiles(profile, voiceProfiles);
 }
 
 function beatMapToText(beats) {
@@ -196,8 +193,8 @@ function repairReconcileJSON(raw) {
 // PROMPT 1 — BEAT RECONCILIATION ONLY (no script)
 // ─────────────────────────────────────────────
 
-function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, profile }) {
-  const voiceSummary = buildVoiceSummary(profile);
+function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles }) {
+  const voiceSummary = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText  = beatMapToText(config?.beats);
   const structure    = config?.story_structure || 'free_form';
   const contentType  = config?.content_type    || 'unknown';
@@ -292,8 +289,8 @@ function formatBeatSummary(beats) {
   }).join('\n');
 }
 
-function buildScriptPromptA({ reconcileResult, concept, whatCaptured, config, profile }) {
-  const voiceSummary = buildVoiceSummary(profile);
+function buildScriptPromptA({ reconcileResult, concept, whatCaptured, config, profile, voiceProfiles }) {
+  const voiceSummary = buildVoiceSummary(profile, voiceProfiles);
   const structure    = config?.story_structure || 'free_form';
   const contentType  = config?.content_type    || 'unknown';
   const brand        = profile?.creator?.brand || '7 Kin Homestead';
@@ -350,8 +347,8 @@ Return ONLY the script text — no JSON, no preamble, no explanation.
 Start directly with the first beat/hook.`;
 }
 
-function buildScriptPromptB({ reconcileResult, concept, whatCaptured, config, profile, partAScript }) {
-  const voiceSummary = buildVoiceSummary(profile);
+function buildScriptPromptB({ reconcileResult, concept, whatCaptured, config, profile, voiceProfiles, partAScript }) {
+  const voiceSummary = buildVoiceSummary(profile, voiceProfiles);
   const structure    = config?.story_structure || 'free_form';
   const contentType  = config?.content_type    || 'unknown';
   const brand        = profile?.creator?.brand || '7 Kin Homestead';
@@ -425,7 +422,7 @@ Do NOT repeat any content from Part A.`;
  * @param {object[]} opts.footageRows    — footage records with .transcript
  * @param {Function} [opts.emit]         — SSE progress callback
  */
-async function generateHybrid({ projectId, concept, whatCaptured, footageRows, emit }) {
+async function generateHybrid({ projectId, concept, whatCaptured, footageRows, voiceProfiles, emit }) {
   emit?.({ stage: 'analyzing', message: 'Loading project config and transcripts…' });
 
   const config  = loadProjectConfig(projectId);
@@ -437,7 +434,7 @@ async function generateHybrid({ projectId, concept, whatCaptured, footageRows, e
   emit?.({ stage: 'beat_mapping', message: 'Call 1 — Reconciling plan vs. reality…' });
 
   const reconcilePrompt = buildReconcilePrompt({
-    concept, whatCaptured, transcriptBlock, config, profile
+    concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles
   });
 
   // Use raw:true so we get the full response text for repair if JSON is truncated
@@ -493,7 +490,7 @@ async function generateHybrid({ projectId, concept, whatCaptured, footageRows, e
   });
 
   const scriptPromptA = buildScriptPromptA({
-    reconcileResult, concept, whatCaptured, config, profile
+    reconcileResult, concept, whatCaptured, config, profile, voiceProfiles
   });
 
   const scriptPartA = await callClaude(scriptPromptA, {
@@ -519,7 +516,7 @@ async function generateHybrid({ projectId, concept, whatCaptured, footageRows, e
     });
 
     const scriptPromptB = buildScriptPromptB({
-      reconcileResult, concept, whatCaptured, config, profile,
+      reconcileResult, concept, whatCaptured, config, profile, voiceProfiles,
       partAScript: scriptPartA
     });
 

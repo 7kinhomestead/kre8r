@@ -263,6 +263,21 @@
     <div class="status-pill" id="pillGoldWrap" style="display:none"><span style="font-size:13px">✨</span>&nbsp;<span class="label">Off-Script Gold</span>&nbsp;<span class="val" id="pillGold">0</span></div>
   </div>
 
+  <!-- VOICE LIBRARY BANNER (shown after CutΩr analysis when talking head content found) -->
+  <div id="voiceLibraryBanner" style="display:none;margin-bottom:16px;padding:14px 18px;background:linear-gradient(135deg,rgba(62,207,178,0.08),rgba(62,207,178,0.03));border:1px solid rgba(62,207,178,0.3);border-radius:10px;display:none;align-items:center;gap:14px;">
+    <span style="font-size:20px">🎙</span>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;color:#3ecfb2;margin-bottom:3px">CutΩr found strong talking head content</div>
+      <div style="font-size:12px;color:#8a9487">Add this footage to the Voice Library so WritΩr can write in your exact voice.</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button onclick="onAddToVoiceLibrary()" style="background:none;border:1px solid rgba(62,207,178,0.5);border-radius:6px;color:#3ecfb2;font-size:12px;font-family:inherit;padding:7px 16px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='rgba(62,207,178,0.1)'" onmouseout="this.style.background='none'">
+        Add to Voice Library →
+      </button>
+      <button onclick="document.getElementById('voiceLibraryBanner').style.display='none'" style="background:none;border:none;color:#4e5349;font-size:18px;cursor:pointer;padding:0 4px">×</button>
+    </div>
+  </div>
+
   <!-- MAIN CONTENT (hidden until project loaded) -->
   <div id="cutsContent" style="display:none">
 
@@ -786,7 +801,34 @@ async function runCutor() {
   label.textContent = '▶ Transcribe & Analyze';
 
   // Reload cuts
-  await loadCuts(currentProjectId);
+  const cutsResult = await loadCuts(currentProjectId);
+
+  // Show Voice Library banner if talking head content was found
+  const hasTranscripts = cutsResult &&
+    ((cutsResult.social || []).some(c => c.transcript) ||
+     (cutsResult.retention || []).some(c => c.transcript));
+  const banner = document.getElementById('voiceLibraryBanner');
+  if (banner && hasTranscripts) banner.style.display = 'flex';
+}
+
+// ─────────────────────────────────────────────
+// VOICE LIBRARY HOOK
+// ─────────────────────────────────────────────
+
+function onAddToVoiceLibrary() {
+  // Find the first clip with a source file path for pre-filling the analyzer
+  const allClips  = [...(cutsData.social || []), ...(cutsData.retention || [])];
+  const withPath  = allClips.find(c => c.file_path || c.source_path);
+  const filePath  = withPath?.file_path || withPath?.source_path || '';
+
+  document.getElementById('voiceLibraryBanner').style.display = 'none';
+
+  // Navigate to writr.html with voice library panel open
+  // Pass source path as query param so writr pre-fills the analyzer
+  const url = filePath
+    ? `/writr.html?voice_file=${encodeURIComponent(filePath)}`
+    : '/writr.html';
+  window.open(url, '_blank');
 }
 
 // ─────────────────────────────────────────────

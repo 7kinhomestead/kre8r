@@ -22,7 +22,143 @@ const { generateScriptFirst }        = require('../writr/script-first');
 const { generateShootFirst }         = require('../writr/shoot-first');
 const { generateHybrid }             = require('../writr/hybrid');
 const { iterateScript }              = require('../writr/iterate');
-const { readConfig }                 = require('../pipr/beat-tracker');
+const { readConfig, writeConfig }    = require('../pipr/beat-tracker');
+const { listProfiles }               = require('../writr/voice-analyzer');
+const { callClaude }                 = require('../writr/claude');
+
+// ─────────────────────────────────────────────
+// FORMAT CONVERSION PROMPTS (bullets + hybrid)
+// Called after primary script is generated — convert to alternate output modes
+// ─────────────────────────────────────────────
+
+function buildBulletsPrompt(fullScript, brand) {
+  return `You are a script editor for ${brand}.
+
+Convert the following script into BULLET POINT format only.
+
+Rules:
+- 3-5 key phrases per beat (never full sentences)
+- Keep beat markers [● BEAT: name] exactly as they appear
+- Each bullet is a memory trigger, not a line to read
+- Strip all b-roll cues, parentheticals, stage directions
+- Keep 🎤 for talking head bullets — strip the emoji for other bullets
+- Keep [BEAT NEEDED] warnings exactly as they appear
+- Do NOT add any explanation, intro, or preamble
+
+SCRIPT:
+${fullScript}
+
+Return ONLY the bullet-point script — no preamble, no JSON.`;
+}
+
+function buildHybridFormatPrompt(fullScript, beatMap, brand) {
+  // Identify emotional peak beats: hook (beat 1), climax-adjacent, and final beat
+  const peakNames = new Set();
+  if (Array.isArray(beatMap) && beatMap.length) {
+    peakNames.add((beatMap[0]?.beat_name || beatMap[0]?.name || '').toLowerCase());
+    peakNames.add((beatMap[beatMap.length - 1]?.beat_name || beatMap[beatMap.length - 1]?.name || '').toLowerCase());
+    if (beatMap.length >= 3) {
+      const mid = Math.floor(beatMap.length * 0.65);
+      peakNames.add((beatMap[mid]?.beat_name || beatMap[mid]?.name || '').toLowerCase());
+    }
+  }
+  const peakList = [...peakNames].filter(Boolean).join(', ') || 'hook, climax, closing';
+
+  return `You are a script editor for ${brand}.
+
+Convert the following script to HYBRID format:
+- SCRIPTED (word-for-word) for emotional peaks: ${peakList}
+- BULLET POINTS for all other beats
+
+Rules:
+- Keep ALL beat markers [● BEAT: name] exactly as they appear
+- Scripted beats: full sentences, conversational, in the creator's voice
+- Bullet beats: 3-5 key phrases as memory triggers, not full sentences
+- Keep 🎤 prefix on all talking head lines
+- Keep all b-roll cues on scripted beats, strip from bullet beats
+- Keep [BEAT NEEDED] warnings exactly as they appear
+- Do NOT add any explanation, intro, or preamble
+
+SCRIPT:
+${fullScript}
+
+Return ONLY the hybrid script — no preamble, no JSON.`;
+}
+
+/**
+ * Generate bullets and hybrid format versions of a full script in parallel.
+ * Streams tab_complete events as each finishes.
+ */
+async function generateFormatVariants({ fullScript, beatMap, brand, write }) {
+  const bulletPromise = callClaude(buildBulletsPrompt(fullScript, brand), { raw: true })
+    .then(r => {
+      const script = (r || '').trim();
+      write({ stage: 'tab_complete', mode: 'bullets', script });
+      return script;
+    })
+    .catch(err => {
+      console.error('[WritΩr] bullets format error:', err.message);
+      write({ stage: 'tab_complete', mode: 'bullets', script: fullScript, error: err.message });
+      return fullScript;
+    });
+
+  const hybridPromise = callClaude(buildHybridFormatPrompt(fullScript, beatMap, brand), { raw: true })
+    .then(r => {
+      const script = (r || '').trim();
+      write({ stage: 'tab_complete', mode: 'hybrid', script });
+      return script;
+    })
+    .catch(err => {
+      console.error('[WritΩr] hybrid format error:', err.message);
+      write({ stage: 'tab_complete', mode: 'hybrid', script: fullScript, error: err.message });
+      return fullScript;
+    });
+
+  const [bullets, hybrid] = await Promise.all([bulletPromise, hybridPromise]);
+  return { bullets, hybrid };
+}
+
+/**
+ * Build voiceProfiles array from request body voice params.
+ * voice_primary   — profile id of primary voice
+ * voice_secondary — profile id of secondary voice (optional)
+ * voice_blend     — integer 0-100: % weight of primary (default 100)
+ *
+ * Returns [{profile, weight}, ...] or [] if no valid selection.
+ */
+function buildVoiceProfiles(voice_primary, voice_secondary, voice_blend) {
+  if (!voice_primary) return [];
+
+  const allProfiles = listProfiles();
+  const primary     = allProfiles.find(p => p.id === voice_primary);
+  if (!primary) return [];
+
+  const blendPct  = Math.max(0, Math.min(100, parseInt(voice_blend ?? 100, 10)));
+  const result    = [{ profile: primary, weight: blendPct }];
+
+  if (voice_secondary && blendPct < 100) {
+    const secondary = allProfiles.find(p => p.id === voice_secondary);
+    if (secondary) result.push({ profile: secondary, weight: 100 - blendPct });
+  }
+
+  return result;
+}
+
+/**
+ * Persist selected voice IDs to project-config.json so the selection survives page reload.
+ */
+function saveVoiceSelectionToConfig(projectId, voice_primary, voice_secondary, voice_blend) {
+  if (!voice_primary) return;
+  try {
+    const config = readConfig(projectId) || {};
+    config.voice_primary   = voice_primary;
+    config.voice_secondary = voice_secondary || null;
+    config.voice_blend     = parseInt(voice_blend ?? 100, 10);
+    writeConfig(projectId, config);
+  } catch (err) {
+    console.warn('[WritΩr] Could not save voice selection to config:', err.message);
+  }
+}
 
 const router = express.Router();
 
@@ -203,7 +339,10 @@ router.get('/:project_id/scripts', (req, res) => {
 // ─────────────────────────────────────────────
 
 router.post('/generate', async (req, res) => {
-  const { project_id, entry_point, input_text, what_happened, concept, footage_text } = req.body;
+  const {
+    project_id, entry_point, input_text, what_happened, concept, footage_text,
+    voice_primary, voice_secondary, voice_blend
+  } = req.body;
 
   // Validate synchronously before switching to SSE (so we can return proper HTTP errors)
   const projectId = parseInt(project_id, 10);
@@ -216,8 +355,12 @@ router.post('/generate', async (req, res) => {
   const { write, end } = startSseResponse(req, res);
 
   try {
-    const ep      = entry_point || readConfig(projectId)?.entry_point || 'shoot_first';
-    const footage = db.getAllFootage({ project_id: projectId });
+    const ep           = entry_point || readConfig(projectId)?.entry_point || 'shoot_first';
+    const footage      = db.getAllFootage({ project_id: projectId });
+    const voiceProfiles = buildVoiceProfiles(voice_primary, voice_secondary, voice_blend);
+
+    // Persist voice selection to project config
+    if (voice_primary) saveVoiceSelectionToConfig(projectId, voice_primary, voice_secondary, voice_blend);
 
     write({ stage: 'analyzing', message: `Starting ${ep.replace(/_/g, ' ')} analysis…` });
 
@@ -230,6 +373,7 @@ router.post('/generate', async (req, res) => {
       result = await generateScriptFirst({
         projectId,
         inputText: input_text || '',
+        voiceProfiles,
         emit
       });
     } else if (ep === 'shoot_first') {
@@ -237,6 +381,7 @@ router.post('/generate', async (req, res) => {
         projectId,
         whatHappened: what_happened || input_text || '',
         footageRows:  footage,
+        voiceProfiles,
         emit
       });
     } else {
@@ -246,6 +391,7 @@ router.post('/generate', async (req, res) => {
         concept:      concept || input_text || '',
         whatCaptured: what_happened || footage_text || '',
         footageRows:  footage,
+        voiceProfiles,
         emit
       });
     }
@@ -258,29 +404,53 @@ router.post('/generate', async (req, res) => {
         ? `CONCEPT: ${concept || input_text || ''}\n\nFOOTAGE: ${what_happened || ''}`
         : (what_happened || input_text || '');
 
-    const scriptId = db.insertWritrScript({
+    const brand = readConfig(projectId)?.brand ||
+      (() => { try { return JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'creator-profile.json'), 'utf8')).creator?.brand; } catch (_) { return null; } })() ||
+      '7 Kin Homestead';
+
+    // ── EMIT FULL TAB IMMEDIATELY ──────────────────────────────────────────
+    write({ stage: 'tab_complete', mode: 'full', script: scriptText });
+    write({ stage: 'writing', message: 'Writing bullets and hybrid format…' });
+
+    // ── GENERATE BULLETS + HYBRID IN PARALLEL ─────────────────────────────
+    const { bullets: bulletsScript, hybrid: hybridScript } = await generateFormatVariants({
+      fullScript: scriptText,
+      beatMap:    result.beat_map || [],
+      brand,
+      write
+    });
+
+    // ── SAVE ALL THREE SCRIPTS ─────────────────────────────────────────────
+    const sessionId  = crypto.randomUUID();
+    const commonData = {
       project_id:        projectId,
       entry_point:       ep,
       input_type:        ep === 'script_first' ? 'script' : ep === 'shoot_first' ? 'what_happened' : 'hybrid',
       raw_input:         rawInput,
       generated_outline: outlineText,
-      generated_script:  scriptText,
       beat_map_json:     result.beat_map        || [],
       hook_variations:   result.hook_variations || [],
       story_found:       result.story_found     || null,
       anchor_moment:     result.anchor_moment   || null,
       missing_beats:     result.missing_beats   || [],
-      iteration_count:   0
-    });
+      iteration_count:   0,
+      session_id:        sessionId
+    };
 
-    db.updateProjectWritr(projectId, { active_script_id: scriptId });
+    const fullId    = db.insertWritrScript({ ...commonData, generated_script: scriptText,    mode: 'full'    });
+    const bulletsId = db.insertWritrScript({ ...commonData, generated_script: bulletsScript, mode: 'bullets' });
+    const hybridId  = db.insertWritrScript({ ...commonData, generated_script: hybridScript,  mode: 'hybrid'  });
 
-    // Send final completion event with all result data at top level
+    db.updateProjectWritr(projectId, { active_script_id: fullId });
+
+    // Send final completion event
     write({
       stage:           'complete',
-      script_id:       scriptId,
+      session_id:      sessionId,
+      script_ids:      { full: fullId, bullets: bulletsId, hybrid: hybridId },
+      script_id:       fullId,       // backward compat
       entry_point:     ep,
-      script:          scriptText,
+      script:          scriptText,   // backward compat
       outline:         outlineText,
       beat_map:        result.beat_map        || [],
       missing_beats:   result.missing_beats   || [],
@@ -318,7 +488,7 @@ router.get('/status/:job_id', (req, res) => {
 // ─────────────────────────────────────────────
 
 router.post('/iterate', async (req, res) => {
-  const { project_id, script_id, feedback } = req.body;
+  const { project_id, script_id, feedback, voice_primary, voice_secondary, voice_blend } = req.body;
 
   const projectId = parseInt(project_id, 10);
   const scriptId  = parseInt(script_id, 10);
@@ -339,11 +509,14 @@ router.post('/iterate', async (req, res) => {
     // emit helper — filters module 'complete' progress msgs
     const emit = (ev) => { if (ev.stage !== 'complete') write(ev); };
 
+    const voiceProfiles = buildVoiceProfiles(voice_primary, voice_secondary, voice_blend);
+
     const result = await iterateScript({
       projectId,
       currentScript,
       feedback,
       iterationCount: existing.iteration_count || 0,
+      voiceProfiles,
       emit
     });
 
@@ -360,7 +533,9 @@ router.post('/iterate', async (req, res) => {
       iteration_count:   newIterCount,
       story_found:       existing.story_found    || null,
       anchor_moment:     existing.anchor_moment  || null,
-      hook_variations:   existing.hook_variations || []
+      hook_variations:   existing.hook_variations || [],
+      mode:              existing.mode            || 'full',
+      session_id:        existing.session_id      || null
     });
 
     write({
@@ -368,6 +543,7 @@ router.post('/iterate', async (req, res) => {
       script_id:       newScriptId,
       iteration_count: newIterCount,
       script:          result.script,
+      mode:            existing.mode || 'full',
       beat_map:        result.beat_map      || [],
       missing_beats:   result.missing_beats || [],
       changes_made:    result.changes_made  || []

@@ -33,13 +33,10 @@ function loadProjectConfig(projectId) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (_) { return null; }
 }
 
-function buildVoiceSummary(profile) {
-  if (!profile?.voice) return 'Straight-talking, warm, funny, never corporate.';
-  return [
-    `Summary: ${profile.voice.summary}`,
-    `Traits: ${(profile.voice.traits || []).join('; ')}`,
-    `Never: ${(profile.voice.never || []).join('; ')}`
-  ].join('\n');
+const { buildVoiceSummaryFromProfiles } = require('./voice-analyzer');
+
+function buildVoiceSummary(profile, voiceProfiles) {
+  return buildVoiceSummaryFromProfiles(profile, voiceProfiles);
 }
 
 function beatMapToText(beats) {
@@ -51,8 +48,8 @@ function beatMapToText(beats) {
   ).join('\n');
 }
 
-function buildPrompt({ inputText, config, profile }) {
-  const voiceSummary     = buildVoiceSummary(profile);
+function buildPrompt({ inputText, config, profile, voiceProfiles }) {
+  const voiceSummary     = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText      = beatMapToText(config?.beats);
   const structure        = config?.story_structure || 'free_form';
   const contentType      = config?.content_type || 'unknown';
@@ -136,7 +133,7 @@ Return ONLY valid JSON — no markdown, no preamble:
  * @param {Function} [opts.emit]     — SSE progress callback
  * @returns {{ beat_map, missing_beats, outline, script, hook_variations }}
  */
-async function generateScriptFirst({ projectId, inputText, emit }) {
+async function generateScriptFirst({ projectId, inputText, voiceProfiles, emit }) {
   emit?.({ stage: 'analyzing', message: 'Reading project config and creator profile…' });
 
   const config  = loadProjectConfig(projectId);
@@ -146,7 +143,7 @@ async function generateScriptFirst({ projectId, inputText, emit }) {
 
   emit?.({ stage: 'beat_mapping', message: `Mapping content to ${config?.story_structure || 'beat'} structure…` });
 
-  const prompt = buildPrompt({ inputText, config, profile });
+  const prompt = buildPrompt({ inputText, config, profile, voiceProfiles });
 
   emit?.({ stage: 'writing', message: 'Writing beat-mapped script draft…' });
 

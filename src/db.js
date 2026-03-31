@@ -320,6 +320,17 @@ function runMigrations() {
     db.run('ALTER TABLE projects ADD COLUMN active_script_id INTEGER');
     console.log('[DB] Migration: added projects.active_script_id');
   }
+
+  // WritΩr: three output modes + session grouping
+  const writrScriptsCols = (db.exec('PRAGMA table_info(writr_scripts)')[0]?.values || []).map(r => r[1]);
+  if (!writrScriptsCols.includes('mode')) {
+    db.run("ALTER TABLE writr_scripts ADD COLUMN mode TEXT NOT NULL DEFAULT 'full'");
+    console.log('[DB] Migration: added writr_scripts.mode');
+  }
+  if (!writrScriptsCols.includes('session_id')) {
+    db.run('ALTER TABLE writr_scripts ADD COLUMN session_id TEXT');
+    console.log('[DB] Migration: added writr_scripts.session_id');
+  }
 }
 
 function persist() {
@@ -1145,8 +1156,8 @@ function insertWritrScript(data) {
        (project_id, entry_point, input_type, raw_input,
         generated_outline, generated_script, beat_map_json,
         hook_variations, story_found, anchor_moment, missing_beats,
-        iteration_count, approved)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        iteration_count, approved, mode, session_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.project_id,
       data.entry_point       || 'shoot_first',
@@ -1160,7 +1171,9 @@ function insertWritrScript(data) {
       data.anchor_moment     ? JSON.stringify(data.anchor_moment)    : null,
       data.missing_beats     ? JSON.stringify(data.missing_beats)    : null,
       data.iteration_count   || 0,
-      data.approved          ? 1 : 0
+      data.approved          ? 1 : 0,
+      data.mode              || 'full',
+      data.session_id        || null
     ]
   );
   persist();

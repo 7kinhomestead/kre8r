@@ -996,7 +996,7 @@ body {
   <div class="offline-title">Server Unreachable</div>
   <div class="offline-body">
     Can't connect to the Kre8Ωr server.<br>
-    Make sure you're on the same WiFi, then tap Retry.<br><br>
+    Make sure your phone is on the same network as the server, then tap Retry.<br><br>
     Or download the offline package from Settings before shoot day.
   </div>
   <button class="offline-btn" onclick="retryConnection()">↺ Retry Connection</button>
@@ -1045,6 +1045,23 @@ async function init() {
     if (saved) prefs = { ...prefs, ...JSON.parse(saved) };
   } catch(e) {}
   applyPrefs();
+
+  // ── Server reachability probe ──
+  // Check /api/health before doing anything. Works on WiFi OR wired LAN.
+  // If unreachable, show the offline screen immediately.
+  const serverReachable = await (async () => {
+    try {
+      const r = await fetch('/api/health', { signal: AbortSignal.timeout(4000) });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!serverReachable) {
+    showOffline();
+    return;
+  }
 
   // URL params
   const params       = new URLSearchParams(location.search);
@@ -1152,7 +1169,7 @@ async function showProjectSelector() {
   } catch(err) {
     listEl.innerHTML = `<div class="selector-empty" style="color:var(--red)">
       Could not load projects.<br>${esc(err.message)}<br><br>
-      Is the server running on the same WiFi?
+      Is the server running and reachable on your network?
     </div>`;
   }
 }
