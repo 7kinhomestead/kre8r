@@ -17,9 +17,10 @@ const express   = require('express');
 const { EventEmitter } = require('events');
 const crypto    = require('crypto');
 
-const { transcribeFile } = require('../vault/transcribe');
+const { transcribeFile, checkWhisper } = require('../vault/transcribe');
 const { identifyCuts }   = require('../vault/cutor');
 const { extractProject } = require('../vault/extractor');
+const { checkFfmpeg }    = require('../vault/intake');
 const db = require('../db');
 
 const router = express.Router();
@@ -61,6 +62,28 @@ function failJob(job, error) {
   job.emitter.emit('event', errEvent);
   job.emitter.emit('done');
 }
+
+// ─────────────────────────────────────────────
+// GET /api/cutor/check — health check for dependencies
+// Returns: { ffmpeg, whisper, whisper_binary, whisper_version }
+// ─────────────────────────────────────────────
+
+router.get('/check', async (req, res) => {
+  try {
+    const [ffmpegOk, whisperInfo] = await Promise.all([
+      checkFfmpeg(),
+      checkWhisper()
+    ]);
+    res.json({
+      ffmpeg:          ffmpegOk,
+      whisper:         whisperInfo.whisper,
+      whisper_binary:  whisperInfo.whisper_binary,
+      whisper_version: whisperInfo.whisper_version
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ─────────────────────────────────────────────
 // POST /api/cutor/start
@@ -126,11 +149,12 @@ router.post('/start', async (req, res) => {
       }
 
       pushEvent(job, {
-        stage:           'analyzed',
-        social_clips:    cutResult.social_clips.length,
-        retention_cuts:  cutResult.retention_cuts.length,
-        cta:             !!cutResult.cta,
-        overall_notes:   cutResult.overall_notes
+        stage:            'analyzed',
+        social_clips:     cutResult.social_clips.length,
+        retention_cuts:   cutResult.retention_cuts.length,
+        cta:              !!cutResult.cta,
+        off_script_gold:  cutResult.off_script_gold?.length || 0,
+        overall_notes:    cutResult.overall_notes
       });
 
       finishJob(job, {
@@ -202,9 +226,10 @@ router.get('/cuts/:project_id', (req, res) => {
 
   const cuts = db.getCutsByProject(projectId);
 
-  const social    = cuts.filter(c => c.cut_type === 'social').sort((a, b) => (a.rank || 99) - (b.rank || 99));
-  const retention = cuts.filter(c => c.cut_type === 'retention');
-  const cta       = cuts.find(c => c.cut_type === 'CTA') || null;
+  const social         = cuts.filter(c => c.cut_type === 'social').sort((a, b) => (a.rank || 99) - (b.rank || 99));
+  const retention      = cuts.filter(c => c.cut_type === 'retention');
+  const cta            = cuts.find(c => c.cut_type === 'CTA') || null;
+  const off_script_gold = cuts.filter(c => c.cut_type === 'off_script_gold');
 
   res.json({
     project_id: projectId,
@@ -212,6 +237,7 @@ router.get('/cuts/:project_id', (req, res) => {
     social,
     retention,
     cta,
+    off_script_gold,
     total: cuts.length
   });
 });
@@ -231,6 +257,36 @@ router.post('/approve/:cut_id', (req, res) => {
   db.approveCut(cutId, approved);
 
   res.json({ ok: true, cut_id: cutId, approved });
+});
+
+// ─────────────────────────────────────────────
+// POST /api/cutor/off-script-gold/:id/approve
+// Mark gold moment for rough cut (same as social approve)
+// ─────────────────────────────────────────────
+
+router.post('/off-script-gold/:id/approve', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const cut = db.getCutById(id);
+  if (!cut || cut.cut_type !== 'off_script_gold') {
+    return res.status(404).json({ error: 'Off-script gold moment not found' });
+  }
+  db.approveCut(id, true);
+  res.json({ ok: true, id, action: 'approved' });
+});
+
+// ─────────────────────────────────────────────
+// POST /api/cutor/off-script-gold/:id/save-later
+// Save to the off-script gold library for future use
+// ─────────────────────────────────────────────
+
+router.post('/off-script-gold/:id/save-later', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const cut = db.getCutById(id);
+  if (!cut || cut.cut_type !== 'off_script_gold') {
+    return res.status(404).json({ error: 'Off-script gold moment not found' });
+  }
+  db.saveOffScriptGoldForLater(id);
+  res.json({ ok: true, id, action: 'saved_for_later' });
 });
 
 // ─────────────────────────────────────────────

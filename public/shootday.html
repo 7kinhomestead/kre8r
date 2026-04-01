@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0D0D1A">
+<title>ShootDay — Kre8Ωr</title>
+<link rel="manifest" href="/manifest.json">
+<style>
+/* ─── CSS Variables ─────────────────────────────── */
+:root {
+  --teal:   #00C9A7;
+  --amber:  #F0B942;
+  --green:  #4ADE80;
+  --red:    #F87171;
+  --bg:     #0D0D1A;
+  --card:   #161B2E;
+  --border: #2A3040;
+  --dim:    #7A8090;
+  --text:   #E8EBE6;
+  --teal-glow:  rgba(0,201,167,0.15);
+  --amber-glow: rgba(240,185,66,0.15);
+  --green-glow: rgba(74,222,128,0.15);
+  --red-glow:   rgba(248,113,113,0.15);
+}
+
+/* ─── Reset ─────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body {
+  height: 100%;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* ─── Nav area ──────────────────────────────────── */
+#kre8r-nav { position: sticky; top: 0; z-index: 200; }
+
+/* ─── App shell ─────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+#view-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+/* ─── Tab bar ───────────────────────────────────── */
+#tab-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #0D0D1A;
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 100;
+  display: flex;
+}
+.tab-btn {
+  flex: 1;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--dim);
+  font-size: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.tab-btn .tab-icon { font-size: 22px; line-height: 1; }
+.tab-btn.active { color: var(--teal); }
+.tab-btn:active { opacity: 0.7; }
+
+/* ─── Views ─────────────────────────────────────── */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ─── Coverage meter ────────────────────────────── */
+#coverage-bar-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.coverage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.coverage-label { font-size: 12px; color: var(--dim); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+.coverage-pct { font-size: 14px; font-weight: 700; color: var(--teal); }
+.coverage-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.coverage-fill {
+  height: 100%;
+  background: var(--teal);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* ─── Shot cards ─────────────────────────────────── */
+#shots-list {
+  padding: 12px 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shot-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+.shot-card.status-good {
+  border-color: rgba(74,222,128,0.5);
+  background: rgba(74,222,128,0.04);
+}
+.shot-card.status-skip {
+  border-color: var(--border);
+  opacity: 0.55;
+}
+.shot-card.status-needed { border-color: var(--border); }
+
+/* swipe hints */
+.swipe-hint {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.swipe-hint.left  { right: 0; background: linear-gradient(to left, rgba(248,113,113,0.2), transparent); }
+.swipe-hint.right { left: 0;  background: linear-gradient(to right, rgba(74,222,128,0.2), transparent); }
+
+.card-inner { position: relative; z-index: 1; }
+.card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.beat-number { font-size: 11px; color: var(--dim); font-weight: 600; }
+.shot-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.shot-type-badge.th     { background: rgba(0,201,167,0.15);   color: var(--teal);  border: 1px solid rgba(0,201,167,0.3);   }
+.shot-type-badge.broll  { background: rgba(240,185,66,0.15);  color: var(--amber); border: 1px solid rgba(240,185,66,0.3);  }
+.shot-type-badge.action { background: rgba(248,113,113,0.15); color: var(--red);   border: 1px solid rgba(248,113,113,0.3); }
+
+.beat-name {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+.beat-status-icon {
+  float: right;
+  font-size: 20px;
+  line-height: 1;
+  margin-left: 8px;
+  margin-top: 2px;
+}
+
+.reality-note {
+  font-size: 14px;
+  color: var(--dim);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.th-prompt-box {
+  background: rgba(0,201,167,0.08);
+  border: 1px solid rgba(0,201,167,0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-style: italic;
+  color: var(--teal);
+  line-height: 1.5;
+}
+
+.take-counter {
+  font-size: 12px;
+  color: var(--amber);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.card-note {
+  font-size: 13px;
+  color: var(--dim);
+  font-style: italic;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.btn-good {
+  flex: 2;
+  min-height: 48px;
+  background: rgba(74,222,128,0.15);
+  border: 1.5px solid rgba(74,222,128,0.4);
+  border-radius: 10px;
+  color: var(--green);
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-good:active { background: rgba(74,222,128,0.3); }
+.btn-skip {
+  flex: 1;
+  min-height: 48px;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--dim);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-skip:active { background: rgba(255,255,255,0.1); }
+.btn-again {
+  flex: 1;
+  min-height: 48px;
+  background: rgba(240,185,66,0.12);
+  border: 1.5px solid rgba(240,185,66,0.35);
+  border-radius: 10px;
+  color: var(--amber);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-again:active { background: rgba(240,185,66,0.25); }
+.btn-undo {
+  flex: 1;
+  min-height: 48px;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-undo:active { background: rgba(255,255,255,0.1); }
+
+/* ─── Script tab ────────────────────────────────── */
+.script-toggle-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.script-toggle-btn {
+  flex: 1;
+  min-height: 40px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--dim);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.script-toggle-btn.active {
+  background: rgba(0,201,167,0.1);
+  border-color: rgba(0,201,167,0.4);
+  color: var(--teal);
+}
+
+.beats-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.beat-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.beat-card.synced {
+  border-color: var(--teal);
+  background: rgba(0,201,167,0.05);
+}
+.beat-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.beat-status-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--border);
+}
+.beat-status-dot.good   { background: var(--green); }
+.beat-status-dot.needed { background: var(--amber); }
+.beat-card-name { font-size: 17px; font-weight: 700; }
+.beat-card-fn { font-size: 13px; color: var(--dim); margin-bottom: 8px; }
+.beat-card-prompt {
+  font-size: 15px;
+  font-style: italic;
+  color: var(--teal);
+  background: rgba(0,201,167,0.07);
+  border: 1px solid rgba(0,201,167,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  line-height: 1.55;
+}
+
+.clean-script-content {
+  padding: 16px;
+  font-size: 18px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+.highlight-section {
+  background: rgba(0,201,167,0.15);
+  border-left: 3px solid var(--teal);
+  padding-left: 12px;
+  margin-left: -12px;
+  display: block;
+}
+.script-none {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--dim);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* ─── Review tab ────────────────────────────────── */
+#review-view { padding: 12px; }
+
+.review-header {
+  font-size: 12px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-left: 2px;
+}
+.review-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.review-card.good { border-color: rgba(74,222,128,0.4); }
+.review-card.skip { opacity: 0.6; }
+.review-card-name { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.review-card-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.review-stat { font-size: 13px; color: var(--dim); }
+.review-stat strong { color: var(--text); }
+.review-note { font-size: 13px; color: var(--dim); font-style: italic; margin-top: 6px; }
+
+.all-covered-banner {
+  margin: 0 0 16px;
+  background: rgba(74,222,128,0.1);
+  border: 1.5px solid rgba(74,222,128,0.4);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 700;
+}
+.still-needed-section { margin-bottom: 16px; }
+.still-needed-title { font-size: 13px; color: var(--amber); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.still-needed-pill {
+  display: inline-block;
+  background: rgba(240,185,66,0.1);
+  border: 1px solid rgba(240,185,66,0.3);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 14px;
+  color: var(--amber);
+  margin: 3px;
+}
+
+/* ─── Settings panel ────────────────────────────── */
+#settings-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  overflow-y: auto;
+}
+#settings-panel.open { transform: translateX(0); }
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+.settings-title { font-size: 20px; font-weight: 700; }
+.settings-close {
+  min-width: 44px; min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: var(--dim);
+  background: none; border: none; cursor: pointer;
+}
+
+.settings-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--dim);
+  margin-bottom: 12px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 6px 0;
+}
+.setting-label    { font-size: 16px; font-weight: 500; }
+.setting-sublabel { font-size: 13px; color: var(--dim); margin-top: 1px; }
+
+/* Toggle switch */
+.toggle { position: relative; width: 52px; height: 30px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--border);
+  border-radius: 30px;
+  transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 22px; width: 22px;
+  left: 4px; bottom: 4px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: var(--teal); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+.setting-input {
+  width: 100%;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  padding: 10px 12px;
+  margin-top: 8px;
+  outline: none;
+}
+.setting-input:focus { border-color: var(--teal); }
+
+.settings-btn {
+  width: 100%;
+  min-height: 52px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.15s;
+}
+.settings-btn:active { background: rgba(255,255,255,0.08); }
+.settings-btn.danger { color: var(--red);  border-color: rgba(248,113,113,0.3); }
+.settings-btn.teal   { color: var(--teal); border-color: rgba(0,201,167,0.3);   }
+
+/* ─── Project selector ──────────────────────────── */
+#project-selector {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--bg);
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+}
+#project-selector.show { display: flex; }
+
+.selector-header {
+  padding: 32px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+.selector-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--dim);
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+.selector-title { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
+.selector-title span { color: var(--teal); }
+.selector-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.project-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.project-card:active {
+  border-color: var(--teal);
+  background: rgba(0,201,167,0.05);
+}
+.project-title { font-size: 18px; font-weight: 700; }
+.project-meta  { display: flex; align-items: center; gap: 10px; }
+.project-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  background: rgba(0,201,167,0.1);
+  border: 1px solid rgba(0,201,167,0.25);
+  color: var(--teal);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.project-coverage { font-size: 13px; color: var(--dim); font-weight: 600; }
+.selector-loading, .selector-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--dim);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* ─── Note dialog ───────────────────────────────── */
+#note-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+#note-dialog.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.note-dialog-inner {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  width: 100%;
+  max-width: 600px;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+#note-dialog.open .note-dialog-inner { transform: translateY(0); }
+.note-dialog-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+.note-textarea {
+  width: 100%;
+  min-height: 100px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px;
+  padding: 12px;
+  resize: vertical;
+  outline: none;
+}
+.note-textarea:focus { border-color: var(--teal); }
+.note-dialog-actions { display: flex; gap: 8px; margin-top: 12px; }
+.note-save {
+  flex: 2;
+  min-height: 48px;
+  background: rgba(0,201,167,0.15);
+  border: 1.5px solid rgba(0,201,167,0.4);
+  border-radius: 10px;
+  color: var(--teal);
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.note-cancel {
+  flex: 1;
+  min-height: 48px;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--dim);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ─── Error banner ──────────────────────────────── */
+#error-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: rgba(248,113,113,0.15);
+  border-bottom: 1px solid rgba(248,113,113,0.4);
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  z-index: 600;
+  display: none;
+  text-align: center;
+}
+#error-banner.show { display: block; }
+
+/* ─── Toast ─────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: calc(72px + 12px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(30,36,54,0.95);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 200;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ─── Offline screen ────────────────────────────── */
+#offline-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 450;
+  padding: 40px 24px;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+}
+#offline-screen.show { display: flex; }
+.offline-icon  { font-size: 56px; }
+.offline-title { font-size: 22px; font-weight: 800; color: var(--red); }
+.offline-body  { font-size: 15px; color: var(--dim); line-height: 1.7; max-width: 320px; }
+.offline-btn {
+  min-height: 52px;
+  min-width: 200px;
+  background: rgba(0,201,167,0.15);
+  border: 1.5px solid rgba(0,201,167,0.4);
+  border-radius: 12px;
+  color: var(--teal);
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* ─── TP sync badge ─────────────────────────────── */
+.tp-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: rgba(0,201,167,0.1);
+  border: 1px solid rgba(0,201,167,0.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+  flex-shrink: 0;
+}
+.tp-sync-badge .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: pulse 1.5s ease infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ─── Misc ──────────────────────────────────────── */
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--dim);
+  font-size: 15px;
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<!-- Error banner -->
+<div id="error-banner"></div>
+
+<!-- ══ APP SHELL ══════════════════════════════════ -->
+<div id="app">
+
+  <!-- Nav (handled by nav.js — small sticky header) -->
+  <div id="kre8r-nav"></div>
+
+  <!-- Main scrollable area -->
+  <div id="view-area">
+
+    <!-- ═══ TAB 1: SHOTS ═════════════════════════ -->
+    <div id="shots-view" class="view active">
+      <div id="coverage-bar-wrap">
+        <div class="coverage-row">
+          <span class="coverage-label">Coverage</span>
+          <span class="coverage-pct" id="coverage-pct">—</span>
+        </div>
+        <div class="coverage-track">
+          <div class="coverage-fill" id="coverage-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <div id="shots-list">
+        <div class="empty-state">Select a project to begin.</div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 2: SCRIPT ════════════════════════ -->
+    <div id="script-view" class="view">
+      <div class="script-toggle-bar">
+        <button class="script-toggle-btn active" id="btn-beats-view" onclick="showScriptMode('beats')">Story Beats</button>
+        <button class="script-toggle-btn" id="btn-clean-view" onclick="showScriptMode('clean')">Clean Script</button>
+        <span id="tp-sync-indicator" style="display:none" class="tp-sync-badge">
+          <span class="dot"></span>SYNC
+        </span>
+      </div>
+      <div id="beats-view-inner" class="beats-list"></div>
+      <div id="clean-view-inner" class="clean-script-content" style="display:none"></div>
+    </div>
+
+    <!-- ═══ TAB 3: REVIEW ════════════════════════ -->
+    <div id="review-view" class="view">
+      <div class="review-header">Shot Log</div>
+      <div id="review-list">
+        <div class="empty-state">No shots logged yet.</div>
+      </div>
+    </div>
+
+  </div><!-- /view-area -->
+
+  <!-- Fixed bottom tab bar -->
+  <div id="tab-bar">
+    <button class="tab-btn active" id="tab-shots" onclick="switchTab('shots')">
+      <span class="tab-icon">🎬</span>
+      <span>Shots</span>
+    </button>
+    <button class="tab-btn" id="tab-script" onclick="switchTab('script')">
+      <span class="tab-icon">📄</span>
+      <span>Script</span>
+    </button>
+    <button class="tab-btn" id="tab-review" onclick="switchTab('review')">
+      <span class="tab-icon">✅</span>
+      <span>Review</span>
+    </button>
+    <button class="tab-btn" id="tab-settings" onclick="openSettings()">
+      <span class="tab-icon">⚙️</span>
+      <span>Settings</span>
+    </button>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ══ PROJECT SELECTOR ══════════════════════════ -->
+<div id="project-selector">
+  <div class="selector-header">
+    <div class="selector-eyebrow">Kre8Ωr ShootDay</div>
+    <div class="selector-title">SELECT <span>PROJECT</span></div>
+  </div>
+  <div id="selector-list" class="selector-list">
+    <div class="selector-loading">Loading projects…</div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS PANEL ════════════════════════════ -->
+<div id="settings-panel">
+  <div class="settings-header">
+    <span class="settings-title">Settings</span>
+    <button class="settings-close" onclick="closeSettings()" aria-label="Close">✕</button>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Tracking</div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Shot Tracker</div>
+        <div class="setting-sublabel">Mark beats good / skip</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="pref-tracker" onchange="savePref('tracker', this.checked); renderShots();">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Take Counter</div>
+        <div class="setting-sublabel">Show take number on card</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="pref-takes" onchange="savePref('takes', this.checked); renderShots();">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Notes</div>
+        <div class="setting-sublabel">Long press to add note</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="pref-notes" onchange="savePref('notes', this.checked); renderShots();">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Script Tab</div>
+    <div class="setting-row">
+      <div><div class="setting-label">Show Script Tab</div></div>
+      <label class="toggle">
+        <input type="checkbox" id="pref-script" onchange="onScriptTabPref(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">TeleprΩmpter Sync</div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Sync with TeleprΩmpter</div>
+        <div class="setting-sublabel">Highlights script position live</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="pref-tp-sync" onchange="onTpSyncPref(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div>
+      <div class="setting-sublabel" style="margin-bottom:4px">Session ID</div>
+      <input type="text" class="setting-input" id="pref-tp-session"
+        placeholder="e.g. ABC123"
+        oninput="savePref('tpSession', this.value)"
+        onblur="onTpSessionChange()">
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Project</div>
+    <button class="settings-btn danger" onclick="changeProject()">🔄 Change Project</button>
+    <button class="settings-btn teal"   onclick="downloadOffline()">📦 Download Offline Package</button>
+  </div>
+</div><!-- /settings-panel -->
+
+<!-- ══ NOTE DIALOG ═══════════════════════════════ -->
+<div id="note-dialog" onclick="maybeCloseNote(event)">
+  <div class="note-dialog-inner">
+    <div class="note-dialog-title" id="note-dialog-title">Add Note</div>
+    <textarea class="note-textarea" id="note-textarea"
+      placeholder="Director's note for this beat…" rows="4"></textarea>
+    <div class="note-dialog-actions">
+      <button class="note-save"   onclick="saveNote()">Save Note</button>
+      <button class="note-cancel" onclick="closeNote()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OFFLINE SCREEN ════════════════════════════ -->
+<div id="offline-screen">
+  <div class="offline-icon">📵</div>
+  <div class="offline-title">Server Unreachable</div>
+  <div class="offline-body">
+    Can't connect to the Kre8Ωr server.<br>
+    Make sure your phone is on the same network as the server, then tap Retry.<br><br>
+    Or download the offline package from Settings before shoot day.
+  </div>
+  <button class="offline-btn" onclick="retryConnection()">↺ Retry Connection</button>
+</div>
+
+<!-- ══ TOAST ══════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- Nav.js -->
+<script src="/js/nav.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════════
+let projectId    = null;
+let projectTitle = '';
+let beats        = [];     // raw beat objects from server
+let scriptData   = null;   // { beats, clean, raw, story_structure }
+let scriptLoaded = false;
+let takes        = {};     // beat_index → { status, take_number, note }
+let prefs = {
+  tracker:   true,
+  takes:     true,
+  notes:     true,
+  script:    true,
+  tpSync:    false,
+  tpSession: '',
+};
+let wsConn       = null;
+let wsRetryTimer = null;
+let refreshTimer = null;
+let activeTab    = 'shots';
+let currentScriptMode = 'beats';
+let noteTargetIdx     = null;
+
+// ════════════════════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  // Restore prefs
+  try {
+    const saved = localStorage.getItem('kre8r_sd_prefs');
+    if (saved) prefs = { ...prefs, ...JSON.parse(saved) };
+  } catch(e) {}
+  applyPrefs();
+
+  // ── Server reachability probe ──
+  // Check /api/health before doing anything. Works on WiFi OR wired LAN.
+  // If unreachable, show the offline screen immediately.
+  const serverReachable = await (async () => {
+    try {
+      const r = await fetch('/api/health', { signal: AbortSignal.timeout(4000) });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!serverReachable) {
+    showOffline();
+    return;
+  }
+
+  // URL params
+  const params       = new URLSearchParams(location.search);
+  const urlProjectId = params.get('project_id');
+  const urlSession   = params.get('session');
+
+  // Determine project
+  const savedProjectId = localStorage.getItem('kre8r_sd_project');
+
+  if (urlProjectId) {
+    await loadProject(parseInt(urlProjectId, 10));
+  } else if (savedProjectId) {
+    await loadProject(parseInt(savedProjectId, 10));
+  } else {
+    showProjectSelector();
+  }
+
+  // Teleprompter sync
+  if (urlSession) {
+    prefs.tpSession = urlSession;
+    savePref('tpSession', urlSession);
+  }
+  if (prefs.tpSync && prefs.tpSession) {
+    connectTeleprompterSync(prefs.tpSession);
+  }
+
+  // Nav
+  try { if (typeof initNav === 'function') initNav(); } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PREFS
+// ════════════════════════════════════════════════════════════════
+function savePref(key, val) {
+  prefs[key] = val;
+  try { localStorage.setItem('kre8r_sd_prefs', JSON.stringify(prefs)); } catch(e) {}
+}
+
+function applyPrefs() {
+  document.getElementById('pref-tracker').checked  = prefs.tracker;
+  document.getElementById('pref-takes').checked    = prefs.takes;
+  document.getElementById('pref-notes').checked    = prefs.notes;
+  document.getElementById('pref-script').checked   = prefs.script;
+  document.getElementById('pref-tp-sync').checked  = prefs.tpSync;
+  document.getElementById('pref-tp-session').value = prefs.tpSession || '';
+  const scriptTab = document.getElementById('tab-script');
+  if (scriptTab) scriptTab.style.display = prefs.script ? '' : 'none';
+}
+
+function onScriptTabPref(val) {
+  savePref('script', val);
+  applyPrefs();
+  if (!val && activeTab === 'script') switchTab('shots');
+}
+
+function onTpSyncPref(val) {
+  savePref('tpSync', val);
+  if (val && prefs.tpSession) {
+    connectTeleprompterSync(prefs.tpSession);
+  } else if (!val) {
+    disconnectWs();
+  }
+}
+
+function onTpSessionChange() {
+  const val = document.getElementById('pref-tp-session').value.trim();
+  savePref('tpSession', val);
+  if (prefs.tpSync && val) connectTeleprompterSync(val);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PROJECT SELECTOR
+// ════════════════════════════════════════════════════════════════
+async function showProjectSelector() {
+  const sel = document.getElementById('project-selector');
+  sel.classList.add('show');
+  const listEl = document.getElementById('selector-list');
+  listEl.innerHTML = '<div class="selector-loading">Loading projects…</div>';
+
+  try {
+    const res  = await fetch('/api/projects');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const projects = Array.isArray(data) ? data : (data.projects || []);
+
+    if (!projects.length) {
+      listEl.innerHTML = '<div class="selector-empty">No projects found.<br>Create one in the Director panel first.</div>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    for (const p of projects) {
+      const card = document.createElement('div');
+      card.className = 'project-card';
+      const structure = p.story_structure || p.pipr_config?.story_structure || '';
+      card.innerHTML = `
+        <div class="project-title">${esc(p.title || 'Untitled')}</div>
+        <div class="project-meta">
+          ${structure ? `<span class="project-badge">${esc(structure)}</span>` : ''}
+        </div>
+      `;
+      card.addEventListener('click', () => selectProject(p.id));
+      listEl.appendChild(card);
+    }
+  } catch(err) {
+    listEl.innerHTML = `<div class="selector-empty" style="color:var(--red)">
+      Could not load projects.<br>${esc(err.message)}<br><br>
+      Is the server running and reachable on your network?
+    </div>`;
+  }
+}
+
+function selectProject(id) {
+  document.getElementById('project-selector').classList.remove('show');
+  localStorage.setItem('kre8r_sd_project', String(id));
+  loadProject(id);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  LOAD PROJECT
+// ════════════════════════════════════════════════════════════════
+async function loadProject(id) {
+  projectId = id;
+  document.getElementById('project-selector').classList.remove('show');
+  hideOffline();
+  document.getElementById('shots-list').innerHTML = '<div class="empty-state">Loading…</div>';
+
+  try {
+    await fetchBeats();
+  } catch(err) {
+    showOffline();
+    return;
+  }
+
+  // Auto-refresh every 10s
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    fetchBeats(true).catch(() => {});
+  }, 10000);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  FETCH BEATS
+// ════════════════════════════════════════════════════════════════
+async function fetchBeats(silent = false) {
+  const res  = await fetch(`/api/shootday/${projectId}/beats`);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+
+  projectTitle = data.project_title || '';
+
+  // Merge takes from server into local state
+  beats = data.beats || [];
+  for (const b of beats) {
+    const existing = takes[b.index];
+    // Server is authoritative if take_number or non-needed status
+    if (b.status !== 'needed' || b.take_number > 0) {
+      takes[b.index] = {
+        status:      b.status      || 'needed',
+        take_number: b.take_number || 0,
+        note:        b.note        || null,
+      };
+    } else if (!existing) {
+      takes[b.index] = { status: 'needed', take_number: 0, note: null };
+    }
+  }
+
+  updateCoverage(data.coverage);
+  renderShots();
+  if (activeTab === 'review') renderReview();
+  if (activeTab === 'script' && scriptLoaded) refreshScriptDots();
+  if (!silent) hideOffline();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  COVERAGE
+// ════════════════════════════════════════════════════════════════
+function updateCoverage(cov) {
+  if (!cov) return;
+  const pct = cov.pct || 0;
+  const label = `${cov.covered || 0} / ${cov.total || 0}`;
+  document.getElementById('coverage-pct').textContent = pct + '% (' + label + ')';
+  document.getElementById('coverage-fill').style.width = pct + '%';
+  document.getElementById('coverage-fill').style.background =
+    pct >= 100 ? 'var(--green)' : 'var(--teal)';
+}
+
+function recalcCoverageLocal() {
+  const covered = beats.filter(b => takes[b.index]?.status === 'good').length;
+  const total   = beats.length;
+  const pct     = total ? Math.round(covered / total * 100) : 0;
+  updateCoverage({ covered, total, pct });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  RENDER SHOTS
+// ════════════════════════════════════════════════════════════════
+function renderShots() {
+  const list = document.getElementById('shots-list');
+  if (!beats.length) {
+    list.innerHTML = '<div class="empty-state">No beats found for this project.<br>Run PipΩr or WritΩr first.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const beat of beats) {
+    list.appendChild(buildShotCard(beat));
+  }
+}
+
+function buildShotCard(beat) {
+  const idx    = beat.index;
+  const take   = takes[idx] || { status: 'needed', take_number: 0, note: null };
+  const status = take.status || 'needed';
+  const isGood = status === 'good';
+  const isSkip = status === 'skip';
+
+  const isTH     = !!(beat.talking_head_prompt || beat.shot_type === 'talking_head');
+  const typeLabel = isTH ? 'Talking Head' : beat.shot_type === 'action' ? 'Action' : 'B-Roll';
+  const typeCls   = isTH ? 'th'           : beat.shot_type === 'action' ? 'action' : 'broll';
+
+  const card = document.createElement('div');
+  card.className = `shot-card status-${status}`;
+  card.dataset.beatIdx = idx;
+
+  // Swipe hint overlays
+  const hintR = document.createElement('div');
+  hintR.className = 'swipe-hint right';
+  hintR.textContent = '✓';
+  const hintL = document.createElement('div');
+  hintL.className = 'swipe-hint left';
+  hintL.textContent = '✕';
+  card.appendChild(hintR);
+  card.appendChild(hintL);
+
+  const inner = document.createElement('div');
+  inner.className = 'card-inner';
+
+  // Meta row
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  meta.innerHTML = `
+    <span class="beat-number">#${idx}</span>
+    <span class="shot-type-badge ${typeCls}">${typeLabel}</span>
+  `;
+  inner.appendChild(meta);
+
+  // Beat name + status icon
+  const nameEl = document.createElement('div');
+  nameEl.className = 'beat-name';
+  if (isGood) nameEl.innerHTML = `<span class="beat-status-icon">✅</span>${esc(beat.name)}`;
+  else if (isSkip) nameEl.innerHTML = `<span class="beat-status-icon">⏭</span>${esc(beat.name)}`;
+  else nameEl.textContent = beat.name;
+  inner.appendChild(nameEl);
+
+  // Reality note
+  if (beat.reality_note) {
+    const rn = document.createElement('div');
+    rn.className = 'reality-note';
+    rn.textContent = beat.reality_note;
+    inner.appendChild(rn);
+  }
+
+  // TH prompt box
+  if (isTH && beat.talking_head_prompt) {
+    const tp = document.createElement('div');
+    tp.className = 'th-prompt-box';
+    tp.textContent = beat.talking_head_prompt;
+    inner.appendChild(tp);
+  }
+
+  // Take counter
+  if (prefs.takes && take.take_number > 0) {
+    const tc = document.createElement('div');
+    tc.className = 'take-counter';
+    tc.textContent = `Take ${take.take_number}`;
+    inner.appendChild(tc);
+  }
+
+  // Note
+  if (prefs.notes && take.note) {
+    const noteEl = document.createElement('div');
+    noteEl.className = 'card-note';
+    noteEl.textContent = '📝 ' + take.note;
+    inner.appendChild(noteEl);
+  }
+
+  // Action buttons
+  if (prefs.tracker) {
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    if (!isGood) {
+      const btnGood = document.createElement('button');
+      btnGood.className = 'btn-good';
+      btnGood.textContent = '✓  GOOD';
+      btnGood.addEventListener('click', e => { e.stopPropagation(); markTake(idx, 'good'); });
+
+      const btnSkip = document.createElement('button');
+      btnSkip.className = 'btn-skip';
+      btnSkip.textContent = 'SKIP';
+      btnSkip.addEventListener('click', e => { e.stopPropagation(); markTake(idx, 'skip'); });
+
+      actions.appendChild(btnGood);
+      actions.appendChild(btnSkip);
+    } else {
+      const btnAgain = document.createElement('button');
+      btnAgain.className = 'btn-again';
+      btnAgain.textContent = 'AGAIN';
+      btnAgain.addEventListener('click', e => { e.stopPropagation(); markTake(idx, 'good'); });
+
+      const btnUndo = document.createElement('button');
+      btnUndo.className = 'btn-undo';
+      btnUndo.textContent = 'UNDO';
+      btnUndo.addEventListener('click', e => { e.stopPropagation(); markTake(idx, 'needed'); });
+
+      actions.appendChild(btnAgain);
+      actions.appendChild(btnUndo);
+    }
+    inner.appendChild(actions);
+  }
+
+  card.appendChild(inner);
+
+  // Swipe gesture
+  attachSwipe(card, idx);
+
+  // Long press (notes)
+  if (prefs.notes) {
+    attachLongPress(card, idx, beat.name);
+  }
+
+  return card;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SWIPE GESTURE
+// ════════════════════════════════════════════════════════════════
+function attachSwipe(card, beatIdx) {
+  let startX = 0, startY = 0, startTime = 0;
+  let dragging = false, axis = null;
+
+  card.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startX    = t.clientX;
+    startY    = t.clientY;
+    startTime = Date.now();
+    dragging  = false;
+    axis      = null;
+  }, { passive: true });
+
+  card.addEventListener('touchmove', e => {
+    const t  = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    if (!axis) {
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+    }
+
+    if (axis === 'x') {
+      dragging = true;
+      const hintR = card.querySelector('.swipe-hint.right');
+      const hintL = card.querySelector('.swipe-hint.left');
+      const opa   = Math.min(Math.abs(dx) / 80, 1);
+      if (dx > 0) { hintR.style.opacity = opa; hintL.style.opacity = 0; }
+      else         { hintL.style.opacity = opa; hintR.style.opacity = 0; }
+    }
+  }, { passive: true });
+
+  card.addEventListener('touchend', e => {
+    const hintR = card.querySelector('.swipe-hint.right');
+    const hintL = card.querySelector('.swipe-hint.left');
+    if (hintR) hintR.style.opacity = 0;
+    if (hintL) hintL.style.opacity = 0;
+
+    if (!dragging || axis !== 'x') return;
+
+    const t       = e.changedTouches[0];
+    const dx      = t.clientX - startX;
+    const elapsed = Date.now() - startTime;
+
+    if (elapsed < 600 && Math.abs(dx) > 60) {
+      if (dx > 0) {
+        vibrate(30);
+        markTake(beatIdx, 'good');
+      } else {
+        vibrate([20, 10, 20]);
+        markTake(beatIdx, 'skip');
+      }
+    }
+    dragging = false;
+    axis     = null;
+  }, { passive: true });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  LONG PRESS
+// ════════════════════════════════════════════════════════════════
+function attachLongPress(card, beatIdx, beatName) {
+  let timer = null;
+  let moved = false;
+
+  const start = () => { moved = false; timer = setTimeout(() => { if (!moved) { vibrate(40); openNote(beatIdx, beatName); } }, 500); };
+  const cancel = () => { if (timer) clearTimeout(timer); timer = null; };
+  const move   = () => { moved = true; cancel(); };
+
+  card.addEventListener('touchstart', start,  { passive: true });
+  card.addEventListener('touchend',   cancel, { passive: true });
+  card.addEventListener('touchmove',  move,   { passive: true });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MARK TAKE
+// ════════════════════════════════════════════════════════════════
+async function markTake(beatIdx, status) {
+  const beat = beats.find(b => b.index === beatIdx);
+  if (!beat) return;
+
+  const prev = takes[beatIdx] || { status: 'needed', take_number: 0, note: null };
+
+  // Good increments take counter; undo resets status only
+  const newTakeNum = status === 'good' ? (prev.take_number + 1) : prev.take_number;
+
+  takes[beatIdx] = {
+    status:      status,
+    take_number: newTakeNum,
+    note:        prev.note,
+  };
+
+  // Optimistic re-render
+  renderShots();
+  recalcCoverageLocal();
+  if (activeTab === 'review') renderReview();
+  if (activeTab === 'script') refreshScriptDots();
+
+  // POST to server
+  try {
+    const res = await fetch(`/api/shootday/${projectId}/take`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        beat_index: beatIdx,
+        beat_name:  beat.name,
+        status,
+        note: takes[beatIdx]?.note || null,
+      }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.coverage) updateCoverage(data.coverage);
+  } catch(err) {
+    showToast('Save failed — will retry on next refresh');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  NOTE DIALOG
+// ════════════════════════════════════════════════════════════════
+function openNote(beatIdx, beatName) {
+  noteTargetIdx = beatIdx;
+  const take = takes[beatIdx] || {};
+  document.getElementById('note-dialog-title').textContent = `Note — ${beatName}`;
+  document.getElementById('note-textarea').value = take.note || '';
+  document.getElementById('note-dialog').classList.add('open');
+  setTimeout(() => document.getElementById('note-textarea').focus(), 320);
+}
+
+function closeNote() {
+  document.getElementById('note-dialog').classList.remove('open');
+  noteTargetIdx = null;
+}
+
+function maybeCloseNote(e) {
+  if (e.target === document.getElementById('note-dialog')) closeNote();
+}
+
+async function saveNote() {
+  if (noteTargetIdx == null) return;
+  const idx  = noteTargetIdx;
+  const note = document.getElementById('note-textarea').value.trim() || null;
+  closeNote();
+
+  if (!takes[idx]) takes[idx] = { status: 'needed', take_number: 0, note: null };
+  takes[idx].note = note;
+
+  renderShots();
+
+  const beat = beats.find(b => b.index === idx);
+  try {
+    await fetch(`/api/shootday/${projectId}/take`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        beat_index: idx,
+        beat_name:  beat?.name || '',
+        status:     takes[idx].status || 'needed',
+        note:       note,
+      }),
+    });
+  } catch(e) {}
+
+  showToast('Note saved');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TAB NAVIGATION
+// ════════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  activeTab = tab;
+
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  document.getElementById(tab + '-view').classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+
+  if (tab === 'script') {
+    loadScript();
+  } else if (tab === 'review') {
+    renderReview();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SCRIPT TAB
+// ════════════════════════════════════════════════════════════════
+async function loadScript() {
+  if (scriptLoaded && scriptData) { renderScriptView(); return; }
+  if (!projectId) return;
+
+  document.getElementById('beats-view-inner').innerHTML = '<div class="empty-state">Loading script…</div>';
+  document.getElementById('clean-view-inner').textContent = 'Loading…';
+
+  try {
+    const res = await fetch(`/api/shootday/${projectId}/script`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    scriptData  = await res.json();
+    scriptLoaded = true;
+    renderScriptView();
+  } catch(err) {
+    document.getElementById('beats-view-inner').innerHTML =
+      `<div class="empty-state" style="color:var(--red)">Failed to load script.<br>${esc(err.message)}</div>`;
+  }
+}
+
+function showScriptMode(mode) {
+  currentScriptMode = mode;
+  document.getElementById('btn-beats-view').classList.toggle('active', mode === 'beats');
+  document.getElementById('btn-clean-view').classList.toggle('active', mode === 'clean');
+  document.getElementById('beats-view-inner').style.display = mode === 'beats' ? '' : 'none';
+  document.getElementById('clean-view-inner').style.display = mode === 'clean' ? '' : 'none';
+}
+
+function renderScriptView() {
+  if (!scriptData) return;
+
+  // Beats view
+  const beatsInner = document.getElementById('beats-view-inner');
+  const scriptBeats = scriptData.beats || [];
+
+  if (!scriptBeats.length) {
+    beatsInner.innerHTML = '<div class="empty-state">No beat map available.<br>Run WritΩr to generate a script first.</div>';
+  } else {
+    beatsInner.innerHTML = '';
+    scriptBeats.forEach((b, i) => {
+      const idx    = b.index != null ? b.index : (i + 1);
+      const take   = takes[idx] || {};
+      const isGood = take.status === 'good';
+
+      const card = document.createElement('div');
+      card.className = 'beat-card';
+      card.dataset.beatIdx = idx;
+
+      card.innerHTML = `
+        <div class="beat-card-header">
+          <div class="beat-status-dot ${isGood ? 'good' : 'needed'}"></div>
+          <div class="beat-card-name">${esc(b.name || b.beat_name || `Beat ${idx}`)}</div>
+        </div>
+        ${b.emotional_function ? `<div class="beat-card-fn">${esc(b.emotional_function)}</div>` : ''}
+        ${b.talking_head_prompt ? `<div class="beat-card-prompt">${esc(b.talking_head_prompt)}</div>` : ''}
+      `;
+      beatsInner.appendChild(card);
+    });
+  }
+
+  // Clean script view
+  const cleanInner = document.getElementById('clean-view-inner');
+  const cleanText  = scriptData.clean || '';
+  if (!cleanText) {
+    cleanInner.innerHTML = '<div class="script-none">No approved script yet.<br>Approve a WritΩr script first.</div>';
+  } else {
+    cleanInner.textContent = cleanText;
+  }
+
+  showScriptMode(currentScriptMode);
+}
+
+// Refresh beat status dots without full re-render
+function refreshScriptDots() {
+  document.querySelectorAll('#beats-view-inner .beat-card').forEach(card => {
+    const idx  = parseInt(card.dataset.beatIdx);
+    const take = takes[idx] || {};
+    const dot  = card.querySelector('.beat-status-dot');
+    if (dot) {
+      dot.className = 'beat-status-dot ' + (take.status === 'good' ? 'good' : 'needed');
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  REVIEW TAB
+// ════════════════════════════════════════════════════════════════
+function renderReview() {
+  const listEl = document.getElementById('review-list');
+  listEl.innerHTML = '';
+
+  if (!beats.length) {
+    listEl.innerHTML = '<div class="empty-state">No beats loaded yet.</div>';
+    return;
+  }
+
+  const goodBeats   = beats.filter(b => takes[b.index]?.status === 'good');
+  const skipBeats   = beats.filter(b => takes[b.index]?.status === 'skip');
+  const neededBeats = beats.filter(b => {
+    const s = takes[b.index]?.status || 'needed';
+    return s === 'needed';
+  });
+
+  // All covered banner
+  if (neededBeats.length === 0) {
+    const banner = document.createElement('div');
+    banner.className = 'all-covered-banner';
+    banner.textContent = '🎉 All shots covered!';
+    listEl.appendChild(banner);
+  } else {
+    const sn = document.createElement('div');
+    sn.className = 'still-needed-section';
+    sn.innerHTML = `<div class="still-needed-title">Still Needed — ${neededBeats.length}</div>`;
+    for (const b of neededBeats) {
+      const pill = document.createElement('span');
+      pill.className = 'still-needed-pill';
+      pill.textContent = b.name;
+      sn.appendChild(pill);
+    }
+    listEl.appendChild(sn);
+  }
+
+  // Logged shots header
+  const logCount = goodBeats.length + skipBeats.length;
+  if (!logCount) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.style.padding = '20px 0';
+    empty.textContent = 'No shots marked yet.';
+    listEl.appendChild(empty);
+    return;
+  }
+
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin:8px 0;';
+  hdr.textContent = `Logged (${logCount})`;
+  listEl.appendChild(hdr);
+
+  const logged = [...goodBeats, ...skipBeats].sort((a, b) => a.index - b.index);
+  for (const beat of logged) {
+    const take = takes[beat.index] || {};
+    const card = document.createElement('div');
+    card.className = `review-card ${take.status || ''}`;
+
+    const icon    = take.status === 'good' ? '✅' : '⏭';
+    const takeNum = take.take_number > 0 ? `Take ${take.take_number}` : '';
+    const statusLabel = take.status === 'good' ? '<span style="color:var(--green)">Good</span>' : '<span style="color:var(--dim)">Skipped</span>';
+
+    card.innerHTML = `
+      <div class="review-card-name">${icon} ${esc(beat.name)}</div>
+      <div class="review-card-meta">
+        ${takeNum ? `<span class="review-stat"><strong>${esc(takeNum)}</strong></span>` : ''}
+        <span class="review-stat">${statusLabel}</span>
+      </div>
+      ${take.note ? `<div class="review-note">📝 ${esc(take.note)}</div>` : ''}
+    `;
+    listEl.appendChild(card);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TELEPROMPTER SYNC (WebSocket)
+// ════════════════════════════════════════════════════════════════
+function connectTeleprompterSync(session) {
+  disconnectWs();
+  if (!session) return;
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url   = `${proto}//${location.host}/api/teleprompter`;
+
+  try {
+    wsConn = new WebSocket(url);
+
+    wsConn.onopen = () => {
+      wsConn.send(JSON.stringify({
+        type:      'register',
+        role:      'display',
+        session:   session,
+        projectId: projectId,
+      }));
+      document.getElementById('tp-sync-indicator').style.display = 'inline-flex';
+    };
+
+    wsConn.onmessage = e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'state' && msg.scrollPct != null) {
+          syncScriptPosition(msg.scrollPct);
+        }
+      } catch(err) {}
+    };
+
+    wsConn.onclose = () => {
+      wsConn = null;
+      document.getElementById('tp-sync-indicator').style.display = 'none';
+      if (prefs.tpSync && prefs.tpSession) {
+        wsRetryTimer = setTimeout(() => connectTeleprompterSync(prefs.tpSession), 5000);
+      }
+    };
+
+    wsConn.onerror = () => {
+      wsConn = null;
+      document.getElementById('tp-sync-indicator').style.display = 'none';
+    };
+  } catch(e) {}
+}
+
+function disconnectWs() {
+  if (wsRetryTimer) { clearTimeout(wsRetryTimer); wsRetryTimer = null; }
+  if (wsConn) {
+    wsConn.onclose = null;
+    try { wsConn.close(); } catch(e) {}
+    wsConn = null;
+  }
+  document.getElementById('tp-sync-indicator').style.display = 'none';
+}
+
+function syncScriptPosition(pct) {
+  if (!scriptData) return;
+
+  // Beats view sync — highlight nearest beat card
+  const scriptBeats = scriptData.beats || [];
+  if (scriptBeats.length > 0) {
+    const idx = Math.round(pct * (scriptBeats.length - 1));
+    document.querySelectorAll('#beats-view-inner .beat-card').forEach((el, i) => {
+      el.classList.toggle('synced', i === idx);
+    });
+    if (activeTab === 'script' && currentScriptMode === 'beats') {
+      const synced = document.querySelector('#beats-view-inner .beat-card.synced');
+      if (synced) synced.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  // Clean script sync — highlight a window of lines
+  const cleanEl = document.getElementById('clean-view-inner');
+  if (cleanEl && currentScriptMode === 'clean') {
+    const text    = scriptData.clean || '';
+    const lines   = text.split('\n');
+    const lineIdx = Math.floor(pct * lines.length);
+    const start   = Math.max(0, lineIdx - 2);
+    const end     = Math.min(lines.length, lineIdx + 3);
+
+    const before  = esc(lines.slice(0, start).join('\n'));
+    const mid     = esc(lines.slice(start, end).join('\n'));
+    const after   = esc(lines.slice(end).join('\n'));
+
+    cleanEl.innerHTML =
+      (before ? `<span>${before}</span>` : '') +
+      (mid    ? `<span class="highlight-section">${mid}</span>` : '') +
+      (after  ? `<span>${after}</span>` : '');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SETTINGS PANEL
+// ════════════════════════════════════════════════════════════════
+function openSettings()  { document.getElementById('settings-panel').classList.add('open'); }
+function closeSettings() { document.getElementById('settings-panel').classList.remove('open'); }
+
+function changeProject() {
+  closeSettings();
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  disconnectWs();
+  localStorage.removeItem('kre8r_sd_project');
+  projectId    = null;
+  beats        = [];
+  scriptData   = null;
+  scriptLoaded = false;
+  takes        = {};
+  document.getElementById('shots-list').innerHTML = '<div class="empty-state">Select a project to begin.</div>';
+  showProjectSelector();
+}
+
+function downloadOffline() {
+  if (!projectId) { showToast('No project loaded'); return; }
+  closeSettings();
+  location.href = `/api/shootday/package/${projectId}`;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  OFFLINE / ERROR
+// ════════════════════════════════════════════════════════════════
+function showOffline() { document.getElementById('offline-screen').classList.add('show'); }
+function hideOffline() { document.getElementById('offline-screen').classList.remove('show'); }
+
+async function retryConnection() {
+  hideOffline();
+  if (projectId) {
+    try { await fetchBeats(); }
+    catch(e) { showOffline(); }
+  } else {
+    showProjectSelector();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════════
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function vibrate(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SERVICE WORKER
+// ════════════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

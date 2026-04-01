@@ -36,9 +36,64 @@ const crypto    = require('crypto');
 
 const db = require('../db');
 
-const PYTHON_PATH    = process.env.PYTHON_PATH    || 'python';
-const WHISPER_MODEL  = process.env.WHISPER_MODEL  || 'base';
+const WHISPER_MODEL  = process.env.WHISPER_MODEL  || 'medium';
 const TRANSCRIPTS_DIR = path.join(__dirname, '..', '..', 'database', 'transcripts');
+
+// Binary detection — cached after first successful probe
+let _whisperBinary  = null;   // null = not yet detected, '' = not found, string = binary name
+let _whisperVersion = null;
+
+const WHISPER_CANDIDATES = process.env.PYTHON_PATH
+  ? [process.env.PYTHON_PATH]
+  : ['py', 'python3', 'python'];
+
+// Test whether `bin -m whisper --help` works; resolves version string or null
+function _testWhisperBinary(bin) {
+  return new Promise((resolve) => {
+    const proc = spawn(bin, ['-m', 'whisper', '--help'], {
+      windowsHide: true,
+      timeout: 10_000
+    });
+    let out = '';
+    proc.stdout.on('data', d => { out += d.toString(); });
+    proc.stderr.on('data', d => { out += d.toString(); });
+    proc.on('error', () => resolve(null));
+    proc.on('close', () => {
+      const lower = out.toLowerCase();
+      if (lower.includes('whisper') || lower.includes('usage') || lower.includes('model')) {
+        const m = out.match(/(\d+\.\d+[\.\d]*)/);
+        resolve(m ? m[1] : 'installed');
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
+async function detectWhisperBinary() {
+  if (_whisperBinary !== null) return _whisperBinary || null;  // '' means not found
+  for (const bin of WHISPER_CANDIDATES) {
+    const ver = await _testWhisperBinary(bin);
+    if (ver !== null) {
+      _whisperBinary  = bin;
+      _whisperVersion = ver;
+      console.log(`[Whisper] Detected binary: ${bin} (${ver})`);
+      return bin;
+    }
+  }
+  _whisperBinary = '';  // not found
+  console.warn('[Whisper] Not found on any candidate path:', WHISPER_CANDIDATES.join(', '));
+  return null;
+}
+
+async function checkWhisper() {
+  const binary = await detectWhisperBinary();
+  return {
+    whisper:         binary !== null,
+    whisper_binary:  binary || null,
+    whisper_version: _whisperVersion || null
+  };
+}
 
 // ─────────────────────────────────────────────
 // HELPERS
@@ -58,18 +113,26 @@ function ensureTranscriptsDir() {
 //                           --word_timestamps True --output_dir <dir>
 // ─────────────────────────────────────────────
 
-function runWhisper(filePath, onProgress = null) {
+async function runWhisper(filePath, onProgress = null) {
+  const binary = await detectWhisperBinary();
+  if (!binary) {
+    throw new Error(
+      `Whisper not found. Tried: ${WHISPER_CANDIDATES.join(', ')}. ` +
+      `Install with: pip install openai-whisper`
+    );
+  }
+
   return new Promise((resolve, reject) => {
     ensureTranscriptsDir();
 
     const args = [
       '-m', 'whisper',
       filePath,
-      '--model',         WHISPER_MODEL,
-      '--output_format', 'json',
+      '--model',           WHISPER_MODEL,
+      '--output_format',   'json',
       '--word_timestamps', 'True',
-      '--output_dir',    TRANSCRIPTS_DIR,
-      '--verbose',       'False'
+      '--output_dir',      TRANSCRIPTS_DIR,
+      '--verbose',         'False'
     ];
 
     onProgress?.({ stage: 'whisper_start', model: WHISPER_MODEL, file: path.basename(filePath) });
@@ -84,7 +147,11 @@ function runWhisper(filePath, onProgress = null) {
       childEnv.PATH = ffmpegBinDir + path.delimiter + (childEnv.PATH || '');
     }
 
-    const proc = spawn(PYTHON_PATH, args, { windowsHide: true, env: childEnv });
+    const proc = spawn(binary, args, {
+      windowsHide: true,
+      env: childEnv,
+      timeout: 600_000  // 10 minutes
+    });
 
     let stderr = '';
     let stdout = '';
@@ -235,4 +302,4 @@ async function transcribeFile(filePath, options = {}) {
   }
 }
 
-module.exports = { transcribeFile, TRANSCRIPTS_DIR };
+module.exports = { transcribeFile, checkWhisper, TRANSCRIPTS_DIR };

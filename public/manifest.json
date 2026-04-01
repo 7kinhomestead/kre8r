@@ -1,0 +1,26 @@
+{
+  "name": "Kre8Ωr ShootDay",
+  "short_name": "ShootDay",
+  "description": "7 Kin Homestead production day interface for Cari",
+  "start_url": "/shootday.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0D0D1A",
+  "theme_color": "#00C9A7",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='28' fill='%230D0D1A'/><text x='96' y='130' font-size='110' text-anchor='middle' font-family='sans-serif' fill='%2300C9A7'>🎬</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='72' fill='%230D0D1A'/><text x='256' y='340' font-size='280' text-anchor='middle' font-family='sans-serif' fill='%2300C9A7'>🎬</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "en-US"
+}

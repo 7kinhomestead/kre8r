@@ -35,6 +35,71 @@ const ANTHROPIC_VERSION     = '2023-06-01';
 const MODEL                 = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
 
 // ─────────────────────────────────────────────
+// VISION RATE LIMIT QUEUE
+// Max 3 concurrent Vision API calls.
+// After each slot is released, waits BATCH_DELAY_MS before the next call
+// starts — prevents bursting all 3 at the exact same millisecond.
+// ─────────────────────────────────────────────
+
+const VISION_CONCURRENCY  = 3;
+const BATCH_DELAY_MS      = 1000;
+
+class VisionQueue {
+  constructor(concurrency, batchDelay) {
+    this.concurrency = concurrency;
+    this.batchDelay  = batchDelay;
+    this.active      = 0;
+    this.queue       = [];
+  }
+
+  run(fn) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ fn, resolve, reject });
+      this._tick();
+    });
+  }
+
+  _tick() {
+    while (this.active < this.concurrency && this.queue.length > 0) {
+      const { fn, resolve, reject } = this.queue.shift();
+      this.active++;
+      Promise.resolve()
+        .then(fn)
+        .then(result => { resolve(result); this._release(); })
+        .catch(err   => { reject(err);    this._release(); });
+    }
+  }
+
+  _release() {
+    this.active--;
+    setTimeout(() => this._tick(), this.batchDelay);
+  }
+}
+
+const visionQueue = new VisionQueue(VISION_CONCURRENCY, BATCH_DELAY_MS);
+
+// ─────────────────────────────────────────────
+// RETRY WITH EXPONENTIAL BACKOFF
+// ─────────────────────────────────────────────
+
+async function withRetry(fn, maxRetries = 3, baseDelayMs = 2000) {
+  let lastErr;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxRetries) {
+        const delay = baseDelayMs * Math.pow(2, attempt); // 2s, 4s, 8s
+        console.warn(`[VaultΩr] Vision attempt ${attempt + 1} failed: ${err.message} — retrying in ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+// ─────────────────────────────────────────────
 // FFMPEG AVAILABILITY CHECK
 // ─────────────────────────────────────────────
 
@@ -301,18 +366,17 @@ async function processFile(filePath, options = {}) {
     return { id, file: filePath, status: 'ok', braw: true, shot_type: 'b-roll', quality_flag: 'review', orientation: null, thumb: null };
   }
 
-  // ── Proxy MP4 detection: check if this matches a known BRAW source ─────────
-  // Proxy naming convention: [original_braw_name]_proxy.mp4
-  const isProxyMp4 = original_filename.endsWith('_proxy.mp4');
-  if (isProxyMp4) {
-    const brawBasename = original_filename.replace(/_proxy\.mp4$/, '.braw');
-    // Search for a matching BRAW record by filename anywhere in the DB
+  // ── Proxy detection: check if this matches a known BRAW source ────────────
+  // Proxy naming convention: [original_braw_name]_proxy.mp4 or _proxy.mov
+  // DaVinci Resolve exports QuickTime (.mov) by default; MP4 is also supported.
+  const isProxy = /_proxy\.(mp4|mov)$/i.test(original_filename);
+  if (isProxy) {
+    const brawBasename = original_filename.replace(/_proxy\.(mp4|mov)$/i, '.braw');
     const brawRecord = db.findBrawByBasename?.(brawBasename) || null;
     if (brawRecord) {
-      // Update the existing BRAW record with proxy data
       return await processProxyUpdate(filePath, brawRecord, { projectId, onProgress });
     }
-    // No matching BRAW — ingest as new proxy record
+    // No matching BRAW found — ingest as a regular clip record
   }
 
   // ── Standard pipeline: ffprobe → thumbnails → Vision → insert ─────────────
@@ -346,9 +410,9 @@ async function processFile(filePath, options = {}) {
   let classification = {};
   if (thumbs) {
     try {
-      classification = await classifyWithVision(thumbs);
+      classification = await visionQueue.run(() => withRetry(() => classifyWithVision(thumbs)));
     } catch (e) {
-      console.warn(`[VaultΩr] Vision failed for ${original_filename}: ${e.message}`);
+      console.warn(`[VaultΩr] Vision failed for ${original_filename} after retries: ${e.message}`);
     }
   }
 
@@ -373,7 +437,7 @@ async function processFile(filePath, options = {}) {
     organized_path:     null,
     used_in:            '[]',
     braw_source_path:   null,
-    is_proxy:           isProxyMp4 ? true : false
+    is_proxy:           isProxy ? true : false
   });
 
   onProgress?.({ stage: 'saved', file: original_filename, id });
@@ -411,7 +475,11 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
 
   let classification = {};
   if (thumbs) {
-    try { classification = await classifyWithVision(thumbs); } catch(e) {}
+    try {
+      classification = await visionQueue.run(() => withRetry(() => classifyWithVision(thumbs)));
+    } catch(e) {
+      console.warn(`[VaultΩr] Vision failed for proxy ${path.basename(proxyPath)} after retries: ${e.message}`);
+    }
   }
 
   // Update the original BRAW record (not the proxy path) with all the good data
@@ -525,4 +593,77 @@ async function ingestFile(filePath, options = {}) {
   return { ok: result.status === 'ok', ...result };
 }
 
-module.exports = { ingestFolder, ingestFile, findVideoFiles, checkFfmpeg };
+// ─────────────────────────────────────────────
+// RECLASSIFY — re-run Vision on an existing clip's thumbnails
+// ─────────────────────────────────────────────
+
+/**
+ * Re-run Claude Vision on an existing footage record using its stored thumbnails.
+ * Reconstructs the thumbs object from the display thumbnail URL (stored in DB),
+ * then updates shot_type / subcategory / description / quality_flag / orientation.
+ */
+async function reclassifyById(footageId) {
+  const record = db.getFootageById(footageId);
+  if (!record) throw new Error(`Footage ${footageId} not found`);
+
+  // Derive thumbnail slug from the stored display URL:
+  //   /thumbnails/abc123_thumb_b.jpg  →  slug = "abc123"
+  // Then reconstruct all three thumb paths.
+  let thumbs = null;
+
+  if (record.thumbnail_path) {
+    const thumbFilename = path.basename(record.thumbnail_path);            // abc123_thumb_b.jpg
+    const slug          = thumbFilename.replace(/_thumb_[abc]\.jpg$/, ''); // abc123
+
+    const buildThumb = (label) => {
+      const filePath = path.join(THUMBNAIL_DIR, `${slug}_thumb_${label}.jpg`);
+      const url      = `/thumbnails/${slug}_thumb_${label}.jpg`;
+      const exists   = fs.existsSync(filePath);
+      return { label, filePath, url, failed: !exists };
+    };
+
+    const a = buildThumb('a');
+    const b = buildThumb('b');
+    const c = buildThumb('c');
+
+    // Need at least one thumbnail to proceed
+    if (!a.failed || !b.failed || !c.failed) {
+      const display = !b.failed ? b : (!a.failed ? a : c);
+      thumbs = { a, b, c, displayPath: display.filePath, displayUrl: display.url };
+    }
+  }
+
+  // If no thumbnails stored, try re-extracting from the proxy file_path
+  if (!thumbs && record.file_path && fs.existsSync(record.file_path)) {
+    const ext = path.extname(record.file_path).toLowerCase();
+    if (!BRAW_EXTENSIONS.has(ext)) {
+      try {
+        const raw  = await probeFile(record.file_path);
+        const meta = parseMetadata(record.file_path, raw);
+        thumbs = await extractThumbnails(record.file_path, meta.duration);
+      } catch (e) {
+        throw new Error(`Cannot extract thumbnails for footage ${footageId}: ${e.message}`);
+      }
+    }
+  }
+
+  if (!thumbs) {
+    throw new Error(
+      `Footage ${footageId} has no thumbnails and is BRAW — ingest its proxy first.`
+    );
+  }
+
+  const classification = await visionQueue.run(() => withRetry(() => classifyWithVision(thumbs)));
+
+  db.updateFootage(footageId, {
+    shot_type:    classification.shot_type    || null,
+    subcategory:  classification.subcategory  || null,
+    description:  classification.description  || null,
+    quality_flag: classification.quality_flag || null,
+    orientation:  classification.orientation  || null,
+  });
+
+  return { id: footageId, ...classification };
+}
+
+module.exports = { ingestFolder, ingestFile, findVideoFiles, checkFfmpeg, reclassifyById };

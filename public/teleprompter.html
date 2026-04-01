@@ -1,0 +1,2353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TeleprΩmpter — Kre8Ωr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap">
+<style>
+/* ── Reset & base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --teal:       #3ecfb2;
+  --teal-dim:   rgba(62,207,178,0.35);
+  --bg:         #000000;
+  --bg-sel:     #0e0f0e;
+  --bg-card:    #161916;
+  --border:     #2a2e28;
+  --text:       #ffffff;
+  --font:       'DM Sans', sans-serif;
+  --font-size:  64px;
+  --ctrl-h:     72px;
+}
+
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
+
+/* ═══════════════════════════════════════
+   SELECTOR SCREEN
+═══════════════════════════════════════ */
+#tp-selector {
+  position: fixed; inset: 0; z-index: 10;
+  background: var(--bg-sel); overflow-y: auto;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 20px 80px;
+}
+.tp-sel-inner { width: 100%; max-width: 640px; }
+
+.tp-sel-header {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 36px;
+}
+.tp-back {
+  color: rgba(255,255,255,0.4); font-size: 13px; text-decoration: none;
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.tp-back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+.tp-sel-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 2px;
+}
+.tp-sel-title span { color: var(--teal); }
+
+/* Tabs */
+.tp-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+.tp-tab {
+  flex: 1; padding: 10px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: rgba(255,255,255,0.5); font-family: var(--font); font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.tp-tab:hover { background: #1c1f1b; color: var(--text); }
+.tp-tab.active { color: var(--teal); border-color: var(--teal-dim); background: rgba(62,207,178,0.06); }
+
+/* Form elements */
+.tp-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 8px;
+}
+.tp-select {
+  width: 100%; padding: 12px 16px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--font); font-size: 15px;
+  cursor: pointer; outline: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a9487' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.tp-select:focus { border-color: var(--teal-dim); }
+
+#tp-preview {
+  margin-top: 12px; padding: 14px 16px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; line-height: 1.7; color: rgba(255,255,255,0.6);
+  min-height: 72px; white-space: pre-wrap;
+}
+#tp-preview.empty { color: rgba(255,255,255,0.25); font-style: italic; }
+
+#tp-paste-wrap textarea {
+  width: 100%; height: 200px; padding: 14px 16px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.7;
+  resize: vertical; outline: none;
+}
+#tp-paste-wrap textarea:focus { border-color: var(--teal-dim); }
+#tp-paste-wrap textarea::placeholder { color: rgba(255,255,255,0.25); }
+
+/* Network / QR */
+.tp-network {
+  margin-top: 28px; padding: 18px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  display: flex; align-items: center; gap: 18px;
+}
+#tp-qr-canvas { flex-shrink: 0; width: 84px; height: 84px;
+  display: flex; align-items: center; justify-content: center; }
+#tp-qr-canvas canvas, #tp-qr-canvas img { border-radius: 5px; display: block; }
+.tp-network-text { flex: 1; min-width: 0; }
+.tp-network-text h4 { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+.tp-network-text p  { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+.tp-ip-url { font-size: 11px; font-family: monospace; color: var(--teal); word-break: break-all; margin-top: 6px; }
+.tp-offline-note { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 4px; font-style: italic; }
+
+#tp-start-btn {
+  width: 100%; margin-top: 24px; padding: 16px;
+  background: var(--teal); border: none; border-radius: 10px;
+  color: #000; font-family: var(--font); font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+}
+#tp-start-btn:hover { background: #52dfc5; }
+#tp-start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════
+   DISPLAY SCREEN
+═══════════════════════════════════════ */
+#tp-display {
+  position: fixed; inset: 0; z-index: 20;
+  background: var(--bg); display: none; flex-direction: column;
+}
+#tp-display.active { display: flex; }
+
+/* Scroll container */
+#tp-scroll-wrap {
+  flex: 1; overflow-y: scroll; overflow-x: hidden; scroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#tp-scroll-wrap::-webkit-scrollbar { width: 3px; }
+#tp-scroll-wrap::-webkit-scrollbar-track { background: transparent; }
+#tp-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+/* Mirror mode */
+#tp-scroll-wrap.mirror #tp-text-wrap { transform: scaleX(-1); }
+
+/* Text area — width limited, centered */
+#tp-text-wrap { max-width: 65%; margin: 0 auto; padding-bottom: 45vh; }
+@media (max-width: 900px) { #tp-text-wrap { max-width: 84%; } }
+@media (max-width: 600px) { #tp-text-wrap { max-width: 93%; } }
+
+/* Spacer pushes first line to reading position (center of screen) */
+#tp-spacer-top { height: 50vh; }
+
+/* Script lines */
+.tp-line {
+  font-size: var(--font-size); line-height: 1.42;
+  color: #ffffff; padding: 5px 0 5px 19px;
+  cursor: pointer; user-select: none;
+}
+.tp-line.tp-above  { color: #ffffff; }
+.tp-line.tp-below  { color: #ffffff; }
+.tp-line.tp-current {
+  color: #ffffff;
+  border-left: 3px solid var(--teal);
+  padding-left: 16px;
+}
+
+/* Paragraph break */
+.tp-break { height: calc(var(--font-size) * 0.55); }
+
+/* Beat marker — thin teal rule across full text width */
+.tp-beat-marker {
+  display: flex; align-items: center; gap: 14px;
+  margin: calc(var(--font-size) * 0.55) 0;
+  padding-left: 19px;
+}
+.tp-beat-rule { flex: 1; height: 1px; background: var(--teal); opacity: 0.28; }
+.tp-beat-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--teal); opacity: 0.45;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* Reading guide — fixed teal line at screen center */
+#tp-reading-guide {
+  position: fixed; left: 0; right: 0; top: 50vh;
+  height: 2px; background: rgba(62,207,178,0.45);
+  pointer-events: none; z-index: 5;
+}
+
+/* Session badge */
+#tp-session-badge {
+  position: fixed; top: 16px; right: 16px; z-index: 50;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+  padding: 8px 14px; display: none;
+  flex-direction: column; align-items: flex-end; gap: 2px;
+}
+#tp-session-badge.visible { display: flex; }
+.tp-session-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.3); font-weight: 600; }
+#tp-session-code { font-family: 'Bebas Neue', sans-serif; font-size: 34px; letter-spacing: 7px; color: var(--teal); line-height: 1; }
+#tp-peer-status { font-size: 10px; color: rgba(255,255,255,0.3); transition: color 0.3s; }
+#tp-peer-status.connected { color: var(--teal); }
+
+/* ═══════════════════════════════════════
+   CONTROLS OVERLAY
+═══════════════════════════════════════ */
+#tp-controls {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+  height: var(--ctrl-h);
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 10px; padding: 0 20px;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+#tp-controls.visible { opacity: 1; pointer-events: all; }
+
+.tp-ctrl-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; color: var(--text); font-family: var(--font);
+  font-size: 13px; font-weight: 500; padding: 8px 13px;
+  cursor: pointer; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
+}
+.tp-ctrl-btn:hover   { background: rgba(255,255,255,0.11); }
+.tp-ctrl-btn.active  { background: rgba(62,207,178,0.15); border-color: var(--teal); color: var(--teal); }
+#tp-play-pause { font-size: 17px; width: 44px; padding: 8px; text-align: center; }
+
+/* Speed */
+.tp-speed-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.tp-ctrl-lbl { font-size: 11px; color: rgba(255,255,255,0.38); font-weight: 600; letter-spacing: 0.4px; }
+#tp-speed-slider {
+  -webkit-appearance: none; width: 110px; height: 4px;
+  background: rgba(255,255,255,0.15); border-radius: 2px; outline: none; cursor: pointer;
+}
+#tp-speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--teal); cursor: pointer;
+}
+#tp-speed-val { font-size: 13px; font-weight: 600; color: var(--teal); min-width: 22px; text-align: right; }
+
+/* Font */
+.tp-font-group { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.tp-font-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; color: var(--text); font-family: var(--font);
+  font-size: 11px; font-weight: 700; padding: 5px 9px; cursor: pointer; transition: all 0.12s;
+}
+.tp-font-btn:hover { background: rgba(255,255,255,0.11); }
+#tp-font-val { font-size: 11px; color: rgba(255,255,255,0.45); min-width: 36px; text-align: center; }
+
+.tp-ctrl-spacer { flex: 1; }
+
+/* ── Voice Sync ────────────────────────────────────────────── */
+#tp-voice-btn { flex-shrink: 0; }
+#tp-voice-btn.listening {
+  background: rgba(62,207,178,0.15); border-color: var(--teal); color: var(--teal);
+  animation: tp-pulse 1.8s ease-in-out infinite;
+}
+#tp-voice-btn.paused-speech {
+  background: rgba(255,180,50,0.12); border-color: rgba(255,180,50,0.5);
+  color: #ffb432;
+}
+@keyframes tp-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(62,207,178,0); }
+  50%      { box-shadow: 0 0 0 5px rgba(62,207,178,0.18); }
+}
+
+/* Mic indicator — floats top-left of display, always visible when voice active */
+#tp-mic-indicator {
+  position: fixed; top: 16px; left: 16px; z-index: 50;
+  display: none; align-items: center; gap: 7px;
+  padding: 7px 13px; border-radius: 20px;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+#tp-mic-indicator.visible { display: flex; }
+#tp-mic-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--teal); transition: background 0.2s;
+}
+#tp-mic-indicator.speech-paused #tp-mic-dot { background: #ffb432; }
+#tp-mic-indicator.speech-paused { border-color: rgba(255,180,50,0.3); color: #ffb432; }
+#tp-mic-label { color: var(--teal); transition: color 0.2s; }
+#tp-mic-indicator.speech-paused #tp-mic-label { color: #ffb432; }
+
+/* Voice sensitivity row (shown when voice is active, inside controls) */
+#tp-voice-sense-row {
+  display: none; align-items: center; gap: 7px; flex-shrink: 0;
+}
+#tp-voice-sense-row.visible { display: flex; }
+#tp-sense-slider {
+  -webkit-appearance: none; width: 80px; height: 4px;
+  background: rgba(62,207,178,0.25); border-radius: 2px; outline: none; cursor: pointer;
+}
+#tp-sense-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--teal); cursor: pointer;
+}
+
+/* ═══════════════════════════════════════
+   JOIN CHOICE SCREEN
+═══════════════════════════════════════ */
+#tp-join {
+  position: fixed; inset: 0; z-index: 10;
+  background: var(--bg-sel);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 24px; text-align: center;
+}
+#tp-join.active { display: flex; }
+.tp-join-heading {
+  font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 3px;
+  color: rgba(255,255,255,0.3); margin-bottom: 8px; text-transform: uppercase;
+}
+.tp-join-code-display {
+  font-family: 'Bebas Neue', sans-serif; font-size: 64px; letter-spacing: 12px;
+  color: var(--teal); line-height: 1; margin-bottom: 6px;
+}
+.tp-join-subtitle {
+  font-size: 14px; color: rgba(255,255,255,0.4); margin-bottom: 40px;
+}
+.tp-join-choices { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 320px; }
+.tp-join-btn {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 22px;
+  border: 2px solid var(--border); border-radius: 14px;
+  background: var(--bg-card); cursor: pointer; transition: all 0.15s;
+  font-family: var(--font); color: var(--text); text-align: left;
+}
+.tp-join-btn:hover { border-color: var(--teal); background: rgba(62,207,178,0.07); }
+.tp-join-btn-icon  { font-size: 30px; line-height: 1; flex-shrink: 0; }
+.tp-join-btn-text  { display: flex; flex-direction: column; gap: 3px; }
+.tp-join-btn-label { font-size: 17px; font-weight: 700; }
+.tp-join-btn-desc  { font-size: 12px; color: rgba(255,255,255,0.38); }
+
+/* Voice debug readout — floats top-center, visible when voice is active */
+#tp-voice-debug {
+  position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 55;
+  background: rgba(0,0,0,0.78); backdrop-filter: blur(10px);
+  border: 1px solid rgba(62,207,178,0.22); border-radius: 20px;
+  padding: 5px 16px; font-size: 12px; color: rgba(255,255,255,0.6);
+  display: none; white-space: nowrap; max-width: 80vw;
+  overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+}
+#tp-voice-debug.visible { display: block; }
+#tp-voice-debug .vd-heard { color: var(--teal); font-weight: 600; }
+#tp-voice-debug .vd-pos   { color: rgba(255,255,255,0.3); margin-left: 8px; font-size: 10px; }
+
+/* Operator-paused badge — shown on display when control device pauses */
+#tp-operator-badge {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 50;
+  background: rgba(0,0,0,0.82); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,180,50,0.45); border-radius: 20px;
+  padding: 7px 20px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+  color: #ffb432; display: none; white-space: nowrap; pointer-events: none;
+}
+#tp-operator-badge.visible { display: block; }
+
+/* Browser compat warning */
+#tp-voice-warn {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 60;
+  background: rgba(255,100,50,0.15); border: 1px solid rgba(255,100,50,0.4);
+  border-radius: 10px; padding: 10px 18px; font-size: 13px; color: rgba(255,180,160,0.95);
+  display: none; white-space: nowrap; backdrop-filter: blur(8px);
+}
+#tp-voice-warn.visible { display: block; }
+
+/* ═══════════════════════════════════════
+   REMOTE CONTROL SCREEN (phone)
+═══════════════════════════════════════ */
+#tp-remote {
+  position: fixed; inset: 0; z-index: 20; background: #000;
+  display: none; flex-direction: column; overflow: hidden;
+}
+#tp-remote.active { display: flex; }
+
+/* ── Connect panel (shown before connection) ── */
+#tp-rem-connect-panel {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+  padding: 36px 24px 24px; overflow-y: auto; flex: 1;
+}
+.tp-rem-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.6); margin-bottom: 20px;
+}
+.tp-rem-title span { color: var(--teal); }
+#tp-remote-status {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 28px;
+  padding: 8px 16px; border-radius: 20px; font-size: 13px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+}
+.tp-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a; transition: background 0.3s; }
+.tp-status-dot.ok { background: var(--teal); }
+.tp-rem-connect { width: 100%; max-width: 380px; margin-bottom: 28px; }
+.tp-rem-connect label {
+  display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.38); font-weight: 600; margin-bottom: 10px; text-align: center;
+}
+.tp-code-row { display: flex; gap: 8px; }
+#tp-rem-code {
+  flex: 1; padding: 13px 14px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--teal); font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px; letter-spacing: 8px; text-align: center; outline: none;
+}
+#tp-rem-code:focus { border-color: var(--teal-dim); }
+#tp-rem-connect-btn {
+  padding: 13px 18px; background: var(--teal); border: none; border-radius: 8px;
+  color: #000; font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer;
+}
+#tp-rem-err { margin-top: 10px; font-size: 13px; color: #ff5a5a; text-align: center; display: none; }
+#tp-rem-err.on { display: block; }
+
+/* ── Script area (fills screen when connected) ── */
+#tp-rem-script-wrap {
+  flex: 1; overflow-y: auto; display: none;
+  padding: 20px 22px 160px; -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+#tp-rem-script-wrap.live { display: block; }
+.tp-rem-line {
+  font-size: var(--rem-font-size, 32px); line-height: 1.75; color: #ffffff;
+  font-family: var(--font); font-weight: 400; margin-bottom: 14px;
+}
+.tp-rem-beat-label {
+  display: block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--teal); margin: 28px 0 10px;
+  padding: 5px 10px; background: rgba(62,207,178,0.09);
+  border-radius: 4px; width: fit-content;
+}
+
+/* ── Sticky controls bar (shown when connected) ── */
+#tp-rem-ctrl-bar {
+  flex-shrink: 0; display: none; flex-direction: column;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.96); border-top: 1px solid rgba(255,255,255,0.12);
+  padding: 8px 10px env(safe-area-inset-bottom, 10px);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  gap: 8px;
+}
+#tp-rem-ctrl-bar.live { display: flex; }
+
+/* Progress bar inside ctrl bar */
+#tp-rem-prog-bar-inner {
+  height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px;
+  overflow: hidden;
+}
+#tp-rem-prog-fill { height: 100%; background: var(--teal); border-radius: 2px; width: 0%; transition: width 0.6s; }
+
+/* Row 1 — Play/Pause · Speed − + · Size A− A+ · Restart */
+.tp-rem-ctrl-row {
+  display: flex; align-items: stretch; gap: 6px;
+}
+
+/* All buttons in ctrl bar share this base — minimum 48px tall */
+.tp-rem-btn {
+  min-height: 48px; flex: 1;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; color: #fff; font-family: var(--font);
+  font-size: 18px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.1s; -webkit-tap-highlight-color: transparent;
+}
+.tp-rem-btn:active { background: rgba(255,255,255,0.18); transform: scale(0.94); }
+
+/* Play/pause: teal accent */
+#tp-rem-pp {
+  flex: 1.4;
+  background: rgba(62,207,178,0.12); border-color: rgba(62,207,178,0.5);
+  color: var(--teal); font-size: 22px;
+}
+#tp-rem-pp:active { background: rgba(62,207,178,0.28); }
+
+/* Label cells between − and + */
+.tp-rem-lbl {
+  flex: 1.2; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: rgba(255,255,255,0.4);
+  pointer-events: none; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; min-height: 48px;
+}
+.tp-rem-lbl span { color: var(--teal); font-size: 16px; font-weight: 700; display: block; margin-top: 2px; }
+
+/* Row 2 — ⏪ 10s · seek slider · 10s ⏩ */
+.tp-rem-seek-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.tp-rem-seek-btn {
+  flex: 0 0 64px; min-height: 48px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; color: #fff; font-family: var(--font);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; transition: all 0.1s;
+}
+.tp-rem-seek-btn:active { background: rgba(255,255,255,0.16); }
+#tp-rem-seek-slider {
+  flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
+  background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; cursor: pointer;
+}
+#tp-rem-seek-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--teal); cursor: pointer;
+}
+
+/* Legacy */
+.tp-rem-prog-wrap { display: none; }
+/* These old selectors kept for any inline-style references */
+.tp-rem-speed-row { display: none; }
+.tp-rem-spd-btn   { display: none; }
+.tp-rem-spd-label { display: none; }
+#tp-rem-restart   { display: none; } /* replaced by .tp-rem-btn version in HTML */
+
+#tp-rem-project-name {
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45);
+  text-align: center; padding: 4px 0 0;
+}
+
+/* ═══════════════════════════════════════
+   VOICE DEVICE SCREEN
+═══════════════════════════════════════ */
+#tp-voice-device {
+  position: fixed; inset: 0; z-index: 30; background: #000;
+  display: none; flex-direction: column; align-items: center;
+  justify-content: space-between; padding: 32px 20px env(safe-area-inset-bottom, 20px);
+  text-align: center; overflow-y: auto;
+}
+#tp-voice-device.active { display: flex; }
+
+#tp-vd-top { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#tp-vd-mic-icon { font-size: 64px; line-height: 1; }
+#tp-vd-mic-icon.pulsing { animation: tp-pulse 1.2s ease-in-out infinite; }
+#tp-vd-status {
+  font-family: 'Bebas Neue', sans-serif; font-size: 34px; letter-spacing: 4px; color: var(--teal);
+}
+#tp-vd-status.paused { color: #ffb432; }
+#tp-vd-operator-lock {
+  display: none; font-size: 13px; font-weight: 700; color: #ffb432;
+  background: rgba(255,180,50,0.1); border: 1px solid rgba(255,180,50,0.3);
+  border-radius: 20px; padding: 5px 14px;
+}
+#tp-vd-operator-lock.visible { display: block; }
+
+#tp-vd-vol-bar-wrap {
+  width: 100%; max-width: 300px; height: 10px; background: rgba(255,255,255,0.1);
+  border-radius: 5px; overflow: hidden; margin: 4px 0;
+}
+#tp-vd-vol-fill { height: 100%; background: var(--teal); width: 0%; border-radius: 5px; transition: width 0.08s; }
+
+/* Bottom controls panel */
+#tp-vd-controls {
+  width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Big pause/play button */
+#tp-vd-pp {
+  width: 100%; padding: 18px; font-size: 18px; font-weight: 700;
+  background: rgba(62,207,178,0.12); border: 2px solid var(--teal);
+  border-radius: 14px; color: var(--teal); font-family: var(--font);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.12s;
+}
+#tp-vd-pp:active { background: rgba(62,207,178,0.28); }
+#tp-vd-pp.is-paused { background: rgba(255,180,50,0.1); border-color: #ffb432; color: #ffb432; }
+
+/* Seek buttons row */
+.tp-vd-row { display: flex; gap: 10px; }
+.tp-vd-btn {
+  flex: 1; min-height: 52px; font-size: 14px; font-weight: 700;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px; color: #fff; font-family: var(--font);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.1s;
+}
+.tp-vd-btn:active { background: rgba(255,255,255,0.18); }
+
+/* Slider rows */
+.tp-vd-slider-row { display: flex; flex-direction: column; gap: 8px; }
+.tp-vd-lbl {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; color: rgba(255,255,255,0.4); text-align: left;
+}
+.tp-vd-lbl span { color: var(--teal); font-size: 13px; margin-left: 6px; }
+.tp-vd-mult-ends {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: rgba(255,255,255,0.25); margin-top: -4px;
+}
+#tp-vd-sense, #tp-vd-mult {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+  background: rgba(62,207,178,0.25); border-radius: 2px; outline: none; cursor: pointer;
+}
+#tp-vd-sense::-webkit-slider-thumb,
+#tp-vd-mult::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--teal); cursor: pointer;
+}
+
+/* Session info */
+#tp-vd-session-info { font-size: 12px; color: rgba(255,255,255,0.2); }
+#tp-vd-conn-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a;
+  display: inline-block; margin-right: 6px; transition: background 0.3s;
+}
+#tp-vd-conn-dot.ok { background: var(--teal); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 1 — SELECTOR
+══════════════════════════════════════════ -->
+<div id="tp-selector">
+  <div class="tp-sel-inner">
+
+    <div class="tp-sel-header">
+      <a href="/" class="tp-back">← Dashboard</a>
+      <h1 class="tp-sel-title">TELEPR<span>Ω</span>MPTER</h1>
+    </div>
+
+    <div class="tp-tabs">
+      <button class="tp-tab active" id="tab-project" onclick="switchTab('project')">Load Script</button>
+      <button class="tp-tab" id="tab-paste"   onclick="switchTab('paste')">Paste Text</button>
+      <button class="tp-tab" id="tab-remote"  onclick="showRemoteScreen(null)">🎮 Remote</button>
+    </div>
+
+    <div id="tp-mode-project">
+      <div class="tp-label">Project</div>
+      <select class="tp-select" id="tp-project-select" onchange="onProjectChange()">
+        <option value="">Loading approved scripts…</option>
+      </select>
+      <div id="tp-preview" class="empty">Select a project above to preview the script.</div>
+    </div>
+
+    <div id="tp-mode-paste" style="display:none">
+      <div id="tp-paste-wrap">
+        <div class="tp-label">Script Text</div>
+        <textarea id="tp-paste-text" placeholder="Paste any script here — production notes will be automatically stripped."></textarea>
+      </div>
+    </div>
+
+    <div class="tp-network">
+      <div id="tp-qr-canvas"></div>
+      <div class="tp-network-text">
+        <h4>Join on Any Device</h4>
+        <p>Scan QR code or type the URL — choose Display to mirror the script, or Control to remote-control the prompter.</p>
+        <div class="tp-ip-url" id="tp-ip-url">Detecting network address…</div>
+        <div class="tp-offline-note" id="tp-offline-note"></div>
+      </div>
+    </div>
+
+    <button id="tp-start-btn" disabled onclick="startTeleprompter()">Start Teleprompter →</button>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 2 — DISPLAY
+══════════════════════════════════════════ -->
+<div id="tp-display">
+  <div id="tp-reading-guide"></div>
+
+  <!-- Mic status indicator — top-left, only when voice sync is active -->
+  <div id="tp-mic-indicator">
+    <div id="tp-mic-dot"></div>
+    <span id="tp-mic-label">LISTENING</span>
+  </div>
+
+  <!-- Voice debug readout — shows last recognized words when voice sync active -->
+  <div id="tp-voice-debug"></div>
+
+  <!-- Browser compat warning -->
+  <div id="tp-voice-warn">⚠ Voice Sync requires microphone access — allow it in your browser settings.</div>
+
+  <div id="tp-session-badge">
+    <div id="tp-session-title" style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:600;text-align:right;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none;"></div>
+    <div class="tp-session-lbl">Remote code</div>
+    <div id="tp-session-code">----</div>
+    <div id="tp-peer-status">Waiting for remote…</div>
+  </div>
+
+  <!-- Operator-paused indicator (shown when control device has locked out voice) -->
+  <div id="tp-operator-badge">⏸ Operator paused</div>
+
+  <div id="tp-scroll-wrap">
+    <div id="tp-text-wrap">
+      <div id="tp-spacer-top"></div>
+      <div id="tp-script-lines"></div>
+    </div>
+  </div>
+
+  <div id="tp-controls">
+    <button class="tp-ctrl-btn" id="tp-play-pause" onclick="togglePlayPause()" title="Space">⏸</button>
+
+    <div class="tp-speed-group">
+      <span class="tp-ctrl-lbl">Speed</span>
+      <input type="range" id="tp-speed-slider" min="0" max="10" step="0.5" value="3"
+             oninput="setSpeed(parseFloat(this.value))">
+      <span id="tp-speed-val">3</span>
+    </div>
+
+    <div class="tp-font-group">
+      <button class="tp-font-btn" onclick="adjustFont(-6)">A−</button>
+      <span id="tp-font-val">64px</span>
+      <button class="tp-font-btn" onclick="adjustFont(6)">A+</button>
+    </div>
+
+    <button class="tp-ctrl-btn" id="tp-mirror-btn" onclick="toggleMirror()">⇆ Mirror</button>
+    <button class="tp-ctrl-btn" id="tp-voice-btn" onclick="toggleVoiceSync()">🎤 Voice</button>
+
+    <div id="tp-voice-sense-row">
+      <span class="tp-ctrl-lbl">Threshold</span>
+      <input type="range" id="tp-sense-slider" min="1" max="10" step="1" value="5"
+             title="Mic sensitivity: low = starts scrolling on whisper, high = needs loud voice">
+    </div>
+
+    <button class="tp-ctrl-btn" onclick="backToSelector()">📋 Scripts</button>
+
+    <div class="tp-ctrl-spacer"></div>
+
+    <button class="tp-ctrl-btn" onclick="doExitFullscreen()">✕ Exit</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 3 — REMOTE CONTROL (phone)
+══════════════════════════════════════════ -->
+<div id="tp-remote">
+
+  <!-- Connect panel — hidden after connection -->
+  <div id="tp-rem-connect-panel">
+    <div class="tp-rem-title">REMOTE <span>CONTROL</span></div>
+
+    <div id="tp-remote-status">
+      <div class="tp-status-dot" id="tp-rem-dot"></div>
+      <span id="tp-rem-status-txt">Not connected</span>
+    </div>
+
+    <div class="tp-rem-connect">
+      <label>4-digit session code</label>
+      <div class="tp-code-row">
+        <input type="text" id="tp-rem-code" maxlength="4" placeholder="1234"
+               inputmode="numeric" pattern="[0-9]*">
+        <button id="tp-rem-connect-btn" onclick="connectRemote()">Connect</button>
+      </div>
+      <div id="tp-rem-err"></div>
+    </div>
+  </div>
+
+  <!-- Script text — fills screen when connected -->
+  <div id="tp-rem-script-wrap">
+    <div id="tp-rem-project-name"></div>
+    <div id="tp-rem-script-lines"></div>
+  </div>
+
+  <!-- Sticky bottom controls — shown when connected -->
+  <div id="tp-rem-ctrl-bar">
+    <div id="tp-rem-prog-bar-inner"><div id="tp-rem-prog-fill"></div></div>
+
+    <!-- Row 1: Play/Pause · Speed − + · Size A− A+ · Restart -->
+    <div class="tp-rem-ctrl-row">
+      <button id="tp-rem-pp"     class="tp-rem-btn" onclick="remoteSend('toggle_pause')">▶</button>
+      <button                    class="tp-rem-btn" onclick="remoteAdjustSpeed(-0.5)">−</button>
+      <div class="tp-rem-lbl">SPD<span id="tp-rem-spd-val">3</span></div>
+      <button                    class="tp-rem-btn" onclick="remoteAdjustSpeed(0.5)">+</button>
+      <button                    class="tp-rem-btn" onclick="remAdjustFontSize(-2)">A−</button>
+      <div class="tp-rem-lbl">SZ<span id="tp-rem-font-val">32</span></div>
+      <button                    class="tp-rem-btn" onclick="remAdjustFontSize(2)">A+</button>
+      <button                    class="tp-rem-btn" onclick="remoteSend('restart')" title="Restart">↺</button>
+    </div>
+
+    <!-- Row 2: ⏪ 10s · position slider · 10s ⏩ -->
+    <div class="tp-rem-seek-row">
+      <button class="tp-rem-seek-btn" onclick="remSeekSeconds(-10)">⏪ 10s</button>
+      <input type="range" id="tp-rem-seek-slider" min="0" max="100" value="0"
+             oninput="remSeekPct(this.value)">
+      <button class="tp-rem-seek-btn" onclick="remSeekSeconds(10)">10s ⏩</button>
+    </div>
+  </div>
+
+  <!-- Legacy hidden elements — keep IDs alive for JS that references them -->
+  <div style="display:none">
+    <div class="tp-rem-prog-wrap"><div class="tp-rem-prog-bar"><div></div></div></div>
+    <span id="tp-rem-pct">0</span>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 4 — JOIN CHOICE
+══════════════════════════════════════════ -->
+<div id="tp-join">
+  <div class="tp-join-heading">Session</div>
+  <div class="tp-join-code-display" id="tp-join-code">----</div>
+  <div class="tp-join-subtitle">How do you want to use this device?</div>
+  <div class="tp-join-choices">
+    <button class="tp-join-btn" onclick="joinAsDisplay()">
+      <div class="tp-join-btn-icon">📺</div>
+      <div class="tp-join-btn-text">
+        <div class="tp-join-btn-label">Display</div>
+        <div class="tp-join-btn-desc">Show the script — synced with the main prompter</div>
+      </div>
+    </button>
+    <button class="tp-join-btn" onclick="joinAsControl()">
+      <div class="tp-join-btn-icon">🎮</div>
+      <div class="tp-join-btn-text">
+        <div class="tp-join-btn-label">Control</div>
+        <div class="tp-join-btn-desc">Remote control — play, pause, adjust speed</div>
+      </div>
+    </button>
+    <button class="tp-join-btn" onclick="joinAsVoice()">
+      <div class="tp-join-btn-icon">🎤</div>
+      <div class="tp-join-btn-text">
+        <div class="tp-join-btn-label">Voice</div>
+        <div class="tp-join-btn-desc">Mic in your pocket — your voice drives the scroll</div>
+      </div>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 5 — VOICE DEVICE (mic in pocket)
+══════════════════════════════════════════ -->
+<div id="tp-voice-device">
+
+  <!-- Top: mic status -->
+  <div id="tp-vd-top">
+    <div id="tp-vd-mic-icon">🎤</div>
+    <div id="tp-vd-status">CONNECTING…</div>
+    <div id="tp-vd-operator-lock">⏸ Operator paused</div>
+  </div>
+
+  <!-- Middle: volume bar -->
+  <div id="tp-vd-vol-bar-wrap"><div id="tp-vd-vol-fill"></div></div>
+
+  <!-- Bottom controls — one-thumb reachable -->
+  <div id="tp-vd-controls">
+
+    <!-- Large pause/play toggle -->
+    <button id="tp-vd-pp" onclick="vdTogglePause()">⏸ Pause</button>
+
+    <!-- Seek row -->
+    <div class="tp-vd-row">
+      <button class="tp-vd-btn" onclick="vdSend('seek_relative_seconds', -10)">⏪ 10s</button>
+      <button class="tp-vd-btn" onclick="vdSend('seek_relative_seconds', 10)">10s ⏩</button>
+    </div>
+
+    <!-- Sensitivity -->
+    <div class="tp-vd-slider-row">
+      <span class="tp-vd-lbl">Mic Sensitivity</span>
+      <input type="range" id="tp-vd-sense" min="1" max="10" value="5">
+    </div>
+
+    <!-- Speed multiplier -->
+    <div class="tp-vd-slider-row">
+      <span class="tp-vd-lbl">Speed  <span id="tp-vd-mult-val">1.0×</span></span>
+      <input type="range" id="tp-vd-mult" min="0.5" max="2.0" step="0.1" value="1.0"
+             oninput="vdUpdateMult(this.value)">
+      <div class="tp-vd-mult-ends"><span>SLOW</span><span>FAST</span></div>
+    </div>
+
+  </div>
+
+  <!-- Connection status -->
+  <div id="tp-vd-session-info">
+    <span id="tp-vd-conn-dot"></span>
+    <span id="tp-vd-session-txt">Not connected</span>
+  </div>
+
+</div>
+
+<!-- QR library from CDN — graceful fallback if offline -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+        crossorigin="anonymous" onerror="window.QRCode=null"></script>
+<script>
+'use strict';
+
+// ─── Constants ────────────────────────────────────────────────
+const MIN_FONT = 32, MAX_FONT = 120, DEF_FONT = 64;
+
+// ─── State ────────────────────────────────────────────────────
+let currentMode    = 'selector';
+let activeTab      = 'project';
+let loadedScript   = null;
+let fontSize       = DEF_FONT;
+let scrollSpeed    = 3;
+let isPlaying      = false;
+let isMirror       = false;
+let rafId          = null;
+let lastTs         = null;
+let scrollRem      = 0;
+let currentLineEl  = null;
+let ctrlHideTimer  = null;
+let wsConn         = null;
+let wsSession      = null;
+let stateTimer     = null;
+let remoteWS        = null;
+let remoteSpeed     = 3;
+let remotePaused    = true;
+let remRafId        = null;
+let remLastTs       = null;
+let remScrollRem    = 0;
+let remScriptReady  = false;
+let remFontSize     = 32;          // remote font size — user-adjustable
+let displayFontSize = 64;          // received from display state; used for speed scaling
+const REM_FONT_MIN  = 18;
+const REM_FONT_MAX  = 64;
+let networkInfo    = { ip: null, port: 3000 };
+let displayEventsOn    = false;
+let isSecondaryDisplay = false;
+
+// ─── URL params ───────────────────────────────────────────────
+const PARAMS   = new URLSearchParams(window.location.search);
+const P_MODE   = PARAMS.get('mode');
+const P_SESS   = PARAMS.get('session');
+const P_PROJ   = PARAMS.get('project_id');
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+
+async function init() {
+  await loadNetworkInfo();
+
+  if (P_MODE === 'voice') {
+    showVoiceDevice(P_SESS);
+    return;
+  }
+
+  if (P_MODE === 'control') {
+    showRemoteScreen(P_SESS);
+    return;
+  }
+
+  // Session code in URL but no explicit mode → show join choice screen
+  if (P_SESS && P_SESS.length === 4 && !P_MODE) {
+    showJoinScreen(P_SESS);
+    return;
+  }
+
+  // Selector flow
+  await loadScriptList();
+  if (P_PROJ) {
+    document.getElementById('tp-project-select').value = P_PROJ;
+    await onProjectChange();
+  }
+  if (P_MODE === 'display' && loadedScript) {
+    startTeleprompter();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NETWORK INFO + QR
+// ═══════════════════════════════════════════════════════════════
+
+async function loadNetworkInfo() {
+  try {
+    const r = await fetch('/api/teleprompter/network-info');
+    if (r.ok) { const d = await r.json(); if (d.ok) networkInfo = d; }
+  } catch (_) {}
+
+  const ip   = networkInfo.ip   || window.location.hostname;
+  const port = networkInfo.port || window.location.port || 3000;
+  const base = `http://${ip}:${port}`;
+
+  document.getElementById('tp-ip-url').textContent = `${base}/teleprompter.html?session=XXXX`;
+
+  if (!networkInfo.ip) {
+    document.getElementById('tp-offline-note').textContent = 'Could not detect local IP — check network connection.';
+  }
+
+  // QR shows base URL; updated to session-specific URL after WS connects
+  buildQR(`${base}/teleprompter.html`);
+}
+
+function buildQR(url) {
+  const c = document.getElementById('tp-qr-canvas');
+  c.innerHTML = '';
+  if (window.QRCode) {
+    try {
+      new QRCode(c, { text: url, width: 80, height: 80,
+        colorDark: '#e8ebe6', colorLight: '#161916',
+        correctLevel: QRCode.CorrectLevel.M });
+    } catch (_) { c.textContent = 'QR'; }
+  } else {
+    c.style.cssText = 'width:80px;height:80px;background:#1c1f1b;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,0.3);';
+    c.textContent = 'QR offline';
+  }
+}
+
+function updateQRForSession(code) {
+  const ip   = networkInfo.ip   || window.location.hostname;
+  const port = networkInfo.port || window.location.port || 3000;
+  const url  = `http://${ip}:${port}/teleprompter.html?session=${code}`;
+  buildQR(url);
+  const urlEl = document.getElementById('tp-ip-url');
+  if (urlEl) urlEl.textContent = url;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCRIPT LIST
+// ═══════════════════════════════════════════════════════════════
+
+async function loadScriptList() {
+  try {
+    const r = await fetch('/api/teleprompter/scripts');
+    const d = await r.json();
+    const sel = document.getElementById('tp-project-select');
+    if (!d.scripts?.length) {
+      sel.innerHTML = '<option value="">No approved scripts — approve one in WritΩr</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— Select a project —</option>';
+    for (const s of d.scripts) {
+      const opt = document.createElement('option');
+      opt.value = s.project_id;
+      opt.textContent = s.project_name;
+      opt.dataset.preview = s.preview || '';
+      sel.appendChild(opt);
+    }
+  } catch (_) {
+    document.getElementById('tp-project-select').innerHTML =
+      '<option value="">Error loading scripts</option>';
+  }
+}
+
+async function onProjectChange() {
+  const sel  = document.getElementById('tp-project-select');
+  const pid  = sel.value;
+  const prev = document.getElementById('tp-preview');
+  const btn  = document.getElementById('tp-start-btn');
+
+  if (!pid) {
+    prev.textContent = 'Select a project above to preview the script.';
+    prev.className = 'empty';
+    loadedScript = null; btn.disabled = true; return;
+  }
+
+  prev.textContent = 'Loading…'; prev.className = '';
+  try {
+    const r = await fetch(`/api/teleprompter/script/${pid}`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+
+    const segs = processScript(d.script_text);
+    loadedScript = {
+      projectId:   parseInt(pid),
+      projectName: d.project_name || 'Untitled',
+      text:        d.script_text,
+      segments:    segs
+    };
+
+    const preview = segs.filter(s => s.type === 'text').slice(0, 4).map(s => s.content).join('\n');
+    prev.textContent = preview || '(Script is empty after stripping production notes)';
+    btn.disabled = false;
+  } catch (e) {
+    prev.textContent = 'Error: ' + e.message; prev.className = 'empty';
+    loadedScript = null; btn.disabled = true;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tp-mode-project').style.display = tab === 'project' ? '' : 'none';
+  document.getElementById('tp-mode-paste').style.display   = tab === 'paste'   ? '' : 'none';
+  document.getElementById('tab-project').classList.toggle('active', tab === 'project');
+  document.getElementById('tab-paste').classList.toggle('active', tab === 'paste');
+  if (tab === 'paste') document.getElementById('tp-start-btn').disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCRIPT PROCESSING — strip all production cues
+// Talent NEVER sees beat labels, b-roll notes, or directions
+// ═══════════════════════════════════════════════════════════════
+
+function processScript(rawText) {
+  if (!rawText) return [];
+
+  // ── Phase 1: whole-document cuts ─────────────────────────────
+  // Drop everything from PRODUCTION NOTES onward (any capitalisation/markdown)
+  let text = rawText.replace(/\*{0,2}PRODUCTION NOTES:?\*{0,2}[\s\S]*$/im, '');
+
+  // ── Phase 2: line-by-line ─────────────────────────────────────
+  const segs = [];
+  let beatN = 0;
+  let lastT = null;
+
+  // Bail-out keywords — if the TRIMMED line contains any of these after
+  // removing the mic emoji it gets dropped entirely (no partial salvage)
+  const DROP_KEYWORDS = [
+    /\bBEAT NEEDED\b/i,
+    /\bb-roll\b/i,
+    /\bINSERT\b/,
+    /\bPRODUCTION NOTES?\b/i,
+    /\bBridge line\b/i,
+    /\bRecord this\b/i,
+  ];
+
+  for (let line of text.split('\n')) {
+    const raw = line;
+    const trimmed = line.trim();
+
+    // ── 1. Skip blank lines (handled at end after processing) ──
+    if (!trimmed) {
+      if (lastT === 'text') { segs.push({ type: 'break' }); lastT = 'break'; }
+      continue;
+    }
+
+    // ── 2. Beat marker: [● BEAT …] → teal divider, no text ──────
+    const bm = trimmed.match(/^\[●\s*BEAT(?:\s+\d+)?:\s*([^\]]+)\]$/i);
+    if (bm) {
+      beatN++;
+      segs.push({ type: 'beat_marker', beatName: bm[1].trim(), beatN });
+      lastT = 'beat_marker';
+      continue;
+    }
+
+    // ── 3. Drop entire lines that start with a production cue ───
+    //    Covers [anything], (anything), *, **, ---, emoji-only
+    const fc = trimmed[0]; // first char
+    if (fc === '[')  continue;   // any bracketed line
+    if (fc === '(')  continue;   // any paren-started line
+    if (fc === '*')  continue;   // * or ** markdown notes
+    if (/^-{2,}/.test(trimmed)) continue; // --- dividers
+
+    // Drop lines that are only emoji / symbols (no latin/number content)
+    if (/^[\p{Emoji}\p{S}\s]+$/u.test(trimmed) && !/[a-zA-Z0-9]/.test(trimmed)) continue;
+
+    // ── 4. Strip 🎤 and apply keyword bail-out ───────────────────
+    line = trimmed.replace(/^🎤\s*/u, '').trim();
+
+    // After stripping the mic emoji, check drop keywords
+    if (DROP_KEYWORDS.some(re => re.test(line))) continue;
+
+    // ── 5. Inline production-note removal (within spoken lines) ──
+    line = line.replace(/\(b-roll:[^)]*\)/gi, '');
+    line = line.replace(/\([^)]*b-roll[^)]*\)/gi, '');
+    line = line.replace(/\(INSERT[^)]+\)/gi, '');
+    line = line.replace(/\[[^\]]*\]/g, '');             // [anything in brackets]
+    line = line.replace(/\([a-z][^)]{0,80}\)/g, '');    // (lowercase-starting note)
+    line = line.replace(/\*{1,2}[^*\n]+\*{1,2}/g, ''); // **bold** or *italic* notes
+    line = line.replace(/\s{2,}/g, ' ').trim();
+
+    // ── 6. Reject if nothing spoken remains ──────────────────────
+    if (!line) {
+      if (lastT === 'text') { segs.push({ type: 'break' }); lastT = 'break'; }
+      continue;
+    }
+
+    segs.push({ type: 'text', content: line });
+    lastT = 'text';
+  }
+
+  return segs;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+
+function renderScript(segs) {
+  const c = document.getElementById('tp-script-lines');
+  c.innerHTML = '';
+
+  for (const seg of segs) {
+    if (seg.type === 'text') {
+      const d = document.createElement('div');
+      d.className   = 'tp-line tp-below';
+      d.textContent = seg.content;
+      c.appendChild(d);
+    } else if (seg.type === 'beat_marker') {
+      const d = document.createElement('div');
+      d.className = 'tp-beat-marker';
+      d.innerHTML = `<div class="tp-beat-rule"></div>` +
+        `<div class="tp-beat-label">— ${esc(seg.beatName)} —</div>` +
+        `<div class="tp-beat-rule"></div>`;
+      c.appendChild(d);
+    } else if (seg.type === 'break') {
+      const d = document.createElement('div');
+      d.className = 'tp-break';
+      c.appendChild(d);
+    }
+  }
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// START TELEPROMPTER
+// ═══════════════════════════════════════════════════════════════
+
+function startTeleprompter() {
+  let segs;
+  if (activeTab === 'paste') {
+    const raw = (document.getElementById('tp-paste-text').value || '').trim();
+    if (!raw) { alert('Please paste some script text first.'); return; }
+    segs = processScript(raw);
+    loadedScript = { projectId: null, text: raw, segments: segs };
+  } else {
+    if (!loadedScript) { alert('Please select a project first.'); return; }
+    segs = loadedScript.segments;
+  }
+  if (!segs.length) { alert('No displayable content after stripping production notes.'); return; }
+
+  renderScript(segs);
+  document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+  document.getElementById('tp-font-val').textContent = fontSize + 'px';
+
+  document.getElementById('tp-selector').style.display = 'none';
+  document.getElementById('tp-display').classList.add('active');
+
+  document.getElementById('tp-scroll-wrap').scrollTop = 0;
+  isPlaying = false; updatePPBtn();
+  currentMode = 'display';
+
+  attachDisplayEvents();
+  connectDisplayWS();
+  reqFS(document.getElementById('tp-display'));
+
+  if (rafId) cancelAnimationFrame(rafId);
+  lastTs = null; scrollRem = 0;
+  rafId = requestAnimationFrame(animTick);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANIMATION LOOP
+// speed * 20 px/s  (speed 5 = 100 px/s ≈ comfortable speaking pace)
+// ═══════════════════════════════════════════════════════════════
+
+function animTick(ts) {
+  // In voice mode, speed comes from volume; otherwise from the play/speed controls
+  const spd = voiceActive ? voiceEffectiveSpd
+            : (isPlaying ? scrollSpeed : 0);
+
+  // Sample mic volume every frame when voice sync is active
+  if (voiceActive) sampleVoiceVolume();
+
+  if (spd > 0) {
+    if (lastTs !== null) {
+      scrollRem += spd * 20 * ((ts - lastTs) / 1000);
+      const px = Math.floor(scrollRem);
+      if (px >= 1) {
+        scrollRem -= px;
+        const w = document.getElementById('tp-scroll-wrap');
+        w.scrollTop += px;
+        if (w.scrollTop + w.clientHeight >= w.scrollHeight - 8) {
+          // Reached end — stop whichever mode is active
+          if (voiceActive) { voiceEffectiveSpd = 0; voiceScrolling = false; }
+          else              { isPlaying = false; updatePPBtn(); }
+        }
+      }
+    }
+    lastTs = ts;
+  } else {
+    lastTs = null; scrollRem = 0;
+  }
+
+  updateCurrentLine();
+
+  // Throttled position broadcast to remotes
+  const now = Date.now();
+  if (!animTick._lastBcast || now - animTick._lastBcast > 250) {
+    animTick._lastBcast = now;
+    sendDisplayState();
+  }
+
+  rafId = requestAnimationFrame(animTick);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CURRENT LINE
+// Focus point at center of screen (50%) — talent sees 3-4 lines
+// above (just said) and 3-4 lines below (coming up)
+// ═══════════════════════════════════════════════════════════════
+
+function updateCurrentLine() {
+  const focusY = window.innerHeight * 0.50;
+  const lines  = document.querySelectorAll('.tp-line');
+  if (!lines.length) return;
+
+  let best = null, bestD = Infinity;
+  for (const l of lines) {
+    const r = l.getBoundingClientRect();
+    const d = Math.abs(r.top + r.height / 2 - focusY);
+    if (d < bestD) { bestD = d; best = l; }
+  }
+
+  if (best === currentLineEl) return;
+  currentLineEl = best;
+
+  const all = Array.from(lines);
+  const idx  = all.indexOf(best);
+  all.forEach((l, i) => {
+    l.classList.remove('tp-current', 'tp-above', 'tp-below');
+    if      (i < idx) l.classList.add('tp-above');
+    else if (i > idx) l.classList.add('tp-below');
+    else              l.classList.add('tp-current');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════════
+
+function togglePlayPause() {
+  isPlaying = !isPlaying;
+  lastTs = null; scrollRem = 0;
+  updatePPBtn();
+  sendDisplayState();
+}
+
+function updatePPBtn() {
+  const b = document.getElementById('tp-play-pause');
+  if (b) b.textContent = isPlaying ? '⏸' : '▶';
+}
+
+function setSpeed(v) {
+  scrollSpeed = Math.max(0, Math.min(10, v));
+  const sl = document.getElementById('tp-speed-slider');
+  const vl = document.getElementById('tp-speed-val');
+  if (sl) sl.value = scrollSpeed;
+  if (vl) vl.textContent = scrollSpeed % 1 === 0 ? String(scrollSpeed) : scrollSpeed.toFixed(1);
+  sendDisplayState();
+}
+
+function adjustFont(delta) {
+  fontSize = Math.max(MIN_FONT, Math.min(MAX_FONT, fontSize + delta));
+  document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+  const vl = document.getElementById('tp-font-val');
+  if (vl) vl.textContent = fontSize + 'px';
+}
+
+function toggleMirror() {
+  isMirror = !isMirror;
+  document.getElementById('tp-scroll-wrap').classList.toggle('mirror', isMirror);
+  document.getElementById('tp-mirror-btn').classList.toggle('active', isMirror);
+}
+
+function backToSelector() {
+  isPlaying = false;
+  isSecondaryDisplay = false;
+  if (rafId)      { cancelAnimationFrame(rafId); rafId = null; }
+  if (wsConn)     { wsConn.close(); wsConn = null; }
+  if (stateTimer) { clearInterval(stateTimer); stateTimer = null; }
+  if (voiceActive) stopVoiceSync();
+  doExitFullscreen();
+  document.getElementById('tp-display').classList.remove('active');
+  document.getElementById('tp-selector').style.display = '';
+  document.getElementById('tp-session-badge').classList.remove('visible');
+  currentMode = 'selector';
+}
+
+function doExitFullscreen() {
+  try {
+    if (document.fullscreenElement || document.webkitFullscreenElement)
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } catch (_) {}
+}
+
+function reqFS(el) {
+  try {
+    if (el.requestFullscreen)            el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch (_) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DISPLAY EVENTS
+// ═══════════════════════════════════════════════════════════════
+
+function attachDisplayEvents() {
+  if (displayEventsOn) return;
+  displayEventsOn = true;
+
+  const display = document.getElementById('tp-display');
+  const wrap    = document.getElementById('tp-scroll-wrap');
+
+  display.addEventListener('mousemove',  showCtrl);
+  display.addEventListener('touchstart', showCtrl, { passive: true });
+
+  wrap.addEventListener('click', function (e) {
+    if (e.target.closest('#tp-controls')) return;
+    const line = e.target.closest('.tp-line');
+    if (line && !isPlaying) {
+      // Jump to this line when paused
+      const lineRect = line.getBoundingClientRect();
+      const focusY   = window.innerHeight * 0.50;
+      wrap.scrollTop += lineRect.top - focusY;
+      sendDisplayState();
+      return;
+    }
+    togglePlayPause();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (currentMode !== 'display') return;
+    if (e.code === 'Space')     { e.preventDefault(); togglePlayPause(); }
+    if (e.code === 'ArrowUp')   { e.preventDefault(); setSpeed(Math.min(10, scrollSpeed + 0.5)); }
+    if (e.code === 'ArrowDown') { e.preventDefault(); setSpeed(Math.max(0,  scrollSpeed - 0.5)); }
+    if (e.code === 'Escape')    { backToSelector(); }
+  });
+
+  display.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    setSpeed(e.deltaY < 0 ? Math.min(10, scrollSpeed + 0.5) : Math.max(0, scrollSpeed - 0.5));
+  }, { passive: false });
+}
+
+function showCtrl() {
+  const c = document.getElementById('tp-controls');
+  if (!c) return;
+  c.classList.add('visible');
+  clearTimeout(ctrlHideTimer);
+  ctrlHideTimer = setTimeout(() => c.classList.remove('visible'), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEBSOCKET — DISPLAY MODE
+// ═══════════════════════════════════════════════════════════════
+
+function connectDisplayWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+  catch (_) { return; }
+
+  wsConn.onopen = () => {
+    const code      = P_SESS && P_SESS.length === 4 ? P_SESS : null;
+    const title     = loadedScript?.projectName || null;
+    const projectId = loadedScript?.projectId   || null;
+    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, title, projectId }));
+  };
+
+  wsConn.onmessage = (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+
+    if (msg.type === 'registered') {
+      wsSession = msg.session;
+      document.getElementById('tp-session-code').textContent = wsSession;
+      document.getElementById('tp-session-badge').classList.add('visible');
+      // Show project title above the code if available
+      const titleEl = document.getElementById('tp-session-title');
+      const title   = loadedScript?.projectName || msg.title || null;
+      if (title && title !== 'Untitled') {
+        titleEl.textContent = title;
+        titleEl.style.display = '';
+      }
+      updateQRForSession(wsSession);
+      updateCountBadge(msg.count);
+      if (stateTimer) clearInterval(stateTimer);
+      stateTimer = setInterval(sendDisplayState, 250);
+    }
+
+    if (msg.type === 'count_update') {
+      updateCountBadge(msg.count);
+    }
+
+    if (msg.type === 'command') {
+      const a = msg.action;
+      if (a === 'pause')        { isPlaying = false; lastTs = null; updatePPBtn(); }
+      if (a === 'play')         { isPlaying = true;  lastTs = null; updatePPBtn(); }
+      if (a === 'toggle_pause') { togglePlayPause(); }
+      if (a === 'speed')        { setSpeed(msg.value); }
+      if (a === 'restart')      {
+        document.getElementById('tp-scroll-wrap').scrollTop = 0;
+        isPlaying = false; lastTs = null; updatePPBtn();
+      }
+      if (a === 'seek_pct') {
+        const w = document.getElementById('tp-scroll-wrap');
+        const max = w.scrollHeight - w.clientHeight;
+        if (max > 0) w.scrollTop = Math.round((msg.value / 100) * max);
+        sendDisplayState();
+      }
+      if (a === 'seek_relative_seconds') {
+        const w = document.getElementById('tp-scroll-wrap');
+        const px = msg.value * scrollSpeed * 20;
+        w.scrollTop = Math.max(0, Math.min(w.scrollHeight - w.clientHeight, w.scrollTop + px));
+        sendDisplayState();
+      }
+      // Show operator badge when Cari explicitly pauses/plays
+      if (msg.source === 'operator') {
+        const nowPaused = (a === 'pause') || (a === 'toggle_pause' && !isPlaying);
+        showOperatorBadge(nowPaused);
+      }
+    }
+  };
+
+  wsConn.onerror = () => {};
+  wsConn.onclose = () => {
+    const el = document.getElementById('tp-peer-status');
+    if (el) { el.textContent = 'Remote disconnected'; el.classList.remove('connected'); }
+  };
+}
+
+function sendDisplayState() {
+  if (!wsConn || wsConn.readyState !== WebSocket.OPEN) return;
+  if (isSecondaryDisplay) return; // follower — never broadcasts state
+  const w   = document.getElementById('tp-scroll-wrap');
+  const max = w.scrollHeight - w.clientHeight;
+  const pos = max > 0 ? Math.round((w.scrollTop / max) * 100) : 0;
+  wsConn.send(JSON.stringify({
+    type:      'state',
+    state:     { speed: scrollSpeed, paused: !isPlaying, position: pos },
+    title:     loadedScript?.projectName || null,
+    projectId: loadedScript?.projectId   || null,
+    fontSize:  parseInt(getComputedStyle(document.documentElement).getPropertyValue('--font-size') || '64', 10)
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REMOTE CONTROL SCREEN
+// ═══════════════════════════════════════════════════════════════
+
+function showRemoteScreen(prefillCode) {
+  currentMode = 'remote';
+  document.getElementById('tp-selector').style.display = 'none';
+  document.getElementById('tp-remote').classList.add('active');
+  if (prefillCode) {
+    document.getElementById('tp-rem-code').value = prefillCode;
+    connectRemote();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// JOIN CHOICE SCREEN
+// ═══════════════════════════════════════════════════════════════
+
+function showJoinScreen(code) {
+  currentMode = 'join';
+  document.getElementById('tp-selector').style.display = 'none';
+  document.getElementById('tp-join').classList.add('active');
+  document.getElementById('tp-join-code').textContent = code;
+}
+
+function joinAsDisplay() {
+  isSecondaryDisplay = true;
+  document.getElementById('tp-join').classList.remove('active');
+  connectSecondaryDisplayWS(P_SESS);
+}
+
+function joinAsControl() {
+  document.getElementById('tp-join').classList.remove('active');
+  showRemoteScreen(P_SESS);
+}
+
+function joinAsVoice() {
+  document.getElementById('tp-join').classList.remove('active');
+  showVoiceDevice(P_SESS);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DEVICE COUNT BADGE
+// ═══════════════════════════════════════════════════════════════
+
+function updateCountBadge(count) {
+  if (!count) return;
+  const el = document.getElementById('tp-peer-status');
+  if (!el) return;
+  const d = count.displays || 0;
+  const c = count.controls || 0;
+  const parts = [];
+  if (d > 0) parts.push(`${d} display${d !== 1 ? 's' : ''}`);
+  if (c > 0) parts.push(`${c} control${c !== 1 ? 's' : ''}`);
+  if (parts.length) {
+    el.textContent = parts.join(' · ');
+    el.classList.toggle('connected', c > 0 || d > 1);
+  } else {
+    el.textContent = 'Waiting for devices…';
+    el.classList.remove('connected');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEBSOCKET — SECONDARY DISPLAY (follower mode)
+// Joins an existing session, receives state, never broadcasts back
+// ═══════════════════════════════════════════════════════════════
+
+async function connectSecondaryDisplayWS(code) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+  catch (_) { return; }
+
+  wsConn.onopen = () => {
+    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, projectId: loadedScript?.projectId || null }));
+  };
+
+  wsConn.onmessage = async (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+
+    if (msg.type === 'registered') {
+      wsSession  = msg.session;
+      const pid  = msg.projectId;
+
+      // Load the script from this session's project
+      if (pid) {
+        try {
+          const r = await fetch(`/api/teleprompter/script/${pid}`);
+          const d = await r.json();
+          if (!d.ok) throw new Error(d.error);
+          const segs = processScript(d.script_text);
+          loadedScript = {
+            projectId:   pid,
+            projectName: d.project_name || msg.title || 'Untitled',
+            text:        d.script_text,
+            segments:    segs
+          };
+        } catch (_) { loadedScript = null; }
+      }
+
+      // Render and show display
+      if (loadedScript?.segments?.length) renderScript(loadedScript.segments);
+      document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+      document.getElementById('tp-selector').style.display = 'none';
+      document.getElementById('tp-display').classList.add('active');
+      document.getElementById('tp-scroll-wrap').scrollTop = 0;
+      currentMode = 'display';
+
+      // Apply initial session state
+      if (msg.state) {
+        scrollSpeed = msg.state.speed  ?? scrollSpeed;
+        isPlaying   = !(msg.state.paused ?? true);
+        setSpeed(scrollSpeed);
+        updatePPBtn();
+      }
+
+      // Show session badge
+      document.getElementById('tp-session-code').textContent = wsSession;
+      document.getElementById('tp-session-badge').classList.add('visible');
+      const titleEl = document.getElementById('tp-session-title');
+      const title   = loadedScript?.projectName || msg.title || null;
+      if (title && title !== 'Untitled') {
+        titleEl.textContent = title; titleEl.style.display = '';
+      }
+      updateCountBadge(msg.count);
+
+      reqFS(document.getElementById('tp-display'));
+      attachDisplayEvents();
+      if (rafId) cancelAnimationFrame(rafId);
+      lastTs = null; scrollRem = 0;
+      rafId = requestAnimationFrame(animTick);
+    }
+
+    // State sync — secondary display follows primary scroll position
+    if (msg.type === 'state') {
+      if (msg.speed  !== undefined) { scrollSpeed = msg.speed; setSpeed(scrollSpeed); }
+      if (msg.paused !== undefined) { isPlaying = !msg.paused; lastTs = null; updatePPBtn(); }
+      if (msg.position !== undefined) {
+        const w   = document.getElementById('tp-scroll-wrap');
+        const max = w.scrollHeight - w.clientHeight;
+        if (max > 0) w.scrollTop = Math.round((msg.position / 100) * max);
+      }
+    }
+
+    if (msg.type === 'count_update') updateCountBadge(msg.count);
+
+    // Commands from control also apply to secondary displays
+    if (msg.type === 'command') {
+      const a = msg.action;
+      if (a === 'pause')        { isPlaying = false; lastTs = null; updatePPBtn(); }
+      if (a === 'play')         { isPlaying = true;  lastTs = null; updatePPBtn(); }
+      if (a === 'toggle_pause') { togglePlayPause(); }
+      if (a === 'speed')        { setSpeed(msg.value); }
+      if (a === 'restart')      {
+        document.getElementById('tp-scroll-wrap').scrollTop = 0;
+        isPlaying = false; lastTs = null; updatePPBtn();
+      }
+      if (a === 'seek_pct') {
+        const w = document.getElementById('tp-scroll-wrap');
+        const max = w.scrollHeight - w.clientHeight;
+        if (max > 0) w.scrollTop = Math.round((msg.value / 100) * max);
+        sendDisplayState();
+      }
+      if (a === 'seek_relative_seconds') {
+        const w = document.getElementById('tp-scroll-wrap');
+        const px = msg.value * scrollSpeed * 20;
+        w.scrollTop = Math.max(0, Math.min(w.scrollHeight - w.clientHeight, w.scrollTop + px));
+        sendDisplayState();
+      }
+    }
+  };
+
+  wsConn.onerror = () => {};
+  wsConn.onclose = () => {
+    const el = document.getElementById('tp-peer-status');
+    if (el) { el.textContent = 'Disconnected'; el.classList.remove('connected'); }
+  };
+}
+
+function connectRemote() {
+  const code = (document.getElementById('tp-rem-code').value || '').trim();
+  const err  = document.getElementById('tp-rem-err');
+  err.classList.remove('on');
+
+  if (!/^\d{4}$/.test(code)) {
+    err.textContent = 'Enter the 4-digit code shown on the prompter screen.';
+    err.classList.add('on'); return;
+  }
+
+  if (remoteWS && remoteWS.readyState === WebSocket.OPEN) remoteWS.close();
+
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try { remoteWS = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+  catch (_) { return; }
+
+  remoteWS.onopen = () => {
+    remoteWS.send(JSON.stringify({ type: 'register', role: 'control', session: code }));
+  };
+
+  remoteWS.onmessage = (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+    if (msg.type === 'error') {
+      err.textContent = msg.message; err.classList.add('on');
+      setRemStatus(false); return;
+    }
+    if (msg.type === 'registered') {
+      setRemStatus(true);
+      if (msg.state) applyRemState(msg.state);
+      // Load script and switch to reading view
+      const pid   = msg.projectId;
+      const title = msg.title || null;
+      showRemConnected(pid, title);
+    }
+    if (msg.type === 'peer_connected') {
+      setRemStatus(true);
+    }
+    if (msg.type === 'peer_disconnected' && msg.role === 'display') setRemStatus(false);
+    if (msg.type === 'state') applyRemState(msg);
+  };
+
+  remoteWS.onerror = () => setRemStatus(false);
+  remoteWS.onclose = () => setRemStatus(false);
+}
+
+function applyRemState(s) {
+  const speed  = s.speed    ?? s.state?.speed;
+  const paused = s.paused   ?? s.state?.paused;
+  const pos    = s.position ?? s.state?.position;
+  const pid    = s.projectId;
+
+  // Update display font size for speed-ratio scaling
+  if (s.fontSize && s.fontSize > 0) {
+    displayFontSize = s.fontSize;
+  }
+
+  if (speed !== undefined) {
+    remoteSpeed = speed;
+    document.getElementById('tp-rem-spd-val').textContent =
+      remoteSpeed % 1 === 0 ? String(remoteSpeed) : remoteSpeed.toFixed(1);
+    remLastTs = null; // reset so speed change takes effect immediately
+  }
+  if (paused !== undefined) {
+    const wasPaused = remotePaused;
+    remotePaused = paused;
+    document.getElementById('tp-rem-pp').textContent = remotePaused ? '▶' : '⏸';
+    if (wasPaused && !remotePaused) remLastTs = null; // resume cleanly
+  }
+  if (pos !== undefined) {
+    document.getElementById('tp-rem-prog-fill').style.width = pos + '%';
+    const seekSlider = document.getElementById('tp-rem-seek-slider');
+    if (seekSlider) seekSlider.value = pos;
+    const wrap = document.getElementById('tp-rem-script-wrap');
+    if (wrap) {
+      const max = wrap.scrollHeight - wrap.clientHeight;
+      if (max > 0) {
+        const target = Math.round((pos / 100) * max);
+        const drift  = Math.abs(wrap.scrollTop - target);
+        // Snap if drifted more than 2% — lets smooth-scroll handle small movements
+        if (drift > max * 0.02) wrap.scrollTop = target;
+      }
+    }
+  }
+  // Fallback: load script if we got a projectId and haven't loaded yet
+  if (pid && !document.getElementById('tp-rem-script-lines').children.length) {
+    showRemConnected(pid, s.title || null);
+  }
+}
+
+function showRemConnected(projectId, title) {
+  // Hide connect panel, show script + controls
+  document.getElementById('tp-rem-connect-panel').style.display = 'none';
+  document.getElementById('tp-rem-script-wrap').classList.add('live');
+  document.getElementById('tp-rem-ctrl-bar').classList.add('live');
+
+  // Apply initial font size
+  document.documentElement.style.setProperty('--rem-font-size', remFontSize + 'px');
+  const fontLbl = document.getElementById('tp-rem-font-val');
+  if (fontLbl) fontLbl.textContent = remFontSize;
+
+  // Wire drag-to-speed gesture on the script area
+  attachRemDragControl();
+
+  if (title && title !== 'Untitled') {
+    const el = document.getElementById('tp-rem-project-name');
+    if (el) el.textContent = title;
+  }
+
+  if (projectId) loadRemoteScript(projectId);
+}
+
+async function loadRemoteScript(projectId) {
+  const container = document.getElementById('tp-rem-script-lines');
+  if (!container) return;
+  container.innerHTML = '<p style="color:rgba(255,255,255,0.3);font-size:14px;padding:10px 0;">Loading script…</p>';
+  try {
+    const r = await fetch(`/api/teleprompter/script/${projectId}`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    const segs = processScript(d.script_text);
+    let html = '';
+    for (const seg of segs) {
+      if (seg.type === 'beat_marker') {
+        html += `<span class="tp-rem-beat-label">${escHtml(seg.beatName)}</span>`;
+      } else if (seg.type === 'text' && seg.content?.trim()) {
+        html += `<p class="tp-rem-line">${escHtml(seg.content)}</p>`;
+      }
+    }
+    container.innerHTML = html || '<p class="tp-rem-line" style="opacity:0.4">Script loaded.</p>';
+    remScriptReady = true;
+  } catch (e) {
+    container.innerHTML = `<p style="color:rgba(255,255,255,0.4);font-size:14px;">Could not load script: ${e.message}</p>`;
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setRemStatus(ok) {
+  document.getElementById('tp-rem-dot').classList.toggle('ok', ok);
+  document.getElementById('tp-rem-status-txt').textContent = ok ? 'Connected to prompter' : 'Not connected';
+}
+
+function remoteSend(action, value) {
+  if (!remoteWS || remoteWS.readyState !== WebSocket.OPEN) return;
+  const m = { type: 'command', action, source: 'operator' };
+  if (value !== undefined) m.value = value;
+  remoteWS.send(JSON.stringify(m));
+  // Also reset remote scroll immediately on restart
+  if (action === 'restart') {
+    const wrap = document.getElementById('tp-rem-script-wrap');
+    if (wrap) wrap.scrollTop = 0;
+    remLastTs = null; remScrollRem = 0;
+  }
+}
+
+function remoteAdjustSpeed(delta) {
+  const next = Math.max(0, Math.min(10, remoteSpeed + delta));
+  remoteSend('speed', next);
+  applyRemState({ speed: next });
+}
+
+function remAdjustFontSize(delta) {
+  remFontSize = Math.max(REM_FONT_MIN, Math.min(REM_FONT_MAX, remFontSize + delta));
+  document.documentElement.style.setProperty('--rem-font-size', remFontSize + 'px');
+  const lbl = document.getElementById('tp-rem-font-val');
+  if (lbl) lbl.textContent = remFontSize;
+  remLastTs = null; // re-sync scroll timing after resize
+}
+
+function remSeekSeconds(secs) {
+  remoteSend('seek_relative_seconds', secs);
+}
+
+function remSeekPct(pct) {
+  remoteSend('seek_pct', parseFloat(pct));
+}
+
+// ── Remote drag-to-speed-control ────────────────────────────────────────────
+// Drag UP on script text = speed up. Drag DOWN = slow down.
+// 80px of drag = 1 speed unit. Speed is clamped 0–10.
+let _remDragAttached = false;
+function attachRemDragControl() {
+  if (_remDragAttached) return;
+  _remDragAttached = true;
+
+  const wrap = document.getElementById('tp-rem-script-wrap');
+  if (!wrap) return;
+
+  let startY      = null;
+  let baseSpeed   = null;
+
+  wrap.addEventListener('touchstart', (e) => {
+    startY    = e.touches[0].clientY;
+    baseSpeed = remoteSpeed;
+  }, { passive: true });
+
+  wrap.addEventListener('touchmove', (e) => {
+    if (startY === null) return;
+    e.preventDefault(); // block native scroll — RAF loop handles scrolling
+    const deltaY = startY - e.touches[0].clientY; // positive = dragged up = faster
+    const next   = Math.max(0, Math.min(10, parseFloat((baseSpeed + deltaY / 80).toFixed(1))));
+    if (Math.abs(next - remoteSpeed) >= 0.1) {
+      remoteSpeed = next;
+      const lbl = document.getElementById('tp-rem-spd-val');
+      if (lbl) lbl.textContent = remoteSpeed % 1 === 0 ? String(remoteSpeed) : remoteSpeed.toFixed(1);
+      remoteSend('speed', next);
+      remLastTs = null;
+    }
+  }, { passive: false });
+
+  wrap.addEventListener('touchend', () => {
+    startY = null; baseSpeed = null;
+  }, { passive: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VOICE SYNC — Web Audio API volume detection
+// Speaking → scroll moves  |  Silence → scroll pauses
+// Volume level modulates speed: loud = faster, quiet = base speed
+// ═══════════════════════════════════════════════════════════════
+
+let voiceActive       = false;
+let voicePrePlayState = false;  // isPlaying before voice mode started
+let voiceEffectiveSpd = 0;      // scroll speed set by voice volume
+let voiceScrolling    = false;  // true while volume is above threshold
+let audioCtx          = null;
+let analyserNode      = null;
+let micStream         = null;
+let micSource         = null;
+let volBuffer         = null;   // Uint8Array for analyser frequency data
+let silenceTimer      = null;   // debounce before stopping scroll
+let voiceDebugTimer   = null;
+let smoothedVol       = 0;      // EMA of volume for stable detection
+const VOL_SMOOTH      = 0.18;   // EMA coefficient — lower = smoother
+
+function getVolumeThreshold() {
+  // Sense slider: 1 = very sensitive (starts on whisper), 10 = needs loud voice
+  // Maps slider 1-10 → threshold 4-28
+  const v = parseInt(document.getElementById('tp-sense-slider').value, 10) || 5;
+  return 4 + (v - 1) * (24 / 9);
+}
+
+function voiceSyncSupported() {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+
+function toggleVoiceSync() {
+  if (!voiceSyncSupported()) {
+    const warn = document.getElementById('tp-voice-warn');
+    warn.textContent = '⚠ Microphone access requires a secure context (HTTPS or localhost).';
+    warn.classList.add('visible');
+    setTimeout(() => warn.classList.remove('visible'), 4000);
+    return;
+  }
+  if (voiceActive) {
+    stopVoiceSync();
+  } else {
+    startVoiceSync(); // async — errors handled internally
+  }
+}
+
+async function startVoiceSync() {
+  if (voiceActive) return;
+
+  // Request mic access
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (e) {
+    const warn = document.getElementById('tp-voice-warn');
+    warn.textContent = e.name === 'NotAllowedError'
+      ? '⚠ Microphone permission denied — allow mic access in browser settings.'
+      : `⚠ Mic error: ${e.message}`;
+    warn.classList.add('visible');
+    setTimeout(() => warn.classList.remove('visible'), 5000);
+    return;
+  }
+
+  micStream = stream;
+
+  // Audio graph: mic source → analyser (never connected to destination — no feedback)
+  audioCtx     = new (window.AudioContext || window.webkitAudioContext)();
+  analyserNode = audioCtx.createAnalyser();
+  analyserNode.fftSize               = 256;
+  analyserNode.smoothingTimeConstant = 0.75;
+  volBuffer    = new Uint8Array(analyserNode.frequencyBinCount);
+  micSource    = audioCtx.createMediaStreamSource(stream);
+  micSource.connect(analyserNode);
+
+  // Pause timer scroll — volume is now the scroll driver
+  voicePrePlayState = isPlaying;
+  isPlaying         = false;
+  lastTs            = null;
+  scrollRem         = 0;
+  voiceActive       = true;
+  voiceScrolling    = false;
+  voiceEffectiveSpd = 0;
+  smoothedVol       = 0;
+
+  const btn = document.getElementById('tp-voice-btn');
+  btn.classList.add('listening');
+  btn.textContent = '🎤 Voice On';
+
+  document.getElementById('tp-voice-sense-row').classList.add('visible');
+  setMicIndicator('listening');
+  updatePPBtn();
+
+  console.log('[Voice Sync] Active — audio running, sample rate:', audioCtx.sampleRate);
+}
+
+function stopVoiceSync() {
+  voiceActive       = false;
+  voiceScrolling    = false;
+  voiceEffectiveSpd = 0;
+  clearTimeout(silenceTimer);  silenceTimer = null;
+  clearTimeout(voiceDebugTimer); voiceDebugTimer = null;
+
+  // Tear down audio graph
+  if (micSource)    { try { micSource.disconnect();   } catch (_) {} micSource    = null; }
+  if (analyserNode) { try { analyserNode.disconnect(); } catch (_) {} analyserNode = null; }
+  if (audioCtx)     { try { audioCtx.close();          } catch (_) {} audioCtx     = null; }
+  if (micStream)    { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  volBuffer = null;
+
+  // Restore pre-voice play state
+  isPlaying = voicePrePlayState;
+  lastTs    = null;
+  updatePPBtn();
+  console.log('[Voice Sync] Stopped — timer scroll restored, isPlaying:', isPlaying);
+
+  const btn = document.getElementById('tp-voice-btn');
+  btn.classList.remove('listening', 'paused-speech');
+  btn.textContent = '🎤 Voice';
+
+  document.getElementById('tp-voice-sense-row').classList.remove('visible');
+  setMicIndicator('off');
+
+  const dbg = document.getElementById('tp-voice-debug');
+  if (dbg) { dbg.classList.remove('visible'); dbg.innerHTML = ''; }
+}
+
+// ─── Volume sampling — called every animation frame ──────────
+
+function sampleVoiceVolume() {
+  if (!analyserNode || !volBuffer) return;
+
+  analyserNode.getByteFrequencyData(volBuffer);
+
+  // RMS across all frequency bins (0–128 range)
+  let sum = 0;
+  for (let i = 0; i < volBuffer.length; i++) sum += volBuffer[i] * volBuffer[i];
+  const rawVol = Math.sqrt(sum / volBuffer.length);
+
+  // Exponential moving average — smooths out transient spikes
+  smoothedVol = smoothedVol * (1 - VOL_SMOOTH) + rawVol * VOL_SMOOTH;
+
+  const threshold = getVolumeThreshold();
+
+  if (smoothedVol > threshold) {
+    // ── Speaking ─────────────────────────────────────────────
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+
+    if (!voiceScrolling) {
+      voiceScrolling = true;
+      setMicIndicator('listening');
+      document.getElementById('tp-voice-btn').classList.remove('paused-speech');
+      document.getElementById('tp-voice-btn').classList.add('listening');
+      console.log('[Voice Sync] Speaking — scroll start, vol:', smoothedVol.toFixed(1), 'threshold:', threshold.toFixed(1));
+    }
+
+    // Volume → speed mapping:
+    //   at threshold   → 0.6× base speed  (just started speaking, cautious)
+    //   at 2× threshold → 1.0× base speed  (normal speaking volume)
+    //   at 3× threshold → 1.5× base speed  (louder delivery = faster scroll)
+    const overage     = Math.max(0, (smoothedVol - threshold) / threshold); // 0 at threshold, 1 at 2×
+    const speedMult   = 0.6 + Math.min(overage, 2) * 0.45;                  // 0.6 → 1.5
+    voiceEffectiveSpd = Math.max(0.3, scrollSpeed * speedMult);
+
+    // Throttled debug update (max ~10fps)
+    if (!voiceDebugTimer) {
+      voiceDebugTimer = setTimeout(() => {
+        voiceDebugTimer = null;
+        showVoiceDebug(smoothedVol, threshold);
+      }, 100);
+    }
+
+  } else {
+    // ── Silence ───────────────────────────────────────────────
+    if (voiceScrolling && !silenceTimer) {
+      silenceTimer = setTimeout(() => {
+        voiceScrolling    = false;
+        voiceEffectiveSpd = 0;
+        silenceTimer      = null;
+        setMicIndicator('paused');
+        document.getElementById('tp-voice-btn').classList.remove('listening');
+        document.getElementById('tp-voice-btn').classList.add('paused-speech');
+        console.log('[Voice Sync] Silence — scroll paused');
+        showVoiceDebug(0, threshold);
+      }, 450); // 450ms debounce — brief pauses between words don't stop scroll
+    }
+  }
+}
+
+function setMicIndicator(state) {
+  const ind  = document.getElementById('tp-mic-indicator');
+  const lbl  = document.getElementById('tp-mic-label');
+  if (state === 'off') {
+    ind.classList.remove('visible', 'speech-paused');
+  } else {
+    ind.classList.add('visible');
+    ind.classList.toggle('speech-paused', state === 'paused');
+    lbl.textContent = state === 'paused' ? 'PAUSED' : 'LISTENING';
+  }
+}
+
+// ─── Debug readout ────────────────────────────────────────────
+
+function showVoiceDebug(vol, threshold) {
+  const dbg = document.getElementById('tp-voice-debug');
+  if (!dbg || !voiceActive) return;
+
+  if (!voiceScrolling || vol <= 0) {
+    dbg.innerHTML = '🎤 <span class="vd-heard">Silence</span><span class="vd-pos"> — scroll paused</span>';
+  } else {
+    // 8-block volume bar
+    const filled = Math.min(8, Math.round((vol / Math.max(threshold * 3, 1)) * 8));
+    const bar    = '█'.repeat(filled) + '░'.repeat(8 - filled);
+    const spd    = voiceEffectiveSpd.toFixed(1);
+    dbg.innerHTML = `🎤 <span class="vd-heard">${bar}</span><span class="vd-pos"> vol ${vol.toFixed(0)} · speed ${spd}×</span>`;
+  }
+  dbg.classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VOICE DEVICE — mic-in-pocket mode
+// Connects to session as 'control', uses Web Audio volume detection
+// to drive scroll: speech → play+speed, silence → pause
+// ═══════════════════════════════════════════════════════════════
+
+let vdWS             = null;
+let vdAudioCtx       = null;
+let vdAnalyser       = null;
+let vdMicStream      = null;
+let vdMicSource      = null;
+let vdVolBuffer      = null;
+let vdSmoothedVol    = 0;
+let vdScrolling      = false;
+let vdSilTimer       = null;
+let vdRafId          = null;
+let vdConnected      = false;
+let vdOperatorLocked = false;  // true when Cari has operator-paused
+let vdManualPause    = false;  // true when Jason presses his own pause button
+let vdSpeedMult      = 1.0;    // speed multiplier slider (0.5–2.0)
+let vdWakeLock       = null;
+
+function showVoiceDevice(code) {
+  currentMode = 'voice';
+  document.getElementById('tp-selector').style.display = 'none';
+  document.getElementById('tp-voice-device').classList.add('active');
+
+  if (code) {
+    document.getElementById('tp-vd-session-txt').textContent = `Session ${code}`;
+    connectVoiceDeviceWS(code);
+  } else {
+    document.getElementById('tp-vd-session-txt').textContent = 'No session code — use ?session=XXXX in URL';
+    document.getElementById('tp-vd-status').textContent = 'NO SESSION';
+  }
+}
+
+function connectVoiceDeviceWS(code) {
+  if (!code) return;
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try { vdWS = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+  catch (_) { return; }
+
+  vdWS.onopen = () => {
+    vdWS.send(JSON.stringify({ type: 'register', role: 'control', session: code }));
+  };
+
+  vdWS.onmessage = (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+    if (msg.type === 'registered') {
+      vdConnected = true;
+      document.getElementById('tp-vd-conn-dot').classList.add('ok');
+      document.getElementById('tp-vd-session-txt').textContent = `Connected · Session ${code}`;
+      document.getElementById('tp-vd-status').textContent = 'STARTING MIC…';
+      if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
+      startVoiceDevice();
+    }
+    if (msg.type === 'state') {
+      if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
+    }
+    if (msg.type === 'error') {
+      document.getElementById('tp-vd-status').textContent = 'SESSION NOT FOUND';
+      document.getElementById('tp-vd-status').classList.add('paused');
+    }
+    if (msg.type === 'peer_disconnected' && msg.role === 'display') {
+      document.getElementById('tp-vd-conn-dot').classList.remove('ok');
+      document.getElementById('tp-vd-session-txt').textContent = 'Display disconnected';
+    }
+  };
+
+  vdWS.onerror = () => {
+    document.getElementById('tp-vd-session-txt').textContent = 'Connection error';
+  };
+  vdWS.onclose = () => {
+    vdConnected = false;
+    document.getElementById('tp-vd-conn-dot').classList.remove('ok');
+  };
+}
+
+function vdSend(action, value) {
+  if (!vdWS || vdWS.readyState !== WebSocket.OPEN) return;
+  const m = { type: 'command', action, source: 'voice' };  // never triggers operatorPaused
+  if (value !== undefined) m.value = value;
+  vdWS.send(JSON.stringify(m));
+}
+
+async function startVoiceDevice() {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (e) {
+    document.getElementById('tp-vd-status').textContent = 'MIC DENIED';
+    document.getElementById('tp-vd-status').classList.add('paused');
+    return;
+  }
+
+  vdMicStream  = stream;
+  vdAudioCtx   = new (window.AudioContext || window.webkitAudioContext)();
+  vdAnalyser   = vdAudioCtx.createAnalyser();
+  vdAnalyser.fftSize               = 256;
+  vdAnalyser.smoothingTimeConstant = 0.75;
+  vdVolBuffer  = new Uint8Array(vdAnalyser.frequencyBinCount);
+  vdMicSource  = vdAudioCtx.createMediaStreamSource(stream);
+  vdMicSource.connect(vdAnalyser);
+
+  vdSmoothedVol = 0;
+  vdScrolling   = false;
+  vdManualPause = false;
+
+  setVdStatus('paused'); // Start paused — wait for voice
+  vdSend('pause');
+
+  // Keep screen on via Wake Lock API
+  if ('wakeLock' in navigator && !vdWakeLock) {
+    navigator.wakeLock.request('screen').then(wl => { vdWakeLock = wl; }).catch(() => {});
+  }
+
+  if (vdRafId) cancelAnimationFrame(vdRafId);
+  vdRafId = requestAnimationFrame(vdSampleLoop);
+}
+
+function vdGetThreshold() {
+  const v = parseInt(document.getElementById('tp-vd-sense').value, 10) || 5;
+  return 4 + (v - 1) * (24 / 9);
+}
+
+function vdSampleLoop() {
+  vdRafId = requestAnimationFrame(vdSampleLoop);
+  if (!vdAnalyser || !vdVolBuffer) return;
+
+  vdAnalyser.getByteFrequencyData(vdVolBuffer);
+  let sum = 0;
+  for (let i = 0; i < vdVolBuffer.length; i++) sum += vdVolBuffer[i] * vdVolBuffer[i];
+  const rawVol = Math.sqrt(sum / vdVolBuffer.length);
+  vdSmoothedVol = vdSmoothedVol * 0.82 + rawVol * 0.18;
+
+  const threshold = vdGetThreshold();
+
+  // Volume bar
+  const pct = Math.min(100, Math.round((vdSmoothedVol / (threshold * 2.5)) * 100));
+  const fill = document.getElementById('tp-vd-vol-fill');
+  if (fill) fill.style.width = pct + '%';
+
+  if (vdSmoothedVol > threshold) {
+    clearTimeout(vdSilTimer); vdSilTimer = null;
+    // Only drive scroll if neither operator nor talent has manually paused
+    if (!vdScrolling && !vdOperatorLocked && !vdManualPause) {
+      vdScrolling = true;
+      setVdStatus('listening');
+      vdSend('play');
+    }
+    if (!vdOperatorLocked && !vdManualPause) {
+      // Speed modulation: louder = faster, scaled by vdSpeedMult slider
+      const overage   = Math.max(0, (vdSmoothedVol - threshold) / threshold);
+      const voiceMult = 0.65 + Math.min(overage, 2) * 0.42;
+      const baseSpeed = 3;
+      vdSend('speed', Math.max(0.3, parseFloat((baseSpeed * voiceMult * vdSpeedMult).toFixed(1))));
+    }
+  } else {
+    if (vdScrolling && !vdSilTimer) {
+      vdSilTimer = setTimeout(() => {
+        vdScrolling = false;
+        vdSilTimer  = null;
+        if (!vdManualPause) setVdStatus('paused');
+        vdSend('pause');
+      }, 450);
+    }
+  }
+}
+
+function setVdStatus(state) {
+  const icon   = document.getElementById('tp-vd-mic-icon');
+  const status = document.getElementById('tp-vd-status');
+  if (!icon || !status) return;
+  if (state === 'listening') {
+    icon.classList.add('pulsing');
+    status.textContent = 'LISTENING';
+    status.classList.remove('paused');
+  } else {
+    icon.classList.remove('pulsing');
+    status.textContent = vdManualPause ? 'HOLD' : 'PAUSED';
+    status.classList.add('paused');
+  }
+}
+
+function vdSetOperatorLock(locked) {
+  vdOperatorLocked = locked;
+  const lockEl = document.getElementById('tp-vd-operator-lock');
+  if (lockEl) lockEl.classList.toggle('visible', locked);
+  if (locked) {
+    vdScrolling = false;
+    clearTimeout(vdSilTimer); vdSilTimer = null;
+    setVdStatus('paused');
+  }
+}
+
+function vdTogglePause() {
+  vdManualPause = !vdManualPause;
+  const btn = document.getElementById('tp-vd-pp');
+  if (vdManualPause) {
+    vdScrolling = false;
+    clearTimeout(vdSilTimer); vdSilTimer = null;
+    vdSend('pause');
+    setVdStatus('paused');
+    if (btn) { btn.textContent = '▶ Resume'; btn.classList.add('is-paused'); }
+  } else {
+    if (btn) { btn.textContent = '⏸ Pause'; btn.classList.remove('is-paused'); }
+    setVdStatus('paused'); // mic will detect speech and resume naturally
+  }
+}
+
+function vdUpdateMult(val) {
+  vdSpeedMult = parseFloat(val);
+  const lbl = document.getElementById('tp-vd-mult-val');
+  if (lbl) lbl.textContent = vdSpeedMult.toFixed(1) + '×';
+}
+
+function showOperatorBadge(visible) {
+  const el = document.getElementById('tp-operator-badge');
+  if (el) el.classList.toggle('visible', visible);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

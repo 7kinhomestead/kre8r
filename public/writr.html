@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — WritΩr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/global.css">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10); --amber-border:rgba(240,185,66,0.30);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10); --red-border:rgba(224,92,92,0.30);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10); --green-border:rgba(92,186,138,0.30);
+    --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  /* ── NAV ── */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(14,15,14,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;}
+  .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);text-decoration:none;}
+  .nav{display:flex;gap:4px;align-items:center;}
+  .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
+  .nav a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav a.active{background:var(--teal-glow);color:var(--teal);}
+  .nav-dropdown{position:relative;display:inline-flex;}
+  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-block;white-space:nowrap;line-height:1.5;}
+  .nav-drop-btn:hover,.nav-dropdown:hover .nav-drop-btn{background:var(--bg-card-2);color:var(--text);}
+  .nav-drop-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);min-width:156px;display:none;z-index:300;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .nav-dropdown:hover .nav-drop-menu{display:block;}
+  .nav-drop-menu a{display:block;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:4px;transition:all 0.15s;white-space:nowrap;}
+  .nav-drop-menu a:hover{background:var(--bg-card-2);color:var(--text);}
+
+  /* ── LAYOUT ── */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+  .main{max-width:1400px;margin:0 auto;padding:24px 16px 80px;}
+
+  .page-header{margin-bottom:24px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(32px,7vw,52px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:6px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;line-height:1.6;}
+
+  /* ── THREE-PANEL GRID ── */
+  .three-panels{display:grid;grid-template-columns:28% 28% 44%;gap:16px;align-items:start;animation:fadeUp 0.4s 0.05s ease both;}
+  @media(max-width:1000px){.three-panels{grid-template-columns:1fr 1fr;}}
+  @media(max-width:680px){.three-panels{grid-template-columns:1fr;}}
+
+  /* ── PANEL ── */
+  .panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+  .panel-title{font-family:var(--font-head);font-size:20px;letter-spacing:2px;color:var(--text);}
+  .panel-title em{font-style:normal;color:var(--teal);}
+  .panel-head-right{display:flex;align-items:center;gap:8px;}
+  .panel-body{padding:18px;}
+
+  /* ── FORM FIELDS ── */
+  .field-group{display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
+  .field-label{font-size:11px;font-weight:700;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.6px;}
+  .field-input{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:10px 12px;outline:none;width:100%;transition:border-color 0.15s;}
+  .field-input:focus{border-color:var(--teal-dim);}
+  .field-input::placeholder{color:var(--text-dimmer);}
+  textarea.field-input{resize:vertical;line-height:1.55;}
+  select.field-input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a9487' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;}
+  select.field-input option{background:var(--bg-card);}
+  .hybrid-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:600px){.hybrid-row{grid-template-columns:1fr;}}
+
+  /* ── ENTRY POINT BADGE ── */
+  .ep-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;}
+  .ep-badge.script-first{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+  .ep-badge.shoot-first{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-border);}
+  .ep-badge.hybrid{background:var(--purple-glow);color:var(--purple);border:1px solid rgba(167,139,250,0.25);}
+  .ep-badge.none{background:var(--bg-card-2);color:var(--text-dimmer);border:1px solid var(--border);}
+
+  /* ── TRANSCRIPT BUTTON ROW ── */
+  .transcript-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .transcript-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+
+  /* ── BUTTONS ── */
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-body);font-size:13px;font-weight:600;padding:9px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .btn-primary{background:var(--teal);color:#0e0f0e;}
+  .btn-primary:hover:not(:disabled){background:var(--teal-dim);}
+  .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
+  .btn-ghost:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-green{background:var(--green);color:#0e0f0e;}
+  .btn-green:hover:not(:disabled){filter:brightness(1.1);}
+  .btn-green:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-full{width:100%;justify-content:center;}
+  .btn-sm{padding:6px 12px;font-size:12px;}
+  .spinner{width:14px;height:14px;border:2px solid rgba(14,15,14,0.3);border-top-color:#0e0f0e;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0;}
+  .spinner-teal{border-color:var(--teal-glow);border-top-color:var(--teal);}
+
+  /* ── PROGRESS / LOG PANEL ── */
+  .progress-wrap{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-top:12px;display:none;}
+  .progress-wrap.visible{display:block;animation:fadeIn 0.2s ease both;}
+  .progress-bar-outer{background:var(--bg-card);border-radius:4px;height:4px;margin-bottom:10px;overflow:hidden;}
+  .progress-bar-inner{height:100%;background:var(--teal);border-radius:4px;width:5%;transition:width 0.4s ease;}
+  .progress-log{max-height:140px;overflow-y:auto;font-size:11px;font-family:monospace;color:var(--text-dim);line-height:1.7;}
+  .progress-log .ok{color:var(--green);}
+  .progress-log .warn{color:var(--amber);}
+  .progress-log .err{color:var(--red);}
+
+  /* ── BEAT MAP PANEL ── */
+  .coverage-summary{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;}
+  .coverage-line{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12px;}
+  .coverage-text{color:var(--text-dim);}
+  .coverage-text strong{color:var(--text);}
+  .coverage-bar-outer{background:var(--bg-card);border-radius:4px;height:5px;overflow:hidden;}
+  .coverage-bar-inner{height:100%;background:var(--teal);border-radius:4px;transition:width 0.5s ease;}
+
+  .beat-cards{display:flex;flex-direction:column;gap:8px;}
+  .beat-card{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;transition:border-color 0.2s;}
+  .beat-card.covered{border-color:var(--green-border);}
+  .beat-card.covered-amber{border-color:var(--amber-border);}
+  .beat-card.needs-coverage{border-color:var(--red-border);}
+  .beat-card.pending{border-color:var(--border);opacity:0.6;}
+
+  .beat-head{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;user-select:none;background:var(--bg-card-2);}
+  .beat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--text-dimmer);}
+  .beat-card.covered .beat-dot{background:var(--green);}
+  .beat-card.covered-amber .beat-dot{background:var(--amber);}
+  .beat-card.needs-coverage .beat-dot{background:var(--red);}
+
+  .beat-name-wrap{flex:1;min-width:0;}
+  .beat-name{font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;}
+  .beat-pct{font-size:11px;color:var(--text-dimmer);}
+  .beat-status-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:0.4px;flex-shrink:0;}
+  .tag-covered{background:var(--green-glow);color:var(--green);border:1px solid var(--green-border);}
+  .tag-amber{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-border);}
+  .tag-missing{background:var(--red-glow);color:var(--red);border:1px solid var(--red-border);}
+  .tag-pending{background:var(--bg-card);color:var(--text-dimmer);border:1px solid var(--border);}
+  .beat-expand{background:none;border:none;color:var(--text-dimmer);font-size:14px;cursor:pointer;transition:transform 0.2s;flex-shrink:0;}
+  .beat-expand.open{transform:rotate(180deg);}
+
+  .beat-detail{padding:10px 12px;border-top:1px solid var(--border);display:none;background:var(--bg-card);}
+  .beat-detail.open{display:block;animation:fadeIn 0.15s ease both;}
+  .beat-detail-label{font-size:10px;font-weight:700;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;margin-top:10px;}
+  .beat-detail-label:first-child{margin-top:0;}
+  .beat-moment{font-size:12px;color:var(--text-dim);line-height:1.6;}
+  .beat-footage-id{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.2);margin-top:4px;}
+  .beat-talking-head{font-size:12px;color:var(--teal);font-style:italic;line-height:1.6;}
+  .beat-coverage-need{font-size:12px;color:var(--amber);line-height:1.6;}
+
+  .beat-placeholder{text-align:center;padding:32px 16px;color:var(--text-dimmer);}
+  .beat-placeholder-icon{font-size:32px;margin-bottom:10px;opacity:0.4;}
+  .beat-placeholder-text{font-size:13px;line-height:1.6;}
+
+  /* ── SCRIPT PANEL ── */
+  .script-panel-head-row{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+  .draft-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);text-transform:uppercase;letter-spacing:0.5px;}
+  .th-indicator{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--radius-sm);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.2);font-size:11px;color:var(--teal);margin-bottom:14px;}
+
+  .script-display{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;min-height:300px;max-height:520px;overflow-y:auto;white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text);}
+  .script-display:empty::before{content:'';display:none;}
+  .script-beat-header{font-family:var(--font-head);font-size:14px;letter-spacing:1.5px;color:var(--teal);display:block;margin-top:18px;margin-bottom:4px;}
+  .script-beat-header:first-child{margin-top:0;}
+  .script-beat-body{display:block;margin-bottom:2px;color:var(--text);}
+  .script-beat-needed{display:block;background:var(--amber-glow);border:1px solid var(--amber-border);border-radius:4px;padding:6px 10px;margin:4px 0;font-size:12px;color:var(--amber);font-family:var(--font-body);}
+  .script-talking-head{display:block;color:var(--teal);font-style:italic;}
+
+  .script-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;color:var(--text-dimmer);text-align:center;padding:32px 20px;}
+  .script-empty-icon{font-size:40px;margin-bottom:14px;opacity:0.35;}
+  .script-empty-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;margin-bottom:8px;color:var(--text-dim);}
+  .script-empty-sub{font-size:13px;line-height:1.6;max-width:280px;}
+
+  /* ── ITERATION BAR ── */
+  .iteration-bar{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  .iter-field{display:flex;gap:8px;align-items:flex-end;}
+  .iter-input{flex:1;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:9px 12px;outline:none;resize:none;line-height:1.5;}
+  .iter-input:focus{border-color:var(--teal-dim);}
+  .iter-input::placeholder{color:var(--text-dimmer);}
+
+  /* ── ACTION BUTTONS ── */
+  .script-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+  /* ── PREVIOUS DRAFTS ── */
+  .drafts-section{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
+  .drafts-toggle{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;cursor:pointer;padding:0;transition:color 0.15s;}
+  .drafts-toggle:hover{color:var(--text);}
+  .drafts-arrow{font-size:10px;transition:transform 0.2s;}
+  .drafts-toggle.open .drafts-arrow{transform:rotate(90deg);}
+  .drafts-list{margin-top:10px;display:none;flex-direction:column;gap:6px;}
+  .drafts-toggle.open + .drafts-list{display:flex;}
+  .draft-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:border-color 0.15s;}
+  .draft-row:hover{border-color:var(--teal-dim);}
+  .draft-row.active-draft{border-color:var(--teal);background:var(--teal-glow);}
+  .draft-label{flex:1;font-size:13px;color:var(--text);}
+  .draft-meta{font-size:11px;color:var(--text-dim);}
+  .draft-approved{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.5px;}
+
+  /* ── PIPR PRE-FILL NOTICE ── */
+  .pipr-notice{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(62,207,178,0.06);border:1px solid rgba(62,207,178,0.2);border-radius:var(--radius-sm);margin-bottom:10px;font-size:11px;color:var(--text-dim);}
+  .pipr-notice-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+  .pipr-notice-text{flex:1;}
+  .pipr-notice a{color:var(--teal);cursor:pointer;text-decoration:underline;}
+  .input-truncated{display:none;font-size:11px;margin-top:4px;color:var(--teal);cursor:pointer;}
+  .input-truncated:hover{opacity:0.8;}
+
+  /* ── SCRIPT TABS ── */
+  .script-tabs{display:flex;gap:2px;margin-bottom:12px;}
+  .script-tab{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:6px 14px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;position:relative;}
+  .script-tab:hover{border-color:var(--border-bright);color:var(--text);}
+  .script-tab.active{border-color:var(--teal);color:var(--teal);background:var(--teal-glow);}
+  .script-tab.loading .tab-spinner{display:inline-block;}
+  .script-tab.loaded .tab-spinner{display:none;}
+  .tab-spinner{width:10px;height:10px;border:1.5px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+  .tab-dot{width:6px;height:6px;border-radius:50%;background:var(--border-bright);flex-shrink:0;}
+  .script-tab.loaded .tab-dot{background:var(--teal);}
+  .script-tab.active .tab-dot{background:var(--teal);}
+
+  /* ── BEAT CARD ENHANCEMENTS ── */
+  .beat-status-bar{height:3px;border-radius:2px 2px 0 0;margin:-1px -1px 10px -1px;flex-shrink:0;}
+  .beat-card.covered      .beat-status-bar{background:var(--green);}
+  .beat-card.covered-amber .beat-status-bar{background:var(--amber);}
+  .beat-card.needs-coverage .beat-status-bar{background:var(--red);}
+  .beat-card:not(.covered):not(.covered-amber):not(.needs-coverage) .beat-status-bar{background:var(--border);}
+  .beat-filming-order{font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .beat-transcript-excerpt{font-size:11px;color:var(--text-dimmer);font-style:italic;margin-top:4px;line-height:1.4;}
+  .beat-footage-pill{display:inline-flex;align-items:center;gap:4px;background:var(--green-glow);border:1px solid var(--green-border);border-radius:3px;padding:2px 8px;font-size:10px;color:var(--green);font-weight:600;margin-top:6px;}
+
+  /* ── SCRIPT SECTION COLORED BORDERS ── */
+  .beat-section{margin-bottom:14px;padding:10px 12px 10px 14px;border-left:3px solid var(--border);border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:var(--bg-card-2);}
+  .beat-section-green{border-left-color:var(--green);}
+  .beat-section-red{border-left-color:var(--red);background:rgba(224,92,92,0.04);}
+  .beat-section-amber{border-left-color:var(--amber);background:rgba(240,185,66,0.04);}
+
+  /* ── VOICE SELECTOR BAR ── */
+  .voice-selector-bar{margin-bottom:12px;padding:12px;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .voice-selector-row{display:flex;gap:10px;align-items:flex-end;}
+  .voice-selector-col{flex:1;}
+  .voice-blend-col{flex:1;}
+
+  /* ── VOICE LIBRARY SECTION ── */
+  .voice-library-section{margin-top:24px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .voice-library-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-card);cursor:pointer;user-select:none;transition:background 0.15s;}
+  .voice-library-header:hover{background:var(--bg-card-2);}
+  .voice-library-title{font-family:var(--font-head);font-size:14px;letter-spacing:1px;color:var(--text);flex:1;}
+  .voice-library-count{font-size:11px;color:var(--text-dimmer);}
+  .voice-library-chevron{font-size:10px;color:var(--text-dimmer);transition:transform 0.2s;}
+  .voice-library-chevron.open{transform:rotate(180deg);}
+  .voice-library-body{border-top:1px solid var(--border);}
+  .voice-library-inner{padding:16px;display:flex;flex-direction:column;gap:16px;}
+  .vl-profiles{display:flex;flex-direction:column;gap:8px;}
+  .vl-profile-card{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .vl-profile-card:hover{border-color:var(--border-bright);}
+  .vl-profile-info{flex:1;min-width:0;}
+  .vl-profile-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .vl-profile-meta{font-size:11px;color:var(--text-dimmer);margin-top:2px;}
+  .vl-profile-summary{font-size:11px;color:var(--text-dim);margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .vl-profile-actions{display:flex;gap:6px;flex-shrink:0;}
+  .vl-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;font-family:var(--font-body);padding:4px 10px;cursor:pointer;transition:all 0.15s;}
+  .vl-btn:hover{border-color:var(--border-bright);color:var(--text);}
+  .vl-btn.danger:hover{border-color:var(--red-border);color:var(--red);}
+  .vl-add-form{padding-top:12px;border-top:1px solid var(--border);}
+  .vl-add-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dimmer);margin-bottom:10px;}
+  .vl-add-row{display:flex;gap:10px;align-items:flex-start;}
+  .vl-analyze-status{margin-top:10px;}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:11px 20px;font-size:13px;font-weight:500;color:var(--text);box-shadow:0 8px 28px rgba(0,0,0,0.4);opacity:0;transition:all 0.25s;z-index:999;pointer-events:none;white-space:nowrap;}
+  .toast.error{border-color:var(--red-border);color:var(--red);}
+  .toast.success{border-color:var(--green-border);color:var(--green);}
+  .toast.visible{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div id="kre8r-nav"></div>
+
+<div class="main">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-title">WRIT<em>Ω</em>R</div>
+    <div class="page-sub">Turn raw footage and ideas into a structured script. Map story beats. Know exactly what to say and what to shoot.</div>
+  </div>
+
+  <!-- THREE-PANEL GRID -->
+  <div class="three-panels">
+
+    <!-- ── PANEL 1: INPUT ── -->
+    <div class="panel" id="inputPanel">
+      <div class="panel-head">
+        <div class="panel-title">INPUT</div>
+      </div>
+      <div class="panel-body">
+
+        <!-- Project selector -->
+        <div class="field-group">
+          <div class="field-label">Project</div>
+          <select class="field-input" id="projectSelect">
+            <option value="">— select a project —</option>
+          </select>
+        </div>
+
+        <!-- Entry point badge -->
+        <div id="epBadgeWrap" style="display:none">
+          <div class="ep-badge none" id="epBadge">No entry point</div>
+        </div>
+
+        <!-- Conditional input area (shown after project selected) -->
+        <div id="inputArea" style="display:none">
+
+          <!-- PIPR PRE-FILL NOTICE (shown when fields pre-filled from config) -->
+          <div class="pipr-notice" id="piprNotice" style="display:none">
+            <span class="pipr-notice-icon">🔗</span>
+            <span class="pipr-notice-text">
+              Pre-filled from PipΩr — edit if needed.
+              <span id="piprPaletteInfo"></span>
+            </span>
+          </div>
+
+          <!-- SCRIPT FIRST -->
+          <div id="inputScriptFirst" style="display:none">
+            <div class="field-group">
+              <div class="field-label">Your Script or Outline</div>
+              <textarea class="field-input" id="scriptFirstText" rows="8" style="min-height:200px"
+                placeholder="Paste your script, outline, or bullet points here. WritΩr will map it to your beat structure and fill the gaps."></textarea>
+              <span class="input-truncated" id="scriptFirstShowFull" onclick="showFullInput('scriptFirstText','scriptFirstShowFull')">Show full ↓</span>
+            </div>
+          </div>
+
+          <!-- SHOOT FIRST -->
+          <div id="inputShootFirst" style="display:none">
+            <div class="field-group">
+              <div class="field-label">What Happened</div>
+              <textarea class="field-input" id="shootFirstText" rows="8" style="min-height:200px"
+                placeholder="Describe what happened when you filmed. What did you do? What went wrong? What surprised you? What moments stand out?"></textarea>
+              <span class="input-truncated" id="shootFirstShowFull" onclick="showFullInput('shootFirstText','shootFirstShowFull')">Show full ↓</span>
+            </div>
+            <div class="transcript-row">
+              <button class="btn btn-ghost btn-sm" id="loadTranscriptsBtn">Load Footage Transcripts</button>
+              <div class="transcript-badge" id="transcriptBadge" style="display:none">
+                <span id="transcriptBadgeText">0 clips</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- HYBRID -->
+          <div id="inputHybrid" style="display:none">
+            <div class="hybrid-row">
+              <div class="field-group">
+                <div class="field-label">Your Concept</div>
+                <textarea class="field-input" id="hybridConceptText" rows="6" style="min-height:160px"
+                  placeholder="What were you planning to make?"></textarea>
+                <span class="input-truncated" id="hybridConceptShowFull" onclick="showFullInput('hybridConceptText','hybridConceptShowFull')">Show full ↓</span>
+              </div>
+              <div class="field-group">
+                <div class="field-label">What Was Captured</div>
+                <textarea class="field-input" id="hybridCapturedText" rows="6" style="min-height:160px"
+                  placeholder="What footage do you have?"></textarea>
+                <span class="input-truncated" id="hybridCapturedShowFull" onclick="showFullInput('hybridCapturedText','hybridCapturedShowFull')">Show full ↓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- VOICE SELECTOR -->
+          <div class="voice-selector-bar" id="voiceSelectorBar" style="display:none">
+            <div class="voice-selector-row">
+              <div class="voice-selector-col">
+                <div class="field-label" style="font-size:10px;margin-bottom:4px">VOICE</div>
+                <select class="field-input field-select" id="voicePrimary" style="font-size:12px;padding:6px 8px" onchange="onVoiceChange()">
+                  <option value="">Default (creator profile)</option>
+                </select>
+              </div>
+              <div class="voice-blend-col" id="voiceBlendCol" style="display:none">
+                <div class="field-label" style="font-size:10px;margin-bottom:4px">BLEND</div>
+                <select class="field-input field-select" id="voiceSecondary" style="font-size:12px;padding:6px 8px" onchange="onVoiceChange()">
+                  <option value="">+ Add 2nd voice</option>
+                </select>
+              </div>
+            </div>
+            <div id="voiceBlendSliderRow" style="display:none;margin-top:8px">
+              <div class="field-label" style="font-size:10px;margin-bottom:4px">
+                PRIMARY WEIGHT: <strong id="voiceBlendLabel">70%</strong>
+              </div>
+              <input type="range" id="voiceBlend" min="10" max="90" value="70" step="10"
+                style="width:100%;accent-color:var(--teal)" oninput="document.getElementById('voiceBlendLabel').textContent=this.value+'%'">
+            </div>
+          </div>
+
+          <!-- GENERATE BUTTON -->
+          <button class="btn btn-primary btn-full" id="generateBtn" disabled>
+            <span class="spinner" id="generateSpinner" style="display:none"></span>
+            <span id="generateBtnLabel">Find the Story →</span>
+          </button>
+
+          <!-- REGENERATE BUTTON — shown only when script is approved -->
+          <button class="btn btn-ghost btn-full" id="regenerateBtn" style="display:none;margin-top:8px;" onclick="onRegenerate()">
+            ↺ Regenerate with current voice profiles
+          </button>
+
+          <!-- SSE LOG -->
+          <div class="progress-wrap" id="generateProgress">
+            <div class="progress-bar-outer"><div class="progress-bar-inner" id="generateBar"></div></div>
+            <div class="progress-log" id="generateLog"></div>
+            <div id="generateRetry" style="display:none;margin-top:10px;">
+              <button class="btn btn-ghost btn-full" id="generateRetryBtn" onclick="onRetry()">
+                ↺ Retry — resubmit the same request
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /inputArea -->
+
+        <!-- No project selected placeholder -->
+        <div id="inputPlaceholder" style="text-align:center;padding:32px 0;color:var(--text-dimmer);font-size:13px;line-height:1.7;">
+          Select a project above to get started.
+        </div>
+
+      </div>
+    </div><!-- /panel 1 -->
+
+    <!-- ── PANEL 2: BEAT MAP ── -->
+    <div class="panel" id="beatMapPanel">
+      <div class="panel-head">
+        <div class="panel-title">BEAT MAP</div>
+      </div>
+      <div class="panel-body">
+
+        <!-- Coverage summary (shown when data exists) -->
+        <div class="coverage-summary" id="coverageSummary" style="display:none">
+          <div class="coverage-line">
+            <span class="coverage-text"><strong id="coverageCovered">0</strong> / <strong id="coverageTotal">0</strong> beats covered</span>
+            <span style="font-size:11px;color:var(--red)" id="coverageReshoot"></span>
+          </div>
+          <div class="coverage-bar-outer">
+            <div class="coverage-bar-inner" id="coverageBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Beat cards -->
+        <div class="beat-cards" id="beatCards"></div>
+
+        <!-- Placeholder -->
+        <div class="beat-placeholder" id="beatPlaceholder">
+          <div class="beat-placeholder-icon">🗂</div>
+          <div class="beat-placeholder-text">Run analysis to see beat coverage</div>
+        </div>
+
+      </div>
+    </div><!-- /panel 2 -->
+
+    <!-- ── PANEL 3: SCRIPT ── -->
+    <div class="panel" id="scriptPanel">
+      <div class="panel-head">
+        <div class="script-panel-head-row">
+          <div class="panel-title">SCRIPT</div>
+          <div class="draft-badge" id="draftBadge" style="display:none">Draft 1</div>
+        </div>
+        <div class="panel-head-right" id="scriptHeadActions" style="display:none">
+          <!-- shown after draft exists -->
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <!-- Output mode tabs (shown when script exists) -->
+        <div class="script-tabs" id="scriptTabs" style="display:none">
+          <button class="script-tab active" id="tab-full"    onclick="switchTab('full')">
+            <span class="tab-spinner"></span><span class="tab-dot"></span> Full Script
+          </button>
+          <button class="script-tab" id="tab-bullets" onclick="switchTab('bullets')">
+            <span class="tab-spinner"></span><span class="tab-dot"></span> Bullets
+          </button>
+          <button class="script-tab" id="tab-hybrid"  onclick="switchTab('hybrid')">
+            <span class="tab-spinner"></span><span class="tab-dot"></span> Hybrid
+          </button>
+        </div>
+
+        <!-- Talking-head indicator (shown when script exists) -->
+        <div class="th-indicator" id="thIndicator" style="display:none">
+          <span>🎤</span>
+          <span>Italic teal text = things to say to camera</span>
+        </div>
+
+        <!-- Script display / empty state -->
+        <div id="scriptEmpty" class="script-empty">
+          <div class="script-empty-icon">📝</div>
+          <div class="script-empty-title">SCRIPT NOT YET GENERATED</div>
+          <div class="script-empty-sub">Select a project and hit "Find the Story" to begin.</div>
+        </div>
+
+        <div id="scriptDisplay" class="script-display" style="display:none"></div>
+
+        <!-- Iteration bar (shown after first draft) -->
+        <div class="iteration-bar" id="iterationBar" style="display:none">
+          <!-- REVISE controls — hidden when script is approved -->
+          <div id="reviseControls">
+            <div class="field-label" style="margin-bottom:8px">REVISE THIS DRAFT</div>
+            <div class="iter-field">
+              <textarea class="iter-input" id="reviseInput" rows="2"
+                placeholder="e.g. 'Make the catalyst hit harder' or 'The hook needs to be punchier' or 'Add more vulnerability to Dark Night of the Soul'"></textarea>
+              <button class="btn btn-ghost btn-sm" id="reviseBtn" disabled>
+                <span class="spinner spinner-teal" id="reviseSpinner" style="display:none"></span>
+                Revise →
+              </button>
+            </div>
+          </div>
+
+          <!-- REGEN notice — shown when script is approved -->
+          <div id="regenApprovedRow" style="display:none;padding:10px 0 4px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--green);margin-bottom:8px;">✓ Script Approved</div>
+            <div style="font-size:12px;color:var(--text-dimmer);margin-bottom:12px;">This script is locked. Start a fresh draft — the approved version stays on record.</div>
+            <button class="btn btn-ghost btn-full" onclick="onRegenerate()">
+              ↺ Regenerate with current voice profiles
+            </button>
+          </div>
+
+          <!-- Iterate SSE log -->
+          <div class="progress-wrap" id="reviseProgress">
+            <div class="progress-bar-outer"><div class="progress-bar-inner" id="reviseBar"></div></div>
+            <div class="progress-log" id="reviseLog"></div>
+          </div>
+        </div>
+
+        <!-- Action buttons (shown after first draft) -->
+        <div class="script-actions" id="scriptActions" style="display:none">
+          <button class="btn btn-green" id="approveBtn">✓ Approve Script</button>
+          <button class="btn btn-ghost" id="exportBtn">⬇ Export .txt</button>
+          <button class="btn btn-ghost" id="teleprompterBtn" style="display:none" onclick="openTeleprompter()">📺 TeleprΩmpter</button>
+        </div>
+
+        <!-- Previous drafts -->
+        <div class="drafts-section" id="draftsSection" style="display:none">
+          <button class="drafts-toggle" id="draftsToggle" onclick="toggleDrafts()">
+            <span class="drafts-arrow">▶</span>
+            <span id="draftsToggleLabel">Previous drafts</span>
+          </button>
+          <div class="drafts-list" id="draftsList"></div>
+        </div>
+
+      </div>
+    </div><!-- /panel 3 -->
+
+  </div><!-- /three-panels -->
+
+  <!-- ── VOICE LIBRARY PANEL ── -->
+  <div class="voice-library-section" id="voiceLibrarySection">
+    <div class="voice-library-header" onclick="toggleVoiceLibrary()">
+      <span class="voice-library-title">🎙 VOICE LIBRARY</span>
+      <span class="voice-library-count" id="voiceLibraryCount">0 profiles</span>
+      <span class="voice-library-chevron" id="voiceLibraryChevron">▼</span>
+    </div>
+    <div class="voice-library-body" id="voiceLibraryBody" style="display:none">
+      <div class="voice-library-inner">
+
+        <!-- Profile list -->
+        <div class="vl-profiles" id="vlProfiles">
+          <div style="color:var(--text-dimmer);font-size:12px;padding:16px 0">
+            No voice profiles yet. Add a profile below.
+          </div>
+        </div>
+
+        <!-- Add profile form -->
+        <div class="vl-add-form">
+          <div class="vl-add-title">+ Analyze Video for Voice Profile</div>
+          <div class="vl-add-row">
+            <div class="field-group" style="flex:1;margin-bottom:0">
+              <input type="text" class="field-input" id="vlFilePath"
+                placeholder="C:\path\to\video.mp4"
+                style="font-size:12px;font-family:monospace">
+            </div>
+            <div class="field-group" style="width:180px;margin-bottom:0">
+              <input type="text" class="field-input" id="vlProfileName"
+                placeholder="Profile name (optional)"
+                style="font-size:12px">
+            </div>
+            <button class="btn btn-ghost" id="vlAnalyzeBtn" onclick="onAnalyzeVoice()" style="white-space:nowrap;padding:0 16px">
+              <span class="spinner" id="vlSpinner" style="display:none"></span>
+              Analyze →
+            </button>
+          </div>
+          <div class="vl-analyze-status" id="vlAnalyzeStatus" style="display:none">
+            <div class="progress-bar-outer" style="margin:8px 0 4px"><div class="progress-bar-inner" id="vlAnalyzeBar" style="width:0%"></div></div>
+            <div class="progress-log" id="vlAnalyzeLog" style="max-height:80px"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+
+let currentProjectId  = null;
+let currentEntryPoint = null;  // 'script_first' | 'shoot_first' | 'hybrid'
+let currentScript     = null;  // active script { id, content, beat_map, approved, mode }
+let currentScripts    = { full: null, bullets: null, hybrid: null }; // per-tab script state
+let activeScriptTab   = 'full';
+let currentBeatMap    = [];
+let draftNumber       = 0;
+let isGenerating      = false;
+let isRevising        = false;
+let voiceLibrary      = [];    // array of voice profile objects from /api/voice-library/profiles
+let vlAnalyzeJobId    = null;  // active voice analyze job id
+// Full original values for truncated pre-fill fields
+const _prefillFull    = {};
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+
+async function init() {
+  await loadProjects();
+  await loadVoiceLibrary();
+
+  // Pre-fill voice analyzer if launched from ReviewΩr with ?voice_file=...
+  const voiceFileParam = new URLSearchParams(window.location.search).get('voice_file');
+  if (voiceFileParam) {
+    const fp = document.getElementById('vlFilePath');
+    if (fp) fp.value = decodeURIComponent(voiceFileParam);
+    // Open Voice Library panel
+    const body    = document.getElementById('voiceLibraryBody');
+    const chevron = document.getElementById('voiceLibraryChevron');
+    if (body)    body.style.display = 'block';
+    if (chevron) chevron.classList.add('open');
+    // Scroll to it
+    setTimeout(() => document.getElementById('voiceLibrarySection')?.scrollIntoView({ behavior: 'smooth' }), 200);
+  }
+
+  document.getElementById('projectSelect').addEventListener('change', e => {
+    const pid = parseInt(e.target.value, 10);
+    if (pid) onProjectChange(pid);
+    else resetToEmpty();
+  });
+
+  document.getElementById('generateBtn').addEventListener('click', onGenerate);
+  document.getElementById('loadTranscriptsBtn').addEventListener('click', onLoadTranscripts);
+  document.getElementById('reviseBtn').addEventListener('click', onRevise);
+  document.getElementById('reviseInput').addEventListener('input', () => {
+    document.getElementById('reviseBtn').disabled = !document.getElementById('reviseInput').value.trim();
+  });
+  document.getElementById('approveBtn').addEventListener('click', onApprove);
+  document.getElementById('exportBtn').addEventListener('click', onExport);
+}
+
+// ─────────────────────────────────────────────
+// LOAD PROJECTS
+// ─────────────────────────────────────────────
+
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/projects');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const projects = await r.json();
+    const sel = document.getElementById('projectSelect');
+    const pipelined = projects.filter(p => p.pipr_complete);
+    if (pipelined.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '— no PipΩr-complete projects yet —';
+      opt.disabled = true;
+      sel.appendChild(opt);
+      return;
+    }
+    pipelined.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      const ep = p.entry_point ? ` · ${epLabel(p.entry_point)}` : '';
+      opt.textContent = (p.title || `Project ${p.id}`) + ep;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    console.error('Failed to load projects:', e);
+    showToast('Could not load projects — is the server running?', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+// ON PROJECT CHANGE
+// ─────────────────────────────────────────────
+
+async function onProjectChange(pid) {
+  currentProjectId  = pid;
+  currentEntryPoint = null;
+  currentScript     = null;
+  currentBeatMap    = [];
+  draftNumber       = 0;
+
+  resetInputArea();
+  resetBeatMap();
+  resetScriptPanel();
+
+  try {
+    const r = await fetch(`/api/writr/${pid}/config`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+
+    const project = data.project || {};
+    currentEntryPoint = project.entry_point || data.config?.entry_point || null;
+
+    showInputArea(currentEntryPoint, data);
+
+    // Pre-populate text from config
+    if (data.config) {
+      prefillInputs(currentEntryPoint, data.config, data.active_script || null);
+    }
+
+    // If existing script, render it and restore sibling tabs
+    if (data.active_script) {
+      const s = data.active_script;
+      const beatMap = s.beat_map_json || s.beat_map || [];
+      currentScript = { ...s, content: s.generated_script || s.content || '', beat_map: beatMap };
+      const mode    = s.mode || 'full';
+      currentScripts[mode] = { ...currentScript, mode };
+      activeScriptTab = mode;
+      setTabState(mode, 'loaded');
+      draftNumber = (s.iteration_count || 0) + 1;
+      renderBeatMap(beatMap);
+      renderScript(currentScript);
+      loadDraftsHistory(pid);
+      // Load sibling tabs in background (non-blocking)
+      if (s.session_id) loadSiblingTabs(s.session_id, beatMap);
+    }
+  } catch(e) {
+    console.error('Failed to load project config:', e);
+    showToast('Could not load project — ' + e.message, 'error');
+    // Still show input area in generic form
+    showInputArea(null, {});
+  }
+}
+
+const PREFILL_TRUNCATE = 500;
+
+function prefillField(taId, toggleId, fullText) {
+  if (!fullText?.trim()) return false;
+  const ta = document.getElementById(taId);
+  const tog = document.getElementById(toggleId);
+  if (!ta || ta.value) return false; // skip if already has content
+  _prefillFull[taId] = fullText;
+  if (fullText.length > PREFILL_TRUNCATE) {
+    ta.value = fullText.slice(0, PREFILL_TRUNCATE) + '…';
+    if (tog) tog.style.display = 'inline';
+  } else {
+    ta.value = fullText;
+  }
+  return true;
+}
+
+function showFullInput(taId, toggleId) {
+  const ta = document.getElementById(taId);
+  const tog = document.getElementById(toggleId);
+  if (ta && _prefillFull[taId]) ta.value = _prefillFull[taId];
+  if (tog) tog.style.display = 'none';
+}
+
+function prefillInputs(entryPoint, config, activeScript) {
+  let anyPrefilled = false;
+
+  // Determine the concept text — PipΩr stores in high_concept; script content in script field
+  const conceptText = config.script || config.high_concept || config.concept || '';
+
+  // Determine the footage/capture text — config stores what_happened; fall back to last script's raw_input
+  function extractFootageText(script) {
+    if (!script?.raw_input) return '';
+    const raw = script.raw_input;
+    // Hybrid format: "CONCEPT: ...\n\nFOOTAGE: ..."
+    const footageMatch = raw.match(/FOOTAGE:\s*([\s\S]+)$/i);
+    if (footageMatch) return footageMatch[1].trim();
+    // Shoot-first: raw_input IS the footage description
+    if (script.input_type === 'what_happened' || script.input_type === 'shoot_first') return raw.trim();
+    return '';
+  }
+  const footageText = config.what_happened || extractFootageText(activeScript) || '';
+
+  if (entryPoint === 'script_first') {
+    anyPrefilled = prefillField('scriptFirstText', 'scriptFirstShowFull', conceptText) || anyPrefilled;
+  } else if (entryPoint === 'shoot_first') {
+    anyPrefilled = prefillField('shootFirstText', 'shootFirstShowFull', footageText) || anyPrefilled;
+  } else {
+    // hybrid (default if unrecognized)
+    anyPrefilled = prefillField('hybridConceptText',  'hybridConceptShowFull',  conceptText) || anyPrefilled;
+    anyPrefilled = prefillField('hybridCapturedText', 'hybridCapturedShowFull', footageText) || anyPrefilled;
+  }
+
+  // Show pre-fill notice with emotional/musical context if available
+  const notice   = document.getElementById('piprNotice');
+  const palInfo  = document.getElementById('piprPaletteInfo');
+  if (notice && anyPrefilled) {
+    const parts = [];
+    if (config.emotional_palette) parts.push(`Mood: ${config.emotional_palette.replace(/_/g, ' ')}`);
+    if (config.musical_theme)     parts.push(`Music: ${config.musical_theme.replace(/_/g, ' ')}`);
+    if (palInfo && parts.length)  palInfo.textContent = parts.join(' · ');
+    notice.style.display = 'flex';
+  }
+}
+
+// ─────────────────────────────────────────────
+// SHOW INPUT AREA
+// ─────────────────────────────────────────────
+
+function showInputArea(entryPoint, data) {
+  document.getElementById('inputPlaceholder').style.display = 'none';
+  document.getElementById('inputArea').style.display        = 'block';
+  document.getElementById('epBadgeWrap').style.display      = 'block';
+
+  // Entry point badge
+  const badge = document.getElementById('epBadge');
+  badge.className = 'ep-badge ' + epClass(entryPoint);
+  badge.textContent = entryPoint ? epLabel(entryPoint) : 'No entry point detected';
+
+  // Hide all conditional inputs
+  document.getElementById('inputScriptFirst').style.display = 'none';
+  document.getElementById('inputShootFirst').style.display  = 'none';
+  document.getElementById('inputHybrid').style.display      = 'none';
+
+  // Show the right one
+  if (entryPoint === 'script_first') {
+    document.getElementById('inputScriptFirst').style.display = 'block';
+  } else if (entryPoint === 'shoot_first') {
+    document.getElementById('inputShootFirst').style.display = 'block';
+  } else if (entryPoint === 'hybrid') {
+    document.getElementById('inputHybrid').style.display = 'block';
+  } else {
+    // Default to shoot_first form as fallback
+    document.getElementById('inputShootFirst').style.display = 'block';
+  }
+
+  // Update generate button label
+  const label = document.getElementById('generateBtnLabel');
+  if (entryPoint === 'script_first') {
+    label.textContent = 'Map the Beats →';
+  } else if (entryPoint === 'hybrid') {
+    label.textContent = 'Reconcile & Write →';
+  } else {
+    label.textContent = 'Find the Story →';
+  }
+
+  document.getElementById('generateBtn').disabled = false;
+
+  // If approved script exists, disable generate and show regenerate button instead
+  if (data.active_script && data.active_script.approved) {
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('generateBtnLabel').textContent = 'Script Approved';
+    document.getElementById('regenerateBtn').style.display = 'block';
+  } else {
+    document.getElementById('regenerateBtn').style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────
+// LOAD TRANSCRIPTS
+// ─────────────────────────────────────────────
+
+async function onLoadTranscripts() {
+  if (!currentProjectId) return;
+  const btn = document.getElementById('loadTranscriptsBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+  try {
+    const r = await fetch(`/api/writr/${currentProjectId}/transcripts`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const badge = document.getElementById('transcriptBadge');
+    const badgeText = document.getElementById('transcriptBadgeText');
+    badgeText.textContent = `${data.count || 0} clip${data.count !== 1 ? 's' : ''} loaded`;
+    badge.style.display = 'inline-flex';
+    if (data.summary) {
+      const ta = document.getElementById('shootFirstText');
+      if (!ta.value) ta.value = data.summary;
+    }
+    showToast(`${data.count || 0} transcript${data.count !== 1 ? 's' : ''} loaded`);
+  } catch(e) {
+    showToast('Could not load transcripts — ' + e.message, 'error');
+  } finally {
+    btn.disabled  = false;
+    btn.textContent = 'Load Footage Transcripts';
+  }
+}
+
+// ─────────────────────────────────────────────
+// GENERATE
+// ─────────────────────────────────────────────
+
+function getInputText() {
+  const ep = currentEntryPoint;
+  if (ep === 'script_first') {
+    return document.getElementById('scriptFirstText').value.trim();
+  }
+  if (ep === 'hybrid') {
+    const concept   = document.getElementById('hybridConceptText').value.trim();
+    const captured  = document.getElementById('hybridCapturedText').value.trim();
+    return [concept, captured].filter(Boolean).join('\n\n---\n\n');
+  }
+  // shoot_first or fallback
+  return document.getElementById('shootFirstText').value.trim();
+}
+
+async function onGenerate() {
+  if (!currentProjectId || isGenerating) return;
+
+  const inputText = getInputText();
+  if (!inputText) {
+    showToast('Add some input text first', 'error');
+    return;
+  }
+
+  isGenerating = true;
+  setGenerateLoading(true);
+  hideRetry();
+  showProgress('generateProgress', 'generateBar');
+  resetBeatMap();
+  resetScriptPanel();
+  // Show tabs in loading state
+  document.getElementById('scriptTabs').style.display = 'flex';
+  setAllTabsLoading();
+
+  // Build body — hybrid sends concept and what_happened as separate fields
+  const ep = currentEntryPoint || 'shoot_first';
+  let generateBody;
+  const voiceParams = getVoiceParams();
+  if (ep === 'hybrid') {
+    generateBody = {
+      project_id:    currentProjectId,
+      entry_point:   'hybrid',
+      concept:       document.getElementById('hybridConceptText')?.value?.trim()   || '',
+      what_happened: document.getElementById('hybridCapturedText')?.value?.trim()  || '',
+      ...voiceParams
+    };
+  } else {
+    generateBody = {
+      project_id:  currentProjectId,
+      entry_point: ep,
+      input_text:  inputText,
+      ...voiceParams
+    };
+  }
+
+  try {
+    await streamWritr({
+      url:  '/api/writr/generate',
+      body: generateBody,
+      barId: 'generateBar',
+      logId: 'generateLog',
+      onEvent: (ev) => {
+        if (ev.stage === 'analyzing')    appendLog('generateLog', ev.message, 'dim');
+        if (ev.stage === 'beat_mapping') appendLog('generateLog', ev.message, 'dim');
+        if (ev.stage === 'writing')      appendLog('generateLog', ev.message, 'dim');
+        if (ev.stage === 'beat_update' && ev.beat) updateBeatCard(ev.beat);
+        // Three-tab: populate each tab as it arrives
+        if (ev.stage === 'tab_complete' && ev.mode) {
+          currentScripts[ev.mode] = { id: null, content: ev.script, beat_map: [], approved: false, mode: ev.mode };
+          setTabState(ev.mode, 'loaded');
+          if (ev.mode === activeScriptTab) {
+            // Render this tab immediately if it's the active one
+            renderScript(currentScripts[ev.mode]);
+          }
+        }
+      },
+      onComplete: (ev) => {
+        appendLog('generateLog', 'Script generated ✓', 'ok');
+        draftNumber = 1;
+
+        // Assign saved script IDs to tab state
+        if (ev.script_ids) {
+          ['full', 'bullets', 'hybrid'].forEach(m => {
+            if (currentScripts[m] && ev.script_ids[m]) currentScripts[m].id = ev.script_ids[m];
+          });
+        } else if (ev.script_id) {
+          // Fallback for single-script response
+          if (currentScripts.full) currentScripts.full.id = ev.script_id;
+        }
+
+        // Store beat_map on all tabs
+        const beatMap = ev.beat_map || [];
+        Object.values(currentScripts).forEach(s => { if (s) s.beat_map = beatMap; });
+
+        // Sync currentScript to active tab
+        currentScript = currentScripts[activeScriptTab] || {
+          id: ev.script_id, content: ev.script, beat_map: beatMap, approved: false
+        };
+
+        renderBeatMap(beatMap);
+        renderScript(currentScript);
+        loadDraftsHistory(currentProjectId);
+        setGenerateLoading(false);
+        isGenerating = false;
+      },
+      onError: (msg) => {
+        appendLog('generateLog', 'Error: ' + msg, 'err');
+        showToast(msg, 'error');
+        showRetry();
+        setGenerateLoading(false);
+        isGenerating = false;
+      }
+    });
+  } catch(e) {
+    appendLog('generateLog', 'Request failed: ' + e.message, 'err');
+    showToast('Generation failed — ' + e.message, 'error');
+    showRetry();
+    setGenerateLoading(false);
+    isGenerating = false;
+  }
+}
+
+function onRetry() {
+  hideRetry();
+  onGenerate();
+}
+
+function onRegenerate() {
+  if (!currentProjectId) return;
+  // Re-enable the generate button (was locked by approved state)
+  const btn   = document.getElementById('generateBtn');
+  const label = document.getElementById('generateBtnLabel');
+  btn.disabled  = false;
+  // Restore the correct label for the entry point
+  if (currentEntryPoint === 'script_first') label.textContent = 'Map the Beats →';
+  else if (currentEntryPoint === 'hybrid')  label.textContent = 'Reconcile & Write →';
+  else                                      label.textContent = 'Find the Story →';
+  // Hide both regenerate buttons
+  document.getElementById('regenerateBtn').style.display = 'none';
+  // Fire the generator — creates a new draft, approved one stays in DB
+  onGenerate();
+}
+
+function showRetry() {
+  const r = document.getElementById('generateRetry');
+  if (r) r.style.display = 'block';
+}
+
+function hideRetry() {
+  const r = document.getElementById('generateRetry');
+  if (r) r.style.display = 'none';
+}
+
+function setGenerateLoading(loading) {
+  document.getElementById('generateBtn').disabled    = loading;
+  document.getElementById('generateSpinner').style.display = loading ? 'inline-block' : 'none';
+}
+
+// ─────────────────────────────────────────────
+// REVISE
+// ─────────────────────────────────────────────
+
+async function onRevise() {
+  // Iterate on the active tab's script
+  const activeScript = currentScripts[activeScriptTab] || currentScript;
+  if (!currentProjectId || !activeScript || isRevising) return;
+  if (!activeScript.id) { showToast('Save the script first before revising', 'error'); return; }
+  const feedback = document.getElementById('reviseInput').value.trim();
+  if (!feedback) return;
+  // Use active tab script as the base for iteration
+  currentScript = activeScript;
+
+  isRevising = true;
+  setReviseLoading(true);
+  showProgress('reviseProgress', 'reviseBar');
+
+  try {
+    await streamWritr({
+      url: '/api/writr/iterate',
+      body: { project_id: currentProjectId, script_id: currentScript.id, feedback, ...getVoiceParams() },
+      barId: 'reviseBar',
+      logId: 'reviseLog',
+      onEvent: (ev) => {
+        if (ev.stage === 'analyzing')    appendLog('reviseLog', ev.message, 'dim');
+        if (ev.stage === 'beat_mapping') appendLog('reviseLog', ev.message, 'dim');
+        if (ev.stage === 'writing')      appendLog('reviseLog', ev.message, 'dim');
+        if (ev.stage === 'beat_update' && ev.beat) updateBeatCard(ev.beat);
+      },
+      onComplete: (ev) => {
+        appendLog('reviseLog', 'Revision complete ✓', 'ok');
+        const updatedScript = {
+          id:       ev.script_id,
+          content:  ev.script,
+          beat_map: ev.beat_map || currentBeatMap,
+          approved: false,
+          mode:     ev.mode || activeScriptTab
+        };
+        currentScript = updatedScript;
+        currentScripts[ev.mode || activeScriptTab] = updatedScript;
+        draftNumber   = ev.iteration_count || (draftNumber + 1);
+        renderBeatMap(ev.beat_map || currentBeatMap);
+        renderScript(currentScript);
+        loadDraftsHistory(currentProjectId);
+        document.getElementById('reviseInput').value = '';
+        document.getElementById('reviseBtn').disabled = true;
+        setReviseLoading(false);
+        isRevising = false;
+      },
+      onError: (msg) => {
+        appendLog('reviseLog', 'Error: ' + msg, 'err');
+        showToast(msg, 'error');
+        setReviseLoading(false);
+        isRevising = false;
+      }
+    });
+  } catch(e) {
+    appendLog('reviseLog', 'Request failed: ' + e.message, 'err');
+    showToast('Revision failed — ' + e.message, 'error');
+    setReviseLoading(false);
+    isRevising = false;
+  }
+}
+
+function setReviseLoading(loading) {
+  document.getElementById('reviseBtn').disabled         = loading;
+  document.getElementById('reviseSpinner').style.display = loading ? 'inline-block' : 'none';
+}
+
+// ─────────────────────────────────────────────
+// APPROVE
+// ─────────────────────────────────────────────
+
+async function onApprove() {
+  if (!currentProjectId || !currentScript) return;
+  try {
+    const r = await fetch(`/api/writr/${currentProjectId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script_id: currentScript.id })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+    // Mark approved in local state — re-render handles all UI locking
+    currentScript.approved = true;
+    if (currentScripts[activeScriptTab]) currentScripts[activeScriptTab].approved = true;
+
+    // Re-render script panel to swap revise → regen notice
+    renderScript(currentScript);
+
+    // Show generate-panel regenerate button
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('generateBtnLabel').textContent = 'Script Approved';
+    document.getElementById('regenerateBtn').style.display = 'block';
+
+    // Show TeleprΩmpter button now that script is approved
+    document.getElementById('teleprompterBtn').style.display = '';
+
+    showToast('Script approved! Open in TeleprΩmpter or continue to EditΩr.', 'success');
+    loadDraftsHistory(currentProjectId);
+  } catch(e) {
+    showToast('Approve failed — ' + e.message, 'error');
+  }
+}
+
+function openTeleprompter() {
+  if (!currentProjectId) return;
+  window.open(`/teleprompter.html?project_id=${currentProjectId}`, '_blank');
+}
+
+// ─────────────────────────────────────────────
+// PREVIOUS DRAFTS
+// ─────────────────────────────────────────────
+
+async function loadDraftsHistory(pid) {
+  if (!pid) return;
+  try {
+    const r = await fetch(`/api/writr/${pid}/scripts`);
+    if (!r.ok) return;
+    const data = await r.json();
+    const scripts = data.scripts || [];
+
+    const section = document.getElementById('draftsSection');
+    const list    = document.getElementById('draftsList');
+    const label   = document.getElementById('draftsToggleLabel');
+
+    if (scripts.length <= 1) { section.style.display = 'none'; return; }
+
+    section.style.display = 'block';
+    label.textContent = `Previous drafts (${scripts.length})`;
+
+    list.innerHTML = scripts.map((s, i) => {
+      const num     = scripts.length - i;
+      const ep      = s.entry_point === 'iteration' ? 'Revision' : epLabel(s.entry_point);
+      const date    = new Date(s.created_at).toLocaleDateString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+      const isActive = currentScript && s.id === currentScript.id;
+      const approvedBadge = s.approved ? '<span class="draft-approved">✓ Approved</span>' : '';
+      return `<div class="draft-row${isActive ? ' active-draft' : ''}" onclick="loadDraft(${s.id})">
+        <div class="draft-label">Draft ${num} — ${ep}</div>
+        <div class="draft-meta">${date}</div>
+        ${approvedBadge}
+      </div>`;
+    }).join('');
+  } catch { /* silent */ }
+}
+
+function toggleDrafts() {
+  document.getElementById('draftsToggle').classList.toggle('open');
+}
+
+async function loadDraft(scriptId) {
+  if (!currentProjectId) return;
+  try {
+    const r = await fetch(`/api/writr/${currentProjectId}/scripts`);
+    if (!r.ok) return;
+    const data = await r.json();
+    const s = (data.scripts || []).find(x => x.id === scriptId);
+    if (!s) return;
+    currentScript = {
+      ...s,
+      content:  s.generated_script || s.content || '',
+      beat_map: s.beat_map_json    || s.beat_map || []
+    };
+    renderBeatMap(currentScript.beat_map);
+    renderScript(currentScript);
+    // Refresh draft list to update active highlight
+    loadDraftsHistory(currentProjectId);
+  } catch(e) {
+    showToast('Could not load draft — ' + e.message, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+// EXPORT
+// ─────────────────────────────────────────────
+
+function onExport() {
+  if (!currentScript) return;
+  const text = buildPlainText(currentScript);
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `script-draft-${draftNumber}-project-${currentProjectId}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function buildPlainText(script) {
+  if (!script) return '';
+  if (typeof script.content === 'string') return script.content;
+  if (Array.isArray(script.beats)) {
+    return script.beats.map(b => {
+      let out = `[${(b.name || b.beat_name || '').toUpperCase()}]\n`;
+      if (b.content) out += b.content + '\n';
+      if (b.talking_head_prompt) out += `\n[SAY TO CAMERA]: ${b.talking_head_prompt}\n`;
+      if (b.needs_coverage) out += `\n[NEED TO CAPTURE]: ${b.coverage_description || ''}\n`;
+      return out;
+    }).join('\n---\n\n');
+  }
+  return JSON.stringify(script, null, 2);
+}
+
+// ─────────────────────────────────────────────
+// RENDER BEAT MAP
+// ─────────────────────────────────────────────
+
+function renderBeatMap(beatMap) {
+  currentBeatMap = beatMap || [];
+  const cards     = document.getElementById('beatCards');
+  const placeholder = document.getElementById('beatPlaceholder');
+  const summary   = document.getElementById('coverageSummary');
+
+  if (!currentBeatMap.length) {
+    cards.innerHTML         = '';
+    placeholder.style.display = 'block';
+    summary.style.display   = 'none';
+    return;
+  }
+
+  placeholder.style.display = 'none';
+  summary.style.display    = 'block';
+
+  updateCoverageSummary(currentBeatMap);
+
+  cards.innerHTML = '';
+  currentBeatMap.forEach((beat, i) => {
+    cards.appendChild(buildBeatCard(beat, i));
+  });
+}
+
+function updateCoverageSummary(beatMap) {
+  const total   = beatMap.length;
+  const covered = beatMap.filter(b => b.covered && !b.needs_coverage).length;
+  const reshoot = beatMap.filter(b => b.needs_coverage).length;
+  const pct     = total > 0 ? Math.round((covered / total) * 100) : 0;
+
+  document.getElementById('coverageCovered').textContent = covered;
+  document.getElementById('coverageTotal').textContent   = total;
+  document.getElementById('coverageBar').style.width     = pct + '%';
+  document.getElementById('coverageReshoot').textContent = reshoot > 0 ? `${reshoot} need reshoot` : '';
+}
+
+function buildBeatCard(beat, idx) {
+  const div = document.createElement('div');
+  div.className = 'beat-card ' + beatCardClass(beat);
+  div.dataset.beatIdx = idx;
+
+  const tagHtml = beatTagHtml(beat);
+  const pct     = beat.position_pct != null ? beat.position_pct + '%' : (Math.round((idx / Math.max(currentBeatMap.length - 1, 1)) * 100)) + '%';
+  const name    = esc(beat.name || beat.beat_name || 'Beat ' + (idx + 1));
+
+  // Filming order for needs-coverage beats
+  const needsBeats    = currentBeatMap.filter(b => b.needs_coverage);
+  const filmingOrder  = beat.needs_coverage
+    ? needsBeats.findIndex(b => (b.name || b.beat_name) === (beat.name || beat.beat_name)) + 1
+    : 0;
+
+  let detailHTML = '';
+
+  if (beat.needs_coverage) {
+    // RED — filming order + full talking head prompt
+    if (filmingOrder > 0)
+      detailHTML += `<div class="beat-filming-order">📹 Shoot this ${filmingOrder === 1 ? 'first' : '#' + filmingOrder}</div>`;
+    if (beat.talking_head_prompt)
+      detailHTML += `<div class="beat-detail-label">Say to camera</div><div class="beat-talking-head" style="font-size:13px;line-height:1.5">🎤 ${esc(beat.talking_head_prompt)}</div>`;
+    if (beat.coverage_description)
+      detailHTML += `<div class="beat-detail-label" style="margin-top:8px">What to capture</div><div class="beat-coverage-need">📸 ${esc(beat.coverage_description)}</div>`;
+  } else if (beat.covered && beat.talking_head_prompt && !beat.real_moment) {
+    // AMBER — intent exists, camera still needed
+    if (beat.real_moment)
+      detailHTML += `<div class="beat-detail-label">Footage</div><div class="beat-moment">${esc(beat.real_moment)}</div>`;
+    detailHTML += `<div class="beat-detail-label" style="margin-top:8px">Still needed</div><div class="beat-talking-head">🎤 ${esc(beat.talking_head_prompt)}</div>`;
+  } else {
+    // GREEN — covered, show evidence
+    if (beat.real_moment) {
+      const excerpt = beat.real_moment.length > 100 ? beat.real_moment.slice(0, 100) + '…' : beat.real_moment;
+      detailHTML += `<div class="beat-transcript-excerpt">"${esc(excerpt)}"</div>`;
+    }
+    if (beat.footage_id)
+      detailHTML += `<span class="beat-footage-pill">🎬 footage #${esc(String(beat.footage_id))}</span>`;
+    if (beat.talking_head_prompt)
+      detailHTML += `<div class="beat-detail-label" style="margin-top:8px">Say to camera</div><div class="beat-talking-head">🎤 ${esc(beat.talking_head_prompt)}</div>`;
+  }
+
+  if (!detailHTML)
+    detailHTML = '<div style="font-size:12px;color:var(--text-dimmer);font-style:italic">Generate a script to fill this beat.</div>';
+
+  div.innerHTML = `
+    <div class="beat-status-bar"></div>
+    <div class="beat-head" onclick="toggleBeat(this)">
+      <div class="beat-dot"></div>
+      <div class="beat-name-wrap">
+        <div class="beat-name">${name}</div>
+        <div class="beat-pct">${pct}</div>
+      </div>
+      ${tagHtml}
+      <button class="beat-expand" tabindex="-1">▾</button>
+    </div>
+    <div class="beat-detail">${detailHTML}</div>
+  `;
+  return div;
+}
+
+function updateBeatCard(beat) {
+  // Called during SSE streaming to update a specific beat in-place
+  if (!beat) return;
+  const idx = currentBeatMap.findIndex(b =>
+    (b.name || b.beat_name) === (beat.name || beat.beat_name)
+  );
+  if (idx >= 0) {
+    currentBeatMap[idx] = { ...currentBeatMap[idx], ...beat };
+  } else {
+    currentBeatMap.push(beat);
+  }
+  renderBeatMap(currentBeatMap);
+}
+
+function beatCardClass(beat) {
+  if (beat.needs_coverage) return 'needs-coverage';
+  if (beat.covered && beat.talking_head_prompt) return 'covered-amber';
+  if (beat.covered) return 'covered';
+  return 'pending';
+}
+
+function beatTagHtml(beat) {
+  if (beat.needs_coverage)                      return '<span class="beat-status-tag tag-missing">NEEDS COVERAGE</span>';
+  if (beat.covered && beat.talking_head_prompt) return '<span class="beat-status-tag tag-amber">NEEDS CAM</span>';
+  if (beat.covered)                             return '<span class="beat-status-tag tag-covered">COVERED</span>';
+  return '<span class="beat-status-tag tag-pending">PENDING</span>';
+}
+
+function toggleBeat(head) {
+  const detail = head.nextElementSibling;
+  const btn    = head.querySelector('.beat-expand');
+  const open   = detail.classList.toggle('open');
+  if (btn) btn.classList.toggle('open', open);
+}
+
+// ─────────────────────────────────────────────
+// RENDER SCRIPT
+// ─────────────────────────────────────────────
+
+function renderScript(script) {
+  if (!script) return;
+
+  const empty   = document.getElementById('scriptEmpty');
+  const display = document.getElementById('scriptDisplay');
+  const draftBadge = document.getElementById('draftBadge');
+  const thInd   = document.getElementById('thIndicator');
+  const iterBar = document.getElementById('iterationBar');
+  const actions = document.getElementById('scriptActions');
+  const tabs    = document.getElementById('scriptTabs');
+
+  empty.style.display      = 'none';
+  display.style.display    = 'block';
+  draftBadge.style.display = 'inline-block';
+  draftBadge.textContent   = `Draft ${draftNumber}`;
+  thInd.style.display      = 'flex';
+  iterBar.style.display    = 'block';
+  actions.style.display    = 'flex';
+  if (tabs) tabs.style.display = 'flex';
+
+  // Build HTML content
+  display.innerHTML = buildScriptHTML(script);
+
+  // If approved, swap revise controls for regen notice
+  if (script.approved) {
+    document.getElementById('reviseControls').style.display  = 'none';
+    document.getElementById('regenApprovedRow').style.display = 'block';
+    document.getElementById('reviseBtn').disabled    = true;
+    document.getElementById('reviseInput').disabled  = true;
+    document.getElementById('approveBtn').disabled   = true;
+    document.getElementById('approveBtn').textContent = '✓ Approved';
+  } else {
+    document.getElementById('reviseControls').style.display  = 'block';
+    document.getElementById('regenApprovedRow').style.display = 'none';
+  }
+}
+
+function buildScriptHTML(script) {
+  if (!script) return '';
+
+  // Plain string (raw script text passed directly)
+  if (typeof script === 'string') {
+    return formatRawScript(script);
+  }
+
+  // Object with beats array
+  if (Array.isArray(script.beats)) {
+    return script.beats.map(beat => buildBeatHTML(beat)).join('');
+  }
+
+  // Object with content string
+  if (typeof script.content === 'string') {
+    return formatRawScript(script.content);
+  }
+
+  // Fallback
+  return `<span style="color:var(--text-dimmer);font-size:12px;font-style:italic">No renderable content in this draft.</span>`;
+}
+
+function buildBeatHTML(beat) {
+  const name    = esc(beat.name || beat.beat_name || '');
+  const content = beat.content || '';
+  const th      = beat.talking_head_prompt;
+  const needs   = beat.needs_coverage;
+  const covDesc = beat.coverage_description || '';
+
+  let html = `<span class="script-beat-header">[● ${name}]</span>`;
+
+  if (needs) {
+    html += `<span class="script-beat-needed">⚠️ BEAT NEEDED: ${name}${covDesc ? ' — ' + esc(covDesc) : ''}</span>`;
+  } else if (content) {
+    // Process content: lines starting with 🎤 or [SAY] get teal italic treatment
+    const lines = content.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) { html += '\n'; continue; }
+      if (trimmed.startsWith('🎤') || trimmed.startsWith('[SAY')) {
+        html += `<span class="script-talking-head">${esc(trimmed)}</span>\n`;
+      } else {
+        html += `<span class="script-beat-body">${esc(trimmed)}</span>\n`;
+      }
+    }
+  }
+
+  if (th && !content.includes(th)) {
+    html += `<span class="script-talking-head">🎤 ${esc(th)}</span>\n`;
+  }
+
+  return html + '\n';
+}
+
+function getBeatCoverageStatus(beatName) {
+  if (!beatName || !currentBeatMap.length) return '';
+  const name = beatName.toLowerCase().trim();
+  const beat = currentBeatMap.find(b =>
+    (b.beat_name || b.name || '').toLowerCase().trim() === name
+  );
+  if (!beat) return '';
+  if (beat.needs_coverage) return 'needs';
+  if (beat.covered && beat.talking_head_prompt && !beat.real_moment) return 'partial';
+  if (beat.covered) return 'covered';
+  return 'needs';
+}
+
+function formatRawScript(raw) {
+  if (!raw) return '';
+
+  const BEAT_RE = /^\[●\s*(?:BEAT:\s*)?(.+?)\]\s*$/;
+  const lines   = raw.split('\n');
+  const sections = [];
+  let currentName = null;
+  let buffer      = [];
+
+  const flushSection = () => {
+    const status = getBeatCoverageStatus(currentName);
+    const cls    = status === 'covered' ? 'beat-section-green'
+                 : status === 'needs'   ? 'beat-section-red'
+                 : status === 'partial' ? 'beat-section-amber'
+                 : '';
+    const header = currentName
+      ? `<span class="script-beat-header">[● ${esc(currentName)}]</span>\n`
+      : '';
+    const body = buffer.map(line => {
+      const t = line.trim();
+      if (!t) return '';
+      if (t.startsWith('🎤') || t.toLowerCase().startsWith('[say'))
+        return `<span class="script-talking-head">${esc(t)}</span>`;
+      if (t.startsWith('(b-roll:') || t.startsWith('(B-roll:') || t.startsWith('(b-Roll:'))
+        return `<span style="color:var(--text-dimmer);font-style:italic;font-size:12px;display:block">${esc(t)}</span>`;
+      if (t.startsWith('[BEAT NEEDED'))
+        return `<span class="script-beat-needed">${esc(t)}</span>`;
+      return `<span class="script-beat-body">${esc(t)}</span>`;
+    }).filter(Boolean).join('\n');
+
+    sections.push(`<div class="beat-section ${cls}">${header}${body}</div>`);
+    buffer = [];
+  };
+
+  for (const line of lines) {
+    const m = line.match(BEAT_RE);
+    if (m) {
+      if (currentName !== null || buffer.length > 0) flushSection();
+      currentName = m[1].trim();
+    } else {
+      buffer.push(line);
+    }
+  }
+  if (currentName !== null || buffer.length > 0) flushSection();
+
+  return sections.join('') || `<span style="white-space:pre-wrap;font-size:13px">${esc(raw)}</span>`;
+}
+
+// ─────────────────────────────────────────────
+// SSE STREAMING (POST endpoint)
+// ─────────────────────────────────────────────
+
+async function streamWritr({ url, body, barId, logId, onEvent, onComplete, onError }) {
+  let pct       = 5;
+  let settled   = false; // true once complete or error event handled
+  setBar(barId, pct);
+
+  try {
+    const r = await fetch(url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body)
+    });
+
+    if (!r.ok) {
+      const ct      = r.headers.get('content-type') || '';
+      const errText = ct.includes('application/json')
+        ? (await r.json().catch(() => ({}))).error || `HTTP ${r.status}`
+        : `HTTP ${r.status}`;
+      onError(errText);
+      return;
+    }
+
+    const reader  = r.body.getReader();
+    const decoder = new TextDecoder();
+    let   buffer  = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // hold incomplete last line
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith(':')) continue; // skip blank / keepalive
+
+        if (trimmed.startsWith('data:')) {
+          const raw = trimmed.slice(5).trim();
+          if (!raw || raw === '[DONE]') continue;
+          try {
+            const ev = JSON.parse(raw);
+
+            if (ev.stage === 'complete') {
+              settled = true;
+              setBar(barId, 100);
+              onComplete(ev);
+              return;
+            }
+            if (ev.stage === 'error') {
+              settled = true;
+              setBar(barId, 100);
+              onError(ev.error || 'Generation failed');
+              return;
+            }
+
+            pct = Math.min(pct + 12, 88);
+            setBar(barId, pct);
+            onEvent(ev);
+          } catch (parseErr) {
+            // Non-JSON data line — ignore
+          }
+        }
+      }
+    }
+
+    // Stream ended — only report unexpected if we never got complete/error
+    if (!settled) {
+      onError('Stream ended unexpectedly — the request may have timed out. Click Retry to try again.');
+    }
+  } catch (e) {
+    if (!settled) onError(e.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+// RESET HELPERS
+// ─────────────────────────────────────────────
+
+function resetToEmpty() {
+  currentProjectId  = null;
+  currentEntryPoint = null;
+  currentScript     = null;
+  currentBeatMap    = [];
+  draftNumber       = 0;
+
+  document.getElementById('inputArea').style.display        = 'none';
+  document.getElementById('epBadgeWrap').style.display      = 'none';
+  document.getElementById('inputPlaceholder').style.display = 'block';
+  document.getElementById('generateBtn').disabled           = true;
+  hideProgress('generateProgress');
+
+  resetBeatMap();
+  resetScriptPanel();
+}
+
+function resetInputArea() {
+  document.getElementById('inputArea').style.display        = 'none';
+  document.getElementById('epBadgeWrap').style.display      = 'none';
+  document.getElementById('inputPlaceholder').style.display = 'block';
+  document.getElementById('transcriptBadge').style.display  = 'none';
+  hideProgress('generateProgress');
+}
+
+function resetBeatMap() {
+  document.getElementById('beatCards').innerHTML         = '';
+  document.getElementById('beatPlaceholder').style.display = 'block';
+  document.getElementById('coverageSummary').style.display = 'none';
+}
+
+function resetScriptPanel() {
+  document.getElementById('scriptEmpty').style.display   = 'block';
+  document.getElementById('scriptDisplay').style.display = 'none';
+  document.getElementById('scriptDisplay').innerHTML     = '';
+  document.getElementById('draftBadge').style.display    = 'none';
+  document.getElementById('thIndicator').style.display   = 'none';
+  document.getElementById('iterationBar').style.display  = 'none';
+  document.getElementById('scriptActions').style.display = 'none';
+  document.getElementById('scriptTabs').style.display    = 'none';
+  document.getElementById('reviseInput').value              = '';
+  document.getElementById('reviseBtn').disabled             = true;
+  document.getElementById('reviseControls').style.display   = 'block';
+  document.getElementById('regenApprovedRow').style.display = 'none';
+  document.getElementById('regenerateBtn').style.display    = 'none';
+  hideProgress('reviseProgress');
+  // Reset tab states
+  currentScripts  = { full: null, bullets: null, hybrid: null };
+  activeScriptTab = 'full';
+  ['full', 'bullets', 'hybrid'].forEach(m => {
+    const tab = document.getElementById('tab-' + m);
+    if (tab) { tab.classList.remove('active', 'loading', 'loaded'); }
+  });
+}
+
+// ─────────────────────────────────────────────
+// PROGRESS HELPERS
+// ─────────────────────────────────────────────
+
+function showProgress(wrapId, barId) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  wrap.classList.add('visible');
+  const log = wrap.querySelector('.progress-log');
+  if (log) log.innerHTML = '';
+  if (barId) setBar(barId, 5);
+}
+
+function hideProgress(wrapId) {
+  document.getElementById(wrapId)?.classList.remove('visible');
+}
+
+function appendLog(logId, text, cls) {
+  const log  = document.getElementById(logId);
+  if (!log) return;
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = text;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setBar(id, pct) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = pct + '%';
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+
+let toastTimer = null;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (type ? ' ' + type : '');
+  void t.offsetWidth; // reflow
+  t.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('visible'), 3200);
+}
+
+// ─────────────────────────────────────────────
+// LABEL / CLASS HELPERS
+// ─────────────────────────────────────────────
+
+function epLabel(ep) {
+  if (ep === 'script_first') return 'SCRIPT FIRST';
+  if (ep === 'shoot_first')  return 'SHOOT FIRST';
+  if (ep === 'hybrid')       return 'HYBRID';
+  return ep || 'Unknown';
+}
+
+function epClass(ep) {
+  if (ep === 'script_first') return 'script-first';
+  if (ep === 'shoot_first')  return 'shoot-first';
+  if (ep === 'hybrid')       return 'hybrid';
+  return 'none';
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ─────────────────────────────────────────────
+// THREE-TAB SCRIPT MANAGEMENT
+// ─────────────────────────────────────────────
+
+function switchTab(mode) {
+  if (activeScriptTab === mode && currentScripts[mode]) return;
+  activeScriptTab = mode;
+
+  // Update tab button active state
+  ['full', 'bullets', 'hybrid'].forEach(m => {
+    const tab = document.getElementById('tab-' + m);
+    if (tab) tab.classList.toggle('active', m === mode);
+  });
+
+  const script = currentScripts[mode];
+  if (!script) {
+    // Tab hasn't arrived yet — show spinner in display area
+    const display = document.getElementById('scriptDisplay');
+    if (display) display.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-dimmer);font-size:13px">Generating…</div>';
+    return;
+  }
+
+  currentScript = script;
+  renderScript(script);
+}
+
+function setTabState(mode, state) {
+  const tab = document.getElementById('tab-' + mode);
+  if (!tab) return;
+  tab.classList.remove('loading', 'loaded');
+  if (state) tab.classList.add(state);
+}
+
+/** Mark all tabs as loading (called when generation starts) */
+function setAllTabsLoading() {
+  ['full', 'bullets', 'hybrid'].forEach(m => setTabState(m, 'loading'));
+}
+
+/**
+ * Restore all three tab scripts when loading a project from the DB.
+ * Looks for sibling scripts with the same session_id.
+ */
+async function loadSiblingTabs(session_id, activeBeatMap) {
+  if (!session_id || !currentProjectId) return;
+  try {
+    const r    = await fetch(`/api/writr/${currentProjectId}/scripts`);
+    const data = await r.json();
+    const siblings = (data.scripts || []).filter(s => s.session_id === session_id);
+    siblings.forEach(s => {
+      const mode = s.mode || 'full';
+      const content = s.generated_script || s.content || '';
+      currentScripts[mode] = {
+        id:       s.id,
+        content,
+        beat_map: s.beat_map_json || activeBeatMap || [],
+        approved: !!s.approved,
+        mode
+      };
+      setTabState(mode, 'loaded');
+    });
+  } catch (_) { /* non-fatal */ }
+}
+
+// ─────────────────────────────────────────────
+// VOICE LIBRARY
+// ─────────────────────────────────────────────
+
+async function loadVoiceLibrary() {
+  try {
+    const res  = await fetch('/api/voice-library/profiles');
+    const data = await res.json();
+    voiceLibrary = data.profiles || [];
+  } catch (_) {
+    voiceLibrary = [];
+  }
+  renderVoiceLibrary();
+}
+
+function renderVoiceLibrary() {
+  const count   = voiceLibrary.length;
+  const countEl = document.getElementById('voiceLibraryCount');
+  if (countEl) countEl.textContent = `${count} profile${count !== 1 ? 's' : ''}`;
+
+  // Populate dropdowns
+  const primarySel   = document.getElementById('voicePrimary');
+  const secondarySel = document.getElementById('voiceSecondary');
+  if (primarySel) {
+    const prev = primarySel.value;
+    primarySel.innerHTML = '<option value="">Default (creator profile)</option>' +
+      voiceLibrary.map(p => `<option value="${p.id}"${p.id === prev ? ' selected' : ''}>${escHtml(p.name)}</option>`).join('');
+  }
+  if (secondarySel) {
+    const prev = secondarySel.value;
+    secondarySel.innerHTML = '<option value="">None</option>' +
+      voiceLibrary.map(p => `<option value="${p.id}"${p.id === prev ? ' selected' : ''}>${escHtml(p.name)}</option>`).join('');
+  }
+
+  // Show voice selector bar only when there's at least one profile
+  const bar = document.getElementById('voiceSelectorBar');
+  if (bar) bar.style.display = count > 0 ? 'block' : 'none';
+
+  // Render profile cards
+  const container = document.getElementById('vlProfiles');
+  if (!container) return;
+  if (!count) {
+    container.innerHTML = '<div style="color:var(--text-dimmer);font-size:12px;padding:8px 0">No voice profiles yet. Analyze a video below to create one.</div>';
+    return;
+  }
+  container.innerHTML = voiceLibrary.map(p => {
+    const c    = p.characteristics || {};
+    const meta = [p.source_file, p.analyzed_at, p.word_count ? `${p.word_count.toLocaleString()} words` : null].filter(Boolean).join(' · ');
+    return `
+    <div class="vl-profile-card">
+      <div class="vl-profile-info">
+        <div class="vl-profile-name">${escHtml(p.name)}</div>
+        <div class="vl-profile-meta">${escHtml(meta)}</div>
+        ${c.summary ? `<div class="vl-profile-summary">${escHtml(c.summary)}</div>` : ''}
+      </div>
+      <div class="vl-profile-actions">
+        <button class="vl-btn" onclick="onRenameProfile('${p.id}')">Rename</button>
+        <button class="vl-btn danger" onclick="onDeleteProfile('${p.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleVoiceLibrary() {
+  const body    = document.getElementById('voiceLibraryBody');
+  const chevron = document.getElementById('voiceLibraryChevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  if (chevron) chevron.classList.toggle('open', !open);
+}
+
+function onVoiceChange() {
+  const primary   = document.getElementById('voicePrimary')?.value;
+  const blendCol  = document.getElementById('voiceBlendCol');
+  const blendRow  = document.getElementById('voiceBlendSliderRow');
+  const secondary = document.getElementById('voiceSecondary')?.value;
+
+  if (blendCol)  blendCol.style.display  = primary ? 'block' : 'none';
+  if (blendRow)  blendRow.style.display  = (primary && secondary) ? 'block' : 'none';
+}
+
+function getVoiceParams() {
+  const primary   = document.getElementById('voicePrimary')?.value   || '';
+  const secondary = document.getElementById('voiceSecondary')?.value || '';
+  const blend     = parseInt(document.getElementById('voiceBlend')?.value || '70', 10);
+  if (!primary) return {};
+  return {
+    voice_primary:   primary,
+    voice_secondary: secondary || undefined,
+    voice_blend:     blend
+  };
+}
+
+async function onAnalyzeVoice() {
+  const filePath = document.getElementById('vlFilePath')?.value?.trim();
+  const name     = document.getElementById('vlProfileName')?.value?.trim();
+  if (!filePath) { showToast('Enter a file path to analyze', 'error'); return; }
+
+  const btn = document.getElementById('vlAnalyzeBtn');
+  const sp  = document.getElementById('vlSpinner');
+  btn.disabled = true;
+  if (sp) sp.style.display = 'inline-block';
+
+  const statusEl = document.getElementById('vlAnalyzeStatus');
+  const logEl    = document.getElementById('vlAnalyzeLog');
+  const barEl    = document.getElementById('vlAnalyzeBar');
+  if (statusEl) statusEl.style.display = 'block';
+  if (logEl)    logEl.innerHTML = '';
+  if (barEl)    barEl.style.width = '5%';
+
+  const stages = { transcribing: 15, transcribed: 35, analyzing: 55, saved: 90, complete: 100 };
+
+  try {
+    const startRes = await fetch('/api/voice-library/analyze', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ file_path: filePath, name: name || null, save: true })
+    });
+    const startData = await startRes.json();
+    if (!startData.ok) throw new Error(startData.error || 'Failed to start analysis');
+
+    vlAnalyzeJobId = startData.job_id;
+
+    // Stream SSE
+    await new Promise((resolve, reject) => {
+      const es = new EventSource(`/api/voice-library/status/${vlAnalyzeJobId}`);
+      es.onmessage = (e) => {
+        const ev = JSON.parse(e.data);
+        if (ev.stage === 'error') { es.close(); reject(new Error(ev.error)); return; }
+        if (ev.stage === 'done')  { es.close(); resolve(ev.result); return; }
+        if (ev.message && logEl) appendLog('vlAnalyzeLog', ev.message, 'dim');
+        if (ev.stage && stages[ev.stage] && barEl) barEl.style.width = stages[ev.stage] + '%';
+      };
+      es.onerror = () => { es.close(); reject(new Error('SSE connection lost')); };
+    });
+
+    if (barEl) barEl.style.width = '100%';
+    appendLog('vlAnalyzeLog', 'Profile saved ✓', 'ok');
+    showToast(`"${name || filePath.split(/[\\/]/).pop()}" added to Voice Library`, 'success');
+
+    // Clear form, reload library
+    if (document.getElementById('vlFilePath'))    document.getElementById('vlFilePath').value    = '';
+    if (document.getElementById('vlProfileName')) document.getElementById('vlProfileName').value = '';
+    await loadVoiceLibrary();
+
+  } catch (err) {
+    appendLog('vlAnalyzeLog', 'Error: ' + err.message, 'err');
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    if (sp) sp.style.display = 'none';
+  }
+}
+
+async function onDeleteProfile(id) {
+  const profile = voiceLibrary.find(p => p.id === id);
+  if (!profile) return;
+  if (!confirm(`Delete voice profile "${profile.name}"?\nThis cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/voice-library/profiles/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    showToast(`"${profile.name}" deleted`, 'success');
+    await loadVoiceLibrary();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function onRenameProfile(id) {
+  const profile = voiceLibrary.find(p => p.id === id);
+  if (!profile) return;
+  const newName = prompt('New name for this voice profile:', profile.name);
+  if (!newName || newName.trim() === profile.name) return;
+  try {
+    const res = await fetch(`/api/voice-library/profiles/${id}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ name: newName.trim() })
+    });
+    if (!res.ok) throw new Error('Rename failed');
+    showToast('Profile renamed', 'success');
+    await loadVoiceLibrary();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+</script>
+<script src="/js/nav.js"></script>
+<script>initNav();</script>
+</body>
+</html>

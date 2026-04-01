@@ -11,6 +11,7 @@
 const express        = require('express');
 const router         = express.Router();
 const path           = require('path');
+const fs             = require('fs');
 const { spawn }      = require('child_process');
 const db             = require('../db');
 
@@ -105,9 +106,10 @@ router.post('/create-project', async (req, res) => {
     const script = db.getScript?.(parseInt(project_id));
     const pkg    = db.getSelectedPackage?.(parseInt(project_id));
 
+    const nameSuffix = req.body.name_suffix ? String(req.body.name_suffix).replace(/[^a-zA-Z0-9_-]/g, '') : '';
     const args = [
       '--project_id',   String(project_id),
-      '--project_name', project.title.replace(/\s+/g, '-'),
+      '--project_name', project.title.replace(/\s+/g, '-') + nameSuffix,
       '--footage_json', JSON.stringify(footageByType),
       '--content_angle', project.content_angle || '',
       '--creator_name',  '7 Kin Homestead'
@@ -152,6 +154,12 @@ router.post('/export-proxies', async (req, res) => {
     const project = db.getProject(parseInt(project_id));
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
+    if (!project.davinci_project_name) {
+      return res.status(400).json({
+        error: 'No DaVinci project linked to this project. Run create-project first.'
+      });
+    }
+
     // Build shot_type_map: filename → shot_type from VaultΩr BRAW records
     const footage = db.getAllFootage({ project_id: parseInt(project_id) });
     const shotTypeMap = {};
@@ -161,14 +169,37 @@ router.post('/export-proxies', async (req, res) => {
       }
     }
 
-    // Proxy output: alongside the project or next to braw folder
-    const proxyOutput = req.body.proxy_output_path
-      || path.join(path.dirname(braw_folder_path), 'proxies');
+    // Proxy output MUST be the vault intake folder so VaultΩr watcher
+    // auto-ingests proxies and links them back to their BRAW records.
+    // proxy_output_path in the request body is only accepted as an explicit
+    // override — log a warning when it's used so it's never silent.
+    let intakeFolder = null;
+    try {
+      const profile = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'creator-profile.json'), 'utf8'));
+      intakeFolder = profile?.vault?.intake_folder || null;
+    } catch (e) {
+      console.warn('[DaVinci] Could not read creator-profile.json:', e.message);
+    }
+
+    let proxyOutput;
+    if (req.body.proxy_output_path) {
+      console.warn(`[DaVinci] WARNING: proxy_output_path override in request: ${req.body.proxy_output_path}`);
+      console.warn('[DaVinci] Proxies sent here will NOT be auto-ingested by VaultΩr watcher.');
+      proxyOutput = req.body.proxy_output_path;
+    } else if (intakeFolder) {
+      proxyOutput = intakeFolder;
+    } else {
+      // Last resort — should never happen if creator-profile.json is present
+      proxyOutput = path.join(path.dirname(braw_folder_path), 'proxies');
+      console.warn(`[DaVinci] creator-profile.json vault.intake_folder not set — falling back to ${proxyOutput}`);
+    }
+
+    console.log(`[DaVinci] Proxy output → ${proxyOutput}`);
 
     const args = [
+      '--project_name',  project.davinci_project_name,
       '--braw_folder',   braw_folder_path,
       '--proxy_output',  proxyOutput,
-      '--project_name',  project.davinci_project_name || '',
       '--shot_type_map', JSON.stringify(shotTypeMap)
     ];
 

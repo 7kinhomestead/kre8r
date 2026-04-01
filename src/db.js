@@ -68,6 +68,22 @@ function runMigrations() {
     db.run('ALTER TABLE cuts ADD COLUMN rank INTEGER');
     console.log('[DB] Migration: added cuts.rank');
   }
+  if (!cutsCols.includes('transcript_excerpt')) {
+    db.run('ALTER TABLE cuts ADD COLUMN transcript_excerpt TEXT');
+    console.log('[DB] Migration: added cuts.transcript_excerpt');
+  }
+  if (!cutsCols.includes('why_it_matters')) {
+    db.run('ALTER TABLE cuts ADD COLUMN why_it_matters TEXT');
+    console.log('[DB] Migration: added cuts.why_it_matters');
+  }
+  if (!cutsCols.includes('suggested_use')) {
+    db.run('ALTER TABLE cuts ADD COLUMN suggested_use TEXT');
+    console.log('[DB] Migration: added cuts.suggested_use');
+  }
+  if (!cutsCols.includes('saved_for_later')) {
+    db.run('ALTER TABLE cuts ADD COLUMN saved_for_later INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added cuts.saved_for_later');
+  }
 
   // VaultΩr: orientation column + resolution-based backfill
   if (!footageCols.includes('orientation')) {
@@ -104,6 +120,12 @@ function runMigrations() {
   if (!projectsCols.includes('davinci_last_updated')) {
     db.run('ALTER TABLE projects ADD COLUMN davinci_last_updated DATETIME');
     console.log('[DB] Migration: added projects.davinci_last_updated');
+  }
+
+  // CutΩr: off_script_gold flag on footage (set when gold moments are found)
+  if (!footageCols.includes('off_script_gold')) {
+    db.run('ALTER TABLE footage ADD COLUMN off_script_gold INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added footage.off_script_gold');
   }
 
   // Footage table: BRAW proxy columns
@@ -155,6 +177,159 @@ function runMigrations() {
   if (!postsCols.includes('angle')) {
     db.run('ALTER TABLE posts ADD COLUMN angle TEXT');
     console.log('[DB] Migration: added posts.angle');
+  }
+
+  // EditΩr: footage.transcript — full Whisper text stored inline for fast multi-clip analysis
+  if (!footageCols.includes('transcript')) {
+    db.run('ALTER TABLE footage ADD COLUMN transcript TEXT');
+    console.log('[DB] Migration: added footage.transcript');
+  }
+
+  // EditΩr: projects.editor_state
+  const projectsCols2 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsCols2.includes('editor_state')) {
+    db.run('ALTER TABLE projects ADD COLUMN editor_state TEXT');
+    console.log('[DB] Migration: added projects.editor_state');
+  }
+
+  // ComposΩr: projects.composor_state
+  const projectsCols3 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsCols3.includes('composor_state')) {
+    db.run('ALTER TABLE projects ADD COLUMN composor_state TEXT');
+    console.log('[DB] Migration: added projects.composor_state');
+  }
+
+  // ComposΩr: composor_tracks table
+  db.run(`CREATE TABLE IF NOT EXISTS composor_tracks (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id        INTEGER NOT NULL,
+    scene_label       TEXT    NOT NULL,
+    scene_index       INTEGER NOT NULL DEFAULT 0,
+    scene_type        TEXT    NOT NULL DEFAULT 'buildup',
+    duration_seconds  REAL,
+    suno_prompt       TEXT,
+    suno_job_id       TEXT,
+    suno_track_url    TEXT,
+    suno_track_path   TEXT,
+    public_path       TEXT,
+    selected          INTEGER NOT NULL DEFAULT 0,
+    generation_index  INTEGER NOT NULL DEFAULT 1,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+
+  // ComposΩr: public_path column (added after initial table creation)
+  const composorCols = (db.exec('PRAGMA table_info(composor_tracks)')[0]?.values || []).map(r => r[1]);
+  if (!composorCols.includes('public_path')) {
+    db.run('ALTER TABLE composor_tracks ADD COLUMN public_path TEXT');
+    console.log('[DB] Migration: added composor_tracks.public_path');
+  }
+  db.run('CREATE INDEX IF NOT EXISTS idx_composor_project ON composor_tracks(project_id)');
+
+  // EditΩr: selects table
+  db.run(`CREATE TABLE IF NOT EXISTS selects (
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id                INTEGER NOT NULL,
+    script_section            TEXT    NOT NULL,
+    section_index             INTEGER NOT NULL DEFAULT 0,
+    takes                     TEXT    NOT NULL DEFAULT '[]',
+    selected_takes            TEXT    NOT NULL DEFAULT '[]',
+    winner_footage_id         INTEGER,
+    gold_nugget               INTEGER NOT NULL DEFAULT 0,
+    fire_suggestion           TEXT,
+    davinci_timeline_position INTEGER NOT NULL DEFAULT 0,
+    created_at                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_selects_project ON selects(project_id)');
+
+  // WritΩr: writr_scripts table
+  db.run(`CREATE TABLE IF NOT EXISTS writr_scripts (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id        INTEGER NOT NULL,
+    entry_point       TEXT    NOT NULL DEFAULT 'shoot_first',
+    input_type        TEXT    NOT NULL DEFAULT 'what_happened',
+    raw_input         TEXT,
+    generated_outline TEXT,
+    generated_script  TEXT,
+    beat_map_json     TEXT,
+    hook_variations   TEXT,
+    story_found       TEXT,
+    anchor_moment     TEXT,
+    missing_beats     TEXT,
+    iteration_count   INTEGER NOT NULL DEFAULT 0,
+    approved          INTEGER NOT NULL DEFAULT 0,
+    approved_at       DATETIME,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_writr_scripts_project ON writr_scripts(project_id)');
+
+  // DirectΩr / ShootDay: shoot_takes table
+  db.run(`CREATE TABLE IF NOT EXISTS shoot_takes (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id  INTEGER NOT NULL,
+    beat_index  INTEGER NOT NULL,
+    beat_name   TEXT    NOT NULL DEFAULT '',
+    take_number INTEGER NOT NULL DEFAULT 1,
+    status      TEXT    NOT NULL DEFAULT 'needed',
+    note        TEXT,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_shoot_takes_project ON shoot_takes(project_id)');
+  db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_shoot_takes_beat ON shoot_takes(project_id, beat_index)');
+
+  // PipΩr: project config columns
+  const projectsCols4 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsCols4.includes('setup_depth')) {
+    db.run('ALTER TABLE projects ADD COLUMN setup_depth TEXT');
+    console.log('[DB] Migration: added projects.setup_depth');
+  }
+  if (!projectsCols4.includes('entry_point')) {
+    db.run('ALTER TABLE projects ADD COLUMN entry_point TEXT');
+    console.log('[DB] Migration: added projects.entry_point');
+  }
+  if (!projectsCols4.includes('story_structure')) {
+    db.run('ALTER TABLE projects ADD COLUMN story_structure TEXT');
+    console.log('[DB] Migration: added projects.story_structure');
+  }
+  if (!projectsCols4.includes('content_type')) {
+    db.run('ALTER TABLE projects ADD COLUMN content_type TEXT');
+    console.log('[DB] Migration: added projects.content_type');
+  }
+  if (!projectsCols4.includes('high_concept')) {
+    db.run('ALTER TABLE projects ADD COLUMN high_concept TEXT');
+    console.log('[DB] Migration: added projects.high_concept');
+  }
+  if (!projectsCols4.includes('estimated_duration_minutes')) {
+    db.run('ALTER TABLE projects ADD COLUMN estimated_duration_minutes INTEGER');
+    console.log('[DB] Migration: added projects.estimated_duration_minutes');
+  }
+  if (!projectsCols4.includes('pipr_complete')) {
+    db.run('ALTER TABLE projects ADD COLUMN pipr_complete INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added projects.pipr_complete');
+  }
+  if (!projectsCols4.includes('writr_complete')) {
+    db.run('ALTER TABLE projects ADD COLUMN writr_complete INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added projects.writr_complete');
+  }
+  if (!projectsCols4.includes('active_script_id')) {
+    db.run('ALTER TABLE projects ADD COLUMN active_script_id INTEGER');
+    console.log('[DB] Migration: added projects.active_script_id');
+  }
+
+  // WritΩr: three output modes + session grouping
+  const writrScriptsCols = (db.exec('PRAGMA table_info(writr_scripts)')[0]?.values || []).map(r => r[1]);
+  if (!writrScriptsCols.includes('mode')) {
+    db.run("ALTER TABLE writr_scripts ADD COLUMN mode TEXT NOT NULL DEFAULT 'full'");
+    console.log('[DB] Migration: added writr_scripts.mode');
+  }
+  if (!writrScriptsCols.includes('session_id')) {
+    db.run('ALTER TABLE writr_scripts ADD COLUMN session_id TEXT');
+    console.log('[DB] Migration: added writr_scripts.session_id');
   }
 }
 
@@ -435,7 +610,7 @@ function updateFootage(id, fields) {
     'shot_type', 'subcategory', 'description', 'quality_flag',
     'organized_path', 'thumbnail_path', 'project_id', 'used_in', 'transcript_path',
     'orientation', 'braw_source_path', 'is_proxy', 'resolution', 'codec',
-    'duration', 'file_size', 'creation_timestamp'
+    'duration', 'file_size', 'creation_timestamp', 'transcript', 'off_script_gold'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return;
@@ -620,19 +795,23 @@ function insertCut(cut) {
   const result = _run(
     `INSERT INTO cuts
        (project_id, footage_id, start_timestamp, end_timestamp, duration_seconds,
-        cut_type, description, reasoning, rank, clip_path)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        cut_type, description, reasoning, rank, clip_path,
+        transcript_excerpt, why_it_matters, suggested_use)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       cut.project_id,
-      cut.footage_id     || null,
+      cut.footage_id          || null,
       cut.start_timestamp,
       cut.end_timestamp,
-      cut.duration_seconds || null,
-      cut.cut_type        || 'social',
-      cut.description     || null,
-      cut.reasoning       || null,
-      cut.rank            || null,
-      cut.clip_path       || null
+      cut.duration_seconds    || null,
+      cut.cut_type            || 'social',
+      cut.description         || null,
+      cut.reasoning           || null,
+      cut.rank                || null,
+      cut.clip_path           || null,
+      cut.transcript_excerpt  || null,
+      cut.why_it_matters      || null,
+      cut.suggested_use       || null
     ]
   );
   persist();
@@ -661,7 +840,18 @@ function updateCutClipPath(id, clipPath) {
 }
 
 function deleteCutsByProject(projectId) {
-  _run(`DELETE FROM cuts WHERE project_id = ?`, [projectId]);
+  // Preserve off_script_gold entries the creator explicitly saved for later
+  // (saved_for_later = 1 or approved = 1). Re-runs should not wipe the library.
+  _run(
+    `DELETE FROM cuts WHERE project_id = ?
+     AND NOT (cut_type = 'off_script_gold' AND (saved_for_later = 1 OR approved = 1))`,
+    [projectId]
+  );
+  persist();
+}
+
+function saveOffScriptGoldForLater(cutId) {
+  _run(`UPDATE cuts SET saved_for_later = 1 WHERE id = ?`, [cutId]);
   persist();
 }
 
@@ -814,6 +1004,296 @@ function getAnalyticsSummary(projectId) {
 }
 
 // ─────────────────────────────────────────────
+// COMPOSΩR — Track helpers
+// ─────────────────────────────────────────────
+
+function insertComposorTrack(track) {
+  const result = _run(
+    `INSERT INTO composor_tracks
+       (project_id, scene_label, scene_index, scene_type, duration_seconds,
+        suno_prompt, suno_job_id, suno_track_url, suno_track_path, public_path,
+        selected, generation_index)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      track.project_id,
+      track.scene_label,
+      track.scene_index        ?? 0,
+      track.scene_type         || 'buildup',
+      track.duration_seconds   || null,
+      track.suno_prompt        || null,
+      track.suno_job_id        || null,
+      track.suno_track_url     || null,
+      track.suno_track_path    || null,
+      track.public_path        || null,
+      track.selected           ? 1 : 0,
+      track.generation_index   ?? 1
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function updateComposorTrack(id, fields) {
+  const allowed = ['suno_job_id', 'suno_track_url', 'suno_track_path', 'public_path', 'selected', 'suno_prompt'];
+  const sets    = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!sets.length) return;
+  const sql     = `UPDATE composor_tracks SET ${sets.map(k => `${k} = ?`).join(', ')} WHERE id = ?`;
+  _run(sql, [...sets.map(k => fields[k]), id]);
+  persist();
+}
+
+function getComposorTracksByProject(projectId) {
+  return _all(
+    `SELECT * FROM composor_tracks WHERE project_id = ? ORDER BY scene_index ASC, generation_index ASC`,
+    [projectId]
+  );
+}
+
+function selectComposorTrack(trackId) {
+  // Get the track to find project + scene
+  const track = _get(`SELECT * FROM composor_tracks WHERE id = ?`, [trackId]);
+  if (!track) return;
+  // Unselect all tracks in same scene
+  _run(
+    `UPDATE composor_tracks SET selected = 0 WHERE project_id = ? AND scene_index = ?`,
+    [track.project_id, track.scene_index]
+  );
+  // Select this one
+  _run(`UPDATE composor_tracks SET selected = 1 WHERE id = ?`, [trackId]);
+  persist();
+}
+
+function deleteComposorTracksByProject(projectId) {
+  _run(`DELETE FROM composor_tracks WHERE project_id = ?`, [projectId]);
+  persist();
+}
+
+function updateProjectComposorState(projectId, state) {
+  _run(`UPDATE projects SET composor_state = ? WHERE id = ?`, [state, projectId]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
+// EDITΩR — Selects helpers
+// ─────────────────────────────────────────────
+
+function insertSelect(section) {
+  const result = _run(
+    `INSERT INTO selects
+       (project_id, script_section, section_index, takes, selected_takes,
+        winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      section.project_id,
+      section.script_section,
+      section.section_index             ?? 0,
+      JSON.stringify(section.takes          || []),
+      JSON.stringify(section.selected_takes || []),
+      section.winner_footage_id         || null,
+      section.gold_nugget               ? 1 : 0,
+      section.fire_suggestion           || null,
+      section.davinci_timeline_position ?? section.section_index ?? 0
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getSelectsByProject(projectId) {
+  return _all(
+    `SELECT * FROM selects WHERE project_id = ? ORDER BY section_index ASC`,
+    [projectId]
+  ).map(s => ({
+    ...s,
+    takes:          JSON.parse(s.takes          || '[]'),
+    selected_takes: JSON.parse(s.selected_takes || '[]'),
+    gold_nugget:    !!s.gold_nugget
+  }));
+}
+
+function deleteSelectsByProject(projectId) {
+  _run(`DELETE FROM selects WHERE project_id = ?`, [projectId]);
+  persist();
+}
+
+function updateProjectEditorState(projectId, state) {
+  _run(`UPDATE projects SET editor_state = ? WHERE id = ?`, [state, projectId]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
+// PIPΩR — Project config helpers
+// ─────────────────────────────────────────────
+
+function updateProjectPipr(projectId, fields) {
+  const allowed = [
+    'setup_depth', 'entry_point', 'story_structure', 'content_type',
+    'high_concept', 'estimated_duration_minutes', 'pipr_complete'
+  ];
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!updates.length) return;
+  const setClauses = updates.map(k => `${k} = ?`).join(', ');
+  _run(`UPDATE projects SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), projectId]);
+  persist();
+}
+
+function updateProjectWritr(projectId, fields) {
+  const allowed = ['writr_complete', 'active_script_id'];
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!updates.length) return;
+  const setClauses = updates.map(k => `${k} = ?`).join(', ');
+  _run(`UPDATE projects SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), projectId]);
+  persist();
+}
+
+// ─────────────────────────────────────────────
+// WRITΩR — Script helpers
+// ─────────────────────────────────────────────
+
+function insertWritrScript(data) {
+  const result = _run(
+    `INSERT INTO writr_scripts
+       (project_id, entry_point, input_type, raw_input,
+        generated_outline, generated_script, beat_map_json,
+        hook_variations, story_found, anchor_moment, missing_beats,
+        iteration_count, approved, mode, session_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      data.project_id,
+      data.entry_point       || 'shoot_first',
+      data.input_type        || 'what_happened',
+      data.raw_input         || null,
+      data.generated_outline || null,
+      data.generated_script  || null,
+      data.beat_map_json     ? JSON.stringify(data.beat_map_json)    : null,
+      data.hook_variations   ? JSON.stringify(data.hook_variations)  : null,
+      data.story_found       || null,
+      data.anchor_moment     ? JSON.stringify(data.anchor_moment)    : null,
+      data.missing_beats     ? JSON.stringify(data.missing_beats)    : null,
+      data.iteration_count   || 0,
+      data.approved          ? 1 : 0,
+      data.mode              || 'full',
+      data.session_id        || null
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getWritrScript(id) {
+  const row = _get(`SELECT * FROM writr_scripts WHERE id = ?`, [id]);
+  return row ? _parseWritrScript(row) : null;
+}
+
+function getWritrScriptsByProject(projectId) {
+  return _all(
+    `SELECT * FROM writr_scripts WHERE project_id = ? ORDER BY created_at DESC`,
+    [projectId]
+  ).map(_parseWritrScript);
+}
+
+function getApprovedWritrScript(projectId) {
+  const row = _get(
+    `SELECT * FROM writr_scripts WHERE project_id = ? AND approved = 1 ORDER BY approved_at DESC LIMIT 1`,
+    [projectId]
+  );
+  return row ? _parseWritrScript(row) : null;
+}
+
+function _parseWritrScript(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    approved:        !!row.approved,
+    beat_map_json:   row.beat_map_json   ? JSON.parse(row.beat_map_json)   : null,
+    hook_variations: row.hook_variations ? JSON.parse(row.hook_variations) : null,
+    anchor_moment:   row.anchor_moment   ? JSON.parse(row.anchor_moment)   : null,
+    missing_beats:   row.missing_beats   ? JSON.parse(row.missing_beats)   : null
+  };
+}
+
+function updateWritrScript(id, fields) {
+  const allowed = [
+    'generated_outline', 'generated_script', 'beat_map_json',
+    'hook_variations', 'story_found', 'anchor_moment', 'missing_beats',
+    'iteration_count', 'approved', 'approved_at', 'raw_input'
+  ];
+  const json_fields = new Set(['beat_map_json', 'hook_variations', 'anchor_moment', 'missing_beats']);
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!updates.length) return;
+  const sets   = updates.map(k => `${k} = ?`);
+  const values = updates.map(k => json_fields.has(k) && fields[k] !== null
+    ? JSON.stringify(fields[k])
+    : fields[k]
+  );
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  _run(`UPDATE writr_scripts SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
+  persist();
+}
+
+function approveWritrScript(projectId, scriptId) {
+  // Un-approve any previously approved script for this project first
+  _run(
+    `UPDATE writr_scripts SET approved = 0, updated_at = CURRENT_TIMESTAMP
+     WHERE project_id = ? AND approved = 1 AND id != ?`,
+    [projectId, scriptId]
+  );
+  // Mark the new script approved
+  _run(
+    `UPDATE writr_scripts SET approved = 1, approved_at = CURRENT_TIMESTAMP,
+       updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [scriptId]
+  );
+  // Set active on project
+  _run(
+    `UPDATE projects SET active_script_id = ?, writr_complete = 1
+     WHERE id = ?`,
+    [scriptId, projectId]
+  );
+  // Sync approved script text into the scripts table so SelectsΩr reads it
+  const ws = getWritrScript(scriptId);
+  if (ws?.generated_script) {
+    upsertScript(projectId, {
+      full_script:      ws.generated_script,
+      approved_version: ws.generated_script,
+      outline:          ws.generated_outline || null
+    });
+  }
+  persist();
+}
+
+// ─────────────────────────────────────────────
+// ARCHIVE / DELETE
+// ─────────────────────────────────────────────
+
+function archiveProject(id) {
+  _run(`UPDATE projects SET status = 'archived' WHERE id = ?`, [id]);
+  persist();
+}
+
+function unarchiveProject(id) {
+  _run(`UPDATE projects SET status = 'active' WHERE id = ?`, [id]);
+  persist();
+}
+
+function deleteProject(id) {
+  // ON DELETE CASCADE in schema handles all child table cleanup automatically
+  _run(`DELETE FROM projects WHERE id = ?`, [id]);
+  persist();
+}
+
+function getArchivedProjects() {
+  return _all(`
+    SELECT p.*, ps.gate_a_approved, ps.gate_b_approved, ps.gate_c_approved,
+           ps.stage_status
+    FROM projects p
+    LEFT JOIN pipeline_state ps ON ps.project_id = p.id
+    WHERE p.status = 'archived'
+    ORDER BY p.created_at DESC
+  `);
+}
+
+// ─────────────────────────────────────────────
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
 
@@ -843,6 +1323,10 @@ module.exports = {
   saveEmails,
   getEmails,
   approveAllEmails,
+  archiveProject,
+  unarchiveProject,
+  deleteProject,
+  getArchivedProjects,
   getPipelineSummary,
   // VaultΩr
   insertFootage,
@@ -874,6 +1358,7 @@ module.exports = {
   approveCut,
   updateCutClipPath,
   deleteCutsByProject,
+  saveOffScriptGoldForLater,
   getScript,
   upsertScript,
   // AnalytΩr
@@ -884,5 +1369,78 @@ module.exports = {
   upsertMetric,
   getAnalyticsByPost,
   getAnalyticsByProject,
-  getAnalyticsSummary
+  getAnalyticsSummary,
+  // ComposΩr
+  insertComposorTrack,
+  updateComposorTrack,
+  getComposorTracksByProject,
+  selectComposorTrack,
+  deleteComposorTracksByProject,
+  updateProjectComposorState,
+  // EditΩr
+  insertSelect,
+  getSelectsByProject,
+  deleteSelectsByProject,
+  updateProjectEditorState,
+  // PipΩr
+  updateProjectPipr,
+  updateProjectWritr,
+  // WritΩr
+  insertWritrScript,
+  getWritrScript,
+  getWritrScriptsByProject,
+  getApprovedWritrScript,
+  updateWritrScript,
+  approveWritrScript,
+  // ShootDay
+  getShootTakes,
+  upsertShootTake,
+  resetShootTakes
 };
+
+
+// ─────────────────────────────────────────────
+// SHOOTDAY — Take helpers
+// ─────────────────────────────────────────────
+
+function getShootTakes(projectId) {
+  return _all(
+    `SELECT * FROM shoot_takes WHERE project_id = ? ORDER BY beat_index ASC`,
+    [projectId]
+  );
+}
+
+function upsertShootTake(projectId, beatIndex, beatName, status, note) {
+  const existing = _get(
+    `SELECT id, take_number FROM shoot_takes WHERE project_id = ? AND beat_index = ?`,
+    [projectId, beatIndex]
+  );
+  if (existing) {
+    const newTake = status === 'needed'
+      ? existing.take_number              // reset doesn't increment
+      : (existing.take_number + 1);      // good/skip = new take attempt
+    _run(
+      `UPDATE shoot_takes SET status = ?, note = ?, take_number = ?,
+         beat_name = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE project_id = ? AND beat_index = ?`,
+      [status, note || null, newTake, beatName || '', projectId, beatIndex]
+    );
+  } else {
+    _run(
+      `INSERT INTO shoot_takes (project_id, beat_index, beat_name, take_number, status, note)
+       VALUES (?, ?, ?, 1, ?, ?)`,
+      [projectId, beatIndex, beatName || '', status, note || null]
+    );
+  }
+  persist();
+  return _get(
+    `SELECT * FROM shoot_takes WHERE project_id = ? AND beat_index = ?`,
+    [projectId, beatIndex]
+  );
+}
+
+function resetShootTakes(projectId) {
+  _run(`DELETE FROM shoot_takes WHERE project_id = ?`, [projectId]);
+  persist();
+}
+

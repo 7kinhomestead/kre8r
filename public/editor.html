@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — EditΩr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/global.css">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10); --amber-border:rgba(240,185,66,0.30);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10); --red-border:rgba(224,92,92,0.30);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10); --green-border:rgba(92,186,138,0.30);
+    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10); --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  /* ── NAV ── */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(14,15,14,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;}
+  .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);text-decoration:none;}
+  .nav{display:flex;gap:4px;align-items:center;}
+  .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
+  .nav a:hover{background:var(--bg-card-2);color:var(--text);}
+  .nav a.active{background:var(--teal-glow);color:var(--teal);}
+  .nav-dropdown{position:relative;display:inline-flex;}
+  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-block;white-space:nowrap;line-height:1.5;}
+  .nav-drop-btn:hover,.nav-dropdown:hover .nav-drop-btn{background:var(--bg-card-2);color:var(--text);}
+  .nav-drop-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);min-width:156px;display:none;z-index:300;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .nav-dropdown:hover .nav-drop-menu{display:block;}
+  .nav-drop-menu a{display:block;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:4px;transition:all 0.15s;white-space:nowrap;}
+  .nav-drop-menu a:hover{background:var(--bg-card-2);color:var(--text);}
+
+  /* ── LAYOUT ── */
+  .main{max-width:1100px;margin:0 auto;padding:24px 16px 80px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── PAGE HEADER ── */
+  .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(32px,7vw,52px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;line-height:1.6;}
+
+  /* ── PROJECT SELECTOR ── */
+  .project-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;animation:fadeUp 0.4s 0.05s ease both;}
+  .field-wrap{display:flex;flex-direction:column;gap:5px;}
+  .field-label{font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;}
+  .project-select{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 12px;outline:none;cursor:pointer;min-width:220px;}
+  .project-select:focus{border-color:var(--teal-dim);}
+
+  /* ── BUTTONS ── */
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-body);font-size:13px;font-weight:600;padding:9px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .btn-primary{background:var(--teal);color:#0e0f0e;}
+  .btn-primary:hover:not(:disabled){background:var(--teal-dim);}
+  .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
+  .btn-ghost:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-green{background:var(--green);color:#0e0f0e;}
+  .btn-green:hover:not(:disabled){filter:brightness(1.1);}
+  .btn-green:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-amber{background:transparent;border:1px solid var(--amber-border);color:var(--amber);}
+  .btn-amber:hover:not(:disabled){background:var(--amber-glow);}
+  .btn-amber:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-sm{padding:6px 12px;font-size:12px;}
+  .spinner{width:14px;height:14px;border:2px solid rgba(14,15,14,0.3);border-top-color:#0e0f0e;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0;}
+  .spinner-teal{border-color:var(--teal-glow);border-top-color:var(--teal);}
+
+  /* ── PROGRESS PANEL ── */
+  .progress-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;display:none;animation:fadeUp 0.3s ease both;}
+  .progress-wrap.visible{display:block;}
+  .progress-title{font-family:var(--font-head);font-size:16px;letter-spacing:1.5px;color:var(--teal);margin-bottom:10px;}
+  .progress-bar-outer{background:var(--bg-card-2);border-radius:4px;height:5px;margin-bottom:10px;overflow:hidden;}
+  .progress-bar-inner{height:100%;background:var(--teal);border-radius:4px;width:0;transition:width 0.4s ease;}
+  .progress-log{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;max-height:160px;overflow-y:auto;font-size:12px;font-family:monospace;color:var(--text-dim);line-height:1.7;}
+  .progress-log .ok{color:var(--green);}
+  .progress-log .warn{color:var(--amber);}
+  .progress-log .err{color:var(--red);}
+
+  /* ── STATUS PILLS ── */
+  .status-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;animation:fadeUp 0.4s 0.1s ease both;}
+  .status-pill{display:flex;align-items:center;gap:7px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:500;}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .dot-green{background:var(--green);} .dot-amber{background:var(--amber);} .dot-teal{background:var(--teal);} .dot-dim{background:var(--text-dimmer);}
+  .status-pill .label{color:var(--text-dim);} .status-pill .val{color:var(--text);}
+
+  /* ── PANELS ── */
+  .panels{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+  @media(max-width:800px){.panels{grid-template-columns:1fr;}}
+  .panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;animation:fadeUp 0.4s 0.15s ease both;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+  .panel-title{font-family:var(--font-head);font-size:20px;letter-spacing:2px;color:var(--text);}
+  .panel-title em{font-style:normal;color:var(--teal);}
+  .panel-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .panel-body{padding:20px;}
+  .panel-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* ── SECTION CARD ── */
+  .sections-list{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+  .section-card{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+  .section-card.is-gold{border-color:rgba(240,185,66,0.4);box-shadow:0 0 12px rgba(240,185,66,0.05);}
+  .section-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;}
+  .section-idx{font-family:var(--font-head);font-size:20px;color:var(--text-dimmer);min-width:28px;}
+  .section-info{flex:1;min-width:0;}
+  .section-label{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .section-meta{display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;}
+  .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;}
+  .badge-gold{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-border);}
+  .badge-winner{background:var(--green-glow);color:var(--green);border:1px solid var(--green-border);}
+  .badge-fire{background:var(--red-glow);color:var(--red);border:1px solid var(--red-border);}
+  .badge-takes{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+  .section-expand{background:none;border:none;color:var(--text-dimmer);font-size:16px;cursor:pointer;transition:transform 0.2s;}
+  .section-expand.open{transform:rotate(180deg);}
+  .section-body{padding:0 14px 14px;border-top:1px solid var(--border);display:none;}
+  .section-body.open{display:block;}
+  .section-detail-label{font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 5px;}
+  .section-detail-text{font-size:13px;color:var(--text-dim);line-height:1.7;}
+  .takes-list{display:flex;flex-direction:column;gap:6px;}
+  .take-item{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-size:12px;color:var(--text-dim);}
+  .take-item.is-winner{border-color:var(--green-border);background:var(--green-glow);}
+  .take-winner-tag{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;margin-left:6px;}
+  .fire-box{background:rgba(224,92,92,0.06);border:1px solid var(--red-border);border-radius:var(--radius-sm);padding:10px 12px;margin-top:12px;font-size:13px;color:var(--text-dim);line-height:1.6;}
+  .fire-box strong{color:var(--red);}
+
+  /* ── BROLL PANEL ── */
+  .broll-section{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;}
+  .broll-section-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;}
+  .broll-suggestion{font-size:12px;color:var(--amber);margin-bottom:10px;line-height:1.5;}
+  .broll-select{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:7px 10px;outline:none;width:100%;}
+  .broll-select:focus{border-color:var(--teal-dim);}
+  .broll-none{font-size:13px;color:var(--text-dimmer);font-style:italic;padding:12px 0;}
+
+  /* ── OVERALL NOTES ── */
+  .notes-panel{background:var(--bg-card);border:1px solid var(--border-bright);border-left:3px solid var(--teal);border-radius:var(--radius);padding:14px 16px;margin-bottom:24px;font-size:14px;color:var(--text-dim);line-height:1.7;animation:fadeUp 0.4s 0.2s ease both;}
+  .notes-panel strong{color:var(--teal);}
+
+  /* ── EMPTY STATE ── */
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text-dim);}
+  .empty-icon{font-size:40px;margin-bottom:12px;opacity:0.5;}
+  .empty-title{font-family:var(--font-head);font-size:20px;letter-spacing:2px;margin-bottom:6px;color:var(--text);}
+  .empty-sub{font-size:13px;line-height:1.6;}
+
+  /* ── ADVANCE BANNER ── */
+  .advance-banner{background:linear-gradient(135deg,var(--teal-glow) 0%,var(--bg-card) 100%);border:1px solid rgba(62,207,178,0.3);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;display:none;animation:fadeUp 0.4s ease both;}
+  .advance-banner.visible{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .advance-text{flex:1;}
+  .advance-title{font-family:var(--font-head);font-size:18px;letter-spacing:2px;color:var(--teal);margin-bottom:4px;}
+  .advance-sub{font-size:13px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<div id="kre8r-nav"></div>
+
+<div class="main">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-title">EDIT<em>Ω</em>R</div>
+    <div class="page-sub">Transcript → selects mapping. Claude picks your best takes. One click to DaVinci.</div>
+  </div>
+
+  <!-- PROJECT SELECTOR -->
+  <div class="project-bar">
+    <div class="field-wrap">
+      <div class="field-label">Project</div>
+      <select class="project-select" id="projectSelect">
+        <option value="">— select a project —</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="buildSelectsBtn" disabled>
+      <span class="spinner" id="buildSpinner" style="display:none"></span>
+      Build Selects
+    </button>
+    <button class="btn btn-ghost" id="davinciBtn" disabled title="Push selects to DaVinci 02_SELECTS timeline">
+      <span class="spinner" id="davinciSpinner" style="display:none"></span>
+      Push to DaVinci
+    </button>
+    <button class="btn btn-ghost btn-sm" id="clearBtn" disabled style="margin-left:auto">Clear</button>
+  </div>
+
+  <!-- SELECTS PROGRESS -->
+  <div class="progress-wrap" id="selectsProgress">
+    <div class="progress-title">BUILDING SELECTS</div>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="selectsBar"></div></div>
+    <div class="progress-log" id="selectsLog"></div>
+  </div>
+
+  <!-- DAVINCI PROGRESS -->
+  <div class="progress-wrap" id="davinciProgress">
+    <div class="progress-title">PUSHING TO DAVINCI</div>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="davinciBar"></div></div>
+    <div class="progress-log" id="davinciLog"></div>
+  </div>
+
+  <!-- STATUS PILLS -->
+  <div class="status-bar" id="statusBar" style="display:none">
+    <div class="status-pill">
+      <div class="status-dot" id="stateDot"></div>
+      <span class="label">State:</span>
+      <span class="val" id="stateVal">—</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot dot-teal"></div>
+      <span class="label">Sections:</span>
+      <span class="val" id="sectionsCount">0</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot dot-amber"></div>
+      <span class="label">Gold Nuggets:</span>
+      <span class="val" id="goldCount">0</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot dot-dim"></div>
+      <span class="label">Fire Notes:</span>
+      <span class="val" id="fireCount">0</span>
+    </div>
+  </div>
+
+  <!-- OVERALL NOTES -->
+  <div class="notes-panel" id="overallNotes" style="display:none">
+    <strong>CLAUDE'S ASSESSMENT</strong><br>
+    <span id="overallNotesText"></span>
+  </div>
+
+  <!-- TWO-PANEL GRID -->
+  <div class="panels">
+
+    <!-- PANEL: SELECTS BUILDER -->
+    <div class="panel" id="selectsPanel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">SELECTS<em>Ω</em>R</div>
+          <div class="panel-sub">Script sections → best takes</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="empty-state" id="selectsEmpty">
+          <div class="empty-icon">🎬</div>
+          <div class="empty-title">NO SELECTS YET</div>
+          <div class="empty-sub">Select a project with talking-head clips and click "Build Selects" to run Whisper + Claude analysis.</div>
+        </div>
+        <div class="sections-list" id="sectionsList" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- PANEL: B-ROLL IMPORTER -->
+    <div class="panel" id="brollPanel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">B-ROLL<em>Ω</em>R</div>
+          <div class="panel-sub">Assign b-roll to sections, push to DaVinci Track 2</div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-amber btn-sm" id="importBrollBtn" disabled>
+            <span class="spinner" id="brollSpinner" style="display:none"></span>
+            Import B-Roll
+          </button>
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <!-- BROLL PROGRESS -->
+        <div class="progress-wrap" id="brollProgress" style="margin-bottom:16px">
+          <div class="progress-title">IMPORTING B-ROLL</div>
+          <div class="progress-bar-outer"><div class="progress-bar-inner" id="brollBar"></div></div>
+          <div class="progress-log" id="brollLog"></div>
+        </div>
+
+        <div class="broll-none" id="brollEmpty">Select a project and build selects to see b-roll suggestions.</div>
+        <div id="brollSections" style="display:none"></div>
+      </div>
+    </div>
+
+  </div><!-- /panels -->
+
+  <!-- ADVANCE BANNER -->
+  <div class="advance-banner" id="advanceBanner">
+    <div class="advance-text">
+      <div class="advance-title">SELECTS READY</div>
+      <div class="advance-sub">Timeline built. Head to ReviewΩr to review CutΩr clips, or open DaVinci to start cutting.</div>
+    </div>
+    <a href="/reviewr.html" class="btn btn-primary" id="goReviewrBtn">Go to ReviewΩr →</a>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+
+let currentProjectId = null;
+let currentSelects   = null;   // { sections, gold_nuggets, fire_sections, ... }
+let brollCandidates  = [];     // all b-roll footage for project
+let brollAssignments = {};     // section_id → footage_id
+let projectsMap      = {};     // id → project object
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+
+async function init() {
+  await loadProjects();
+
+  const params = new URLSearchParams(window.location.search);
+  const pid = params.get('project_id');
+  if (pid) {
+    document.getElementById('projectSelect').value = pid;
+    onProjectChange(parseInt(pid, 10));
+  }
+
+  document.getElementById('projectSelect').addEventListener('change', e => {
+    const pid = parseInt(e.target.value, 10);
+    if (pid) onProjectChange(pid);
+  });
+
+  document.getElementById('buildSelectsBtn').addEventListener('click', onBuildSelects);
+  document.getElementById('davinciBtn').addEventListener('click', onPushToDavinci);
+  document.getElementById('importBrollBtn').addEventListener('click', onImportBroll);
+  document.getElementById('clearBtn').addEventListener('click', onClearSelects);
+}
+
+// ─────────────────────────────────────────────
+// PROJECTS
+// ─────────────────────────────────────────────
+
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/projects');
+    const projects = await r.json();
+    const sel = document.getElementById('projectSelect');
+    projects.forEach(p => {
+      projectsMap[p.id] = p;
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title || `Project ${p.id}`;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    console.error('Failed to load projects:', e);
+  }
+}
+
+// ─────────────────────────────────────────────
+// ON PROJECT CHANGE
+// ─────────────────────────────────────────────
+
+async function onProjectChange(projectId) {
+  currentProjectId = projectId;
+  currentSelects   = null;
+  brollAssignments = {};
+
+  const proj = projectsMap[projectId];
+  const hasFootage = !proj || proj.footage_count > 0;
+  document.getElementById('buildSelectsBtn').disabled = !hasFootage;
+  document.getElementById('clearBtn').disabled = false;
+  document.getElementById('davinciBtn').disabled = true;
+  document.getElementById('importBrollBtn').disabled = true;
+  document.getElementById('statusBar').style.display = 'none';
+  document.getElementById('overallNotes').style.display = 'none';
+  document.getElementById('advanceBanner').classList.remove('visible');
+
+  // Show/hide footage guard
+  let footageGuard = document.getElementById('footageGuard');
+  if (!footageGuard) {
+    footageGuard = document.createElement('div');
+    footageGuard.id = 'footageGuard';
+    footageGuard.style.cssText = 'display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px 16px;font-size:13px;color:#f59e0b;margin-bottom:12px;';
+    const projectBar = document.querySelector('.project-bar');
+    projectBar.insertAdjacentElement('afterend', footageGuard);
+  }
+  if (!hasFootage) {
+    footageGuard.style.display = 'block';
+    footageGuard.textContent = '⚠ No footage assigned to this project yet. Go to VaultΩr and assign footage first.';
+  } else {
+    footageGuard.style.display = 'none';
+  }
+
+  clearSections();
+  clearBroll();
+
+  // Load existing selects
+  try {
+    const r = await fetch(`/api/editor/selects/${projectId}`);
+    const data = await r.json();
+    if (data.sections && data.sections.length > 0) {
+      renderSelects(data);
+    }
+  } catch (e) {
+    console.error('Failed to load selects:', e);
+  }
+
+  // Load b-roll suggestions
+  await loadBroll(projectId);
+}
+
+// ─────────────────────────────────────────────
+// BUILD SELECTS
+// ─────────────────────────────────────────────
+
+async function onBuildSelects() {
+  if (!currentProjectId) return;
+
+  setBuildLoading(true);
+  showProgress('selectsProgress', true);
+  clearSections();
+  clearBroll();
+
+  try {
+    const r = await fetch(`/api/editor/selects/build/${currentProjectId}`, { method: 'POST' });
+    const { job_id } = await r.json();
+
+    await streamJob(job_id, '/api/editor/selects/status/', 'selectsProgress', 'selectsBar', 'selectsLog', {
+      onStage: (ev) => {
+        if (ev.stage === 'transcribing') appendLog('selectsLog', `Transcribing ${ev.file}…`, 'dim');
+        if (ev.stage === 'transcribed')  appendLog('selectsLog', `Transcribed: ${ev.segments} segments`, 'ok');
+        if (ev.stage === 'transcript_skipped') appendLog('selectsLog', `Skipped: ${ev.file} (${ev.reason})`, 'warn');
+        if (ev.stage === 'chunks_planned')   appendLog('selectsLog', `Claude: ${ev.total_clips} clip(s) → ${ev.total_chunks} chunk(s)`, 'dim');
+        if (ev.stage === 'analyzing_chunk')  appendLog('selectsLog', ev.message, 'dim');
+        if (ev.stage === 'chunk_done')       appendLog('selectsLog', ev.message, 'ok');
+        if (ev.stage === 'merging')          appendLog('selectsLog', ev.message, 'dim');
+        if (ev.stage === 'merge_done')       appendLog('selectsLog', ev.message, 'ok');
+        if (ev.stage === 'saved')         appendLog('selectsLog', `Saved ${ev.sections} sections to DB`, 'ok');
+        if (ev.stage === 'whisper')       { if (ev.line) appendLog('selectsLog', ev.line, 'dim'); }
+      },
+      onDone: async (result) => {
+        appendLog('selectsLog', `Done — ${result.sections} sections, ${result.gold_nuggets} gold nuggets`, 'ok');
+        // Reload selects
+        const r2 = await fetch(`/api/editor/selects/${currentProjectId}`);
+        const data = await r2.json();
+        renderSelects(data);
+        await loadBroll(currentProjectId);
+        setBuildLoading(false);
+      },
+      onError: (err) => {
+        appendLog('selectsLog', `Error: ${err}`, 'err');
+        setBuildLoading(false);
+      }
+    });
+  } catch (e) {
+    appendLog('selectsLog', `Request failed: ${e.message}`, 'err');
+    setBuildLoading(false);
+  }
+}
+
+function setBuildLoading(loading) {
+  document.getElementById('buildSelectsBtn').disabled = loading;
+  document.getElementById('buildSpinner').style.display = loading ? 'inline-block' : 'none';
+}
+
+// ─────────────────────────────────────────────
+// RENDER SELECTS
+// ─────────────────────────────────────────────
+
+function renderSelects(data) {
+  currentSelects = data;
+
+  // Status pills
+  const stateVal  = document.getElementById('stateVal');
+  const stateDot  = document.getElementById('stateDot');
+  const state     = data.editor_state || 'selects_ready';
+  stateVal.textContent = state.replace(/_/g, ' ');
+  stateDot.className  = 'status-dot ' + (state === 'broll_imported' ? 'dot-green' : 'dot-teal');
+  document.getElementById('sectionsCount').textContent = data.total || 0;
+  document.getElementById('goldCount').textContent     = data.gold_nuggets || 0;
+  document.getElementById('fireCount').textContent     = data.fire_sections || 0;
+  document.getElementById('statusBar').style.display   = 'flex';
+
+  // Enable DaVinci button
+  document.getElementById('davinciBtn').disabled = false;
+
+  // Overall notes (stored in result after build — not in selects endpoint)
+  // We'll skip for now; show if available from build result
+  document.getElementById('overallNotes').style.display = 'none';
+
+  // Sections list
+  const list  = document.getElementById('sectionsList');
+  const empty = document.getElementById('selectsEmpty');
+
+  if (!data.sections || data.sections.length === 0) {
+    list.style.display  = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  list.innerHTML  = '';
+  list.style.display  = 'flex';
+  empty.style.display = 'none';
+
+  for (const sec of data.sections) {
+    list.appendChild(buildSectionCard(sec));
+  }
+
+  // Show advance banner
+  document.getElementById('advanceBanner').classList.add('visible');
+  document.getElementById('goReviewrBtn').href = `/reviewr.html?project_id=${currentProjectId}`;
+}
+
+function buildSectionCard(sec) {
+  const card = document.createElement('div');
+  card.className = 'section-card' + (sec.gold_nugget ? ' is-gold' : '');
+
+  const takesCount = (sec.takes || []).length;
+
+  card.innerHTML = `
+    <div class="section-head" onclick="toggleSection(this)">
+      <span class="section-idx">${sec.section_index + 1}</span>
+      <div class="section-info">
+        <div class="section-label">${esc(sec.script_section)}</div>
+        <div class="section-meta">
+          ${takesCount > 0 ? `<span class="badge badge-takes">${takesCount} take${takesCount !== 1 ? 's' : ''}</span>` : ''}
+          ${sec.winner_footage_id ? `<span class="badge badge-winner">winner set</span>` : ''}
+          ${sec.gold_nugget ? `<span class="badge badge-gold">gold nugget</span>` : ''}
+          ${sec.fire_suggestion ? `<span class="badge badge-fire">fire note</span>` : ''}
+        </div>
+      </div>
+      <button class="section-expand" tabindex="-1">▾</button>
+    </div>
+    <div class="section-body">
+      ${buildTakesHTML(sec)}
+      ${sec.fire_suggestion ? `<div class="fire-box"><strong>FIRE:</strong> ${esc(sec.fire_suggestion)}</div>` : ''}
+    </div>
+  `;
+  return card;
+}
+
+function buildTakesHTML(sec) {
+  const takes = sec.takes || [];
+  if (takes.length === 0) return '<div class="section-detail-label">TAKES</div><div class="section-detail-text" style="color:var(--red)">No takes found for this section.</div>';
+
+  const html = takes.map(t => {
+    const isWinner = t.footage_id === sec.winner_footage_id;
+    const ts = (t.start != null && t.end != null)
+      ? ` — ${fmtTs(t.start)} → ${fmtTs(t.end)}`
+      : '';
+    return `<div class="take-item${isWinner ? ' is-winner' : ''}">
+      <strong>${esc(t.filename || `footage #${t.footage_id}`)}</strong>${ts}
+      ${isWinner ? '<span class="take-winner-tag">WINNER</span>' : ''}
+      ${t.transcript_excerpt ? `<br><span style="font-size:11px;opacity:0.7">"${esc(t.transcript_excerpt)}"</span>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<div class="section-detail-label">TAKES</div><div class="takes-list">${html}</div>`;
+}
+
+function toggleSection(head) {
+  const body = head.nextElementSibling;
+  const btn  = head.querySelector('.section-expand');
+  const open = body.classList.toggle('open');
+  if (btn) btn.classList.toggle('open', open);
+}
+
+function clearSections() {
+  document.getElementById('sectionsList').innerHTML = '';
+  document.getElementById('sectionsList').style.display = 'none';
+  document.getElementById('selectsEmpty').style.display = 'block';
+  document.getElementById('statusBar').style.display = 'none';
+  document.getElementById('advanceBanner').classList.remove('visible');
+}
+
+// ─────────────────────────────────────────────
+// PUSH TO DAVINCI
+// ─────────────────────────────────────────────
+
+async function onPushToDavinci() {
+  if (!currentProjectId) return;
+
+  setDavinciLoading(true);
+  showProgress('davinciProgress', true);
+
+  try {
+    const r = await fetch(`/api/editor/davinci/build/${currentProjectId}`, { method: 'POST' });
+    const { job_id } = await r.json();
+
+    await streamJob(job_id, '/api/editor/selects/status/', 'davinciProgress', 'davinciBar', 'davinciLog', {
+      onStage: (ev) => {
+        if (ev.stage === 'davinci_log') appendLog('davinciLog', ev.line, 'dim');
+        if (ev.stage === 'davinci_start') appendLog('davinciLog', `Pushing ${ev.sections} sections…`, 'dim');
+      },
+      onDone: (result) => {
+        const warn = (result.warnings || []).length;
+        const errs = (result.errors || []).length;
+        appendLog('davinciLog', `Timeline '${result.timeline_name}' created — ${result.clips_placed} clips placed`, 'ok');
+        if (warn) appendLog('davinciLog', `${warn} warning(s) — check DaVinci`, 'warn');
+        if (errs) appendLog('davinciLog', `${errs} error(s)`, 'err');
+        setDavinciLoading(false);
+      },
+      onError: (err) => {
+        appendLog('davinciLog', `Error: ${err}`, 'err');
+        setDavinciLoading(false);
+      }
+    });
+  } catch (e) {
+    appendLog('davinciLog', `Request failed: ${e.message}`, 'err');
+    setDavinciLoading(false);
+  }
+}
+
+function setDavinciLoading(loading) {
+  document.getElementById('davinciBtn').disabled = loading;
+  document.getElementById('davinciSpinner').style.display = loading ? 'inline-block' : 'none';
+}
+
+// ─────────────────────────────────────────────
+// CLEAR SELECTS
+// ─────────────────────────────────────────────
+
+async function onClearSelects() {
+  if (!currentProjectId) return;
+  if (!confirm('Clear all selects for this project? This cannot be undone.')) return;
+
+  try {
+    await fetch(`/api/editor/selects/${currentProjectId}`, { method: 'DELETE' });
+    currentSelects = null;
+    brollAssignments = {};
+    clearSections();
+    clearBroll();
+    document.getElementById('davinciBtn').disabled = true;
+    document.getElementById('importBrollBtn').disabled = true;
+    hideProgress('selectsProgress');
+    hideProgress('davinciProgress');
+  } catch (e) {
+    console.error('Clear failed:', e);
+  }
+}
+
+// ─────────────────────────────────────────────
+// B-ROLL
+// ─────────────────────────────────────────────
+
+async function loadBroll(projectId) {
+  try {
+    const r = await fetch(`/api/editor/broll/${projectId}`);
+    const data = await r.json();
+
+    brollCandidates  = data.candidates || [];
+    brollAssignments = {};
+
+    renderBroll(data);
+  } catch (e) {
+    console.error('Failed to load b-roll:', e);
+  }
+}
+
+function renderBroll(data) {
+  const container = document.getElementById('brollSections');
+  const empty     = document.getElementById('brollEmpty');
+  const importBtn = document.getElementById('importBrollBtn');
+
+  const sections = data.sections || [];
+
+  if (sections.length === 0) {
+    container.style.display = 'none';
+    empty.style.display = 'block';
+    importBtn.disabled = true;
+    return;
+  }
+
+  container.innerHTML    = '';
+  container.style.display = 'block';
+  empty.style.display    = 'none';
+  importBtn.disabled     = false;
+
+  for (const sec of sections) {
+    container.appendChild(buildBrollSection(sec, data.candidates || []));
+  }
+}
+
+function buildBrollSection(sec, candidates) {
+  const div = document.createElement('div');
+  div.className = 'broll-section';
+  div.dataset.sectionId = sec.section_id;
+
+  const selectId = `broll-select-${sec.section_id}`;
+
+  const options = candidates.map(c =>
+    `<option value="${c.footage_id}">${esc(c.filename)}${c.duration ? ` (${c.duration}s)` : ''}</option>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="broll-section-label">${esc(sec.script_section)}</div>
+    <div class="broll-suggestion">${esc(sec.fire_suggestion)}</div>
+    ${candidates.length > 0
+      ? `<select class="broll-select" id="${selectId}" onchange="onBrollAssign(${sec.section_id}, this.value)">
+           <option value="">— choose b-roll clip —</option>
+           ${options}
+         </select>`
+      : `<div style="font-size:12px;color:var(--text-dimmer);font-style:italic">No b-roll footage in VaultΩr for this project.</div>`
+    }
+  `;
+  return div;
+}
+
+function onBrollAssign(sectionId, footageId) {
+  if (footageId) {
+    brollAssignments[sectionId] = parseInt(footageId, 10);
+  } else {
+    delete brollAssignments[sectionId];
+  }
+}
+
+async function onImportBroll() {
+  const assignments = Object.entries(brollAssignments).map(([section_id, footage_id]) => ({
+    section_id: parseInt(section_id, 10),
+    footage_id
+  }));
+
+  if (assignments.length === 0) {
+    alert('Assign at least one b-roll clip before importing.');
+    return;
+  }
+
+  setBrollLoading(true);
+  showProgress('brollProgress', true);
+
+  try {
+    const r = await fetch(`/api/editor/broll/import/${currentProjectId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignments })
+    });
+    const { job_id } = await r.json();
+
+    await streamJob(job_id, '/api/editor/broll/status/', 'brollProgress', 'brollBar', 'brollLog', {
+      onStage: (ev) => {
+        if (ev.stage === 'davinci_log') appendLog('brollLog', ev.line, 'dim');
+        if (ev.stage === 'davinci_start') appendLog('brollLog', `Placing ${ev.assignments} clips…`, 'dim');
+      },
+      onDone: (result) => {
+        appendLog('brollLog', `Done — ${result.clips_placed} placed, ${result.clips_missing} missing`, result.clips_missing > 0 ? 'warn' : 'ok');
+        setBrollLoading(false);
+      },
+      onError: (err) => {
+        appendLog('brollLog', `Error: ${err}`, 'err');
+        setBrollLoading(false);
+      }
+    });
+  } catch (e) {
+    appendLog('brollLog', `Request failed: ${e.message}`, 'err');
+    setBrollLoading(false);
+  }
+}
+
+function setBrollLoading(loading) {
+  document.getElementById('importBrollBtn').disabled = loading;
+  document.getElementById('brollSpinner').style.display = loading ? 'inline-block' : 'none';
+}
+
+function clearBroll() {
+  document.getElementById('brollSections').innerHTML = '';
+  document.getElementById('brollSections').style.display = 'none';
+  document.getElementById('brollEmpty').style.display = 'block';
+  document.getElementById('importBrollBtn').disabled = true;
+}
+
+// ─────────────────────────────────────────────
+// SSE JOB STREAM
+// ─────────────────────────────────────────────
+
+function streamJob(jobId, basePath, progressId, barId, logId, { onStage, onDone, onError }) {
+  return new Promise(resolve => {
+    const es = new EventSource(`${basePath}${jobId}`);
+    let pct = 5;
+
+    es.onmessage = (e) => {
+      const ev = JSON.parse(e.data);
+
+      if (ev.stage === 'done') {
+        setBar(barId, 100);
+        es.close();
+        onDone(ev.result);
+        resolve();
+        return;
+      }
+
+      if (ev.stage === 'error') {
+        setBar(barId, 100);
+        es.close();
+        onError(ev.error);
+        resolve();
+        return;
+      }
+
+      pct = Math.min(pct + 8, 90);
+      setBar(barId, pct);
+      onStage(ev);
+    };
+
+    es.onerror = () => {
+      es.close();
+      onError('Connection lost');
+      resolve();
+    };
+  });
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+
+function appendLog(logId, text, cls = '') {
+  const log  = document.getElementById(logId);
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = text;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setBar(id, pct) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = pct + '%';
+}
+
+function showProgress(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('visible', show);
+  if (show) {
+    const log = el?.querySelector('.progress-log');
+    if (log) log.innerHTML = '';
+    setBar(id.replace('Progress', 'Bar'), 5);
+  }
+}
+
+function hideProgress(id) {
+  document.getElementById(id)?.classList.remove('visible');
+}
+
+function fmtTs(s) {
+  if (s == null) return '?';
+  const m   = Math.floor(s / 60);
+  const sec = (s % 60).toFixed(1).padStart(4, '0');
+  return `${m}:${sec}`;
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ─────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+</script>
+<script src="/js/nav.js"></script>
+<script>initNav();</script>
+</body>
+</html>

@@ -10,7 +10,7 @@ const path     = require('path');
 const fs       = require('fs');
 const multer   = require('multer');
 const db       = require('../db');
-const { ingestFolder, ingestFile, checkFfmpeg } = require('../vault/intake');
+const { ingestFolder, ingestFile, checkFfmpeg, reclassifyById } = require('../vault/intake');
 const { startWatcher, stopWatcher, getWatcherStatus } = require('../vault/watcher');
 const { organizeFile, organizeAll } = require('../vault/organizer');
 
@@ -113,6 +113,27 @@ router.get('/footage/:id', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// PATCH /api/vault/footage/bulk-assign
+// Body: { footage_ids: [1,2,3], project_id: X }
+// Must be defined before /:id to avoid param capture
+// ─────────────────────────────────────────────
+router.patch('/footage/bulk-assign', (req, res) => {
+  const { footage_ids, project_id } = req.body;
+  if (!footage_ids || !Array.isArray(footage_ids) || footage_ids.length === 0) {
+    return res.status(400).json({ error: 'footage_ids array is required' });
+  }
+  if (!project_id) return res.status(400).json({ error: 'project_id is required' });
+  try {
+    for (const id of footage_ids) {
+      db.updateFootage(parseInt(id), { project_id: parseInt(project_id) });
+    }
+    res.json({ ok: true, updated: footage_ids.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // PATCH /api/vault/footage/:id — update fields
 // ─────────────────────────────────────────────
 router.patch('/footage/:id', (req, res) => {
@@ -185,6 +206,84 @@ router.post('/footage/:id/organize', async (req, res) => {
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/footage/:id/reclassify
+// Re-run Claude Vision on an existing clip's thumbnails
+// ─────────────────────────────────────────────
+router.post('/footage/:id/reclassify', async (req, res) => {
+  try {
+    const result = await reclassifyById(parseInt(req.params.id));
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/reclassify-missing
+// Re-run Vision on all footage where description or quality_flag is null.
+// Streams SSE progress when Accept: text/event-stream.
+// ─────────────────────────────────────────────
+router.post('/reclassify-missing', async (req, res) => {
+  const useSSE = req.headers.accept === 'text/event-stream';
+
+  if (useSSE) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+  }
+
+  const send = useSSE
+    ? (data) => res.write(`data: ${JSON.stringify(data)}\n\n`)
+    : () => {};
+
+  try {
+    // Find all footage missing description or quality_flag, skipping BRAW stubs
+    // (BRAW stubs have no thumbnails — they need a proxy first)
+    const all = db.getAllFootage({});
+    const missing = all.filter(f =>
+      (!f.description || !f.quality_flag) &&
+      f.thumbnail_path !== null &&
+      f.codec !== 'BRAW'
+    );
+
+    send({ stage: 'discovered', total: missing.length });
+
+    const results = { ok: 0, failed: 0, errors: [] };
+
+    for (let i = 0; i < missing.length; i++) {
+      const f = missing[i];
+      send({ stage: 'processing', index: i + 1, total: missing.length, file: f.original_filename });
+      try {
+        const classification = await reclassifyById(f.id);
+        results.ok++;
+        send({ stage: 'classified', index: i + 1, total: missing.length, file: f.original_filename, classification });
+      } catch (e) {
+        results.failed++;
+        results.errors.push({ id: f.id, file: f.original_filename, error: e.message });
+        send({ stage: 'error', file: f.original_filename, error: e.message });
+      }
+    }
+
+    const summary = { total: missing.length, ...results };
+    send({ stage: 'done', summary });
+
+    if (useSSE) {
+      res.end();
+    } else {
+      res.json(summary);
+    }
+  } catch (e) {
+    if (useSSE) {
+      res.write(`data: ${JSON.stringify({ stage: 'error', error: e.message })}\n\n`);
+      res.end();
+    } else {
+      res.status(500).json({ error: e.message });
+    }
   }
 });
 

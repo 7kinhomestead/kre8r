@@ -2,76 +2,83 @@
 
 ---
 
-## Task 1 — Confirm color space + S-curve in Resolve 20 with real footage
+## Task 1 — Live test TeleprΩmpter full 3-device setup
 
-The `create-project.py` script now probes and logs all available `GetSetting` keys to
-stderr. The next real test must include proxy footage so the S-curve path actually runs.
+All four fixes landed this session but haven't been tested end-to-end on real hardware.
 
-**What to do:**
-1. Pick a project that has proxy MP4s in VaultΩr (or drop a test MP4 into the intake
-   folder and let it ingest)
-2. Call `POST /api/davinci/create-project` with that `project_id`
-3. Watch the server console for these lines:
-   ```
-   [probe] GetSetting('colorSpaceInput') = '...'   ← confirms key exists + current value
-   [color] colorSpaceInput: SetSetting('colorSpaceInput', '...') OK
-   [resolve] colorAdj keys (first 12): [...]        ← shows S-curve key format
-   ```
-4. If color space still fails: the probe output will show the exact Resolve 20 key names
-   to use — update `try_set_color_space()` calls in `create-project.py` with the correct keys
-5. If S-curve still fails: the colorAdj key list will show what Resolve 20 exposes —
-   add the correct key format as "Format D" in the S-curve section
-
-**Success criteria:** `errors: []` in the JSON response, color management visible in
-Resolve Project Settings → Color Management tab.
+**Test sequence:**
+1. Start display on laptop: `http://localhost:3000/teleprompter.html` → Load Script → Start
+2. Note the 4-digit session code on screen
+3. **Phone 1 (Control/Cari):** `http://192.168.1.143:3000/teleprompter.html?mode=control&session=XXXX`
+   - Confirm script text appears and scrolls in sync with display
+   - Test ⏪ 10s / slider / 10s ⏩ seek controls
+   - Test drag up/down on text → speed changes on display
+   - Confirm all text is full white, no fading
+4. **Phone 2 (Voice/Jason):** `http://192.168.1.143:3000/teleprompter.html?mode=voice&session=XXXX`
+   - Confirm 🎤 icon + volume bar appear
+   - Speak → display starts scrolling; pause → display stops
+   - Confirm sensitivity slider adjusts threshold
+5. Confirm teal reading guide line visible at 38% from top on display
+6. Tap any line on paused display → confirm jump to that line
 
 ---
 
-## Task 2 — Update `public/index.html` PipelineΩr dashboard
+## Task 2 — Id8Ωr (Ideation Engine) — Phase 3
 
-The home screen was not updated this session. A `--blue` CSS variable was added but
-the quick-action cards and project card links were not completed.
+First new tool of Phase 3. Generates content ideas from creator voice, trending angles, and past winners.
 
-**Quick-action cards** — add two missing cards (AnalytΩr, OperatΩr):
-```
-AnalytΩr:  chart icon (📊), c-blue,   "Track performance across platforms"  → m5-analytics.html
-OperatΩr:  grid icon  (🗂️), c-green,  "Queue, publish, and archive projects" → operator.html
-```
-The `c-blue` class needs to be added to the CSS (the `--blue: #5b9cf6` var already exists).
+**Design:**
+- Input: niche keywords, recent video titles, optional trending topic
+- Output: 5–10 idea cards, each with: Hook, Angle (Financial/Rigged/Rock Rich), Story Structure, B-roll needs
+- Ideas saved to DB, promotable to full PipΩr project with one click
+- Uses Claude with creator-profile.json for voice + angle filtering
 
-**Pipeline project cards** — add two action links to each card:
-- "Analytics →" linking to `m5-analytics.html?project_id=X` (always shown)
-- "OperatΩr →" linking to `operator.html?project_id=X` (shown only when `gate_c_approved`)
-
-**Grid layout** — 8 cards total; keep 4-column grid (2 rows of 4). Confirm it doesn't
-overflow at 1280px width.
+**Files to create:**
+- `src/routes/id8r.js` — route + Claude generation
+- `public/id8r.html` — idea card UI, promote-to-project button
+- DB: `id8r_ideas` table (`project_id nullable`, `hook`, `angle`, `structure`, `created_at`)
+- Mount in `server.js`
 
 ---
 
-## Task 3 — CutΩr Whisper path hardening + ReviewΩr UX fixes
+## Task 3 — Create GitHub PR for feat/editor branch
 
-The CutΩr route uses `python -m whisper` which depends on the user's Python environment.
-This needs to be robust before first real use.
+All session 9–12 work is on `feat/editor`. PR still not created.
 
-**Whisper path detection (`src/routes/cutor.js`):**
-- Check `py -m whisper --help` first (Windows Python Launcher), then `python3`, then `python`
-- If Whisper not found, return a clear error immediately rather than a spawn that hangs
-- Log which Python binary is being used so debugging is easy
-- Add a `GET /api/cutor/check` health endpoint: returns ffmpeg status + Whisper status
-  (similar to `/api/vault/status`) — ReviewΩr can call this on load and show a warning
-  banner if Whisper is missing
+```
+gh pr create \
+  --title "feat: TeleprΩmpter overhaul, WritΩr 3-tabs, Voice Library, DirectΩr" \
+  --base main --head feat/editor
+```
 
-**ReviewΩr UI fixes:**
-- On load, call `/api/cutor/check` and show a setup warning if ffmpeg or Whisper is
-  missing (with install instructions)
-- The "Transcribe + Analyze" button should be disabled with a tooltip explaining why
-  if the check fails
-- Add a "Re-run Analysis" button that clears existing cuts for a project and re-runs
-  the full pipeline (currently there is no way to reprocess footage)
-- Fix: after extraction, the clip_path links should be clickable `file://` links so the
-  user can open the extracted clip directly from the browser
+PR covers:
+- **TeleprΩmpter:** 3-device setup (display/control/voice), position sync, seek controls, full-white text, reading guide, drag-to-speed, font size calibration, voice device mode
+- **WritΩr:** three output tabs (Full/Bullets/Hybrid), parallel generation, session_id grouping, beat coverage colors, PipΩr prefill fix
+- **Voice Library:** Whisper → Claude voice analysis, weighted profile blending, SSE job stream
+- **DirectΩr:** crew brief data fix, Blob package download, shot type inference
+- **ReviewΩr:** auto Voice Library prompt after CutΩr analysis
 
-**Robustness:**
-- If Whisper times out (>10 min), emit a timeout error event and mark job failed
-- If Claude cut analysis returns malformed JSON, show a parse error in the SSE log
-  rather than silently failing
+---
+
+## Carry-forward (from Session 11 — still valid)
+
+### Voice Library end-to-end test
+1. Open `http://localhost:3000/writr.html` → Voice Library section
+2. Add a real `.mp4` with speech → confirm SSE: `transcribing` → `analyzing` → `saved`
+3. Select as Primary voice → write script → confirm voice instructions in prompt
+
+### WritΩr three tabs end-to-end test
+1. Generate → confirm all 3 tabs complete and render correctly
+2. Beat coverage colors on cards and script sections
+3. Navigate away and back → all tabs restore
+
+---
+
+## PM2 Quick Reference
+
+```
+pm2 status              # check kre8r is running
+pm2 logs kre8r          # live server logs
+pm2 restart kre8r       # after pulling code changes
+pm2 save                # save process list after any pm2 changes
+```

@@ -3,350 +3,864 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kre8Ωr — Pipeline Dashboard</title>
+<title>Kre8Ωr — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/global.css">
 <style>
-  :root {
-    --bg: #0e0f0e; --bg-card: #161916; --bg-card-2: #1c1f1b;
-    --border: #2a2e28; --border-bright: #3d4439;
-    --teal: #3ecfb2; --teal-dim: #2aa893; --teal-glow: rgba(62,207,178,0.10); --teal-glow-strong: rgba(62,207,178,0.20);
-    --amber: #f0b942; --amber-glow: rgba(240,185,66,0.10);
-    --red: #e05c5c; --red-glow: rgba(224,92,92,0.10);
-    --green: #5cba8a; --green-glow: rgba(92,186,138,0.10);
-    --purple: #a78bfa; --purple-glow: rgba(167,139,250,0.10);
-    --blue: #5b9cf6; --blue-glow: rgba(91,156,246,0.10);
-    --text: #e8ebe6; --text-dim: #8a9487; --text-dimmer: #4e5349;
-    --font-head: 'Bebas Neue', sans-serif; --font-body: 'DM Sans', sans-serif;
-    --radius: 10px; --radius-sm: 6px;
-  }
+  /* ─── BASE ─── */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; min-height: 100vh; -webkit-font-smoothing: antialiased; }
   body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size:128px 128px; z-index:1000; }
 
-  /* NAV */
-  .topbar { position:sticky; top:0; z-index:50; background:rgba(14,15,14,0.94); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; }
-  .logo { font-family:var(--font-head); font-size:24px; letter-spacing:2px; color:var(--text); text-decoration:none; }
-  .logo .sub { color:var(--text-dimmer); font-size:11px; font-family:var(--font-body); letter-spacing:0.5px; font-weight:500; margin-left:10px; text-transform:uppercase; }
-  .nav { display:flex; gap:4px; align-items:center; }
-  .nav a { color:var(--text-dim); font-family:var(--font-body); font-size:13px; font-weight:500; text-decoration:none; padding:6px 12px; border-radius:var(--radius-sm); transition:all 0.15s; white-space:nowrap; }
-  .nav a:hover { background:var(--bg-card-2); color:var(--text); }
-  .nav a.active { background:var(--teal-glow); color:var(--teal); }
-  .nav-dropdown{position:relative;display:inline-flex;}
-  .nav-drop-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;display:inline-block;white-space:nowrap;line-height:1.5;}
-  .nav-drop-btn:hover,.nav-dropdown:hover .nav-drop-btn{background:var(--bg-card-2);color:var(--text);}
-  .nav-drop-btn.active{background:var(--teal-glow);color:var(--teal);}
-  .nav-drop-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);min-width:156px;display:none;z-index:300;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
-  .nav-dropdown:hover .nav-drop-menu{display:block;}
-  .nav-drop-menu a{display:block;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:4px;transition:all 0.15s;white-space:nowrap;}
-  .nav-drop-menu a:hover{background:var(--bg-card-2);color:var(--text);}
-  .nav-drop-menu a.active{background:var(--teal-glow);color:var(--teal);}
-  .nav a.m-tag { font-size:11px; font-weight:700; letter-spacing:0.5px; padding:4px 9px; border-radius:20px; border:1px solid; }
-  .nav a.m2 { border-color:var(--teal); color:var(--teal); background:var(--teal-glow); }
-  .nav a.m3 { border-color:var(--amber); color:var(--amber); background:var(--amber-glow); }
-  .nav a.m4 { border-color:var(--purple); color:var(--purple); background:var(--purple-glow); }
-  .nav a.m1 { border-color:var(--green); color:var(--green); background:var(--green-glow); }
-
-  /* MAIN */
-  .main { max-width: 960px; margin: 0 auto; padding: 32px 16px 80px; }
-
-  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-
-  /* HERO */
-  .hero { margin-bottom: 40px; animation: fadeUp 0.4s ease both; }
-  .hero-title { font-family:var(--font-head); font-size:clamp(48px,10vw,80px); letter-spacing:4px; line-height:0.9; color:var(--text); margin-bottom:16px; }
-  .hero-title em { font-style:normal; color:var(--teal); }
-  .hero-sub { color:var(--text-dim); font-size:14px; max-width:500px; line-height:1.7; }
-  .hero-tagline { font-family:var(--font-head); font-size:13px; letter-spacing:3px; color:var(--text-dimmer); margin-top:10px; text-transform:uppercase; }
-
-  /* QUICK ACTIONS */
-  .quick-actions { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:40px; animation:fadeUp 0.4s 0.05s ease both; }
-  @media(max-width:640px) { .quick-actions { grid-template-columns:1fr 1fr; } }
-  .qa-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; text-decoration:none; color:inherit; display:block; transition:all 0.15s; position:relative; overflow:hidden; }
-  .qa-card:hover { border-color:var(--border-bright); transform:translateY(-2px); }
-  .qa-card::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg, currentColor 0%, transparent 100%); opacity:0.04; pointer-events:none; }
-  .qa-card.c-teal { color:var(--teal); border-color:var(--teal); }
-  .qa-card.c-amber { color:var(--amber); border-color:var(--amber); }
-  .qa-card.c-purple { color:var(--purple); border-color:var(--purple); }
-  .qa-card.c-green { color:var(--green); border-color:var(--green); }
-  .qa-icon { font-size:26px; margin-bottom:10px; }
-  .qa-label { font-family:var(--font-head); font-size:18px; letter-spacing:1.5px; margin-bottom:4px; }
-  .qa-sub { font-size:11px; color:var(--text-dim); font-weight:500; }
-
-  /* NEW PROJECT */
-  .new-project-bar { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:32px; animation:fadeUp 0.4s 0.08s ease both; }
-  .new-project-bar h3 { font-family:var(--font-head); font-size:20px; letter-spacing:1.5px; color:var(--text-dim); margin-bottom:12px; }
-  .new-project-row { display:flex; gap:10px; flex-wrap:wrap; }
-  .np-input { flex:1; min-width:200px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:var(--font-body); font-size:14px; padding:10px 14px; }
-  .np-input:focus { outline:none; border-color:var(--teal-dim); }
-  .np-input::placeholder { color:var(--text-dimmer); }
-  .btn { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:var(--radius-sm); font-family:var(--font-body); font-size:13px; font-weight:600; cursor:pointer; border:1.5px solid transparent; transition:all 0.15s; white-space:nowrap; }
-  .btn:active { transform:scale(0.97); }
-  .btn-teal { background:var(--teal); border-color:var(--teal); color:var(--bg); }
-  .btn-teal:hover { background:var(--teal-dim); }
-  .btn-ghost { background:transparent; border-color:var(--border-bright); color:var(--text-dim); }
-  .btn-ghost:hover { border-color:var(--text-dim); color:var(--text); }
-
-  /* PIPELINE */
-  .section-header { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; }
-  .section-title { font-family:var(--font-head); font-size:28px; letter-spacing:2px; color:var(--text); }
-  .section-sub { font-size:13px; color:var(--text-dim); }
-
-  /* PROJECT CARDS */
-  .projects-list { display:flex; flex-direction:column; gap:12px; }
-  .project-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; display:grid; grid-template-columns:1fr auto; gap:16px; align-items:start; transition:border-color 0.15s; animation:fadeUp 0.35s ease both; }
-  .project-card:hover { border-color:var(--border-bright); }
-  .project-card.needs-attention { border-left:3px solid var(--amber); }
-  .project-title { font-weight:700; font-size:16px; margin-bottom:4px; color:var(--text); }
-  .project-meta { font-size:12px; color:var(--text-dim); margin-bottom:12px; }
-  .gate-pills { display:flex; gap:6px; flex-wrap:wrap; }
-  .gate-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:0.3px; border:1px solid; }
-  .gate-pill.done { background:var(--green-glow); border-color:var(--green); color:var(--green); }
-  .gate-pill.pending { background:var(--bg-card-2); border-color:var(--border); color:var(--text-dimmer); }
-  .gate-pill.waiting { background:var(--amber-glow); border-color:var(--amber); color:var(--amber); }
-  .project-actions { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
-  .stage-badge { font-family:var(--font-head); font-size:13px; letter-spacing:1px; color:var(--text-dimmer); margin-bottom:6px; }
-
-  /* EMPTY STATE */
-  .empty-state { text-align:center; padding:60px 20px; animation:fadeUp 0.4s 0.1s ease both; }
-  .empty-icon { font-size:48px; margin-bottom:16px; }
-  .empty-title { font-family:var(--font-head); font-size:28px; letter-spacing:2px; color:var(--text-dim); margin-bottom:8px; }
-  .empty-sub { font-size:13px; color:var(--text-dimmer); max-width:380px; margin:0 auto; line-height:1.7; }
-
-  /* TOAST */
-  .toast-wrap { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:999; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
-  .toast { background:var(--bg-card); border:1px solid var(--border); padding:10px 18px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; color:var(--text); box-shadow:0 6px 24px rgba(0,0,0,0.6); animation:toastIn 0.2s ease, toastOut 0.2s ease 2.6s forwards; }
-  .toast.green { border-color:var(--green); color:var(--green); }
-  .toast.amber { border-color:var(--amber); color:var(--amber); }
-  .toast.teal { border-color:var(--teal); color:var(--teal); }
-  .toast.red { border-color:var(--red); color:var(--red); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
   @keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   @keyframes toastOut { from{opacity:1} to{opacity:0} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  /* STATUS */
-  .status-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; }
-  .dot-green { background:var(--green); }
-  .dot-amber { background:var(--amber); box-shadow:0 0 6px var(--amber); }
-  .dot-dim { background:var(--text-dimmer); }
-  @media(max-width:480px) { .main{padding:20px 12px 80px;} .topbar{padding:0 12px;} .project-card{grid-template-columns:1fr;} .project-actions{flex-direction:row; align-items:center;} }
+  /* ─── LAYOUT ─── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 100px; }
+
+  /* ─── HERO ─── */
+  .hero { margin-bottom: 36px; animation: fadeUp 0.35s ease both; }
+  .hero-eyebrow { font-family: var(--font-head); font-size: 11px; letter-spacing: 4px; color: var(--text-dimmer); text-transform: uppercase; margin-bottom: 8px; }
+  .hero-title { font-family: var(--font-head); font-size: clamp(40px, 8vw, 72px); letter-spacing: 3px; line-height: 0.92; color: var(--text); margin-bottom: 10px; }
+  .hero-title em { font-style: normal; color: var(--teal); }
+  .hero-sub { font-size: 13px; color: var(--text-dim); max-width: 440px; line-height: 1.7; }
+
+  /* ─── ZONE HEADERS ─── */
+  .zone { margin-bottom: 40px; animation: fadeUp 0.35s ease both; }
+  .zone-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .zone-title { font-family: var(--font-head); font-size: 14px; letter-spacing: 3px; color: var(--text-dimmer); text-transform: uppercase; }
+  .zone-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+  .zone-badge.red { background: var(--red-glow); border: 1px solid var(--red-border); color: var(--red); }
+  .zone-badge.green { background: var(--green-glow); border: 1px solid var(--green-border); color: var(--green); }
+  .zone-badge.amber { background: var(--amber-glow); border: 1px solid var(--amber-border); color: var(--amber); }
+  .zone-rule { flex: 1; height: 1px; background: var(--border); }
+
+  /* ─── ATTENTION ZONE ─── */
+  .attention-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+
+  .attention-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    transition: border-color 0.15s;
+    animation: fadeUp 0.3s ease both;
+  }
+  .attention-card:hover { border-color: var(--border-bright); }
+  .attention-card.urgent { border-left: 3px solid var(--amber); }
+  .attention-card.critical { border-left: 3px solid var(--red); }
+  .attention-card.ready { border-left: 3px solid var(--teal); }
+  .att-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .att-body { flex: 1; min-width: 0; }
+  .att-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; line-height: 1.4; }
+  .att-sub { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5; }
+  .att-cta {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+    padding: 5px 11px; border-radius: 20px;
+    text-decoration: none; border: 1px solid; cursor: pointer;
+    transition: all 0.12s; white-space: nowrap;
+    background: none; font-family: var(--font-body);
+  }
+  .att-cta.teal { color: var(--teal); border-color: rgba(62,207,178,0.35); }
+  .att-cta.teal:hover { background: var(--teal-glow); }
+  .att-cta.amber { color: var(--amber); border-color: var(--amber-border); }
+  .att-cta.amber:hover { background: var(--amber-glow); }
+  .att-cta.purple { color: var(--purple); border-color: var(--purple-border); }
+  .att-cta.purple:hover { background: var(--purple-glow); }
+  .att-cta.red { color: var(--red); border-color: var(--red-border); }
+  .att-cta.red:hover { background: var(--red-glow); }
+
+  /* All-clear */
+  .all-clear {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--green-glow);
+    border: 1px solid var(--green-border);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    color: var(--green);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .all-clear-icon { font-size: 18px; }
+
+  /* ─── IN MOTION ZONE ─── */
+  #zone-motion { display: none; }
+  .motion-items { display: flex; flex-direction: column; gap: 8px; }
+  .motion-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 16px;
+    font-size: 13px; color: var(--text-dim);
+  }
+  .motion-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--teal);
+    flex-shrink: 0;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  /* ─── PROJECTS ZONE ─── */
+  .projects-grid { display: flex; flex-direction: column; gap: 12px; }
+
+  .project-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: start;
+    transition: border-color 0.15s;
+    animation: fadeUp 0.3s ease both;
+    text-decoration: none;
+    color: inherit;
+  }
+  .project-card:hover { border-color: var(--border-bright); }
+  .project-card.needs-attn { border-left: 3px solid var(--amber); }
+
+  /* Card left */
+  .pc-left {}
+  .pc-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .pc-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .pc-type-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 20px; border: 1px solid;
+  }
+  .pc-type-badge.rock-rich { color: var(--purple); border-color: var(--purple-border); background: var(--purple-glow); }
+  .pc-type-badge.vsl { color: var(--amber); border-color: var(--amber-border); background: var(--amber-glow); }
+  .pc-type-badge.edu { color: var(--blue); border-color: rgba(91,156,246,0.3); background: var(--blue-glow); }
+  .pc-type-badge.default { color: var(--text-dimmer); border-color: var(--border); background: none; }
+  .pc-struct-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 20px;
+    color: var(--text-dimmer); border: 1px solid var(--border); background: none;
+  }
+  .pc-struct-badge.active { color: var(--teal); border-color: rgba(62,207,178,0.25); background: var(--teal-glow); }
+
+  .pc-meta { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .pc-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .pc-dot.green { background: var(--green); }
+  .pc-dot.amber { background: var(--amber); box-shadow: 0 0 5px var(--amber); }
+  .pc-dot.dim { background: var(--text-dimmer); }
+
+  /* Pipeline bar */
+  .pc-pipeline { margin-bottom: 14px; }
+  .pc-stages { display: flex; align-items: center; gap: 0; margin-bottom: 6px; }
+  .pc-stage {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase;
+    color: var(--text-dimmer);
+    transition: color 0.15s;
+  }
+  .pc-stage.done { color: var(--green); }
+  .pc-stage.current { color: var(--teal); }
+  .pc-stage-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-faint);
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .pc-stage.done .pc-stage-dot { background: var(--green); }
+  .pc-stage.current .pc-stage-dot {
+    background: var(--teal);
+    box-shadow: 0 0 0 3px var(--teal-glow);
+  }
+  .pc-stage-line { flex: 1; height: 2px; background: var(--border); margin: 0 4px; min-width: 20px; transition: background 0.15s; }
+  .pc-stage-line.done { background: var(--green); }
+
+  /* Beat coverage */
+  .pc-beats { margin-bottom: 14px; }
+  .pc-beat-track { height: 3px; background: var(--bg-card-2); border-radius: 2px; overflow: hidden; margin-bottom: 5px; }
+  .pc-beat-fill { height: 100%; border-radius: 2px; background: var(--teal); transition: width 0.4s; }
+  .pc-beat-label { font-size: 11px; color: var(--text-dimmer); }
+  .pc-beat-label span { color: var(--teal); font-weight: 600; }
+
+  /* Tags row */
+  .pc-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+  .pc-tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; border: 1px solid; letter-spacing: 0.2px; }
+  .pc-tag.ok { color: var(--green); border-color: var(--green-border); background: var(--green-glow); }
+  .pc-tag.warn { color: var(--amber); border-color: var(--amber-border); background: var(--amber-glow); }
+  .pc-tag.miss { color: var(--red); border-color: var(--red-border); background: var(--red-glow); }
+  .pc-tag.dim { color: var(--text-dimmer); border-color: var(--border); background: none; }
+
+  /* Card right */
+  .pc-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .pc-updated { font-size: 10px; color: var(--text-dimmer); white-space: nowrap; }
+  .pc-next-action {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.2px;
+    padding: 8px 14px; border-radius: var(--radius-sm);
+    text-decoration: none; border: 1.5px solid; cursor: pointer;
+    transition: all 0.12s; white-space: nowrap;
+    font-family: var(--font-body);
+    background: none;
+  }
+  .pc-next-action.teal { color: var(--teal); border-color: rgba(62,207,178,0.4); }
+  .pc-next-action.teal:hover { background: var(--teal-glow); }
+  .pc-next-action.amber { color: var(--amber); border-color: var(--amber-border); }
+  .pc-next-action.amber:hover { background: var(--amber-glow); }
+  .pc-next-action.purple { color: var(--purple); border-color: var(--purple-border); }
+  .pc-next-action.purple:hover { background: var(--purple-glow); }
+  .pc-next-action.green { color: var(--green); border-color: var(--green-border); }
+  .pc-next-action.green:hover { background: var(--green-glow); }
+  .pc-next-action.dim { color: var(--text-dim); border-color: var(--border-bright); }
+  .pc-next-action.dim:hover { background: var(--bg-card-2); color: var(--text); }
+
+  /* New project CTA */
+  .new-project-cta {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: var(--bg-card);
+    border: 1px solid rgba(62,207,178,0.3);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 14px;
+    text-decoration: none; color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+    animation: fadeUp 0.35s 0.05s ease both;
+  }
+  .new-project-cta:hover { border-color: var(--teal); background: var(--teal-glow); }
+  .npc-text h3 { font-family: var(--font-head); font-size: 18px; letter-spacing: 1.5px; color: var(--teal); margin-bottom: 2px; }
+  .npc-text p { font-size: 12px; color: var(--text-dim); }
+  .btn-cta {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius-sm);
+    font-family: var(--font-body); font-size: 12px; font-weight: 700;
+    background: var(--teal); color: var(--bg); border: none; cursor: pointer;
+    white-space: nowrap; flex-shrink: 0; text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-cta:hover { background: var(--teal-dim); }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    animation: fadeUp 0.4s 0.1s ease both;
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-title { font-family: var(--font-head); font-size: 28px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 8px; }
+  .empty-sub { font-size: 13px; color: var(--text-dimmer); max-width: 360px; margin: 0 auto; line-height: 1.7; }
+
+  /* ─── PROJECT CARD MENU ─── */
+  .pc-menu-wrap { position: relative; align-self: flex-start; }
+  .pc-menu-btn {
+    background: none; border: none; color: rgba(255,255,255,0.2);
+    font-size: 18px; cursor: pointer; padding: 0 6px; line-height: 1.4;
+    border-radius: 4px; transition: all 0.12s;
+  }
+  .pc-menu-btn:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+  .pc-menu {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 200;
+    background: #1a1d1a; border: 1px solid var(--border-bright);
+    border-radius: 8px; padding: 4px; min-width: 168px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6); display: none;
+  }
+  .pc-menu.open { display: block; }
+  .pc-menu-item {
+    display: flex; align-items: center; gap: 9px; padding: 8px 12px;
+    border-radius: 5px; font-size: 13px; cursor: pointer; width: 100%;
+    background: none; border: none; text-align: left; color: var(--text-dim);
+    font-family: var(--font-body); transition: all 0.1s;
+  }
+  .pc-menu-item:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .pc-menu-item.danger:hover { background: rgba(220,60,60,0.12); color: #f87171; }
+  .pc-menu-sep { height: 1px; background: var(--border); margin: 3px 4px; }
+
+  /* ─── CONFIRMATION MODAL ─── */
+  #confirm-modal {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  #confirm-modal.open { display: flex; }
+  .confirm-dialog {
+    background: #161916; border: 1px solid var(--border-bright);
+    border-radius: 12px; padding: 28px 28px 22px; max-width: 420px; width: 100%;
+    animation: fadeUp 0.18s ease;
+  }
+  .confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .confirm-msg { font-size: 13px; color: var(--text-dim); line-height: 1.65; margin-bottom: 24px; }
+  .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .confirm-cancel {
+    padding: 9px 18px; background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-bright); border-radius: 7px;
+    color: var(--text-dim); font-family: var(--font-body); font-size: 13px;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .confirm-cancel:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+  .confirm-ok {
+    padding: 9px 18px; background: rgba(200,40,40,0.2);
+    border: 1px solid rgba(220,60,60,0.4); border-radius: 7px;
+    color: #f87171; font-family: var(--font-body); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .confirm-ok:hover { background: rgba(200,40,40,0.35); }
+  .confirm-ok.archive {
+    background: rgba(180,130,20,0.15); border-color: rgba(200,150,40,0.4); color: var(--amber);
+  }
+  .confirm-ok.archive:hover { background: rgba(180,130,20,0.28); }
+
+  /* ─── ARCHIVED SECTION ─── */
+  .archived-toggle {
+    display: none; align-items: center; gap: 8px; margin-top: 20px;
+    cursor: pointer; color: var(--text-dimmer); font-size: 11px;
+    font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    user-select: none; padding: 4px 0;
+  }
+  .archived-toggle.visible { display: flex; }
+  .archived-toggle:hover { color: var(--text-dim); }
+  .archived-arrow { display: inline-block; transition: transform 0.2s; font-size: 10px; }
+  .archived-toggle.open .archived-arrow { transform: rotate(90deg); }
+  #archived-section { display: none; margin-top: 12px; }
+  #archived-section.open { display: block; }
+  .archived-card { opacity: 0.6; border-color: rgba(255,255,255,0.05) !important; }
+  .archived-card:hover { opacity: 0.85; }
+  .pc-restore-btn {
+    padding: 6px 12px; background: rgba(62,207,178,0.08);
+    border: 1px solid rgba(62,207,178,0.3); border-radius: 6px;
+    color: var(--teal); font-family: var(--font-body); font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: all 0.12s; white-space: nowrap;
+  }
+  .pc-restore-btn:hover { background: rgba(62,207,178,0.18); }
+
+  /* ─── SYSTEM STATUS BAR ─── */
+  .status-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(14,15,14,0.96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    padding: 8px 24px;
+    display: flex; align-items: center; gap: 20px;
+    font-size: 11px; color: var(--text-dimmer);
+  }
+  .status-bar-label { font-family: var(--font-head); font-size: 10px; letter-spacing: 2px; margin-right: 4px; color: var(--text-faint); }
+  .svc { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .svc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
+  .svc-dot.ok { background: var(--green); }
+  .svc-dot.err { background: var(--red); box-shadow: 0 0 5px var(--red); }
+  .svc-dot.chk { background: var(--amber); }
+  .status-bar-right { margin-left: auto; font-size: 10px; letter-spacing: 1px; color: var(--text-faint); }
+
+  /* ─── TOAST ─── */
+  .toast-wrap { position: fixed; bottom: 44px; left: 50%; transform: translateX(-50%); z-index: 999; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+  .toast { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.6); animation: toastIn 0.2s ease, toastOut 0.2s ease 2.6s forwards; }
+  .toast.green { border-color: var(--green); color: var(--green); }
+  .toast.amber { border-color: var(--amber); color: var(--amber); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 640px) {
+    .main { padding: 20px 14px 80px; }
+    .project-card { grid-template-columns: 1fr; }
+    .pc-right { flex-direction: row; align-items: center; }
+    .status-bar { gap: 12px; padding: 8px 16px; }
+  }
 </style>
 </head>
 <body>
 
-<nav class="topbar">
-  <a href="/" class="logo">KRE<span style="color:var(--teal)">8Ω</span>R</a>
-  <div class="nav">
-    <a href="vault.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">VaultΩr</a>
-    <a href="reviewr.html" class="m-tag" style="background:rgba(62,207,178,0.12);color:var(--teal);">ReviewΩr</a>
-    <a href="m5-analytics.html">AnalytΩr</a>
-    <a href="operator.html">OperatΩr</a>
-    <div class="nav-dropdown">
-      <button class="nav-drop-btn m-tag" style="background:rgba(62,207,178,0.08);color:var(--teal-dim);border:1px solid rgba(62,207,178,0.25);">Distribut<span style="color:var(--teal)">Ω</span>r ▾</button>
-      <div class="nav-drop-menu">
-        <a href="m1-approval-dashboard.html">GateΩr</a>
-        <a href="m2-package-generator.html">PackageΩr</a>
-        <a href="m3-caption-generator.html">CaptionΩr</a>
-        <a href="m4-email-generator.html">MailΩr</a>
-      </div>
-    </div>
-  </div>
-</nav>
+<!-- NAV -->
+<div id="kre8r-nav"></div>
 
 <main class="main">
 
   <!-- HERO -->
   <div class="hero">
+    <div class="hero-eyebrow">7 Kin Homestead</div>
     <div class="hero-title">PIPELINE<br><em>COMMAND</em></div>
-    <div class="hero-sub">Every video. Every stage. Every gate. One place.</div>
-    <div class="hero-tagline">7 Kin Homestead · Sine Resistentia</div>
+    <div class="hero-sub">The heart monitor. One view. Every project. What needs you right now.</div>
   </div>
 
-  <!-- QUICK ACTIONS -->
-  <div class="quick-actions">
-    <a href="vault.html" class="qa-card c-teal">
-      <div class="qa-icon">🎬</div>
-      <div class="qa-label">VAULT + CUT</div>
-      <div class="qa-sub">Ingest footage, transcribe, identify cuts</div>
-    </a>
-    <a href="reviewr.html" class="qa-card c-teal">
-      <div class="qa-icon">✂️</div>
-      <div class="qa-label">REVIEW<span style="font-size:10px">Ω</span>R</div>
-      <div class="qa-sub">Approve clips, extract with ffmpeg</div>
-    </a>
-    <a href="m2-package-generator.html" class="qa-card c-teal">
-      <div class="qa-icon">📦</div>
-      <div class="qa-label">M2 PACKAGES</div>
-      <div class="qa-sub">Generate 5 content packages</div>
-    </a>
-    <a href="m3-caption-generator.html" class="qa-card c-amber">
-      <div class="qa-icon">✍️</div>
-      <div class="qa-label">M3 CAPTIONS</div>
-      <div class="qa-sub">5-platform clip captions</div>
-    </a>
-    <a href="m4-email-generator.html" class="qa-card c-purple">
-      <div class="qa-icon">📧</div>
-      <div class="qa-label">M4 EMAILS</div>
-      <div class="qa-sub">7-email ROCK RICH sequence</div>
-    </a>
-    <a href="m1-approval-dashboard.html" class="qa-card c-green">
-      <div class="qa-icon">✅</div>
-      <div class="qa-label">M1 GATES</div>
-      <div class="qa-sub">Approve packages, clips, emails</div>
-    </a>
-  </div>
-
-  <!-- NEW PROJECT -->
-  <div class="new-project-bar">
-    <h3>NEW PROJECT</h3>
-    <div class="new-project-row">
-      <input type="text" class="np-input" id="new-title" placeholder="Video title or topic…">
-      <input type="url" class="np-input" id="new-url" placeholder="YouTube URL (optional)">
-      <button class="btn btn-teal" onclick="createProject()">+ Create Project</button>
+  <!-- ZONE 1 — ATTENTION REQUIRED -->
+  <div class="zone" id="zone-attention" style="animation-delay:0.05s">
+    <div class="zone-header">
+      <div class="zone-title">Attention Required</div>
+      <div class="zone-badge red" id="attention-badge" style="display:none"></div>
+      <div class="zone-rule"></div>
+    </div>
+    <div class="attention-grid" id="attention-cards">
+      <!-- rendered by JS -->
     </div>
   </div>
 
-  <!-- PIPELINE -->
-  <div class="section-header">
-    <div class="section-title">ACTIVE PIPELINE</div>
-    <div class="section-sub" id="pipeline-count"></div>
-  </div>
-  <div class="projects-list" id="projects-list">
-    <div class="empty-state" id="empty-state">
-      <div class="empty-icon">🌱</div>
-      <div class="empty-title">PIPELINE IS CLEAR</div>
-      <div class="empty-sub">Create a project above or start in M2 to generate packages for a video. Projects appear here automatically.</div>
+  <!-- ZONE 2 — IN MOTION (hidden until something is running) -->
+  <div class="zone" id="zone-motion" style="animation-delay:0.1s">
+    <div class="zone-header">
+      <div class="zone-title">In Motion</div>
+      <div class="zone-rule"></div>
     </div>
+    <div class="motion-items" id="motion-items"></div>
+  </div>
+
+  <!-- ZONE 3 — PROJECTS -->
+  <div class="zone" id="zone-projects" style="animation-delay:0.12s">
+    <div class="zone-header">
+      <div class="zone-title">Active Projects</div>
+      <div id="project-count-badge" class="zone-badge amber" style="display:none"></div>
+      <div class="zone-rule"></div>
+    </div>
+
+    <a href="/pipr.html" class="new-project-cta">
+      <div class="npc-text">
+        <h3>🎬 START NEW PROJECT</h3>
+        <p>Set story structure, beat map, and creative intent in PipΩr before touching footage.</p>
+      </div>
+      <span class="btn-cta">PipΩr Wizard →</span>
+    </a>
+
+    <div class="projects-grid" id="projects-grid">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🌱</div>
+        <div class="empty-title">PIPELINE IS CLEAR</div>
+        <div class="empty-sub">No active projects yet. Click PipΩr Wizard above to start your first video.</div>
+      </div>
+    </div>
+
+    <!-- Archived projects — collapsed by default, shown when archives exist -->
+    <div class="archived-toggle" id="archived-toggle" onclick="toggleArchivedSection()">
+      <span class="archived-arrow">▶</span>
+      <span>Archived Projects</span>
+      <span id="archived-count" style="color:var(--text-faint)"></span>
+    </div>
+    <div id="archived-section">
+      <div class="projects-grid" id="archived-grid"></div>
+    </div>
+
   </div>
 
 </main>
 
+<!-- SYSTEM STATUS BAR -->
+<div class="status-bar" id="status-bar">
+  <span class="status-bar-label">Systems</span>
+  <span class="svc"><span class="svc-dot chk" id="dot-api"></span>API</span>
+  <span class="svc"><span class="svc-dot ok" id="dot-ffmpeg"></span>ffmpeg</span>
+  <span class="svc"><span class="svc-dot ok" id="dot-whisper"></span>Whisper</span>
+  <span class="svc"><span class="svc-dot ok" id="dot-davinci"></span>DaVinci</span>
+  <span class="status-bar-right">SINE RESISTENTIA</span>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
+<!-- Confirmation modal -->
+<div id="confirm-modal" onclick="if(event.target===this)closeConfirm()">
+  <div class="confirm-dialog">
+    <div class="confirm-title" id="confirm-title"></div>
+    <div class="confirm-msg"   id="confirm-msg"></div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-ok"     id="confirm-ok-btn" onclick="runConfirm()"></button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/nav.js"></script>
 <script>
+initNav();
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let _projects = [];
+let _beatReport = {};
+let _health = {};
+
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', loadPipeline);
+window.addEventListener('DOMContentLoaded', init);
 
-async function loadPipeline() {
+async function init() {
+  await Promise.all([
+    loadHealth(),
+    loadDashboard()
+  ]);
+}
+
+// ─────────────────────────────────────────────
+// HEALTH CHECK
+// ─────────────────────────────────────────────
+async function loadHealth() {
   try {
-    const res = await fetch('/api/projects');
-    const projects = await res.json();
-    renderPipeline(projects);
+    const res = await fetch('/api/health');
+    if (!res.ok) return;
+    _health = await res.json();
+    updateStatusBar(_health);
   } catch (e) {
-    console.error('Failed to load pipeline:', e);
+    document.getElementById('dot-api').className = 'svc-dot err';
   }
 }
 
-function renderPipeline(projects) {
-  const list = document.getElementById('projects-list');
-  const empty = document.getElementById('empty-state');
-  const count = document.getElementById('pipeline-count');
+function updateStatusBar(h) {
+  const dotApi = document.getElementById('dot-api');
+  if (h.anthropic_configured) {
+    dotApi.className = 'svc-dot ok';
+  } else {
+    dotApi.className = 'svc-dot err';
+    showToast('Anthropic API key not set — add to .env', 'amber');
+  }
+}
 
-  if (!projects || projects.length === 0) {
+// ─────────────────────────────────────────────
+// DASHBOARD LOAD
+// ─────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [projRes, beatRes] = await Promise.allSettled([
+      fetch('/api/projects'),
+      fetch('/api/pipr/report')
+    ]);
+
+    _projects = projRes.status === 'fulfilled' && projRes.value.ok
+      ? await projRes.value.json()
+      : [];
+
+    if (beatRes.status === 'fulfilled' && beatRes.value.ok) {
+      const beatData = await beatRes.value.json();
+      if (beatData.ok) {
+        _beatReport = Object.fromEntries(
+          (beatData.projects || []).map(p => [p.project_id, p])
+        );
+      }
+    }
+
+    // Sort: needs attention first, then by updated_at desc
+    _projects.sort((a, b) => {
+      const aAttn = projectNeedsAttention(a);
+      const bAttn = projectNeedsAttention(b);
+      if (aAttn && !bAttn) return -1;
+      if (!aAttn && bAttn) return 1;
+      return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
+    });
+
+    renderAttentionZone();
+    renderProjectsZone();
+    checkArchivedCount();
+  } catch (e) {
+    console.error('[Dashboard] Failed to load:', e);
+  }
+}
+
+// ─────────────────────────────────────────────
+// ATTENTION ZONE
+// ─────────────────────────────────────────────
+function renderAttentionZone() {
+  const cards = [];
+
+  _projects.forEach(p => {
+    // No PipΩr setup
+    if (!p.pipr_complete) {
+      cards.push({
+        type: 'urgent',
+        icon: '🎬',
+        label: `PipΩr setup needed — ${esc(p.title)}`,
+        sub: 'No beat map or story structure. Set up in PipΩr before writing or editing.',
+        cta: { label: 'Open PipΩr →', href: `/pipr.html`, color: 'purple' }
+      });
+      return;
+    }
+
+    // PipΩr done, WritΩr not started
+    if (p.pipr_complete && !p.writr_complete) {
+      cards.push({
+        type: 'ready',
+        icon: '✍️',
+        label: `Script ready to write — ${esc(p.title)}`,
+        sub: 'Beat map is set. Start WritΩr to find the story and write the script.',
+        cta: { label: 'Open WritΩr →', href: `/writr.html?project_id=${p.id}`, color: 'teal' }
+      });
+    }
+
+    // Gate A waiting
+    if (p.package_count > 0 && !p.gate_a_approved) {
+      cards.push({
+        type: 'urgent',
+        icon: '⚡',
+        label: `Gate A waiting — ${esc(p.title)}`,
+        sub: `${p.package_count} package${p.package_count !== 1 ? 's' : ''} ready for content approval.`,
+        cta: { label: 'Review Gate A →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' }
+      });
+    }
+
+    // Gate B waiting
+    if (p.gate_a_approved && p.approved_captions > 0 && !p.gate_b_approved) {
+      cards.push({
+        type: 'urgent',
+        icon: '⚡',
+        label: `Gate B waiting — ${esc(p.title)}`,
+        sub: `Captions approved and ready for platform review.`,
+        cta: { label: 'Review Gate B →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' }
+      });
+    }
+
+    // Gate C waiting
+    if (p.gate_b_approved && p.approved_emails > 0 && !p.gate_c_approved) {
+      cards.push({
+        type: 'urgent',
+        icon: '⚡',
+        label: `Gate C waiting — ${esc(p.title)}`,
+        sub: `Email sequence ready for final approval before send.`,
+        cta: { label: 'Review Gate C →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' }
+      });
+    }
+
+    // Missing beats that need reshoot
+    const beatData = _beatReport[p.id];
+    if (beatData && beatData.missing && beatData.missing.length > 0 && !p.writr_complete) {
+      const critical = beatData.missing.filter(b =>
+        ['All Is Lost', 'Hook', 'Catalyst', 'CTA', 'Break into Three'].includes(b)
+      );
+      if (critical.length > 0) {
+        cards.push({
+          type: 'critical',
+          icon: '🎥',
+          label: `${critical.length} beat${critical.length !== 1 ? 's' : ''} need coverage — ${esc(p.title)}`,
+          sub: `Missing: ${critical.slice(0, 3).map(esc).join(', ')}${critical.length > 3 ? ` + ${critical.length - 3} more` : ''}`,
+          cta: { label: 'View Beat Map →', href: `/editor.html?project_id=${p.id}`, color: 'red' }
+        });
+      }
+    }
+
+    // WritΩr draft approved, selects not yet built
+    if (p.writr_complete && p.active_script_id && p.footage_count > 0 && p.extracted_clips === 0) {
+      cards.push({
+        type: 'ready',
+        icon: '✂️',
+        label: `Script approved, selects not built — ${esc(p.title)}`,
+        sub: 'WritΩr script is ready. Build selects from footage.',
+        cta: { label: 'Build Selects →', href: `/editor.html?project_id=${p.id}`, color: 'teal' }
+      });
+    }
+  });
+
+  const container = document.getElementById('attention-cards');
+  const badge = document.getElementById('attention-badge');
+
+  if (cards.length === 0) {
+    container.innerHTML = `
+      <div class="all-clear">
+        <span class="all-clear-icon">✅</span>
+        <span>All clear — no action needed right now</span>
+      </div>`;
+    badge.style.display = 'none';
+    return;
+  }
+
+  badge.textContent = cards.length;
+  badge.style.display = '';
+
+  container.innerHTML = cards.map((c, i) => `
+    <div class="attention-card ${c.type}" style="animation-delay:${i * 0.04}s">
+      <div class="att-icon">${c.icon}</div>
+      <div class="att-body">
+        <div class="att-label">${c.label}</div>
+        <div class="att-sub">${c.sub}</div>
+        <a href="${c.cta.href}" class="att-cta ${c.cta.color}">${c.cta.label}</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─────────────────────────────────────────────
+// PROJECTS ZONE
+// ─────────────────────────────────────────────
+function renderProjectsZone() {
+  const grid = document.getElementById('projects-grid');
+  const empty = document.getElementById('empty-state');
+  const badge = document.getElementById('project-count-badge');
+
+  if (!_projects || _projects.length === 0) {
     empty.style.display = 'block';
-    count.textContent = 'No active projects';
     return;
   }
 
   empty.style.display = 'none';
-  count.textContent = `${projects.length} video${projects.length !== 1 ? 's' : ''} in pipeline`;
+  badge.textContent = `${_projects.length} active`;
+  badge.style.display = '';
 
-  list.innerHTML = '';
-  projects.forEach((p, i) => {
-    const card = document.createElement('div');
-    const needsAttention = !p.gate_a_approved || (p.package_count > 0 && !p.gate_b_approved) || (p.gate_b_approved && !p.gate_c_approved);
-    card.className = `project-card${needsAttention ? ' needs-attention' : ''}`;
-    card.style.animationDelay = `${i * 0.06}s`;
+  const cards = _projects.map((p, i) => buildProjectCard(p, i));
+  grid.innerHTML = cards.join('');
+}
 
-    const gateA = p.gate_a_approved
-      ? '<span class="gate-pill done">✓ Gate A</span>'
-      : (p.package_count > 0 ? '<span class="gate-pill waiting">⚡ Gate A</span>' : '<span class="gate-pill pending">Gate A</span>');
-    const gateB = p.gate_b_approved
-      ? '<span class="gate-pill done">✓ Gate B</span>'
-      : (p.approved_captions > 0 ? '<span class="gate-pill waiting">⚡ Gate B</span>' : '<span class="gate-pill pending">Gate B</span>');
-    const gateC = p.gate_c_approved
-      ? '<span class="gate-pill done">✓ Gate C</span>'
-      : (p.approved_emails > 0 ? '<span class="gate-pill waiting">⚡ Gate C</span>' : '<span class="gate-pill pending">Gate C</span>');
+function buildProjectCard(p, i) {
+  const beatData = _beatReport[p.id];
+  const attn = projectNeedsAttention(p);
+  const stage = getProjectStage(p);
+  const nextAction = getNextAction(p);
+  const dateStr = relativeDate(p.updated_at || p.created_at);
 
-    const cutPill = p.extracted_clips > 0
-      ? `<span class="gate-pill done">✓ ${p.extracted_clips} clip${p.extracted_clips !== 1 ? 's' : ''} extracted</span>`
-      : p.approved_cuts > 0
-        ? `<span class="gate-pill waiting">⚡ ${p.approved_cuts} approved</span>`
-        : p.social_cuts > 0
-          ? `<span class="gate-pill pending">${p.social_cuts} cuts identified</span>`
-          : p.footage_count > 0
-            ? '<span class="gate-pill pending">Footage ready</span>'
-            : '';
+  // Type badge
+  const typeBadge = getTypeBadge(p);
 
-    const dateStr = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // Structure badge
+  const structBadge = p.story_structure
+    ? `<span class="pc-struct-badge active">${esc(p.story_structure)}</span>`
+    : '';
 
-    card.innerHTML = `
-      <div>
-        <div class="project-title">${escHtml(p.title)}</div>
-        <div class="project-meta">
-          <span class="status-dot ${needsAttention ? 'dot-amber' : 'dot-green'}"></span>
-          Stage ${escHtml(p.current_stage)} · Created ${dateStr}
-          ${p.youtube_url ? ` · <a href="${escHtml(p.youtube_url)}" target="_blank" style="color:var(--teal);font-size:11px;">YouTube ↗</a>` : ''}
-        </div>
-        <div class="gate-pills">
-          ${cutPill}${gateA}${gateB}${gateC}
+  // Pipeline bar
+  const stageNames = ['Pre', 'Prod', 'Post', 'Dist'];
+  const stagesHTML = stageNames.map((name, si) => {
+    const done = si < stage.index;
+    const current = si === stage.index;
+    const cls = done ? 'done' : current ? 'current' : '';
+    const lineHTML = si < stageNames.length - 1
+      ? `<div class="pc-stage-line${done ? ' done' : ''}"></div>`
+      : '';
+    return `<div class="pc-stage ${cls}">
+      <div class="pc-stage-dot"></div>${name}
+    </div>${lineHTML}`;
+  }).join('');
+
+  // Beat coverage
+  let beatsHTML = '';
+  if (beatData && beatData.beats_total > 0) {
+    const pct = beatData.coverage_pct;
+    const covered = beatData.beats_covered;
+    const total = beatData.beats_total;
+    beatsHTML = `<div class="pc-beats">
+      <div class="pc-beat-track"><div class="pc-beat-fill" style="width:${pct}%"></div></div>
+      <div class="pc-beat-label"><span>${covered}/${total} beats · ${pct}%</span> covered</div>
+    </div>`;
+  }
+
+  // Tags
+  const tags = [];
+  if (p.pipr_complete) tags.push(`<span class="pc-tag ok">PipΩr ✓</span>`);
+  if (p.writr_complete) tags.push(`<span class="pc-tag ok">WritΩr ✓</span>`);
+  if (p.gate_a_approved) tags.push(`<span class="pc-tag ok">Gate A ✓</span>`);
+  if (p.extracted_clips > 0) tags.push(`<span class="pc-tag dim">${p.extracted_clips} clips</span>`);
+  if (p.package_count > 0 && !p.gate_a_approved) tags.push(`<span class="pc-tag warn">⚡ Gate A</span>`);
+  if (beatData && beatData.missing && beatData.missing.length > 0) {
+    tags.push(`<span class="pc-tag miss">↗ ${beatData.missing.length} beats missing</span>`);
+  }
+
+  const tagsHTML = tags.length > 0 ? `<div class="pc-tags">${tags.join('')}</div>` : '';
+
+  const dotCls = attn ? 'amber' : 'green';
+  const dotLabel = stage.label;
+
+  return `<div class="project-card${attn ? ' needs-attn' : ''}" style="animation-delay:${i * 0.05}s">
+    <div class="pc-left">
+      <div class="pc-title-row">
+        <span class="pc-title">${esc(p.title)}</span>
+        ${typeBadge}
+        ${structBadge}
+      </div>
+      <div class="pc-meta">
+        <span class="pc-dot ${dotCls}"></span>
+        <span>${dotLabel}</span>
+        <span>·</span>
+        <span>Updated ${dateStr}</span>
+        ${p.youtube_url ? `<span>·</span><a href="${esc(p.youtube_url)}" target="_blank" style="color:var(--teal);font-size:11px;">YouTube ↗</a>` : ''}
+      </div>
+      <div class="pc-pipeline">
+        <div class="pc-stages">${stagesHTML}</div>
+      </div>
+      ${beatsHTML}
+      ${tagsHTML}
+    </div>
+    <div class="pc-right">
+      <div class="pc-menu-wrap">
+        <button class="pc-menu-btn" title="Project options"
+                onclick="togglePcMenu(${p.id},event)">⋯</button>
+        <div class="pc-menu" id="pc-menu-${p.id}">
+          <button class="pc-menu-item" onclick="window.location='/pipr.html?project_id=${p.id}'">⚙ Settings</button>
+          <div class="pc-menu-sep"></div>
+          <button class="pc-menu-item" onclick="confirmArchive(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">📦 Archive</button>
+          <div class="pc-menu-sep"></div>
+          <button class="pc-menu-item danger" onclick="confirmDelete(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">🗑 Delete</button>
         </div>
       </div>
-      <div class="project-actions">
-        <div class="stage-badge">${escHtml(p.current_stage)}</div>
-        <a href="reviewr.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">CutΩr →</a>
-        <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">M2 →</a>
-        <a href="m1-approval-dashboard.html?project_id=${p.id}" class="btn btn-ghost" style="font-size:11px;padding:6px 10px;">Gates →</a>
-      </div>
-    `;
-    list.appendChild(card);
-  });
+      <div class="pc-updated">${dateStr}</div>
+      <a href="${nextAction.href}" class="pc-next-action ${nextAction.color}">${nextAction.label}</a>
+    </div>
+  </div>`;
 }
 
 // ─────────────────────────────────────────────
-// CREATE PROJECT
+// PROJECT HELPERS
 // ─────────────────────────────────────────────
-async function createProject() {
-  const title = document.getElementById('new-title').value.trim();
-  const url = document.getElementById('new-url').value.trim();
+function projectNeedsAttention(p) {
+  if (!p.pipr_complete) return true;
+  if (p.package_count > 0 && !p.gate_a_approved) return true;
+  if (p.gate_a_approved && p.approved_captions > 0 && !p.gate_b_approved) return true;
+  if (p.gate_b_approved && p.approved_emails > 0 && !p.gate_c_approved) return true;
+  const bd = _beatReport[p.id];
+  if (bd && bd.missing && bd.missing.some(b =>
+    ['All Is Lost', 'Hook', 'Catalyst', 'CTA'].includes(b)
+  )) return true;
+  return false;
+}
 
-  if (!title) { showToast('Add a video title first', 'amber'); return; }
+function getProjectStage(p) {
+  if (p.gate_c_approved) return { index: 3, label: 'Distributing' };
+  if (p.gate_a_approved) return { index: 3, label: 'Distribution' };
+  if (p.extracted_clips > 0 || p.footage_count > 0 || p.writr_complete) return { index: 2, label: 'Post-Production' };
+  if (p.pipr_complete) return { index: 1, label: 'In Production' };
+  return { index: 0, label: 'Pre-Production' };
+}
 
-  let videoId = null;
-  if (url) {
-    try {
-      const u = new URL(url);
-      videoId = u.searchParams.get('v') || (u.hostname === 'youtu.be' ? u.pathname.slice(1) : null);
-    } catch(e) {}
-  }
+function getNextAction(p) {
+  if (!p.pipr_complete) return { label: 'Set up PipΩr →', href: `/pipr.html`, color: 'purple' };
+  if (!p.writr_complete) return { label: 'Write Script →', href: `/writr.html?project_id=${p.id}`, color: 'teal' };
+  if (p.footage_count === 0) return { label: 'Ingest Footage →', href: `/vault.html`, color: 'teal' };
+  if (p.approved_cuts === 0 && p.footage_count > 0) return { label: 'Review Cuts →', href: `/reviewr.html?project_id=${p.id}`, color: 'teal' };
+  if (p.extracted_clips > 0 && p.package_count === 0) return { label: 'Build Selects →', href: `/editor.html?project_id=${p.id}`, color: 'teal' };
+  if (p.package_count === 0) return { label: 'Build Package →', href: `/m2-package-generator.html?project_id=${p.id}`, color: 'teal' };
+  if (!p.gate_a_approved) return { label: 'Approve Gate A →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' };
+  if (p.gate_a_approved && p.approved_captions > 0 && !p.gate_b_approved) return { label: 'Approve Gate B →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' };
+  if (p.gate_b_approved && p.approved_emails > 0 && !p.gate_c_approved) return { label: 'Approve Gate C →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' };
+  if (p.gate_c_approved) return { label: 'View in AnalytΩr →', href: `/analytr.html`, color: 'green' };
+  return { label: 'Open EditΩr →', href: `/editor.html?project_id=${p.id}`, color: 'dim' };
+}
 
-  try {
-    const res = await fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, youtube_url: url || null, youtube_video_id: videoId })
-    });
-    const project = await res.json();
-    if (project.error) throw new Error(project.error);
-
-    document.getElementById('new-title').value = '';
-    document.getElementById('new-url').value = '';
-    showToast('Project created — start in M2 to generate packages', 'teal');
-    loadPipeline();
-  } catch (e) {
-    showToast('Failed to create project: ' + e.message, 'red');
-  }
+function getTypeBadge(p) {
+  const ct = (p.content_type || '').toLowerCase();
+  if (ct.includes('rock rich') || ct.includes('community')) return `<span class="pc-type-badge rock-rich">Rock Rich</span>`;
+  if (ct.includes('vsl')) return `<span class="pc-type-badge vsl">VSL</span>`;
+  if (ct.includes('edu') || ct.includes('tutorial')) return `<span class="pc-type-badge edu">Educational</span>`;
+  if (p.content_type) return `<span class="pc-type-badge default">${esc(p.content_type)}</span>`;
+  return '';
 }
 
 // ─────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────
-function escHtml(str) {
+function esc(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function relativeDate(dateStr) {
+  if (!dateStr) return 'unknown';
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = now - d;
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hrs < 24) return `${hrs}h ago`;
+    if (days === 1) return 'yesterday';
+    if (days < 7) return `${days}d ago`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch (e) {
+    return dateStr;
+  }
 }
 
 function showToast(msg, type = '') {
@@ -356,6 +870,202 @@ function showToast(msg, type = '') {
   t.textContent = msg;
   wrap.appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+
+// ─────────────────────────────────────────────
+// PROJECT CARD MENU
+// ─────────────────────────────────────────────
+
+function togglePcMenu(id, e) {
+  e.stopPropagation();
+  const menu = document.getElementById(`pc-menu-${id}`);
+  const wasOpen = menu.classList.contains('open');
+  // Close all open menus first
+  document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) menu.classList.add('open');
+}
+
+// Close any open menu when clicking elsewhere
+document.addEventListener('click', () => {
+  document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+});
+
+// ─────────────────────────────────────────────
+// CONFIRMATION MODAL
+// ─────────────────────────────────────────────
+
+let _confirmCb = null;
+
+function showConfirm({ title, msg, okLabel, okClass, onConfirm }) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent   = msg;
+  const btn = document.getElementById('confirm-ok-btn');
+  btn.textContent = okLabel;
+  btn.className   = `confirm-ok ${okClass || ''}`.trim();
+  _confirmCb = onConfirm;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  _confirmCb = null;
+}
+
+function runConfirm() {
+  const cb = _confirmCb;
+  closeConfirm();
+  if (cb) cb();
+}
+
+// Esc to dismiss
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeConfirm();
+});
+
+// ─────────────────────────────────────────────
+// ARCHIVE
+// ─────────────────────────────────────────────
+
+function confirmArchive(id, title) {
+  showConfirm({
+    title:     `Archive "${title}"?`,
+    msg:       'The project will be hidden from the dashboard. You can restore it any time from the Archived Projects section below.',
+    okLabel:   'Archive',
+    okClass:   'archive',
+    onConfirm: () => doArchive(id)
+  });
+}
+
+async function doArchive(id) {
+  try {
+    const r = await fetch(`/api/projects/${id}/archive`, { method: 'PATCH' });
+    if (!r.ok) throw new Error();
+    await loadDashboard();
+    checkArchivedCount();
+    showToast('Project archived');
+  } catch {
+    showToast('Could not archive project', 'amber');
+  }
+}
+
+async function doUnarchive(id) {
+  try {
+    await fetch(`/api/projects/${id}/unarchive`, { method: 'PATCH' });
+    await loadDashboard();
+    loadArchivedGrid();   // refresh the archived list in place
+    showToast('Project restored');
+  } catch {
+    showToast('Could not restore project', 'amber');
+  }
+}
+
+// ─────────────────────────────────────────────
+// DELETE
+// ─────────────────────────────────────────────
+
+function confirmDelete(id, title) {
+  showConfirm({
+    title:     `Delete "${title}"?`,
+    msg:       'This permanently deletes the project, all scripts, packages, captions, and emails. Footage in VaultΩr is not affected. This cannot be undone.',
+    okLabel:   'Delete Forever',
+    okClass:   '',
+    onConfirm: () => doDelete(id)
+  });
+}
+
+function confirmDeleteArchived(id, title) {
+  showConfirm({
+    title:     `Delete "${title}"?`,
+    msg:       'This permanently deletes the archived project and all its data. Footage in VaultΩr is not affected. This cannot be undone.',
+    okLabel:   'Delete Forever',
+    okClass:   '',
+    onConfirm: () => doDeleteArchived(id)
+  });
+}
+
+async function doDelete(id) {
+  try {
+    const r = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error();
+    await loadDashboard();
+    checkArchivedCount();
+    showToast('Project deleted');
+  } catch {
+    showToast('Could not delete project', 'amber');
+  }
+}
+
+async function doDeleteArchived(id) {
+  try {
+    const r = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error();
+    loadArchivedGrid();
+    checkArchivedCount();
+    showToast('Project deleted');
+  } catch {
+    showToast('Could not delete project', 'amber');
+  }
+}
+
+// ─────────────────────────────────────────────
+// ARCHIVED SECTION
+// ─────────────────────────────────────────────
+
+async function checkArchivedCount() {
+  try {
+    const r = await fetch('/api/projects/archived');
+    const list = await r.json();
+    const toggle = document.getElementById('archived-toggle');
+    const badge  = document.getElementById('archived-count');
+    if (list.length > 0) {
+      toggle.classList.add('visible');
+      badge.textContent = `(${list.length})`;
+    } else {
+      toggle.classList.remove('visible', 'open');
+      document.getElementById('archived-section').classList.remove('open');
+      badge.textContent = '';
+    }
+  } catch { /* silent */ }
+}
+
+function toggleArchivedSection() {
+  const toggle  = document.getElementById('archived-toggle');
+  const section = document.getElementById('archived-section');
+  const opening = toggle.classList.toggle('open');
+  section.classList.toggle('open', opening);
+  if (opening) loadArchivedGrid();
+}
+
+async function loadArchivedGrid() {
+  const grid = document.getElementById('archived-grid');
+  try {
+    const r    = await fetch('/api/projects/archived');
+    const list = await r.json();
+    if (!list.length) {
+      grid.innerHTML = '<div class="empty-state" style="padding:32px 20px"><div class="empty-icon">📦</div><div class="empty-title" style="font-size:14px">NO ARCHIVED PROJECTS</div></div>';
+      return;
+    }
+    grid.innerHTML = list.map(p => `
+      <div class="project-card archived-card">
+        <div class="pc-left">
+          <div class="pc-title-row">
+            <span class="pc-title">${esc(p.title)}</span>
+            <span class="pc-type-badge default" style="opacity:0.5">Archived</span>
+          </div>
+          <div class="pc-meta">
+            <span class="pc-dot" style="background:var(--text-faint)"></span>
+            <span>Created ${relativeDate(p.created_at)}</span>
+          </div>
+        </div>
+        <div class="pc-right">
+          <button class="pc-restore-btn" onclick="doUnarchive(${p.id})">↩ Restore</button>
+          <button class="pc-next-action dim" style="font-size:12px"
+                  onclick="confirmDeleteArchived(${p.id},${JSON.stringify(p.title)})">🗑 Delete</button>
+        </div>
+      </div>`).join('');
+  } catch {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-sub">Could not load archived projects.</div></div>';
+  }
 }
 </script>
 </body>
