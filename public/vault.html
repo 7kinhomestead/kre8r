@@ -94,6 +94,24 @@
   .progress-log .ok{color:var(--green);}
   .progress-log .err{color:var(--red);}
 
+  /* ── UPLOAD FROM DEVICE ── */
+  .upload-drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-card-2);position:relative;}
+  .upload-drop-zone:hover,.upload-drop-zone.drag-over{border-color:var(--teal);background:var(--teal-glow);}
+  .upload-drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .upload-drop-icon{font-size:32px;margin-bottom:8px;opacity:0.6;}
+  .upload-drop-title{font-family:var(--font-head);font-size:14px;letter-spacing:1px;color:var(--text);margin-bottom:4px;}
+  .upload-drop-sub{font-size:12px;color:var(--text-dimmer);}
+  .upload-progress-bar-outer{background:var(--bg-card-2);border-radius:4px;height:8px;overflow:hidden;margin-top:14px;display:none;}
+  .upload-progress-bar-outer.visible{display:block;}
+  .upload-progress-bar-inner{height:100%;background:var(--teal);border-radius:4px;width:0;transition:width 0.3s ease;}
+  .upload-bytes{font-size:11px;color:var(--text-dim);margin-top:6px;display:none;}
+  .upload-bytes.visible{display:block;}
+  .upload-log{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;max-height:140px;overflow-y:auto;font-size:12px;font-family:monospace;color:var(--text-dim);line-height:1.6;margin-top:10px;display:none;}
+  .upload-log.visible{display:block;}
+  .upload-log .ok{color:var(--green);}
+  .upload-log .err{color:var(--red);}
+  @media(max-width:600px){.upload-drop-zone{padding:22px 12px;}}
+
   /* ── LIBRARY CONTROLS ── */
   .library-controls{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
   .view-toggle{display:flex;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
@@ -349,6 +367,35 @@
         <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar"></div></div>
         <div class="progress-log" id="progressLog"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Upload from Device -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">UPLOAD FROM DEVICE</div>
+      <div class="section-sub">Upload video files directly from your phone or computer</div>
+    </div>
+    <div class="intake-panel">
+      <div class="intake-row" style="margin-bottom:14px;">
+        <div>
+          <label>Link to project (optional)</label>
+          <select class="project-select" id="uploadProjectSelect">
+            <option value="">— None —</option>
+          </select>
+        </div>
+      </div>
+      <div class="upload-drop-zone" id="uploadDropZone">
+        <input type="file" id="uploadFileInput" accept="video/*,.mp4,.mov,.mts,.avi,.mkv" multiple />
+        <div class="upload-drop-icon">📱</div>
+        <div class="upload-drop-title">TAP TO SELECT VIDEO</div>
+        <div class="upload-drop-sub">or drag &amp; drop here — mp4, mov, avi, mkv, mts</div>
+      </div>
+      <div class="upload-progress-bar-outer" id="uploadProgressOuter">
+        <div class="upload-progress-bar-inner" id="uploadProgressBar"></div>
+      </div>
+      <div class="upload-bytes" id="uploadBytes"></div>
+      <div class="upload-log" id="uploadLog"></div>
     </div>
   </div>
 
@@ -692,7 +739,7 @@ let allProjects = [];
 async function loadProjects() {
   try {
     allProjects = await fetch('/api/projects').then(r => r.json());
-    const targets = [document.getElementById('projectSelect'), document.getElementById('modalProjectLink'), document.getElementById('bulkProjectSelect')];
+    const targets = [document.getElementById('projectSelect'), document.getElementById('uploadProjectSelect'), document.getElementById('modalProjectLink'), document.getElementById('bulkProjectSelect')];
     for (const sel of targets) {
       if (!sel) continue;
       // Keep first option (— None — / — Unassigned —), clear the rest
@@ -1295,6 +1342,137 @@ async function startIngest() {
   } catch(e) { addLog('err', '✗ ' + e.message); }
   finally { btn.disabled = false; btn.textContent = '▶ Ingest'; }
 }
+
+// ── UPLOAD FROM DEVICE ─────────────────────────────────────────────────────
+(function initUpload() {
+  const dropZone   = document.getElementById('uploadDropZone');
+  const fileInput  = document.getElementById('uploadFileInput');
+  const progressOuter = document.getElementById('uploadProgressOuter');
+  const progressBar   = document.getElementById('uploadProgressBar');
+  const bytesEl    = document.getElementById('uploadBytes');
+  const logEl      = document.getElementById('uploadLog');
+
+  function addLog(cls, text) {
+    logEl.classList.add('visible');
+    logEl.innerHTML += `<div class="${cls}">${escHtml(text)}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function resetUI() {
+    progressOuter.classList.remove('visible');
+    bytesEl.classList.remove('visible');
+    logEl.classList.remove('visible');
+    progressBar.style.width = '0%';
+    bytesEl.textContent = '';
+    logEl.innerHTML = '';
+  }
+
+  // Drag and drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|mts|braw)$/i.test(f.name));
+    if (files.length) uploadFiles(files);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) uploadFiles([...fileInput.files]);
+    fileInput.value = ''; // reset so same file can be picked again
+  });
+
+  async function uploadFiles(files) {
+    resetUI();
+    logEl.classList.add('visible');
+
+    const projectId = document.getElementById('uploadProjectSelect').value || null;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      addLog('', `↑ Uploading ${file.name} (${fmtBytes(file.size)})…`);
+
+      progressOuter.classList.add('visible');
+      bytesEl.classList.add('visible');
+      progressBar.style.width = '0%';
+
+      // XHR for upload progress, then read SSE response for intake progress
+      try {
+        const { footage_id, error } = await xhrUpload(file, projectId, (loaded, total) => {
+          const pct = total ? Math.round((loaded / total) * 60) : 0; // 0–60% = upload phase
+          progressBar.style.width = pct + '%';
+          bytesEl.textContent = `${fmtBytes(loaded)} / ${fmtBytes(total)}`;
+        });
+
+        if (error) {
+          addLog('err', `✗ ${file.name}: ${error}`);
+          progressBar.style.width = '0%';
+        } else {
+          progressBar.style.width = '100%';
+          addLog('ok', `✓ ${file.name} ingested${footage_id ? ` (id=${footage_id})` : ''}`);
+          await loadFootage();
+          await loadStatus();
+        }
+      } catch (e) {
+        addLog('err', `✗ ${file.name}: ${e.message}`);
+      }
+    }
+  }
+
+  function xhrUpload(file, projectId, onProgress) {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append('video', file);
+      if (projectId) formData.append('project_id', projectId);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/vault/upload');
+      xhr.setRequestHeader('Accept', 'text/event-stream');
+
+      xhr.upload.addEventListener('progress', e => {
+        if (e.lengthComputable) onProgress(e.loaded, e.total);
+      });
+
+      // Parse SSE chunks from XHR responseText as they arrive
+      let lastIdx = 0;
+      let lastStage = null;
+      xhr.addEventListener('progress', () => {
+        const chunk = xhr.responseText.slice(lastIdx);
+        lastIdx = xhr.responseText.length;
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+            lastStage = evt;
+            if (evt.stage === 'uploaded')   addLog('', `  Saved to server, running intake…`);
+            if (evt.stage === 'ingesting')  addLog('', `  Classifying with Claude Vision…`);
+            if (evt.stage === 'error')      addLog('err', `  ✗ ${evt.error}`);
+          } catch (_) {}
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(lastStage || {});
+        } else {
+          reject(new Error(`HTTP ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => reject(new Error('Network error')));
+      xhr.send(formData);
+    });
+  }
+
+  function fmtBytes(b) {
+    if (!b) return '0 B';
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    if (b < 1024 * 1024 * 1024) return (b / 1024 / 1024).toFixed(1) + ' MB';
+    return (b / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  }
+})();
 
 // ── SELECTION & BULK ASSIGN ────────────────────────────────────────────────
 function toggleSelect(event, id) {

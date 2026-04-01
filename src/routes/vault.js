@@ -19,6 +19,33 @@ const { organizeFile, organizeAll } = require('../vault/organizer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ─────────────────────────────────────────────
+// multer — disk storage for direct video uploads
+// Saves to /home/kre8r/kre8r/uploads (cloud) or ./uploads (local)
+// ─────────────────────────────────────────────
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+  || path.join(process.cwd(), 'uploads');
+
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const videoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+    filename:    (_req, file, cb) => {
+      // Preserve original name but prefix with timestamp to avoid collisions
+      const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      cb(null, `${Date.now()}_${safe}`);
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 * 1024 }, // 10 GB max
+  fileFilter: (_req, file, cb) => {
+    const ALLOWED = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv', '.braw', '.r3d', '.ari']);
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ALLOWED.has(ext)) cb(null, true);
+    else cb(new Error(`Unsupported file type: ${ext}`));
+  }
+});
+
+// ─────────────────────────────────────────────
 // GET /api/vault/status — ffmpeg check + stats
 // ─────────────────────────────────────────────
 router.get('/status', async (req, res) => {
@@ -361,6 +388,65 @@ router.post('/watcher/start', (req, res) => {
 router.post('/watcher/stop', async (req, res) => {
   const result = await stopWatcher();
   res.json(result);
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/upload
+// Multipart video upload → saves to UPLOAD_DIR → runs intake pipeline
+// Streams SSE progress so the client can show a live progress bar.
+// Field name: "video"   Optional field: "project_id"
+// ─────────────────────────────────────────────
+router.post('/upload', (req, res) => {
+  // Stream SSE immediately so the client gets progress from byte-one
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => {
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch (_) {}
+  };
+
+  // Run multer then intake pipeline
+  videoUpload.single('video')(req, res, async (multerErr) => {
+    if (multerErr) {
+      send({ stage: 'error', error: multerErr.message });
+      return res.end();
+    }
+
+    if (!req.file) {
+      send({ stage: 'error', error: 'No video file received' });
+      return res.end();
+    }
+
+    const savedPath  = req.file.path;
+    const origName   = req.file.originalname;
+    const projectId  = req.body?.project_id ? parseInt(req.body.project_id) : null;
+
+    send({ stage: 'uploaded', file: origName, size: req.file.size, path: savedPath });
+    send({ stage: 'ingesting', file: origName });
+
+    try {
+      const result = await ingestFile(savedPath, {
+        projectId,
+        originalFilename: origName,
+        onProgress: send
+      });
+
+      if (result.ok) {
+        send({ stage: 'done', file: origName, footage_id: result.footage_id ?? null });
+      } else {
+        // Clean up failed upload
+        try { fs.unlinkSync(savedPath); } catch (_) {}
+        send({ stage: 'error', error: result.error || 'Ingest failed' });
+      }
+    } catch (e) {
+      try { fs.unlinkSync(savedPath); } catch (_) {}
+      send({ stage: 'error', error: e.message });
+    }
+
+    res.end();
+  });
 });
 
 // ─────────────────────────────────────────────
