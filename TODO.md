@@ -2,87 +2,75 @@
 
 ---
 
-## Task 1 — Live test Voice Library end-to-end
+## Task 1 — Live test TeleprΩmpter full 3-device setup
 
-The Voice Library analyze pipeline hasn't been tested with a real video file.
+All four fixes landed this session but haven't been tested end-to-end on real hardware.
 
-1. Open `http://localhost:3000/writr.html`
-2. Scroll to Voice Library section at bottom
-3. Click **+ Add Voice Profile**
-4. Drop a real `.mp4` or `.mov` file with speech
-5. Confirm SSE progress stream: `transcribing` → `transcribed` → `analyzing` → `saved`
-6. Profile card should appear with name, word count, summary
-7. Select it as Primary voice — write a script — confirm the voice instructions show in the prompt
-8. Test blend: select two profiles, set 70/30 split — confirm weighted summary in prompt
-
----
-
-## Task 2 — Live test WritΩr three tabs end-to-end
-
-The three-tab parallel generation was built but not live-tested against the real API.
-
-1. Open `http://localhost:3000/writr.html` → select a project
-2. Fill Concept + What Was Captured → click Generate
-3. Confirm:
-   - All three tabs show spinner while generating
-   - `[Full Script]` tab completes first and renders immediately
-   - `[Bullets]` and `[Hybrid]` tabs complete and switch without re-generating
-   - Beat coverage colors show on beat cards and script sections
-4. Click `[Bullets]` tab → confirm bullet-point format
-5. Click `[Hybrid]` tab → confirm hybrid outline format
-6. Click Revise → confirm it iterates on the active tab's content
-7. Navigate away and back → confirm active tab and all sibling scripts restore
+**Test sequence:**
+1. Start display on laptop: `http://localhost:3000/teleprompter.html` → Load Script → Start
+2. Note the 4-digit session code on screen
+3. **Phone 1 (Control/Cari):** `http://192.168.1.143:3000/teleprompter.html?mode=control&session=XXXX`
+   - Confirm script text appears and scrolls in sync with display
+   - Test ⏪ 10s / slider / 10s ⏩ seek controls
+   - Test drag up/down on text → speed changes on display
+   - Confirm all text is full white, no fading
+4. **Phone 2 (Voice/Jason):** `http://192.168.1.143:3000/teleprompter.html?mode=voice&session=XXXX`
+   - Confirm 🎤 icon + volume bar appear
+   - Speak → display starts scrolling; pause → display stops
+   - Confirm sensitivity slider adjusts threshold
+5. Confirm teal reading guide line visible at 38% from top on display
+6. Tap any line on paused display → confirm jump to that line
 
 ---
 
-## Task 3 — Id8Ωr (Ideation Engine)
+## Task 2 — Id8Ωr (Ideation Engine) — Phase 3
 
-Phase 3 next tool. Generates content ideas from creator voice, trending topics, and past performance.
+First new tool of Phase 3. Generates content ideas from creator voice, trending angles, and past winners.
 
-Design:
-- Input: creator niche, recent videos, top performers
-- Output: 5-10 hook + concept + story structure combinations
-- Each idea includes: Hook, Angle (Financial/Rigged/Rock Rich), Structure, Estimated viral potential
-- Ideas saved to DB and can be promoted to a full PipΩr project with one click
-- Route: `src/routes/id8r.js` | UI: `public/id8r.html`
+**Design:**
+- Input: niche keywords, recent video titles, optional trending topic
+- Output: 5–10 idea cards, each with: Hook, Angle (Financial/Rigged/Rock Rich), Story Structure, B-roll needs
+- Ideas saved to DB, promotable to full PipΩr project with one click
+- Uses Claude with creator-profile.json for voice + angle filtering
 
----
-
-## Task 4 — DirectΩr live shoot test
-
-DirectΩr was fixed this session but needs a real-world test on a phone:
-
-1. Open `http://localhost:3000/director.html` → select "The Rock Rich Community Launch"
-2. Confirm crew brief shows: project title, story_circle, concept, all 8 beats with arrows
-3. Confirm all 8 shots show as **Talking Head** (not B-Roll)
-4. Click **Generate + Download** → confirm `.html` file downloads (not `.txt`)
-5. Open the downloaded file offline in a browser → confirm full ShootDay interface loads
-6. Open ShootDay on phone at `http://[local-ip]:3000/shootday.html` → select project
-7. Mark 2-3 beats as "good" → confirm coverage bar updates in real time
-8. Return to DirectΩr → confirm mirror panel shows updated coverage
+**Files to create:**
+- `src/routes/id8r.js` — route + Claude generation
+- `public/id8r.html` — idea card UI, promote-to-project button
+- DB: `id8r_ideas` table (`project_id nullable`, `hook`, `angle`, `structure`, `created_at`)
+- Mount in `server.js`
 
 ---
 
-## Task 5 — Create GitHub PR for feat/editor branch
+## Task 3 — Create GitHub PR for feat/editor branch
 
-All session 9–11 work is on `feat/editor`. PR never created.
+All session 9–12 work is on `feat/editor`. PR still not created.
 
 ```
 gh pr create \
-  --title "feat: TeleprΩmpter, WritΩr 3-tabs, Voice Library, DirectΩr" \
-  --body "..."
+  --title "feat: TeleprΩmpter overhaul, WritΩr 3-tabs, Voice Library, DirectΩr" \
+  --base main --head feat/editor
 ```
 
-Or browser: https://github.com/7kinhomestead/kre8r/compare/main...feat/editor
+PR covers:
+- **TeleprΩmpter:** 3-device setup (display/control/voice), position sync, seek controls, full-white text, reading guide, drag-to-speed, font size calibration, voice device mode
+- **WritΩr:** three output tabs (Full/Bullets/Hybrid), parallel generation, session_id grouping, beat coverage colors, PipΩr prefill fix
+- **Voice Library:** Whisper → Claude voice analysis, weighted profile blending, SSE job stream
+- **DirectΩr:** crew brief data fix, Blob package download, shot type inference
+- **ReviewΩr:** auto Voice Library prompt after CutΩr analysis
 
-PR should cover:
-- TeleprΩmpter: multi-device display, remote control, voice sync (Web Audio API)
-- WritΩr: three output mode tabs (Full/Bullets/Hybrid), parallel generation, session_id grouping
-- WritΩr: visual beat coverage colors (green/red/amber cards + script borders)
-- WritΩr: PipΩr prefill fix (concept + footage from active script raw_input)
-- Voice Library: Whisper → Claude voice analysis, weighted profile blending, SSE job stream
-- DirectΩr: crew brief fix, Blob package download, shot type inference (talking_head default)
-- ReviewΩr: auto Voice Library prompt after CutΩr analysis
+---
+
+## Carry-forward (from Session 11 — still valid)
+
+### Voice Library end-to-end test
+1. Open `http://localhost:3000/writr.html` → Voice Library section
+2. Add a real `.mp4` with speech → confirm SSE: `transcribing` → `analyzing` → `saved`
+3. Select as Primary voice → write script → confirm voice instructions in prompt
+
+### WritΩr three tabs end-to-end test
+1. Generate → confirm all 3 tabs complete and render correctly
+2. Beat coverage colors on cards and script sections
+3. Navigate away and back → all tabs restore
 
 ---
 

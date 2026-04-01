@@ -35,12 +35,21 @@ const router = express.Router();
 
 function getLocalIP() {
   const ifaces = os.networkInterfaces();
+  const candidates = [];
   for (const name of Object.keys(ifaces)) {
     for (const iface of ifaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+      if (iface.family === 'IPv4' && !iface.internal) {
+        candidates.push(iface.address);
+      }
     }
   }
-  return null;
+  // Prefer RFC-1918 private ranges (WiFi/LAN) over VPN/virtual adapters
+  const privateIp = candidates.find(ip =>
+    ip.startsWith('192.168.') ||
+    ip.startsWith('10.')      ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
+  );
+  return privateIp || candidates[0] || null;
 }
 
 // ─────────────────────────────────────────────
@@ -72,7 +81,7 @@ router.get('/scripts', (req, res) => {
 
     result.push({
       project_id:   p.id,
-      project_name: p.name || 'Untitled',
+      project_name: p.title || p.name || 'Untitled',
       script_id:    script.id,
       preview,
       approved_at:  script.approved_at
@@ -96,7 +105,7 @@ router.get('/script/:project_id', (req, res) => {
   res.json({
     ok:           true,
     project_id:   projectId,
-    project_name: project.name || 'Untitled',
+    project_name: project.title || project.name || 'Untitled',
     script_id:    script.id,
     script_text:  script.generated_script || '',
     beat_map:     script.beat_map_json    || []
@@ -247,6 +256,7 @@ function createTeleprompterWS(httpServer) {
         if (msg.action === 'play')         sess.state.paused  = false;
         if (msg.action === 'toggle_pause') sess.state.paused  = !sess.state.paused;
         if (msg.action === 'restart')      sess.state.position = 0;
+        if (msg.action === 'seek_pct')             sess.state.position = msg.value;
         // Echo updated state to all controls
         broadcastToControls(sess, { type: 'state', ...sess.state, title: sess.title });
       }

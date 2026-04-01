@@ -149,16 +149,15 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* Script lines */
 .tp-line {
   font-size: var(--font-size); line-height: 1.42;
-  color: var(--text); opacity: 0.7; padding: 5px 0 5px 19px;
-  cursor: pointer; transition: opacity 0.1s; user-select: none;
+  color: #ffffff; padding: 5px 0 5px 19px;
+  cursor: pointer; user-select: none;
 }
-.tp-line.tp-above  { opacity: 0.45; }
-.tp-line.tp-below  { opacity: 0.70; }
+.tp-line.tp-above  { color: #ffffff; }
+.tp-line.tp-below  { color: #ffffff; }
 .tp-line.tp-current {
-  opacity: 1;
+  color: #ffffff;
   border-left: 3px solid var(--teal);
   padding-left: 16px;
-  margin-left: 0;
 }
 
 /* Paragraph break */
@@ -180,7 +179,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* Subtle reading guide line */
 #tp-reading-guide {
   position: fixed; left: 0; right: 0; top: 38vh;
-  height: 1px; background: rgba(62,207,178,0.06);
+  height: 2px; background: rgba(62,207,178,0.45);
   pointer-events: none; z-index: 5;
 }
 
@@ -357,19 +356,21 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
    REMOTE CONTROL SCREEN (phone)
 ═══════════════════════════════════════ */
 #tp-remote {
-  position: fixed; inset: 0; z-index: 20; background: #050705;
-  display: none; flex-direction: column; align-items: center;
-  padding: 36px 24px 40px; overflow-y: auto;
+  position: fixed; inset: 0; z-index: 20; background: #000;
+  display: none; flex-direction: column; overflow: hidden;
 }
 #tp-remote.active { display: flex; }
 
+/* ── Connect panel (shown before connection) ── */
+#tp-rem-connect-panel {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+  padding: 36px 24px 24px; overflow-y: auto; flex: 1;
+}
 .tp-rem-title {
   font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px;
   color: rgba(255,255,255,0.6); margin-bottom: 20px;
 }
 .tp-rem-title span { color: var(--teal); }
-
-/* Connection status */
 #tp-remote-status {
   display: inline-flex; align-items: center; gap: 8px; margin-bottom: 28px;
   padding: 8px 16px; border-radius: 20px; font-size: 13px;
@@ -377,8 +378,6 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 .tp-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a; transition: background 0.3s; }
 .tp-status-dot.ok { background: var(--teal); }
-
-/* Code input */
 .tp-rem-connect { width: 100%; max-width: 380px; margin-bottom: 28px; }
 .tp-rem-connect label {
   display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
@@ -394,49 +393,123 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-rem-code:focus { border-color: var(--teal-dim); }
 #tp-rem-connect-btn {
   padding: 13px 18px; background: var(--teal); border: none; border-radius: 8px;
-  color: #000; font-family: var(--font); font-size: 14px; font-weight: 700;
-  cursor: pointer;
+  color: #000; font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer;
 }
 #tp-rem-err { margin-top: 10px; font-size: 13px; color: #ff5a5a; text-align: center; display: none; }
 #tp-rem-err.on { display: block; }
 
-/* Progress */
-.tp-rem-prog-wrap { width: 100%; max-width: 380px; margin-bottom: 24px; }
-.tp-rem-prog-label { display: flex; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 7px; }
-.tp-rem-prog-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-#tp-rem-prog-fill { height: 100%; background: var(--teal); border-radius: 2px; width: 0%; transition: width 0.6s; }
+/* ── Script area (fills screen when connected) ── */
+#tp-rem-script-wrap {
+  flex: 1; overflow-y: auto; display: none;
+  padding: 20px 22px 160px; -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+#tp-rem-script-wrap.live { display: block; }
+.tp-rem-line {
+  font-size: var(--rem-font-size, 32px); line-height: 1.75; color: #ffffff;
+  font-family: var(--font); font-weight: 400; margin-bottom: 14px;
+}
+.tp-rem-beat-label {
+  display: block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--teal); margin: 28px 0 10px;
+  padding: 5px 10px; background: rgba(62,207,178,0.09);
+  border-radius: 4px; width: fit-content;
+}
 
-/* Big play/pause */
+/* ── Sticky controls bar (shown when connected) ── */
+#tp-rem-ctrl-bar {
+  flex-shrink: 0; display: none; flex-direction: column;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.94); border-top: 1px solid rgba(255,255,255,0.12);
+  padding: 10px 16px env(safe-area-inset-bottom, 12px);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+#tp-rem-ctrl-bar.live { display: flex; }
+/* Progress bar inside ctrl bar */
+#tp-rem-prog-bar-inner {
+  height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px;
+  overflow: hidden; margin-bottom: 10px;
+}
+#tp-rem-prog-fill { height: 100%; background: var(--teal); border-radius: 2px; width: 0%; transition: width 0.6s; }
+/* Controls row */
+.tp-rem-ctrl-row {
+  display: flex; align-items: center; gap: 10px;
+}
 #tp-rem-pp {
-  width: 100%; max-width: 380px; height: 110px;
-  background: rgba(62,207,178,0.1); border: 2px solid var(--teal);
-  border-radius: 14px; color: var(--teal); font-size: 44px;
-  cursor: pointer; margin-bottom: 14px;
-  display: flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; flex-shrink: 0;
+  background: rgba(62,207,178,0.12); border: 1.5px solid var(--teal);
+  border-radius: 12px; color: var(--teal); font-size: 22px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: background 0.12s;
 }
-#tp-rem-pp:active { background: rgba(62,207,178,0.22); }
-
-/* Speed row */
-.tp-rem-speed-row { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 380px; margin-bottom: 12px; }
+#tp-rem-pp:active { background: rgba(62,207,178,0.28); }
+.tp-rem-speed-row { display: flex; align-items: center; gap: 8px; flex: 1; }
 .tp-rem-spd-btn {
-  width: 60px; height: 60px; background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
-  color: var(--text); font-size: 22px; cursor: pointer; flex-shrink: 0;
+  width: 50px; height: 50px; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+  color: #fff; font-size: 22px; cursor: pointer; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center; transition: all 0.1s;
 }
-.tp-rem-spd-btn:active { background: rgba(255,255,255,0.14); transform: scale(0.93); }
-.tp-rem-spd-label { flex: 1; text-align: center; font-size: 15px; color: rgba(255,255,255,0.6); }
-.tp-rem-spd-label span { color: var(--teal); font-weight: 600; font-size: 20px; }
-
-/* Restart */
+.tp-rem-spd-btn:active { background: rgba(255,255,255,0.16); transform: scale(0.92); }
+.tp-rem-spd-label { flex: 1; text-align: center; font-size: 13px; color: rgba(255,255,255,0.55); }
+.tp-rem-spd-label span { color: var(--teal); font-weight: 700; font-size: 18px; display: block; }
 #tp-rem-restart {
-  width: 100%; max-width: 380px; padding: 13px;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  width: 50px; height: 50px; flex-shrink: 0;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px; color: rgba(255,255,255,0.55);
-  font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.12s;
+  font-family: var(--font); font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
 }
-#tp-rem-restart:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+#tp-rem-restart:active { background: rgba(255,255,255,0.1); color: #fff; }
+/* Progress / pct label */
+.tp-rem-prog-wrap { display: none; } /* legacy — replaced by ctrl bar */
+#tp-rem-project-name {
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45);
+  text-align: center; padding: 6px 0 2px;
+}
+
+/* ═══════════════════════════════════════
+   VOICE DEVICE SCREEN
+═══════════════════════════════════════ */
+#tp-voice-device {
+  position: fixed; inset: 0; z-index: 30; background: #000;
+  display: none; flex-direction: column; align-items: center;
+  justify-content: center; gap: 28px; padding: 40px 24px;
+  text-align: center;
+}
+#tp-voice-device.active { display: flex; }
+#tp-vd-mic-icon { font-size: 72px; line-height: 1; transition: transform 0.15s; }
+#tp-vd-mic-icon.pulsing { animation: tp-pulse 1.2s ease-in-out infinite; }
+#tp-vd-status {
+  font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 4px;
+  color: var(--teal);
+}
+#tp-vd-status.paused { color: #ffb432; }
+#tp-vd-subtitle { font-size: 13px; color: rgba(255,255,255,0.35); max-width: 260px; line-height: 1.6; }
+#tp-vd-vol-bar-wrap {
+  width: 220px; height: 8px; background: rgba(255,255,255,0.1);
+  border-radius: 4px; overflow: hidden;
+}
+#tp-vd-vol-fill { height: 100%; background: var(--teal); width: 0%; border-radius: 4px; transition: width 0.08s; }
+#tp-vd-sense-wrap { width: 100%; max-width: 260px; }
+#tp-vd-sense-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.35); margin-bottom: 10px; display: block;
+}
+#tp-vd-sense {
+  -webkit-appearance: none; width: 100%; height: 4px;
+  background: rgba(62,207,178,0.25); border-radius: 2px; outline: none; cursor: pointer;
+}
+#tp-vd-sense::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--teal); cursor: pointer;
+}
+#tp-vd-session-info { font-size: 12px; color: rgba(255,255,255,0.2); }
+#tp-vd-conn-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a;
+  display: inline-block; margin-right: 6px; transition: background 0.3s;
+}
+#tp-vd-conn-dot.ok { background: var(--teal); }
 </style>
 </head>
 <body>
@@ -455,6 +528,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     <div class="tp-tabs">
       <button class="tp-tab active" id="tab-project" onclick="switchTab('project')">Load Script</button>
       <button class="tp-tab" id="tab-paste"   onclick="switchTab('paste')">Paste Text</button>
+      <button class="tp-tab" id="tab-remote"  onclick="showRemoteScreen(null)">🎮 Remote</button>
     </div>
 
     <div id="tp-mode-project">
@@ -556,40 +630,65 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
      SCREEN 3 — REMOTE CONTROL (phone)
 ══════════════════════════════════════════ -->
 <div id="tp-remote">
-  <div class="tp-rem-title">REMOTE <span>CONTROL</span></div>
-  <div id="tp-rem-project-name" style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.55);margin-bottom:16px;margin-top:-12px;display:none;"></div>
 
-  <div id="tp-remote-status">
-    <div class="tp-status-dot" id="tp-rem-dot"></div>
-    <span id="tp-rem-status-txt">Not connected</span>
-  </div>
+  <!-- Connect panel — hidden after connection -->
+  <div id="tp-rem-connect-panel">
+    <div class="tp-rem-title">REMOTE <span>CONTROL</span></div>
 
-  <div class="tp-rem-connect">
-    <label>4-digit session code</label>
-    <div class="tp-code-row">
-      <input type="text" id="tp-rem-code" maxlength="4" placeholder="1234"
-             inputmode="numeric" pattern="[0-9]*">
-      <button id="tp-rem-connect-btn" onclick="connectRemote()">Connect</button>
+    <div id="tp-remote-status">
+      <div class="tp-status-dot" id="tp-rem-dot"></div>
+      <span id="tp-rem-status-txt">Not connected</span>
     </div>
-    <div id="tp-rem-err"></div>
-  </div>
 
-  <div class="tp-rem-prog-wrap">
-    <div class="tp-rem-prog-label">
-      <span>Start</span><span id="tp-rem-pct">0%</span><span>End</span>
+    <div class="tp-rem-connect">
+      <label>4-digit session code</label>
+      <div class="tp-code-row">
+        <input type="text" id="tp-rem-code" maxlength="4" placeholder="1234"
+               inputmode="numeric" pattern="[0-9]*">
+        <button id="tp-rem-connect-btn" onclick="connectRemote()">Connect</button>
+      </div>
+      <div id="tp-rem-err"></div>
     </div>
-    <div class="tp-rem-prog-bar"><div id="tp-rem-prog-fill"></div></div>
   </div>
 
-  <button id="tp-rem-pp" onclick="remoteSend('toggle_pause')">⏸</button>
-
-  <div class="tp-rem-speed-row">
-    <button class="tp-rem-spd-btn" onclick="remoteAdjustSpeed(-0.5)">−</button>
-    <div class="tp-rem-spd-label">Speed <span id="tp-rem-spd-val">3</span></div>
-    <button class="tp-rem-spd-btn" onclick="remoteAdjustSpeed(0.5)">+</button>
+  <!-- Script text — fills screen when connected -->
+  <div id="tp-rem-script-wrap">
+    <div id="tp-rem-project-name"></div>
+    <div id="tp-rem-script-lines"></div>
   </div>
 
-  <button id="tp-rem-restart" onclick="remoteSend('restart')">↺ Restart from beginning</button>
+  <!-- Sticky bottom controls — shown when connected -->
+  <div id="tp-rem-ctrl-bar">
+    <div id="tp-rem-prog-bar-inner"><div id="tp-rem-prog-fill"></div></div>
+    <div class="tp-rem-ctrl-row">
+      <button id="tp-rem-pp" onclick="remoteSend('toggle_pause')">▶</button>
+      <div class="tp-rem-speed-row">
+        <button class="tp-rem-spd-btn" onclick="remoteAdjustSpeed(-0.5)">−</button>
+        <div class="tp-rem-spd-label">SPEED<span id="tp-rem-spd-val">3</span></div>
+        <button class="tp-rem-spd-btn" onclick="remoteAdjustSpeed(0.5)">+</button>
+      </div>
+      <div class="tp-rem-speed-row">
+        <button class="tp-rem-spd-btn" onclick="remAdjustFontSize(-2)">A−</button>
+        <div class="tp-rem-spd-label">SIZE<span id="tp-rem-font-val">32</span></div>
+        <button class="tp-rem-spd-btn" onclick="remAdjustFontSize(2)">A+</button>
+      </div>
+      <button id="tp-rem-restart" onclick="remoteSend('restart')" title="Restart">↺</button>
+    </div>
+    <div class="tp-rem-ctrl-row" style="margin-top:8px;">
+      <button class="tp-rem-spd-btn" onclick="remSeekSeconds(-10)" style="font-size:13px;width:auto;padding:0 12px;flex:1;">⏪ 10s</button>
+      <input type="range" id="tp-rem-seek-slider" min="0" max="100" value="0"
+             oninput="remSeekPct(this.value)"
+             style="flex:3;height:4px;-webkit-appearance:none;background:rgba(255,255,255,0.2);border-radius:2px;outline:none;cursor:pointer;margin:0 8px;">
+      <button class="tp-rem-spd-btn" onclick="remSeekSeconds(10)" style="font-size:13px;width:auto;padding:0 12px;flex:1;">10s ⏩</button>
+    </div>
+  </div>
+
+  <!-- Legacy hidden elements — keep IDs alive for JS that references them -->
+  <div style="display:none">
+    <div class="tp-rem-prog-wrap"><div class="tp-rem-prog-bar"><div></div></div></div>
+    <span id="tp-rem-pct">0</span>
+  </div>
+
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -614,6 +713,31 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
         <div class="tp-join-btn-desc">Remote control — play, pause, adjust speed</div>
       </div>
     </button>
+    <button class="tp-join-btn" onclick="joinAsVoice()">
+      <div class="tp-join-btn-icon">🎤</div>
+      <div class="tp-join-btn-text">
+        <div class="tp-join-btn-label">Voice</div>
+        <div class="tp-join-btn-desc">Mic in your pocket — your voice drives the scroll</div>
+      </div>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 5 — VOICE DEVICE (mic in pocket)
+══════════════════════════════════════════ -->
+<div id="tp-voice-device">
+  <div id="tp-vd-mic-icon">🎤</div>
+  <div id="tp-vd-status">CONNECTING…</div>
+  <div id="tp-vd-subtitle">Your voice controls the teleprompter.<br>Speak → scroll starts. Pause → scroll stops.</div>
+  <div id="tp-vd-vol-bar-wrap"><div id="tp-vd-vol-fill"></div></div>
+  <div id="tp-vd-sense-wrap">
+    <span id="tp-vd-sense-label">Mic Sensitivity</span>
+    <input type="range" id="tp-vd-sense" min="1" max="10" value="5">
+  </div>
+  <div id="tp-vd-session-info">
+    <span id="tp-vd-conn-dot"></span>
+    <span id="tp-vd-session-txt">Not connected</span>
   </div>
 </div>
 
@@ -642,9 +766,17 @@ let ctrlHideTimer  = null;
 let wsConn         = null;
 let wsSession      = null;
 let stateTimer     = null;
-let remoteWS       = null;
-let remoteSpeed    = 3;
-let remotePaused   = true;
+let remoteWS        = null;
+let remoteSpeed     = 3;
+let remotePaused    = true;
+let remRafId        = null;
+let remLastTs       = null;
+let remScrollRem    = 0;
+let remScriptReady  = false;
+let remFontSize     = 32;          // remote font size — user-adjustable
+let displayFontSize = 64;          // received from display state; used for speed scaling
+const REM_FONT_MIN  = 18;
+const REM_FONT_MAX  = 64;
 let networkInfo    = { ip: null, port: 3000 };
 let displayEventsOn    = false;
 let isSecondaryDisplay = false;
@@ -661,6 +793,11 @@ const P_PROJ   = PARAMS.get('project_id');
 
 async function init() {
   await loadNetworkInfo();
+
+  if (P_MODE === 'voice') {
+    showVoiceDevice(P_SESS);
+    return;
+  }
 
   if (P_MODE === 'control') {
     showRemoteScreen(P_SESS);
@@ -997,6 +1134,14 @@ function animTick(ts) {
   }
 
   updateCurrentLine();
+
+  // Throttled position broadcast to remotes
+  const now = Date.now();
+  if (!animTick._lastBcast || now - animTick._lastBcast > 250) {
+    animTick._lastBcast = now;
+    sendDisplayState();
+  }
+
   rafId = requestAnimationFrame(animTick);
 }
 
@@ -1111,7 +1256,17 @@ function attachDisplayEvents() {
   display.addEventListener('touchstart', showCtrl, { passive: true });
 
   wrap.addEventListener('click', function (e) {
-    if (!e.target.closest('#tp-controls')) togglePlayPause();
+    if (e.target.closest('#tp-controls')) return;
+    const line = e.target.closest('.tp-line');
+    if (line && !isPlaying) {
+      // Jump to this line when paused
+      const lineRect = line.getBoundingClientRect();
+      const focusY   = window.innerHeight * 0.38;
+      wrap.scrollTop += lineRect.top - focusY;
+      sendDisplayState();
+      return;
+    }
+    togglePlayPause();
   });
 
   document.addEventListener('keydown', function (e) {
@@ -1146,9 +1301,10 @@ function connectDisplayWS() {
   catch (_) { return; }
 
   wsConn.onopen = () => {
-    const code  = P_SESS && P_SESS.length === 4 ? P_SESS : null;
-    const title = loadedScript?.projectName || null;
-    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, title }));
+    const code      = P_SESS && P_SESS.length === 4 ? P_SESS : null;
+    const title     = loadedScript?.projectName || null;
+    const projectId = loadedScript?.projectId   || null;
+    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, title, projectId }));
   };
 
   wsConn.onmessage = (e) => {
@@ -1168,7 +1324,7 @@ function connectDisplayWS() {
       updateQRForSession(wsSession);
       updateCountBadge(msg.count);
       if (stateTimer) clearInterval(stateTimer);
-      stateTimer = setInterval(sendDisplayState, 2000);
+      stateTimer = setInterval(sendDisplayState, 250);
     }
 
     if (msg.type === 'count_update') {
@@ -1184,6 +1340,18 @@ function connectDisplayWS() {
       if (a === 'restart')      {
         document.getElementById('tp-scroll-wrap').scrollTop = 0;
         isPlaying = false; lastTs = null; updatePPBtn();
+      }
+      if (a === 'seek_pct') {
+        const w = document.getElementById('tp-scroll-wrap');
+        const max = w.scrollHeight - w.clientHeight;
+        if (max > 0) w.scrollTop = Math.round((msg.value / 100) * max);
+        sendDisplayState();
+      }
+      if (a === 'seek_relative_seconds') {
+        const w = document.getElementById('tp-scroll-wrap');
+        const px = msg.value * scrollSpeed * 20;
+        w.scrollTop = Math.max(0, Math.min(w.scrollHeight - w.clientHeight, w.scrollTop + px));
+        sendDisplayState();
       }
     }
   };
@@ -1202,9 +1370,11 @@ function sendDisplayState() {
   const max = w.scrollHeight - w.clientHeight;
   const pos = max > 0 ? Math.round((w.scrollTop / max) * 100) : 0;
   wsConn.send(JSON.stringify({
-    type:  'state',
-    state: { speed: scrollSpeed, paused: !isPlaying, position: pos },
-    title: loadedScript?.projectName || null
+    type:      'state',
+    state:     { speed: scrollSpeed, paused: !isPlaying, position: pos },
+    title:     loadedScript?.projectName || null,
+    projectId: loadedScript?.projectId   || null,
+    fontSize:  parseInt(getComputedStyle(document.documentElement).getPropertyValue('--font-size') || '64', 10)
   }));
 }
 
@@ -1244,6 +1414,11 @@ function joinAsControl() {
   showRemoteScreen(P_SESS);
 }
 
+function joinAsVoice() {
+  document.getElementById('tp-join').classList.remove('active');
+  showVoiceDevice(P_SESS);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // DEVICE COUNT BADGE
 // ═══════════════════════════════════════════════════════════════
@@ -1277,7 +1452,7 @@ async function connectSecondaryDisplayWS(code) {
   catch (_) { return; }
 
   wsConn.onopen = () => {
-    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code }));
+    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, projectId: loadedScript?.projectId || null }));
   };
 
   wsConn.onmessage = async (e) => {
@@ -1360,6 +1535,18 @@ async function connectSecondaryDisplayWS(code) {
         document.getElementById('tp-scroll-wrap').scrollTop = 0;
         isPlaying = false; lastTs = null; updatePPBtn();
       }
+      if (a === 'seek_pct') {
+        const w = document.getElementById('tp-scroll-wrap');
+        const max = w.scrollHeight - w.clientHeight;
+        if (max > 0) w.scrollTop = Math.round((msg.value / 100) * max);
+        sendDisplayState();
+      }
+      if (a === 'seek_relative_seconds') {
+        const w = document.getElementById('tp-scroll-wrap');
+        const px = msg.value * scrollSpeed * 20;
+        w.scrollTop = Math.max(0, Math.min(w.scrollHeight - w.clientHeight, w.scrollTop + px));
+        sendDisplayState();
+      }
     }
   };
 
@@ -1399,13 +1586,13 @@ function connectRemote() {
     if (msg.type === 'registered') {
       setRemStatus(true);
       if (msg.state) applyRemState(msg.state);
+      // Load script and switch to reading view
+      const pid   = msg.projectId;
+      const title = msg.title || null;
+      showRemConnected(pid, title);
     }
     if (msg.type === 'peer_connected') {
       setRemStatus(true);
-      if (msg.title && msg.title !== 'Untitled') {
-        const el = document.getElementById('tp-rem-project-name');
-        if (el) { el.textContent = msg.title; el.style.display = ''; }
-      }
     }
     if (msg.type === 'peer_disconnected' && msg.role === 'display') setRemStatus(false);
     if (msg.type === 'state') applyRemState(msg);
@@ -1416,25 +1603,97 @@ function connectRemote() {
 }
 
 function applyRemState(s) {
-  if (s.speed !== undefined) {
-    remoteSpeed = s.speed;
+  const speed  = s.speed    ?? s.state?.speed;
+  const paused = s.paused   ?? s.state?.paused;
+  const pos    = s.position ?? s.state?.position;
+  const pid    = s.projectId;
+
+  // Update display font size for speed-ratio scaling
+  if (s.fontSize && s.fontSize > 0) {
+    displayFontSize = s.fontSize;
+  }
+
+  if (speed !== undefined) {
+    remoteSpeed = speed;
     document.getElementById('tp-rem-spd-val').textContent =
       remoteSpeed % 1 === 0 ? String(remoteSpeed) : remoteSpeed.toFixed(1);
+    remLastTs = null; // reset so speed change takes effect immediately
   }
-  if (s.paused !== undefined) {
-    remotePaused = s.paused;
+  if (paused !== undefined) {
+    const wasPaused = remotePaused;
+    remotePaused = paused;
     document.getElementById('tp-rem-pp').textContent = remotePaused ? '▶' : '⏸';
+    if (wasPaused && !remotePaused) remLastTs = null; // resume cleanly
   }
-  if (s.position !== undefined) {
-    document.getElementById('tp-rem-prog-fill').style.width = s.position + '%';
-    document.getElementById('tp-rem-pct').textContent = s.position + '%';
+  if (pos !== undefined) {
+    document.getElementById('tp-rem-prog-fill').style.width = pos + '%';
+    const seekSlider = document.getElementById('tp-rem-seek-slider');
+    if (seekSlider) seekSlider.value = pos;
+    const wrap = document.getElementById('tp-rem-script-wrap');
+    if (wrap) {
+      const max = wrap.scrollHeight - wrap.clientHeight;
+      if (max > 0) {
+        const target = Math.round((pos / 100) * max);
+        const drift  = Math.abs(wrap.scrollTop - target);
+        // Snap if drifted more than 2% — lets smooth-scroll handle small movements
+        if (drift > max * 0.02) wrap.scrollTop = target;
+      }
+    }
   }
-  // Show project name when received from display
-  const title = s.title || (s.state && s.state.title);
+  // Fallback: load script if we got a projectId and haven't loaded yet
+  if (pid && !document.getElementById('tp-rem-script-lines').children.length) {
+    showRemConnected(pid, s.title || null);
+  }
+}
+
+function showRemConnected(projectId, title) {
+  // Hide connect panel, show script + controls
+  document.getElementById('tp-rem-connect-panel').style.display = 'none';
+  document.getElementById('tp-rem-script-wrap').classList.add('live');
+  document.getElementById('tp-rem-ctrl-bar').classList.add('live');
+
+  // Apply initial font size
+  document.documentElement.style.setProperty('--rem-font-size', remFontSize + 'px');
+  const fontLbl = document.getElementById('tp-rem-font-val');
+  if (fontLbl) fontLbl.textContent = remFontSize;
+
+  // Wire drag-to-speed gesture on the script area
+  attachRemDragControl();
+
   if (title && title !== 'Untitled') {
     const el = document.getElementById('tp-rem-project-name');
-    if (el) { el.textContent = title; el.style.display = ''; }
+    if (el) el.textContent = title;
   }
+
+  if (projectId) loadRemoteScript(projectId);
+}
+
+async function loadRemoteScript(projectId) {
+  const container = document.getElementById('tp-rem-script-lines');
+  if (!container) return;
+  container.innerHTML = '<p style="color:rgba(255,255,255,0.3);font-size:14px;padding:10px 0;">Loading script…</p>';
+  try {
+    const r = await fetch(`/api/teleprompter/script/${projectId}`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    const segs = processScript(d.script_text);
+    let html = '';
+    for (const seg of segs) {
+      if (seg.type === 'beat_marker') {
+        html += `<span class="tp-rem-beat-label">${escHtml(seg.beatName)}</span>`;
+      } else if (seg.type === 'text' && seg.content?.trim()) {
+        html += `<p class="tp-rem-line">${escHtml(seg.content)}</p>`;
+      }
+    }
+    container.innerHTML = html || '<p class="tp-rem-line" style="opacity:0.4">Script loaded.</p>';
+    remScriptReady = true;
+  } catch (e) {
+    container.innerHTML = `<p style="color:rgba(255,255,255,0.4);font-size:14px;">Could not load script: ${e.message}</p>`;
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function setRemStatus(ok) {
@@ -1447,12 +1706,72 @@ function remoteSend(action, value) {
   const m = { type: 'command', action };
   if (value !== undefined) m.value = value;
   remoteWS.send(JSON.stringify(m));
+  // Also reset remote scroll immediately on restart
+  if (action === 'restart') {
+    const wrap = document.getElementById('tp-rem-script-wrap');
+    if (wrap) wrap.scrollTop = 0;
+    remLastTs = null; remScrollRem = 0;
+  }
 }
 
 function remoteAdjustSpeed(delta) {
   const next = Math.max(0, Math.min(10, remoteSpeed + delta));
   remoteSend('speed', next);
   applyRemState({ speed: next });
+}
+
+function remAdjustFontSize(delta) {
+  remFontSize = Math.max(REM_FONT_MIN, Math.min(REM_FONT_MAX, remFontSize + delta));
+  document.documentElement.style.setProperty('--rem-font-size', remFontSize + 'px');
+  const lbl = document.getElementById('tp-rem-font-val');
+  if (lbl) lbl.textContent = remFontSize;
+  remLastTs = null; // re-sync scroll timing after resize
+}
+
+function remSeekSeconds(secs) {
+  remoteSend('seek_relative_seconds', secs);
+}
+
+function remSeekPct(pct) {
+  remoteSend('seek_pct', parseFloat(pct));
+}
+
+// ── Remote drag-to-speed-control ────────────────────────────────────────────
+// Drag UP on script text = speed up. Drag DOWN = slow down.
+// 80px of drag = 1 speed unit. Speed is clamped 0–10.
+let _remDragAttached = false;
+function attachRemDragControl() {
+  if (_remDragAttached) return;
+  _remDragAttached = true;
+
+  const wrap = document.getElementById('tp-rem-script-wrap');
+  if (!wrap) return;
+
+  let startY      = null;
+  let baseSpeed   = null;
+
+  wrap.addEventListener('touchstart', (e) => {
+    startY    = e.touches[0].clientY;
+    baseSpeed = remoteSpeed;
+  }, { passive: true });
+
+  wrap.addEventListener('touchmove', (e) => {
+    if (startY === null) return;
+    e.preventDefault(); // block native scroll — RAF loop handles scrolling
+    const deltaY = startY - e.touches[0].clientY; // positive = dragged up = faster
+    const next   = Math.max(0, Math.min(10, parseFloat((baseSpeed + deltaY / 80).toFixed(1))));
+    if (Math.abs(next - remoteSpeed) >= 0.1) {
+      remoteSpeed = next;
+      const lbl = document.getElementById('tp-rem-spd-val');
+      if (lbl) lbl.textContent = remoteSpeed % 1 === 0 ? String(remoteSpeed) : remoteSpeed.toFixed(1);
+      remoteSend('speed', next);
+      remLastTs = null;
+    }
+  }, { passive: false });
+
+  wrap.addEventListener('touchend', () => {
+    startY = null; baseSpeed = null;
+  }, { passive: true });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1672,6 +1991,174 @@ function showVoiceDebug(vol, threshold) {
     dbg.innerHTML = `🎤 <span class="vd-heard">${bar}</span><span class="vd-pos"> vol ${vol.toFixed(0)} · speed ${spd}×</span>`;
   }
   dbg.classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VOICE DEVICE — mic-in-pocket mode
+// Connects to session as 'control', uses Web Audio volume detection
+// to drive scroll: speech → play+speed, silence → pause
+// ═══════════════════════════════════════════════════════════════
+
+let vdWS           = null;
+let vdAudioCtx     = null;
+let vdAnalyser     = null;
+let vdMicStream    = null;
+let vdMicSource    = null;
+let vdVolBuffer    = null;
+let vdSmoothedVol  = 0;
+let vdScrolling    = false;
+let vdSilTimer     = null;
+let vdRafId        = null;
+let vdConnected    = false;
+
+function showVoiceDevice(code) {
+  currentMode = 'voice';
+  document.getElementById('tp-selector').style.display = 'none';
+  document.getElementById('tp-voice-device').classList.add('active');
+
+  if (code) {
+    document.getElementById('tp-vd-session-txt').textContent = `Session ${code}`;
+    connectVoiceDeviceWS(code);
+  } else {
+    document.getElementById('tp-vd-session-txt').textContent = 'No session code — use ?session=XXXX in URL';
+    document.getElementById('tp-vd-status').textContent = 'NO SESSION';
+  }
+}
+
+function connectVoiceDeviceWS(code) {
+  if (!code) return;
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try { vdWS = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+  catch (_) { return; }
+
+  vdWS.onopen = () => {
+    vdWS.send(JSON.stringify({ type: 'register', role: 'control', session: code }));
+  };
+
+  vdWS.onmessage = (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+    if (msg.type === 'registered') {
+      vdConnected = true;
+      document.getElementById('tp-vd-conn-dot').classList.add('ok');
+      document.getElementById('tp-vd-session-txt').textContent = `Connected · Session ${code}`;
+      document.getElementById('tp-vd-status').textContent = 'STARTING MIC…';
+      startVoiceDevice();
+    }
+    if (msg.type === 'error') {
+      document.getElementById('tp-vd-status').textContent = 'SESSION NOT FOUND';
+      document.getElementById('tp-vd-status').classList.add('paused');
+    }
+    if (msg.type === 'peer_disconnected' && msg.role === 'display') {
+      document.getElementById('tp-vd-conn-dot').classList.remove('ok');
+      document.getElementById('tp-vd-session-txt').textContent = 'Display disconnected';
+    }
+  };
+
+  vdWS.onerror = () => {
+    document.getElementById('tp-vd-session-txt').textContent = 'Connection error';
+  };
+  vdWS.onclose = () => {
+    vdConnected = false;
+    document.getElementById('tp-vd-conn-dot').classList.remove('ok');
+  };
+}
+
+function vdSend(action, value) {
+  if (!vdWS || vdWS.readyState !== WebSocket.OPEN) return;
+  const m = { type: 'command', action };
+  if (value !== undefined) m.value = value;
+  vdWS.send(JSON.stringify(m));
+}
+
+async function startVoiceDevice() {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (e) {
+    document.getElementById('tp-vd-status').textContent = 'MIC DENIED';
+    document.getElementById('tp-vd-status').classList.add('paused');
+    return;
+  }
+
+  vdMicStream  = stream;
+  vdAudioCtx   = new (window.AudioContext || window.webkitAudioContext)();
+  vdAnalyser   = vdAudioCtx.createAnalyser();
+  vdAnalyser.fftSize               = 256;
+  vdAnalyser.smoothingTimeConstant = 0.75;
+  vdVolBuffer  = new Uint8Array(vdAnalyser.frequencyBinCount);
+  vdMicSource  = vdAudioCtx.createMediaStreamSource(stream);
+  vdMicSource.connect(vdAnalyser);
+
+  vdSmoothedVol = 0;
+  vdScrolling   = false;
+
+  setVdStatus('paused'); // Start paused — wait for voice
+  vdSend('pause');
+
+  if (vdRafId) cancelAnimationFrame(vdRafId);
+  vdRafId = requestAnimationFrame(vdSampleLoop);
+}
+
+function vdGetThreshold() {
+  const v = parseInt(document.getElementById('tp-vd-sense').value, 10) || 5;
+  return 4 + (v - 1) * (24 / 9);
+}
+
+function vdSampleLoop() {
+  vdRafId = requestAnimationFrame(vdSampleLoop);
+  if (!vdAnalyser || !vdVolBuffer) return;
+
+  vdAnalyser.getByteFrequencyData(vdVolBuffer);
+  let sum = 0;
+  for (let i = 0; i < vdVolBuffer.length; i++) sum += vdVolBuffer[i] * vdVolBuffer[i];
+  const rawVol = Math.sqrt(sum / vdVolBuffer.length);
+  vdSmoothedVol = vdSmoothedVol * 0.82 + rawVol * 0.18;
+
+  const threshold = vdGetThreshold();
+
+  // Volume bar
+  const pct = Math.min(100, Math.round((vdSmoothedVol / (threshold * 2.5)) * 100));
+  const fill = document.getElementById('tp-vd-vol-fill');
+  if (fill) fill.style.width = pct + '%';
+
+  if (vdSmoothedVol > threshold) {
+    clearTimeout(vdSilTimer); vdSilTimer = null;
+    if (!vdScrolling) {
+      vdScrolling = true;
+      setVdStatus('listening');
+      vdSend('play');
+    }
+    // Speed modulation: louder = faster
+    const overage  = Math.max(0, (vdSmoothedVol - threshold) / threshold);
+    const speedMult = 0.65 + Math.min(overage, 2) * 0.42;
+    const baseSpeed = 3; // default speed
+    vdSend('speed', Math.max(0.3, parseFloat((baseSpeed * speedMult).toFixed(1))));
+
+  } else {
+    if (vdScrolling && !vdSilTimer) {
+      vdSilTimer = setTimeout(() => {
+        vdScrolling = false;
+        vdSilTimer  = null;
+        setVdStatus('paused');
+        vdSend('pause');
+      }, 450);
+    }
+  }
+}
+
+function setVdStatus(state) {
+  const icon   = document.getElementById('tp-vd-mic-icon');
+  const status = document.getElementById('tp-vd-status');
+  if (!icon || !status) return;
+  if (state === 'listening') {
+    icon.classList.add('pulsing');
+    status.textContent = 'LISTENING';
+    status.classList.remove('paused');
+  } else {
+    icon.classList.remove('pulsing');
+    status.textContent = 'PAUSED';
+    status.classList.add('paused');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
