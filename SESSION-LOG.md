@@ -1,129 +1,147 @@
-# Kre8Ωr Session Log — 2026-03-31 (Session 12 — TeleprΩmpter Overhaul)
+# Kre8Ωr Session Log — 2026-03-31 (Session 13 — Deployment + Upload Feature)
 
-## What Was Built — Session 12
-
----
-
-### TeleprΩmpter — Remote Scroll Speed Calibration (`public/teleprompter.html`)
-
-**Problem:** Remote phone screen was scrolling ~3× faster than the display (in words per second) because both ran at the same px/s despite the remote having a much smaller font.
-
-**Fix:**
-- Added `remFontSize` (default 32px) and `displayFontSize` (default 64px, updated from display state) variables
-- `remAnimTick` now scales px/s by `(remFontSize × 1.75) / (displayFontSize × 1.5)` so word rate matches display
-- Display broadcasts `fontSize` in every `sendDisplayState()` call; remote stores it in `displayFontSize`
-- Added **A− / A+** font size buttons to remote control bar (range 18–64px, steps of 2)
-- CSS `--rem-font-size` variable applied to `.tp-rem-line` elements
-- Font size label shows current value next to A− / A+ buttons
+## What Was Built — Session 13
 
 ---
 
-### TeleprΩmpter — Drag-to-Speed on Remote (`public/teleprompter.html`)
+### Pre-Deploy UI Fixes (3 pages)
 
-**Problem:** Drag gesture on remote script text was not controlling scroll speed (lost during remote screen redesign).
+#### EditΩr — Footage Guard (`public/editor.html`)
+- Added `projectsMap` to store full project objects on load
+- `onProjectChange()` now checks `footage_count === 0` before enabling Build Selects
+- If no footage assigned: Build Selects button disabled, amber notice shown inline:
+  *"No footage assigned to this project yet. Go to VaultΩr and assign footage first."*
+- Guard div injected once and toggled on project change — no DOM bloat
 
-**Fix — `attachRemDragControl()`:**
-- `touchstart` captures `startY` and `baseSpeed` at finger-down
-- `touchmove` with `preventDefault()` blocks native scroll (RAF loop owns scrolling); maps vertical drag to speed: 80px = 1 speed unit, drag UP = faster, drag DOWN = slower
-- Speed updates live: sends `speed` command to display via WebSocket, updates speed label in control bar
-- Guard flag `_remDragAttached` prevents double-binding on reconnect
-- Called once from `showRemConnected()` after script area becomes visible
+#### M2 PackageΩr — Empty State (`public/m2-package-generator.html`)
+- `renderCutorPanel()` previously returned silently when `clips.length === 0`
+- Now shows the CutΩr panel with count "0 APPROVED CLIPS" and message:
+  *"Run CutΩr first to identify your strongest moments — packages will be built around those clips."*
 
----
-
-### TeleprΩmpter — Four Major Fixes (`public/teleprompter.html` + `src/routes/teleprompter.js`)
-
----
-
-#### FIX 1 — SYNC: Remote mirrors display position exactly
-
-**Problem:** Remote had its own independent RAF animation loop that drifted from the display because different font sizes produce different scroll heights for the same content.
-
-**Fix:**
-- Removed `remAnimTick` function and its RAF loop entirely — remote no longer self-scrolls
-- Added `scroll-behavior: smooth` to `#tp-rem-script-wrap` — browser animates each position update
-- State broadcast interval: `2000ms → 250ms`
-- Added throttled broadcast in `animTick`: fires `sendDisplayState()` every 250ms during playback
-- `applyRemState` now always applies position (removed `!remScriptReady` guard); snaps hard only if drift >2% of scroll height, lets smooth-scroll handle small movements
-- Seek slider on remote (`#tp-rem-seek-slider`) updates to match position on every state message
+#### ComposΩr — Prompt Mode UX (`public/composor.html`)
+- Replaced amber warning energy with teal "active feature" framing
+- `.suno-fallback` CSS changed from amber → teal (background, border, text color)
+- Added `.prompt-mode-banner` CSS block + `#promptModeBanner` HTML element
+- `checkSunoKey()` now toggles the banner: shows teal panel when `!sunoOk`:
+  *"PROMPT MODE ACTIVE — Claude will write your Suno prompts. Paste them at suno.com/create."*
+- Status pill changed from `⚠ No Suno Key` → `● Prompt Mode` (teal, not amber)
+- Per-track fallback text: `"📋 Copy prompt → paste at suno.com/create → upload audio above"`
 
 ---
 
-#### FIX 2 — SCROLL BACK: Seek controls on remote
-
-**New controls added to remote ctrl bar:**
-- **⏪ 10s** — jumps back 10 seconds worth of scroll at current speed (`seek_relative_seconds: -10`)
-- **Position slider** (0–100%) — drag to any point in the script (`seek_pct`)
-- **10s ⏩** — jumps forward 10 seconds
-
-**Display handles new commands:**
-- `seek_pct` → sets `scrollTop` to `(value/100) × maxScroll`, then broadcasts state
-- `seek_relative_seconds` → moves `scrollTop` by `seconds × scrollSpeed × 20px`, clamped to valid range
-- Both handlers added to primary display AND secondary display `onmessage`
-
-**Line tap on display while paused:**
-- Clicking any `.tp-line` when `!isPlaying` scrolls the reading guide to that line's position
-- Falls through to `togglePlayPause()` when tapping blank areas
-
-**New functions:** `remSeekSeconds(secs)`, `remSeekPct(pct)`
-
-**Server (`teleprompter.js`):** `seek_pct` command now mirrors position into `sess.state.position`
+### Project 19 Archived
+- Called `PATCH /api/projects/19/archive` to remove test project "1" from dashboard
 
 ---
 
-#### FIX 3 — TEXT BRIGHTNESS: Full white always, no opacity fading
-
-**Problem:** Opacity-based dimming made text invisible before it entered the reading zone — talent missing whole paragraphs.
-
-**Fix:**
-- `.tp-line`, `.tp-line.tp-above`, `.tp-line.tp-below`, `.tp-line.tp-current` — all set to `color: #ffffff`, no opacity, no `transition`
-- Current line still indicated by teal `border-left: 3px solid var(--teal)` — position only, not brightness
-- Reading guide line: height `1px → 2px`, opacity `0.06 → 0.45` — now clearly visible as a teal hairline at 38% from top
+### db.js — approveWritrScript Fix (`src/db.js`)
+- `approveWritrScript()` now un-approves any previously approved script for the same project before marking the new one approved
+- Prevents multiple `approved = 1` rows per project which caused stale script bugs in TeleprΩmpter
 
 ---
 
-#### FIX 4 — VOICE DEVICE: Mic in pocket controls the display
+### Voice Profile — Owner Financed Land (`creator-profile.json`)
+- Added full voice analysis entry for "Owner Financed Land.mp4"
+- Captures rapid-fire sentence rhythm, embedded humor pattern, directness=8, formality=2
+- Available for WritΩr weighted profile blending
 
-**New URL mode:** `/teleprompter.html?mode=voice&session=XXXX`
+---
 
-Any phone on the network can act as a voice controller. Jason puts his phone in his pocket — his voice drives the scroll. Cari's phone stays in control mode as override.
+### Git — Branches Aligned
+- `feat/editor` and `master` pushed to GitHub
+- Discovered `main` (GitHub default branch) was stale at an older commit
+- `master` merged into `main` and force-synced — all branches now at same tip
+- `master` is the working branch; every push now goes to both `master` and `main`
 
-**Voice device screen (`#tp-voice-device`):**
-- Full-screen: large 🎤 icon, status (`LISTENING` / `PAUSED`), volume bar, sensitivity slider
-- Pulsing animation when speech detected
-- Session connection status with teal dot indicator
+---
 
-**Voice detection (same Web Audio API as built-in voice sync):**
-- `vdSampleLoop()` — RAF loop sampling mic volume via analyser
-- Speech detected → sends `play` + scaled `speed` (louder = faster, range 0.65×–1.5× base speed of 3)
-- 450ms silence debounce → sends `pause`
-- Connects to display as `role: 'control'` — no server changes needed
+### DigitalOcean Deployment Scripts (`deploy/`)
 
-**Join screen updated:** Third option "Voice" added to `#tp-join` choices (`joinAsVoice()`)
+#### `deploy/digitalocean-setup.sh`
+Full fresh-droplet setup script for Ubuntu 22.04 LTS. Steps:
+1. `apt-get update` + system packages (ffmpeg, nginx, certbot, python3-pip, ufw)
+2. Node.js 20 via NodeSource
+3. openai-whisper via pip3
+4. PM2 global install
+5. `kre8r` user creation
+6. Git clone from `github.com/7kinhomestead/kre8r`
+7. `npm install --production`
+8. `.env` creation with `ANTHROPIC_API_KEY` placeholder
+9. PM2 start + save + systemd startup hook
+10. nginx reverse proxy: port 80 → 3000, WebSocket upgrade headers, `proxy_buffering off` for SSE, 500MB upload limit
+11. Basic auth: username `demo` / password `kre8r2024` via `apache2-utils` + `.htpasswd`
+12. UFW firewall: SSH + Nginx Full only
 
-**Complete 3-device setup:**
-- **Display laptop** — full-screen script, auto-advances
-- **Jason's pocket** — `?mode=voice&session=XXXX` — mic drives scroll
-- **Cari's phone** — `?mode=control&session=XXXX` — mirror view, speed override, seek controls
+Run on fresh droplet:
+```
+curl -fsSL https://raw.githubusercontent.com/7kinhomestead/kre8r/main/deploy/digitalocean-setup.sh | bash
+```
+
+#### `deploy/deploy.sh`
+One-liner redeploy script for future code pushes:
+```bash
+bash /home/kre8r/kre8r/deploy/deploy.sh
+# git pull → npm install → pm2 restart
+```
+
+---
+
+### VaultΩr — Direct Device Upload (`src/routes/vault.js` + `public/vault.html`)
+
+#### Backend — `POST /api/vault/upload`
+- New multer disk-storage instance: saves to `./uploads/` (override via `UPLOAD_DIR` env var)
+- `uploads/` directory auto-created on server start if missing
+- Accepts: mp4, mov, mts, avi, mkv, braw, r3d, ari — up to 10GB
+- Filenames: `{timestamp}_{original_name}` to prevent collisions
+- Runs `ingestFile()` (same path as folder ingest) for full classification pipeline
+- Streams SSE: `uploaded` → `ingesting` → Vision classification events → `done`
+- Deletes uploaded file from disk if intake fails (no orphaned files)
+
+#### Frontend — "Upload from Device" section (`public/vault.html`)
+- New `<!-- Upload from Device -->` section between Ingest Folder and DaVinci Projects panels
+- Drag-and-drop zone with `dragover` / `dragleave` / `drop` handlers
+- Hidden `<input type="file" accept="video/*">` fills the entire zone for tap-to-select (mobile-friendly)
+- XHR upload (not fetch) for byte-level `progress` events
+- Progress bar: 0–60% = upload bytes, 60–100% = intake classification
+- SSE chunks parsed from `xhr.responseText` as they arrive (chunked streaming)
+- Multi-file queue: files uploaded and ingested sequentially
+- `fmtBytes()` helper formats transfer progress as KB / MB / GB
+- Upload project select wired into `loadProjects()` targets array — auto-populated
+- New CSS: `.upload-drop-zone`, `.upload-drop-zone.drag-over`, `.upload-progress-bar-*`, `.upload-log`, `.upload-bytes`
+- Mobile-responsive: reduced padding at `max-width: 600px`
 
 ---
 
 ## Files Changed This Session
 
-| File | What Changed |
-|---|---|
-| `public/teleprompter.html` | Remote font size calibration, drag-to-speed restore, FIX 1–4 (sync, seek, brightness, voice device) |
-| `src/routes/teleprompter.js` | `seek_pct` command mirrors position into session state |
+| File | Change |
+|------|--------|
+| `public/editor.html` | footage_count guard, projectsMap |
+| `public/m2-package-generator.html` | empty state when no cuts |
+| `public/composor.html` | Prompt Mode banner, teal fallback styling |
+| `public/vault.html` | Upload from Device section + JS + CSS |
+| `src/routes/vault.js` | POST /api/vault/upload endpoint |
+| `src/db.js` | approveWritrScript un-approves previous |
+| `creator-profile.json` | Owner Financed Land voice sample |
+| `deploy/digitalocean-setup.sh` | Full DigitalOcean setup script |
+| `deploy/deploy.sh` | Redeploy script |
+| `SESSION-LOG.md` | This file |
+| `TODO.md` | Updated next 3 tasks |
 
 ---
 
-## Server Status
-- Running on port 3000 ✅
-- Local IP: 192.168.1.143 ✅
-- WebSocket at `/ws/teleprompter` ✅
-- All routes responding ✅
+## Commits This Session
+
+```
+a0f2063  feat: VaultΩr direct device upload with live progress
+386ae9e  Add DigitalOcean deployment scripts
+760f1f4  Pre-deployment: all fixes, audit complete, ready for kre8r.app
+5aa2ab7  Merge feat/editor → master
+```
 
 ---
 
-## Previous Session
-Session 11 — WritΩr Three Tabs, Voice Library, DirectΩr Fixes (see git log)
+## Server State
+- Local: PM2 running `kre8r` on port 3000
+- GitHub: `main` and `master` both at `a0f2063` (in sync)
+- Deploy script: live at `https://raw.githubusercontent.com/7kinhomestead/kre8r/main/deploy/digitalocean-setup.sh`
