@@ -97,11 +97,18 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .tp-network {
   margin-top: 28px; padding: 18px;
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
-  display: flex; align-items: center; gap: 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
 }
 #tp-qr-canvas { flex-shrink: 0; width: 84px; height: 84px;
   display: flex; align-items: center; justify-content: center; }
 #tp-qr-canvas canvas, #tp-qr-canvas img { border-radius: 5px; display: block; }
+.tp-qr-pair { display: flex; gap: 0; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+.tp-qr-block { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 48px; }
+.tp-qr-divider { width: 4px; background: var(--teal); border-radius: 2px; align-self: stretch; margin: 16px 0; }
+.tp-qr-block:first-child { border-right: none; }
+.tp-qr-label { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--teal); }
+.tp-qr-sublabel { font-size: 11px; color: var(--text-muted); margin-top: -6px; }
+.tp-qr-url { font-size: 10px; color: var(--text-muted); word-break: break-all; max-width: 140px; text-align: center; }
 .tp-network-text { flex: 1; min-width: 0; }
 .tp-network-text h4 { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
 .tp-network-text p  { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; }
@@ -636,13 +643,20 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     </div>
 
     <div class="tp-network">
-      <div id="tp-qr-canvas"></div>
-      <div class="tp-network-text">
-        <h4>Join on Any Device</h4>
-        <p>Scan QR code or type the URL — choose Display to mirror the script, or Control to remote-control the prompter.</p>
-        <div class="tp-ip-url" id="tp-ip-url">Detecting network address…</div>
-        <div class="tp-offline-note" id="tp-offline-note"></div>
+      <div class="tp-qr-pair">
+        <div class="tp-qr-block">
+          <div class="tp-qr-label">📱 VOICE DEVICE</div>
+          <div id="tp-qr-voice"></div>
+          <div class="tp-qr-url" id="tp-url-voice">Detecting…</div>
+        </div>
+        <div class="tp-qr-divider"></div>
+        <div class="tp-qr-block">
+          <div class="tp-qr-label">🎬 CONTROL DEVICE</div>
+          <div id="tp-qr-control"></div>
+          <div class="tp-qr-url" id="tp-url-control">Detecting…</div>
+        </div>
       </div>
+      <div id="tp-offline-note"></div>
     </div>
 
     <button id="tp-start-btn" disabled onclick="startTeleprompter()">Start Teleprompter →</button>
@@ -959,38 +973,43 @@ async function loadNetworkInfo() {
   const port = networkInfo.port || window.location.port || 3000;
   const base = `http://${ip}:${port}`;
 
-  document.getElementById('tp-ip-url').textContent = `${base}/teleprompter.html?session=XXXX`;
-
   if (!networkInfo.ip) {
     document.getElementById('tp-offline-note').textContent = 'Could not detect local IP — check network connection.';
   }
 
   // QR shows base URL; updated to session-specific URL after WS connects
-  buildQR(`${base}/teleprompter.html`);
+  buildBothQRs(base, null);
 }
 
-function buildQR(url) {
-  const c = document.getElementById('tp-qr-canvas');
+function buildQR(url, canvasId) {
+  const c = document.getElementById(canvasId);
+  if (!c) return;
   c.innerHTML = '';
   if (window.QRCode) {
-    try {
-      new QRCode(c, { text: url, width: 80, height: 80,
-        colorDark: '#e8ebe6', colorLight: '#161916',
-        correctLevel: QRCode.CorrectLevel.M });
-    } catch (_) { c.textContent = 'QR'; }
+    new QRCode(c, { text: url, width: 140, height: 140,
+      colorDark: '#e8ebe6', colorLight: '#161916',
+      correctLevel: QRCode.CorrectLevel.M });
   } else {
-    c.style.cssText = 'width:80px;height:80px;background:#1c1f1b;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,0.3);';
     c.textContent = 'QR offline';
   }
 }
 
+function buildBothQRs(base, sessionCode) {
+  const voiceUrl   = sessionCode
+    ? `${base}/teleprompter.html?session=${sessionCode}&role=voice`
+    : `${base}/teleprompter.html?role=voice`;
+  const controlUrl = sessionCode
+    ? `${base}/teleprompter.html?session=${sessionCode}&role=control`
+    : `${base}/teleprompter.html?role=control`;
+  buildQR(voiceUrl,   'tp-qr-voice');
+  buildQR(controlUrl, 'tp-qr-control');
+  document.getElementById('tp-url-voice').textContent   = voiceUrl;
+  document.getElementById('tp-url-control').textContent = controlUrl;
+}
+
 function updateQRForSession(code) {
-  const ip   = networkInfo.ip   || window.location.hostname;
-  const port = networkInfo.port || window.location.port || 3000;
-  const url  = `http://${ip}:${port}/teleprompter.html?session=${code}`;
-  buildQR(url);
-  const urlEl = document.getElementById('tp-ip-url');
-  if (urlEl) urlEl.textContent = url;
+  const base = `http://${ip}:${port}`;
+  buildBothQRs(base, code);
 }
 
 // ═══════════════════════════════════════════════════════════════
