@@ -247,7 +247,8 @@
       "Bash(sqlite3 database/kre8r.db \"SELECT id, original_filename, shot_type FROM footage WHERE organized_path LIKE ''%Completed%'' OR original_filename LIKE ''%Final%'' OR original_filename LIKE ''%final%'' OR organized_path LIKE ''%Posted%'' LIMIT 20;\")",
       "Bash(node -e \"const path = require\\(''path''\\); console.log\\(path.resolve\\(''database/kre8r.db''\\)\\);\")",
       "Bash(curl -s http://localhost:3000/api/vault/footage)",
-      "Bash(node -e \"const chunks=[]; process.stdin.on\\(''''data'''',c=>chunks.push\\(c\\)\\); process.stdin.on\\(''''end'''',\\(\\)=>{ const data=JSON.parse\\(Buffer.concat\\(chunks\\)\\); console.log\\(''''total:'''', data.length\\); console.log\\(''''completed:'''', data.filter\\(f=>f.shot_type===''''completed-video''''\\).length\\); console.log\\(''''sample shot_types:'''', [...new Set\\(data.map\\(f=>f.shot_type\\)\\)].slice\\(0,10\\)\\); }\\);\")"
+      "Bash(node -e \"const chunks=[]; process.stdin.on\\(''''data'''',c=>chunks.push\\(c\\)\\); process.stdin.on\\(''''end'''',\\(\\)=>{ const data=JSON.parse\\(Buffer.concat\\(chunks\\)\\); console.log\\(''''total:'''', data.length\\); console.log\\(''''completed:'''', data.filter\\(f=>f.shot_type===''''completed-video''''\\).length\\); console.log\\(''''sample shot_types:'''', [...new Set\\(data.map\\(f=>f.shot_type\\)\\)].slice\\(0,10\\)\\); }\\);\")",
+      "Bash(python3 -c \":*)"
     ]
   }
 }

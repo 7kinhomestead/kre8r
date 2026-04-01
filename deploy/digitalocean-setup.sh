@@ -180,6 +180,10 @@ server {
 
     location / {
         proxy_pass http://127.0.0.1:$APP_PORT;
+        proxy_request_buffering off;
+        proxy_send_timeout    3600s;
+        proxy_connect_timeout 60s;
+        proxy_buffering off;
     }
 }
 NGINXEOF
