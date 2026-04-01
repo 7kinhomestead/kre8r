@@ -1232,7 +1232,13 @@ function updateWritrScript(id, fields) {
 }
 
 function approveWritrScript(projectId, scriptId) {
-  // Mark approved in writr_scripts
+  // Un-approve any previously approved script for this project first
+  _run(
+    `UPDATE writr_scripts SET approved = 0, updated_at = CURRENT_TIMESTAMP
+     WHERE project_id = ? AND approved = 1 AND id != ?`,
+    [projectId, scriptId]
+  );
+  // Mark the new script approved
   _run(
     `UPDATE writr_scripts SET approved = 1, approved_at = CURRENT_TIMESTAMP,
        updated_at = CURRENT_TIMESTAMP WHERE id = ?`,

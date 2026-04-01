@@ -399,6 +399,11 @@
             <span id="generateBtnLabel">Find the Story →</span>
           </button>
 
+          <!-- REGENERATE BUTTON — shown only when script is approved -->
+          <button class="btn btn-ghost btn-full" id="regenerateBtn" style="display:none;margin-top:8px;" onclick="onRegenerate()">
+            ↺ Regenerate with current voice profiles
+          </button>
+
           <!-- SSE LOG -->
           <div class="progress-wrap" id="generateProgress">
             <div class="progress-bar-outer"><div class="progress-bar-inner" id="generateBar"></div></div>
@@ -493,13 +498,25 @@
 
         <!-- Iteration bar (shown after first draft) -->
         <div class="iteration-bar" id="iterationBar" style="display:none">
-          <div class="field-label" style="margin-bottom:8px">REVISE THIS DRAFT</div>
-          <div class="iter-field">
-            <textarea class="iter-input" id="reviseInput" rows="2"
-              placeholder="e.g. 'Make the catalyst hit harder' or 'The hook needs to be punchier' or 'Add more vulnerability to Dark Night of the Soul'"></textarea>
-            <button class="btn btn-ghost btn-sm" id="reviseBtn" disabled>
-              <span class="spinner spinner-teal" id="reviseSpinner" style="display:none"></span>
-              Revise →
+          <!-- REVISE controls — hidden when script is approved -->
+          <div id="reviseControls">
+            <div class="field-label" style="margin-bottom:8px">REVISE THIS DRAFT</div>
+            <div class="iter-field">
+              <textarea class="iter-input" id="reviseInput" rows="2"
+                placeholder="e.g. 'Make the catalyst hit harder' or 'The hook needs to be punchier' or 'Add more vulnerability to Dark Night of the Soul'"></textarea>
+              <button class="btn btn-ghost btn-sm" id="reviseBtn" disabled>
+                <span class="spinner spinner-teal" id="reviseSpinner" style="display:none"></span>
+                Revise →
+              </button>
+            </div>
+          </div>
+
+          <!-- REGEN notice — shown when script is approved -->
+          <div id="regenApprovedRow" style="display:none;padding:10px 0 4px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--green);margin-bottom:8px;">✓ Script Approved</div>
+            <div style="font-size:12px;color:var(--text-dimmer);margin-bottom:12px;">This script is locked. Start a fresh draft — the approved version stays on record.</div>
+            <button class="btn btn-ghost btn-full" onclick="onRegenerate()">
+              ↺ Regenerate with current voice profiles
             </button>
           </div>
 
@@ -835,10 +852,13 @@ function showInputArea(entryPoint, data) {
 
   document.getElementById('generateBtn').disabled = false;
 
-  // If approved script exists, disable generate, show revise note
+  // If approved script exists, disable generate and show regenerate button instead
   if (data.active_script && data.active_script.approved) {
     document.getElementById('generateBtn').disabled = true;
     document.getElementById('generateBtnLabel').textContent = 'Script Approved';
+    document.getElementById('regenerateBtn').style.display = 'block';
+  } else {
+    document.getElementById('regenerateBtn').style.display = 'none';
   }
 }
 
@@ -1002,6 +1022,22 @@ function onRetry() {
   onGenerate();
 }
 
+function onRegenerate() {
+  if (!currentProjectId) return;
+  // Re-enable the generate button (was locked by approved state)
+  const btn   = document.getElementById('generateBtn');
+  const label = document.getElementById('generateBtnLabel');
+  btn.disabled  = false;
+  // Restore the correct label for the entry point
+  if (currentEntryPoint === 'script_first') label.textContent = 'Map the Beats →';
+  else if (currentEntryPoint === 'hybrid')  label.textContent = 'Reconcile & Write →';
+  else                                      label.textContent = 'Find the Story →';
+  // Hide both regenerate buttons
+  document.getElementById('regenerateBtn').style.display = 'none';
+  // Fire the generator — creates a new draft, approved one stays in DB
+  onGenerate();
+}
+
 function showRetry() {
   const r = document.getElementById('generateRetry');
   if (r) r.style.display = 'block';
@@ -1101,12 +1137,17 @@ async function onApprove() {
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
 
-    // Mark approved in local state and update UI
+    // Mark approved in local state — re-render handles all UI locking
     currentScript.approved = true;
-    document.getElementById('approveBtn').disabled = true;
-    document.getElementById('approveBtn').textContent = '✓ Approved';
-    document.getElementById('reviseBtn').disabled = true;
-    document.getElementById('reviseInput').disabled = true;
+    if (currentScripts[activeScriptTab]) currentScripts[activeScriptTab].approved = true;
+
+    // Re-render script panel to swap revise → regen notice
+    renderScript(currentScript);
+
+    // Show generate-panel regenerate button
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('generateBtnLabel').textContent = 'Script Approved';
+    document.getElementById('regenerateBtn').style.display = 'block';
 
     // Show TeleprΩmpter button now that script is approved
     document.getElementById('teleprompterBtn').style.display = '';
@@ -1381,12 +1422,17 @@ function renderScript(script) {
   // Build HTML content
   display.innerHTML = buildScriptHTML(script);
 
-  // If approved, disable revise
+  // If approved, swap revise controls for regen notice
   if (script.approved) {
-    document.getElementById('reviseBtn').disabled = true;
-    document.getElementById('reviseInput').disabled = true;
-    document.getElementById('approveBtn').disabled = true;
+    document.getElementById('reviseControls').style.display  = 'none';
+    document.getElementById('regenApprovedRow').style.display = 'block';
+    document.getElementById('reviseBtn').disabled    = true;
+    document.getElementById('reviseInput').disabled  = true;
+    document.getElementById('approveBtn').disabled   = true;
     document.getElementById('approveBtn').textContent = '✓ Approved';
+  } else {
+    document.getElementById('reviseControls').style.display  = 'block';
+    document.getElementById('regenApprovedRow').style.display = 'none';
   }
 }
 
@@ -1628,8 +1674,11 @@ function resetScriptPanel() {
   document.getElementById('iterationBar').style.display  = 'none';
   document.getElementById('scriptActions').style.display = 'none';
   document.getElementById('scriptTabs').style.display    = 'none';
-  document.getElementById('reviseInput').value           = '';
-  document.getElementById('reviseBtn').disabled          = true;
+  document.getElementById('reviseInput').value              = '';
+  document.getElementById('reviseBtn').disabled             = true;
+  document.getElementById('reviseControls').style.display   = 'block';
+  document.getElementById('regenApprovedRow').style.display = 'none';
+  document.getElementById('regenerateBtn').style.display    = 'none';
   hideProgress('reviseProgress');
   // Reset tab states
   currentScripts  = { full: null, bullets: null, hybrid: null };

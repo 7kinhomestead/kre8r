@@ -143,8 +143,14 @@
   .track-audio-placeholder{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dimmer);margin-bottom:8px;padding:6px 0;}
   .track-audio-placeholder .spinner-teal{width:12px;height:12px;}
   .track-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
-  .suno-fallback{display:flex;align-items:center;gap:8px;background:var(--amber-glow);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:8px 12px;font-size:11px;color:var(--amber);line-height:1.4;}
-  .suno-fallback a{color:var(--amber);font-weight:600;}
+  .suno-fallback{display:flex;align-items:center;gap:8px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.3);border-radius:var(--radius-sm);padding:8px 12px;font-size:11px;color:var(--teal);line-height:1.4;}
+  .suno-fallback a{color:var(--teal);font-weight:600;}
+  .prompt-mode-banner{background:linear-gradient(135deg,rgba(62,207,178,0.07),rgba(62,207,178,0.03));border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:none;}
+  .prompt-mode-banner.show{display:flex;align-items:flex-start;gap:12px;}
+  .prompt-mode-icon{font-size:22px;flex-shrink:0;margin-top:2px;}
+  .prompt-mode-text{flex:1;}
+  .prompt-mode-title{font-family:var(--font-head);font-size:12px;letter-spacing:1.5px;color:var(--teal);margin-bottom:4px;}
+  .prompt-mode-sub{font-size:12px;color:var(--text-dim);line-height:1.5;}
   .btn-suno{background:transparent;border:1px solid rgba(167,139,250,0.35);color:var(--purple);font-size:12px;}
   .btn-suno:hover{background:var(--purple-glow);border-color:var(--purple);}
   .upload-scene-bar{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--border);background:rgba(92,186,138,0.03);}
@@ -205,6 +211,15 @@
     </button>
     <button class="btn btn-danger btn-sm" id="clearBtn" disabled style="margin-left:auto">Clear</button>
     <span id="sunoKeyStatus"></span>
+  </div>
+
+  <!-- PROMPT MODE BANNER -->
+  <div class="prompt-mode-banner" id="promptModeBanner">
+    <div class="prompt-mode-icon">🎵</div>
+    <div class="prompt-mode-text">
+      <div class="prompt-mode-title">PROMPT MODE ACTIVE</div>
+      <div class="prompt-mode-sub">Claude will write your Suno prompts. Copy each prompt and paste it at <a href="https://suno.com/create" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600">suno.com/create</a> to generate tracks, then upload the audio file here.</div>
+    </div>
   </div>
 
   <!-- STATUS PILLS -->
@@ -364,10 +379,12 @@ async function checkSunoKey() {
     sunoOk = d.suno_configured;
     sunoKeyStatus.innerHTML = sunoOk
       ? '<span class="suno-key-pill suno-key-ok">● Suno API Active</span>'
-      : '<span class="suno-key-pill suno-key-missing">⚠ No Suno Key — Prompt Mode</span>';
+      : '<span class="suno-key-pill suno-key-ok" style="background:var(--teal-glow);color:var(--teal);border-color:rgba(62,207,178,0.3)">● Prompt Mode</span>';
   } catch(e) {
     sunoKeyStatus.innerHTML = '<span class="suno-key-pill suno-key-missing">⚠ API Offline</span>';
   }
+  const banner = document.getElementById('promptModeBanner');
+  if (banner) banner.classList.toggle('show', !sunoOk);
 }
 
 async function loadProjects() {
@@ -520,7 +537,7 @@ function renderTrackRow(t) {
   } else if (isGenning && sunoOk) {
     audioEl = `<div class="track-audio-placeholder"><span class="spinner spinner-teal"></span> Generating audio…</div>`;
   } else if (t.suno_prompt && !sunoOk) {
-    audioEl = `<div class="suno-fallback">No Suno key — generate manually then upload above</div>`;
+    audioEl = `<div class="suno-fallback">📋 Copy prompt → paste at suno.com/create → upload audio above</div>`;
   }
 
   const selectBtnClass = isSelected ? 'btn btn-selected btn-sm' : 'btn btn-ghost btn-sm';

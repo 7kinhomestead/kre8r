@@ -305,6 +305,7 @@ let currentProjectId = null;
 let currentSelects   = null;   // { sections, gold_nuggets, fire_sections, ... }
 let brollCandidates  = [];     // all b-roll footage for project
 let brollAssignments = {};     // section_id → footage_id
+let projectsMap      = {};     // id → project object
 
 // ─────────────────────────────────────────────
 // INIT
@@ -341,6 +342,7 @@ async function loadProjects() {
     const projects = await r.json();
     const sel = document.getElementById('projectSelect');
     projects.forEach(p => {
+      projectsMap[p.id] = p;
       const opt = document.createElement('option');
       opt.value = p.id;
       opt.textContent = p.title || `Project ${p.id}`;
@@ -360,13 +362,32 @@ async function onProjectChange(projectId) {
   currentSelects   = null;
   brollAssignments = {};
 
-  document.getElementById('buildSelectsBtn').disabled = false;
+  const proj = projectsMap[projectId];
+  const hasFootage = !proj || proj.footage_count > 0;
+  document.getElementById('buildSelectsBtn').disabled = !hasFootage;
   document.getElementById('clearBtn').disabled = false;
   document.getElementById('davinciBtn').disabled = true;
   document.getElementById('importBrollBtn').disabled = true;
   document.getElementById('statusBar').style.display = 'none';
   document.getElementById('overallNotes').style.display = 'none';
   document.getElementById('advanceBanner').classList.remove('visible');
+
+  // Show/hide footage guard
+  let footageGuard = document.getElementById('footageGuard');
+  if (!footageGuard) {
+    footageGuard = document.createElement('div');
+    footageGuard.id = 'footageGuard';
+    footageGuard.style.cssText = 'display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px 16px;font-size:13px;color:#f59e0b;margin-bottom:12px;';
+    const projectBar = document.querySelector('.project-bar');
+    projectBar.insertAdjacentElement('afterend', footageGuard);
+  }
+  if (!hasFootage) {
+    footageGuard.style.display = 'block';
+    footageGuard.textContent = '⚠ No footage assigned to this project yet. Go to VaultΩr and assign footage first.';
+  } else {
+    footageGuard.style.display = 'none';
+  }
+
   clearSections();
   clearBroll();
 

@@ -407,7 +407,12 @@ function renderCutorPanel(clips) {
   const panel = document.getElementById('cutor-panel');
   const list  = document.getElementById('cutor-clips');
   const count = document.getElementById('cutor-clip-count');
-  if (!clips.length) return;
+  if (!clips.length) {
+    count.textContent = '0 APPROVED CLIPS';
+    list.innerHTML = '<div style="font-size:13px;color:#f59e0b;padding:8px 0;">Run CutΩr first to identify your strongest moments — packages will be built around those clips.</div>';
+    panel.classList.add('show');
+    return;
+  }
 
   count.textContent = `${clips.length} APPROVED CLIP${clips.length !== 1 ? 'S' : ''}`;
   list.innerHTML = '';

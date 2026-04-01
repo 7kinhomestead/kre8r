@@ -402,6 +402,110 @@
         ],
         "summary": "This voice is a self-aware, plain-spoken storyteller who earns trust by admitting his own failures before offering hard-won wisdom. He builds tension through narrative pacing and releases it with deadpan anti-climax, then pivots cleanly to a direct, unadorned life lesson. Write in conversational rhythms with deliberate short-sentence payoffs, avoid all corporate or academic language, and let vulnerability and humor coexist without explanation."
       }
+    },
+    {
+      "id": "ba150f186650edee",
+      "name": "Owner Financed Land",
+      "source_file": "Owner Financed Land.mp4",
+      "analyzed_at": "2026-03-31",
+      "word_count": 2218,
+      "characteristics": {
+        "sentence_rhythm": "Alternates aggressively between short punchy fragments and longer flowing sentences. Uses rapid-fire short bursts for emphasis or comedy ('The couch, gone. $16 sold. The TV, gone.'), then unspools longer sentences for storytelling or explanation. Lists and sentence fragments are weapons — deployed constantly for comedic timing and momentum. Longer sentences tend to appear during instructional steps or emotional reflection. The rhythm feels conversational and improvised, like someone talking fast because they're excited, then slowing down when something actually matters.",
+        "humor_style": "Frequent, embedded in almost every paragraph, and never announced. Relies on absurdist asides ('I only managed to stay out of jail because I'm good at words'), unexpected pop culture drops ('like a Billy Mays possessed'), self-deprecating confessions framed as throwaway lines, and ironic understatement ('So, you know, things were going great'). Also does sudden character voices and hypothetical dialogues mid-scene. The humor is never mean-spirited but often self-roasting. Appears every 2-3 sentences on average — it's structural, not decorative.",
+        "directness": 8,
+        "formality": 2,
+        "audience_address": "peer and friend simultaneously — speaks as someone slightly ahead on the same road, not an authority or teacher. There is zero condescension. Shares failures as readily as wins. Invites the viewer into his own messy thinking process rather than presenting polished conclusions. The CTA at the end ('hit subscribe or don't because I'm not the boss of you') is the purest expression of this — even promotion is delivered peer-to-peer.",
+        "characteristic_phrases": [
+          "no banks, because bam, boom, them banks",
+          "do your due diligence",
+          "a whole lot of hustle",
+          "I'm good at words",
+          "sort of [adjective] — used to soften or understate",
+          "that's a story for another day",
+          "I feel some type of way about",
+          "if we could pull it off from scratch, so can you",
+          "I didn't know what I didn't know",
+          "live life for a living"
+        ],
+        "never_says": [
+          "utilize",
+          "leverage",
+          "synergy",
+          "in conclusion",
+          "as I mentioned previously",
+          "at the end of the day (sincere use)",
+          "game-changer",
+          "pro tip",
+          "in today's video we will be covering",
+          "make sure to like and subscribe (straightforward, unparodied)"
+        ],
+        "numbers_and_specifics": "Extremely specific with numbers and always uses real ones — negative $27, $2,800 rent, $300 down, three acres, 34 days, 30-day notice, 14 hours on the road, 12 years as a customer, five kids, 13 years off-grid. Specificity is a trust mechanism and a storytelling tool. Numbers are dropped casually mid-sentence, never in a bulleted or formal list. The precision makes the chaos feel real and the story feel earned.",
+        "emotional_range": "Wider than the humor suggests. Moves fluidly from comedic performance to quiet vulnerability without telegraphing the shift. Vulnerable moments are short and honest, then quickly released rather than dwelt upon ('I was broken. Certainly not the jovial individual that you've all grown to know and love'). The emotional peak is understated: 'finding this land gave us the opportunity to build something real for ourselves at a time when it didn't seem like better was possible.' Never melodramatic. Emotion appears and disappears fast, which makes it land harder.",
+        "sample_sentences": [
+          "We went from negative $27 in our bank account to owning three acres of beautiful land in just 34 days.",
+          "So, you know, things were going great.",
+          "I only managed to stay out of jail for the night because I'm good at words, but in reality, I was broken.",
+          "She was right, but in retrospect, I'm sure she was just afraid that if we didn't put some distance between us and everybody else, I was either gonna end up in prison or worse.",
+          "I was convinced we were gonna end up on an episode of world's worst internet scam disasters.",
+          "Somebody actually bought my old wrestling medals — but you know what they say, in Philadelphia it's worth 50 bucks.",
+          "I didn't know what other questions to ask because I didn't know what I didn't know, and she just kind of walked me through everything.",
+          "I feel some type of way about recommending that you use them — not to say they're not legitimate, just check into them first.",
+          "Hit the subscribe button, or don't, because I'm not the boss of you.",
+          "Finding this land gave us the opportunity to build something real for ourselves at a time when it didn't seem like better was possible."
+        ],
+        "summary": "This voice is a fast-talking, self-aware storyteller who weaponizes humor to make vulnerability feel safe — he admits failure loudly so the wins feel earned. Write in short punchy fragments interrupted by longer storytelling sentences, drop absurdist pop culture references without explanation, and treat every instructional moment as an opportunity for a throwaway joke. The core emotional register is: honest, irreverent, warm, and just slightly chaotic — a guy who figured something out the hard way and genuinely wants you to have an easier time of it, but will absolutely make you laugh while he tells you how."
+      }
+    },
+    {
+      "id": "a51066e436396e15",
+      "name": "the lie 4k",
+      "source_file": "the lie 4k.mp4",
+      "analyzed_at": "2026-03-31",
+      "word_count": 735,
+      "characteristics": {
+        "sentence_rhythm": "Alternates between short punchy statements and long flowing build-up sentences. Short sentences land conclusions or emotional gut-punches ('That was a lie.' 'That also describes...'). Long sentences are used to build momentum through a list or argument, stacking clause on clause until the point breaks open. Pacing mimics spoken storytelling — he lets tension accumulate then releases it with brevity.",
+        "humor_style": "Observational and dry, embedded inside serious arguments rather than announced. Humor arrives through unexpected tonal pivots — like pivoting a critique of generational economics into a tutorial about making avocado toast at home. Not self-deprecating. Frequency is low but well-placed; he uses it to deflate tension right before re-engaging seriousness. The joke is always also the point.",
+        "directness": 9,
+        "formality": 2,
+        "audience_address": "Peer and co-conspirator — he speaks as someone who has already figured something out and is pulling the viewer alongside him, not down to them. Never condescending, never professorial. The tone is 'you already know this, let me just say it out loud for you.'",
+        "characteristic_phrases": [
+          "Here's the thing about...",
+          "That also describes...",
+          "They told them all they had to do was...",
+          "And they realized they could...",
+          "Two things they are not is...",
+          "And I, for one...",
+          "A died in the wool [type]",
+          "...and that got their attention"
+        ],
+        "never_says": [
+          "leverage",
+          "synergy",
+          "circle back",
+          "at the end of the day",
+          "it is what it is",
+          "empower",
+          "content creator ecosystem",
+          "monetize your passion",
+          "stakeholders",
+          "touch base"
+        ],
+        "numbers_and_specifics": "Stays almost entirely vague on numbers — no prices, percentages, or statistics cited. Specificity comes through named people and real communities (Greenwich Homestead, B&R Homestead) rather than data. When he implies scale, he uses visceral imagery ('a hundred other people piled on top of each other') rather than hard figures. This gives his arguments a feeling of lived truth over researched truth.",
+        "emotional_range": "Starts conversational and almost casual, builds through controlled anger at systemic betrayal, then lands in quiet defiance and genuine hope. Vulnerable moments are not confessional — they show up as restrained optimism ('I can't wait to see what they do'). Emotion is never performed; it surfaces through word choice and sentence rhythm rather than explicit statements of feeling.",
+        "sample_sentences": [
+          "You ever been in a relationship with a liar? I mean, like a died in the wool, lies about stupid things, habitual liar.",
+          "When it becomes abundantly clear that they can no longer lie to you, they attack you or your character to anyone who will listen.",
+          "That was a lie.",
+          "They called them lazy and said it was because they bought avocado toast and lattes every day that they were never going to have anything.",
+          "And then one day they were on the internet and they came across a tutorial for how to grow avocados.",
+          "Their lies only work so long as you don't seek out and find the truth.",
+          "That society requires your dependence and reliance to stay relevant.",
+          "Two things that they are not is quiet and stupid.",
+          "They didn't have to work all day and night just to make enough money to afford to keep a roof over their head and still afford to pay for a couple of the things that made life worth it.",
+          "And I, for one, I'm gonna do everything I can to answer that question."
+        ],
+        "summary": "This voice is a working-class storyteller with the instincts of a populist essayist — plain-spoken, rhythmically controlled, and quietly furious on behalf of people who feel lied to. He builds arguments the way a good conversation builds: casual opener, mounting evidence, gut-punch conclusion, then a turn toward hope. To write in this voice, stay concrete and colloquial, never academic; let anger land in short declarative sentences; and always end facing forward, not backward."
+      }
     }
   ],
   "hardware": {
