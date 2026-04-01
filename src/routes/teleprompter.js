@@ -186,11 +186,12 @@ function createTeleprompterWS(httpServer) {
 
           if (!sessions.has(sessionCode)) {
             sessions.set(sessionCode, {
-              displays:  new Set(),
-              controls:  new Set(),
-              state:     { speed: 3, paused: true, position: 0 },
-              title:     null,
-              projectId: null
+              displays:       new Set(),
+              controls:       new Set(),
+              state:          { speed: 3, paused: true, position: 0 },
+              operatorPaused: false,
+              title:          null,
+              projectId:      null
             });
           }
 
@@ -230,11 +231,12 @@ function createTeleprompterWS(httpServer) {
           const count = getCount(sess);
 
           safeSend(ws, {
-            type:      'registered',
-            session:   code,
-            state:     sess.state,
-            title:     sess.title,
-            projectId: sess.projectId,
+            type:           'registered',
+            session:        code,
+            state:          sess.state,
+            operatorPaused: sess.operatorPaused,
+            title:          sess.title,
+            projectId:      sess.projectId,
             count
           });
 
@@ -251,21 +253,24 @@ function createTeleprompterWS(httpServer) {
       if (msg.type === 'command' && myRole === 'control') {
         broadcastToDisplays(sess, msg);
         // Mirror state
-        if (msg.action === 'speed')        sess.state.speed   = msg.value;
-        if (msg.action === 'pause')        sess.state.paused  = true;
-        if (msg.action === 'play')         sess.state.paused  = false;
-        if (msg.action === 'toggle_pause') sess.state.paused  = !sess.state.paused;
-        if (msg.action === 'restart')      sess.state.position = 0;
-        if (msg.action === 'seek_pct')             sess.state.position = msg.value;
-        // Echo updated state to all controls
-        broadcastToControls(sess, { type: 'state', ...sess.state, title: sess.title });
+        if (msg.action === 'speed')        sess.state.speed    = msg.value;
+        if (msg.action === 'pause')        { sess.state.paused = true;  if (msg.source === 'operator') sess.operatorPaused = true; }
+        if (msg.action === 'play')         { sess.state.paused = false; if (msg.source === 'operator') sess.operatorPaused = false; }
+        if (msg.action === 'toggle_pause') {
+          sess.state.paused = !sess.state.paused;
+          if (msg.source === 'operator') sess.operatorPaused = sess.state.paused;
+        }
+        if (msg.action === 'restart')   sess.state.position = 0;
+        if (msg.action === 'seek_pct')  sess.state.position = msg.value;
+        // Echo updated state + operatorPaused to all controls
+        broadcastToControls(sess, { type: 'state', ...sess.state, operatorPaused: sess.operatorPaused, title: sess.title });
       }
 
       // ── DISPLAY → CONTROLS + OTHER DISPLAYS: state sync ────────
       if (msg.type === 'state' && myRole === 'display') {
         if (msg.state) Object.assign(sess.state, msg.state);
         if (msg.title) sess.title = msg.title;
-        const stateMsg = { type: 'state', ...sess.state, title: sess.title };
+        const stateMsg = { type: 'state', ...sess.state, operatorPaused: sess.operatorPaused, title: sess.title };
         broadcastToControls(sess, stateMsg);
         // Relay to secondary displays for position sync
         for (const disp of sess.displays) {

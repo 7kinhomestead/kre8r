@@ -143,8 +143,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 @media (max-width: 900px) { #tp-text-wrap { max-width: 84%; } }
 @media (max-width: 600px) { #tp-text-wrap { max-width: 93%; } }
 
-/* Spacer pushes first line to reading position */
-#tp-spacer-top { height: 38vh; }
+/* Spacer pushes first line to reading position (center of screen) */
+#tp-spacer-top { height: 50vh; }
 
 /* Script lines */
 .tp-line {
@@ -176,9 +176,9 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   white-space: nowrap; flex-shrink: 0;
 }
 
-/* Subtle reading guide line */
+/* Reading guide — fixed teal line at screen center */
 #tp-reading-guide {
-  position: fixed; left: 0; right: 0; top: 38vh;
+  position: fixed; left: 0; right: 0; top: 50vh;
   height: 2px; background: rgba(62,207,178,0.45);
   pointer-events: none; z-index: 5;
 }
@@ -343,6 +343,16 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-voice-debug .vd-heard { color: var(--teal); font-weight: 600; }
 #tp-voice-debug .vd-pos   { color: rgba(255,255,255,0.3); margin-left: 8px; font-size: 10px; }
 
+/* Operator-paused badge — shown on display when control device pauses */
+#tp-operator-badge {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 50;
+  background: rgba(0,0,0,0.82); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,180,50,0.45); border-radius: 20px;
+  padding: 7px 20px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+  color: #ffb432; display: none; white-space: nowrap; pointer-events: none;
+}
+#tp-operator-badge.visible { display: block; }
+
 /* Browser compat warning */
 #tp-voice-warn {
   position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 60;
@@ -420,52 +430,88 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-rem-ctrl-bar {
   flex-shrink: 0; display: none; flex-direction: column;
   position: fixed; bottom: 0; left: 0; right: 0;
-  background: rgba(0,0,0,0.94); border-top: 1px solid rgba(255,255,255,0.12);
-  padding: 10px 16px env(safe-area-inset-bottom, 12px);
+  background: rgba(0,0,0,0.96); border-top: 1px solid rgba(255,255,255,0.12);
+  padding: 8px 10px env(safe-area-inset-bottom, 10px);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  gap: 8px;
 }
 #tp-rem-ctrl-bar.live { display: flex; }
+
 /* Progress bar inside ctrl bar */
 #tp-rem-prog-bar-inner {
   height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px;
-  overflow: hidden; margin-bottom: 10px;
+  overflow: hidden;
 }
 #tp-rem-prog-fill { height: 100%; background: var(--teal); border-radius: 2px; width: 0%; transition: width 0.6s; }
-/* Controls row */
+
+/* Row 1 — Play/Pause · Speed − + · Size A− A+ · Restart */
 .tp-rem-ctrl-row {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: stretch; gap: 6px;
 }
+
+/* All buttons in ctrl bar share this base — minimum 48px tall */
+.tp-rem-btn {
+  min-height: 48px; flex: 1;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; color: #fff; font-family: var(--font);
+  font-size: 18px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.1s; -webkit-tap-highlight-color: transparent;
+}
+.tp-rem-btn:active { background: rgba(255,255,255,0.18); transform: scale(0.94); }
+
+/* Play/pause: teal accent */
 #tp-rem-pp {
-  width: 56px; height: 56px; flex-shrink: 0;
-  background: rgba(62,207,178,0.12); border: 1.5px solid var(--teal);
-  border-radius: 12px; color: var(--teal); font-size: 22px;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: background 0.12s;
+  flex: 1.4;
+  background: rgba(62,207,178,0.12); border-color: rgba(62,207,178,0.5);
+  color: var(--teal); font-size: 22px;
 }
 #tp-rem-pp:active { background: rgba(62,207,178,0.28); }
-.tp-rem-speed-row { display: flex; align-items: center; gap: 8px; flex: 1; }
-.tp-rem-spd-btn {
-  width: 50px; height: 50px; background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
-  color: #fff; font-size: 22px; cursor: pointer; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; transition: all 0.1s;
+
+/* Label cells between − and + */
+.tp-rem-lbl {
+  flex: 1.2; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: rgba(255,255,255,0.4);
+  pointer-events: none; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; min-height: 48px;
 }
-.tp-rem-spd-btn:active { background: rgba(255,255,255,0.16); transform: scale(0.92); }
-.tp-rem-spd-label { flex: 1; text-align: center; font-size: 13px; color: rgba(255,255,255,0.55); }
-.tp-rem-spd-label span { color: var(--teal); font-weight: 700; font-size: 18px; display: block; }
-#tp-rem-restart {
-  width: 50px; height: 50px; flex-shrink: 0;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px; color: rgba(255,255,255,0.55);
-  font-family: var(--font); font-size: 18px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+.tp-rem-lbl span { color: var(--teal); font-size: 16px; font-weight: 700; display: block; margin-top: 2px; }
+
+/* Row 2 — ⏪ 10s · seek slider · 10s ⏩ */
+.tp-rem-seek-row {
+  display: flex; align-items: center; gap: 6px;
 }
-#tp-rem-restart:active { background: rgba(255,255,255,0.1); color: #fff; }
-/* Progress / pct label */
-.tp-rem-prog-wrap { display: none; } /* legacy — replaced by ctrl bar */
+.tp-rem-seek-btn {
+  flex: 0 0 64px; min-height: 48px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; color: #fff; font-family: var(--font);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; transition: all 0.1s;
+}
+.tp-rem-seek-btn:active { background: rgba(255,255,255,0.16); }
+#tp-rem-seek-slider {
+  flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
+  background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; cursor: pointer;
+}
+#tp-rem-seek-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--teal); cursor: pointer;
+}
+
+/* Legacy */
+.tp-rem-prog-wrap { display: none; }
+/* These old selectors kept for any inline-style references */
+.tp-rem-speed-row { display: none; }
+.tp-rem-spd-btn   { display: none; }
+.tp-rem-spd-label { display: none; }
+#tp-rem-restart   { display: none; } /* replaced by .tp-rem-btn version in HTML */
+
 #tp-rem-project-name {
   font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45);
-  text-align: center; padding: 6px 0 2px;
+  text-align: center; padding: 4px 0 0;
 }
 
 /* ═══════════════════════════════════════
@@ -474,36 +520,79 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-voice-device {
   position: fixed; inset: 0; z-index: 30; background: #000;
   display: none; flex-direction: column; align-items: center;
-  justify-content: center; gap: 28px; padding: 40px 24px;
-  text-align: center;
+  justify-content: space-between; padding: 32px 20px env(safe-area-inset-bottom, 20px);
+  text-align: center; overflow-y: auto;
 }
 #tp-voice-device.active { display: flex; }
-#tp-vd-mic-icon { font-size: 72px; line-height: 1; transition: transform 0.15s; }
+
+#tp-vd-top { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#tp-vd-mic-icon { font-size: 64px; line-height: 1; }
 #tp-vd-mic-icon.pulsing { animation: tp-pulse 1.2s ease-in-out infinite; }
 #tp-vd-status {
-  font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 4px;
-  color: var(--teal);
+  font-family: 'Bebas Neue', sans-serif; font-size: 34px; letter-spacing: 4px; color: var(--teal);
 }
 #tp-vd-status.paused { color: #ffb432; }
-#tp-vd-subtitle { font-size: 13px; color: rgba(255,255,255,0.35); max-width: 260px; line-height: 1.6; }
+#tp-vd-operator-lock {
+  display: none; font-size: 13px; font-weight: 700; color: #ffb432;
+  background: rgba(255,180,50,0.1); border: 1px solid rgba(255,180,50,0.3);
+  border-radius: 20px; padding: 5px 14px;
+}
+#tp-vd-operator-lock.visible { display: block; }
+
 #tp-vd-vol-bar-wrap {
-  width: 220px; height: 8px; background: rgba(255,255,255,0.1);
-  border-radius: 4px; overflow: hidden;
+  width: 100%; max-width: 300px; height: 10px; background: rgba(255,255,255,0.1);
+  border-radius: 5px; overflow: hidden; margin: 4px 0;
 }
-#tp-vd-vol-fill { height: 100%; background: var(--teal); width: 0%; border-radius: 4px; transition: width 0.08s; }
-#tp-vd-sense-wrap { width: 100%; max-width: 260px; }
-#tp-vd-sense-label {
-  font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
-  color: rgba(255,255,255,0.35); margin-bottom: 10px; display: block;
+#tp-vd-vol-fill { height: 100%; background: var(--teal); width: 0%; border-radius: 5px; transition: width 0.08s; }
+
+/* Bottom controls panel */
+#tp-vd-controls {
+  width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; gap: 12px;
 }
-#tp-vd-sense {
-  -webkit-appearance: none; width: 100%; height: 4px;
+
+/* Big pause/play button */
+#tp-vd-pp {
+  width: 100%; padding: 18px; font-size: 18px; font-weight: 700;
+  background: rgba(62,207,178,0.12); border: 2px solid var(--teal);
+  border-radius: 14px; color: var(--teal); font-family: var(--font);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.12s;
+}
+#tp-vd-pp:active { background: rgba(62,207,178,0.28); }
+#tp-vd-pp.is-paused { background: rgba(255,180,50,0.1); border-color: #ffb432; color: #ffb432; }
+
+/* Seek buttons row */
+.tp-vd-row { display: flex; gap: 10px; }
+.tp-vd-btn {
+  flex: 1; min-height: 52px; font-size: 14px; font-weight: 700;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px; color: #fff; font-family: var(--font);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.1s;
+}
+.tp-vd-btn:active { background: rgba(255,255,255,0.18); }
+
+/* Slider rows */
+.tp-vd-slider-row { display: flex; flex-direction: column; gap: 8px; }
+.tp-vd-lbl {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; color: rgba(255,255,255,0.4); text-align: left;
+}
+.tp-vd-lbl span { color: var(--teal); font-size: 13px; margin-left: 6px; }
+.tp-vd-mult-ends {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: rgba(255,255,255,0.25); margin-top: -4px;
+}
+#tp-vd-sense, #tp-vd-mult {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
   background: rgba(62,207,178,0.25); border-radius: 2px; outline: none; cursor: pointer;
 }
-#tp-vd-sense::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 20px; height: 20px;
+#tp-vd-sense::-webkit-slider-thumb,
+#tp-vd-mult::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px;
   border-radius: 50%; background: var(--teal); cursor: pointer;
 }
+
+/* Session info */
 #tp-vd-session-info { font-size: 12px; color: rgba(255,255,255,0.2); }
 #tp-vd-conn-dot {
   width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a;
@@ -586,6 +675,9 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     <div id="tp-peer-status">Waiting for remote…</div>
   </div>
 
+  <!-- Operator-paused indicator (shown when control device has locked out voice) -->
+  <div id="tp-operator-badge">⏸ Operator paused</div>
+
   <div id="tp-scroll-wrap">
     <div id="tp-text-wrap">
       <div id="tp-spacer-top"></div>
@@ -660,26 +752,25 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   <!-- Sticky bottom controls — shown when connected -->
   <div id="tp-rem-ctrl-bar">
     <div id="tp-rem-prog-bar-inner"><div id="tp-rem-prog-fill"></div></div>
+
+    <!-- Row 1: Play/Pause · Speed − + · Size A− A+ · Restart -->
     <div class="tp-rem-ctrl-row">
-      <button id="tp-rem-pp" onclick="remoteSend('toggle_pause')">▶</button>
-      <div class="tp-rem-speed-row">
-        <button class="tp-rem-spd-btn" onclick="remoteAdjustSpeed(-0.5)">−</button>
-        <div class="tp-rem-spd-label">SPEED<span id="tp-rem-spd-val">3</span></div>
-        <button class="tp-rem-spd-btn" onclick="remoteAdjustSpeed(0.5)">+</button>
-      </div>
-      <div class="tp-rem-speed-row">
-        <button class="tp-rem-spd-btn" onclick="remAdjustFontSize(-2)">A−</button>
-        <div class="tp-rem-spd-label">SIZE<span id="tp-rem-font-val">32</span></div>
-        <button class="tp-rem-spd-btn" onclick="remAdjustFontSize(2)">A+</button>
-      </div>
-      <button id="tp-rem-restart" onclick="remoteSend('restart')" title="Restart">↺</button>
+      <button id="tp-rem-pp"     class="tp-rem-btn" onclick="remoteSend('toggle_pause')">▶</button>
+      <button                    class="tp-rem-btn" onclick="remoteAdjustSpeed(-0.5)">−</button>
+      <div class="tp-rem-lbl">SPD<span id="tp-rem-spd-val">3</span></div>
+      <button                    class="tp-rem-btn" onclick="remoteAdjustSpeed(0.5)">+</button>
+      <button                    class="tp-rem-btn" onclick="remAdjustFontSize(-2)">A−</button>
+      <div class="tp-rem-lbl">SZ<span id="tp-rem-font-val">32</span></div>
+      <button                    class="tp-rem-btn" onclick="remAdjustFontSize(2)">A+</button>
+      <button                    class="tp-rem-btn" onclick="remoteSend('restart')" title="Restart">↺</button>
     </div>
-    <div class="tp-rem-ctrl-row" style="margin-top:8px;">
-      <button class="tp-rem-spd-btn" onclick="remSeekSeconds(-10)" style="font-size:13px;width:auto;padding:0 12px;flex:1;">⏪ 10s</button>
+
+    <!-- Row 2: ⏪ 10s · position slider · 10s ⏩ -->
+    <div class="tp-rem-seek-row">
+      <button class="tp-rem-seek-btn" onclick="remSeekSeconds(-10)">⏪ 10s</button>
       <input type="range" id="tp-rem-seek-slider" min="0" max="100" value="0"
-             oninput="remSeekPct(this.value)"
-             style="flex:3;height:4px;-webkit-appearance:none;background:rgba(255,255,255,0.2);border-radius:2px;outline:none;cursor:pointer;margin:0 8px;">
-      <button class="tp-rem-spd-btn" onclick="remSeekSeconds(10)" style="font-size:13px;width:auto;padding:0 12px;flex:1;">10s ⏩</button>
+             oninput="remSeekPct(this.value)">
+      <button class="tp-rem-seek-btn" onclick="remSeekSeconds(10)">10s ⏩</button>
     </div>
   </div>
 
@@ -727,18 +818,51 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
      SCREEN 5 — VOICE DEVICE (mic in pocket)
 ══════════════════════════════════════════ -->
 <div id="tp-voice-device">
-  <div id="tp-vd-mic-icon">🎤</div>
-  <div id="tp-vd-status">CONNECTING…</div>
-  <div id="tp-vd-subtitle">Your voice controls the teleprompter.<br>Speak → scroll starts. Pause → scroll stops.</div>
-  <div id="tp-vd-vol-bar-wrap"><div id="tp-vd-vol-fill"></div></div>
-  <div id="tp-vd-sense-wrap">
-    <span id="tp-vd-sense-label">Mic Sensitivity</span>
-    <input type="range" id="tp-vd-sense" min="1" max="10" value="5">
+
+  <!-- Top: mic status -->
+  <div id="tp-vd-top">
+    <div id="tp-vd-mic-icon">🎤</div>
+    <div id="tp-vd-status">CONNECTING…</div>
+    <div id="tp-vd-operator-lock">⏸ Operator paused</div>
   </div>
+
+  <!-- Middle: volume bar -->
+  <div id="tp-vd-vol-bar-wrap"><div id="tp-vd-vol-fill"></div></div>
+
+  <!-- Bottom controls — one-thumb reachable -->
+  <div id="tp-vd-controls">
+
+    <!-- Large pause/play toggle -->
+    <button id="tp-vd-pp" onclick="vdTogglePause()">⏸ Pause</button>
+
+    <!-- Seek row -->
+    <div class="tp-vd-row">
+      <button class="tp-vd-btn" onclick="vdSend('seek_relative_seconds', -10)">⏪ 10s</button>
+      <button class="tp-vd-btn" onclick="vdSend('seek_relative_seconds', 10)">10s ⏩</button>
+    </div>
+
+    <!-- Sensitivity -->
+    <div class="tp-vd-slider-row">
+      <span class="tp-vd-lbl">Mic Sensitivity</span>
+      <input type="range" id="tp-vd-sense" min="1" max="10" value="5">
+    </div>
+
+    <!-- Speed multiplier -->
+    <div class="tp-vd-slider-row">
+      <span class="tp-vd-lbl">Speed  <span id="tp-vd-mult-val">1.0×</span></span>
+      <input type="range" id="tp-vd-mult" min="0.5" max="2.0" step="0.1" value="1.0"
+             oninput="vdUpdateMult(this.value)">
+      <div class="tp-vd-mult-ends"><span>SLOW</span><span>FAST</span></div>
+    </div>
+
+  </div>
+
+  <!-- Connection status -->
   <div id="tp-vd-session-info">
     <span id="tp-vd-conn-dot"></span>
     <span id="tp-vd-session-txt">Not connected</span>
   </div>
+
 </div>
 
 <!-- QR library from CDN — graceful fallback if offline -->
@@ -1147,11 +1271,12 @@ function animTick(ts) {
 
 // ═══════════════════════════════════════════════════════════════
 // CURRENT LINE
-// Focus point at 38% from top of viewport
+// Focus point at center of screen (50%) — talent sees 3-4 lines
+// above (just said) and 3-4 lines below (coming up)
 // ═══════════════════════════════════════════════════════════════
 
 function updateCurrentLine() {
-  const focusY = window.innerHeight * 0.38;
+  const focusY = window.innerHeight * 0.50;
   const lines  = document.querySelectorAll('.tp-line');
   if (!lines.length) return;
 
@@ -1261,7 +1386,7 @@ function attachDisplayEvents() {
     if (line && !isPlaying) {
       // Jump to this line when paused
       const lineRect = line.getBoundingClientRect();
-      const focusY   = window.innerHeight * 0.38;
+      const focusY   = window.innerHeight * 0.50;
       wrap.scrollTop += lineRect.top - focusY;
       sendDisplayState();
       return;
@@ -1352,6 +1477,11 @@ function connectDisplayWS() {
         const px = msg.value * scrollSpeed * 20;
         w.scrollTop = Math.max(0, Math.min(w.scrollHeight - w.clientHeight, w.scrollTop + px));
         sendDisplayState();
+      }
+      // Show operator badge when Cari explicitly pauses/plays
+      if (msg.source === 'operator') {
+        const nowPaused = (a === 'pause') || (a === 'toggle_pause' && !isPlaying);
+        showOperatorBadge(nowPaused);
       }
     }
   };
@@ -1703,7 +1833,7 @@ function setRemStatus(ok) {
 
 function remoteSend(action, value) {
   if (!remoteWS || remoteWS.readyState !== WebSocket.OPEN) return;
-  const m = { type: 'command', action };
+  const m = { type: 'command', action, source: 'operator' };
   if (value !== undefined) m.value = value;
   remoteWS.send(JSON.stringify(m));
   // Also reset remote scroll immediately on restart
@@ -1999,17 +2129,21 @@ function showVoiceDebug(vol, threshold) {
 // to drive scroll: speech → play+speed, silence → pause
 // ═══════════════════════════════════════════════════════════════
 
-let vdWS           = null;
-let vdAudioCtx     = null;
-let vdAnalyser     = null;
-let vdMicStream    = null;
-let vdMicSource    = null;
-let vdVolBuffer    = null;
-let vdSmoothedVol  = 0;
-let vdScrolling    = false;
-let vdSilTimer     = null;
-let vdRafId        = null;
-let vdConnected    = false;
+let vdWS             = null;
+let vdAudioCtx       = null;
+let vdAnalyser       = null;
+let vdMicStream      = null;
+let vdMicSource      = null;
+let vdVolBuffer      = null;
+let vdSmoothedVol    = 0;
+let vdScrolling      = false;
+let vdSilTimer       = null;
+let vdRafId          = null;
+let vdConnected      = false;
+let vdOperatorLocked = false;  // true when Cari has operator-paused
+let vdManualPause    = false;  // true when Jason presses his own pause button
+let vdSpeedMult      = 1.0;    // speed multiplier slider (0.5–2.0)
+let vdWakeLock       = null;
 
 function showVoiceDevice(code) {
   currentMode = 'voice';
@@ -2042,7 +2176,11 @@ function connectVoiceDeviceWS(code) {
       document.getElementById('tp-vd-conn-dot').classList.add('ok');
       document.getElementById('tp-vd-session-txt').textContent = `Connected · Session ${code}`;
       document.getElementById('tp-vd-status').textContent = 'STARTING MIC…';
+      if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
       startVoiceDevice();
+    }
+    if (msg.type === 'state') {
+      if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
     }
     if (msg.type === 'error') {
       document.getElementById('tp-vd-status').textContent = 'SESSION NOT FOUND';
@@ -2065,7 +2203,7 @@ function connectVoiceDeviceWS(code) {
 
 function vdSend(action, value) {
   if (!vdWS || vdWS.readyState !== WebSocket.OPEN) return;
-  const m = { type: 'command', action };
+  const m = { type: 'command', action, source: 'voice' };  // never triggers operatorPaused
   if (value !== undefined) m.value = value;
   vdWS.send(JSON.stringify(m));
 }
@@ -2091,9 +2229,15 @@ async function startVoiceDevice() {
 
   vdSmoothedVol = 0;
   vdScrolling   = false;
+  vdManualPause = false;
 
   setVdStatus('paused'); // Start paused — wait for voice
   vdSend('pause');
+
+  // Keep screen on via Wake Lock API
+  if ('wakeLock' in navigator && !vdWakeLock) {
+    navigator.wakeLock.request('screen').then(wl => { vdWakeLock = wl; }).catch(() => {});
+  }
 
   if (vdRafId) cancelAnimationFrame(vdRafId);
   vdRafId = requestAnimationFrame(vdSampleLoop);
@@ -2123,23 +2267,25 @@ function vdSampleLoop() {
 
   if (vdSmoothedVol > threshold) {
     clearTimeout(vdSilTimer); vdSilTimer = null;
-    if (!vdScrolling) {
+    // Only drive scroll if neither operator nor talent has manually paused
+    if (!vdScrolling && !vdOperatorLocked && !vdManualPause) {
       vdScrolling = true;
       setVdStatus('listening');
       vdSend('play');
     }
-    // Speed modulation: louder = faster
-    const overage  = Math.max(0, (vdSmoothedVol - threshold) / threshold);
-    const speedMult = 0.65 + Math.min(overage, 2) * 0.42;
-    const baseSpeed = 3; // default speed
-    vdSend('speed', Math.max(0.3, parseFloat((baseSpeed * speedMult).toFixed(1))));
-
+    if (!vdOperatorLocked && !vdManualPause) {
+      // Speed modulation: louder = faster, scaled by vdSpeedMult slider
+      const overage   = Math.max(0, (vdSmoothedVol - threshold) / threshold);
+      const voiceMult = 0.65 + Math.min(overage, 2) * 0.42;
+      const baseSpeed = 3;
+      vdSend('speed', Math.max(0.3, parseFloat((baseSpeed * voiceMult * vdSpeedMult).toFixed(1))));
+    }
   } else {
     if (vdScrolling && !vdSilTimer) {
       vdSilTimer = setTimeout(() => {
         vdScrolling = false;
         vdSilTimer  = null;
-        setVdStatus('paused');
+        if (!vdManualPause) setVdStatus('paused');
         vdSend('pause');
       }, 450);
     }
@@ -2156,9 +2302,46 @@ function setVdStatus(state) {
     status.classList.remove('paused');
   } else {
     icon.classList.remove('pulsing');
-    status.textContent = 'PAUSED';
+    status.textContent = vdManualPause ? 'HOLD' : 'PAUSED';
     status.classList.add('paused');
   }
+}
+
+function vdSetOperatorLock(locked) {
+  vdOperatorLocked = locked;
+  const lockEl = document.getElementById('tp-vd-operator-lock');
+  if (lockEl) lockEl.classList.toggle('visible', locked);
+  if (locked) {
+    vdScrolling = false;
+    clearTimeout(vdSilTimer); vdSilTimer = null;
+    setVdStatus('paused');
+  }
+}
+
+function vdTogglePause() {
+  vdManualPause = !vdManualPause;
+  const btn = document.getElementById('tp-vd-pp');
+  if (vdManualPause) {
+    vdScrolling = false;
+    clearTimeout(vdSilTimer); vdSilTimer = null;
+    vdSend('pause');
+    setVdStatus('paused');
+    if (btn) { btn.textContent = '▶ Resume'; btn.classList.add('is-paused'); }
+  } else {
+    if (btn) { btn.textContent = '⏸ Pause'; btn.classList.remove('is-paused'); }
+    setVdStatus('paused'); // mic will detect speech and resume naturally
+  }
+}
+
+function vdUpdateMult(val) {
+  vdSpeedMult = parseFloat(val);
+  const lbl = document.getElementById('tp-vd-mult-val');
+  if (lbl) lbl.textContent = vdSpeedMult.toFixed(1) + '×';
+}
+
+function showOperatorBadge(visible) {
+  const el = document.getElementById('tp-operator-badge');
+  if (el) el.classList.toggle('visible', visible);
 }
 
 // ═══════════════════════════════════════════════════════════════
