@@ -158,7 +158,7 @@ server {
     server_name ${DOMAIN:-_};
 
     # Increase body size for footage thumbnail uploads
-    client_max_body_size 500M;
+    client_max_body_size 10G;
 
     # Proxy timeouts for long-running SSE streams
     proxy_read_timeout    3600s;

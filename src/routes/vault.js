@@ -113,6 +113,7 @@ router.get('/footage', async (req, res) => {
       });
     }
 
+    res.set('Cache-Control', 'no-store');
     res.json(footage);
   } catch (e) {
     res.status(500).json({ error: e.message });

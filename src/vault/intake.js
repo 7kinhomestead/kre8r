@@ -266,7 +266,7 @@ async function extractThumbnails(filePath, duration) {
 
 const VISION_PROMPT = `You are analyzing three thumbnails from different points in a video clip (early, middle, late) from a homesteading and off-grid living content creator (7 Kin Homestead). Use all three frames together to make your classification — do not judge on any single frame alone. A blurry early frame with sharp middle and late frames is a usable or hero clip, not a discard. Return ONLY a JSON object:
 {
-  "shot_type": "one of: dialogue, talking-head, b-roll, action, unusable",
+  "shot_type": "one of: dialogue, talking-head, b-roll, action, completed-video, unusable",
   "subcategory": "one of: wide, medium, close-up, detail, null — only for b-roll, null for all others",
   "description": "1-2 sentences describing what is visible across the three frames — specific and search-useful",
   "quality_flag": "one of: hero, usable, review, discard",
@@ -274,6 +274,19 @@ const VISION_PROMPT = `You are analyzing three thumbnails from different points 
   "orientation": "one of: horizontal, vertical, square"
 }
 Be specific in descriptions. 'Person talking in front of trees' is not useful. 'Creator in grey shirt speaking to camera, outdoor background with forest visible, good lighting' is useful.`;
+
+const SHOT_TYPE_ALIASES = {
+  'talking_head' : 'talking-head',
+  'talkinghead'  : 'talking-head',
+  'broll'        : 'b-roll',
+  'b_roll'       : 'b-roll',
+  'completed_video' : 'completed-video',
+};
+function normalizeShotType(val) {
+  if (!val) return null;
+  const lower = val.toLowerCase().trim();
+  return SHOT_TYPE_ALIASES[lower] || lower;
+}
 
 async function classifyWithVision(thumbs) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -363,6 +376,10 @@ async function processFile(filePath, options = {}) {
       is_proxy:           false
     });
     onProgress?.({ stage: 'saved', file: original_filename, id, braw: true });
+    // Auto-trigger DaVinci proxy export for this BRAW file
+    setImmediate(() => triggerBrawProxyExport(projectId, filePath).catch(err =>
+      console.error('[VaultΩr] Auto proxy export failed:', err.message)
+    ));
     return { id, file: filePath, status: 'ok', braw: true, shot_type: 'b-roll', quality_flag: 'review', orientation: null, thumb: null };
   }
 
@@ -423,7 +440,7 @@ async function processFile(filePath, options = {}) {
     project_id:         projectId,
     file_path:          filePath,
     original_filename,
-    shot_type:          classification.shot_type    || null,
+    shot_type:          normalizeShotType(classification.shot_type),
     subcategory:        classification.subcategory  || null,
     description:        classification.description  || null,
     quality_flag:       classification.quality_flag || null,
@@ -446,7 +463,7 @@ async function processFile(filePath, options = {}) {
     id,
     file:         filePath,
     status:       'ok',
-    shot_type:    classification.shot_type    || null,
+    shot_type:    normalizeShotType(classification.shot_type),
     quality_flag: classification.quality_flag || null,
     orientation:  classification.orientation  || null,
     thumb:        thumbs?.displayUrl || null
@@ -484,7 +501,7 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
 
   // Update the original BRAW record (not the proxy path) with all the good data
   db.updateFootage(brawRecord.id, {
-    shot_type:          classification.shot_type    || brawRecord.shot_type,
+    shot_type:          normalizeShotType(classification.shot_type) || brawRecord.shot_type,
     subcategory:        classification.subcategory  || null,
     description:        classification.description  || brawRecord.description,
     quality_flag:       classification.quality_flag || brawRecord.quality_flag,
@@ -504,7 +521,7 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
     file:         proxyPath,
     status:       'ok',
     proxy_update: true,
-    shot_type:    classification.shot_type    || null,
+    shot_type:    normalizeShotType(classification.shot_type),
     quality_flag: classification.quality_flag || null,
     orientation:  classification.orientation  || null,
     thumb:        thumbs?.displayUrl || null
@@ -572,6 +589,26 @@ async function ingestFolder(folderPath, options = {}) {
     by_shot_type: results.by_shot_type,
     by_quality:   results.by_quality
   };
+}
+
+async function triggerBrawProxyExport(projectId, brawPath) {
+  if (!projectId) return;
+  const brawFolder = path.dirname(brawPath);
+  const project = db.getProject(projectId);
+  if (!project) return;
+  // Use the same logic as the export-proxies route
+  const profile = JSON.parse(fs.readFileSync(
+    path.join(__dirname, '../../creator-profile.json'), 'utf8'
+  ));
+  const intakeFolder = profile?.vault?.intake_folder;
+  if (!intakeFolder) return;
+  const { runScript } = require('../routes/davinci');
+  await runScript('braw-proxy-export.py', [
+    '--project_id',   String(projectId),
+    '--project_name', project.davinci_project_name || project.title,
+    '--braw_folder',  brawFolder,
+    '--proxy_output',   intakeFolder,
+  ], 7200000);
 }
 
 // ─────────────────────────────────────────────
@@ -656,7 +693,7 @@ async function reclassifyById(footageId) {
   const classification = await visionQueue.run(() => withRetry(() => classifyWithVision(thumbs)));
 
   db.updateFootage(footageId, {
-    shot_type:    classification.shot_type    || null,
+    shot_type:    normalizeShotType(classification.shot_type),
     subcategory:  classification.subcategory  || null,
     description:  classification.description  || null,
     quality_flag: classification.quality_flag || null,

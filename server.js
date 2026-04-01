@@ -49,7 +49,7 @@ app.use('/api/vault',      require('./src/routes/vault'));
 app.use('/api/cutor',      require('./src/routes/cutor'));
 app.use('/api/analytics',  require('./src/routes/analytics'));
 app.use('/api/operator',   require('./src/routes/operator'));
-app.use('/api/davinci',    require('./src/routes/davinci'));
+app.use('/api/davinci',    require('./src/routes/davinci').router);
 app.use('/api/editor',     require('./src/routes/editor'));
 app.use('/api/composor',   require('./src/routes/composor'));
 app.use('/api/pipr',          require('./src/routes/pipr'));
@@ -58,6 +58,7 @@ const { router: teleprompterRouter, createTeleprompterWS } = require('./src/rout
 app.use('/api/teleprompter',  teleprompterRouter);
 app.use('/api/shootday',      require('./src/routes/shootday'));
 app.use('/api/voice-library', require('./src/routes/voice-library'));
+app.use('/api/mailor',       require('./src/routes/mailor'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
@@ -146,6 +147,7 @@ async function start() {
     console.log(`  \x1b[2m  M2 Package\u03a9r   →\x1b[0m http://localhost:${PORT}/m2-package-generator.html`);
     console.log(`  \x1b[2m  M3 Caption\u03a9r   →\x1b[0m http://localhost:${PORT}/m3-caption-generator.html`);
     console.log(`  \x1b[2m  M4 Mail\u03a9r      →\x1b[0m http://localhost:${PORT}/m4-email-generator.html`);
+    console.log(`  \x1b[2m  Mail\u03a9r         →\x1b[0m http://localhost:${PORT}/mailor.html`);
     console.log('');
     console.log('  \x1b[2mSINE RESISTENTIA\x1b[0m');
     console.log('');

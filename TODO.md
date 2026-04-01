@@ -75,6 +75,19 @@ All fixes are committed but haven't been tested end-to-end on real hardware.
 
 ---
 
+## Code Fixes (Pending)
+
+### Fix 1 — `davinci.js` → `runScript()` Python detection
+- **Problem:** `runScript()` hardcodes `spawn('python', ...)` — fails on systems where the binary is `py` or `python3`
+- **Fix:** Add `PYTHON_CANDIDATES` + `detectPython()` pattern (already in `editor.js` and `composor.js`)
+  - `PYTHON_CANDIDATES = process.env.PYTHON_PATH ? [process.env.PYTHON_PATH] : ['py', 'python3', 'python']`
+  - `let _pythonBin = null;`
+  - `async function detectPython()` — tries each candidate via `spawn(bin, ['--version'])`, caches winner
+  - Change `runScript()` from sync `Promise` constructor to `async function`
+  - Resolve binary first: `const bin = await detectPython();` then `spawn(bin, ...)`
+
+---
+
 ## PM2 Quick Reference (server)
 
 ```

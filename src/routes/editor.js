@@ -21,7 +21,7 @@ const crypto           = require('crypto');
 const { spawn }        = require('child_process');
 const path             = require('path');
 
-const { buildSelects }        = require('../editor/selects');
+const { buildSelects }        = require('../editor/selects-new');
 const { getBrollSuggestions, importBroll } = require('../editor/broll-bridge');
 const db = require('../db');
 

@@ -513,9 +513,9 @@
     "planned": "DigitalOcean Droplet when stable"
   },
   "vault": {
-    "intake_folder": "C:/Users/18054/Videos/intake",
-    "footage_root": "C:/Users/18054/Videos",
-    "organized_folder": "C:/Users/18054/Videos/organized",
+    "intake_folder": "D:/kre8r/intake",
+    "footage_root": "D:/kre8r/footage",
+    "organized_folder": "D:/kre8r/organized",
     "supported_extensions": [
       ".mp4",
       ".mov",

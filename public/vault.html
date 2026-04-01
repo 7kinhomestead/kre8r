@@ -159,6 +159,7 @@
   .tag-dialogue{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(91,156,246,0.25);}
   .tag-talkinghead{background:var(--purple-glow);color:var(--purple);border:1px solid rgba(167,139,250,0.25);}
   .tag-action{background:var(--amber-glow);color:var(--amber);border:1px solid rgba(240,185,66,0.25);}
+  .tag-completed{background:rgba(245,158,11,0.10);color:#f59e0b;border:1px solid rgba(245,158,11,0.25);}
   .tag-unusable{background:var(--red-glow);color:var(--red);border:1px solid rgba(224,92,92,0.25);}
   .tag-unclassified{background:rgba(255,255,255,0.05);color:var(--text-dimmer);border:1px solid var(--border);}
   .tag-hero{background:var(--green-glow);color:var(--green);border:1px solid rgba(92,186,138,0.25);}
@@ -437,6 +438,7 @@
         <button class="filter-chip active" data-shot="all" onclick="setFilter('shot','all',this)">All</button>
         <button class="filter-chip" data-shot="b-roll" onclick="setFilter('shot','b-roll',this)">B-roll</button>
         <button class="filter-chip" data-shot="talking-head" onclick="setFilter('shot','talking-head',this)">Talking Head</button>
+        <button class="filter-chip" data-shot="completed-video" onclick="setFilter('shot','completed-video',this)">Completed</button>
         <button class="filter-chip" data-shot="dialogue" onclick="setFilter('shot','dialogue',this)">Dialogue</button>
         <button class="filter-chip" data-shot="action" onclick="setFilter('shot','action',this)">Action</button>
         <button class="filter-chip" data-shot="unusable" onclick="setFilter('shot','unusable',this)">Unusable</button>
@@ -539,6 +541,7 @@
           <option value="">— unclassified —</option>
           <option value="b-roll">B-roll</option>
           <option value="talking-head">Talking Head</option>
+          <option value="completed-video">Completed Video</option>
           <option value="dialogue">Dialogue</option>
           <option value="action">Action</option>
           <option value="unusable">Unusable</option>
@@ -871,7 +874,7 @@ function renderFolder(footage) {
   grid.className = 'footage-folder';
   if (!footage.length) { grid.innerHTML = emptyHtml(); return; }
 
-  const shotOrder = ['b-roll', 'talking-head', 'dialogue', 'action', 'unusable', 'unclassified'];
+  const shotOrder = ['b-roll', 'talking-head', 'dialogue', 'action', 'completed-video', 'unusable', 'unclassified'];
   const grouped = {};
   for (const f of footage) {
     const k = f.shot_type || 'unclassified';
@@ -1537,7 +1540,7 @@ async function bulkAssign() {
 
 // ── UTILS ──────────────────────────────────────────────────────────────────
 function shotTypeTag(type) {
-  const map = { 'b-roll':'tag-broll', 'dialogue':'tag-dialogue', 'talking-head':'tag-talkinghead', 'action':'tag-action', 'unusable':'tag-unusable' };
+  const map = { 'b-roll':'tag-broll', 'dialogue':'tag-dialogue', 'talking-head':'tag-talkinghead', 'action':'tag-action', 'completed-video':'tag-completed', 'unusable':'tag-unusable' };
   return `<span class="tag ${map[type] || 'tag-unclassified'}">${type || 'unclassified'}</span>`;
 }
 
