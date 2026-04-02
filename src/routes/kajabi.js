@@ -59,9 +59,13 @@ async function kajabi(method, path, body) {
     },
   };
   if (body) opts.body = JSON.stringify(body);
+  console.log('[kajabi] →', method, path);
   const res  = await fetch(`${KAJABI_API}${path}`, opts);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `Kajabi API ${res.status}: ${path}`);
+  if (!res.ok) {
+    console.error('[kajabi] API error:', res.status, JSON.stringify(data));
+    throw new Error(data?.error || data?.message || `Kajabi API ${res.status}: ${path}`);
+  }
   return data;
 }
 
@@ -82,13 +86,12 @@ router.get('/status', async (req, res) => {
 
 router.get('/contacts', async (req, res) => {
   try {
-    const { tag, page = 1 } = req.query;
-    const path = tag
-      ? `/contacts?filter[tag]=${encodeURIComponent(tag)}&page=${page}`
-      : `/contacts?page=${page}`;
-    const data = await kajabi('GET', path);
+    const { page = 1 } = req.query;
+    console.log('[kajabi/contacts] fetching page', page);
+    const data = await kajabi('GET', `/contacts`);
     res.json(data);
   } catch (e) {
+    console.error('[kajabi/contacts]', e);
     res.status(500).json({ error: e.message });
   }
 });
