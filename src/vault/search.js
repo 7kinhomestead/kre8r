@@ -27,7 +27,7 @@ Columns:
   project_id       INTEGER  — nullable, links to a project
   file_path        TEXT     — absolute path to the source file
   original_filename TEXT    — original filename
-  shot_type        TEXT     — one of: dialogue, talking-head, b-roll, action, unusable, unclassified
+  shot_type        TEXT     — one of: dialogue, talking-head, b-roll, action, completed-video, unusable, unclassified
   subcategory      TEXT     — one of: wide, medium, close-up, detail (b-roll only; NULL for others)
   description      TEXT     — 1-2 sentence content description from Claude Vision
   duration         REAL     — clip length in seconds

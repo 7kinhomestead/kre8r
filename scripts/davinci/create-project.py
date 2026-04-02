@@ -331,7 +331,7 @@ def run(args):
         doc_content = "\n".join(doc_lines) + "\n"
 
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False,
+            mode="w", encoding="utf-8", suffix=".txt", delete=False,
             prefix=f"kre8r_{args.project_id}_docs_"
         ) as tmp:
             tmp.write(doc_content)
