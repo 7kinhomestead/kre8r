@@ -250,7 +250,8 @@
       "Bash(node -e \"const chunks=[]; process.stdin.on\\(''''data'''',c=>chunks.push\\(c\\)\\); process.stdin.on\\(''''end'''',\\(\\)=>{ const data=JSON.parse\\(Buffer.concat\\(chunks\\)\\); console.log\\(''''total:'''', data.length\\); console.log\\(''''completed:'''', data.filter\\(f=>f.shot_type===''''completed-video''''\\).length\\); console.log\\(''''sample shot_types:'''', [...new Set\\(data.map\\(f=>f.shot_type\\)\\)].slice\\(0,10\\)\\); }\\);\")",
       "Bash(python3 -c \":*)",
       "Bash(node test-kajabi.js)",
-      "Bash(curl -s http://localhost:3000/api/kajabi/status)"
+      "Bash(curl -s http://localhost:3000/api/kajabi/status)",
+      "Bash(node -e \"require\\(''./src/routes/id8r.js''\\)\")"
     ]
   }
 }

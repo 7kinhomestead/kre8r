@@ -3,89 +3,909 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kre8Ωr — Id8Ωr</title>
+<title>Id8Ωr — Kre8Ωr</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/global.css">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-  body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size:128px 128px; z-index:1000; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-
-  .main { max-width: 680px; margin: 0 auto; padding: 80px 24px 120px; text-align: center; }
-
-  .cs-phase {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-    padding: 4px 12px; border-radius: 20px;
-    background: var(--bg-card-2); border: 1px solid var(--border-bright); color: var(--text-dimmer);
-    margin-bottom: 28px; animation: fadeUp 0.3s ease both;
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
+    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10);
+    --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
   }
-  .cs-phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
 
-  .cs-icon { font-size: 64px; margin-bottom: 20px; animation: fadeUp 0.3s 0.05s ease both; }
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 
-  .cs-title {
-    font-family: var(--font-head); font-size: clamp(48px, 12vw, 96px);
-    letter-spacing: 4px; line-height: 0.9; color: var(--text);
-    margin-bottom: 16px; animation: fadeUp 0.3s 0.08s ease both;
-  }
-  .cs-title em { font-style: normal; color: var(--teal); }
+  /* ── Layout ── */
+  .main{max-width:1000px;margin:0 auto;padding:32px 16px 100px;}
 
-  .cs-desc {
-    font-size: 16px; color: var(--text-mid, #8a9487); line-height: 1.7;
-    max-width: 480px; margin: 0 auto 36px;
-    animation: fadeUp 0.3s 0.11s ease both;
-  }
+  /* ── Page Header ── */
+  .page-header{margin-bottom:32px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(34px,8vw,54px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;max-width:560px;line-height:1.6;}
 
-  .cs-pipeline {
-    display: flex; align-items: center; justify-content: center; gap: 0;
-    margin-bottom: 48px; animation: fadeUp 0.3s 0.14s ease both;
-  }
-  .cs-stage {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-    color: var(--text-dimmer);
-  }
-  .cs-stage.active { color: var(--teal); }
-  .cs-stage-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
-  .cs-stage.active .cs-stage-dot { background: var(--teal); box-shadow: 0 0 0 4px var(--teal-glow); }
-  .cs-stage-line { width: 48px; height: 2px; background: var(--border); margin-bottom: 14px; }
+  /* ── Screens ── */
+  .screen{display:none;}
+  .screen.active{display:block;animation:fadeUp 0.35s ease both;}
 
-  .cs-back {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600; color: var(--text-dim);
-    text-decoration: none; padding: 10px 18px; border-radius: var(--radius-sm);
-    border: 1px solid var(--border-bright); transition: all 0.15s;
-    animation: fadeUp 0.3s 0.17s ease both;
+  /* ─────────────────────────────────── */
+  /* SCREEN 1 — Mode Select              */
+  /* ─────────────────────────────────── */
+  .mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:8px;}
+  @media(max-width:700px){.mode-grid{grid-template-columns:1fr;}}
+
+  .mode-card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:28px 24px;display:flex;flex-direction:column;gap:12px;
+    cursor:pointer;transition:all 0.2s;
   }
-  .cs-back:hover { border-color: var(--teal); color: var(--teal); }
+  .mode-card:hover{border-color:var(--teal);background:var(--bg-card-2);transform:translateY(-2px);}
+  .mode-icon{font-size:32px;line-height:1;}
+  .mode-title{font-family:var(--font-head);font-size:22px;letter-spacing:1.5px;color:var(--text);}
+  .mode-sub{color:var(--text-dim);font-size:13px;line-height:1.5;flex:1;}
+  .mode-btn{
+    background:var(--teal);color:#0e0f0e;border:none;border-radius:var(--radius-sm);
+    padding:10px 18px;font-family:var(--font-body);font-size:13px;font-weight:700;
+    cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;margin-top:4px;
+  }
+  .mode-btn:hover{background:var(--teal-dim);}
+
+  /* ─────────────────────────────────── */
+  /* SCREEN 2 — Conversation             */
+  /* ─────────────────────────────────── */
+  .chat-container{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    display:flex;flex-direction:column;height:65vh;min-height:400px;
+  }
+  .chat-mode-label{
+    padding:12px 16px;border-bottom:1px solid var(--border);
+    font-size:12px;font-weight:600;letter-spacing:0.5px;color:var(--teal);text-transform:uppercase;
+    display:flex;align-items:center;gap:8px;
+  }
+  .chat-back{background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:18px;line-height:1;padding:0;transition:color 0.15s;}
+  .chat-back:hover{color:var(--text-dim);}
+
+  .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;}
+  .chat-messages::-webkit-scrollbar{width:4px;}
+  .chat-messages::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:4px;}
+
+  .msg{max-width:85%;padding:12px 14px;border-radius:var(--radius);font-size:14px;line-height:1.6;}
+  .msg.assistant{align-self:flex-start;background:var(--bg-card-2);border-left:3px solid var(--teal);border-radius:0 var(--radius) var(--radius) 0;color:var(--text);}
+  .msg.user{align-self:flex-end;background:rgba(62,207,178,0.08);border:1px solid rgba(62,207,178,0.2);color:var(--text);}
+  .msg .msg-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:5px;opacity:0.6;}
+  .msg.assistant .msg-label{color:var(--teal);}
+  .msg.user .msg-label{color:var(--text-dim);text-align:right;}
+
+  .chat-input-wrap{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;}
+  .chat-input{
+    flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius-sm);padding:10px 12px;font-family:var(--font-body);font-size:14px;
+    resize:none;line-height:1.5;max-height:120px;min-height:42px;transition:border-color 0.15s;
+  }
+  .chat-input:focus{outline:none;border-color:var(--teal);}
+  .chat-input::placeholder{color:var(--text-dimmer);}
+
+  .send-btn{
+    background:var(--teal);color:#0e0f0e;border:none;border-radius:var(--radius-sm);
+    padding:10px 16px;font-family:var(--font-body);font-size:13px;font-weight:700;
+    cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;
+  }
+  .send-btn:hover{background:var(--teal-dim);}
+  .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  .typing-indicator{display:none;align-self:flex-start;padding:8px 12px;color:var(--text-dimmer);font-size:13px;animation:pulse 1.2s infinite;}
+
+  /* ─────────────────────────────────── */
+  /* SCREEN 3 — Research                 */
+  /* ─────────────────────────────────── */
+  .research-header{margin-bottom:24px;}
+  .research-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
+  .research-sub{color:var(--text-dim);font-size:13px;}
+
+  .research-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+  @media(max-width:700px){.research-cards{grid-template-columns:1fr;}}
+
+  .research-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px;display:flex;flex-direction:column;gap:8px;}
+  .research-card-icon{font-size:24px;}
+  .research-card-label{font-weight:600;font-size:14px;color:var(--text);}
+  .research-card-status{font-size:12px;color:var(--text-dimmer);display:flex;align-items:center;gap:6px;}
+  .spinner{width:12px;height:12px;border:2px solid var(--border-bright);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0;}
+  .check{color:var(--teal);font-size:14px;}
+  .research-card-result{font-size:12px;color:var(--text-dim);line-height:1.5;max-height:100px;overflow-y:auto;display:none;}
+  .research-card-result.visible{display:block;}
+  .research-continue-wrap{text-align:center;}
+
+  /* ─────────────────────────────────── */
+  /* SCREEN 4 — Mind Map                 */
+  /* ─────────────────────────────────── */
+  .mindmap-header{margin-bottom:20px;}
+  .mindmap-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
+  .mindmap-sub{color:var(--text-dim);font-size:13px;}
+  .mindmap-container{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;min-height:300px;}
+  .mindmap-container svg{width:100%;height:auto;display:block;}
+  .mindmap-actions{display:flex;justify-content:flex-end;}
+
+  /* ─────────────────────────────────── */
+  /* SCREEN 5 — Package                  */
+  /* ─────────────────────────────────── */
+  .package-header{margin-bottom:20px;}
+  .package-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
+  .package-sub{color:var(--text-dim);font-size:13px;}
+  .package-columns{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+  @media(max-width:750px){.package-columns{grid-template-columns:1fr;}}
+  .package-col-label{font-family:var(--font-head);font-size:14px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:10px;}
+
+  .pkg-card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 16px;cursor:pointer;transition:all 0.15s;margin-bottom:10px;
+    font-size:13px;line-height:1.5;
+  }
+  .pkg-card:hover{border-color:var(--border-bright);background:var(--bg-card-2);}
+  .pkg-card.selected{border-color:var(--teal);background:var(--teal-glow);}
+  .pkg-card-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:6px;}
+  .pkg-card-text{color:var(--text);font-weight:500;}
+  .pkg-card-sub{color:var(--text-dim);font-size:12px;margin-top:4px;}
+  .package-actions{display:flex;justify-content:flex-end;}
+
+  /* ─────────────────────────────────── */
+  /* SCREEN 6 — Vision Brief             */
+  /* ─────────────────────────────────── */
+  .brief-header{margin-bottom:24px;}
+  .brief-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
+  .brief-sub{color:var(--text-dim);font-size:13px;}
+  .brief-grid{display:flex;flex-direction:column;gap:14px;margin-bottom:28px;}
+  .brief-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
+  .brief-section-label{font-family:var(--font-head);font-size:13px;letter-spacing:1.5px;color:var(--teal);text-transform:uppercase;margin-bottom:10px;}
+  .brief-section-body{color:var(--text);font-size:14px;line-height:1.6;}
+  .brief-section-body ul{padding-left:18px;}
+  .brief-section-body li{margin-bottom:4px;}
+  .brief-pipeline{
+    background:var(--bg);border:1px solid var(--border-bright);border-radius:var(--radius-sm);
+    padding:14px 16px;font-family:monospace;font-size:12px;color:var(--text-dim);
+    overflow-x:auto;white-space:pre-wrap;line-height:1.6;margin-top:8px;
+  }
+  .brief-actions{display:flex;gap:12px;flex-wrap:wrap;}
+
+  /* ── Shared Buttons ── */
+  .btn{
+    background:var(--teal);color:#0e0f0e;border:none;border-radius:var(--radius-sm);
+    padding:12px 22px;font-family:var(--font-body);font-size:14px;font-weight:700;
+    cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn:hover{background:var(--teal-dim);}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;background:var(--teal);}
+  .btn.btn-secondary{background:var(--bg-card);color:var(--text);border:1px solid var(--border);}
+  .btn.btn-secondary:hover{background:var(--bg-card-2);border-color:var(--border-bright);}
+
+  .spinner-lg{width:16px;height:16px;border:2px solid rgba(14,15,14,0.3);border-top-color:#0e0f0e;border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+  .btn.loading .spinner-lg{display:inline-block;}
+  .btn.loading .btn-label{opacity:0.7;}
+
+  /* ── Loading overlay ── */
+  .loading-state{text-align:center;padding:40px;color:var(--text-dim);display:none;}
+  .loading-state.visible{display:block;animation:fadeUp 0.3s ease both;}
+  .loading-state .spinner{width:24px;height:24px;border-width:3px;margin:0 auto 12px;}
+  .loading-text{font-size:14px;animation:pulse 1.5s infinite;}
+
+  /* ── Error ── */
+  .error-msg{background:var(--red-glow);border:1px solid var(--red);border-radius:var(--radius-sm);color:var(--red);padding:10px 14px;font-size:13px;margin-bottom:12px;display:none;}
+  .error-msg.visible{display:block;}
 </style>
 </head>
 <body>
-<div id="kre8r-nav"></div>
-<main class="main">
-  <div class="cs-phase"><span class="cs-phase-dot"></span>Coming in Phase 3</div>
-  <div class="cs-icon">💡</div>
-  <div class="cs-title">ID8<em>Ω</em>R</div>
-  <p class="cs-desc">AI ideation engine that generates video concepts from your channel data, trending topics, and creator voice — so you always know what to make next.</p>
 
-  <div class="cs-pipeline">
-    <div class="cs-stage active"><div class="cs-stage-dot"></div>Pre</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Prod</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Post</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Dist</div>
+<div id="kre8r-nav"></div>
+
+<div class="main">
+
+  <div class="page-header">
+    <div class="page-title">ID8<em>Ω</em>R</div>
+    <div class="page-sub">From raw idea to production-ready brief. Shape it, find it, or go deep.</div>
   </div>
 
-  <a href="/" class="cs-back">← Back to Dashboard</a>
-</main>
-<script src="/js/nav.js"></script>
-<script>initNav();</script>
+  <!-- ─────────────────── SCREEN 1: Mode Select ─────────────────── -->
+  <div id="screen-mode" class="screen active">
+    <div class="mode-grid">
+
+      <div class="mode-card" data-mode="shape_it">
+        <div class="mode-icon">✦</div>
+        <div class="mode-title">SHAPE IT</div>
+        <div class="mode-sub">I have an idea but need help pulling it off</div>
+        <button class="mode-btn" data-mode="shape_it">Start →</button>
+      </div>
+
+      <div class="mode-card" data-mode="find_it">
+        <div class="mode-icon">◎</div>
+        <div class="mode-title">FIND IT</div>
+        <div class="mode-sub">I need an idea — I don't know what to make</div>
+        <button class="mode-btn" data-mode="find_it">Start →</button>
+      </div>
+
+      <div class="mode-card" data-mode="deep_dive">
+        <div class="mode-icon">⬡</div>
+        <div class="mode-title">DEEP DIVE</div>
+        <div class="mode-sub">I have a topic but need to know more</div>
+        <button class="mode-btn" data-mode="deep_dive">Start →</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─────────────────── SCREEN 2: Conversation ─────────────────── -->
+  <div id="screen-conv" class="screen">
+    <div class="chat-container">
+      <div class="chat-mode-label">
+        <button class="chat-back" id="chat-back-btn" title="Back to mode select">←</button>
+        <span id="chat-mode-display">SHAPE IT</span>
+        &nbsp;·&nbsp; Id8Ωr
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="typing-indicator" id="typing-indicator">Id8Ωr is thinking...</div>
+      <div class="chat-input-wrap">
+        <textarea id="chat-input" class="chat-input" placeholder="Reply to Id8Ωr... (Enter to send, Shift+Enter for newline)" rows="1"></textarea>
+        <button class="send-btn" id="send-btn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────── SCREEN 3: Research ─────────────────── -->
+  <div id="screen-research" class="screen">
+    <div class="research-header">
+      <div class="research-title">RESEARCH</div>
+      <div class="research-sub">Running 3 research passes in parallel. This takes about 20-30 seconds.</div>
+    </div>
+    <div class="research-cards">
+
+      <div class="research-card" id="rc-youtube">
+        <div class="research-card-icon">🎬</div>
+        <div class="research-card-label">YouTube Research</div>
+        <div class="research-card-status" id="rc-youtube-status"><span class="spinner"></span> Searching...</div>
+        <div class="research-card-result" id="rc-youtube-result"></div>
+      </div>
+
+      <div class="research-card" id="rc-data">
+        <div class="research-card-icon">📊</div>
+        <div class="research-card-label">Data &amp; Facts</div>
+        <div class="research-card-status" id="rc-data-status"><span class="spinner"></span> Searching...</div>
+        <div class="research-card-result" id="rc-data-result"></div>
+      </div>
+
+      <div class="research-card" id="rc-vault">
+        <div class="research-card-icon">🗄️</div>
+        <div class="research-card-label">VaultΩr Check</div>
+        <div class="research-card-status" id="rc-vault-status"><span class="spinner"></span> Checking...</div>
+        <div class="research-card-result" id="rc-vault-result"></div>
+      </div>
+
+    </div>
+    <div class="research-continue-wrap">
+      <button class="btn" id="research-continue-btn" disabled>
+        <div class="spinner-lg"></div>
+        <span class="btn-label">Generate Mind Map →</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ─────────────────── SCREEN 4: Mind Map ─────────────────── -->
+  <div id="screen-mindmap" class="screen">
+    <div class="mindmap-header">
+      <div class="mindmap-title">MIND MAP</div>
+      <div class="mindmap-sub">Click branch nodes to expand/collapse leaf nodes.</div>
+    </div>
+    <div class="loading-state" id="mindmap-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Building mind map...</div>
+    </div>
+    <div class="mindmap-container" id="mindmap-container"></div>
+    <div class="mindmap-actions">
+      <button class="btn" id="mindmap-continue-btn">Generate Package →</button>
+    </div>
+  </div>
+
+  <!-- ─────────────────── SCREEN 5: Package ─────────────────── -->
+  <div id="screen-package" class="screen">
+    <div class="package-header">
+      <div class="package-title">PACKAGE</div>
+      <div class="package-sub">Select one title, one thumbnail, one hook to continue.</div>
+    </div>
+    <div class="loading-state" id="package-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Generating package options...</div>
+    </div>
+    <div id="package-content" style="display:none;">
+      <div class="package-columns">
+        <div>
+          <div class="package-col-label">Titles</div>
+          <div id="titles-list"></div>
+        </div>
+        <div>
+          <div class="package-col-label">Thumbnails</div>
+          <div id="thumbnails-list"></div>
+        </div>
+        <div>
+          <div class="package-col-label">Hooks</div>
+          <div id="hooks-list"></div>
+        </div>
+      </div>
+      <div class="package-actions">
+        <button class="btn" id="package-continue-btn" disabled>Generate Vision Brief →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────── SCREEN 6: Vision Brief ─────────────────── -->
+  <div id="screen-brief" class="screen">
+    <div class="brief-header">
+      <div class="brief-title">VISION BRIEF</div>
+      <div class="brief-sub">Your production-ready concept. Ready to send to the pipeline.</div>
+    </div>
+    <div class="loading-state" id="brief-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Writing Vision Brief...</div>
+    </div>
+    <div id="brief-content" style="display:none;">
+      <div class="brief-grid">
+
+        <div class="brief-section">
+          <div class="brief-section-label">Elevator Pitch</div>
+          <div class="brief-section-body" id="brief-elevator"></div>
+        </div>
+
+        <div class="brief-section">
+          <div class="brief-section-label">The Package</div>
+          <div class="brief-section-body" id="brief-package-chosen"></div>
+        </div>
+
+        <div class="brief-section">
+          <div class="brief-section-label">Audience Insight</div>
+          <div class="brief-section-body" id="brief-audience"></div>
+        </div>
+
+        <div class="brief-section">
+          <div class="brief-section-label">Key Talking Points</div>
+          <div class="brief-section-body" id="brief-talking-points"></div>
+        </div>
+
+        <div class="brief-section">
+          <div class="brief-section-label">Story Angle</div>
+          <div class="brief-section-body" id="brief-story"></div>
+        </div>
+
+        <div class="brief-section">
+          <div class="brief-section-label">What NOT To Do</div>
+          <div class="brief-section-body" id="brief-not-do"></div>
+        </div>
+
+        <div class="brief-section">
+          <div class="brief-section-label">Pipeline Brief</div>
+          <div class="brief-pipeline" id="brief-pipeline-json"></div>
+        </div>
+
+      </div>
+
+      <div class="error-msg" id="pipeline-error"></div>
+
+      <div class="brief-actions">
+        <button class="btn" id="send-pipr-btn">
+          <div class="spinner-lg"></div>
+          <span class="btn-label">Send to PipΩr →</span>
+        </button>
+        <button class="btn btn-secondary" id="send-writr-btn">
+          <div class="spinner-lg"></div>
+          <span class="btn-label">Send to WritΩr →</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .main -->
+
+<script src="/js/nav.js" defer></script>
+<script>window.addEventListener('load', () => initNav())</script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────
+  let sessionId    = null;
+  let currentMode  = null;
+  let researchDone = { youtube: false, data: false, vault: false };
+  let selectedTitle = null;
+  let selectedThumb = null;
+  let selectedHook  = null;
+
+  const MODE_LABELS = {
+    shape_it  : 'SHAPE IT',
+    find_it   : 'FIND IT',
+    deep_dive : 'DEEP DIVE',
+  };
+
+  // ── Screen navigation ──────────────────────────────────────────
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+  }
+
+  // ── Mode select ────────────────────────────────────────────────
+  document.querySelectorAll('[data-mode]').forEach(el => {
+    el.addEventListener('click', () => {
+      const mode = el.dataset.mode;
+      if (mode) startSession(mode);
+    });
+  });
+
+  // ── Back button ────────────────────────────────────────────────
+  document.getElementById('chat-back-btn').addEventListener('click', () => {
+    if (confirm('Go back to mode select? Your current session will be lost.')) {
+      sessionId = null;
+      currentMode = null;
+      showScreen('mode');
+    }
+  });
+
+  // ── Start session ──────────────────────────────────────────────
+  async function startSession(mode) {
+    currentMode = mode;
+    document.getElementById('chat-mode-display').textContent = MODE_LABELS[mode] || mode;
+    showScreen('conv');
+
+    const messagesEl = document.getElementById('chat-messages');
+    messagesEl.innerHTML = '';
+
+    const placeholder = appendMessage('assistant', 'Starting session...', true);
+
+    try {
+      const res  = await fetch('/api/id8r/start', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ mode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to start session');
+
+      sessionId = data.session_id;
+      placeholder.remove();
+      appendMessage('assistant', data.message);
+    } catch (e) {
+      placeholder.remove();
+      appendMessage('assistant', 'Failed to start: ' + e.message);
+    }
+  }
+
+  // ── Chat ───────────────────────────────────────────────────────
+  const chatInput = document.getElementById('chat-input');
+  const sendBtn   = document.getElementById('send-btn');
+
+  async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || !sessionId) return;
+
+    chatInput.value = '';
+    autoResize(chatInput);
+    appendMessage('user', text);
+    sendBtn.disabled = true;
+    document.getElementById('typing-indicator').style.display = 'flex';
+
+    try {
+      const res  = await fetch('/api/id8r/respond', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ session_id: sessionId, message: text }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      document.getElementById('typing-indicator').style.display = 'none';
+      sendBtn.disabled = false;
+
+      if (data.research_ready) {
+        const cleaned = data.message.replace(/RESEARCH_READY/g, '').trim();
+        if (cleaned) appendMessage('assistant', cleaned);
+        setTimeout(() => startResearch(), 800);
+      } else {
+        appendMessage('assistant', data.message);
+      }
+    } catch (e) {
+      document.getElementById('typing-indicator').style.display = 'none';
+      sendBtn.disabled = false;
+      appendMessage('assistant', 'Error: ' + e.message);
+    }
+  }
+
+  chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  sendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('input', () => autoResize(chatInput));
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function appendMessage(role, text, placeholder) {
+    const wrap  = document.getElementById('chat-messages');
+    const div   = document.createElement('div');
+    div.className = 'msg ' + role;
+    const label = role === 'assistant' ? 'Id8Ωr' : 'You';
+    div.innerHTML = `<div class="msg-label">${label}</div><div class="msg-text">${escHtml(text).replace(/\n/g,'<br>')}</div>`;
+    if (placeholder) div.style.opacity = '0.4';
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+    return div;
+  }
+
+  // ── Research ───────────────────────────────────────────────────
+  function startResearch() {
+    researchDone = { youtube: false, data: false, vault: false };
+
+    ['youtube','data','vault'].forEach(p => {
+      document.getElementById('rc-' + p + '-status').innerHTML =
+        '<span class="spinner"></span> ' + (p === 'vault' ? 'Checking...' : 'Searching...');
+      const r = document.getElementById('rc-' + p + '-result');
+      r.textContent = '';
+      r.classList.remove('visible');
+    });
+    document.getElementById('research-continue-btn').disabled = true;
+
+    showScreen('research');
+    streamSSE('/api/id8r/research', { session_id: sessionId }, onResearchEvent);
+  }
+
+  function onResearchEvent(ev) {
+    if (ev.stage === 'pass_done') {
+      const p = ev.pass;
+      document.getElementById('rc-' + p + '-status').innerHTML = '<span class="check">✓</span> Done';
+      const rEl = document.getElementById('rc-' + p + '-result');
+      const txt = (ev.result || '');
+      rEl.textContent = txt.length > 400 ? txt.slice(0, 398) + '…' : txt;
+      rEl.classList.add('visible');
+      researchDone[p] = true;
+      checkResearchComplete();
+    }
+    if (ev.stage === 'done') checkResearchComplete();
+    if (ev.stage === 'error') console.error('[research SSE]', ev.error);
+  }
+
+  function checkResearchComplete() {
+    if (researchDone.youtube && researchDone.data && researchDone.vault) {
+      const btn = document.getElementById('research-continue-btn');
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+  }
+
+  document.getElementById('research-continue-btn').addEventListener('click', startMindMap);
+
+  // ── Mind Map ───────────────────────────────────────────────────
+  async function startMindMap() {
+    showScreen('mindmap');
+    document.getElementById('mindmap-loading').classList.add('visible');
+    document.getElementById('mindmap-container').innerHTML = '';
+
+    try {
+      const res  = await fetch('/api/id8r/mindmap', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ session_id: sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      document.getElementById('mindmap-loading').classList.remove('visible');
+      renderMindMap(data);
+    } catch (e) {
+      document.getElementById('mindmap-loading').classList.remove('visible');
+      document.getElementById('mindmap-container').innerHTML =
+        `<p style="color:var(--red);padding:20px;">Error: ${escHtml(e.message)}</p>`;
+    }
+  }
+
+  document.getElementById('mindmap-continue-btn').addEventListener('click', startPackage);
+
+  // ── Package ────────────────────────────────────────────────────
+  async function startPackage() {
+    showScreen('package');
+    document.getElementById('package-loading').classList.add('visible');
+    document.getElementById('package-content').style.display = 'none';
+    selectedTitle = selectedThumb = selectedHook = null;
+
+    try {
+      const res  = await fetch('/api/id8r/package', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ session_id: sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      document.getElementById('package-loading').classList.remove('visible');
+      document.getElementById('package-content').style.display = 'block';
+      renderPackage(data);
+    } catch (e) {
+      document.getElementById('package-loading').classList.remove('visible');
+      document.getElementById('package-content').style.display = 'block';
+      document.getElementById('titles-list').innerHTML =
+        `<p style="color:var(--red);">Error: ${escHtml(e.message)}</p>`;
+    }
+  }
+
+  function renderPackage(data) {
+    // Titles
+    const tl = document.getElementById('titles-list');
+    tl.innerHTML = '';
+    (data.titles || []).forEach((t, i) => {
+      const c = mkPkgCard(`Title ${i+1}`, t.text, t.angle);
+      c.addEventListener('click', () => {
+        tl.querySelectorAll('.pkg-card').forEach(x => x.classList.remove('selected'));
+        c.classList.add('selected');
+        selectedTitle = t;
+        checkPkg();
+      });
+      tl.appendChild(c);
+    });
+
+    // Thumbnails
+    const thl = document.getElementById('thumbnails-list');
+    thl.innerHTML = '';
+    (data.thumbnails || []).forEach((t, i) => {
+      const c = mkPkgCard(`Thumbnail ${i+1} · ${t.emotion}`, t.text_overlay, t.concept);
+      c.addEventListener('click', () => {
+        thl.querySelectorAll('.pkg-card').forEach(x => x.classList.remove('selected'));
+        c.classList.add('selected');
+        selectedThumb = t;
+        checkPkg();
+      });
+      thl.appendChild(c);
+    });
+
+    // Hooks
+    const hl = document.getElementById('hooks-list');
+    hl.innerHTML = '';
+    (data.hooks || []).forEach((h, i) => {
+      const c = mkPkgCard(`Hook ${i+1} · ${h.type}`, h.text, '');
+      c.addEventListener('click', () => {
+        hl.querySelectorAll('.pkg-card').forEach(x => x.classList.remove('selected'));
+        c.classList.add('selected');
+        selectedHook = h;
+        checkPkg();
+      });
+      hl.appendChild(c);
+    });
+  }
+
+  function mkPkgCard(label, text, sub) {
+    const c = document.createElement('div');
+    c.className = 'pkg-card';
+    c.innerHTML = `<div class="pkg-card-label">${escHtml(label)}</div><div class="pkg-card-text">${escHtml(text)}</div>${sub ? `<div class="pkg-card-sub">${escHtml(sub)}</div>` : ''}`;
+    return c;
+  }
+
+  function checkPkg() {
+    document.getElementById('package-continue-btn').disabled = !(selectedTitle && selectedThumb && selectedHook);
+  }
+
+  document.getElementById('package-continue-btn').addEventListener('click', startBrief);
+
+  // ── Vision Brief ───────────────────────────────────────────────
+  async function startBrief() {
+    showScreen('brief');
+    document.getElementById('brief-loading').classList.add('visible');
+    document.getElementById('brief-content').style.display = 'none';
+
+    try {
+      const res  = await fetch('/api/id8r/brief', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({
+          session_id         : sessionId,
+          selected_title     : selectedTitle?.text,
+          selected_thumbnail : selectedThumb,
+          selected_hook      : selectedHook,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      document.getElementById('brief-loading').classList.remove('visible');
+      document.getElementById('brief-content').style.display = 'block';
+      renderBrief(data);
+    } catch (e) {
+      document.getElementById('brief-loading').classList.remove('visible');
+      document.getElementById('brief-content').style.display = 'block';
+      document.getElementById('brief-elevator').textContent = 'Error: ' + e.message;
+    }
+  }
+
+  function renderBrief(data) {
+    setText('brief-elevator', data.elevator_pitch || '');
+    setText('brief-audience', data.audience_insight || '');
+    setText('brief-story',    data.story_angle || '');
+
+    // Talking points
+    const tpEl = document.getElementById('brief-talking-points');
+    const pts  = data.talking_points || [];
+    tpEl.innerHTML = pts.length
+      ? '<ul>' + pts.map(p => `<li>${escHtml(p)}</li>`).join('') + '</ul>'
+      : '';
+
+    // What not to do
+    const wEl = document.getElementById('brief-not-do');
+    const avd = data.what_not_to_do || [];
+    wEl.innerHTML = avd.length
+      ? '<ul>' + avd.map(p => `<li>${escHtml(p)}</li>`).join('') + '</ul>'
+      : '';
+
+    // Package chosen
+    document.getElementById('brief-package-chosen').innerHTML = [
+      selectedTitle ? `<strong>Title:</strong> ${escHtml(selectedTitle.text)}` : '',
+      selectedThumb ? `<strong>Thumbnail:</strong> ${escHtml(selectedThumb.text_overlay)} — ${escHtml(selectedThumb.concept)}` : '',
+      selectedHook  ? `<strong>Hook:</strong> ${escHtml(selectedHook.text)}` : '',
+    ].filter(Boolean).join('<br>');
+
+    // Pipeline JSON
+    const pb = data.pipeline_brief || {};
+    document.getElementById('brief-pipeline-json').textContent = JSON.stringify(pb, null, 2);
+  }
+
+  function setText(id, val) {
+    document.getElementById(id).textContent = val;
+  }
+
+  // ── Send to pipeline ───────────────────────────────────────────
+  async function sendToPipeline(destination) {
+    const errEl   = document.getElementById('pipeline-error');
+    const piprBtn = document.getElementById('send-pipr-btn');
+    const writrBtn= document.getElementById('send-writr-btn');
+    errEl.classList.remove('visible');
+    piprBtn.disabled  = true;
+    writrBtn.disabled = true;
+
+    const activeBtn = destination === 'writr' ? writrBtn : piprBtn;
+    activeBtn.classList.add('loading');
+
+    try {
+      const res  = await fetch('/api/id8r/send-pipeline', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ session_id: sessionId, destination }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      window.location.href = data.redirect_url;
+    } catch (e) {
+      piprBtn.disabled  = false;
+      writrBtn.disabled = false;
+      activeBtn.classList.remove('loading');
+      errEl.textContent = 'Error: ' + e.message;
+      errEl.classList.add('visible');
+    }
+  }
+
+  document.getElementById('send-pipr-btn').addEventListener('click',  () => sendToPipeline('pipr'));
+  document.getElementById('send-writr-btn').addEventListener('click', () => sendToPipeline('writr'));
+
+  // ── Mind Map SVG ───────────────────────────────────────────────
+  function renderMindMap(data) {
+    // data = { center, branches: [{ label, color, leaves }] }
+    const container = document.getElementById('mindmap-container');
+    const W = 800, H = 600, cx = 400, cy = 300;
+    const branchLen = 150, leafLen = 100;
+    const branches  = data.branches || [];
+    const n         = branches.length;
+    const collapsed = branches.map(() => false);
+
+    function build() {
+      const parts = [];
+
+      branches.forEach((branch, i) => {
+        const angle  = (2 * Math.PI * i / n) - Math.PI / 2;
+        const bx     = cx + branchLen * Math.cos(angle);
+        const by     = cy + branchLen * Math.sin(angle);
+        const color  = branch.color || '#3ecfb2';
+        const leaves = branch.leaves || [];
+
+        // Connector to center
+        parts.push(`<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" stroke="${color}" stroke-width="2" stroke-opacity="0.5"/>`);
+
+        // Leaf nodes
+        if (!collapsed[i] && leaves.length) {
+          leaves.forEach((leaf, j) => {
+            const la = angle + (j - (leaves.length - 1) / 2) * 0.45;
+            const lx = bx + leafLen * Math.cos(la);
+            const ly = by + leafLen * Math.sin(la);
+            parts.push(`<line x1="${bx}" y1="${by}" x2="${lx}" y2="${ly}" stroke="#2a2e28" stroke-width="1.5"/>`);
+            parts.push(`<ellipse cx="${lx}" cy="${ly}" rx="42" ry="14" fill="#1c1f1b" stroke="#3d4439" stroke-width="1"/>`);
+            const leafLabel = leaf.length > 22 ? leaf.slice(0, 20) + '…' : leaf;
+            parts.push(`<text x="${lx}" y="${ly + 4}" text-anchor="middle" fill="#8a9487" font-family="DM Sans,sans-serif" font-size="9.5">${escHtml(leafLabel)}</text>`);
+          });
+        }
+
+        // Branch node (clickable — render after leaves so it's on top)
+        const label = branch.label.length > 16 ? branch.label.slice(0, 14) + '…' : branch.label;
+        parts.push(`<g class="branch-node" data-idx="${i}" style="cursor:pointer;" role="button" aria-label="Toggle ${escHtml(branch.label)}">
+          <ellipse cx="${bx}" cy="${by}" rx="50" ry="20" fill="${color}" fill-opacity="0.15" stroke="${color}" stroke-width="1.5"/>
+          <text x="${bx}" y="${by + 5}" text-anchor="middle" fill="${color}" font-family="DM Sans,sans-serif" font-size="11" font-weight="600">${escHtml(label)}</text>
+        </g>`);
+      });
+
+      // Center node (on top of everything)
+      parts.push(`<circle cx="${cx}" cy="${cy}" r="52" fill="#14b8a6" fill-opacity="0.12" stroke="#14b8a6" stroke-width="2"/>`);
+      const words = (data.center || 'Topic').split(' ');
+      const lh    = 14;
+      const sy    = cy - ((words.length - 1) * lh) / 2 + 5;
+      words.forEach((w, wi) => {
+        parts.push(`<text x="${cx}" y="${sy + wi * lh}" text-anchor="middle" fill="#e8ebe6" font-family="Bebas Neue,sans-serif" font-size="13" letter-spacing="1">${escHtml(w)}</text>`);
+      });
+
+      return parts.join('\n');
+    }
+
+    function render() {
+      container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#0e0f0e;border-radius:8px;">${build()}</svg>`;
+      container.querySelectorAll('.branch-node').forEach(el => {
+        el.addEventListener('click', () => {
+          collapsed[parseInt(el.dataset.idx)] ^= 1;
+          render();
+        });
+      });
+    }
+
+    render();
+  }
+
+  // ── SSE POST stream helper ─────────────────────────────────────
+  function streamSSE(url, body, onEvent) {
+    fetch(url, {
+      method  : 'POST',
+      headers : { 'Content-Type': 'application/json' },
+      body    : JSON.stringify(body),
+    }).then(res => {
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      function pump() {
+        reader.read().then(({ done, value }) => {
+          if (done) return;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();
+          lines.forEach(line => {
+            if (line.startsWith('data: ')) {
+              try { onEvent(JSON.parse(line.slice(6))); } catch (_) {}
+            }
+          });
+          pump();
+        });
+      }
+      pump();
+    }).catch(e => onEvent({ stage: 'error', error: e.message }));
+  }
+
+  // ── Utility ────────────────────────────────────────────────────
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+})();
+</script>
 </body>
 </html>

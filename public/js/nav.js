@@ -30,7 +30,7 @@
         items: [
           { label: 'PipΩr',       href: '/pipr.html' },
           { label: 'WritΩr',      href: '/writr.html' },
-          { label: 'Id8Ωr',       href: '/id8r.html',       soon: true, phase: 3 },
+          { label: 'Id8Ωr',       href: '/id8r.html' },
           { label: 'ResearchΩr',  href: '/researchr.html',  soon: true, phase: 3 },
         ]
       },
