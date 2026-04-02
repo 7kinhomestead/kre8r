@@ -833,6 +833,19 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 ══════════════════════════════════════════ -->
 <div id="tp-voice-device">
 
+  <!-- Session entry screen (shown when no code provided) -->
+  <div id="tp-vd-join" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:24px;padding:32px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:#fff;">ENTER SESSION CODE</div>
+    <input id="tp-vd-join-input" type="number" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+      style="font-size:48px;width:180px;text-align:center;background:#111;border:2px solid #3ecfb2;border-radius:10px;color:#3ecfb2;padding:16px 12px;font-family:monospace;outline:none;-moz-appearance:textfield;"
+      placeholder="0000">
+    <button onclick="vdJoinSession()"
+      style="font-size:20px;font-family:'Bebas Neue',sans-serif;letter-spacing:2px;background:#3ecfb2;color:#000;border:none;border-radius:10px;padding:18px 48px;cursor:pointer;">
+      JOIN SESSION
+    </button>
+    <div id="tp-vd-join-error" style="color:#e05c5c;font-size:14px;min-height:20px;"></div>
+  </div>
+
   <!-- Top: mic status -->
   <div id="tp-vd-top">
     <div id="tp-vd-mic-icon">🎤</div>
@@ -916,6 +929,9 @@ let displayFontSize = 64;          // received from display state; used for spee
 const REM_FONT_MIN  = 18;
 const REM_FONT_MAX  = 64;
 let networkInfo    = { ip: null, port: 3000 };
+let ip   = '';
+let port = 3000;
+let base = '';
 let displayEventsOn    = false;
 let isSecondaryDisplay = false;
 
@@ -969,9 +985,9 @@ async function loadNetworkInfo() {
     if (r.ok) { const d = await r.json(); if (d.ok) networkInfo = d; }
   } catch (_) {}
 
-  const ip   = networkInfo.ip   || window.location.hostname;
-  const port = networkInfo.port || window.location.port || 3000;
-  const base = `http://${ip}:${port}`;
+  ip   = networkInfo.ip   || window.location.hostname;
+  port = networkInfo.port || window.location.port || 3000;
+  base = `http://${ip}:${port}`;
 
   if (!networkInfo.ip) {
     document.getElementById('tp-offline-note').textContent = 'Could not detect local IP — check network connection.';
@@ -996,11 +1012,11 @@ function buildQR(url, canvasId) {
 
 function buildBothQRs(base, sessionCode) {
   const voiceUrl   = sessionCode
-    ? `${base}/teleprompter.html?session=${sessionCode}&role=voice`
-    : `${base}/teleprompter.html?role=voice`;
+    ? `${base}/teleprompter.html?session=${sessionCode}&mode=voice`
+    : `${base}/teleprompter.html?mode=voice`;
   const controlUrl = sessionCode
-    ? `${base}/teleprompter.html?session=${sessionCode}&role=control`
-    : `${base}/teleprompter.html?role=control`;
+    ? `${base}/teleprompter.html?session=${sessionCode}&mode=control`
+    : `${base}/teleprompter.html?mode=control`;
   buildQR(voiceUrl,   'tp-qr-voice');
   buildQR(controlUrl, 'tp-qr-control');
   document.getElementById('tp-url-voice').textContent   = voiceUrl;
@@ -2170,12 +2186,33 @@ function showVoiceDevice(code) {
   document.getElementById('tp-voice-device').classList.add('active');
 
   if (code) {
+    document.getElementById('tp-vd-join').style.display = 'none';
+    document.getElementById('tp-vd-top').style.display = '';
     document.getElementById('tp-vd-session-txt').textContent = `Session ${code}`;
     connectVoiceDeviceWS(code);
   } else {
-    document.getElementById('tp-vd-session-txt').textContent = 'No session code — use ?session=XXXX in URL';
-    document.getElementById('tp-vd-status').textContent = 'NO SESSION';
+    // No code — show session entry screen, hide the mic UI
+    document.getElementById('tp-vd-join').style.display = 'flex';
+    document.getElementById('tp-vd-top').style.display = 'none';
+    document.getElementById('tp-vd-vol-bar-wrap').style.display = 'none';
+    document.getElementById('tp-vd-controls').style.display = 'none';
   }
+}
+
+function vdJoinSession() {
+  const val = document.getElementById('tp-vd-join-input').value.trim();
+  if (val.length !== 4 || !/^\d{4}$/.test(val)) {
+    document.getElementById('tp-vd-join-error').textContent = 'Enter a 4-digit code';
+    return;
+  }
+  document.getElementById('tp-vd-join-error').textContent = '';
+  // Restore hidden elements before connecting
+  document.getElementById('tp-vd-join').style.display = 'none';
+  document.getElementById('tp-vd-top').style.display = '';
+  document.getElementById('tp-vd-vol-bar-wrap').style.display = '';
+  document.getElementById('tp-vd-controls').style.display = '';
+  document.getElementById('tp-vd-session-txt').textContent = `Session ${val}`;
+  connectVoiceDeviceWS(val);
 }
 
 function connectVoiceDeviceWS(code) {

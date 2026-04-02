@@ -2,7 +2,30 @@
 
 ---
 
-## Task 1 — Deploy to DigitalOcean and verify kre8r.app live
+## Task 1 — Id8Ωr Full End-to-End Test + Polish
+
+Run the complete flow (all 3 modes) and note any issues. Known things to verify:
+
+1. **Rate limit clear** — does the 3-phase sequential flow with 65s waits survive without hitting the 30k token/min limit?
+2. **Summarization** — check `pm2 logs` after research: confirm `[id8r] summarization failed` does NOT appear
+3. **Mindmap cache** — navigate away to mind map and back; confirm it doesn't re-call Claude
+4. **Skip button** — click Skip during a phase wait; confirm countdown clears and next phase starts when server is ready
+5. **Package + Brief** — confirm both complete without rate limit errors now that they use `researchSummary`
+6. **Remove debug log** — `console.log('[mindmap] messages chars...')` in `/mindmap` handler once confirmed working
+
+---
+
+## Task 2 — Id8Ωr: Research Phase Wait Time Tuning
+
+The 65s wait × 3 phases = ~3.5 min total research time. After real testing:
+- If rate limits still hit → increase to 70s
+- If no rate limits at all → reduce to 45s to tighten the UX
+- Consider making the wait duration configurable via env var `ID8R_PHASE_WAIT_MS=65000`
+- Also consider: skip the 65s wait after Phase 3 (VaultΩr) since it's a local DB call with no Claude token cost — the only waits needed are between Phase 1→2 and Phase 2→3
+
+---
+
+## Task 3 — Deploy to DigitalOcean and verify kre8r.app live
 
 The deploy script exists and is tested. Spin up the droplet and go live.
 
@@ -17,74 +40,25 @@ The deploy script exists and is tested. Spin up the droplet and go live.
 5. Point `kre8r.app` DNS A record → droplet IP
 6. After DNS propagates: `certbot --nginx -d kre8r.app -d www.kre8r.app`
 7. Verify at `https://kre8r.app` — login: `demo` / `kre8r2024`
-8. Test Upload from Device: phone browser → VaultΩr → Upload from Device → upload a clip
-9. Test TeleprΩmpter: load a script, confirm 3-device setup works on cloud URL
-
----
-
-## Task 2 — Id8Ωr (Ideation Engine) — Phase 3
-
-First new tool of Phase 3. Generates content ideas from creator voice, trending angles, and past winners.
-
-**Design:**
-- Input: niche keywords, recent video titles, optional trending topic
-- Output: 5–10 idea cards, each with: Hook, Angle (Financial/Rigged/Rock Rich), Story Structure, B-roll needs
-- Ideas saved to DB, promotable to full PipΩr project with one click
-- Uses Claude with creator-profile.json for voice + angle filtering
-
-**Files to create:**
-- `src/routes/id8r.js` — route + Claude generation
-- `public/id8r.html` — idea card UI, promote-to-project button
-- DB: `id8r_ideas` table (`project_id nullable`, `hook`, `angle`, `structure`, `created_at`)
-- Mount in `server.js`
-
----
-
-## Task 3 — Live test TeleprΩmpter full 3-device setup
-
-All fixes are committed but haven't been tested end-to-end on real hardware.
-
-**Test sequence:**
-1. Start display on laptop: `https://kre8r.app/teleprompter.html` → Load Script → Start
-2. Note the 4-digit session code on screen
-3. **Phone 1 (Control/Cari):** `https://kre8r.app/teleprompter.html?mode=control&session=XXXX`
-   - Confirm script text appears and scrolls in sync with display
-   - Test ⏪ 10s / slider / 10s ⏩ seek controls
-   - Test drag up/down on text → speed changes on display
-   - Confirm all text is full white, no fading
-4. **Phone 2 (Voice/Jason):** `https://kre8r.app/teleprompter.html?mode=voice&session=XXXX`
-   - Confirm 🎤 icon + volume bar appear
-   - Speak → display starts scrolling; pause → display stops
-   - Confirm sensitivity slider adjusts threshold
-5. Confirm teal reading guide line visible at 50% from top on display
-6. Tap any line on paused display → confirm jump to that line
+8. Test Id8Ωr full flow on live URL
 
 ---
 
 ## Carry-forward (still valid)
 
+### TeleprΩmpter 3-device live test
+1. Start display on laptop: `https://kre8r.app/teleprompter.html` → Load Script → Start
+2. Note the 4-digit session code on screen
+3. **Phone 1 (Control/Cari):** `https://kre8r.app/teleprompter.html?mode=control&session=XXXX`
+4. **Phone 2 (Voice/Jason):** `https://kre8r.app/teleprompter.html?mode=voice&session=XXXX`
+
 ### Voice Library end-to-end test
 1. Open VaultΩr → Upload from Device → upload a real `.mp4` with speech
 2. Open WritΩr → Voice Library → confirm SSE: `transcribing` → `analyzing` → `saved`
-3. Select as Primary voice → write script → confirm voice instructions in prompt
 
-### WritΩr three tabs end-to-end test
-1. Generate → confirm all 3 tabs complete and render correctly
-2. Beat coverage colors on cards and script sections
-3. Navigate away and back → all tabs restore
-
----
-
-## Code Fixes (Pending)
-
-### Fix 1 — `davinci.js` → `runScript()` Python detection
+### Code Fix — `davinci.js` → `runScript()` Python detection
 - **Problem:** `runScript()` hardcodes `spawn('python', ...)` — fails on systems where the binary is `py` or `python3`
 - **Fix:** Add `PYTHON_CANDIDATES` + `detectPython()` pattern (already in `editor.js` and `composor.js`)
-  - `PYTHON_CANDIDATES = process.env.PYTHON_PATH ? [process.env.PYTHON_PATH] : ['py', 'python3', 'python']`
-  - `let _pythonBin = null;`
-  - `async function detectPython()` — tries each candidate via `spawn(bin, ['--version'])`, caches winner
-  - Change `runScript()` from sync `Promise` constructor to `async function`
-  - Resolve binary first: `const bin = await detectPython();` then `spawn(bin, ...)`
 
 ---
 
@@ -102,3 +76,5 @@ sudo -u kre8r pm2 save                # save process list after any pm2 changes
 ```
 bash /home/kre8r/kre8r/deploy/deploy.sh
 ```
+
+---

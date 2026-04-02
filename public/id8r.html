@@ -116,18 +116,44 @@
   .research-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
   .research-sub{color:var(--text-dim);font-size:13px;}
 
-  .research-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
-  @media(max-width:700px){.research-cards{grid-template-columns:1fr;}}
-
-  .research-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px;display:flex;flex-direction:column;gap:8px;}
-  .research-card-icon{font-size:24px;}
-  .research-card-label{font-weight:600;font-size:14px;color:var(--text);}
-  .research-card-status{font-size:12px;color:var(--text-dimmer);display:flex;align-items:center;gap:6px;}
   .spinner{width:12px;height:12px;border:2px solid var(--border-bright);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0;}
   .check{color:var(--teal);font-size:14px;}
-  .research-card-result{font-size:12px;color:var(--text-dim);line-height:1.5;max-height:100px;overflow-y:auto;display:none;}
-  .research-card-result.visible{display:block;}
-  .research-continue-wrap{text-align:center;}
+  .research-continue-wrap{text-align:center;margin-top:24px;}
+
+  /* Phase feed */
+  #research-feed{display:flex;flex-direction:column;gap:14px;}
+
+  /* Phase result card */
+  .phase-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;animation:fadeUp 0.35s ease both;}
+  .phase-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .phase-card-icon{font-size:20px;}
+  .phase-card-label{font-family:var(--font-head);font-size:16px;letter-spacing:1.5px;color:var(--text);}
+  .phase-card-status{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--teal);text-transform:uppercase;}
+  .phase-card-body{font-size:13px;color:var(--text-dim);line-height:1.6;}
+  .phase-card-body .result-snippet{white-space:pre-wrap;}
+  .phase-card-titles{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+  .phase-title-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--text);line-height:1.4;}
+  .phase-bullets{padding-left:18px;margin-top:6px;}
+  .phase-bullets li{margin-bottom:4px;font-size:13px;}
+  .show-more-link{color:var(--teal);font-size:11px;text-decoration:none;white-space:nowrap;}
+
+  /* Phase wait card */
+  .phase-wait-card{background:var(--bg-card-2);border:1px solid var(--border-bright);border-radius:var(--radius);padding:28px 24px;text-align:center;animation:fadeUp 0.35s ease both;}
+  .phase-wait-card.skipped{opacity:0.4;}
+  .countdown-number{font-family:var(--font-head);font-size:72px;letter-spacing:4px;color:var(--teal);line-height:1;margin-bottom:12px;}
+  .musing-text{font-size:14px;color:var(--text-dim);font-style:italic;max-width:440px;margin:0 auto 16px;min-height:42px;transition:opacity 0.4s;}
+  .wait-progress-wrap{width:100%;max-width:320px;margin:0 auto 18px;background:var(--border);border-radius:4px;height:3px;overflow:hidden;}
+  .wait-progress-bar{height:100%;background:var(--teal);border-radius:4px;transition:width 1s linear;}
+  .skip-btn{background:none;border:1px solid var(--border-bright);color:var(--text-dimmer);border-radius:var(--radius-sm);padding:7px 16px;font-size:12px;cursor:pointer;transition:all 0.15s;}
+  .skip-btn:hover{border-color:var(--teal);color:var(--teal);}
+
+  /* Phase next indicator */
+  .phase-next-label{font-size:12px;color:var(--text-dimmer);display:flex;align-items:center;gap:6px;padding:8px 0;}
+  .phase-next-label .spinner{border-top-color:var(--text-dimmer);}
+
+  /* Vault clip cards */
+  .vault-clips{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+  .vault-clip-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--text-dim);}
 
   /* ─────────────────────────────────── */
   /* SCREEN 4 — Mind Map                 */
@@ -267,32 +293,9 @@
   <div id="screen-research" class="screen">
     <div class="research-header">
       <div class="research-title">RESEARCH</div>
-      <div class="research-sub">Running 3 research passes in parallel. This takes about 20-30 seconds.</div>
+      <div class="research-sub">Three passes. Each one needs a moment to breathe.</div>
     </div>
-    <div class="research-cards">
-
-      <div class="research-card" id="rc-youtube">
-        <div class="research-card-icon">🎬</div>
-        <div class="research-card-label">YouTube Research</div>
-        <div class="research-card-status" id="rc-youtube-status"><span class="spinner"></span> Searching...</div>
-        <div class="research-card-result" id="rc-youtube-result"></div>
-      </div>
-
-      <div class="research-card" id="rc-data">
-        <div class="research-card-icon">📊</div>
-        <div class="research-card-label">Data &amp; Facts</div>
-        <div class="research-card-status" id="rc-data-status"><span class="spinner"></span> Searching...</div>
-        <div class="research-card-result" id="rc-data-result"></div>
-      </div>
-
-      <div class="research-card" id="rc-vault">
-        <div class="research-card-icon">🗄️</div>
-        <div class="research-card-label">VaultΩr Check</div>
-        <div class="research-card-status" id="rc-vault-status"><span class="spinner"></span> Checking...</div>
-        <div class="research-card-result" id="rc-vault-result"></div>
-      </div>
-
-    </div>
+    <div id="research-feed"></div>
     <div class="research-continue-wrap">
       <button class="btn" id="research-continue-btn" disabled>
         <div class="spinner-lg"></div>
@@ -443,7 +446,7 @@
   }
 
   // ── Mode select ────────────────────────────────────────────────
-  document.querySelectorAll('[data-mode]').forEach(el => {
+  document.querySelectorAll('.mode-card[data-mode]').forEach(el => {
     el.addEventListener('click', () => {
       const mode = el.dataset.mode;
       if (mode) startSession(mode);
@@ -552,44 +555,195 @@
   }
 
   // ── Research ───────────────────────────────────────────────────
+  const MUSINGS = [
+    'The best ideas come from sitting with them for a minute.',
+    'What would make this video impossible to scroll past?',
+    'Who specifically needs to see this video right now?',
+    'What do you know about this that nobody else does?',
+    'What would Cari say about this concept?',
+    'What emotion do you want them to feel at the end?',
+    'What\'s the one sentence this whole video is about?',
+    'What would make you actually want to watch this?',
+    'The hook is everything. What\'s yours?',
+    'What are you afraid to say about this topic?',
+  ];
+
+  const PHASE_ICONS = { 1: '🎬', 2: '📊', 3: '🗄️', 4: '✦' };
+  let activeCountdown = null; // { interval, musingInterval, el }
+  let researchComplete = false;
+
   function startResearch() {
-    researchDone = { youtube: false, data: false, vault: false };
-
-    ['youtube','data','vault'].forEach(p => {
-      document.getElementById('rc-' + p + '-status').innerHTML =
-        '<span class="spinner"></span> ' + (p === 'vault' ? 'Checking...' : 'Searching...');
-      const r = document.getElementById('rc-' + p + '-result');
-      r.textContent = '';
-      r.classList.remove('visible');
-    });
+    researchComplete = false;
+    document.getElementById('research-feed').innerHTML = '';
     document.getElementById('research-continue-btn').disabled = true;
-
     showScreen('research');
     streamSSE('/api/id8r/research', { session_id: sessionId }, onResearchEvent);
   }
 
   function onResearchEvent(ev) {
-    if (ev.stage === 'pass_done') {
-      const p = ev.pass;
-      document.getElementById('rc-' + p + '-status').innerHTML = '<span class="check">✓</span> Done';
-      const rEl = document.getElementById('rc-' + p + '-result');
-      const txt = (ev.result || '');
-      rEl.textContent = txt.length > 400 ? txt.slice(0, 398) + '…' : txt;
-      rEl.classList.add('visible');
-      researchDone[p] = true;
-      checkResearchComplete();
-    }
-    if (ev.stage === 'done') checkResearchComplete();
-    if (ev.stage === 'error') console.error('[research SSE]', ev.error);
-  }
+    const feed = document.getElementById('research-feed');
 
-  function checkResearchComplete() {
-    if (researchDone.youtube && researchDone.data && researchDone.vault) {
+    if (ev.stage === 'phase_start') {
+      // Show a "working" indicator for the incoming phase
+      const el = document.createElement('div');
+      el.className = 'phase-next-label';
+      el.id = 'phase-next-' + ev.phase;
+      el.innerHTML = '<span class="spinner"></span> ' + escHtml(ev.label) + '...';
+      feed.appendChild(el);
+    }
+
+    if (ev.stage === 'phase_result') {
+      // Remove the working indicator
+      const next = document.getElementById('phase-next-' + ev.phase);
+      if (next) next.remove();
+
+      const card = document.createElement('div');
+      card.className = 'phase-card';
+      card.innerHTML =
+        '<div class="phase-card-header">' +
+          '<span class="phase-card-icon">' + (PHASE_ICONS[ev.phase] || '◎') + '</span>' +
+          '<span class="phase-card-label">' + escHtml(ev.label) + '</span>' +
+          '<span class="phase-card-status">✓ Done</span>' +
+        '</div>' +
+        '<div class="phase-card-body">' + renderPhaseBody(ev.phase, ev.data || '') + '</div>';
+      feed.appendChild(card);
+      feed.scrollTop = feed.scrollHeight;
+    }
+
+    if (ev.stage === 'phase_wait') {
+      // Clear any previous active countdown
+      if (activeCountdown) clearCountdown();
+
+      const waitCard = document.createElement('div');
+      waitCard.className = 'phase-wait-card';
+      waitCard.id = 'wait-card-' + ev.phase;
+      const musingIdx = Math.floor(Math.random() * MUSINGS.length);
+      waitCard.innerHTML =
+        '<div class="countdown-number" id="countdown-num-' + ev.phase + '">' + ev.duration + '</div>' +
+        '<div class="musing-text" id="musing-' + ev.phase + '">' + escHtml(MUSINGS[musingIdx]) + '</div>' +
+        '<div class="wait-progress-wrap"><div class="wait-progress-bar" id="progress-' + ev.phase + '" style="width:100%"></div></div>' +
+        '<button class="skip-btn" id="skip-' + ev.phase + '">Skip wait →</button>';
+      feed.appendChild(waitCard);
+      feed.scrollTop = feed.scrollHeight;
+
+      let remaining = ev.duration;
+      let musingCursor = (musingIdx + 1) % MUSINGS.length;
+
+      const countdownInterval = setInterval(() => {
+        remaining--;
+        const numEl = document.getElementById('countdown-num-' + ev.phase);
+        const barEl = document.getElementById('progress-' + ev.phase);
+        if (numEl) numEl.textContent = remaining;
+        if (barEl) barEl.style.width = ((remaining / ev.duration) * 100) + '%';
+        if (remaining <= 0) clearCountdown();
+      }, 1000);
+
+      const musingInterval = setInterval(() => {
+        const musingEl = document.getElementById('musing-' + ev.phase);
+        if (!musingEl) return;
+        musingEl.style.opacity = '0';
+        setTimeout(() => {
+          musingEl.textContent = MUSINGS[musingCursor];
+          musingEl.style.opacity = '1';
+          musingCursor = (musingCursor + 1) % MUSINGS.length;
+        }, 400);
+      }, 10000);
+
+      activeCountdown = { countdownInterval, musingInterval, phase: ev.phase };
+
+      document.getElementById('skip-' + ev.phase).addEventListener('click', () => {
+        clearCountdown();
+        const wc = document.getElementById('wait-card-' + ev.phase);
+        if (wc) wc.classList.add('skipped');
+      });
+    }
+
+    if (ev.stage === 'done') {
+      if (activeCountdown) clearCountdown();
+      researchComplete = true;
       const btn = document.getElementById('research-continue-btn');
       btn.disabled = false;
       btn.classList.remove('loading');
     }
+
+    if (ev.stage === 'error') console.error('[research SSE]', ev.error);
   }
+
+  function clearCountdown() {
+    if (!activeCountdown) return;
+    clearInterval(activeCountdown.countdownInterval);
+    clearInterval(activeCountdown.musingInterval);
+    activeCountdown = null;
+  }
+
+  function renderPhaseBody(phase, txt) {
+    if (!txt) return '';
+    if (phase === 1) {
+      // YouTube: try to surface titles as cards, rest as truncated text
+      const lines = txt.split('\n').filter(l => l.trim());
+      const titleLines = lines.filter(l =>
+        /^\d+[\.\)]\s/.test(l.trim()) || l.trim().startsWith('-') || l.trim().startsWith('•')
+      ).slice(0, 6);
+      let html = '';
+      if (titleLines.length > 0) {
+        html += '<div class="phase-card-titles">' +
+          titleLines.map(t => '<div class="phase-title-item">' + escHtml(t.replace(/^[-•\d.\)]\s*/, '').trim()) + '</div>').join('') +
+          '</div>';
+      }
+      html += truncatedText(txt, 300);
+      return html;
+    }
+    if (phase === 2) {
+      // Data: try to show bullet list
+      const lines = txt.split('\n').filter(l => l.trim());
+      const bullets = lines.filter(l => /^[-•*]\s/.test(l.trim()) || /^\d+[\.\)]\s/.test(l.trim())).slice(0, 8);
+      if (bullets.length > 0) {
+        return '<ul class="phase-bullets">' +
+          bullets.map(b => '<li>' + escHtml(b.replace(/^[-•*\d.\)]\s*/, '').trim()) + '</li>').join('') +
+          '</ul>' + truncatedText(txt, 300);
+      }
+      return truncatedText(txt, 300);
+    }
+    if (phase === 3) {
+      // Vault: show as plain text or clip cards
+      const isClips = txt.includes('clip(s)') || txt.includes('related clip');
+      if (isClips) {
+        const parts = txt.split(':');
+        const header = parts[0] || '';
+        const clips = (parts[1] || '').split(',').map(s => s.trim()).filter(Boolean);
+        return '<div style="font-size:13px;color:var(--text-dim);margin-bottom:8px;">' + escHtml(header) + '</div>' +
+          (clips.length ? '<div class="vault-clips">' + clips.map(c => '<div class="vault-clip-item">' + escHtml(c) + '</div>').join('') + '</div>' : '');
+      }
+      return '<div style="font-size:13px;color:var(--text-dim);">' + escHtml(txt) + '</div>';
+    }
+    return truncatedText(txt, 300);
+  }
+
+  function truncatedText(txt, limit) {
+    if (!txt) return '';
+    if (txt.length <= limit) {
+      return '<span class="result-snippet">' + escHtml(txt) + '</span>';
+    }
+    const id = 'trunc-' + Math.random().toString(36).slice(2, 8);
+    return '<span class="result-snippet">' + escHtml(txt.slice(0, limit)) +
+      '… <a href="#" class="show-more-link" data-trunc="' + id + '">Show more</a>' +
+      '<span id="' + id + '" style="display:none;">' + escHtml(txt.slice(limit)) + '</span>' +
+      '</span>';
+  }
+
+  // Delegated show-more handler for dynamically created links
+  document.getElementById('research-feed').addEventListener('click', function(e) {
+    const link = e.target.closest('.show-more-link');
+    if (!link) return;
+    e.preventDefault();
+    const id = link.dataset.trunc;
+    if (!id) return;
+    const full = document.getElementById(id);
+    if (!full) return;
+    const hidden = full.style.display === 'none';
+    full.style.display = hidden ? 'inline' : 'none';
+    link.textContent = hidden ? 'Show less' : 'Show more';
+  });
 
   document.getElementById('research-continue-btn').addEventListener('click', startMindMap);
 

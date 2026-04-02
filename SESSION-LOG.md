@@ -1,3 +1,63 @@
+# Kre8Ωr Session Log — 2026-04-02 (Session 14 — Id8Ωr Research Phase Overhaul)
+
+## What Was Built — Session 14
+
+---
+
+### Id8Ωr — Bug Fixes & Rate Limit Architecture (`src/routes/id8r.js`, `public/id8r.html`)
+
+#### Bug Fixes
+- **Double-fire on mode select** — `querySelectorAll('[data-mode]')` was attaching click listeners to both `.mode-card` divs AND the `.mode-btn` buttons inside them, triggering two `/start` calls per click. Fixed by scoping selector to `.mode-card[data-mode]` only — button clicks bubble up to the card once.
+- **`anthropic-beta` header** — confirmed correct value `'web-search-2025-03-05'` was in place from previous session.
+
+#### Research Phase — Complete Rewrite
+**Root cause:** 3 parallel Claude web_search calls (each up to 2048 tokens output) + summarization all fired within the same rate-limit window (30k input tokens/min), causing cascade failures on mindmap/package/brief.
+
+**Backend changes (`src/routes/id8r.js`):**
+- Research passes changed from `Promise.allSettled` parallel → fully sequential
+- Added `getRecentMessages(messages, maxExchanges=6)` helper — windows conversation to seed + last 12 messages for all Claude calls
+- YouTube and Data `max_tokens` reduced 2048 → 1024
+- `/start` handler `max_tokens` reduced 512 → 256
+- Research phase restructured into 4 explicit phases with SSE events:
+  - `phase_start` → `phase_result` → `phase_wait {duration:65}` → 65s server-side `setTimeout` → next phase
+  - Phase 1: YouTube (Claude web_search)
+  - Phase 2: Data & Facts (Claude web_search)
+  - Phase 3: VaultΩr cross-reference (local DB, no Claude)
+  - Phase 4: Summarization (Claude, no wait after)
+- Summarization wrapped in proper try/catch — fallback only fires on actual error
+- Summarization input sliced: YouTube/Data at 2000 chars, Vault at 500
+- `/mindmap`, `/package`, `/brief` all use `session.researchSummary` (condensed) not raw `session.researchResults`
+- `/mindmap` adds `session.mindmapCache` — subsequent calls return cached result instantly
+- `conversationText` in all downstream routes uses `getRecentMessages()` window
+
+**Frontend changes (`public/id8r.html`):**
+- Static 3-card research grid replaced with a live `#research-feed` — cards append dynamically as events arrive
+- `phase_result` renders a phase card per type:
+  - YouTube: extracts title lines as visual cards + truncated text
+  - Data: extracts bullet points as `<ul>` + truncated text
+  - Vault: clip name cards or plain status text
+- `phase_wait` renders a countdown card with:
+  - Large ticking countdown number (65 → 0)
+  - Rotating musing quote (10 MUSINGS array, rotates every 10s with fade transition)
+  - Progress bar depleting in sync with countdown
+  - "Skip wait →" button — clears countdown visually, server wait continues naturally
+- Delegated `click` handler on `#research-feed` handles all show-more/show-less toggles for dynamically created content
+
+---
+
+### Debug Logging Added & Left In
+- `[mindmap] messages chars / summary chars / total chars` — console.log before Claude call in `/mindmap`
+- Intentionally left for ongoing token monitoring
+
+---
+
+## Server State — End of Session 14
+- PM2: online, pid 20468, uptime ~26min, 0 restarts since last manual restart
+- All changes saved, no uncommitted issues
+- Id8Ωr full flow tested: mode select → conversation → research phases → mind map
+
+---
+
 # Kre8Ωr Session Log — 2026-03-31 (Session 13 — Deployment + Upload Feature)
 
 ## What Was Built — Session 13

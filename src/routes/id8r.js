@@ -67,7 +67,7 @@ async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null)
       'Content-Type'      : 'application/json',
       'x-api-key'         : apiKey,
       'anthropic-version' : '2023-06-01',
-      'anthropic-beta'    : tools ? 'tools-2024-04-04' : undefined,
+      ...(tools ? { 'anthropic-beta': 'web-search-2025-03-05' } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -93,6 +93,16 @@ async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024) {
   }
 }
 
+// ─── Message Window Helper ─────────────────────────────────────────────────────
+
+function getRecentMessages(messages, maxExchanges = 6) {
+  // Always keep first 2 messages (the seed), then last N exchanges
+  const seed = messages.slice(0, 2);
+  const recent = messages.slice(2);
+  const windowed = recent.slice(-(maxExchanges * 2));
+  return [...seed, ...windowed];
+}
+
 // ─── POST /api/id8r/start ──────────────────────────────────────────────────────
 
 router.post('/start', async (req, res) => {
@@ -109,7 +119,7 @@ router.post('/start', async (req, res) => {
     const firstMessage = await callClaudeText(
       systemPrompt,
       [{ role: 'user', content: "Let's get started." }],
-      512
+      256
     );
 
     sessions.set(sessionId, {
@@ -150,7 +160,7 @@ router.post('/respond', async (req, res) => {
 
     const reply = await callClaudeText(
       session.systemPrompt,
-      session.messages,
+      getRecentMessages(session.messages),
       512
     );
 
@@ -194,84 +204,107 @@ router.post('/research', async (req, res) => {
     }
 
     // Build topic summary from conversation
-    const conversationText = session.messages
+    const conversationText = getRecentMessages(session.messages)
       .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
       .join('\n');
 
     send({ stage: 'start', message: 'Starting research phase...' });
 
-    // Run 3 passes in parallel
-    const [youtubeResult, dataResult, vaultResult] = await Promise.allSettled([
+    const results = {};
 
-      // Pass 1: YouTube Research
-      (async () => {
-        send({ stage: 'pass_start', pass: 'youtube', label: 'YouTube Research' });
-        const data = await callClaude(
-          `You are a YouTube research analyst for 7 Kin Homestead, a homesteading channel with 725k TikTok followers. Search for the top performing YouTube videos on the topic from the conversation below. Return a summary of what's working — titles, angles, view counts if visible, gaps in existing content.`,
-          [{
-            role: 'user',
-            content: `Conversation:\n${conversationText}\n\nSearch YouTube for top performing videos on this topic and summarize what you find: popular titles, common angles, view counts, and any content gaps.`,
-          }],
-          2048,
-          [{ type: 'web_search_20250305', name: 'web_search' }]
-        );
-        const textContent = data.content.find(c => c.type === 'text');
-        return textContent ? textContent.text : 'No YouTube results found.';
-      })(),
+    // ── Phase 1: YouTube Research ─────────────────────────────────
+    send({ stage: 'phase_start', phase: 1, label: 'YouTube Research' });
+    try {
+      const data = await callClaude(
+        `You are a YouTube research analyst for 7 Kin Homestead, a homesteading channel with 725k TikTok followers. Search for the top performing YouTube videos on the topic from the conversation below. Return a summary of what's working — titles, angles, view counts if visible, gaps in existing content.`,
+        [{
+          role: 'user',
+          content: `Conversation:\n${conversationText}\n\nSearch YouTube for top performing videos on this topic and summarize what you find: popular titles, common angles, view counts, and any content gaps.`,
+        }],
+        1024,
+        [{ type: 'web_search_20250305', name: 'web_search' }]
+      );
+      const textContent = data.content.find(c => c.type === 'text');
+      results.youtube = textContent ? textContent.text : 'No YouTube results found.';
+    } catch (e) {
+      results.youtube = `Error: ${e.message}`;
+    }
+    send({ stage: 'phase_result', phase: 1, label: 'YouTube Research', data: results.youtube });
+    send({ stage: 'phase_wait', phase: 1, duration: 65, message: 'Reviewing findings...' });
+    await new Promise(r => setTimeout(r, 65000));
 
-      // Pass 2: Data & Facts
-      (async () => {
-        send({ stage: 'pass_start', pass: 'data', label: 'Data & Facts' });
-        const data = await callClaude(
-          `You are a research analyst for 7 Kin Homestead, a homesteading content creator. Search for statistics, studies, recent news, and compelling data hooks related to the topic from the conversation. Focus on numbers and facts that would make a homesteading audience lean in.`,
-          [{
-            role: 'user',
-            content: `Conversation:\n${conversationText}\n\nSearch for relevant statistics, studies, news hooks, and data points that could strengthen this video concept.`,
-          }],
-          2048,
-          [{ type: 'web_search_20250305', name: 'web_search' }]
-        );
-        const textContent = data.content.find(c => c.type === 'text');
-        return textContent ? textContent.text : 'No data results found.';
-      })(),
+    // ── Phase 2: Data & Facts ─────────────────────────────────────
+    send({ stage: 'phase_start', phase: 2, label: 'Data & Facts' });
+    try {
+      const data = await callClaude(
+        `You are a research analyst for 7 Kin Homestead, a homesteading content creator. Search for statistics, studies, recent news, and compelling data hooks related to the topic from the conversation. Focus on numbers and facts that would make a homesteading audience lean in.`,
+        [{
+          role: 'user',
+          content: `Conversation:\n${conversationText}\n\nSearch for relevant statistics, studies, news hooks, and data points that could strengthen this video concept.`,
+        }],
+        1024,
+        [{ type: 'web_search_20250305', name: 'web_search' }]
+      );
+      const textContent = data.content.find(c => c.type === 'text');
+      results.data = textContent ? textContent.text : 'No data results found.';
+    } catch (e) {
+      results.data = `Error: ${e.message}`;
+    }
+    send({ stage: 'phase_result', phase: 2, label: 'Data & Facts', data: results.data });
+    send({ stage: 'phase_wait', phase: 2, duration: 65, message: 'Reviewing findings...' });
+    await new Promise(r => setTimeout(r, 65000));
 
-      // Pass 3: VaultΩr cross-reference
-      (async () => {
-        send({ stage: 'pass_start', pass: 'vault', label: 'VaultΩr Check' });
-        try {
-          const { default: fetch } = await import('node-fetch');
-          const vaultRes = await fetch('http://localhost:3000/api/vault/footage');
-          if (!vaultRes.ok) return 'VaultΩr not available.';
-          const footage = await vaultRes.json();
-          const items = Array.isArray(footage) ? footage : (footage.footage || []);
-          const completed = items.filter(f => f.status === 'completed' || f.classification);
-          if (completed.length === 0) return 'No classified footage in VaultΩr yet.';
-          // Simple keyword match against topic
+    // ── Phase 3: VaultΩr cross-reference ─────────────────────────
+    send({ stage: 'phase_start', phase: 3, label: 'VaultΩr Check' });
+    try {
+      const { default: fetch } = await import('node-fetch');
+      const vaultRes = await fetch('http://localhost:3000/api/vault/footage');
+      if (!vaultRes.ok) {
+        results.vault = 'VaultΩr not available.';
+      } else {
+        const footage = await vaultRes.json();
+        const items = Array.isArray(footage) ? footage : (footage.footage || []);
+        const completed = items.filter(f => f.status === 'completed' || f.classification);
+        if (completed.length === 0) {
+          results.vault = 'No classified footage in VaultΩr yet.';
+        } else {
           const topicKeywords = conversationText.toLowerCase().split(/\s+/).filter(w => w.length > 4);
           const related = completed.filter(f => {
             const text = `${f.title || ''} ${f.classification || ''} ${f.topic || ''}`.toLowerCase();
             return topicKeywords.some(k => text.includes(k));
           });
-          if (related.length === 0) return `VaultΩr has ${completed.length} completed clips — none closely match this topic. Fresh territory.`;
-          return `VaultΩr found ${related.length} related clip(s): ${related.slice(0, 5).map(f => f.title || f.filename).join(', ')}`;
-        } catch (e) {
-          return `VaultΩr check failed: ${e.message}`;
+          results.vault = related.length === 0
+            ? `VaultΩr has ${completed.length} completed clips — none closely match this topic. Fresh territory.`
+            : `VaultΩr found ${related.length} related clip(s): ${related.slice(0, 5).map(f => f.title || f.filename).join(', ')}`;
         }
-      })(),
-    ]);
+      }
+    } catch (e) {
+      results.vault = `VaultΩr check failed: ${e.message}`;
+    }
+    send({ stage: 'phase_result', phase: 3, label: 'VaultΩr Check', data: results.vault });
+    send({ stage: 'phase_wait', phase: 3, duration: 65, message: 'Reviewing findings...' });
+    await new Promise(r => setTimeout(r, 65000));
 
-    const results = {
-      youtube : youtubeResult.status === 'fulfilled' ? youtubeResult.value : `Error: ${youtubeResult.reason?.message}`,
-      data    : dataResult.status === 'fulfilled'    ? dataResult.value    : `Error: ${dataResult.reason?.message}`,
-      vault   : vaultResult.status === 'fulfilled'   ? vaultResult.value   : `Error: ${vaultResult.reason?.message}`,
-    };
+    // ── Phase 4: Summarization ────────────────────────────────────
+    send({ stage: 'phase_start', phase: 4, label: 'Summarizing...' });
 
-    // Store research results in session
     session.researchResults = results;
 
-    send({ stage: 'pass_done', pass: 'youtube', result: results.youtube });
-    send({ stage: 'pass_done', pass: 'data',    result: results.data });
-    send({ stage: 'pass_done', pass: 'vault',   result: results.vault });
+    try {
+      const summaryMessages = [{
+        role: 'user',
+        content: `Summarize these research results into bullet points under 400 words:\n\nYouTube: ${results.youtube.slice(0, 2000)}\n\nData: ${results.data.slice(0, 2000)}\n\nVault: ${results.vault.slice(0, 500)}`,
+      }];
+      session.researchSummary = await callClaudeText(
+        'You are a research summarizer. Be concise. Return plain text bullet points only, no markdown headers.',
+        summaryMessages,
+        600
+      );
+    } catch (e) {
+      console.error('[id8r] summarization failed:', e.message);
+      session.researchSummary = `YouTube: ${results.youtube.slice(0, 300)}\n\nData: ${results.data.slice(0, 300)}\n\nVault: ${results.vault.slice(0, 200)}`;
+    }
+
     send({ stage: 'done', message: 'Research complete.' });
     res.end();
   } catch (e) {
@@ -291,15 +324,11 @@ router.post('/mindmap', async (req, res) => {
     const session = sessions.get(session_id);
     if (!session) return res.status(404).json({ error: 'Session not found or expired' });
 
-    const conversationText = session.messages
-      .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
-      .join('\n');
+    if (session.mindmapCache) return res.json(session.mindmapCache);
 
-    const researchSummary = session.researchResults
-      ? `YouTube: ${session.researchResults.youtube}\n\nData: ${session.researchResults.data}\n\nVaultΩr: ${session.researchResults.vault}`
-      : 'No research data yet.';
+    const researchSummary = session.researchSummary || 'No research data yet.';
 
-    const systemPrompt = `You are Id8Ωr, a creative strategist for 7 Kin Homestead. Generate a mind map JSON from the conversation and research below. The mind map should show the central topic and 4-6 branches (angles, audiences, hooks, themes, concerns, opportunities), each with 2-4 leaf nodes.
+    const systemPrompt = `You are Id8Ωr, a creative strategist for 7 Kin Homestead. Generate a mind map JSON from the research below. The mind map should show the central topic and 4-6 branches (angles, audiences, hooks, themes, concerns, opportunities), each with 2-4 leaf nodes.
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -320,12 +349,13 @@ Keep labels SHORT (2-5 words). Make it useful for content planning.`;
       systemPrompt,
       [{
         role: 'user',
-        content: `Conversation:\n${conversationText}\n\nResearch:\n${researchSummary}\n\nGenerate mind map JSON.`,
+        content: `Research:\n${researchSummary}\n\nGenerate mind map JSON.`,
       }],
       1024
     );
 
     session.mindMapData = result;
+    session.mindmapCache = result;
     res.json(result);
   } catch (e) {
     console.error('[id8r/mindmap]', e);
@@ -343,13 +373,11 @@ router.post('/package', async (req, res) => {
     const session = sessions.get(session_id);
     if (!session) return res.status(404).json({ error: 'Session not found or expired' });
 
-    const conversationText = session.messages
+    const conversationText = getRecentMessages(session.messages)
       .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
       .join('\n');
 
-    const researchSummary = session.researchResults
-      ? `YouTube: ${session.researchResults.youtube}\n\nData: ${session.researchResults.data}`
-      : 'No research data.';
+    const researchSummary = session.researchSummary || 'No research data.';
 
     const systemPrompt = `You are a YouTube packaging expert for 7 Kin Homestead, a homesteading creator with 725k TikTok followers. Generate packaging options based on the conversation and research.
 
@@ -401,13 +429,11 @@ router.post('/brief', async (req, res) => {
     const session = sessions.get(session_id);
     if (!session) return res.status(404).json({ error: 'Session not found or expired' });
 
-    const conversationText = session.messages
+    const conversationText = getRecentMessages(session.messages)
       .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
       .join('\n');
 
-    const researchSummary = session.researchResults
-      ? `YouTube: ${session.researchResults.youtube}\n\nData: ${session.researchResults.data}\n\nVaultΩr: ${session.researchResults.vault}`
-      : 'No research data.';
+    const researchSummary = session.researchSummary || 'No research data.';
 
     const systemPrompt = `You are Id8Ωr, a creative strategist for 7 Kin Homestead. Generate a complete Vision Brief for this video concept.
 
