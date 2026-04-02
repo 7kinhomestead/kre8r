@@ -279,6 +279,7 @@
         <button class="chat-back" id="chat-back-btn" title="Back to mode select">←</button>
         <span id="chat-mode-display">SHAPE IT</span>
         &nbsp;·&nbsp; Id8Ωr
+        <button id="start-over-btn" style="margin-left:auto;background:none;border:1px solid var(--border-bright);color:var(--text-dimmer);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;cursor:pointer;transition:all 0.15s;" title="Clear session and start over">Start Over</button>
       </div>
       <div class="chat-messages" id="chat-messages"></div>
       <div class="typing-indicator" id="typing-indicator">Id8Ωr is thinking...</div>
@@ -453,9 +454,47 @@
     });
   });
 
+  // ── Session persistence ────────────────────────────────────────
+  function saveSession() {
+    if (!sessionId) return;
+    sessionStorage.setItem('id8r_session_id', sessionId);
+    sessionStorage.setItem('id8r_chat_html', document.getElementById('chat-messages').innerHTML);
+    sessionStorage.setItem('id8r_mode_label', document.getElementById('chat-mode-display').textContent);
+  }
+
+  function clearSession() {
+    sessionStorage.removeItem('id8r_session_id');
+    sessionStorage.removeItem('id8r_chat_html');
+    sessionStorage.removeItem('id8r_mode_label');
+  }
+
+  // Restore session on load
+  (function restoreSession() {
+    const savedId    = sessionStorage.getItem('id8r_session_id');
+    const savedHtml  = sessionStorage.getItem('id8r_chat_html');
+    const savedLabel = sessionStorage.getItem('id8r_mode_label');
+    if (!savedId) return;
+    sessionId = savedId;
+    document.getElementById('chat-mode-display').textContent = savedLabel || 'SESSION';
+    if (savedHtml) document.getElementById('chat-messages').innerHTML = savedHtml;
+    showScreen('conv');
+    // Scroll to bottom of restored chat
+    const wrap = document.getElementById('chat-messages');
+    wrap.scrollTop = wrap.scrollHeight;
+  })();
+
+  // ── Start Over button ──────────────────────────────────────────
+  document.getElementById('start-over-btn').addEventListener('click', () => {
+    if (confirm('Start over? This will clear the current session.')) {
+      clearSession();
+      location.reload();
+    }
+  });
+
   // ── Back button ────────────────────────────────────────────────
   document.getElementById('chat-back-btn').addEventListener('click', () => {
     if (confirm('Go back to mode select? Your current session will be lost.')) {
+      clearSession();
       sessionId = null;
       currentMode = null;
       showScreen('mode');
@@ -483,8 +522,11 @@
       if (!res.ok) throw new Error(data.error || 'Failed to start session');
 
       sessionId = data.session_id;
+      sessionStorage.setItem('id8r_session_id', sessionId);
+      sessionStorage.setItem('id8r_mode_label', MODE_LABELS[mode] || mode);
       placeholder.remove();
       appendMessage('assistant', data.message);
+      saveSession();
     } catch (e) {
       placeholder.remove();
       appendMessage('assistant', 'Failed to start: ' + e.message);
@@ -520,9 +562,11 @@
       if (data.research_ready) {
         const cleaned = data.message.replace(/RESEARCH_READY/g, '').trim();
         if (cleaned) appendMessage('assistant', cleaned);
+        saveSession();
         setTimeout(() => startResearch(), 800);
       } else {
         appendMessage('assistant', data.message);
+        saveSession();
       }
     } catch (e) {
       document.getElementById('typing-indicator').style.display = 'none';
@@ -676,11 +720,32 @@
     activeCountdown = null;
   }
 
+  function cleanMarkdown(txt) {
+    if (!txt) return '';
+    return txt
+      // Strip encrypted_content blobs (long base64-like strings)
+      .replace(/[A-Za-z0-9+/=]{60,}/g, '')
+      // --- horizontal rule → marker we'll handle in HTML
+      .replace(/^---+$/gm, '\u2500\u2500\u2500')
+      // ### headings → plain text (keep the text)
+      .replace(/^#{1,6}\s+(.+)$/gm, '$1')
+      // **bold** → keep text, strip markers
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      // lone * bullets → clean dash
+      .replace(/^\*\s+/gm, '- ')
+      // -- → remove
+      .replace(/--/g, '')
+      // collapse 3+ blank lines to 2
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
   function renderPhaseBody(phase, txt) {
     if (!txt) return '';
+    const cleaned = cleanMarkdown(txt);
     if (phase === 1) {
       // YouTube: try to surface titles as cards, rest as truncated text
-      const lines = txt.split('\n').filter(l => l.trim());
+      const lines = cleaned.split('\n').filter(l => l.trim());
       const titleLines = lines.filter(l =>
         /^\d+[\.\)]\s/.test(l.trim()) || l.trim().startsWith('-') || l.trim().startsWith('•')
       ).slice(0, 6);
@@ -690,45 +755,45 @@
           titleLines.map(t => '<div class="phase-title-item">' + escHtml(t.replace(/^[-•\d.\)]\s*/, '').trim()) + '</div>').join('') +
           '</div>';
       }
-      html += truncatedText(txt, 300);
+      html += truncatedText(cleaned, 300);
       return html;
     }
     if (phase === 2) {
       // Data: try to show bullet list
-      const lines = txt.split('\n').filter(l => l.trim());
+      const lines = cleaned.split('\n').filter(l => l.trim());
       const bullets = lines.filter(l => /^[-•*]\s/.test(l.trim()) || /^\d+[\.\)]\s/.test(l.trim())).slice(0, 8);
       if (bullets.length > 0) {
         return '<ul class="phase-bullets">' +
           bullets.map(b => '<li>' + escHtml(b.replace(/^[-•*\d.\)]\s*/, '').trim()) + '</li>').join('') +
-          '</ul>' + truncatedText(txt, 300);
+          '</ul>' + truncatedText(cleaned, 300);
       }
-      return truncatedText(txt, 300);
+      return truncatedText(cleaned, 300);
     }
     if (phase === 3) {
       // Vault: show as plain text or clip cards
-      const isClips = txt.includes('clip(s)') || txt.includes('related clip');
+      const isClips = cleaned.includes('clip(s)') || cleaned.includes('related clip');
       if (isClips) {
-        const parts = txt.split(':');
+        const parts = cleaned.split(':');
         const header = parts[0] || '';
         const clips = (parts[1] || '').split(',').map(s => s.trim()).filter(Boolean);
         return '<div style="font-size:13px;color:var(--text-dim);margin-bottom:8px;">' + escHtml(header) + '</div>' +
           (clips.length ? '<div class="vault-clips">' + clips.map(c => '<div class="vault-clip-item">' + escHtml(c) + '</div>').join('') + '</div>' : '');
       }
-      return '<div style="font-size:13px;color:var(--text-dim);">' + escHtml(txt) + '</div>';
+      return '<div style="font-size:13px;color:var(--text-dim);">' + escHtml(cleaned) + '</div>';
     }
-    return truncatedText(txt, 300);
+    return truncatedText(cleaned, 300);
   }
 
   function truncatedText(txt, limit) {
     if (!txt) return '';
+    const id = 'trunc-' + Math.random().toString(36).slice(2, 8);
     if (txt.length <= limit) {
       return '<span class="result-snippet">' + escHtml(txt) + '</span>';
     }
-    const id = 'trunc-' + Math.random().toString(36).slice(2, 8);
-    return '<span class="result-snippet">' + escHtml(txt.slice(0, limit)) +
-      '… <a href="#" class="show-more-link" data-trunc="' + id + '">Show more</a>' +
+    return '<span class="result-snippet">' +
+      escHtml(txt.slice(0, limit)) +
       '<span id="' + id + '" style="display:none;">' + escHtml(txt.slice(limit)) + '</span>' +
-      '</span>';
+      '</span> <a href="#" class="show-more-link" data-trunc="' + id + '">Show more</a>';
   }
 
   // Delegated show-more handler for dynamically created links

@@ -67,7 +67,6 @@ async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null)
       'Content-Type'      : 'application/json',
       'x-api-key'         : apiKey,
       'anthropic-version' : '2023-06-01',
-      ...(tools ? { 'anthropic-beta': 'web-search-2025-03-05' } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -222,16 +221,25 @@ router.post('/research', async (req, res) => {
           content: `Conversation:\n${conversationText}\n\nSearch YouTube for top performing videos on this topic and summarize what you find: popular titles, common angles, view counts, and any content gaps.`,
         }],
         1024,
-        [{ type: 'web_search_20250305', name: 'web_search' }]
+        [{ type: 'web_search_20260209', name: 'web_search' }]
       );
-      const textContent = data.content.find(c => c.type === 'text');
-      results.youtube = textContent ? textContent.text : 'No YouTube results found.';
+      const fullText = data.content
+        .map(block => {
+          if (block.type === 'text') return block.text;
+          if (block.type === 'web_search_tool_result') {
+            return block.content?.map(r => `${r.title}\n${r.url}\n${r.encrypted_content || ''}`).join('\n\n') || '';
+          }
+          return '';
+        })
+        .filter(Boolean)
+        .join('\n\n');
+      results.youtube = fullText || 'No YouTube results found.';
     } catch (e) {
       results.youtube = `Error: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 1, label: 'YouTube Research', data: results.youtube });
-    send({ stage: 'phase_wait', phase: 1, duration: 65, message: 'Reviewing findings...' });
-    await new Promise(r => setTimeout(r, 65000));
+    send({ stage: 'phase_wait', phase: 1, duration: 120, message: 'Reviewing findings...' });
+    await new Promise(r => setTimeout(r, 120000));
 
     // ── Phase 2: Data & Facts ─────────────────────────────────────
     send({ stage: 'phase_start', phase: 2, label: 'Data & Facts' });
@@ -243,16 +251,25 @@ router.post('/research', async (req, res) => {
           content: `Conversation:\n${conversationText}\n\nSearch for relevant statistics, studies, news hooks, and data points that could strengthen this video concept.`,
         }],
         1024,
-        [{ type: 'web_search_20250305', name: 'web_search' }]
+        [{ type: 'web_search_20260209', name: 'web_search' }]
       );
-      const textContent = data.content.find(c => c.type === 'text');
-      results.data = textContent ? textContent.text : 'No data results found.';
+      const fullText = data.content
+        .map(block => {
+          if (block.type === 'text') return block.text;
+          if (block.type === 'web_search_tool_result') {
+            return block.content?.map(r => `${r.title}\n${r.url}\n${r.encrypted_content || ''}`).join('\n\n') || '';
+          }
+          return '';
+        })
+        .filter(Boolean)
+        .join('\n\n');
+      results.data = fullText || 'No data results found.';
     } catch (e) {
       results.data = `Error: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 2, label: 'Data & Facts', data: results.data });
-    send({ stage: 'phase_wait', phase: 2, duration: 65, message: 'Reviewing findings...' });
-    await new Promise(r => setTimeout(r, 65000));
+    send({ stage: 'phase_wait', phase: 2, duration: 120, message: 'Reviewing findings...' });
+    await new Promise(r => setTimeout(r, 120000));
 
     // ── Phase 3: VaultΩr cross-reference ─────────────────────────
     send({ stage: 'phase_start', phase: 3, label: 'VaultΩr Check' });
@@ -282,8 +299,8 @@ router.post('/research', async (req, res) => {
       results.vault = `VaultΩr check failed: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 3, label: 'VaultΩr Check', data: results.vault });
-    send({ stage: 'phase_wait', phase: 3, duration: 65, message: 'Reviewing findings...' });
-    await new Promise(r => setTimeout(r, 65000));
+    send({ stage: 'phase_wait', phase: 3, duration: 120, message: 'Reviewing findings...' });
+    await new Promise(r => setTimeout(r, 120000));
 
     // ── Phase 4: Summarization ────────────────────────────────────
     send({ stage: 'phase_start', phase: 4, label: 'Summarizing...' });
