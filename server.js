@@ -59,6 +59,7 @@ app.use('/api/teleprompter',  teleprompterRouter);
 app.use('/api/shootday',      require('./src/routes/shootday'));
 app.use('/api/voice-library', require('./src/routes/voice-library'));
 app.use('/api/mailor',       require('./src/routes/mailor'));
+app.use('/api/kajabi',       require('./src/routes/kajabi'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
