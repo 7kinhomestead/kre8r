@@ -137,6 +137,7 @@
   .beat-name-wrap{flex:1;min-width:0;}
   .beat-name{font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;}
   .beat-pct{font-size:11px;color:var(--text-dimmer);}
+  .beat-function{font-size:11px;color:var(--text-muted);font-style:italic;margin-top:2px;}
   .beat-status-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:0.4px;flex-shrink:0;}
   .tag-covered{background:var(--green-glow);color:var(--green);border:1px solid var(--green-border);}
   .tag-amber{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-border);}
@@ -1351,6 +1352,7 @@ function buildBeatCard(beat, idx) {
       <div class="beat-name-wrap">
         <div class="beat-name">${name}</div>
         <div class="beat-pct">${pct}</div>
+        ${beat.emotional_function ? `<div class="beat-function">${beat.emotional_function}</div>` : ''}
       </div>
       ${tagHtml}
       <button class="beat-expand" tabindex="-1">▾</button>

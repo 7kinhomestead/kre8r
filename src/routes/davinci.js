@@ -20,10 +20,21 @@ const SCRIPTS_DIR = path.join(__dirname, '..', '..', 'scripts', 'davinci');
 // ─────────────────────────────────────────────
 // INTERNAL: call a Python script, return parsed JSON
 // ─────────────────────────────────────────────
+function detectPython() {
+  const candidates = ['python3', 'python', 'py'];
+  for (const cmd of candidates) {
+    try {
+      const result = require('child_process').spawnSync(cmd, ['--version']);
+      if (result.status === 0) return cmd;
+    } catch (_) {}
+  }
+  return 'python3';
+}
+
 function runScript(scriptName, args = [], timeoutMs = 120_000) {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(SCRIPTS_DIR, scriptName);
-    const child = spawn('python', [scriptPath, ...args], {
+    const child = spawn(detectPython(), [scriptPath, ...args], {
       env: { ...process.env },
       timeout: timeoutMs
     });
