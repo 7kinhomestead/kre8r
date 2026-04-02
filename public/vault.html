@@ -263,6 +263,8 @@
 
   /* ── BRAW BADGE (card) ── */
   .braw-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--amber-glow);border:1px solid rgba(240,185,66,0.4);color:var(--amber);letter-spacing:0.4px;margin-top:5px;}
+  .btn-voice-analyze{font-size:10px;padding:2px 8px;background:transparent;border:1px solid var(--teal);color:var(--teal);border-radius:4px;cursor:pointer;margin-top:4px;}
+  .btn-voice-analyze:hover{background:var(--teal);color:var(--bg);}
 
   /* ── DAVINCI PANEL ── */
   .davinci-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;animation:fadeUp 0.4s 0.12s ease both;}
@@ -936,6 +938,9 @@ function renderCard(f) {
     const posted = !!fDist[p.key];
     return `<span class="dist-dot${posted ? ' posted' : ''}" title="${p.full}${posted ? ' — posted' : ''}" onclick="toggleDistDot(event,${f.id},'${p.key}')">${p.short}</span>`;
   }).join('');
+  const voiceBtnHtml = f.shot_type === 'completed-video'
+    ? `<button class="btn-voice-analyze" onclick="analyzeVoice(${f.id}, '${escAttr(f.original_filename)}', '${escAttr(f.file_path)}')" title="Analyze voice profile">🎤 Voice</button>`
+    : '';
   const dur = f.duration ? formatDuration(f.duration) : null;
   const isSelected = selectedIds.has(f.id);
 
@@ -956,6 +961,7 @@ function renderCard(f) {
           ${dur ? `<span class="footage-dur">${dur}</span>` : ''}
         </div>
         <div class="dist-dots">${dotHtml}</div>
+        ${voiceBtnHtml}
         ${(f.braw_source_path && f.codec === 'BRAW') ? '<span class="braw-badge">PROXY NEEDED</span>' : ''}
       </div>
     </div>
@@ -1571,6 +1577,26 @@ function parentDir(filePath) {
 function escHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(str) { return (str||'').replace(/'/g, '\'').replace(/"/g, '&quot;'); }
+
+async function analyzeVoice(footageId, filename, filePath) {
+  if (!confirm(`Analyze voice profile from "${filename}"?`)) return;
+  const profileName = prompt('Profile name:', filename.replace(/\.[^.]+$/, ''));
+  if (!profileName) return;
+  showToast('Starting voice analysis…', 'teal');
+  const res = await fetch('/api/voice-library/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file_path: filePath, name: profileName, save: true })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    showToast(`Voice analysis started — job ${data.job_id}`, 'green');
+  } else {
+    showToast(data.error || 'Analysis failed', 'red');
+  }
 }
 
 function showToast(msg, type = 'green') {

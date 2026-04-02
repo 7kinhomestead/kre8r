@@ -129,6 +129,8 @@ router.post('/broadcast', async (req, res) => {
       gen_community,    // boolean — generate community post
     } = req.body;
 
+    console.log('[mailor/broadcast] flags:', { gen_email, gen_blog, gen_community });
+
     if (!prompt) return res.status(400).json({ error: 'prompt is required' });
 
     const profile = loadProfile();
