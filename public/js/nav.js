@@ -61,8 +61,9 @@
           { label: 'GateΩr',    sublabel: 'M1', href: '/m1-approval-dashboard.html' },
           { label: 'PackageΩr', sublabel: 'M2', href: '/m2-package-generator.html' },
           { label: 'CaptionΩr', sublabel: 'M3', href: '/m3-caption-generator.html' },
-          { label: 'MailΩr',    sublabel: 'M4', href: '/m4-email-generator.html' },
-          { label: 'AnalytΩr',  href: '/analytr.html', soon: true, phase: 5 },
+          { label: 'MailΩr',      sublabel: 'M4', href: '/mailor.html' },
+          { label: 'AudienceΩr', sublabel: 'M5', href: '/audience.html' },
+          { label: 'AnalytΩr',   href: '/analytr.html', soon: true, phase: 5 },
         ]
       }
     ]

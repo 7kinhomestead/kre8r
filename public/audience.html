@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AudienceΩr — Kre8Ωr</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="/js/nav.js" defer></script>
+  <style>
+    :root {
+      --gold: #f59e0b;
+      --gold-dim: rgba(245,158,11,0.1);
+      --gold-border: rgba(245,158,11,0.25);
+    }
+    .page-header { padding: 32px 24px 0; }
+    .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 3px; margin: 0; }
+    .page-title span { color: var(--gold); }
+    .page-sub { color: var(--text-muted); margin: 4px 0 0; font-size: 14px; }
+
+    .status-bar { margin: 16px 24px; padding: 10px 16px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .status-bar.connected { background: rgba(20,184,166,0.08); border: 1px solid rgba(20,184,166,0.2); color: var(--teal); }
+    .status-bar.disconnected { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #ef4444; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+    .tabs { display: flex; gap: 2px; padding: 0 24px; margin-top: 24px; border-bottom: 1px solid var(--border); }
+    .tab { padding: 10px 20px; font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-muted); background: none; border-top: none; border-left: none; border-right: none; transition: color 0.2s; }
+    .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .tab-panel { display: none; padding: 24px; }
+    .tab-panel.active { display: block; }
+
+    .section-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .section-label { font-size: 11px; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 12px; }
+
+    .contacts-grid { display: grid; gap: 8px; }
+    .contact-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+    .contact-name { font-size: 14px; font-weight: 500; }
+    .contact-email { font-size: 12px; color: var(--text-muted); }
+    .contact-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+    .contact-tag { font-size: 10px; padding: 2px 8px; background: var(--gold-dim); border: 1px solid var(--gold-border); color: var(--gold); border-radius: 4px; }
+    .contact-actions { display: flex; gap: 6px; }
+
+    .tags-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    .tag-card { padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; }
+    .tag-name { font-size: 13px; }
+    .tag-count { font-size: 11px; color: var(--text-muted); }
+
+    .broadcast-tag-box { display: grid; gap: 12px; }
+    .field label { font-size: 11px; letter-spacing: 1px; color: var(--text-muted); display: block; margin-bottom: 4px; }
+    .field select, .field input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+    .generate-btn { width: 100%; padding: 14px; background: var(--gold); color: #000; font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; border: none; border-radius: 8px; cursor: pointer; margin-top: 8px; }
+    .generate-btn:hover { opacity: 0.9; }
+    .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .offers-grid { display: grid; gap: 8px; }
+    .offer-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+    .offer-name { font-size: 14px; }
+    .offer-price { font-size: 12px; color: var(--text-muted); }
+
+    .progress-bar-wrap { background: var(--bg); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 0.3s; }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    .toast.green  { background: rgba(20,184,166,0.15); border: 1px solid var(--teal); color: var(--teal); }
+    .toast.amber  { background: rgba(245,158,11,0.15); border: 1px solid var(--gold); color: var(--gold); }
+    .toast.red    { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #ef4444; }
+
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 14px; }
+    .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
+    .page-btn { padding: 6px 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+    .btn-sm { font-size: 11px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; }
+    .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm.danger:hover { border-color: #ef4444; color: #ef4444; }
+  </style>
+</head>
+<body>
+  <nav id="main-nav"></nav>
+
+  <div class="page-header">
+    <h1 class="page-title">AUDIENCE<span>Ω</span>R</h1>
+    <p class="page-sub">Contacts, tags, offers — your Rock Rich audience in one place.</p>
+  </div>
+
+  <div id="status-bar" class="status-bar disconnected">
+    <div class="status-dot"></div>
+    <span id="status-text">Checking Kajabi connection…</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('contacts')">Contacts</button>
+    <button class="tab" onclick="switchTab('tags')">Tags</button>
+    <button class="tab" onclick="switchTab('broadcast')">Broadcast Tag</button>
+    <button class="tab" onclick="switchTab('offers')">Offers</button>
+  </div>
+
+  <!-- CONTACTS -->
+  <div id="tab-contacts" class="tab-panel active">
+    <div class="section-card">
+      <div class="section-label">CONTACTS</div>
+      <div class="search-row">
+        <input type="text" id="contact-search" placeholder="Search by name or email…" oninput="filterContacts()">
+        <select id="tag-filter" onchange="loadContacts(1)">
+          <option value="">All contacts</option>
+        </select>
+      </div>
+      <div id="contacts-list" class="contacts-grid">
+        <div class="empty-state">Loading contacts…</div>
+      </div>
+      <div class="pagination">
+        <button class="page-btn" id="prev-btn" onclick="loadContacts(currentPage-1)" disabled>← Prev</button>
+        <span id="page-info" style="font-size:12px;color:var(--text-muted);padding:6px 8px;"></span>
+        <button class="page-btn" id="next-btn" onclick="loadContacts(currentPage+1)" disabled>Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAGS -->
+  <div id="tab-tags" class="tab-panel">
+    <div class="section-card">
+      <div class="section-label">ALL TAGS</div>
+      <div id="tags-list" class="tags-grid">
+        <div class="empty-state">Loading tags…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BROADCAST TAG -->
+  <div id="tab-broadcast" class="tab-panel">
+    <div class="section-card">
+      <div class="section-label">BROADCAST TAG — fire an automation to a segment</div>
+      <div class="broadcast-tag-box">
+        <div class="field">
+          <label>TAG TO ADD</label>
+          <select id="bc-tag-id">
+            <option value="">Select a tag…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>SEGMENT (optional — leave blank for everyone)</label>
+          <select id="bc-filter-tag">
+            <option value="">Everyone</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>LABEL (for your reference)</label>
+          <input type="text" id="bc-label" placeholder="e.g. Rock Rich launch announcement">
+        </div>
+        <div id="bc-progress" style="display:none">
+          <div style="font-size:12px;color:var(--text-muted)" id="bc-progress-text">Starting…</div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="bc-progress-bar" style="width:0%"></div></div>
+        </div>
+        <button class="generate-btn" id="bc-btn" onclick="broadcastTag()">FIRE TAG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OFFERS -->
+  <div id="tab-offers" class="tab-panel">
+    <div class="section-card">
+      <div class="section-label">ROCK RICH OFFERS</div>
+      <div id="offers-list" class="offers-grid">
+        <div class="empty-state">Loading offers…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let currentPage   = 1;
+    let allContacts   = [];
+    let allTags       = [];
+    let isConnected   = false;
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function init() {
+      await checkStatus();
+      if (isConnected) {
+        await loadTags();
+        await loadContacts(1);
+        await loadOffers();
+      }
+    }
+
+    async function checkStatus() {
+      const res  = await fetch('/api/kajabi/status');
+      const data = await res.json();
+      const bar  = document.getElementById('status-bar');
+      const txt  = document.getElementById('status-text');
+      isConnected = data.connected;
+      if (data.connected) {
+        bar.className = 'status-bar connected';
+        txt.textContent = `Connected — ${data.site}`;
+      } else {
+        bar.className = 'status-bar disconnected';
+        txt.textContent = `Not connected — ${data.reason || 'Check API credentials'}`;
+      }
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach((t,i) => {
+        const names = ['contacts','tags','broadcast','offers'];
+        t.classList.toggle('active', names[i] === name);
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(`tab-${name}`).classList.add('active');
+    }
+
+    // ── Contacts ──────────────────────────────────────────────────────────────
+    async function loadContacts(page = 1) {
+      currentPage = page;
+      const tagFilter = document.getElementById('tag-filter').value;
+      const url = tagFilter
+        ? `/api/kajabi/contacts?tag=${encodeURIComponent(tagFilter)}&page=${page}`
+        : `/api/kajabi/contacts?page=${page}`;
+      const res  = await fetch(url);
+      const data = await res.json();
+      allContacts = data?.data || [];
+      renderContacts(allContacts);
+      const meta = data?.meta || {};
+      document.getElementById('page-info').textContent = `Page ${page}`;
+      document.getElementById('prev-btn').disabled = page <= 1;
+      document.getElementById('next-btn').disabled = !meta.next_page;
+    }
+
+    function renderContacts(contacts) {
+      const el = document.getElementById('contacts-list');
+      if (!contacts.length) { el.innerHTML = '<div class="empty-state">No contacts found.</div>'; return; }
+      el.innerHTML = contacts.map(c => {
+        const a  = c.attributes || {};
+        const tags = (a.tags || []).map(t => `<span class="contact-tag">${escHtml(t.name)}</span>`).join('');
+        return `<div class="contact-row">
+          <div>
+            <div class="contact-name">${escHtml(a.full_name || a.email)}</div>
+            <div class="contact-email">${escHtml(a.email)}</div>
+            <div class="contact-tags" style="margin-top:4px">${tags}</div>
+          </div>
+          <div class="contact-actions">
+            <button class="btn-sm" onclick="addTagToContact('${c.id}')">+ Tag</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function filterContacts() {
+      const q = document.getElementById('contact-search').value.toLowerCase();
+      const filtered = allContacts.filter(c => {
+        const a = c.attributes || {};
+        return (a.full_name || '').toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q);
+      });
+      renderContacts(filtered);
+    }
+
+    async function addTagToContact(contactId) {
+      const tag = allTags.find(t => {
+        const name = prompt('Tag name to add:');
+        return t.attributes?.name === name;
+      });
+      if (!tag) return;
+      const res = await fetch('/api/kajabi/tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: contactId, tag_id: tag.id })
+      });
+      const data = await res.json();
+      if (data.ok) showToast('Tag added', 'green');
+      else showToast(data.error || 'Failed', 'red');
+    }
+
+    // ── Tags ──────────────────────────────────────────────────────────────────
+    async function loadTags() {
+      const res  = await fetch('/api/kajabi/tags');
+      const data = await res.json();
+      allTags    = data?.data || [];
+
+      // Populate tag filter dropdowns
+      const opts = allTags.map(t => `<option value="${t.id}">${escHtml(t.attributes?.name || t.id)}</option>`).join('');
+      document.getElementById('tag-filter').innerHTML    = '<option value="">All contacts</option>' + opts;
+      document.getElementById('bc-tag-id').innerHTML     = '<option value="">Select a tag…</option>' + opts;
+      document.getElementById('bc-filter-tag').innerHTML = '<option value="">Everyone</option>' + opts;
+
+      // Render tags tab
+      const el = document.getElementById('tags-list');
+      if (!allTags.length) { el.innerHTML = '<div class="empty-state">No tags found.</div>'; return; }
+      el.innerHTML = allTags.map(t => `
+        <div class="tag-card">
+          <div class="tag-name">${escHtml(t.attributes?.name || t.id)}</div>
+          <div class="tag-count">${t.attributes?.contacts_count ?? ''}</div>
+        </div>`).join('');
+    }
+
+    // ── Broadcast Tag ─────────────────────────────────────────────────────────
+    async function broadcastTag() {
+      const tag_id        = document.getElementById('bc-tag-id').value;
+      const filter_tag_id = document.getElementById('bc-filter-tag').value;
+      const label         = document.getElementById('bc-label').value.trim();
+      if (!tag_id) { showToast('Select a tag to add', 'amber'); return; }
+
+      const btn = document.getElementById('bc-btn');
+      btn.disabled = true;
+      btn.textContent = 'FIRING…';
+      document.getElementById('bc-progress').style.display = 'block';
+
+      const res = await fetch('/api/kajabi/broadcast-tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag_id, filter_tag_id: filter_tag_id || null, label })
+      });
+
+      const reader = res.body.getReader();
+      const dec    = new TextDecoder();
+      let buf      = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value);
+        const lines = buf.split('\n\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          try {
+            const ev = JSON.parse(line.slice(5).trim());
+            if (ev.stage === 'progress') {
+              const pct = ev.total ? Math.round((ev.tagged / ev.total) * 100) : 0;
+              document.getElementById('bc-progress-bar').style.width = pct + '%';
+              document.getElementById('bc-progress-text').textContent = `Tagged ${ev.tagged} of ${ev.total} contacts`;
+            }
+            if (ev.stage === 'done') {
+              showToast(ev.message, 'green');
+              document.getElementById('bc-progress-bar').style.width = '100%';
+            }
+            if (ev.stage === 'error') showToast(ev.error, 'red');
+          } catch (_) {}
+        }
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'FIRE TAG';
+    }
+
+    // ── Offers ────────────────────────────────────────────────────────────────
+    async function loadOffers() {
+      const res  = await fetch('/api/kajabi/offers');
+      const data = await res.json();
+      const offers = data?.data || [];
+      const el   = document.getElementById('offers-list');
+      if (!offers.length) { el.innerHTML = '<div class="empty-state">No offers found.</div>'; return; }
+      el.innerHTML = offers.map(o => {
+        const a = o.attributes || {};
+        return `<div class="offer-row">
+          <div>
+            <div class="offer-name">${escHtml(a.name || o.id)}</div>
+            <div class="offer-price">${a.price ? '$' + (a.price/100).toFixed(2) : 'Free'}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Utils ─────────────────────────────────────────────────────────────────
+    function escHtml(str) {
+      return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showToast(msg, type = 'green') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className   = `toast ${type} show`;
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
