@@ -124,6 +124,9 @@ router.post('/broadcast', async (req, res) => {
       voice_secondary,  // optional second voice
       voice_blend,      // 10–90, primary weight
       project_id,       // optional
+      gen_email,        // boolean — generate A/B email pair
+      gen_blog,         // boolean — generate blog post
+      gen_community,    // boolean — generate community post
     } = req.body;
 
     if (!prompt) return res.status(400).json({ error: 'prompt is required' });
@@ -183,12 +186,46 @@ Return JSON only:
 
     const result = await callClaude(systemPrompt, userPrompt, 3000);
 
-    // Save to DB if project linked
-    if (project_id) {
-      db.saveEmails(parseInt(project_id), { broadcast: result });
+    const response = { ok: true };
+
+    if (gen_email !== false) {
+      response.broadcast = result;
     }
 
-    res.json({ ok: true, broadcast: result });
+    if (gen_blog) {
+      const blogPrompt = `Write a blog post based on this prompt: ${prompt}
+Segment: ${segment || 'everyone'}
+Goal: ${goal || 'not specified'}
+
+Write a complete blog post in Jason's voice. Plain text only. Include a title, 3-5 paragraphs, and a clear call to action at the end.
+
+Return JSON only:
+{
+  "title": "blog post title",
+  "body": "full blog post body"
+}`;
+      response.blog_post = await callClaude(systemPrompt, blogPrompt, 2000);
+    }
+
+    if (gen_community) {
+      const communityPrompt = `Write a Kajabi community post based on this prompt: ${prompt}
+Segment: ${segment || 'everyone'}
+Goal: ${goal || 'not specified'}
+
+Short, punchy community post. Feels like a real person posting, not a broadcast. 2-4 paragraphs max. End with a question or call to action that invites replies.
+
+Return JSON only:
+{
+  "body": "full community post"
+}`;
+      response.community_post = await callClaude(systemPrompt, communityPrompt, 1000);
+    }
+
+    if (project_id) {
+      db.saveEmails(parseInt(project_id), { broadcast: response.broadcast });
+    }
+
+    res.json(response);
   } catch (e) {
     console.error('[mailor/broadcast]', e);
     res.status(500).json({ error: e.message });
