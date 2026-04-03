@@ -66,14 +66,53 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
 
   // ── Step 2: Click '+New Email Campaign' button ────────────────────────────
   try {
-    const newBtnSel = [
-      'a:has-text("+New Email Campaign")',
-      'button:has-text("+New Email Campaign")',
-      'a:has-text("New Email Campaign")',
-      'button:has-text("New Email Campaign")',
-    ].join(', ');
-    await page.waitForSelector(newBtnSel, { timeout: 10000 });
-    await page.click(newBtnSel);
+    // Give React time to fully render after navigation
+    await page.waitForTimeout(2000);
+
+    let clicked = false;
+
+    // Try 1: data attribute selector via JS click (bypasses visibility requirements)
+    try {
+      const found = await page.evaluate(() => {
+        const el = document.querySelector('[data-create-save-as-template]');
+        if (el) { el.click(); return true; }
+        return false;
+      });
+      if (found) clicked = true;
+    } catch (_) {}
+
+    // Try 2: Playwright locator by text (handles React-rendered text nodes)
+    if (!clicked) {
+      try {
+        const loc = page.getByText('+New Email Campaign', { exact: false }).first();
+        await loc.click({ timeout: 6000 });
+        clicked = true;
+      } catch (_) {}
+    }
+
+    // Try 3: getByText without the plus sign
+    if (!clicked) {
+      try {
+        const loc = page.getByText('New Email Campaign', { exact: false }).first();
+        await loc.click({ timeout: 6000 });
+        clicked = true;
+      } catch (_) {}
+    }
+
+    // Try 4: waitForSelector with CSS — last resort
+    if (!clicked) {
+      const newBtnSel = [
+        'a:has-text("+New Email Campaign")',
+        'button:has-text("+New Email Campaign")',
+        'a:has-text("New Email Campaign")',
+        'button:has-text("New Email Campaign")',
+      ].join(', ');
+      await page.waitForSelector(newBtnSel, { timeout: 8000 });
+      await page.click(newBtnSel);
+      clicked = true;
+    }
+
+    if (!clicked) throw new Error('Could not find +New Email Campaign button after all attempts');
     await page.waitForLoadState('networkidle');
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step2-new-campaign-btn');
