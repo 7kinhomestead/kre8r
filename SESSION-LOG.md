@@ -1,3 +1,80 @@
+# Kre8Ωr Session Log — 2026-04-02 (Session 15 — Docs, Proxy Pipeline Debug, Selects Fix)
+
+## What Was Built — Session 15
+
+---
+
+### Documentation (`README.md`, `OPUS_REVIEW.md`)
+
+- **`README.md`** — Created clean professional README covering: what Kre8Ωr is, prerequisites, installation, environment variables, instance configuration, running locally (dev + PM2), full pipeline overview, module reference for every tool, project structure, tech stack, database notes, DaVinci caveat, license.
+- **`OPUS_REVIEW.md`** — Created structured architecture review document for Charlie meeting (potential technical co-founder). Covers: pipeline overview, tech stack, 5 evaluation questions (architecture health, Id8Ωr flow, commercial viability, creator profile pattern, what's missing), current known issues, commercialization thinking.
+- Both committed and pushed: `a3f58cb — docs: README, OPUS_REVIEW — clean professional docs for Charlie meeting`
+
+---
+
+### VaultΩr — Export Proxies Button (`public/vault.html`)
+
+- Added **Export Proxies** button to each DaVinci project card in the `renderDvpCard()` function
+- Button ID: `ep-btn-{project_id}` — allows disabling during render
+- Click flow: `prompt()` for BRAW folder path → `POST /api/davinci/export-proxies` with `{ project_id, braw_folder_path }` → disables button + shows "Rendering…" → toast on success/failure → `loadDavinciProjects()` refresh
+- `exportProxies(projectId, projectName)` function added after `addNextTimeline()`
+- Endpoint already existed (`src/routes/davinci.js` line 159) — this was the missing UI
+
+---
+
+### EditΩr Selects Engine — Bug Fixes (`src/editor/selects-new.js`)
+
+Three fixes to unblock CutΩr from running on project 18 footage:
+
+1. **`script.trim()` guard** — Added `typeof script === 'string'` check before both `.trim()` calls in `detectShootMode()`. Prevents crash when `script` is not a string (e.g. object or null from DB).
+
+2. **`talking_head` shot type** — `classifyClipForSelects()` only checked for `'talking-head'` and `'dialogue'`. VaultΩr stores the value as `'talking_head'` (underscore). Added `|| shotType === 'talking_head'` to the condition — clips now correctly route to selects logic instead of falling through to `keep_flag`.
+
+3. **Confidence check removed** — `classifyClipForSelects()` had `|| confidence < 0.7` in the mixed/uncertain branch. `classification_confidence` is not stored in the DB for any current footage (returns `undefined` → defaults to `0`). The `0 < 0.7` check was blocking every clip. Removed entirely — routing now based on `shot_type` only, which VaultΩr classification provides reliably.
+
+---
+
+### Proxy Pipeline — Investigation & Diagnosis
+
+Investigated why clips 587 and 588 (project 18, `A009_` BRAW files from `H:\The Rock Rich Community Launch\`) can't be transcribed:
+
+- Both have `proxy_path: undefined` — no proxies ingested yet
+- `callWhisper(clip.file_path || clip.proxy_path)` falls back to the `.braw` path which Whisper can't read
+- VaultΩr intake watcher confirmed on `D:/kre8r/intake`
+- **Found:** 7 proxy `.mp4` files already exist in `D:/kre8r/intake` including `A009_03211400_C039_proxy.mp4` and `A009_03211408_C040_proxy.mp4`
+- **Root cause:** Proxies are in the intake folder but have NOT been ingested yet — confirmed `findBrawByBasename()` exists in `db.js` and will correctly match on backslash path patterns, so ingest will auto-link them once triggered
+- **Resolution:** Trigger VaultΩr ingest on `D:/kre8r/intake` to pick up the waiting proxy files
+
+---
+
+### DB Maintenance
+
+- Unassigned 5 stale clips (IDs 582–586) from project 18 via `PATCH /api/vault/footage/:id { project_id: null }`
+- Project 18 now has exactly 2 clips: 587 and 588
+
+---
+
+## Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `README.md` | Created — full professional README |
+| `OPUS_REVIEW.md` | Created — architecture review for Charlie meeting |
+| `public/vault.html` | Export Proxies button + `exportProxies()` function |
+| `src/editor/selects-new.js` | script.trim() guard, talking_head match, confidence check removed |
+| `public/js/nav.js` | CutΩr added then reverted (cutor.html doesn't exist yet) |
+| `SESSION-LOG.md` | This file |
+| `TODO.md` | Updated next 3 tasks |
+
+---
+
+## Server State — End of Session 15
+- PM2: online, pid 24020, 57.9mb, no errors
+- Watcher: `D:/kre8r/intake` — 7 proxy files waiting to be ingested
+- All selects-engine fixes saved and restarted
+
+---
+
 # Kre8Ωr Session Log — 2026-04-02 (Session 14 — Id8Ωr Research Phase Overhaul)
 
 ## What Was Built — Session 14

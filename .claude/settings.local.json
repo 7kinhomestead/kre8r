@@ -251,7 +251,20 @@
       "Bash(python3 -c \":*)",
       "Bash(node test-kajabi.js)",
       "Bash(curl -s http://localhost:3000/api/kajabi/status)",
-      "Bash(node -e \"require\\(''./src/routes/id8r.js''\\)\")"
+      "Bash(node -e \"require\\(''./src/routes/id8r.js''\\)\")",
+      "Bash(curl \"http://localhost:3000/api/vault/footage?project_id=18\")",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.slice\\(0,5\\).forEach\\(c=>console.log\\(c.id, c.shot_type, c.classification_confidence\\)\\);}\\)\")",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.forEach\\(c=>console.log\\(c.id, c.shot_type, c.classification_confidence, c.original_filename\\)\\);}\\)\")",
+      "Bash(curl -X PATCH http://localhost:3000/api/vault/footage/583 -H \"Content-Type: application/json\" -d \"{\"\"project_id\"\": null}\")",
+      "Bash(curl -X PATCH http://localhost:3000/api/vault/footage/584 -H \"Content-Type: application/json\" -d \"{\"\"project_id\"\": null}\")",
+      "Bash(curl -X PATCH http://localhost:3000/api/vault/footage/585 -H \"Content-Type: application/json\" -d \"{\"\"project_id\"\": null}\")",
+      "Bash(curl -X PATCH http://localhost:3000/api/vault/footage/586 -H \"Content-Type: application/json\" -d \"{\"\"project_id\"\": null}\")",
+      "Bash(curl -X PATCH http://localhost:3000/api/vault/footage/582 -H \"Content-Type: application/json\" -d \"{\"\"project_id\"\": null}\")",
+      "Bash(curl \"http://localhost:3000/api/vault/footage\")",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.filter\\(c=>c.original_filename&&c.original_filename.includes\\(''''proxy''''\\)\\).forEach\\(c=>console.log\\(c.id, c.original_filename, c.file_path\\)\\);}\\)\")",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.filter\\(c=>c.original_filename&&\\(c.original_filename.includes\\(''''C039''''\\)||c.original_filename.includes\\(''''C040''''\\)\\)\\).forEach\\(c=>console.log\\(c.id, c.original_filename, c.file_path, c.is_proxy\\)\\);}\\)\")",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.forEach\\(c=>console.log\\(c.id, c.shot_type, c.proxy_path\\)\\);}\\)\")",
+      "Bash(node -e \"const fs=require\\(''fs''\\); fs.readdirSync\\(''D:/kre8r/intake''\\).forEach\\(f=>console.log\\(f\\)\\);\")"
     ]
   }
 }

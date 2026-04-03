@@ -48,9 +48,9 @@ const FILLER_WORDS           = new Set(['um','uh','hmm','ah','er','like','you kn
 // ─── Shoot mode detection ────────────────────────────────────────────────────
 
 function detectShootMode(script) {
-  if (!script || script.trim().length < 50) return 'freeform';
+  if (!script || (typeof script === 'string' ? script : '').trim().length < 50) return 'freeform';
   // If script has clear beat markers or substantial content → scripted
-  const lines = script.trim().split('\n').filter(l => l.trim().length > 0);
+  const lines = (typeof script === 'string' ? script : '').trim().split('\n').filter(l => l.trim().length > 0);
   if (lines.length >= 3) return 'scripted';
   return 'hybrid';
 }
@@ -64,10 +64,10 @@ function classifyClipForSelects(clip) {
   if (shotType === 'b-roll') {
     return { action: 'skip', reason: 'b-roll — handled by b-roll bridge' };
   }
-  if (shotType === 'mixed' || confidence < 0.7) {
+  if (shotType === 'mixed') {
     return { action: 'keep_flag', reason: 'mixed or uncertain — keep whole clip, flag for human review' };
   }
-  if (shotType === 'talking-head' || shotType === 'dialogue') {
+  if (shotType === 'talking-head' || shotType === 'talking_head' || shotType === 'dialogue') {
     return { action: 'selects', reason: 'talking head — run selects logic' };
   }
   // Unknown classification → keep it
