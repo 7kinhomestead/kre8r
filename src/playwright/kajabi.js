@@ -171,7 +171,12 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
 
     await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button[type="submit"], button:not([disabled])'));
-      const btn = buttons.find(b => b.textContent.trim().includes('Continue') || b.getAttribute('data-disable-with') === 'Saving...');
+      const btn = buttons.find(b =>
+        b.textContent.trim().includes('Continue') ||
+        b.textContent.trim().includes('Create') ||
+        b.getAttribute('data-disable-with') === 'Saving...' ||
+        b.getAttribute('data-disable-with') === 'Create'
+      );
       if (!btn) throw new Error('Continue button not found');
       btn.click();
     });
