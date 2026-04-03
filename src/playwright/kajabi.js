@@ -169,15 +169,16 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
     await page.waitForTimeout(500);
 
     await page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button[type="submit"], button:not([disabled])'));
-      const btn = buttons.find(b =>
-        b.textContent.trim().includes('Continue') ||
-        b.textContent.trim().includes('Create') ||
-        b.getAttribute('data-disable-with') === 'Saving...' ||
-        b.getAttribute('data-disable-with') === 'Create'
+      const els = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+      const el = els.find(e =>
+        e.textContent.trim().includes('Continue') ||
+        e.textContent.trim().includes('Create') ||
+        e.value === 'Create' ||
+        e.value === 'Continue' ||
+        e.getAttribute('data-disable-with') === 'Create'
       );
-      if (!btn) throw new Error('Continue button not found');
-      btn.click();
+      if (!el) throw new Error('Continue button not found');
+      el.click();
     });
     await page.waitForLoadState('networkidle');
   } catch (e) {
