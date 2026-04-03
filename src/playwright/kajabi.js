@@ -180,7 +180,7 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
       if (!el) throw new Error('Continue button not found');
       el.click();
     });
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step6-title-continue');
     return { ok: false, error: `Step 6 (fill title + Continue): ${e.message}`, screenshot };
@@ -189,23 +189,11 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
   // ── Step 7: Segment/recipient selection, then 'Save and Continue' ─────────
   try {
     if (segment) {
-      const segSel = [
-        `label:has-text("${segment}")`,
-        `input[value="${segment}"]`,
-        'select[name*="segment"]',
-        'select[name*="recipient"]',
-        'select[name*="group"]',
-      ].join(', ');
-      const segEl = await page.$(segSel);
-      if (segEl) {
-        const tagName = await segEl.evaluate(el => el.tagName.toLowerCase());
-        if (tagName === 'select') {
-          await segEl.selectOption({ label: segment });
-        } else {
-          await segEl.click();
-        }
+      try {
+        await page.selectOption('select[name="segment"]', { label: segment });
+      } catch (_) {
+        // No match or select not found — Kajabi defaults to all members, continue regardless
       }
-      // No match — Kajabi defaults to all members, continue regardless
     }
 
     const saveContSel = [
