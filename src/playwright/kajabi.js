@@ -121,43 +121,12 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
 
   // ── Step 3: Click 'Email Broadcast' (not Email Sequence) ─────────────────
   try {
-    let clicked = false;
-
-    // Try 1: getByText locator
-    try {
-      await page.getByText('Email Broadcast').click({ timeout: 6000 });
-      clicked = true;
-    } catch (_) {}
-
-    // Try 2: data-campaign-type attribute
-    if (!clicked) {
-      try {
-        await page.locator('[data-campaign-type="broadcast"]').click({ timeout: 4000 });
-        clicked = true;
-      } catch (_) {}
-    }
-
-    // Try 3: radio input with value="broadcast"
-    if (!clicked) {
-      try {
-        await page.locator('input[value="broadcast"]').click({ timeout: 4000 });
-        clicked = true;
-      } catch (_) {}
-    }
-
-    // Try 4: DOM walk via evaluate — clicks any element whose text is exactly 'Email Broadcast'
-    if (!clicked) {
-      await page.evaluate(() => {
-        const els = document.querySelectorAll('*');
-        for (const el of els) {
-          if (el.textContent.trim() === 'Email Broadcast') { el.click(); break; }
-        }
-      });
-      clicked = true; // evaluate won't throw even if nothing was found — best effort
-    }
-
-    // Wait 1000ms for React to register the selection
-    await page.waitForTimeout(1000);
+    await page.evaluate(() => {
+      const el = document.querySelector('[data-js-tabs-target="email-campaign-selection-option-broadcast"]');
+      if (!el) throw new Error('Email Broadcast tab not found');
+      el.click();
+    });
+    await page.waitForTimeout(1500);
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step3-select-broadcast-type');
     return { ok: false, error: `Step 3 (click Email Broadcast type): ${e.message}`, screenshot };
