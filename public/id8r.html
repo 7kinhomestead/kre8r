@@ -132,6 +132,7 @@
   }
   .concept-card.chosen{border-color:var(--teal);background:linear-gradient(135deg,var(--bg-card-2),rgba(62,207,178,0.05));}
 
+  .novel-badge{font-size:10px;letter-spacing:2px;color:var(--teal);background:rgba(20,184,166,0.1);border:1px solid rgba(20,184,166,0.3);border-radius:4px;padding:2px 8px;display:inline-block;margin-bottom:8px;font-family:'DM Sans',sans-serif;}
   .concept-angle{
     display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
     color:var(--teal);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);
@@ -728,6 +729,7 @@
       const card = document.createElement('div');
       card.className = 'concept-card';
       card.innerHTML = `
+        ${concept.is_novel ? '<div class="novel-badge">✨ NEW ANGLE</div>' : ''}
         <span class="concept-angle">${escHtml(concept.angle || '')}</span>
         <div class="concept-headline">${escHtml(concept.headline || '')}</div>
         <div class="concept-why">${escHtml(concept.why || '')}</div>
