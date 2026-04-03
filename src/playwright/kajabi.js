@@ -121,25 +121,57 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
 
   // ── Step 3: Click 'Email Broadcast' (not Email Sequence) ─────────────────
   try {
-    const broadcastTypeSel = [
-      'button:has-text("Email Broadcast")',
-      'a:has-text("Email Broadcast")',
-      'label:has-text("Email Broadcast")',
-      '[data-testid="email-broadcast"]',
-    ].join(', ');
-    await page.waitForSelector(broadcastTypeSel, { timeout: 10000 });
-    await page.click(broadcastTypeSel);
-    await page.waitForLoadState('networkidle');
+    let clicked = false;
+
+    // Try 1: getByText locator
+    try {
+      await page.getByText('Email Broadcast').click({ timeout: 6000 });
+      clicked = true;
+    } catch (_) {}
+
+    // Try 2: data-campaign-type attribute
+    if (!clicked) {
+      try {
+        await page.locator('[data-campaign-type="broadcast"]').click({ timeout: 4000 });
+        clicked = true;
+      } catch (_) {}
+    }
+
+    // Try 3: radio input with value="broadcast"
+    if (!clicked) {
+      try {
+        await page.locator('input[value="broadcast"]').click({ timeout: 4000 });
+        clicked = true;
+      } catch (_) {}
+    }
+
+    // Try 4: DOM walk via evaluate — clicks any element whose text is exactly 'Email Broadcast'
+    if (!clicked) {
+      await page.evaluate(() => {
+        const els = document.querySelectorAll('*');
+        for (const el of els) {
+          if (el.textContent.trim() === 'Email Broadcast') { el.click(); break; }
+        }
+      });
+      clicked = true; // evaluate won't throw even if nothing was found — best effort
+    }
+
+    // Wait 1000ms for React to register the selection
+    await page.waitForTimeout(1000);
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step3-select-broadcast-type');
     return { ok: false, error: `Step 3 (click Email Broadcast type): ${e.message}`, screenshot };
   }
 
-  // ── Step 4: Click 'Continue' button ──────────────────────────────────────
+  // ── Step 4: Wait for Continue to be ENABLED, then click ──────────────────
   try {
-    const continueSel = 'button:has-text("Continue"), a:has-text("Continue")';
-    await page.waitForSelector(continueSel, { timeout: 8000 });
-    await page.click(continueSel);
+    // Wait 2000ms for React to enable the button after type selection
+    await page.waitForTimeout(2000);
+
+    // Wait for Continue that is NOT disabled
+    const enabledContinueSel = 'button:has-text("Continue"):not([disabled]), a:has-text("Continue"):not([disabled])';
+    await page.waitForSelector(enabledContinueSel, { timeout: 8000 });
+    await page.click(enabledContinueSel);
     await page.waitForLoadState('networkidle');
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step4-continue-after-type');
