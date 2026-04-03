@@ -213,7 +213,8 @@
   .phase-title-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--text);line-height:1.4;}
   .phase-bullets{padding-left:18px;margin-top:6px;}
   .phase-bullets li{margin-bottom:4px;font-size:13px;}
-  .show-more-link{color:var(--teal);font-size:11px;text-decoration:none;white-space:nowrap;}
+  .show-more-link{display:inline-block;margin-top:10px;background:none;border:1px solid var(--border-bright);color:var(--teal);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;transition:all 0.15s;}
+  .show-more-link:hover{border-color:var(--teal);background:var(--teal-glow);}
 
   /* Phase wait card */
   .phase-wait-card{background:var(--bg-card-2);border:1px solid var(--border-bright);border-radius:var(--radius);padding:28px 24px;text-align:center;animation:fadeUp 0.35s ease both;}
@@ -947,7 +948,7 @@
           titleLines.map(t => '<div class="phase-title-item">' + escHtml(t.replace(/^[-•\d.\)]\s*/, '').trim()) + '</div>').join('') +
           '</div>';
       }
-      html += truncatedText(cleaned, 300);
+      html += truncatedText(cleaned, 600);
       return html;
     }
     if (phase === 2) {
@@ -956,9 +957,9 @@
       if (bullets.length > 0) {
         return '<ul class="phase-bullets">' +
           bullets.map(b => '<li>' + escHtml(b.replace(/^[-•*\d.\)]\s*/, '').trim()) + '</li>').join('') +
-          '</ul>' + truncatedText(cleaned, 300);
+          '</ul>' + truncatedText(cleaned, 600);
       }
-      return truncatedText(cleaned, 300);
+      return truncatedText(cleaned, 600);
     }
     if (phase === 3) {
       const isClips = cleaned.includes('clip(s)') || cleaned.includes('related clip');
@@ -971,7 +972,7 @@
       }
       return '<div style="font-size:13px;color:var(--text-dim);">' + escHtml(cleaned) + '</div>';
     }
-    return truncatedText(cleaned, 300);
+    return truncatedText(cleaned, 600);
   }
 
   function truncatedText(txt, limit) {
@@ -983,7 +984,7 @@
     return '<span class="result-snippet">' +
       escHtml(txt.slice(0, limit)) +
       '<span id="' + id + '" style="display:none;">' + escHtml(txt.slice(limit)) + '</span>' +
-      '</span> <a href="#" class="show-more-link" data-trunc="' + id + '">Show more</a>';
+      '</span><br><a href="#" class="show-more-link" data-trunc="' + id + '">Show Full Research →</a>';
   }
 
   // Delegated show-more handler for dynamically created links
@@ -997,7 +998,7 @@
     if (!full) return;
     const hidden = full.style.display === 'none';
     full.style.display = hidden ? 'inline' : 'none';
-    link.textContent   = hidden ? 'Show less' : 'Show more';
+    link.textContent   = hidden ? 'Show Less ↑' : 'Show Full Research →';
   });
 
   // Research → Package (no mindmap)
