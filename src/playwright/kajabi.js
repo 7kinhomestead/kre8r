@@ -149,15 +149,14 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
 
   // ── Step 5: Click 'Use Classic Editor' (skip template selection) ──────────
   try {
-    const classicSel = [
-      'button:has-text("Use Classic Editor")',
-      'a:has-text("Use Classic Editor")',
-      'button:has-text("Classic Editor")',
-      'a:has-text("Classic Editor")',
-    ].join(', ');
-    await page.waitForSelector(classicSel, { timeout: 10000 });
-    await page.click(classicSel);
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    await page.evaluate(() => {
+      const els = Array.from(document.querySelectorAll('button, a'));
+      const el = els.find(e => e.textContent.trim().includes('Classic Editor'));
+      if (!el) throw new Error('Classic Editor button not found');
+      el.click();
+    });
+    await page.waitForTimeout(2000);
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step5-classic-editor');
     return { ok: false, error: `Step 5 (click Use Classic Editor): ${e.message}`, screenshot };
