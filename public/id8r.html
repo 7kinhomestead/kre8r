@@ -301,6 +301,23 @@
   /* ── Error ── */
   .error-msg{background:var(--red-glow);border:1px solid var(--red);border-radius:var(--radius-sm);color:var(--red);padding:10px 14px;font-size:13px;margin-bottom:12px;display:none;}
   .error-msg.visible{display:block;}
+
+  /* ── Session Expired Overlay ── */
+  .session-expired-overlay{
+    display:none;position:fixed;inset:0;background:rgba(14,15,14,0.95);z-index:9999;
+    align-items:center;justify-content:center;flex-direction:column;gap:20px;
+    animation:fadeUp 0.3s ease both;
+  }
+  .session-expired-overlay.visible{display:flex;}
+  .session-expired-icon{font-size:48px;line-height:1;}
+  .session-expired-title{font-family:var(--font-head);font-size:32px;letter-spacing:2px;color:var(--text);}
+  .session-expired-msg{color:var(--text-dim);font-size:14px;text-align:center;max-width:420px;line-height:1.7;}
+  .session-expired-btn{
+    margin-top:8px;background:var(--teal);color:#0e0f0e;border:none;border-radius:var(--radius-sm);
+    padding:13px 28px;font-family:var(--font-body);font-size:14px;font-weight:700;
+    cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;
+  }
+  .session-expired-btn:hover{background:var(--teal-dim);}
 </style>
 </head>
 <body>
@@ -504,6 +521,14 @@
 
 </div><!-- .main -->
 
+<!-- ── Session Expired Overlay ── -->
+<div class="session-expired-overlay" id="session-expired-overlay">
+  <div class="session-expired-icon">⏱</div>
+  <div class="session-expired-title">SESSION EXPIRED</div>
+  <div class="session-expired-msg">The server was restarted and your session was cleared. Your conversation is gone, but your next idea will be even better.</div>
+  <button class="session-expired-btn" id="session-expired-btn">Start Over →</button>
+</div>
+
 <script src="/js/nav.js" defer></script>
 <script>window.addEventListener('load', () => initNav())</script>
 
@@ -646,7 +671,7 @@
         body    : JSON.stringify({ session_id: sessionId, message: text }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed'); }
 
       document.getElementById('typing-indicator').style.display = 'none';
       sendBtn.disabled = false;
@@ -705,7 +730,7 @@
         body    : JSON.stringify({ session_id: sessionId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to generate concepts');
+      if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed to generate concepts'); }
 
       conceptsData = data.concepts || [];
       saveSession();
@@ -759,7 +784,7 @@
         body    : JSON.stringify({ session_id: sessionId, choice }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed'); }
 
       chosenConcept = data.chosen;
       saveSession();
@@ -913,7 +938,10 @@
       btn.classList.remove('loading');
     }
 
-    if (ev.stage === 'error') console.error('[research SSE]', ev.error);
+    if (ev.stage === 'error') {
+      if (ev.error === 'SESSION_EXPIRED') { checkSessionExpired({ error: 'SESSION_EXPIRED' }); return; }
+      console.error('[research SSE]', ev.error);
+    }
   }
 
   function clearCountdown() {
@@ -1020,7 +1048,7 @@
         body    : JSON.stringify({ session_id: sessionId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed'); }
 
       document.getElementById('package-loading').classList.remove('visible');
       document.getElementById('package-content').style.display = 'block';
@@ -1105,7 +1133,7 @@
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed'); }
 
       document.getElementById('brief-loading').classList.remove('visible');
       document.getElementById('brief-content').style.display = 'block';
@@ -1167,7 +1195,7 @@
         body    : JSON.stringify({ session_id: sessionId, destination }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed'); }
       window.location.href = data.redirect_url;
     } catch (e) {
       piprBtn.disabled  = false;
@@ -1209,6 +1237,20 @@
       pump();
     }).catch(e => onEvent({ stage: 'error', error: e.message }));
   }
+
+  // ── Session Expired ────────────────────────────────────────────
+  function checkSessionExpired(data) {
+    if (data && data.error === 'SESSION_EXPIRED') {
+      document.getElementById('session-expired-overlay').classList.add('visible');
+      return true;
+    }
+    return false;
+  }
+
+  document.getElementById('session-expired-btn').addEventListener('click', () => {
+    clearSession();
+    location.reload();
+  });
 
   // ── Utility ────────────────────────────────────────────────────
   function escHtml(s) {

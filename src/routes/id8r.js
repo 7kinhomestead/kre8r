@@ -18,7 +18,16 @@
 const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
+const path    = require('path');
 const db      = require('../db');
+
+const creatorProfile = require(path.join(__dirname, '../../creator-profile.json'));
+
+// ─── Session Expired Response ──────────────────────────────────────────────────
+const SESSION_EXPIRED = {
+  error   : 'SESSION_EXPIRED',
+  message : 'Your session expired — the server was restarted. Click Start Over to begin a new session.',
+};
 
 // ─── Session Store ─────────────────────────────────────────────────────────────
 
@@ -151,7 +160,7 @@ router.post('/respond', async (req, res) => {
     }
 
     const session = sessions.get(session_id);
-    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+    if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     session.messages.push({ role: 'user', content: message });
 
@@ -180,34 +189,63 @@ router.post('/concepts', async (req, res) => {
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
     const session = sessions.get(session_id);
-    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+    if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const conversationText = getRecentMessages(session.messages)
       .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
       .join('\n');
 
+    const angles = Object.values(creatorProfile.content_angles || {});
+    const anglesText = angles
+      .map(a => `- ${a.label}: ${a.description}`)
+      .join('\n');
+
     const result = await callClaudeJSON(
-      `You are Id8Ωr, a creative strategist for Jason Rutland at 7 Kin Homestead (725k TikTok, homesteading content). Based on the conversation below, generate 3 distinct concept directions for Jason's video. Each must be meaningfully different — different angle, different audience hook, different emotional entry point. Be specific to what Jason actually said, not generic. Use his real voice: straight-talking, funny, real numbers, never corporate.
+      `You are Id8Ωr, a creative strategist for Jason Rutland at 7 Kin Homestead (725k TikTok, homesteading content). Based on the conversation below, generate exactly 3 concept directions for Jason's video.
+
+RULES:
+- Concepts 1 and 2 MUST use angles from the provided list below. Pick the 2 best fits for what Jason described.
+- Concept 3 MUST be a novel angle you invent — something NOT on the list. A fresh frame, an unexpected lens, a creative repackage of the topic that doesn't fit any existing category.
+- Each concept must be meaningfully different — different audience hook, different emotional entry point.
+- Be specific to what Jason actually said, not generic. Use his real voice: straight-talking, funny, real numbers, never corporate.
+
+JASON'S CONTENT ANGLES:
+${anglesText}
 
 Return ONLY valid JSON in this exact shape:
 {
   "concepts": [
     {
       "id": 1,
-      "angle": "Financial Take",
+      "angle": "Label from the angles list",
       "headline": "one punchy sentence — the video in a nutshell",
       "why": "one sentence — why this works for Jason's audience specifically",
-      "hook": "the first 1-2 sentences of the video, in Jason's voice"
+      "hook": "the first 1-2 sentences of the video, in Jason's voice",
+      "is_novel": false
+    },
+    {
+      "id": 2,
+      "angle": "Label from the angles list",
+      "headline": "one punchy sentence — the video in a nutshell",
+      "why": "one sentence — why this works for Jason's audience specifically",
+      "hook": "the first 1-2 sentences of the video, in Jason's voice",
+      "is_novel": false
+    },
+    {
+      "id": 3,
+      "angle": "Your invented angle name",
+      "headline": "one punchy sentence — the video in a nutshell",
+      "why": "one sentence — why this novel frame works for Jason's audience specifically",
+      "hook": "the first 1-2 sentences of the video, in Jason's voice",
+      "is_novel": true
     }
   ]
-}
-
-Use these angles where appropriate: Financial Take, System Is Rigged, Rock Rich Episode, Practical How-To, Mistakes / What Not To Do, Lifestyle / Day-in-Life, High Curiosity / Viral. Pick the 3 best fits for what Jason described.`,
+}`,
       [{
         role: 'user',
-        content: `Conversation:\n${conversationText}\n\nGenerate 3 distinct concept directions.`,
+        content: `Conversation:\n${conversationText}\n\nGenerate 3 concept directions: 2 from the angles list, 1 novel angle you invent.`,
       }],
-      800
+      1000
     );
 
     session.concepts = result.concepts || [];
@@ -227,7 +265,7 @@ router.post('/choose', async (req, res) => {
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
     const session = sessions.get(session_id);
-    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+    if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const choiceNum = parseInt(choice);
     if (!isNaN(choiceNum) && choiceNum >= 1 && choiceNum <= 3) {
@@ -272,7 +310,7 @@ router.post('/research', async (req, res) => {
 
     const session = sessions.get(session_id);
     if (!session) {
-      send({ stage: 'error', error: 'Session not found or expired' });
+      send({ stage: 'error', error: 'SESSION_EXPIRED', message: SESSION_EXPIRED.message });
       return res.end();
     }
 
@@ -422,7 +460,7 @@ router.post('/package', async (req, res) => {
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
     const session = sessions.get(session_id);
-    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+    if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const conversationText = getRecentMessages(session.messages)
       .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
@@ -480,7 +518,7 @@ router.post('/brief', async (req, res) => {
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
     const session = sessions.get(session_id);
-    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+    if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const conversationText = getRecentMessages(session.messages)
       .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
@@ -533,7 +571,7 @@ router.post('/send-pipeline', async (req, res) => {
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
     const session = sessions.get(session_id);
-    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+    if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     if (!session.briefData) return res.status(400).json({ error: 'No brief generated yet — run /brief first' });
 
