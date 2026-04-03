@@ -225,14 +225,34 @@
       </div>
 
       <div class="action-row">
-        <button class="btn" id="bc-send-btn" onclick="sendBroadcast()">
+        <button class="btn" id="bc-send-btn" onclick="previewBroadcast()">
           <div class="spinner-sm"></div>
-          <span class="btn-label">Send Broadcast →</span>
+          <span class="btn-label">Preview Broadcast →</span>
         </button>
       </div>
     </div>
 
     <div class="progress-log" id="bc-log"></div>
+
+    <!-- Dry-run confirm panel — shown after preview screenshot -->
+    <div id="bc-preview-confirm" style="display:none;">
+      <div class="form-section" style="border-color:rgba(240,185,66,0.4);background:rgba(240,185,66,0.04);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;">👁 Preview Ready</div>
+        <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">
+          Kajabi has been filled in but nothing was sent yet. A screenshot has been saved so you can verify it looks right.
+        </div>
+        <div id="bc-preview-path" style="font-family:monospace;font-size:11px;color:var(--text-dimmer);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:16px;word-break:break-all;"></div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;">This is what Kajabi will send. Confirm?</div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn" id="bc-confirm-yes" onclick="confirmSendBroadcast()">
+            <div class="spinner-sm"></div>
+            <span class="btn-label">Yes — Send It →</span>
+          </button>
+          <button class="btn btn-secondary" onclick="cancelBroadcast()">No — Go Back</button>
+        </div>
+      </div>
+    </div>
+
     <div class="op-result" id="bc-result">
       <div class="op-result-label" id="bc-result-label"></div>
       <div class="op-result-msg" id="bc-result-msg"></div>
@@ -532,7 +552,7 @@
   };
 
   // ── SSE stream helper ────────────────────────────────────────
-  function streamSSE(url, body, logId, resultId) {
+  function streamSSE(url, body, logId, resultId, onEvent) {
     const log    = document.getElementById(logId);
     const result = document.getElementById(resultId);
     log.innerHTML = '';
@@ -559,17 +579,22 @@
               if (!line.startsWith('data: ')) return;
               try {
                 const ev = JSON.parse(line.slice(6));
+                // Call optional per-event hook first
+                if (onEvent) onEvent(ev);
                 if (ev.stage === 'progress') {
                   log.innerHTML += `<div>▸ ${escHtml(ev.message)}</div>`;
                   log.scrollTop = log.scrollHeight;
                 }
                 if (ev.stage === 'done') {
                   log.innerHTML += `<div style="color:var(--green);">✓ ${escHtml(ev.message)}</div>`;
-                  result.className = 'op-result success visible';
-                  document.getElementById(resultId + '-label').textContent = '✓ Success';
-                  document.getElementById(resultId + '-msg').textContent   = ev.message;
-                  const det = Object.entries(ev).filter(([k]) => !['stage','message'].includes(k)).map(([k,v]) => `${k}: ${v}`).join('  ·  ');
-                  document.getElementById(resultId + '-detail').textContent = det;
+                  // Only show generic result card on real sends (not dry runs — confirm panel handles that)
+                  if (!ev.dryRun) {
+                    result.className = 'op-result success visible';
+                    document.getElementById(resultId + '-label').textContent = '✓ Success';
+                    document.getElementById(resultId + '-msg').textContent   = ev.message;
+                    const det = Object.entries(ev).filter(([k]) => !['stage','message','dryRun'].includes(k)).map(([k,v]) => `${k}: ${v}`).join('  ·  ');
+                    document.getElementById(resultId + '-detail').textContent = det;
+                  }
                 }
                 if (ev.stage === 'error') {
                   log.innerHTML += `<div style="color:var(--red);">✗ ${escHtml(ev.error)}</div>`;
@@ -607,16 +632,58 @@
   }
 
   // ── Actions ──────────────────────────────────────────────────
-  window.sendBroadcast = async function() {
+  // Stash current broadcast params for use in confirm step
+  let _pendingBroadcast = null;
+
+  window.previewBroadcast = async function() {
     if (!guardConnection()) return;
     const subject    = document.getElementById('bc-subject').value.trim();
     const body       = document.getElementById('bc-body').value.trim();
     const segment    = document.getElementById('bc-segment').value;
     const scheduleAt = sendMode === 'schedule' ? document.getElementById('bc-schedule-at').value : null;
     if (!subject || !body) { alert('Subject and body are required.'); return; }
+
+    _pendingBroadcast = { subject, body, segment, scheduleAt };
+
+    document.getElementById('bc-preview-confirm').style.display = 'none';
+    document.getElementById('bc-result').className = 'op-result';
     setLoading('bc-send-btn', true);
-    await streamSSE('/api/playwright/broadcast', { subject, body, segment, scheduleAt }, 'bc-log', 'bc-result');
+
+    // Dry run — fills form, takes screenshot, does NOT submit
+    await streamSSE(
+      '/api/playwright/broadcast',
+      { ..._pendingBroadcast, dryRun: true },
+      'bc-log',
+      'bc-result',
+      (ev) => {
+        if (ev.stage === 'done' && ev.dryRun) {
+          // Show confirm panel with screenshot path
+          document.getElementById('bc-result').className = 'op-result'; // hide generic result
+          document.getElementById('bc-preview-path').textContent = ev.screenshot || '(screenshot path unavailable)';
+          document.getElementById('bc-preview-confirm').style.display = 'block';
+          document.getElementById('bc-preview-confirm').scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    );
     setLoading('bc-send-btn', false);
+  };
+
+  window.confirmSendBroadcast = async function() {
+    if (!_pendingBroadcast) return;
+    setLoading('bc-confirm-yes', true);
+    document.getElementById('bc-preview-confirm').style.display = 'none';
+
+    await streamSSE('/api/playwright/broadcast', { ..._pendingBroadcast, dryRun: false }, 'bc-log', 'bc-result');
+
+    _pendingBroadcast = null;
+    setLoading('bc-confirm-yes', false);
+  };
+
+  window.cancelBroadcast = function() {
+    _pendingBroadcast = null;
+    document.getElementById('bc-preview-confirm').style.display = 'none';
+    document.getElementById('bc-log').innerHTML = '';
+    document.getElementById('bc-log').classList.remove('visible');
   };
 
   window.postCommunity = async function() {

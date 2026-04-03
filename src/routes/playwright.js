@@ -175,10 +175,13 @@ router.post('/broadcast', async (req, res) => {
   }
 
   try {
-    send({ stage: 'progress', message: 'Navigating to Email Broadcasts...' });
-    const result = await sendBroadcast(activePage, req.body);
-    if (result.ok) {
-      send({ stage: 'done', message: 'Broadcast sent.', broadcastId: result.broadcastId, sentAt: result.sentAt });
+    const dryRun = req.body.dryRun !== false; // default true; only false when explicitly set
+    send({ stage: 'progress', message: dryRun ? 'Filling form for preview...' : 'Sending broadcast...' });
+    const result = await sendBroadcast(activePage, { ...req.body, dryRun });
+    if (result.ok && result.dryRun) {
+      send({ stage: 'done', dryRun: true, message: 'Preview ready — check the screenshot.', screenshot: result.screenshot });
+    } else if (result.ok) {
+      send({ stage: 'done', dryRun: false, message: 'Broadcast sent.', broadcastId: result.broadcastId, sentAt: result.sentAt });
     } else {
       send({ stage: 'error', error: result.error, screenshot: result.screenshot });
     }

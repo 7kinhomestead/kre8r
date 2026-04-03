@@ -49,7 +49,7 @@ async function fillRichText(page, selector, content) {
 
 // ─── sendBroadcast ───────────────────────────────────────────────────────────
 
-async function sendBroadcast(page, { subject, body, segment, scheduleAt }) {
+async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun = true }) {
   try {
     // Navigate to Email Broadcasts
     await nav(page, `${KAJABI_BASE}/marketing/email_campaigns/new`);
@@ -77,16 +77,21 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt }) {
 
     // Schedule or send now
     if (scheduleAt) {
-      // Look for schedule option
       try {
         const scheduleBtn = await page.waitForSelector('button:has-text("Schedule"), [data-testid*="schedule"]', { timeout: 5000 });
         await scheduleBtn.click();
         await page.waitForLoadState('networkidle');
-        // Fill date/time if fields appear
         const dateSel = 'input[type="datetime-local"], input[type="date"]';
         const dateEl  = await page.$(dateSel);
         if (dateEl) await dateEl.fill(scheduleAt);
       } catch (_) {}
+    }
+
+    // ── Dry run: screenshot and stop before submitting ──────────────────────
+    if (dryRun) {
+      const screenshotPath = path.join(os.tmpdir(), 'playwright-broadcast-preview.png');
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      return { ok: true, dryRun: true, screenshot: screenshotPath };
     }
 
     // Submit
@@ -96,11 +101,11 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt }) {
     await page.waitForLoadState('networkidle');
 
     // Try to grab broadcast ID from URL
-    const url        = page.url();
-    const match      = url.match(/\/(\d+)/);
+    const url         = page.url();
+    const match       = url.match(/\/(\d+)/);
     const broadcastId = match ? match[1] : null;
 
-    return { ok: true, broadcastId, sentAt: new Date().toISOString() };
+    return { ok: true, dryRun: false, broadcastId, sentAt: new Date().toISOString() };
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast');
     return { ok: false, error: e.message, screenshot };
