@@ -159,7 +159,7 @@ VOICE:
 ${voiceContext}
 
 RULES:
-- Plain text only. No markdown, no asterisks, no bullet symbols.
+- Output the email body as HTML, not plain text. Use <p> tags for paragraphs, <br> for line breaks, <a href="URL"> for links. No markdown, no asterisks, no bullet symbols.
 - Write like a real person sending a personal email, not a newsletter blast.
 - Short, punchy subject lines — no clickbait, no ALL CAPS gimmicks.
 - Every email has one job. One CTA. Don't pile on.

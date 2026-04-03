@@ -150,6 +150,11 @@
   .email-subject-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;}
   .email-body-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;font-family:var(--font-body);margin-bottom:10px;max-height:360px;overflow-y:auto;}
   .email-panel-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .link-inserter{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .link-inserter label{font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);white-space:nowrap;}
+  .link-inserter input{flex:1;min-width:100px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:5px 8px;}
+  .link-inserter input:focus{outline:none;border-color:var(--teal-dim);}
+  .link-inserter .btn-insert-link{white-space:nowrap;font-size:11px;padding:5px 12px;}
 
   /* EMAIL DAY BLOCK (sequence mode) */
   .email-day-block{margin-bottom:20px;}
@@ -758,7 +763,13 @@ function renderBroadcastResults(broadcast) {
         <div class="email-field-label">Body
           <button class="btn btn-copy btn-copy-body" style="font-size:10px;padding:2px 8px;">Copy</button>
         </div>
-        <div class="email-body-box">${escHtml(version.body)}</div>
+        <textarea class="email-body-textarea" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;font-size:13px;color:var(--text);line-height:1.8;font-family:var(--font-body);margin-bottom:10px;max-height:360px;overflow-y:auto;resize:vertical;box-sizing:border-box;" rows="10"></textarea>
+        <div class="link-inserter">
+          <label>Insert Link</label>
+          <input class="link-label-input" type="text" placeholder="Label" />
+          <input class="link-url-input" type="url" placeholder="https://..." />
+          <button class="btn btn-insert-link">Insert Link</button>
+        </div>
         <div class="email-panel-actions">
           <button class="btn btn-copy btn-copy-full">📋 Copy Full Email</button>
           <button class="btn btn-kajabi-send" style="background:none;border:1px solid var(--border-bright);color:var(--text-dim);font-size:12px;padding:5px 12px;">⚡ Send via Kajabi</button>
@@ -766,14 +777,40 @@ function renderBroadcastResults(broadcast) {
       </div>`;
 
     // Attach copy handlers via JS — no inline JSON in HTML attributes
-    const subjectBtn = card.querySelector('.btn-copy-subject');
-    const bodyBtn    = card.querySelector('.btn-copy-body');
-    const fullBtn    = card.querySelector('.btn-copy-full');
-    const full       = `Subject: ${version.subject}\n\n${version.body}`;
+    const subjectBtn  = card.querySelector('.btn-copy-subject');
+    const bodyBtn     = card.querySelector('.btn-copy-body');
+    const fullBtn     = card.querySelector('.btn-copy-full');
+    const bodyTA      = card.querySelector('.email-body-textarea');
+    const linkLabel   = card.querySelector('.link-label-input');
+    const linkUrl     = card.querySelector('.link-url-input');
+    const insertBtn   = card.querySelector('.btn-insert-link');
+
+    // Populate textarea with the generated body
+    bodyTA.value = version.body;
+
+    const getBody = () => bodyTA.value;
+    const full    = () => `Subject: ${version.subject}\n\n${getBody()}`;
 
     subjectBtn.addEventListener('click', () => clipWrite(version.subject, () => flashCopy(subjectBtn)));
-    bodyBtn.addEventListener('click',    () => clipWrite(version.body,    () => flashCopy(bodyBtn)));
-    fullBtn.addEventListener('click',    () => clipWrite(full,            () => flashCopy(fullBtn)));
+    bodyBtn.addEventListener('click',    () => clipWrite(getBody(),       () => flashCopy(bodyBtn)));
+    fullBtn.addEventListener('click',    () => clipWrite(full(),          () => flashCopy(fullBtn)));
+
+    // Insert Link — wraps selected text or inserts at cursor
+    insertBtn.addEventListener('click', () => {
+      const label = linkLabel.value.trim();
+      const url   = linkUrl.value.trim();
+      if (!url) { linkUrl.focus(); return; }
+      const tag      = `<a href="${url}">${label || url}</a>`;
+      const start    = bodyTA.selectionStart;
+      const end      = bodyTA.selectionEnd;
+      const selected = bodyTA.value.substring(start, end);
+      const insert   = selected ? `<a href="${url}">${selected}</a>` : tag;
+      bodyTA.value   = bodyTA.value.substring(0, start) + insert + bodyTA.value.substring(end);
+      bodyTA.selectionStart = bodyTA.selectionEnd = start + insert.length;
+      bodyTA.focus();
+      linkLabel.value = '';
+      linkUrl.value   = '';
+    });
 
     const kajabiBtn = card.querySelector('.btn-kajabi-send');
     kajabiBtn.addEventListener('click', async () => {
@@ -785,7 +822,7 @@ function renderBroadcastResults(broadcast) {
           if (go) window.open('/automator.html', '_blank');
           return;
         }
-        const params = new URLSearchParams({ subject: version.subject, body: version.body });
+        const params = new URLSearchParams({ subject: version.subject, body: getBody() });
         window.open('/automator.html?' + params.toString(), '_blank');
       } catch (e) {
         alert('Could not reach AutomatΩr: ' + e.message);
