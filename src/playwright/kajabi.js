@@ -15,7 +15,10 @@ const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 
-const KAJABI_BASE = 'https://app.kajabi.com/admin';
+const creatorProfile = require(path.join(__dirname, '../../creator-profile.json'));
+const KAJABI_SITE_ID = (creatorProfile.kajabi || {}).site_id || '';
+const KAJABI_BASE    = 'https://app.kajabi.com/admin';
+const KAJABI_SITE    = `${KAJABI_BASE}/sites/${KAJABI_SITE_ID}`;
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 
@@ -48,103 +51,109 @@ async function fillRichText(page, selector, content) {
 }
 
 // ─── sendBroadcast ───────────────────────────────────────────────────────────
-// Multi-step wizard flow matching Kajabi's actual UI progression.
-// Each step is individually wrapped so failures identify exactly where things broke.
+// Follows the exact Kajabi wizard flow Jason documented.
+// Each step individually try/caught with labelled screenshot on failure.
 
 async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun = true }) {
 
   // ── Step 1: Navigate to Email Campaigns list ──────────────────────────────
   try {
-    await nav(page, `${KAJABI_BASE}/email_campaigns`);
+    await nav(page, `${KAJABI_SITE}/email_campaigns`);
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step1-nav');
     return { ok: false, error: `Step 1 (navigate to email campaigns): ${e.message}`, screenshot };
   }
 
-  // ── Step 2: Click New / Create / Broadcast button ─────────────────────────
+  // ── Step 2: Click '+New Email Campaign' button ────────────────────────────
   try {
     const newBtnSel = [
-      'a:has-text("New Broadcast")',
-      'a:has-text("New Email")',
-      'button:has-text("New Broadcast")',
-      'button:has-text("New Email")',
-      'a:has-text("Create Broadcast")',
-      'a:has-text("Create")',
-      'button:has-text("Create")',
-      'a:has-text("New")',
-      'button:has-text("New")',
+      'a:has-text("+New Email Campaign")',
+      'button:has-text("+New Email Campaign")',
+      'a:has-text("New Email Campaign")',
+      'button:has-text("New Email Campaign")',
     ].join(', ');
     await page.waitForSelector(newBtnSel, { timeout: 10000 });
     await page.click(newBtnSel);
     await page.waitForLoadState('networkidle');
   } catch (e) {
-    const screenshot = await screenshotOnFail(page, 'broadcast-step2-new-btn');
-    return { ok: false, error: `Step 2 (click New/Create button): ${e.message}`, screenshot };
+    const screenshot = await screenshotOnFail(page, 'broadcast-step2-new-campaign-btn');
+    return { ok: false, error: `Step 2 (click +New Email Campaign): ${e.message}`, screenshot };
   }
 
-  // ── Step 3: If type chooser appears, select Broadcast (not Sequence) ───────
+  // ── Step 3: Click 'Email Broadcast' (not Email Sequence) ─────────────────
   try {
-    const typeChooserSel = [
-      'button:has-text("Broadcast")',
-      'a:has-text("Broadcast")',
-      '[data-testid*="broadcast"]',
-      'label:has-text("Broadcast")',
+    const broadcastTypeSel = [
+      'button:has-text("Email Broadcast")',
+      'a:has-text("Email Broadcast")',
+      'label:has-text("Email Broadcast")',
+      '[data-testid="email-broadcast"]',
     ].join(', ');
-    const typeEl = await page.$(typeChooserSel);
-    if (typeEl) {
-      await typeEl.click();
-      await page.waitForLoadState('networkidle');
-    }
-    // If no type chooser appears, we're already on the broadcast form — continue
+    await page.waitForSelector(broadcastTypeSel, { timeout: 10000 });
+    await page.click(broadcastTypeSel);
+    await page.waitForLoadState('networkidle');
   } catch (e) {
-    const screenshot = await screenshotOnFail(page, 'broadcast-step3-type-chooser');
-    return { ok: false, error: `Step 3 (select Broadcast type): ${e.message}`, screenshot };
+    const screenshot = await screenshotOnFail(page, 'broadcast-step3-select-broadcast-type');
+    return { ok: false, error: `Step 3 (click Email Broadcast type): ${e.message}`, screenshot };
   }
 
-  // ── Step 4: Fill broadcast name (using subject as the name) ──────────────
+  // ── Step 4: Click 'Continue' button ──────────────────────────────────────
   try {
-    const nameSel = [
+    const continueSel = 'button:has-text("Continue"), a:has-text("Continue")';
+    await page.waitForSelector(continueSel, { timeout: 8000 });
+    await page.click(continueSel);
+    await page.waitForLoadState('networkidle');
+  } catch (e) {
+    const screenshot = await screenshotOnFail(page, 'broadcast-step4-continue-after-type');
+    return { ok: false, error: `Step 4 (Continue after type selection): ${e.message}`, screenshot };
+  }
+
+  // ── Step 5: Click 'Use Classic Editor' (skip template selection) ──────────
+  try {
+    const classicSel = [
+      'button:has-text("Use Classic Editor")',
+      'a:has-text("Use Classic Editor")',
+      'button:has-text("Classic Editor")',
+      'a:has-text("Classic Editor")',
+    ].join(', ');
+    await page.waitForSelector(classicSel, { timeout: 10000 });
+    await page.click(classicSel);
+    await page.waitForLoadState('networkidle');
+  } catch (e) {
+    const screenshot = await screenshotOnFail(page, 'broadcast-step5-classic-editor');
+    return { ok: false, error: `Step 5 (click Use Classic Editor): ${e.message}`, screenshot };
+  }
+
+  // ── Step 6: Fill broadcast title with subject, then click 'Continue' ──────
+  try {
+    const titleSel = [
       'input[name="email_campaign[name]"]',
+      'input[placeholder*="title" i]',
       'input[placeholder*="name" i]',
-      'input[placeholder*="broadcast name" i]',
+      'input[placeholder*="broadcast" i]',
       'input[id*="name"]',
+      'input[id*="title"]',
     ].join(', ');
-    await page.waitForSelector(nameSel, { timeout: 10000 });
-    await page.fill(nameSel, subject);
+    await page.waitForSelector(titleSel, { timeout: 10000 });
+    await page.fill(titleSel, subject);
+
+    const continueSel = 'button:has-text("Continue"), a:has-text("Continue")';
+    await page.waitForSelector(continueSel, { timeout: 8000 });
+    await page.click(continueSel);
+    await page.waitForLoadState('networkidle');
   } catch (e) {
-    const screenshot = await screenshotOnFail(page, 'broadcast-step4-name');
-    return { ok: false, error: `Step 4 (fill broadcast name): ${e.message}`, screenshot };
+    const screenshot = await screenshotOnFail(page, 'broadcast-step6-title-continue');
+    return { ok: false, error: `Step 6 (fill title + Continue): ${e.message}`, screenshot };
   }
 
-  // ── Step 5: Click Next / Continue to move past naming step ───────────────
-  try {
-    const nextSel = [
-      'button:has-text("Next")',
-      'button:has-text("Continue")',
-      'a:has-text("Next")',
-      'a:has-text("Continue")',
-      'button[type="submit"]:has-text("Next")',
-      'button[type="submit"]:has-text("Continue")',
-    ].join(', ');
-    const nextEl = await page.$(nextSel);
-    if (nextEl) {
-      await nextEl.click();
-      await page.waitForLoadState('networkidle');
-    }
-  } catch (e) {
-    const screenshot = await screenshotOnFail(page, 'broadcast-step5-next-after-name');
-    return { ok: false, error: `Step 5 (Next after name): ${e.message}`, screenshot };
-  }
-
-  // ── Step 6: Recipient / segment selection ────────────────────────────────
+  // ── Step 7: Segment/recipient selection, then 'Save and Continue' ─────────
   try {
     if (segment) {
       const segSel = [
         `label:has-text("${segment}")`,
-        `[data-testid*="segment"]`,
         `input[value="${segment}"]`,
         'select[name*="segment"]',
         'select[name*="recipient"]',
+        'select[name*="group"]',
       ].join(', ');
       const segEl = await page.$(segSel);
       if (segEl) {
@@ -155,43 +164,36 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
           await segEl.click();
         }
       }
-      // No segment match — Kajabi will default to all members, continue
+      // No match — Kajabi defaults to all members, continue regardless
     }
 
-    // Click Next / Continue past recipients step if the button exists
-    const nextSel = [
-      'button:has-text("Next")',
+    const saveContSel = [
+      'button:has-text("Save and Continue")',
+      'a:has-text("Save and Continue")',
       'button:has-text("Continue")',
-      'a:has-text("Next")',
       'a:has-text("Continue")',
     ].join(', ');
-    const nextEl = await page.$(nextSel);
-    if (nextEl) {
-      await nextEl.click();
-      await page.waitForLoadState('networkidle');
-    }
+    await page.waitForSelector(saveContSel, { timeout: 8000 });
+    await page.click(saveContSel);
+    await page.waitForLoadState('networkidle');
   } catch (e) {
-    const screenshot = await screenshotOnFail(page, 'broadcast-step6-recipients');
-    return { ok: false, error: `Step 6 (recipient/segment selection): ${e.message}`, screenshot };
+    const screenshot = await screenshotOnFail(page, 'broadcast-step7-segment-save');
+    return { ok: false, error: `Step 7 (segment selection + Save and Continue): ${e.message}`, screenshot };
   }
 
-  // ── Step 7: Fill subject line in the email composer ──────────────────────
+  // ── Step 8: Fill subject line and body in the editor, then 'Save and Continue'
   try {
+    // Subject line input
     const subjectSel = [
       'input[name="email_campaign[subject]"]',
+      'input[name*="subject"]',
       'input[placeholder*="subject" i]',
       'input[id*="subject"]',
-      'input[name*="subject"]',
     ].join(', ');
     await page.waitForSelector(subjectSel, { timeout: 10000 });
     await page.fill(subjectSel, subject);
-  } catch (e) {
-    const screenshot = await screenshotOnFail(page, 'broadcast-step7-subject');
-    return { ok: false, error: `Step 7 (fill subject line): ${e.message}`, screenshot };
-  }
 
-  // ── Step 8: Fill email body in the rich text editor ───────────────────────
-  try {
+    // Email body in rich text editor
     const bodySel = [
       '.ql-editor',
       '[contenteditable="true"]',
@@ -200,12 +202,20 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
     ].join(', ');
     await page.waitForSelector(bodySel, { timeout: 10000 });
     await fillRichText(page, bodySel, body);
+
+    const saveContSel = [
+      'button:has-text("Save and Continue")',
+      'a:has-text("Save and Continue")',
+    ].join(', ');
+    await page.waitForSelector(saveContSel, { timeout: 8000 });
+    await page.click(saveContSel);
+    await page.waitForLoadState('networkidle');
   } catch (e) {
-    const screenshot = await screenshotOnFail(page, 'broadcast-step8-body');
-    return { ok: false, error: `Step 8 (fill email body): ${e.message}`, screenshot };
+    const screenshot = await screenshotOnFail(page, 'broadcast-step8-editor-save');
+    return { ok: false, error: `Step 8 (fill subject + body + Save and Continue): ${e.message}`, screenshot };
   }
 
-  // ── Dry run: screenshot the filled form and stop ──────────────────────────
+  // ── Dry run: on the preview page, screenshot and stop ────────────────────
   if (dryRun) {
     try {
       const screenshotPath = path.join(os.tmpdir(), 'playwright-broadcast-preview.png');
@@ -216,40 +226,60 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
     }
   }
 
-  // ── Step 9: Send or Schedule ──────────────────────────────────────────────
+  // ── Step 9 (real send): 'Save and Continue' on preview, then send/schedule
   try {
+    // Advance past preview page
+    const previewContSel = [
+      'button:has-text("Save and Continue")',
+      'a:has-text("Save and Continue")',
+      'button:has-text("Continue")',
+    ].join(', ');
+    await page.waitForSelector(previewContSel, { timeout: 8000 });
+    await page.click(previewContSel);
+    await page.waitForLoadState('networkidle');
+
+    // Send Right Now vs Schedule for Later
     if (scheduleAt) {
-      const scheduleBtnSel = [
-        'button:has-text("Schedule")',
-        '[data-testid*="schedule"]',
-        'a:has-text("Schedule")',
+      const scheduleSel = [
+        'button:has-text("Schedule for Later")',
+        'a:has-text("Schedule for Later")',
+        'label:has-text("Schedule for Later")',
       ].join(', ');
-      const scheduleBtn = await page.$(scheduleBtnSel);
-      if (scheduleBtn) {
-        await scheduleBtn.click();
-        await page.waitForLoadState('networkidle');
-        const dateSel = 'input[type="datetime-local"], input[type="date"]';
-        const dateEl  = await page.$(dateSel);
-        if (dateEl) await dateEl.fill(scheduleAt);
-      }
+      await page.waitForSelector(scheduleSel, { timeout: 8000 });
+      await page.click(scheduleSel);
+      await page.waitForLoadState('networkidle');
+
+      // Fill schedule date/time if a picker appears
+      const dateSel = 'input[type="datetime-local"], input[type="date"]';
+      const dateEl  = await page.$(dateSel);
+      if (dateEl) await dateEl.fill(scheduleAt);
+    } else {
+      const sendNowSel = [
+        'button:has-text("Send Right Now")',
+        'a:has-text("Send Right Now")',
+        'label:has-text("Send Right Now")',
+      ].join(', ');
+      await page.waitForSelector(sendNowSel, { timeout: 8000 });
+      await page.click(sendNowSel);
+      await page.waitForLoadState('networkidle');
     }
 
-    const sendSel = [
-      'button[type="submit"]:has-text("Send")',
-      'button:has-text("Send Now")',
-      'button:has-text("Send Broadcast")',
-      'button:has-text("Schedule")',
+    // Final confirm button
+    const confirmSel = [
       'button:has-text("Send")',
+      'button:has-text("Confirm")',
+      'button:has-text("Send Broadcast")',
+      'button[type="submit"]',
     ].join(', ');
-    await page.waitForSelector(sendSel, { timeout: 8000 });
-    await page.click(sendSel);
+    await page.waitForSelector(confirmSel, { timeout: 8000 });
+    await page.click(confirmSel);
     await page.waitForLoadState('networkidle');
 
     const broadcastId = (page.url().match(/\/(\d+)/) || [])[1] || null;
     return { ok: true, dryRun: false, broadcastId, sentAt: new Date().toISOString() };
   } catch (e) {
-    const screenshot = await screenshotOnFail(page, 'broadcast-step9-send');
-    return { ok: false, error: `Step 9 (send/schedule): ${e.message}`, screenshot };
+    const screenshot = await screenshotOnFail(page, 'broadcast-step9-send-confirm');
+    return { ok: false, error: `Step 9 (preview → send/schedule → confirm): ${e.message}`, screenshot };
   }
 }
 
