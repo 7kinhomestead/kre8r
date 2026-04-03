@@ -18,7 +18,7 @@ Usage:
     python braw-proxy-export.py \
         --project_name "2026-03-29_My-Video_006" \
         --braw_folder "D:/footage/raw" \
-        --proxy_output "C:/Users/18054/Videos/intake" \
+        --proxy_output "D:/kre8r/intake" \
         [--shot_type_map '{"clip001.braw": "talking_head"}']
 """
 

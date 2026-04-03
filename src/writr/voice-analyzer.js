@@ -22,7 +22,6 @@ const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.j
 
 // Python candidates — same order as CutΩr transcription
 const PYTHON_CANDIDATES = [
-  'C:/Users/18054/AppData/Local/Programs/Python/Python312/python.exe',
   'python3',
   'python',
   'py'

@@ -282,3 +282,66 @@ a0f2063  feat: VaultΩr direct device upload with live progress
 - Local: PM2 running `kre8r` on port 3000
 - GitHub: `main` and `master` both at `a0f2063` (in sync)
 - Deploy script: live at `https://raw.githubusercontent.com/7kinhomestead/kre8r/main/deploy/digitalocean-setup.sh`
+
+---
+
+## Session 14 — 2026-04-02
+
+### What Was Built
+- SelectsΩr v2 (`src/editor/selects-new.js`) — three shoot modes (SCRIPTED/HYBRID/FREEFORM),
+  decision gate, conservative cuts, mixed clip flagging. Confidence check removed —
+  routes purely on shot_type. Accepts both talking-head and talking_head.
+- `src/utils/claude.js` — shared Claude API caller extracted, used everywhere
+- BRAW auto-proxy trigger — intake.js fires DaVinci proxy export automatically on BRAW ingest
+- Vault paths moved to D:\ — main drive protected
+- BRAW → proxy → classify pipeline tested end to end (4 clips live)
+- MailΩr (`/mailor.html`) — new page, broadcast A/B mode, sequence mode, voice blend,
+  blog post + community post checkboxes, Kajabi connection banner, copy working
+- VaultΩr completed-video classification — 132 clips reclassified, gold tag, filter chip,
+  natural language search vocabulary updated
+- Voice analysis button on completed-video cards in VaultΩr
+- TeleprΩmpter — dual QR codes with role deep-links (?mode=voice / ?mode=control),
+  teal divider, removed personal labels. Session entry screen for voice device.
+- AudiencΩr (`/audience.html`) — Kajabi OAuth2, contacts live, tags, offers, broadcast-tag SSE
+- KajabiΩr backend (`src/routes/kajabi.js`) — full OAuth2 client, token cache, all endpoints
+- Id8Ωr (`/id8r.html` + `src/routes/id8r.js`) — full ideation engine. 3 modes, conversation,
+  sequential web research with 120s phase waits + musings countdown, package cards
+  (3 titles / 3 thumbnails / 3 hooks), Vision Brief, pipeline handoff to PipΩr/WritΩr.
+  Session persisted in sessionStorage. Start Over button.
+- WritΩr beat cards now show emotional_function description
+- detectPython() added to davinci.js — tries python3/python/py in order
+- create-project.py unicode charmap fix (encoding="utf-8")
+- VaultΩr natural language search updated with completed-video vocabulary
+- Nav fixed: MailΩr link corrected to /mailor.html, AudiencΩr added at M5
+- README.md created — Charlie-ready, 10-minute setup guide
+- OPUS_REVIEW.md created — senior architecture review
+- CLAUDE.md fully updated — complete current state
+
+### What Was Tested
+- Full BRAW → proxy → VaultΩr classify pipeline (end to end)
+- Upload on kre8r.app (fixed nginx proxy_request_buffering off)
+- MailΩr broadcast A/B generation with voice profiles
+- AudiencΩr Kajabi contacts loading live
+- TeleprΩmpter 3-device shoot — Rock Rich launch video filmed in 20 minutes
+  (vs 2-4 hours previously — 6x productivity improvement)
+- Id8Ωr full flow through package cards (rate limiting on mind map resolved partially)
+- SelectsΩr v2 with real Rock Rich footage (proxy path linking issue identified)
+
+### Known Issues Identified This Session
+- Id8Ωr rate limiting on research phase 2 — YouTube web_search consuming too many tokens
+- Id8Ωr mind map — cut in next session, replace with fast concept pass → choose → deep
+- SelectsΩr proxy_path must be set before transcription can run
+- BRAW proxy naming convention match requires _proxy.mp4 suffix and watcher running
+- AudiencΩr tag filter — Kajabi 500s on filtered contact requests
+- rock_rich_episode (underscore) vs rockrich inconsistency in pipr.html
+
+### Deployments
+- Multiple deploys to kre8r.app throughout session
+- All changes live on master branch
+
+### Session Notes
+- Teleprompter shoot: 20 minutes for Rock Rich Community Launch video (vs 2-4hrs)
+- Opus architecture review conducted — see OPUS_REVIEW.md
+- Jason manually edited Rock Rich launch video (deadline driven)
+- Charlie meeting Saturday at 11am (after jiu jitsu)
+- New monitor purchased 🖥️
