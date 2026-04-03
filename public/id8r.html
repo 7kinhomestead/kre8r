@@ -110,11 +110,89 @@
   .typing-indicator{display:none;align-self:flex-start;padding:8px 12px;color:var(--text-dimmer);font-size:13px;animation:pulse 1.2s infinite;}
 
   /* ─────────────────────────────────── */
-  /* SCREEN 3 — Research                 */
+  /* SCREEN 3 — Concepts                 */
+  /* ─────────────────────────────────── */
+  .concepts-header{margin-bottom:24px;}
+  .concepts-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
+  .concepts-sub{color:var(--text-dim);font-size:13px;}
+
+  /* Generating spinner */
+  .concepts-generating{text-align:center;padding:60px 20px;}
+  .concepts-generating .spinner-ring{width:40px;height:40px;border:3px solid var(--border-bright);border-top-color:var(--teal);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px;}
+  .concepts-generating-label{font-size:14px;color:var(--text-dim);animation:pulse 1.5s infinite;}
+
+  /* Concept cards grid */
+  .concept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+  @media(max-width:750px){.concept-grid{grid-template-columns:1fr;}}
+
+  .concept-card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:22px 20px 18px;display:flex;flex-direction:column;gap:10px;
+    transition:all 0.2s;
+  }
+  .concept-card.chosen{border-color:var(--teal);background:linear-gradient(135deg,var(--bg-card-2),rgba(62,207,178,0.05));}
+
+  .concept-angle{
+    display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
+    color:var(--teal);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);
+    border-radius:4px;padding:3px 8px;align-self:flex-start;
+  }
+  .concept-headline{
+    font-family:var(--font-head);font-size:20px;letter-spacing:1px;line-height:1.15;color:var(--text);
+  }
+  .concept-why{font-size:12px;color:var(--text-dim);line-height:1.5;flex:1;}
+  .concept-hook{
+    font-size:12px;color:var(--text-dimmer);line-height:1.5;
+    border-left:2px solid var(--border-bright);padding-left:10px;font-style:italic;
+  }
+  .concept-choose-btn{
+    background:var(--teal);color:#0e0f0e;border:none;border-radius:var(--radius-sm);
+    padding:9px 16px;font-family:var(--font-body);font-size:12px;font-weight:700;
+    cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;margin-top:4px;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .concept-choose-btn:hover{background:var(--teal-dim);}
+  .concept-card.chosen .concept-choose-btn{background:var(--teal-dim);}
+  .concept-chosen-badge{
+    display:none;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
+    color:var(--teal);text-align:center;padding:4px 0 0;
+  }
+  .concept-card.chosen .concept-chosen-badge{display:block;}
+  .concept-card.chosen .concept-choose-btn{display:none;}
+
+  /* Blend row */
+  .concept-blend{
+    border-top:1px solid var(--border);padding-top:20px;display:flex;gap:12px;align-items:center;
+    flex-wrap:wrap;
+  }
+  .concept-blend-label{font-size:13px;color:var(--text-dim);white-space:nowrap;flex-shrink:0;}
+  .concept-blend-input{
+    flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius-sm);padding:10px 12px;font-family:var(--font-body);font-size:13px;
+    transition:border-color 0.15s;
+  }
+  .concept-blend-input:focus{outline:none;border-color:var(--teal);}
+  .concept-blend-input::placeholder{color:var(--text-dimmer);}
+  .concept-blend-btn{
+    background:var(--bg-card-2);color:var(--text);border:1px solid var(--border-bright);border-radius:var(--radius-sm);
+    padding:10px 18px;font-family:var(--font-body);font-size:13px;font-weight:700;
+    cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;
+  }
+  .concept-blend-btn:hover{border-color:var(--teal);color:var(--teal);}
+
+  /* ─────────────────────────────────── */
+  /* SCREEN 4 — Research                 */
   /* ─────────────────────────────────── */
   .research-header{margin-bottom:24px;}
   .research-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
   .research-sub{color:var(--text-dim);font-size:13px;}
+  .research-chosen-banner{
+    background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius-sm);
+    padding:10px 14px;margin-bottom:20px;font-size:13px;color:var(--teal);
+    display:none;
+  }
+  .research-chosen-banner.visible{display:block;}
+  .research-chosen-banner strong{color:var(--text);}
 
   .spinner{width:12px;height:12px;border:2px solid var(--border-bright);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0;}
   .check{color:var(--teal);font-size:14px;}
@@ -154,16 +232,6 @@
   /* Vault clip cards */
   .vault-clips{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
   .vault-clip-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--text-dim);}
-
-  /* ─────────────────────────────────── */
-  /* SCREEN 4 — Mind Map                 */
-  /* ─────────────────────────────────── */
-  .mindmap-header{margin-bottom:20px;}
-  .mindmap-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
-  .mindmap-sub{color:var(--text-dim);font-size:13px;}
-  .mindmap-container{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;min-height:300px;}
-  .mindmap-container svg{width:100%;height:auto;display:block;}
-  .mindmap-actions{display:flex;justify-content:flex-end;}
 
   /* ─────────────────────────────────── */
   /* SCREEN 5 — Package                  */
@@ -290,34 +358,49 @@
     </div>
   </div>
 
-  <!-- ─────────────────── SCREEN 3: Research ─────────────────── -->
+  <!-- ─────────────────── SCREEN 3: Concepts ─────────────────── -->
+  <div id="screen-concepts" class="screen">
+    <div class="concepts-header">
+      <div class="concepts-title">CHOOSE YOUR ANGLE</div>
+      <div class="concepts-sub">Three directions based on your conversation. Pick one to go deep on.</div>
+    </div>
+
+    <!-- Generating state -->
+    <div id="concepts-generating" class="concepts-generating">
+      <div class="spinner-ring"></div>
+      <div class="concepts-generating-label">Generating concept directions...</div>
+    </div>
+
+    <!-- Cards + blend row (shown once concepts load) -->
+    <div id="concepts-loaded" style="display:none;">
+      <div class="concept-grid" id="concept-cards"></div>
+
+      <div class="concept-blend">
+        <span class="concept-blend-label">Or blend/reframe:</span>
+        <input type="text" class="concept-blend-input" id="concept-blend-input"
+          placeholder="e.g. Financial take but told as a day-in-life story...">
+        <button class="concept-blend-btn" id="concept-blend-btn">Go Deep →</button>
+      </div>
+    </div>
+
+    <div class="error-msg" id="concepts-error"></div>
+  </div>
+
+  <!-- ─────────────────── SCREEN 4: Research ─────────────────── -->
   <div id="screen-research" class="screen">
     <div class="research-header">
       <div class="research-title">RESEARCH</div>
       <div class="research-sub">Three passes. Each one needs a moment to breathe.</div>
     </div>
+    <div class="research-chosen-banner" id="research-chosen-banner">
+      Going deep on: <strong id="research-chosen-label"></strong>
+    </div>
     <div id="research-feed"></div>
     <div class="research-continue-wrap">
       <button class="btn" id="research-continue-btn" disabled>
         <div class="spinner-lg"></div>
-        <span class="btn-label">Generate Mind Map →</span>
+        <span class="btn-label">Package This →</span>
       </button>
-    </div>
-  </div>
-
-  <!-- ─────────────────── SCREEN 4: Mind Map ─────────────────── -->
-  <div id="screen-mindmap" class="screen">
-    <div class="mindmap-header">
-      <div class="mindmap-title">MIND MAP</div>
-      <div class="mindmap-sub">Click branch nodes to expand/collapse leaf nodes.</div>
-    </div>
-    <div class="loading-state" id="mindmap-loading">
-      <div class="spinner"></div>
-      <div class="loading-text">Building mind map...</div>
-    </div>
-    <div class="mindmap-container" id="mindmap-container"></div>
-    <div class="mindmap-actions">
-      <button class="btn" id="mindmap-continue-btn">Generate Package →</button>
     </div>
   </div>
 
@@ -427,12 +510,13 @@
   'use strict';
 
   // ── State ──────────────────────────────────────────────────────
-  let sessionId    = null;
-  let currentMode  = null;
-  let researchDone = { youtube: false, data: false, vault: false };
-  let selectedTitle = null;
-  let selectedThumb = null;
-  let selectedHook  = null;
+  let sessionId      = null;
+  let currentMode    = null;
+  let conceptsData   = null;   // [{ id, angle, headline, why, hook }]
+  let chosenConcept  = null;   // the chosen concept object
+  let selectedTitle  = null;
+  let selectedThumb  = null;
+  let selectedHook   = null;
 
   const MODE_LABELS = {
     shape_it  : 'SHAPE IT',
@@ -457,15 +541,16 @@
   // ── Session persistence ────────────────────────────────────────
   function saveSession() {
     if (!sessionId) return;
-    sessionStorage.setItem('id8r_session_id', sessionId);
-    sessionStorage.setItem('id8r_chat_html', document.getElementById('chat-messages').innerHTML);
-    sessionStorage.setItem('id8r_mode_label', document.getElementById('chat-mode-display').textContent);
+    sessionStorage.setItem('id8r_session_id',  sessionId);
+    sessionStorage.setItem('id8r_chat_html',   document.getElementById('chat-messages').innerHTML);
+    sessionStorage.setItem('id8r_mode_label',  document.getElementById('chat-mode-display').textContent);
+    if (conceptsData)  sessionStorage.setItem('id8r_concepts',       JSON.stringify(conceptsData));
+    if (chosenConcept) sessionStorage.setItem('id8r_chosen_concept', JSON.stringify(chosenConcept));
   }
 
   function clearSession() {
-    sessionStorage.removeItem('id8r_session_id');
-    sessionStorage.removeItem('id8r_chat_html');
-    sessionStorage.removeItem('id8r_mode_label');
+    ['id8r_session_id','id8r_chat_html','id8r_mode_label','id8r_concepts','id8r_chosen_concept']
+      .forEach(k => sessionStorage.removeItem(k));
   }
 
   // Restore session on load
@@ -473,12 +558,15 @@
     const savedId    = sessionStorage.getItem('id8r_session_id');
     const savedHtml  = sessionStorage.getItem('id8r_chat_html');
     const savedLabel = sessionStorage.getItem('id8r_mode_label');
+    const savedConcepts = sessionStorage.getItem('id8r_concepts');
+    const savedChosen   = sessionStorage.getItem('id8r_chosen_concept');
     if (!savedId) return;
     sessionId = savedId;
     document.getElementById('chat-mode-display').textContent = savedLabel || 'SESSION';
     if (savedHtml) document.getElementById('chat-messages').innerHTML = savedHtml;
+    if (savedConcepts)  { try { conceptsData  = JSON.parse(savedConcepts);  } catch(_){} }
+    if (savedChosen)    { try { chosenConcept = JSON.parse(savedChosen);    } catch(_){} }
     showScreen('conv');
-    // Scroll to bottom of restored chat
     const wrap = document.getElementById('chat-messages');
     wrap.scrollTop = wrap.scrollHeight;
   })();
@@ -495,8 +583,10 @@
   document.getElementById('chat-back-btn').addEventListener('click', () => {
     if (confirm('Go back to mode select? Your current session will be lost.')) {
       clearSession();
-      sessionId = null;
-      currentMode = null;
+      sessionId    = null;
+      currentMode  = null;
+      conceptsData = null;
+      chosenConcept = null;
       showScreen('mode');
     }
   });
@@ -563,7 +653,8 @@
         const cleaned = data.message.replace(/RESEARCH_READY/g, '').trim();
         if (cleaned) appendMessage('assistant', cleaned);
         saveSession();
-        setTimeout(() => startResearch(), 800);
+        // Go to concepts first, not research
+        setTimeout(() => generateConcepts(), 800);
       } else {
         appendMessage('assistant', data.message);
         saveSession();
@@ -598,6 +689,107 @@
     return div;
   }
 
+  // ── Concepts (Fast Pass) ───────────────────────────────────────
+  async function generateConcepts() {
+    showScreen('concepts');
+    document.getElementById('concepts-generating').style.display = 'block';
+    document.getElementById('concepts-loaded').style.display = 'none';
+    document.getElementById('concepts-error').classList.remove('visible');
+
+    try {
+      const res  = await fetch('/api/id8r/concepts', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ session_id: sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate concepts');
+
+      conceptsData = data.concepts || [];
+      saveSession();
+
+      document.getElementById('concepts-generating').style.display = 'none';
+      document.getElementById('concepts-loaded').style.display     = 'block';
+      renderConceptCards(conceptsData);
+    } catch (e) {
+      document.getElementById('concepts-generating').style.display = 'none';
+      const errEl = document.getElementById('concepts-error');
+      errEl.textContent = 'Error: ' + e.message;
+      errEl.classList.add('visible');
+    }
+  }
+
+  function renderConceptCards(concepts) {
+    const grid = document.getElementById('concept-cards');
+    grid.innerHTML = '';
+
+    concepts.forEach((concept) => {
+      const card = document.createElement('div');
+      card.className = 'concept-card';
+      card.innerHTML = `
+        <span class="concept-angle">${escHtml(concept.angle || '')}</span>
+        <div class="concept-headline">${escHtml(concept.headline || '')}</div>
+        <div class="concept-why">${escHtml(concept.why || '')}</div>
+        ${concept.hook ? `<div class="concept-hook">${escHtml(concept.hook)}</div>` : ''}
+        <button class="concept-choose-btn" data-choice="${concept.id}">
+          Choose This →
+        </button>
+        <div class="concept-chosen-badge">✓ Chosen — Going Deep</div>
+      `;
+      grid.appendChild(card);
+
+      card.querySelector('.concept-choose-btn').addEventListener('click', () => {
+        chooseConcept(String(concept.id), card);
+      });
+    });
+  }
+
+  async function chooseConcept(choice, cardEl) {
+    // Disable all choose buttons
+    document.querySelectorAll('.concept-choose-btn').forEach(b => b.disabled = true);
+    document.getElementById('concept-blend-btn').disabled = true;
+
+    try {
+      const res  = await fetch('/api/id8r/choose', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ session_id: sessionId, choice }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      chosenConcept = data.chosen;
+      saveSession();
+
+      // Highlight chosen card
+      if (cardEl) cardEl.classList.add('chosen');
+
+      // Brief pause so user sees the selection, then start research
+      setTimeout(() => startResearch(), 700);
+    } catch (e) {
+      // Re-enable on error
+      document.querySelectorAll('.concept-choose-btn').forEach(b => b.disabled = false);
+      document.getElementById('concept-blend-btn').disabled = false;
+      const errEl = document.getElementById('concepts-error');
+      errEl.textContent = 'Error choosing concept: ' + e.message;
+      errEl.classList.add('visible');
+    }
+  }
+
+  // Blend / free-text direction
+  document.getElementById('concept-blend-btn').addEventListener('click', () => {
+    const val = document.getElementById('concept-blend-input').value.trim();
+    if (!val) {
+      document.getElementById('concept-blend-input').focus();
+      return;
+    }
+    chooseConcept(val, null);
+  });
+
+  document.getElementById('concept-blend-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('concept-blend-btn').click(); }
+  });
+
   // ── Research ───────────────────────────────────────────────────
   const MUSINGS = [
     'The best ideas come from sitting with them for a minute.',
@@ -613,13 +805,24 @@
   ];
 
   const PHASE_ICONS = { 1: '🎬', 2: '📊', 3: '🗄️', 4: '✦' };
-  let activeCountdown = null; // { interval, musingInterval, el }
+  let activeCountdown  = null;
   let researchComplete = false;
 
   function startResearch() {
     researchComplete = false;
     document.getElementById('research-feed').innerHTML = '';
     document.getElementById('research-continue-btn').disabled = true;
+
+    // Show chosen concept banner
+    if (chosenConcept) {
+      const banner = document.getElementById('research-chosen-banner');
+      const label  = document.getElementById('research-chosen-label');
+      label.textContent = chosenConcept.headline
+        ? `"${chosenConcept.headline}" (${chosenConcept.angle || 'Custom'})`
+        : chosenConcept.angle || 'Custom Direction';
+      banner.classList.add('visible');
+    }
+
     showScreen('research');
     streamSSE('/api/id8r/research', { session_id: sessionId }, onResearchEvent);
   }
@@ -628,7 +831,6 @@
     const feed = document.getElementById('research-feed');
 
     if (ev.stage === 'phase_start') {
-      // Show a "working" indicator for the incoming phase
       const el = document.createElement('div');
       el.className = 'phase-next-label';
       el.id = 'phase-next-' + ev.phase;
@@ -637,7 +839,6 @@
     }
 
     if (ev.stage === 'phase_result') {
-      // Remove the working indicator
       const next = document.getElementById('phase-next-' + ev.phase);
       if (next) next.remove();
 
@@ -655,7 +856,6 @@
     }
 
     if (ev.stage === 'phase_wait') {
-      // Clear any previous active countdown
       if (activeCountdown) clearCountdown();
 
       const waitCard = document.createElement('div');
@@ -670,7 +870,7 @@
       feed.appendChild(waitCard);
       feed.scrollTop = feed.scrollHeight;
 
-      let remaining = ev.duration;
+      let remaining  = ev.duration;
       let musingCursor = (musingIdx + 1) % MUSINGS.length;
 
       const countdownInterval = setInterval(() => {
@@ -723,19 +923,12 @@
   function cleanMarkdown(txt) {
     if (!txt) return '';
     return txt
-      // Strip encrypted_content blobs (long base64-like strings)
       .replace(/[A-Za-z0-9+/=]{60,}/g, '')
-      // --- horizontal rule → marker we'll handle in HTML
       .replace(/^---+$/gm, '\u2500\u2500\u2500')
-      // ### headings → plain text (keep the text)
       .replace(/^#{1,6}\s+(.+)$/gm, '$1')
-      // **bold** → keep text, strip markers
       .replace(/\*\*(.+?)\*\*/g, '$1')
-      // lone * bullets → clean dash
       .replace(/^\*\s+/gm, '- ')
-      // -- → remove
       .replace(/--/g, '')
-      // collapse 3+ blank lines to 2
       .replace(/\n{3,}/g, '\n\n')
       .trim();
   }
@@ -744,7 +937,6 @@
     if (!txt) return '';
     const cleaned = cleanMarkdown(txt);
     if (phase === 1) {
-      // YouTube: try to surface titles as cards, rest as truncated text
       const lines = cleaned.split('\n').filter(l => l.trim());
       const titleLines = lines.filter(l =>
         /^\d+[\.\)]\s/.test(l.trim()) || l.trim().startsWith('-') || l.trim().startsWith('•')
@@ -759,7 +951,6 @@
       return html;
     }
     if (phase === 2) {
-      // Data: try to show bullet list
       const lines = cleaned.split('\n').filter(l => l.trim());
       const bullets = lines.filter(l => /^[-•*]\s/.test(l.trim()) || /^\d+[\.\)]\s/.test(l.trim())).slice(0, 8);
       if (bullets.length > 0) {
@@ -770,12 +961,11 @@
       return truncatedText(cleaned, 300);
     }
     if (phase === 3) {
-      // Vault: show as plain text or clip cards
       const isClips = cleaned.includes('clip(s)') || cleaned.includes('related clip');
       if (isClips) {
-        const parts = cleaned.split(':');
+        const parts  = cleaned.split(':');
         const header = parts[0] || '';
-        const clips = (parts[1] || '').split(',').map(s => s.trim()).filter(Boolean);
+        const clips  = (parts[1] || '').split(',').map(s => s.trim()).filter(Boolean);
         return '<div style="font-size:13px;color:var(--text-dim);margin-bottom:8px;">' + escHtml(header) + '</div>' +
           (clips.length ? '<div class="vault-clips">' + clips.map(c => '<div class="vault-clip-item">' + escHtml(c) + '</div>').join('') + '</div>' : '');
       }
@@ -807,36 +997,11 @@
     if (!full) return;
     const hidden = full.style.display === 'none';
     full.style.display = hidden ? 'inline' : 'none';
-    link.textContent = hidden ? 'Show less' : 'Show more';
+    link.textContent   = hidden ? 'Show less' : 'Show more';
   });
 
-  document.getElementById('research-continue-btn').addEventListener('click', startMindMap);
-
-  // ── Mind Map ───────────────────────────────────────────────────
-  async function startMindMap() {
-    showScreen('mindmap');
-    document.getElementById('mindmap-loading').classList.add('visible');
-    document.getElementById('mindmap-container').innerHTML = '';
-
-    try {
-      const res  = await fetch('/api/id8r/mindmap', {
-        method  : 'POST',
-        headers : { 'Content-Type': 'application/json' },
-        body    : JSON.stringify({ session_id: sessionId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-
-      document.getElementById('mindmap-loading').classList.remove('visible');
-      renderMindMap(data);
-    } catch (e) {
-      document.getElementById('mindmap-loading').classList.remove('visible');
-      document.getElementById('mindmap-container').innerHTML =
-        `<p style="color:var(--red);padding:20px;">Error: ${escHtml(e.message)}</p>`;
-    }
-  }
-
-  document.getElementById('mindmap-continue-btn').addEventListener('click', startPackage);
+  // Research → Package (no mindmap)
+  document.getElementById('research-continue-btn').addEventListener('click', startPackage);
 
   // ── Package ────────────────────────────────────────────────────
   async function startPackage() {
@@ -866,7 +1031,6 @@
   }
 
   function renderPackage(data) {
-    // Titles
     const tl = document.getElementById('titles-list');
     tl.innerHTML = '';
     (data.titles || []).forEach((t, i) => {
@@ -880,7 +1044,6 @@
       tl.appendChild(c);
     });
 
-    // Thumbnails
     const thl = document.getElementById('thumbnails-list');
     thl.innerHTML = '';
     (data.thumbnails || []).forEach((t, i) => {
@@ -894,7 +1057,6 @@
       thl.appendChild(c);
     });
 
-    // Hooks
     const hl = document.getElementById('hooks-list');
     hl.innerHTML = '';
     (data.hooks || []).forEach((h, i) => {
@@ -957,28 +1119,24 @@
     setText('brief-audience', data.audience_insight || '');
     setText('brief-story',    data.story_angle || '');
 
-    // Talking points
     const tpEl = document.getElementById('brief-talking-points');
     const pts  = data.talking_points || [];
     tpEl.innerHTML = pts.length
       ? '<ul>' + pts.map(p => `<li>${escHtml(p)}</li>`).join('') + '</ul>'
       : '';
 
-    // What not to do
     const wEl = document.getElementById('brief-not-do');
     const avd = data.what_not_to_do || [];
     wEl.innerHTML = avd.length
       ? '<ul>' + avd.map(p => `<li>${escHtml(p)}</li>`).join('') + '</ul>'
       : '';
 
-    // Package chosen
     document.getElementById('brief-package-chosen').innerHTML = [
       selectedTitle ? `<strong>Title:</strong> ${escHtml(selectedTitle.text)}` : '',
       selectedThumb ? `<strong>Thumbnail:</strong> ${escHtml(selectedThumb.text_overlay)} — ${escHtml(selectedThumb.concept)}` : '',
       selectedHook  ? `<strong>Hook:</strong> ${escHtml(selectedHook.text)}` : '',
     ].filter(Boolean).join('<br>');
 
-    // Pipeline JSON
     const pb = data.pipeline_brief || {};
     document.getElementById('brief-pipeline-json').textContent = JSON.stringify(pb, null, 2);
   }
@@ -989,9 +1147,9 @@
 
   // ── Send to pipeline ───────────────────────────────────────────
   async function sendToPipeline(destination) {
-    const errEl   = document.getElementById('pipeline-error');
-    const piprBtn = document.getElementById('send-pipr-btn');
-    const writrBtn= document.getElementById('send-writr-btn');
+    const errEl    = document.getElementById('pipeline-error');
+    const piprBtn  = document.getElementById('send-pipr-btn');
+    const writrBtn = document.getElementById('send-writr-btn');
     errEl.classList.remove('visible');
     piprBtn.disabled  = true;
     writrBtn.disabled = true;
@@ -1019,75 +1177,6 @@
 
   document.getElementById('send-pipr-btn').addEventListener('click',  () => sendToPipeline('pipr'));
   document.getElementById('send-writr-btn').addEventListener('click', () => sendToPipeline('writr'));
-
-  // ── Mind Map SVG ───────────────────────────────────────────────
-  function renderMindMap(data) {
-    // data = { center, branches: [{ label, color, leaves }] }
-    const container = document.getElementById('mindmap-container');
-    const W = 800, H = 600, cx = 400, cy = 300;
-    const branchLen = 150, leafLen = 100;
-    const branches  = data.branches || [];
-    const n         = branches.length;
-    const collapsed = branches.map(() => false);
-
-    function build() {
-      const parts = [];
-
-      branches.forEach((branch, i) => {
-        const angle  = (2 * Math.PI * i / n) - Math.PI / 2;
-        const bx     = cx + branchLen * Math.cos(angle);
-        const by     = cy + branchLen * Math.sin(angle);
-        const color  = branch.color || '#3ecfb2';
-        const leaves = branch.leaves || [];
-
-        // Connector to center
-        parts.push(`<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" stroke="${color}" stroke-width="2" stroke-opacity="0.5"/>`);
-
-        // Leaf nodes
-        if (!collapsed[i] && leaves.length) {
-          leaves.forEach((leaf, j) => {
-            const la = angle + (j - (leaves.length - 1) / 2) * 0.45;
-            const lx = bx + leafLen * Math.cos(la);
-            const ly = by + leafLen * Math.sin(la);
-            parts.push(`<line x1="${bx}" y1="${by}" x2="${lx}" y2="${ly}" stroke="#2a2e28" stroke-width="1.5"/>`);
-            parts.push(`<ellipse cx="${lx}" cy="${ly}" rx="42" ry="14" fill="#1c1f1b" stroke="#3d4439" stroke-width="1"/>`);
-            const leafLabel = leaf.length > 22 ? leaf.slice(0, 20) + '…' : leaf;
-            parts.push(`<text x="${lx}" y="${ly + 4}" text-anchor="middle" fill="#8a9487" font-family="DM Sans,sans-serif" font-size="9.5">${escHtml(leafLabel)}</text>`);
-          });
-        }
-
-        // Branch node (clickable — render after leaves so it's on top)
-        const label = branch.label.length > 16 ? branch.label.slice(0, 14) + '…' : branch.label;
-        parts.push(`<g class="branch-node" data-idx="${i}" style="cursor:pointer;" role="button" aria-label="Toggle ${escHtml(branch.label)}">
-          <ellipse cx="${bx}" cy="${by}" rx="50" ry="20" fill="${color}" fill-opacity="0.15" stroke="${color}" stroke-width="1.5"/>
-          <text x="${bx}" y="${by + 5}" text-anchor="middle" fill="${color}" font-family="DM Sans,sans-serif" font-size="11" font-weight="600">${escHtml(label)}</text>
-        </g>`);
-      });
-
-      // Center node (on top of everything)
-      parts.push(`<circle cx="${cx}" cy="${cy}" r="52" fill="#14b8a6" fill-opacity="0.12" stroke="#14b8a6" stroke-width="2"/>`);
-      const words = (data.center || 'Topic').split(' ');
-      const lh    = 14;
-      const sy    = cy - ((words.length - 1) * lh) / 2 + 5;
-      words.forEach((w, wi) => {
-        parts.push(`<text x="${cx}" y="${sy + wi * lh}" text-anchor="middle" fill="#e8ebe6" font-family="Bebas Neue,sans-serif" font-size="13" letter-spacing="1">${escHtml(w)}</text>`);
-      });
-
-      return parts.join('\n');
-    }
-
-    function render() {
-      container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#0e0f0e;border-radius:8px;">${build()}</svg>`;
-      container.querySelectorAll('.branch-node').forEach(el => {
-        el.addEventListener('click', () => {
-          collapsed[parseInt(el.dataset.idx)] ^= 1;
-          render();
-        });
-      });
-    }
-
-    render();
-  }
 
   // ── SSE POST stream helper ─────────────────────────────────────
   function streamSSE(url, body, onEvent) {

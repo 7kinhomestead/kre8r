@@ -7,8 +7,9 @@
  *
  * POST /api/id8r/start          — start session, return session_id + first question
  * POST /api/id8r/respond        — user message → next question or RESEARCH_READY signal
- * POST /api/id8r/research       — SSE stream, 3 research passes in parallel
- * POST /api/id8r/mindmap        — generate mind map JSON
+ * POST /api/id8r/concepts       — fast pass: 3 concept directions (no web search)
+ * POST /api/id8r/choose         — creator picks a concept or types a blend
+ * POST /api/id8r/research       — SSE stream, 3 research passes on chosen concept
  * POST /api/id8r/package        — generate 3 titles, 3 thumbnails, 3 hooks
  * POST /api/id8r/brief          — generate full Vision Brief
  * POST /api/id8r/send-pipeline  — create project in DB, return redirect URL
@@ -17,8 +18,6 @@
 const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
-const fs      = require('fs');
-const path    = require('path');
 const db      = require('../db');
 
 // ─── Session Store ─────────────────────────────────────────────────────────────
@@ -95,9 +94,8 @@ async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024) {
 // ─── Message Window Helper ─────────────────────────────────────────────────────
 
 function getRecentMessages(messages, maxExchanges = 6) {
-  // Always keep first 2 messages (the seed), then last N exchanges
-  const seed = messages.slice(0, 2);
-  const recent = messages.slice(2);
+  const seed    = messages.slice(0, 2);
+  const recent  = messages.slice(2);
   const windowed = recent.slice(-(maxExchanges * 2));
   return [...seed, ...windowed];
 }
@@ -111,10 +109,9 @@ router.post('/start', async (req, res) => {
       return res.status(400).json({ error: 'mode is required: shape_it | find_it | deep_dive' });
     }
 
-    const sessionId = crypto.randomBytes(8).toString('hex');
+    const sessionId    = crypto.randomBytes(8).toString('hex');
     const systemPrompt = SYSTEM_PROMPTS[mode];
 
-    // Get first question from Claude
     const firstMessage = await callClaudeText(
       systemPrompt,
       [{ role: 'user', content: "Let's get started." }],
@@ -125,11 +122,13 @@ router.post('/start', async (req, res) => {
       mode,
       systemPrompt,
       messages: [
-        { role: 'user', content: "Let's get started." },
+        { role: 'user',      content: "Let's get started." },
         { role: 'assistant', content: firstMessage },
       ],
+      concepts        : null,
+      chosenConcept   : null,
       researchResults : null,
-      mindMapData     : null,
+      researchSummary : null,
       packageData     : null,
       briefData       : null,
       createdAt       : Date.now(),
@@ -154,7 +153,6 @@ router.post('/respond', async (req, res) => {
     const session = sessions.get(session_id);
     if (!session) return res.status(404).json({ error: 'Session not found or expired' });
 
-    // Append user message
     session.messages.push({ role: 'user', content: message });
 
     const reply = await callClaudeText(
@@ -163,11 +161,9 @@ router.post('/respond', async (req, res) => {
       512
     );
 
-    // Append assistant reply
     session.messages.push({ role: 'assistant', content: reply });
 
     const researchReady = reply.includes('RESEARCH_READY');
-
     res.json({ message: reply, research_ready: researchReady });
   } catch (e) {
     console.error('[id8r/respond]', e);
@@ -175,8 +171,86 @@ router.post('/respond', async (req, res) => {
   }
 });
 
+// ─── POST /api/id8r/concepts ──────────────────────────────────────────────────
+// Fast pass — no web search, low tokens, immediate
+
+router.post('/concepts', async (req, res) => {
+  try {
+    const { session_id } = req.body;
+    if (!session_id) return res.status(400).json({ error: 'session_id is required' });
+
+    const session = sessions.get(session_id);
+    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+
+    const conversationText = getRecentMessages(session.messages)
+      .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
+      .join('\n');
+
+    const result = await callClaudeJSON(
+      `You are Id8Ωr, a creative strategist for Jason Rutland at 7 Kin Homestead (725k TikTok, homesteading content). Based on the conversation below, generate 3 distinct concept directions for Jason's video. Each must be meaningfully different — different angle, different audience hook, different emotional entry point. Be specific to what Jason actually said, not generic. Use his real voice: straight-talking, funny, real numbers, never corporate.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "concepts": [
+    {
+      "id": 1,
+      "angle": "Financial Take",
+      "headline": "one punchy sentence — the video in a nutshell",
+      "why": "one sentence — why this works for Jason's audience specifically",
+      "hook": "the first 1-2 sentences of the video, in Jason's voice"
+    }
+  ]
+}
+
+Use these angles where appropriate: Financial Take, System Is Rigged, Rock Rich Episode, Practical How-To, Mistakes / What Not To Do, Lifestyle / Day-in-Life, High Curiosity / Viral. Pick the 3 best fits for what Jason described.`,
+      [{
+        role: 'user',
+        content: `Conversation:\n${conversationText}\n\nGenerate 3 distinct concept directions.`,
+      }],
+      800
+    );
+
+    session.concepts = result.concepts || [];
+    res.json(result);
+  } catch (e) {
+    console.error('[id8r/concepts]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── POST /api/id8r/choose ────────────────────────────────────────────────────
+// Creator picks concept 1/2/3 or types a free-text blend
+
+router.post('/choose', async (req, res) => {
+  try {
+    const { session_id, choice } = req.body;
+    if (!session_id) return res.status(400).json({ error: 'session_id is required' });
+
+    const session = sessions.get(session_id);
+    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+
+    const choiceNum = parseInt(choice);
+    if (!isNaN(choiceNum) && choiceNum >= 1 && choiceNum <= 3) {
+      const concepts = session.concepts || [];
+      session.chosenConcept = concepts[choiceNum - 1] || {
+        id: choiceNum, angle: 'Custom', headline: String(choice), why: '', hook: '',
+      };
+    } else {
+      // Free-text blend
+      session.chosenConcept = {
+        id: 0, angle: 'Custom Direction', headline: String(choice), why: 'Creator-defined direction', hook: '',
+      };
+    }
+
+    res.json({ ok: true, chosen: session.chosenConcept });
+  } catch (e) {
+    console.error('[id8r/choose]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── POST /api/id8r/research ───────────────────────────────────────────────────
-// SSE stream — 3 research passes
+// SSE stream — 3 focused research passes on the chosen concept
 
 router.post('/research', async (req, res) => {
   const { session_id } = req.body;
@@ -202,23 +276,31 @@ router.post('/research', async (req, res) => {
       return res.end();
     }
 
-    // Build topic summary from conversation
     const conversationText = getRecentMessages(session.messages)
       .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
       .join('\n');
+
+    // Focused research on chosen concept
+    const chosen         = session.chosenConcept;
+    const chosenAngle    = chosen ? chosen.angle    : '';
+    const chosenHeadline = chosen ? chosen.headline : '';
+    const chosenContext  = chosen
+      ? `\n\nChosen concept direction: "${chosenHeadline}" (${chosenAngle}). Research specifically for this angle — do not cover other directions.`
+      : '';
 
     send({ stage: 'start', message: 'Starting research phase...' });
 
     const results = {};
 
     // ── Phase 1: YouTube Research ─────────────────────────────────
-    send({ stage: 'phase_start', phase: 1, label: 'YouTube Research' });
+    const phase1Label = chosenAngle ? `YouTube Research — ${chosenAngle}` : 'YouTube Research';
+    send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
       const data = await callClaude(
         `You are a YouTube research analyst for 7 Kin Homestead, a homesteading channel with 725k TikTok followers. Search for the top performing YouTube videos on the topic from the conversation below. Return a summary of what's working — titles, angles, view counts if visible, gaps in existing content.`,
         [{
           role: 'user',
-          content: `Conversation:\n${conversationText}\n\nSearch YouTube for top performing videos on this topic and summarize what you find: popular titles, common angles, view counts, and any content gaps.`,
+          content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch YouTube for top performing videos on this specific angle and summarize: popular titles, common approaches, view counts, and any content gaps.`,
         }],
         1024,
         [{ type: 'web_search_20260209', name: 'web_search' }]
@@ -237,18 +319,19 @@ router.post('/research', async (req, res) => {
     } catch (e) {
       results.youtube = `Error: ${e.message}`;
     }
-    send({ stage: 'phase_result', phase: 1, label: 'YouTube Research', data: results.youtube });
+    send({ stage: 'phase_result', phase: 1, label: phase1Label, data: results.youtube });
     send({ stage: 'phase_wait', phase: 1, duration: 120, message: 'Reviewing findings...' });
     await new Promise(r => setTimeout(r, 120000));
 
     // ── Phase 2: Data & Facts ─────────────────────────────────────
-    send({ stage: 'phase_start', phase: 2, label: 'Data & Facts' });
+    const phase2Label = chosenAngle ? `Data & Facts — ${chosenAngle}` : 'Data & Facts';
+    send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
       const data = await callClaude(
-        `You are a research analyst for 7 Kin Homestead, a homesteading content creator. Search for statistics, studies, recent news, and compelling data hooks related to the topic from the conversation. Focus on numbers and facts that would make a homesteading audience lean in.`,
+        `You are a research analyst for 7 Kin Homestead, a homesteading content creator. Search for statistics, studies, recent news, and compelling data hooks related to the topic. Focus on numbers and facts that would make a homesteading audience lean in.`,
         [{
           role: 'user',
-          content: `Conversation:\n${conversationText}\n\nSearch for relevant statistics, studies, news hooks, and data points that could strengthen this video concept.`,
+          content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch for relevant statistics, studies, news hooks, and data points that strengthen this specific concept.`,
         }],
         1024,
         [{ type: 'web_search_20260209', name: 'web_search' }]
@@ -267,20 +350,21 @@ router.post('/research', async (req, res) => {
     } catch (e) {
       results.data = `Error: ${e.message}`;
     }
-    send({ stage: 'phase_result', phase: 2, label: 'Data & Facts', data: results.data });
+    send({ stage: 'phase_result', phase: 2, label: phase2Label, data: results.data });
     send({ stage: 'phase_wait', phase: 2, duration: 120, message: 'Reviewing findings...' });
     await new Promise(r => setTimeout(r, 120000));
 
     // ── Phase 3: VaultΩr cross-reference ─────────────────────────
-    send({ stage: 'phase_start', phase: 3, label: 'VaultΩr Check' });
+    const phase3Label = 'VaultΩr — have you covered this before?';
+    send({ stage: 'phase_start', phase: 3, label: phase3Label });
     try {
       const { default: fetch } = await import('node-fetch');
       const vaultRes = await fetch('http://localhost:3000/api/vault/footage');
       if (!vaultRes.ok) {
         results.vault = 'VaultΩr not available.';
       } else {
-        const footage = await vaultRes.json();
-        const items = Array.isArray(footage) ? footage : (footage.footage || []);
+        const footage  = await vaultRes.json();
+        const items    = Array.isArray(footage) ? footage : (footage.footage || []);
         const completed = items.filter(f => f.status === 'completed' || f.classification);
         if (completed.length === 0) {
           results.vault = 'No classified footage in VaultΩr yet.';
@@ -298,7 +382,7 @@ router.post('/research', async (req, res) => {
     } catch (e) {
       results.vault = `VaultΩr check failed: ${e.message}`;
     }
-    send({ stage: 'phase_result', phase: 3, label: 'VaultΩr Check', data: results.vault });
+    send({ stage: 'phase_result', phase: 3, label: phase3Label, data: results.vault });
     send({ stage: 'phase_wait', phase: 3, duration: 120, message: 'Reviewing findings...' });
     await new Promise(r => setTimeout(r, 120000));
 
@@ -308,13 +392,12 @@ router.post('/research', async (req, res) => {
     session.researchResults = results;
 
     try {
-      const summaryMessages = [{
-        role: 'user',
-        content: `Summarize these research results into bullet points under 400 words:\n\nYouTube: ${results.youtube.slice(0, 2000)}\n\nData: ${results.data.slice(0, 2000)}\n\nVault: ${results.vault.slice(0, 500)}`,
-      }];
       session.researchSummary = await callClaudeText(
         'You are a research summarizer. Be concise. Return plain text bullet points only, no markdown headers.',
-        summaryMessages,
+        [{
+          role: 'user',
+          content: `Summarize these research results into bullet points under 400 words:\n\nYouTube: ${results.youtube.slice(0, 2000)}\n\nData: ${results.data.slice(0, 2000)}\n\nVault: ${results.vault.slice(0, 500)}`,
+        }],
         600
       );
     } catch (e) {
@@ -328,55 +411,6 @@ router.post('/research', async (req, res) => {
     console.error('[id8r/research]', e);
     send({ stage: 'error', error: e.message });
     res.end();
-  }
-});
-
-// ─── POST /api/id8r/mindmap ────────────────────────────────────────────────────
-
-router.post('/mindmap', async (req, res) => {
-  try {
-    const { session_id } = req.body;
-    if (!session_id) return res.status(400).json({ error: 'session_id is required' });
-
-    const session = sessions.get(session_id);
-    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
-
-    if (session.mindmapCache) return res.json(session.mindmapCache);
-
-    const researchSummary = session.researchSummary || 'No research data yet.';
-
-    const systemPrompt = `You are Id8Ωr, a creative strategist for 7 Kin Homestead. Generate a mind map JSON from the research below. The mind map should show the central topic and 4-6 branches (angles, audiences, hooks, themes, concerns, opportunities), each with 2-4 leaf nodes.
-
-Return ONLY valid JSON in this exact shape:
-{
-  "center": "Core Topic Label",
-  "branches": [
-    {
-      "label": "Branch Label",
-      "color": "#hex",
-      "leaves": ["leaf 1", "leaf 2", "leaf 3"]
-    }
-  ]
-}
-
-Use these colors for branches: #3ecfb2, #f0b942, #a78bfa, #5b9cf6, #5cba8a, #e05c5c
-Keep labels SHORT (2-5 words). Make it useful for content planning.`;
-
-    const result = await callClaudeJSON(
-      systemPrompt,
-      [{
-        role: 'user',
-        content: `Research:\n${researchSummary}\n\nGenerate mind map JSON.`,
-      }],
-      1024
-    );
-
-    session.mindMapData = result;
-    session.mindmapCache = result;
-    res.json(result);
-  } catch (e) {
-    console.error('[id8r/mindmap]', e);
-    res.status(500).json({ error: e.message });
   }
 });
 
@@ -395,8 +429,13 @@ router.post('/package', async (req, res) => {
       .join('\n');
 
     const researchSummary = session.researchSummary || 'No research data.';
+    const chosen          = session.chosenConcept;
+    const chosenContext   = chosen
+      ? `\n\nChosen direction: "${chosen.headline}" (${chosen.angle})`
+      : '';
 
-    const systemPrompt = `You are a YouTube packaging expert for 7 Kin Homestead, a homesteading creator with 725k TikTok followers. Generate packaging options based on the conversation and research.
+    const result = await callClaudeJSON(
+      `You are a YouTube packaging expert for 7 Kin Homestead, a homesteading creator with 725k TikTok followers. Generate packaging options based on the conversation and research.
 
 The creator's voice: straight-talking, warm, funny, never corporate. Real numbers. Self-deprecating. Uses "Kevin" as a foil.
 
@@ -417,13 +456,10 @@ Return ONLY valid JSON:
     { "text": "First 15 seconds script", "type": "question/stat/story/challenge" },
     { "text": "First 15 seconds script", "type": "question/stat/story/challenge" }
   ]
-}`;
-
-    const result = await callClaudeJSON(
-      systemPrompt,
+}`,
       [{
         role: 'user',
-        content: `Conversation:\n${conversationText}\n\nResearch:\n${researchSummary}\n\nGenerate 3 titles, 3 thumbnails, 3 hooks.`,
+        content: `Conversation:\n${conversationText}${chosenContext}\n\nResearch:\n${researchSummary}\n\nGenerate 3 titles, 3 thumbnails, 3 hooks.`,
       }],
       1024
     );
@@ -452,7 +488,8 @@ router.post('/brief', async (req, res) => {
 
     const researchSummary = session.researchSummary || 'No research data.';
 
-    const systemPrompt = `You are Id8Ωr, a creative strategist for 7 Kin Homestead. Generate a complete Vision Brief for this video concept.
+    const result = await callClaudeJSON(
+      `You are Id8Ωr, a creative strategist for 7 Kin Homestead. Generate a complete Vision Brief for this video concept.
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -471,10 +508,7 @@ Return ONLY valid JSON in this exact shape:
     "entry_point": "script_first",
     "estimated_duration_minutes": 0
   }
-}`;
-
-    const result = await callClaudeJSON(
-      systemPrompt,
+}`,
       [{
         role: 'user',
         content: `Conversation:\n${conversationText}\n\nResearch:\n${researchSummary}\n\nSelected Title: ${selected_title || 'TBD'}\nSelected Thumbnail: ${JSON.stringify(selected_thumbnail) || 'TBD'}\nSelected Hook: ${JSON.stringify(selected_hook) || 'TBD'}\n\nGenerate the complete Vision Brief JSON.`,
@@ -495,7 +529,6 @@ Return ONLY valid JSON in this exact shape:
 router.post('/send-pipeline', async (req, res) => {
   try {
     const { session_id, destination } = req.body;
-    // destination: 'pipr' | 'writr'
 
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
@@ -507,13 +540,8 @@ router.post('/send-pipeline', async (req, res) => {
     const brief = session.briefData;
     const pb    = brief.pipeline_brief || {};
 
-    // Map pipeline_brief fields to projects schema
-    const title   = pb.title || brief.elevator_pitch || 'Untitled Id8Ωr Project';
-    const topic   = [
-      pb.high_concept,
-      pb.content_angle,
-      pb.concept_note,
-    ].filter(Boolean).join(' | ');
+    const title = pb.title || brief.elevator_pitch || 'Untitled Id8Ωr Project';
+    const topic = [pb.high_concept, pb.content_angle, pb.concept_note].filter(Boolean).join(' | ');
 
     const project = db.createProject(title, topic, null, null);
 
