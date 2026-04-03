@@ -269,7 +269,9 @@
       "Bash(node -e \"require\\(''./src/routes/id8r.js''\\); console.log\\(''id8r.js loaded OK''\\);\")",
       "Bash(timeout 10)",
       "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(JSON.stringify\\(p.content_angles || p.angles || Object.keys\\(p\\), null, 2\\)\\);\")",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "Bash(npx playwright:*)",
+      "Bash(node -e \"require\\(''./src/routes/playwright.js''\\); console.log\\(''playwright.js loaded OK''\\);\")"
     ]
   }
 }

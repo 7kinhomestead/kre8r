@@ -761,6 +761,7 @@ function renderBroadcastResults(broadcast) {
         <div class="email-body-box">${escHtml(version.body)}</div>
         <div class="email-panel-actions">
           <button class="btn btn-copy btn-copy-full">📋 Copy Full Email</button>
+          <button class="btn btn-kajabi-send" style="background:none;border:1px solid var(--border-bright);color:var(--text-dim);font-size:12px;padding:5px 12px;">⚡ Send via Kajabi</button>
         </div>
       </div>`;
 
@@ -773,6 +774,23 @@ function renderBroadcastResults(broadcast) {
     subjectBtn.addEventListener('click', () => clipWrite(version.subject, () => flashCopy(subjectBtn)));
     bodyBtn.addEventListener('click',    () => clipWrite(version.body,    () => flashCopy(bodyBtn)));
     fullBtn.addEventListener('click',    () => clipWrite(full,            () => flashCopy(fullBtn)));
+
+    const kajabiBtn = card.querySelector('.btn-kajabi-send');
+    kajabiBtn.addEventListener('click', async () => {
+      try {
+        const statusRes  = await fetch('/api/playwright/status');
+        const statusData = await statusRes.json();
+        if (!statusData.connected) {
+          const go = confirm('Chrome is not connected to AutomatΩr.\n\nClick OK to open AutomatΩr and set up the connection, then come back to send.');
+          if (go) window.open('/automator.html', '_blank');
+          return;
+        }
+        const params = new URLSearchParams({ subject: version.subject, body: version.body });
+        window.open('/automator.html?' + params.toString(), '_blank');
+      } catch (e) {
+        alert('Could not reach AutomatΩr: ' + e.message);
+      }
+    });
 
     container.appendChild(card);
   }

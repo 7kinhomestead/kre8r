@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutomatΩr — Kre8Ωr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/global.css">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+  .main{max-width:900px;margin:0 auto;padding:32px 16px 100px;}
+
+  /* ── Page Header ── */
+  .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(34px,8vw,54px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;line-height:1.6;}
+
+  /* ── Connection Panel ── */
+  .connect-panel{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px 24px;margin-bottom:24px;animation:fadeUp 0.4s ease 0.05s both;
+  }
+  .connect-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .connect-status{display:flex;align-items:center;gap:10px;}
+  .status-dot{width:10px;height:10px;border-radius:50%;background:var(--text-dimmer);flex-shrink:0;transition:background 0.3s;}
+  .status-dot.connected{background:var(--green);}
+  .status-dot.checking{background:var(--amber);animation:pulse 1s infinite;}
+  .status-text{font-size:14px;font-weight:600;color:var(--text-dim);}
+  .status-text.connected{color:var(--green);}
+  .connect-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+  .connect-instructions{
+    margin-top:16px;padding-top:16px;border-top:1px solid var(--border);
+    display:none;
+  }
+  .connect-instructions.visible{display:block;}
+  .connect-instructions-label{font-size:12px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:10px;}
+  .connect-step{font-size:13px;color:var(--text-dim);margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;}
+  .step-num{width:20px;height:20px;border-radius:50%;background:var(--bg-card-2);border:1px solid var(--border-bright);font-size:10px;font-weight:700;color:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .connect-cmd{
+    background:var(--bg);border:1px solid var(--border-bright);border-radius:var(--radius-sm);
+    padding:10px 14px;font-family:monospace;font-size:12px;color:var(--teal);
+    display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;
+  }
+  .cmd-copy-btn{background:none;border:1px solid var(--border-bright);color:var(--text-dimmer);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .cmd-copy-btn:hover{border-color:var(--teal);color:var(--teal);}
+
+  /* ── Tabs ── */
+  .tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:6px;animation:fadeUp 0.4s ease 0.1s both;}
+  .tab-btn{flex:1;background:none;border:none;border-radius:var(--radius-sm);padding:10px 12px;font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;transition:all 0.15s;text-align:center;white-space:nowrap;}
+  .tab-btn:hover{color:var(--text);background:var(--bg-card-2);}
+  .tab-btn.active{background:var(--teal);color:#0e0f0e;}
+  @media(max-width:600px){.tabs{flex-wrap:wrap;}.tab-btn{flex:1 1 45%;}}
+
+  /* ── Tab Panels ── */
+  .tab-panel{display:none;animation:fadeUp 0.3s ease both;}
+  .tab-panel.active{display:block;}
+
+  /* ── Form ── */
+  .form-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;}
+  .form-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;display:block;}
+  .form-input{
+    width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius-sm);padding:10px 12px;font-family:var(--font-body);font-size:14px;
+    transition:border-color 0.15s;margin-bottom:14px;
+  }
+  .form-input:focus{outline:none;border-color:var(--teal);}
+  .form-input::placeholder{color:var(--text-dimmer);}
+  textarea.form-input{resize:vertical;min-height:120px;line-height:1.55;}
+  textarea.form-input.tall{min-height:200px;}
+  select.form-input{cursor:pointer;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
+  .form-toggle{display:flex;gap:8px;margin-bottom:14px;}
+  .toggle-opt{flex:1;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 14px;font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;text-align:center;transition:all 0.15s;}
+  .toggle-opt.active{border-color:var(--teal);color:var(--teal);background:var(--teal-glow);}
+
+  /* ── Sequence email builder ── */
+  .email-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+  .email-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;}
+  .email-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .email-item-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-dimmer);}
+  .email-item-remove{background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;border-radius:4px;transition:all 0.15s;}
+  .email-item-remove:hover{background:var(--red-glow);color:var(--red);}
+  .add-email-btn{background:none;border:1px dashed var(--border-bright);color:var(--text-dimmer);border-radius:var(--radius-sm);padding:10px;width:100%;font-family:var(--font-body);font-size:13px;cursor:pointer;transition:all 0.15s;margin-bottom:14px;}
+  .add-email-btn:hover{border-color:var(--teal);color:var(--teal);}
+
+  /* ── Action row ── */
+  .action-row{display:flex;justify-content:flex-end;padding-top:4px;}
+
+  /* ── Progress / result ── */
+  .op-result{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-top:14px;display:none;}
+  .op-result.visible{display:block;animation:fadeUp 0.3s ease both;}
+  .op-result.success{border-color:rgba(92,186,138,0.4);background:var(--green-glow);}
+  .op-result.error{border-color:rgba(224,92,92,0.4);background:var(--red-glow);}
+  .op-result-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px;}
+  .op-result.success .op-result-label{color:var(--green);}
+  .op-result.error .op-result-label{color:var(--red);}
+  .op-result-msg{font-size:13px;color:var(--text-dim);line-height:1.6;}
+  .op-result-detail{font-family:monospace;font-size:11px;color:var(--text-dimmer);margin-top:6px;}
+
+  /* Progress stream */
+  .progress-log{background:var(--bg);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:12px 14px;font-family:monospace;font-size:12px;color:var(--text-dim);line-height:1.8;max-height:200px;overflow-y:auto;margin-top:10px;display:none;}
+  .progress-log.visible{display:block;}
+
+  /* ── Shared Buttons ── */
+  .btn{
+    background:var(--teal);color:#0e0f0e;border:none;border-radius:var(--radius-sm);
+    padding:11px 22px;font-family:var(--font-body);font-size:14px;font-weight:700;
+    cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;
+    display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  }
+  .btn:hover{background:var(--teal-dim);}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;background:var(--teal);}
+  .btn.btn-secondary{background:var(--bg-card-2);color:var(--text);border:1px solid var(--border-bright);}
+  .btn.btn-secondary:hover{border-color:var(--teal);color:var(--teal);}
+  .btn.btn-danger{background:none;color:var(--red);border:1px solid rgba(224,92,92,0.3);}
+  .btn.btn-danger:hover{background:var(--red-glow);border-color:var(--red);}
+  .spinner-sm{width:14px;height:14px;border:2px solid rgba(14,15,14,0.3);border-top-color:#0e0f0e;border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+  .btn.loading .spinner-sm{display:inline-block;}
+  .btn.loading .btn-label{opacity:0.7;}
+</style>
+</head>
+<body>
+
+<div id="kre8r-nav"></div>
+
+<div class="main">
+
+  <div class="page-header">
+    <div class="page-title">AUTOMAT<em>Ω</em>R</div>
+    <div class="page-sub">Kajabi automation. Claude writes it, Playwright sends it.</div>
+  </div>
+
+  <!-- ── Connection Panel ── -->
+  <div class="connect-panel">
+    <div class="connect-header">
+      <div class="connect-status">
+        <div class="status-dot checking" id="status-dot"></div>
+        <div class="status-text" id="status-text">Checking connection...</div>
+      </div>
+      <div class="connect-actions">
+        <button class="btn" id="connect-btn" onclick="connectChrome()">
+          <div class="spinner-sm"></div>
+          <span class="btn-label">Connect Chrome</span>
+        </button>
+        <button class="btn btn-danger" id="disconnect-btn" onclick="disconnectChrome()" style="display:none;">
+          Disconnect
+        </button>
+      </div>
+    </div>
+
+    <div class="connect-instructions" id="connect-instructions">
+      <div class="connect-instructions-label">Setup — First Time</div>
+      <div class="connect-step">
+        <div class="step-num">1</div>
+        <div>Close all Chrome windows, then relaunch Chrome with remote debugging enabled:</div>
+      </div>
+      <div class="connect-cmd">
+        <code id="chrome-cmd-text">chrome.exe --remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\Google\Chrome\RemoteDebug"</code>
+        <button class="cmd-copy-btn" onclick="copyCmd()">Copy</button>
+      </div>
+      <div class="connect-step" style="margin-top:12px;">
+        <div class="step-num">2</div>
+        <div>Log into <strong>app.kajabi.com</strong> in that Chrome window.</div>
+      </div>
+      <div class="connect-step">
+        <div class="step-num">3</div>
+        <div>Click <strong>Connect Chrome</strong> above. Playwright will attach to your existing session — no credentials stored.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ── -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('broadcast')">⚡ Broadcast</button>
+    <button class="tab-btn" onclick="switchTab('community')">💬 Community</button>
+    <button class="tab-btn" onclick="switchTab('sequence')">📧 Sequence</button>
+    <button class="tab-btn" onclick="switchTab('automation')">⚙️ Automation</button>
+  </div>
+
+  <!-- ────────────────── BROADCAST TAB ────────────────── -->
+  <div id="tab-broadcast" class="tab-panel active">
+    <div class="form-section">
+      <label class="form-label">Subject Line</label>
+      <input type="text" class="form-input" id="bc-subject" placeholder="Your email subject...">
+
+      <label class="form-label">Email Body</label>
+      <textarea class="form-input tall" id="bc-body" placeholder="Email body — paste from MailΩr or write here..."></textarea>
+
+      <label class="form-label">Segment</label>
+      <select class="form-input" id="bc-segment">
+        <option value="">All Members</option>
+      </select>
+
+      <label class="form-label">Send Timing</label>
+      <div class="form-toggle">
+        <div class="toggle-opt active" id="toggle-now" onclick="setSendMode('now')">Send Now</div>
+        <div class="toggle-opt" id="toggle-schedule" onclick="setSendMode('schedule')">Schedule</div>
+      </div>
+
+      <div id="schedule-fields" style="display:none;">
+        <label class="form-label">Schedule Date &amp; Time</label>
+        <input type="datetime-local" class="form-input" id="bc-schedule-at">
+      </div>
+
+      <div class="action-row">
+        <button class="btn" id="bc-send-btn" onclick="sendBroadcast()">
+          <div class="spinner-sm"></div>
+          <span class="btn-label">Send Broadcast →</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="progress-log" id="bc-log"></div>
+    <div class="op-result" id="bc-result">
+      <div class="op-result-label" id="bc-result-label"></div>
+      <div class="op-result-msg" id="bc-result-msg"></div>
+      <div class="op-result-detail" id="bc-result-detail"></div>
+    </div>
+  </div>
+
+  <!-- ────────────────── COMMUNITY TAB ────────────────── -->
+  <div id="tab-community" class="tab-panel">
+    <div class="form-section">
+      <label class="form-label">Post Body</label>
+      <textarea class="form-input tall" id="cm-body" placeholder="Write your community post..."></textarea>
+
+      <label class="form-label">Topic <span style="font-size:11px;font-weight:400;text-transform:none;color:var(--text-dimmer);">(optional)</span></label>
+      <input type="text" class="form-input" id="cm-topic" placeholder="Topic name in Kajabi...">
+
+      <div class="action-row">
+        <button class="btn" id="cm-post-btn" onclick="postCommunity()">
+          <div class="spinner-sm"></div>
+          <span class="btn-label">Post to Community →</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="progress-log" id="cm-log"></div>
+    <div class="op-result" id="cm-result">
+      <div class="op-result-label" id="cm-result-label"></div>
+      <div class="op-result-msg" id="cm-result-msg"></div>
+      <div class="op-result-detail" id="cm-result-detail"></div>
+    </div>
+  </div>
+
+  <!-- ────────────────── SEQUENCE TAB ────────────────── -->
+  <div id="tab-sequence" class="tab-panel">
+    <div class="form-section">
+      <label class="form-label">Sequence Name</label>
+      <input type="text" class="form-input" id="seq-name" placeholder="e.g. New Member Welcome">
+
+      <label class="form-label">Emails</label>
+      <div class="email-list" id="seq-email-list"></div>
+      <button class="add-email-btn" onclick="addSequenceEmail()">+ Add Email</button>
+
+      <div class="action-row">
+        <button class="btn" id="seq-create-btn" onclick="createSequence()">
+          <div class="spinner-sm"></div>
+          <span class="btn-label">Create Sequence →</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="progress-log" id="seq-log"></div>
+    <div class="op-result" id="seq-result">
+      <div class="op-result-label" id="seq-result-label"></div>
+      <div class="op-result-msg" id="seq-result-msg"></div>
+      <div class="op-result-detail" id="seq-result-detail"></div>
+    </div>
+  </div>
+
+  <!-- ────────────────── AUTOMATION TAB ────────────────── -->
+  <div id="tab-automation" class="tab-panel">
+    <div class="form-section">
+      <label class="form-label">Automation Name</label>
+      <input type="text" class="form-input" id="auto-name" placeholder="e.g. Welcome sequence on tag">
+
+      <label class="form-label">Trigger</label>
+      <select class="form-input" id="auto-trigger" onchange="updateTriggerFields()">
+        <option value="tag_added">Tag Added</option>
+        <option value="purchase_made">Purchase Made</option>
+        <option value="form_submitted">Form Submitted</option>
+      </select>
+
+      <div id="auto-trigger-tag-fields">
+        <label class="form-label">Tag Name</label>
+        <select class="form-input" id="auto-trigger-tag">
+          <option value="">Loading tags...</option>
+        </select>
+      </div>
+
+      <label class="form-label">Action</label>
+      <select class="form-input" id="auto-action" onchange="updateActionFields()">
+        <option value="enroll_sequence">Enroll in Sequence</option>
+        <option value="send_email">Send Email</option>
+        <option value="add_tag">Add Tag</option>
+        <option value="grant_offer">Grant Offer</option>
+      </select>
+
+      <div id="auto-action-sequence-fields">
+        <label class="form-label">Sequence Name / ID</label>
+        <input type="text" class="form-input" id="auto-sequence-id" placeholder="Sequence name or ID from Kajabi">
+      </div>
+
+      <div class="action-row">
+        <button class="btn" id="auto-create-btn" onclick="createAutomation()">
+          <div class="spinner-sm"></div>
+          <span class="btn-label">Create Automation →</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="progress-log" id="auto-log"></div>
+    <div class="op-result" id="auto-result">
+      <div class="op-result-label" id="auto-result-label"></div>
+      <div class="op-result-msg" id="auto-result-msg"></div>
+      <div class="op-result-detail" id="auto-result-detail"></div>
+    </div>
+  </div>
+
+</div><!-- .main -->
+
+<script src="/js/nav.js" defer></script>
+<script>window.addEventListener('load', () => initNav())</script>
+
+<script>
+(function () {
+  'use strict';
+
+  let isConnected  = false;
+  let sendMode     = 'now';
+  let sequenceEmails = [];
+
+  // ── Init ─────────────────────────────────────────────────────
+  window.addEventListener('load', async () => {
+    await checkStatus();
+    await loadTags();
+    addSequenceEmail(); // start with one email slot
+  });
+
+  // ── Tab switching ─────────────────────────────────────────────
+  window.switchTab = function(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const idx = ['broadcast','community','sequence','automation'].indexOf(tab);
+    document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  };
+
+  // Pre-fill from URL params (from MailΩr handoff)
+  (function checkUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const subject = params.get('subject');
+    const body    = params.get('body');
+    if (subject) { document.getElementById('bc-subject').value = decodeURIComponent(subject); }
+    if (body)    { document.getElementById('bc-body').value    = decodeURIComponent(body); }
+    if (subject || body) switchTab('broadcast');
+  })();
+
+  // ── Connection ───────────────────────────────────────────────
+  async function checkStatus() {
+    const dot  = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    dot.className = 'status-dot checking';
+    text.className = 'status-text';
+    text.textContent = 'Checking connection...';
+
+    try {
+      const res  = await fetch('/api/playwright/status');
+      const data = await res.json();
+      isConnected = data.connected;
+
+      if (data.connected) {
+        dot.className   = 'status-dot connected';
+        text.className  = 'status-text connected';
+        text.textContent = 'Chrome Connected — Kajabi automation ready';
+        document.getElementById('connect-btn').style.display      = 'none';
+        document.getElementById('disconnect-btn').style.display   = '';
+        document.getElementById('connect-instructions').classList.remove('visible');
+      } else if (data.port_reachable) {
+        dot.className   = 'status-dot';
+        dot.style.background = 'var(--amber)';
+        text.textContent = 'Chrome found on port 9222 — click Connect';
+        document.getElementById('connect-instructions').classList.remove('visible');
+      } else {
+        dot.className   = 'status-dot';
+        text.textContent = 'Not connected — Chrome not found on port 9222';
+        document.getElementById('connect-instructions').classList.add('visible');
+      }
+    } catch (e) {
+      dot.className  = 'status-dot';
+      text.textContent = 'Status check failed: ' + e.message;
+    }
+  }
+
+  window.connectChrome = async function() {
+    const btn = document.getElementById('connect-btn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+      const res  = await fetch('/api/playwright/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.ok) {
+        isConnected = true;
+      }
+    } catch (e) {
+      console.error('[connect]', e);
+    }
+
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    await checkStatus();
+  };
+
+  window.disconnectChrome = async function() {
+    try {
+      await fetch('/api/playwright/disconnect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      isConnected = false;
+    } catch (_) {}
+    document.getElementById('disconnect-btn').style.display = 'none';
+    document.getElementById('connect-btn').style.display    = '';
+    await checkStatus();
+  };
+
+  window.copyCmd = function() {
+    const cmd = document.getElementById('chrome-cmd-text').textContent;
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.querySelector('.cmd-copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    });
+  };
+
+  // ── Tags ─────────────────────────────────────────────────────
+  async function loadTags() {
+    try {
+      const res  = await fetch('/api/kajabi/tags');
+      const data = await res.json();
+      const tags = data.tags || data || [];
+      const sel  = document.getElementById('bc-segment');
+      const asel = document.getElementById('auto-trigger-tag');
+      [sel, asel].forEach(el => {
+        if (!el) return;
+        while (el.options.length > 1) el.remove(1);
+        tags.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.name || t;
+          opt.textContent = t.name || t;
+          el.appendChild(opt);
+        });
+      });
+    } catch (_) {
+      // Tags unavailable — selects stay with defaults
+    }
+  }
+
+  // ── Send mode toggle ──────────────────────────────────────────
+  window.setSendMode = function(mode) {
+    sendMode = mode;
+    document.getElementById('toggle-now').classList.toggle('active', mode === 'now');
+    document.getElementById('toggle-schedule').classList.toggle('active', mode === 'schedule');
+    document.getElementById('schedule-fields').style.display = mode === 'schedule' ? '' : 'none';
+  };
+
+  // ── Trigger / action field updates ───────────────────────────
+  window.updateTriggerFields = function() {
+    const val = document.getElementById('auto-trigger').value;
+    document.getElementById('auto-trigger-tag-fields').style.display = val === 'tag_added' ? '' : 'none';
+  };
+
+  window.updateActionFields = function() {
+    const val = document.getElementById('auto-action').value;
+    document.getElementById('auto-action-sequence-fields').style.display = val === 'enroll_sequence' ? '' : 'none';
+  };
+
+  // ── Sequence email builder ────────────────────────────────────
+  window.addSequenceEmail = function() {
+    const idx  = sequenceEmails.length;
+    sequenceEmails.push({ subject: '', body: '', delayDays: idx === 0 ? 0 : 1 });
+
+    const list = document.getElementById('seq-email-list');
+    const item = document.createElement('div');
+    item.className  = 'email-item';
+    item.dataset.idx = idx;
+    item.innerHTML  = `
+      <div class="email-item-header">
+        <span class="email-item-label">Email ${idx + 1}</span>
+        <button class="email-item-remove" onclick="removeSequenceEmail(${idx})" title="Remove">✕</button>
+      </div>
+      <label class="form-label">Subject</label>
+      <input type="text" class="form-input" placeholder="Subject line..." oninput="updateEmail(${idx},'subject',this.value)" style="margin-bottom:10px;">
+      <label class="form-label">Body</label>
+      <textarea class="form-input" placeholder="Email body..." oninput="updateEmail(${idx},'body',this.value)" style="min-height:80px;margin-bottom:10px;"></textarea>
+      <label class="form-label">Send after (days)</label>
+      <input type="number" class="form-input" value="${idx === 0 ? 0 : 1}" min="0" oninput="updateEmail(${idx},'delayDays',parseInt(this.value)||0)">
+    `;
+    list.appendChild(item);
+  };
+
+  window.updateEmail = function(idx, field, val) {
+    if (sequenceEmails[idx]) sequenceEmails[idx][field] = val;
+  };
+
+  window.removeSequenceEmail = function(idx) {
+    const list = document.getElementById('seq-email-list');
+    const item = list.querySelector(`[data-idx="${idx}"]`);
+    if (item) item.remove();
+    sequenceEmails[idx] = null;
+  };
+
+  // ── SSE stream helper ────────────────────────────────────────
+  function streamSSE(url, body, logId, resultId) {
+    const log    = document.getElementById(logId);
+    const result = document.getElementById(resultId);
+    log.innerHTML = '';
+    log.classList.add('visible');
+    result.className = 'op-result';
+
+    return new Promise((resolve) => {
+      fetch(url, {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify(body),
+      }).then(res => {
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+
+        function pump() {
+          reader.read().then(({ done, value }) => {
+            if (done) { resolve(); return; }
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop();
+            lines.forEach(line => {
+              if (!line.startsWith('data: ')) return;
+              try {
+                const ev = JSON.parse(line.slice(6));
+                if (ev.stage === 'progress') {
+                  log.innerHTML += `<div>▸ ${escHtml(ev.message)}</div>`;
+                  log.scrollTop = log.scrollHeight;
+                }
+                if (ev.stage === 'done') {
+                  log.innerHTML += `<div style="color:var(--green);">✓ ${escHtml(ev.message)}</div>`;
+                  result.className = 'op-result success visible';
+                  document.getElementById(resultId + '-label').textContent = '✓ Success';
+                  document.getElementById(resultId + '-msg').textContent   = ev.message;
+                  const det = Object.entries(ev).filter(([k]) => !['stage','message'].includes(k)).map(([k,v]) => `${k}: ${v}`).join('  ·  ');
+                  document.getElementById(resultId + '-detail').textContent = det;
+                }
+                if (ev.stage === 'error') {
+                  log.innerHTML += `<div style="color:var(--red);">✗ ${escHtml(ev.error)}</div>`;
+                  result.className = 'op-result error visible';
+                  document.getElementById(resultId + '-label').textContent = '✗ Error';
+                  document.getElementById(resultId + '-msg').textContent   = ev.error;
+                  if (ev.screenshot) document.getElementById(resultId + '-detail').textContent = 'Debug screenshot: ' + ev.screenshot;
+                }
+              } catch (_) {}
+            });
+            pump();
+          });
+        }
+        pump();
+      }).catch(e => {
+        log.innerHTML += `<div style="color:var(--red);">✗ ${escHtml(e.message)}</div>`;
+        resolve();
+      });
+    });
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.classList.toggle('loading', loading);
+  }
+
+  function guardConnection() {
+    if (!isConnected) {
+      alert('Chrome is not connected. Click Connect Chrome first.');
+      return false;
+    }
+    return true;
+  }
+
+  // ── Actions ──────────────────────────────────────────────────
+  window.sendBroadcast = async function() {
+    if (!guardConnection()) return;
+    const subject    = document.getElementById('bc-subject').value.trim();
+    const body       = document.getElementById('bc-body').value.trim();
+    const segment    = document.getElementById('bc-segment').value;
+    const scheduleAt = sendMode === 'schedule' ? document.getElementById('bc-schedule-at').value : null;
+    if (!subject || !body) { alert('Subject and body are required.'); return; }
+    setLoading('bc-send-btn', true);
+    await streamSSE('/api/playwright/broadcast', { subject, body, segment, scheduleAt }, 'bc-log', 'bc-result');
+    setLoading('bc-send-btn', false);
+  };
+
+  window.postCommunity = async function() {
+    if (!guardConnection()) return;
+    const body  = document.getElementById('cm-body').value.trim();
+    const topic = document.getElementById('cm-topic').value.trim();
+    if (!body) { alert('Post body is required.'); return; }
+    setLoading('cm-post-btn', true);
+    await streamSSE('/api/playwright/community', { body, topic }, 'cm-log', 'cm-result');
+    setLoading('cm-post-btn', false);
+  };
+
+  window.createSequence = async function() {
+    if (!guardConnection()) return;
+    const name   = document.getElementById('seq-name').value.trim();
+    const emails = sequenceEmails.filter(Boolean).filter(e => e.subject || e.body);
+    if (!name)           { alert('Sequence name is required.'); return; }
+    if (!emails.length)  { alert('Add at least one email.'); return; }
+    setLoading('seq-create-btn', true);
+    await streamSSE('/api/playwright/sequence', { name, emails }, 'seq-log', 'seq-result');
+    setLoading('seq-create-btn', false);
+  };
+
+  window.createAutomation = async function() {
+    if (!guardConnection()) return;
+    const name    = document.getElementById('auto-name').value.trim();
+    const triggerType = document.getElementById('auto-trigger').value;
+    const triggerTag  = document.getElementById('auto-trigger-tag').value;
+    const actionType  = document.getElementById('auto-action').value;
+    const sequenceId  = document.getElementById('auto-sequence-id').value.trim();
+    if (!name) { alert('Automation name is required.'); return; }
+    const trigger = { type: triggerType, tag: triggerTag };
+    const action  = { type: actionType, sequenceId };
+    setLoading('auto-create-btn', true);
+    await streamSSE('/api/playwright/automation', { name, trigger, action }, 'auto-log', 'auto-result');
+    setLoading('auto-create-btn', false);
+  };
+
+  // ── Utility ──────────────────────────────────────────────────
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+})();
+</script>
+</body>
+</html>

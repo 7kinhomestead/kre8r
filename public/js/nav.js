@@ -63,6 +63,7 @@
           { label: 'CaptionΩr', sublabel: 'M3', href: '/m3-caption-generator.html' },
           { label: 'MailΩr',      sublabel: 'M4', href: '/mailor.html' },
           { label: 'AudienceΩr', sublabel: 'M5', href: '/audience.html' },
+          { label: 'AutomatΩr',  href: '/automator.html' },
           { label: 'AnalytΩr',   href: '/analytr.html', soon: true, phase: 5 },
         ]
       }
