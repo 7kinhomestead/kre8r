@@ -75,3 +75,11 @@ bash /home/kre8r/kre8r/deploy/deploy.sh
 ```
 
 ---
+
+## Technical Debt
+
+**Engine vs Soul audit** — Systematic pass through all route handlers finding hardcoded creator data that should read from `creator-profile.json`. `generate.js` email route is a known offender. Est: 3–4 hours.
+
+**better-sqlite3 migration** — Replace sql.js before commercialization. Crash recovery risk, not just scale. If the server dies between a write and the next `persist()` call, that write is lost. Nearly a drop-in replacement. Est: 4–6 hours.
+
+---

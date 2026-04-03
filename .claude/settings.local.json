@@ -264,7 +264,12 @@
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.filter\\(c=>c.original_filename&&c.original_filename.includes\\(''''proxy''''\\)\\).forEach\\(c=>console.log\\(c.id, c.original_filename, c.file_path\\)\\);}\\)\")",
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.filter\\(c=>c.original_filename&&\\(c.original_filename.includes\\(''''C039''''\\)||c.original_filename.includes\\(''''C040''''\\)\\)\\).forEach\\(c=>console.log\\(c.id, c.original_filename, c.file_path, c.is_proxy\\)\\);}\\)\")",
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.forEach\\(c=>console.log\\(c.id, c.shot_type, c.proxy_path\\)\\);}\\)\")",
-      "Bash(node -e \"const fs=require\\(''fs''\\); fs.readdirSync\\(''D:/kre8r/intake''\\).forEach\\(f=>console.log\\(f\\)\\);\")"
+      "Bash(node -e \"const fs=require\\(''fs''\\); fs.readdirSync\\(''D:/kre8r/intake''\\).forEach\\(f=>console.log\\(f\\)\\);\")",
+      "Read(//mnt/c/Users/18054/**)",
+      "Bash(node -e \"require\\(''./src/routes/id8r.js''\\); console.log\\(''id8r.js loaded OK''\\);\")",
+      "Bash(timeout 10)",
+      "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(JSON.stringify\\(p.content_angles || p.angles || Object.keys\\(p\\), null, 2\\)\\);\")",
+      "Bash(xargs wc:*)"
     ]
   }
 }
