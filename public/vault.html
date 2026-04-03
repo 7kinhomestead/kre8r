@@ -1013,6 +1013,7 @@ function renderDvpCard(p) {
       ${nextTl
         ? `<button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="addNextTimeline(${p.id},'${nextTl}')">Add ${nextTl}</button>`
         : ''}
+      <button class="btn btn-ghost" id="ep-btn-${p.id}" style="font-size:12px;padding:7px 14px" onclick="exportProxies(${p.id}, '${escHtml(p.davinci_project_name || p.title)}')">Export Proxies</button>
       <span style="font-size:11px;color:var(--text-dimmer);align-self:center;margin-left:auto">${escHtml(p.title)}</span>
     </div>
   </div>`;
@@ -1053,6 +1054,32 @@ async function addNextTimeline(projectId, timelineName) {
     if (data.ok) { showToast(`${timelineName} added to DaVinci`, 'green'); loadDavinciProjects(); }
     else         { showToast('Error: ' + (data.error || 'unknown'), 'red'); }
   } catch(e) { showToast('Request failed: ' + e.message, 'red'); }
+}
+
+async function exportProxies(projectId, projectName) {
+  const brawFolder = prompt(`BRAW folder path for "${projectName}":\n(e.g. H:/Projects/MyShoot/Raw)`);
+  if (!brawFolder || !brawFolder.trim()) return;
+  const btn = document.getElementById(`ep-btn-${projectId}`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Rendering…'; }
+  try {
+    const res = await fetch('/api/davinci/export-proxies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_id: projectId, braw_folder_path: brawFolder.trim() })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('Proxy render started — DaVinci is rendering in the background', 'green');
+      if (btn) { btn.textContent = 'Rendering…'; }
+      loadDavinciProjects();
+    } else {
+      showToast('Error: ' + (data.error || 'unknown'), 'red');
+      if (btn) { btn.disabled = false; btn.textContent = 'Export Proxies'; }
+    }
+  } catch(e) {
+    showToast('Request failed: ' + e.message, 'red');
+    if (btn) { btn.disabled = false; btn.textContent = 'Export Proxies'; }
+  }
 }
 
 // ── DISTRIBUTION — CARD TOGGLE ─────────────────────────────────────────────
