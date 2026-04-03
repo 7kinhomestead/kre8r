@@ -165,7 +165,8 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
   // ── Step 6: Fill broadcast title with subject, then click 'Continue' ──────
   try {
     await page.waitForSelector('#email_broadcast_title', { timeout: 10000 });
-    await page.fill('#email_broadcast_title', subject);
+    const broadcastTitle = `${new Date().toISOString().slice(0,10)} - ${subject} - ${segment || 'All Members'}`;
+    await page.fill('#email_broadcast_title', broadcastTitle);
     await page.waitForTimeout(500);
 
     await page.evaluate(() => {
@@ -215,24 +216,25 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
   // ── Step 8: Fill subject line and body in the editor, then 'Save and Continue'
   try {
     // Subject line input
-    const subjectSel = [
-      'input[name="email_campaign[subject]"]',
-      'input[name*="subject"]',
-      'input[placeholder*="subject" i]',
-      'input[id*="subject"]',
-    ].join(', ');
+    const subjectSel = 'input[name="email_broadcast[subject]"], #email_broadcast_subject';
     await page.waitForSelector(subjectSel, { timeout: 10000 });
     await page.fill(subjectSel, subject);
 
-    // Email body in rich text editor
-    const bodySel = [
-      '.ql-editor',
-      '[contenteditable="true"]',
-      'textarea[name*="body"]',
-      'textarea[name*="content"]',
-    ].join(', ');
-    await page.waitForSelector(bodySel, { timeout: 10000 });
-    await fillRichText(page, bodySel, body);
+    // Email body via TinyMCE API (TinyMCE replaces the textarea with an iframe editor)
+    await page.waitForTimeout(3000); // wait for TinyMCE to initialize
+    await page.evaluate((bodyText) => {
+      // Try TinyMCE API first
+      if (window.tinymce && window.tinymce.activeEditor) {
+        window.tinymce.activeEditor.setContent(bodyText);
+        return;
+      }
+      // Try by editor id
+      if (window.tinymce && window.tinymce.get('email_broadcast_body')) {
+        window.tinymce.get('email_broadcast_body').setContent(bodyText);
+        return;
+      }
+      throw new Error('TinyMCE editor not found');
+    }, body);
 
     const saveContSel = [
       'button:has-text("Save and Continue")',
