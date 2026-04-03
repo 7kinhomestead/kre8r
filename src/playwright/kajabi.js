@@ -165,20 +165,16 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
 
   // ── Step 6: Fill broadcast title with subject, then click 'Continue' ──────
   try {
-    const titleSel = [
-      'input[name="email_campaign[name]"]',
-      'input[placeholder*="title" i]',
-      'input[placeholder*="name" i]',
-      'input[placeholder*="broadcast" i]',
-      'input[id*="name"]',
-      'input[id*="title"]',
-    ].join(', ');
-    await page.waitForSelector(titleSel, { timeout: 10000 });
-    await page.fill(titleSel, subject);
+    await page.waitForSelector('#email_broadcast_title', { timeout: 10000 });
+    await page.fill('#email_broadcast_title', subject);
+    await page.waitForTimeout(500);
 
-    const continueSel = 'button:has-text("Continue"), a:has-text("Continue")';
-    await page.waitForSelector(continueSel, { timeout: 8000 });
-    await page.click(continueSel);
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button[type="submit"], button:not([disabled])'));
+      const btn = buttons.find(b => b.textContent.trim().includes('Continue') || b.getAttribute('data-disable-with') === 'Saving...');
+      if (!btn) throw new Error('Continue button not found');
+      btn.click();
+    });
     await page.waitForLoadState('networkidle');
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step6-title-continue');
