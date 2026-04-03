@@ -271,7 +271,13 @@
       "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(JSON.stringify\\(p.content_angles || p.angles || Object.keys\\(p\\), null, 2\\)\\);\")",
       "Bash(xargs wc:*)",
       "Bash(npx playwright:*)",
-      "Bash(node -e \"require\\(''./src/routes/playwright.js''\\); console.log\\(''playwright.js loaded OK''\\);\")"
+      "Bash(node -e \"require\\(''./src/routes/playwright.js''\\); console.log\\(''playwright.js loaded OK''\\);\")",
+      "Bash(node -e \"require\\(''./src/routes/playwright.js''\\); console.log\\(''OK''\\);\")",
+      "Bash(node -e \"require\\(''./src/playwright/kajabi.js''\\); console.log\\(''kajabi.js loaded OK''\\);\")",
+      "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(JSON.stringify\\(p.kajabi || p.platform || {}, null, 2\\)\\);\")",
+      "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(Object.keys\\(p\\)\\);\")",
+      "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(JSON.stringify\\(p.community, null, 2\\)\\);\")",
+      "Bash(node -e \"require\\(''./src/playwright/kajabi.js''\\); console.log\\(''OK''\\);\")"
     ]
   }
 }
