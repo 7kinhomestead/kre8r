@@ -1,3 +1,74 @@
+# Kre8Ωr Session Log — 2026-04-03 (Session 16 — AutomatΩr Playwright Broadcast End-to-End)
+
+## What Was Built — Session 16
+
+---
+
+### AutomatΩr — Playwright `sendBroadcast` End-to-End (`src/playwright/kajabi.js`)
+
+Iteratively fixed every step of the Kajabi broadcast wizard flow until the full run worked end to end.
+All fixes used `page.evaluate()` JS clicks — Kajabi's React/web-component UI rejects standard Playwright selectors at almost every step.
+
+**Step 3** — `Email Broadcast` type selection
+Replaced 4-attempt guessing chain with single targeted evaluate:
+```js
+document.querySelector('[data-js-tabs-target="email-campaign-selection-option-broadcast"]').click()
+```
+
+**Step 5** — `Use Classic Editor` click
+Replaced `waitForSelector` + `page.click()` with evaluate DOM walk:
+```js
+const els = Array.from(document.querySelectorAll('button, a'));
+els.find(e => e.textContent.trim().includes('Classic Editor')).click();
+```
+
+**Step 6** — Broadcast title field
+- Exact selector `#email_broadcast_title` confirmed
+- Title now uses naming convention: `YYYY-MM-DD - {subject} - {segment || 'All Members'}`
+- Continue button found via evaluate across `button` + `input[type="submit"]`, matching text or `.value`
+- `waitForLoadState('networkidle')` → `waitForTimeout(3000)` (Kajabi SPA doesn't fire networkidle reliably)
+
+**Step 7** — Segment + Save and Continue
+- Removed all segment `selectOption` attempts — Kajabi default is already All Members, touching it broke the flow
+- Save and Continue click unified across `pds-button`, `button`, `input[type="submit"]`
+
+**Step 8** — Subject + body
+- Subject: `input[name="email_broadcast[subject]"]` or `#email_broadcast_subject`
+- Body: TinyMCE API injection — `window.tinymce.activeEditor.setContent(body)` with fallback to editor ID
+- 3s wait before TinyMCE inject to allow iframe to initialize
+
+---
+
+### MailΩr — Link Inserter + HTML Email Output (`public/mailor.html`, `src/routes/mailor.js`)
+
+**`src/routes/mailor.js`** — Prompt rule updated from "Plain text only" to "Output the email body as HTML" — `<p>`, `<br>`, `<a href>` tags. TinyMCE renders HTML natively; plain text did not.
+
+**`public/mailor.html`** — Broadcast body output changed from static display div to editable `<textarea>` pre-filled with generated HTML. Link inserter added below each version card:
+- Label input + URL input + Insert Link button
+- Wraps selected text as `<a href="URL">selected</a>` or inserts at cursor
+- Copy Body and Send via Kajabi both pull from live textarea (edits and inserted links included)
+
+---
+
+### Commits This Session
+
+```
+88c0b50  fix: Steps 3+4 sendBroadcast — 4-attempt broadcast type selection + :not([disabled]) Continue button
+588b72e  fix: Step 3 sendBroadcast — click Email Broadcast via data-js-tabs-target attribute
+72d0850  fix: Step 6 sendBroadcast — exact #email_broadcast_title selector + evaluate Continue click
+109f231  fix: Step 6 sendBroadcast — also match 'Create' button text and data-disable-with
+0b1361e  fix: Step 5 sendBroadcast — evaluate click Classic Editor button
+ef05644  fix: Step 6 sendBroadcast — include input[type=submit] and .value checks in Continue click
+86d9a83  fix: Step 6 waitForTimeout(3000); Step 7 segment via select[name=segment] with fallback
+47e3b76  fix: Step 7 sendBroadcast — pds-button web component click + segment fallback to All Members
+3d21d3f  fix: Step 6 title convention; Step 8 exact subject selector + TinyMCE body injection
+c9d9528  feat: MailΩr link inserter + HTML email body output for TinyMCE
+79a8454  fix: Step 7 sendBroadcast — skip segment selection, use default All Members
+02852d0  feat: AutomatΩr Playwright broadcast flow working end to end
+```
+
+---
+
 # Kre8Ωr Session Log — 2026-04-02 (Session 15 — Docs, Proxy Pipeline Debug, Selects Fix)
 
 ## What Was Built — Session 15

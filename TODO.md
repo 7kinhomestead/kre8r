@@ -2,7 +2,85 @@
 
 ---
 
-## Task 1 — Ingest the 7 waiting proxy files and run CutΩr on project 18
+## Task 1 — Test AutomatΩr dry-run → confirm → live send end to end
+
+Broadcast flow is wired. First real test with a live email.
+
+**Steps:**
+1. Open Chrome with `--remote-debugging-port=9222`
+2. Log into Kajabi manually
+3. Open AutomatΩr → Connect Chrome
+4. Generate a broadcast in MailΩr → Send via Kajabi
+5. Run dry-run → verify screenshot shows correct Kajabi preview page
+6. Confirm → verify email lands in Kajabi drafts or sends
+7. If Step 8 (TinyMCE body) fails: inspect the iframe — check if `tinymce.activeEditor` is accessible from the top frame or needs `page.frame()` inside the iframe context
+
+---
+
+## Task 2 — AutomatΩr Step 8: handle TinyMCE inside iframe if top-frame access fails
+
+If `window.tinymce` is not accessible from the top frame (Kajabi may sandbox the editor):
+- Use `page.frame({ url: /tinymce/ })` or `page.frames()` to find the editor iframe
+- Then `frame.evaluate(() => document.body.innerHTML = body)` or inject via postMessage
+- Also confirm subject field selector — may need `input[name="email_broadcast[subject]"]` confirmed live
+
+---
+
+## Task 3 — Ingest 7 waiting proxy files and run selects on project 18
+
+7 proxy `.mp4` files are sitting in `D:/kre8r/intake` unprocessed.
+
+**Steps:**
+1. Open VaultΩr → Ingest Folder → point at `D:/kre8r/intake` → run ingest
+2. Confirm clips 587 and 588 now have `proxy_path` set
+3. Open EditΩr → select project 18 → run selects
+4. Confirm transcription completes and selects are identified
+
+---
+
+## Carry-forward (still valid)
+
+### Fix `davinci.js` → `runScript()` Python detection
+- **Problem:** `runScript()` hardcodes `spawn('python', ...)` — fails on systems where the binary is `py` or `python3`
+- **Fix:** Add `PYTHON_CANDIDATES` + `detectPython()` pattern (already in `editor.js` and `composor.js`)
+
+### TeleprΩmpter 3-device live test
+1. Start display on laptop → Load Script → Start
+2. Note 4-digit session code
+3. Phone 1 (Control): `http://{ip}:3000/teleprompter.html?mode=control&session=XXXX`
+4. Phone 2 (Voice): `http://{ip}:3000/teleprompter.html?mode=voice&session=XXXX`
+
+### Id8Ωr — Remove debug log
+- `console.log('[mindmap] messages chars...')` in `/mindmap` handler — remove once flow confirmed stable
+
+---
+
+## PM2 Quick Reference
+
+```
+pm2 status              # check kre8r is running
+pm2 logs kre8r          # live server logs
+pm2 restart kre8r       # after pulling code changes
+pm2 save                # save process list after any pm2 changes
+```
+
+## Redeploy (after pushing new code)
+
+```
+bash /home/kre8r/kre8r/deploy/deploy.sh
+```
+
+---
+
+## Technical Debt
+
+**Engine vs Soul audit** — Systematic pass through all route handlers finding hardcoded creator data that should read from `creator-profile.json`. `generate.js` email route is a known offender. Est: 3–4 hours.
+
+**better-sqlite3 migration** — Replace sql.js before commercialization. Crash recovery risk, not just scale. If the server dies between a write and the next `persist()` call, that write is lost. Nearly a drop-in replacement. Est: 4–6 hours.
+
+---
+
+## ARCHIVE — Completed Task 1 (Session 16)
 
 7 proxy `.mp4` files are sitting in `D:/kre8r/intake` unprocessed. VaultΩr's watcher is running but they haven't been ingested yet.
 
