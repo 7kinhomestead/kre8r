@@ -189,23 +189,18 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
 
   // ── Step 7: Segment/recipient selection, then 'Save and Continue' ─────────
   try {
+    // Leave segment as default (All Members) — don't try to select
+    // The default Kajabi segment is already All Members
     await page.waitForTimeout(2000);
-    // First try selectOption on the segment dropdown
-    try {
-      await page.selectOption('select[name="segment"]', { label: segment || 'All Members' });
-    } catch(e) { /* segment selection optional */ }
-    await page.waitForTimeout(500);
-    // Click Save and Continue — it's a pds-button web component
     await page.evaluate(() => {
-      // Try pds-button first
-      const pdsBtns = Array.from(document.querySelectorAll('pds-button'));
-      const btn = pdsBtns.find(b => b.textContent.trim().includes('Save') || b.textContent.trim().includes('Continue'));
-      if (btn) { btn.click(); return; }
-      // Fallback to input[type=submit]
-      const inputs = Array.from(document.querySelectorAll('input[type="submit"]'));
-      const input = inputs.find(i => i.value.includes('Save') || i.value.includes('Continue'));
-      if (input) { input.click(); return; }
-      throw new Error('Save and Continue button not found');
+      const pdsBtns = Array.from(document.querySelectorAll('pds-button, button, input[type="submit"]'));
+      const btn = pdsBtns.find(b =>
+        b.textContent.trim().includes('Save') ||
+        b.textContent.trim().includes('Continue') ||
+        b.value === 'Save and Continue'
+      );
+      if (btn) btn.click();
+      else throw new Error('Save and Continue not found');
     });
     await page.waitForTimeout(3000);
   } catch (e) {
