@@ -297,13 +297,13 @@ router.post('/research', async (req, res) => {
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
       const data = await callClaude(
-        `You are a YouTube research analyst for 7 Kin Homestead, a homesteading channel with 725k TikTok followers. Search for the top performing YouTube videos on the topic from the conversation below. Return a summary of what's working — titles, angles, view counts if visible, gaps in existing content.`,
+        `You are a YouTube research analyst for 7 Kin Homestead, a homesteading channel with 725k TikTok followers. Search for the top performing YouTube videos on the topic from the conversation below. Return maximum 5-7 video examples with titles and channel names only — no URLs needed, no full lists. Summarize what's working: common angles, what's missing, and one key content gap.`,
         [{
           role: 'user',
-          content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch YouTube for top performing videos on this specific angle and summarize: popular titles, common approaches, view counts, and any content gaps.`,
+          content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch YouTube for top performing videos on this specific angle. Return 5-7 examples (title + channel name only), the common approach across them, and the biggest content gap.`,
         }],
         1024,
-        [{ type: 'web_search_20260209', name: 'web_search' }]
+        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }]
       );
       const fullText = data.content
         .map(block => {
