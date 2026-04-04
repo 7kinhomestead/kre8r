@@ -290,7 +290,9 @@
       "Bash(node -e \"require\\(''./src/routes/writr.js''\\); console.log\\(''writr ok''\\)\")",
       "Bash(node -e \"require\\(''./src/writr/script-first.js''\\); console.log\\(''sf ok''\\)\")",
       "Bash(node -e \"require\\(''./src/writr/shoot-first.js''\\); console.log\\(''shf ok''\\)\")",
-      "Bash(node -e \"require\\(''./src/writr/hybrid.js''\\); console.log\\(''hybrid ok''\\)\")"
+      "Bash(node -e \"require\\(''./src/writr/hybrid.js''\\); console.log\\(''hybrid ok''\\)\")",
+      "Bash(node -e \"require\\(''./src/routes/writr.js''\\); console.log\\(''writr OK''\\)\")",
+      "Bash(node -e \"require\\(''./src/db.js''\\); console.log\\(''db OK''\\)\")"
     ]
   }
 }
