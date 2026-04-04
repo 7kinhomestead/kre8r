@@ -12,17 +12,35 @@ Required for `GET /api/shootday/crew-brief/:project_id` (crew-brief.py) — exit
 
 ---
 
-## Task 1 — Run Project 21 (Tankless) through PipΩr properly
+## Task 1 — Run Project 23 (Propane Water Heater) through PipΩr → WritΩr
 
-Project 21 has `entry_point: script_first` and `high_concept` set but no story structure, beats, or pipr_complete flag. WritΩr won't generate a full script without beats.
+Project 23 has full `id8r_data` (concept, briefData, packageData all confirmed populated). The brief block will pre-fill screen 3 automatically. This is the first full Id8Ωr → PipΩr → WritΩr pipeline run.
 
 **Steps:**
-1. Open PipΩr → load project 21 (Tankless Water Heater)
-2. Choose story structure (Save the Cat or Story Circle)
-3. Fill beat map — at minimum set the core beats
-4. Mark pipr_complete
-5. Open WritΩr → select project 21 → generate script
-6. Confirm Id8Ωr research context block appears in the generation (check server logs)
+1. Open `http://localhost:3000/pipr.html?load_project=23`
+2. Confirm arrival banner shows + screen 1 pre-filled (title, high concept)
+3. Advance to screen 2 — confirm Id8Ωr concept card appears with headline + why
+4. Select story structure (Save the Cat recommended for this format)
+5. Advance to screen 3 — confirm full brief block is in the textarea
+6. Complete beat map on screen 4
+7. Mark pipr_complete → open WritΩr → select project 23 → generate script
+8. Confirm the Id8Ωr research context block appears in server logs during generation
+9. Archive projects 21 and 22 (duplicate tankless projects — superseded by 23)
+
+---
+
+## Task 2 — Ingest 7 waiting proxy files and run selects on project 18
+
+7 proxy `.mp4` files are sitting in `D:/kre8r/intake` unprocessed.
+
+**Steps:**
+1. Open VaultΩr → Ingest Folder → point at `D:/kre8r/intake` → run ingest
+2. Confirm clips 587 and 588 now have `proxy_path` set:
+   ```
+   curl 'http://localhost:3000/api/vault/footage?project_id=18' | node -e "const d=[];process.stdin.on('data',c=>d.push(c));process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(d));r.forEach(c=>console.log(c.id, c.proxy_path));})"
+   ```
+3. Open EditΩr → select project 18 → run selects
+4. Confirm transcription completes and selects are identified
 
 ---
 

@@ -1,3 +1,85 @@
+# Kre8Ωr Session Log — 2026-04-04 (Session 19 — PipΩr Id8Ωr Brief Enrichment + Bug Fixes)
+
+## What Was Built — Session 19
+
+---
+
+### PipΩr — Id8Ωr Concept Card on Screen 2 (`public/pipr.html`)
+
+Added a hidden teal info card (`#id8r-concept-card`) above the structure grid on screen 2. When a project arrives from Id8Ωr with `id8r_data`, the card shows:
+- `✨ Id8Ωr Concept` label
+- `#id8r-concept-headline` — `chosenConcept.headline`
+- `#id8r-concept-why` — `chosenConcept.why`
+
+Gives the creator context for picking story structure without having to remember what Id8Ωr recommended. Hidden by default — only appears when `id8r_data` exists and has a concept headline.
+
+---
+
+### PipΩr — Full Brief Block Pre-fill on Screen 3 (`public/pipr.html`)
+
+Extended `checkLoadProject()` to parse `p.id8r_data` and build a formatted brief block injected into all three screen 3 content textareas (`#f-script`, `#f-what-happened`, `#f-hybrid-concept`) simultaneously. Whichever variant screen 3 shows based on `entry_point`, it's pre-filled.
+
+**Brief block format:**
+```
+CONCEPT: {chosenConcept.headline}
+WHY THIS WORKS: {chosenConcept.why}
+OPENING HOOK: {chosenConcept.hook}
+RESEARCH FINDINGS: {researchSummary — first 800 chars}
+SELECTED TITLE: {packageData.titles[0].text}
+SELECTED HOOKS:
+- {packageData.hooks[0].text}
+- {packageData.hooks[1].text}
+ELEVATOR PITCH: {briefData.elevator_pitch}
+STORY ANGLE: {briefData.story_angle}
+TALKING POINTS: (5 bullets)
+WHAT NOT TO DO: (3 bullets)
+CONCEPT NOTE: {briefData.pipeline_brief.concept_note}
+```
+
+**Bug fixed in same pass:** `packageData.titles` and `packageData.hooks` are arrays of `{text, angle}` / `{text, type}` objects — not plain strings. Added `.text || fallback` so the title and hook lines render correctly.
+
+---
+
+### ComposΩr — Project Dropdown Bug Fix (`public/composor.html`)
+
+**Root cause:** `GET /api/projects` returns a plain array, but `composor.html` was doing `(d.projects || []).forEach(...)` — `d.projects` was always `undefined`, fallback `[]` always used, dropdown was always empty.
+
+**Fix:** `(Array.isArray(d) ? d : d.projects || []).forEach(...)`
+
+**Audit:** Checked all 9 other files that call `GET /api/projects`. ComposΩr was the only one with the bug. director.html, editor.html, writr.html, m1, m5 all handle the plain array correctly. reviewr.html and shootday.html already had defensive fallbacks.
+
+---
+
+### Commits This Session
+
+```
+c34d4da  fix: ComposΩr project dropdown, PipΩr Id8r brief enrichment, nav fixes, crew brief PDF
+d85366c  chore: Session 18 log + TODO update
+0090197  feat: inject WritΩr script into PackageΩr, CaptionΩr, and MailΩr prompts
+0f1c8c6  feat: crew brief PDF download using reportlab
+3d9a4f8  feat: DirectΩr + ShootDay UX clarity improvements
+```
+
+---
+
+## Files Changed — Session 19
+
+| File | Change |
+|------|--------|
+| `public/pipr.html` | Id8Ωr concept card on screen 2; full brief block pre-fill in checkLoadProject(); .text fix for titles/hooks; briefData enrichment (elevator pitch, story angle, talking points, what not to do, concept note) |
+| `public/composor.html` | Fixed project dropdown — `d.projects` → `Array.isArray(d) ? d : d.projects \|\| []` |
+
+---
+
+## Server State — End of Session 19
+- PM2 online, 73mb, 3h uptime
+- All changes committed and pushed to master (`c34d4da`)
+- DigitalOcean deploy still needed: `pip install reportlab` required before crew brief PDF works on server
+- Project 23 (Propane Water Heater) confirmed: full id8r_data with concept, briefData, packageData — ready to run through PipΩr → WritΩr
+- Project 21 and 22 are duplicate tankless projects — consider archiving in favour of project 23
+
+---
+
 # Kre8Ωr Session Log — 2026-04-04 (Session 18 — Crew Brief PDF + Data Flow Gaps)
 
 ## What Was Built — Session 18
