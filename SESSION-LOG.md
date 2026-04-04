@@ -1,3 +1,96 @@
+# Kre8Ωr Session Log — 2026-04-03/04 (Session 17 — Id8Ωr→PipΩr Handoff, WritΩr Research Context, Nav Audit)
+
+## What Was Built — Session 17
+
+---
+
+### Id8Ωr → PipΩr Handoff Fix (`src/routes/id8r.js`, `public/pipr.html`, `src/db.js`)
+
+**Root cause:** `pipr.html?project_id=` was intercepted by the existing `checkSettingsMode()` IIFE which showed the archive/settings panel instead of loading the project. Fixed by switching to `?load_project=` as a distinct param.
+
+**`src/db.js`** — New `id8r_data` TEXT column on projects table (migration reuses `projectsCols3` check). New `updateProjectId8r(projectId, data)` function serializes the full Id8Ωr session as JSON blob.
+
+**`src/routes/id8r.js` — `/send-pipeline`** — now calls `db.createProject()`, then `db.updateProjectPipr()` (sets `entry_point`, `content_type`, `high_concept`), then `db.updateProjectId8r()` (stores `chosenConcept`, `researchSummary`, `packageData`, `briefData`). Redirect uses `?load_project=` for PipΩr, `?project_id=` for WritΩr (unchanged).
+
+**`public/pipr.html`** — Three additions:
+1. `checkLoadProject()` IIFE — reads `?load_project=`, fetches project from API, pre-fills topic/title/entry_point, calls `selectEntry()` to mark card and auto-advance to screen 1, shows arrival banner after 350ms delay
+2. Id8Ωr arrival banner (`#id8r-arrival-banner`) — teal notice: "Arrived from Id8Ωr — concept and entry point pre-loaded"
+3. Vault first entry card (4th option): "I HAVE FOOTAGE IN THE VAULT" — triggers `vault_first` entry point
+
+---
+
+### WritΩr — Id8Ωr Research Context Injection (`src/routes/writr.js`, all 3 engines)
+
+**Problem:** Script generation had no knowledge of WHY the video was being made — no concept, no research findings, no chosen angle.
+
+**`src/routes/writr.js`** — Reads `project.id8r_data` JSON blob and builds `id8rBlock` string with section header `## CONTENT INTELLIGENCE FROM ID8ΩR RESEARCH`. Includes: chosen concept headline/why/hook, research summary (first 600 chars), top titles, elevator pitch, talking points, content angle.
+
+**`src/writr/script-first.js`**, **`src/writr/shoot-first.js`**, **`src/writr/hybrid.js`** — All three engines updated: `buildPrompt()` now accepts `id8rBlock` and injects it between `## PROJECT CONFIG` and `## BEAT MAP`. `generateXxx()` functions pass it through.
+
+**vault_first engine branch (`src/routes/writr.js`)** — Fetches all footage assigned to the project from DB, formats as clip inventory (`[shot_type] filename (Ns): transcript excerpt…`), passes to `generateShootFirst` with the clip list as `whatHappened`. Falls back gracefully if no clips found.
+
+---
+
+### Nav Audit + Update (`public/js/nav.js`, `public/mailor.html`)
+
+**Audit** — All 23 HTML files checked for nav compliance (kre8r-nav div + nav.js script + initNav() call). Found `mailor.html` had div + script but no `initNav()` call — nav never rendered.
+
+**`public/js/nav.js`** — Full dropdown restructure:
+- Pre: Id8Ωr, PipΩr, WritΩr
+- Prod: DirectΩr, ShootDay, TeleprΩmpter
+- Post: VaultΩr, EditΩr, ReviewΩr, ComposΩr
+- Dist: GateΩr (M1), PackageΩr (M2), CaptionΩr (M3), MailΩr (M4), AudiencΩr (M5), AutomatΩr, AnalΩzr (soon)
+- Removed: ResearchΩr, CoverageΩr, m4-email-generator
+- Renamed: AnalytΩr → AnalΩzr, fixed AudienceΩr → AudiencΩr
+
+**`public/mailor.html`** — Added missing `initNav()` call.
+
+---
+
+### MailΩr — Link Inserter + HTML Email Output (`public/mailor.html`, `src/routes/mailor.js`)
+
+Broadcast body changed from static display div to editable `<textarea>` pre-filled with generated HTML. Link inserter below each version card: label input + URL input + Insert Link button — wraps selected text as `<a>` tag or inserts at cursor. Claude now outputs HTML (`<p>`, `<br>`, `<a>`) not plain text for TinyMCE compatibility.
+
+---
+
+### Commits This Session
+
+```
+b912682  feat: nav restructure + fix MailΩr missing initNav
+a2a11ab  feat: PipΩr vault_first entry point, Id8r auto-skip screen 0, arrival banner
+89ab5fd  fix: Id8r→PipΩr handoff, research data preservation, WritΩr Id8r context injection
+(+ Session 16 AutomatΩr commits — see below)
+```
+
+---
+
+## Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `src/routes/id8r.js` | /send-pipeline: createProject + updateProjectPipr + updateProjectId8r + ?load_project= |
+| `src/db.js` | id8r_data column migration + updateProjectId8r() function |
+| `public/pipr.html` | checkLoadProject() IIFE, arrival banner, vault_first entry card |
+| `src/routes/writr.js` | id8rBlock building + vault_first engine branch |
+| `src/writr/script-first.js` | id8rBlock param + injection in buildPrompt |
+| `src/writr/shoot-first.js` | id8rBlock param + injection in buildPrompt |
+| `src/writr/hybrid.js` | id8rBlock param + injection in buildPrompt |
+| `public/js/nav.js` | Full nav restructure — correct order, removed stale items, renamed tools |
+| `public/mailor.html` | Added missing initNav() call; link inserter; editable body textarea |
+| `src/routes/mailor.js` | HTML output prompt rule |
+| `SESSION-LOG.md` | This file |
+| `TODO.md` | Updated next 3 tasks |
+
+---
+
+## Server State — End of Session 17
+- All changes committed and pushed to master
+- Deployed to kre8r.app via `git pull + pm2 restart`
+- Project 21 (Tankless Water Heater) needs PipΩr run (story structure + beats) before WritΩr
+- 7 proxy files still waiting in `D:/kre8r/intake` — ingest not yet triggered
+
+---
+
 # Kre8Ωr Session Log — 2026-04-03 (Session 16 — AutomatΩr Playwright Broadcast End-to-End)
 
 ## What Was Built — Session 16

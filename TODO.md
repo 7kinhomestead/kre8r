@@ -2,39 +2,47 @@
 
 ---
 
-## Task 1 — Test AutomatΩr dry-run → confirm → live send end to end
+## Task 1 — Run Project 21 (Tankless) through PipΩr properly
 
-Broadcast flow is wired. First real test with a live email.
+Project 21 has `entry_point: script_first` and `high_concept` set but no story structure, beats, or pipr_complete flag. WritΩr won't generate a full script without beats.
+
+**Steps:**
+1. Open PipΩr → load project 21 (Tankless Water Heater)
+2. Choose story structure (Save the Cat or Story Circle)
+3. Fill beat map — at minimum set the core beats
+4. Mark pipr_complete
+5. Open WritΩr → select project 21 → generate script
+6. Confirm Id8Ωr research context block appears in the generation (check server logs)
+
+---
+
+## Task 2 — Ingest 7 waiting proxy files and run selects on project 18
+
+7 proxy `.mp4` files are sitting in `D:/kre8r/intake` unprocessed.
+
+**Steps:**
+1. Open VaultΩr → Ingest Folder → point at `D:/kre8r/intake` → run ingest
+2. Confirm clips 587 and 588 now have `proxy_path` set:
+   ```
+   curl 'http://localhost:3000/api/vault/footage?project_id=18' | node -e "const d=[];process.stdin.on('data',c=>d.push(c));process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(d));r.forEach(c=>console.log(c.id, c.proxy_path));})"
+   ```
+3. Open EditΩr → select project 18 → run selects
+4. Confirm transcription completes and selects are identified
+
+---
+
+## Task 3 — Test AutomatΩr end-to-end with live Kajabi session
+
+Broadcast Playwright flow is wired. Needs a real live test.
 
 **Steps:**
 1. Open Chrome with `--remote-debugging-port=9222`
 2. Log into Kajabi manually
 3. Open AutomatΩr → Connect Chrome
 4. Generate a broadcast in MailΩr → Send via Kajabi
-5. Run dry-run → verify screenshot shows correct Kajabi preview page
-6. Confirm → verify email lands in Kajabi drafts or sends
-7. If Step 8 (TinyMCE body) fails: inspect the iframe — check if `tinymce.activeEditor` is accessible from the top frame or needs `page.frame()` inside the iframe context
-
----
-
-## Task 2 — AutomatΩr Step 8: handle TinyMCE inside iframe if top-frame access fails
-
-If `window.tinymce` is not accessible from the top frame (Kajabi may sandbox the editor):
-- Use `page.frame({ url: /tinymce/ })` or `page.frames()` to find the editor iframe
-- Then `frame.evaluate(() => document.body.innerHTML = body)` or inject via postMessage
-- Also confirm subject field selector — may need `input[name="email_broadcast[subject]"]` confirmed live
-
----
-
-## Task 3 — Ingest 7 waiting proxy files and run selects on project 18
-
-7 proxy `.mp4` files are sitting in `D:/kre8r/intake` unprocessed.
-
-**Steps:**
-1. Open VaultΩr → Ingest Folder → point at `D:/kre8r/intake` → run ingest
-2. Confirm clips 587 and 588 now have `proxy_path` set
-3. Open EditΩr → select project 18 → run selects
-4. Confirm transcription completes and selects are identified
+5. Dry-run → verify screenshot shows correct preview
+6. Confirm → verify email lands in Kajabi drafts
+7. If Step 8 body injection fails: check if `tinymce.activeEditor` is accessible from top frame or needs `page.frame()` targeting the TinyMCE iframe
 
 ---
 
