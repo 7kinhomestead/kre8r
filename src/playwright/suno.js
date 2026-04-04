@@ -87,8 +87,11 @@ async function findCreateButton(page) {
   for (const sel of CREATE_SELECTORS) {
     try {
       const el = await page.$(sel);
-      if (el) { console.log(`[suno.js] Create button found: ${sel}`); return el; }
-    } catch (_) {}
+      console.log(`[suno.js] trying selector: ${sel} → ${el ? 'FOUND' : 'not found'}`);
+      if (el) { return el; }
+    } catch (e) {
+      console.log(`[suno.js] trying selector: ${sel} → ERROR: ${e.message}`);
+    }
   }
   console.warn('[suno.js] No Create button found with any candidate selector');
   return null;
@@ -99,7 +102,10 @@ async function findCreateButton(page) {
 
 async function waitForAudioTracks(page, sceneIndex) {
   console.log('[suno.js] Polling for audio tracks (15s interval, 5min max)...');
-  const start = Date.now();
+  const start     = Date.now();
+  const SETTLE_MS = 60_000; // after first URL found, wait up to 60s for a second
+
+  let firstFoundAt = null;
 
   while (Date.now() - start < POLL_TIMEOUT) {
     await new Promise(r => setTimeout(r, POLL_INTERVAL));
@@ -125,14 +131,25 @@ async function waitForAudioTracks(page, sceneIndex) {
         return [...new Set([...fromAudio, ...fromSource, ...fromData])];
       });
 
-      console.log(`[suno.js] Poll — found ${urls.length} audio URL(s) at ${Math.round((Date.now() - start) / 1000)}s`);
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      console.log(`[suno.js] Poll — found ${urls.length} audio URL(s) at ${elapsed}s`);
 
       if (urls.length >= 2) {
-        console.log('[suno.js] Got 2+ audio URLs:', urls);
+        console.log('[suno.js] Got 2 audio URLs:', urls);
         return urls.slice(0, 2);
       }
+
       if (urls.length === 1) {
-        console.log('[suno.js] 1 URL so far, waiting for second...');
+        if (!firstFoundAt) {
+          firstFoundAt = Date.now();
+          console.log('[suno.js] 1st URL found — waiting up to 60s for a second...');
+        } else if (Date.now() - firstFoundAt >= SETTLE_MS) {
+          console.log('[suno.js] 60s elapsed since 1st URL — taking 1 track and moving on:', urls);
+          return urls;
+        } else {
+          const wait = Math.round((SETTLE_MS - (Date.now() - firstFoundAt)) / 1000);
+          console.log(`[suno.js] Still waiting for 2nd URL (${wait}s left)...`);
+        }
       }
     } catch (e) {
       console.warn('[suno.js] Poll error:', e.message);
@@ -180,11 +197,64 @@ async function generateOnSuno(page, { prompt, projectId, sceneLabel, sceneIndex,
     // Give React time to hydrate fully
     await page.waitForTimeout(4000);
 
-    // ── Step 2: Inspect DOM before touching anything ──────────────────────
-    await inspectDOM(page, sceneIndex);
     await snap(page, sceneIndex, 1, 'loaded');
 
-    // ── Step 3: Find and fill prompt input ───────────────────────────────
+    // ── Step 1b: Dismiss OneTrust cookie banner ───────────────────────────
+    try {
+      await page.waitForSelector('.ot-close-icon', { timeout: 3000 });
+      await page.click('.ot-close-icon', { force: true });
+      console.log('[suno.js] OneTrust dismissed');
+      await page.waitForTimeout(1000);
+    } catch (e) {
+      console.log('[suno.js] No OneTrust banner');
+    }
+
+    // ── Scan for close button attrs ───────────────────────────────────────
+    await page.waitForTimeout(2000);
+    const closeBtn = await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const x = buttons.find(b =>
+        b.getAttribute('aria-label')?.toLowerCase().includes('close') ||
+        b.textContent.trim() === '×' ||
+        b.textContent.trim() === 'X' ||
+        b.textContent.trim() === '✕'
+      );
+      if (!x) return 'NOT FOUND';
+      return JSON.stringify({
+        text:       x.textContent.trim(),
+        ariaLabel:  x.getAttribute('aria-label'),
+        className:  x.className.substring(0, 100),
+        dataTestId: x.getAttribute('data-testid')
+      });
+    });
+    console.log('[suno.js] Close button attrs:', closeBtn);
+
+    // ── Step 2: Dismiss modals / kill focus traps ─────────────────────────
+    await page.evaluate(() => {
+      const dismissors = Array.from(document.querySelectorAll('button'));
+      const dismiss = dismissors.find(b =>
+        b.textContent.includes('×') ||
+        b.textContent.includes('Close') ||
+        b.textContent.includes('Dismiss') ||
+        b.textContent.includes('Skip') ||
+        b.textContent.includes('Got it') ||
+        b.getAttribute('aria-label') === 'Close'
+      );
+      if (dismiss) dismiss.click();
+    });
+    await page.waitForTimeout(500);
+    console.log('[suno.js] Modal dismissal attempted');
+
+    // ── Step 3: Click Instrumental FIRST ─────────────────────────────────
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const btn = buttons.find(b => b.getAttribute('aria-label') === 'Enable instrumental mode');
+      if (btn) btn.click();
+    });
+    console.log('[suno.js] Instrumental clicked');
+    await page.waitForTimeout(500);
+
+    // ── Step 4: Find and fill prompt input ───────────────────────────────
     const promptEl = await findPromptInput(page);
     if (!promptEl) {
       await snap(page, sceneIndex, 2, 'no-input');
@@ -192,9 +262,63 @@ async function generateOnSuno(page, { prompt, projectId, sceneLabel, sceneIndex,
     }
 
     const truncated = prompt.slice(0, PROMPT_MAX_CHARS);
-    await promptEl.click({ clickCount: 3 }); // select all existing text
-    await promptEl.fill(truncated);
-    console.log(`[suno.js] Filled prompt: ${truncated.length} chars`);
+
+    // ── Scan all textareas before filling ────────────────────────────────
+    const allTextareas = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('textarea')).map((ta, i) => ({
+        index:       i,
+        placeholder: ta.placeholder,
+        value:       ta.value.substring(0, 50),
+        visible:     ta.offsetParent !== null,
+        rect:        ta.getBoundingClientRect()
+      }));
+    });
+    console.log('[suno.js] All textareas:', JSON.stringify(allTextareas));
+
+    // Get fresh textarea rect after Instrumental toggle
+    const taRect = await page.evaluate(() => {
+      const ta = document.querySelector('textarea[placeholder*="Describe" i]');
+      if (!ta) return null;
+      const r = ta.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    if (!taRect) throw new Error('textarea bounding rect not found');
+    console.log(`[suno.js] textarea center: ${JSON.stringify(taRect)}`);
+
+    // React 18 controlled inputs listen to beforeinput + input InputEvents with
+    // inputType:'insertText' and data property — not generic Event('input').
+    // First focus via mouse click, then inject via the correct event chain.
+    await page.mouse.click(taRect.x, taRect.y);
+    await page.waitForTimeout(300);
+    await page.evaluate((text) => {
+      const ta = document.querySelector('textarea[placeholder*="Describe" i]');
+      if (!ta) return;
+      ta.focus();
+      ta.select();
+      // Clear first
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+      nativeSetter.call(ta, '');
+      ta.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'deleteContentBackward' }));
+      // Now insert text via beforeinput + input with data property (React 18 synthetic event hook)
+      ta.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }));
+      nativeSetter.call(ta, text);
+      ta.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }));
+      ta.dispatchEvent(new Event('change', { bubbles: true }));
+    }, truncated);
+    await page.waitForTimeout(500);
+    console.log(`[suno.js] Typed prompt: "${truncated.substring(0, 80)}"`);
+    await page.screenshot({ path: `/tmp/playwright-suno-fill-${sceneIndex}.png` });
+
+    const visualCheck = await page.evaluate(() => {
+      const ta = document.querySelector('textarea[placeholder*="Describe" i]');
+      return {
+        value:     ta ? ta.value.substring(0, 50) : 'NOT FOUND',
+        displayed: ta ? window.getComputedStyle(ta).display : 'unknown'
+      };
+    });
+    console.log('[suno.js] Visual check after re-fill:', JSON.stringify(visualCheck));
+    await page.screenshot({ path: `/tmp/playwright-suno-visual-${sceneIndex}.png` });
+
     await snap(page, sceneIndex, 2, 'filled');
 
     // ── Step 4: Find and click Create ────────────────────────────────────
@@ -204,8 +328,9 @@ async function generateOnSuno(page, { prompt, projectId, sceneLabel, sceneIndex,
       throw new Error('Could not find Suno Create button — check /tmp screenshot for DOM state');
     }
 
-    await createBtn.click();
-    console.log('[suno.js] Clicked Create — waiting for generation...');
+    // force:true bypasses Playwright visibility check — same CSS issue as textarea
+    await createBtn.click({ force: true });
+    console.log('[suno.js] Clicked Create (force) — waiting for generation...');
     await snap(page, sceneIndex, 3, 'clicked-create');
 
     // ── Step 5: Poll for audio ────────────────────────────────────────────
