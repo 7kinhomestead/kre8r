@@ -1,20 +1,22 @@
 /**
  * ShootDay / DirectΩr Route — src/routes/shootday.js
  *
- * GET  /api/shootday/package/:project_id   — generate self-contained offline HTML
- * GET  /api/shootday/:project_id/beats     — beat list merged with take data
- * GET  /api/shootday/:project_id/script    — approved script (clean text)
- * GET  /api/shootday/:project_id/takes     — all takes for project
- * POST /api/shootday/:project_id/take      — upsert a take (status + note)
- * POST /api/shootday/:project_id/reset     — clear all takes for fresh session
- * GET  /api/shootday/:project_id/summary   — coverage summary for director mirror view
+ * GET  /api/shootday/package/:project_id    — generate self-contained offline HTML (Cari's phone)
+ * GET  /api/shootday/crew-brief/:project_id — generate crew brief PDF (reportlab)
+ * GET  /api/shootday/:project_id/beats      — beat list merged with take data
+ * GET  /api/shootday/:project_id/script     — approved script (clean text)
+ * GET  /api/shootday/:project_id/takes      — all takes for project
+ * POST /api/shootday/:project_id/take       — upsert a take (status + note)
+ * POST /api/shootday/:project_id/reset      — clear all takes for fresh session
+ * GET  /api/shootday/:project_id/summary    — coverage summary for director mirror view
  */
 
 'use strict';
 
-const express = require('express');
-const path    = require('path');
-const os      = require('os');
+const express              = require('express');
+const path                 = require('path');
+const os                   = require('os');
+const { spawn, execFile }  = require('child_process');
 
 const db                = require('../db');
 const { readConfig }    = require('../pipr/beat-tracker');
@@ -129,6 +131,96 @@ function beatPriority(beat, total) {
       beat.emotional_function?.toLowerCase().includes('hook')) return 'hero';
   return 'required';
 }
+
+// ─────────────────────────────────────────────
+// PYTHON DETECTION (for PDF generation)
+// ─────────────────────────────────────────────
+
+const PYTHON_CANDIDATES = ['python3', 'python', 'py'];
+let _pythonBin = null;
+
+async function detectPython() {
+  if (_pythonBin) return _pythonBin;
+  for (const candidate of PYTHON_CANDIDATES) {
+    const found = await new Promise(resolve =>
+      execFile(candidate, ['--version'], err => resolve(!err))
+    );
+    if (found) { _pythonBin = candidate; return candidate; }
+  }
+  throw new Error('Python not found. Install Python 3 and run: pip install reportlab');
+}
+
+// ─────────────────────────────────────────────
+// GET /api/shootday/crew-brief/:project_id
+// Generate a crew brief PDF via reportlab
+// MUST be before /:project_id routes
+// ─────────────────────────────────────────────
+
+router.get('/crew-brief/:project_id', async (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  const data = buildBeatList(projectId);
+  if (!data) return res.status(404).json({ error: 'Project not found' });
+
+  const { project, beats, config } = data;
+  const date = new Date().toISOString().slice(0, 10);
+
+  // Normalize duration to minutes (DB may store seconds or minutes)
+  const durSec = project.target_duration_seconds || project.duration_seconds || null;
+  const durMin = durSec
+    ? Math.round(durSec / 60)
+    : (project.estimated_duration_minutes || config?.estimated_duration_minutes || null);
+
+  const payload = JSON.stringify({
+    project: {
+      id:               project.id,
+      title:            project.title           || 'Untitled',
+      high_concept:     project.high_concept    || project.topic || config?.high_concept || null,
+      story_structure:  project.story_structure || config?.story_structure || null,
+      duration_minutes: durMin,
+    },
+    beats,
+    config: config || {},
+    date,
+  });
+
+  try {
+    const python     = await detectPython();
+    const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'pdf', 'crew-brief.py');
+    const safeName   = (project.title || 'crew-brief').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+    const filename   = `crew_brief_${safeName}_${date}.pdf`;
+
+    const pdfBuf = await new Promise((resolve, reject) => {
+      const py     = spawn(python, [scriptPath]);
+      const chunks = [];
+      let stderr   = '';
+
+      py.stdout.on('data', d => chunks.push(d));
+      py.stderr.on('data', d => {
+        stderr += d.toString();
+        console.error('[crew-brief stderr]', d.toString().trimEnd());
+      });
+      py.on('close', code => {
+        if (code === 2) return reject(new Error('reportlab not installed — run: pip install reportlab'));
+        if (code !== 0) return reject(new Error(`PDF script exited ${code}: ${stderr.slice(0, 400)}`));
+        resolve(Buffer.concat(chunks));
+      });
+      py.on('error', reject);
+      py.stdin.write(payload);
+      py.stdin.end();
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuf.length);
+    res.end(pdfBuf);
+
+  } catch (err) {
+    console.error('[crew-brief]', err.message);
+    res.status(500).json({ error: 'PDF generation failed', detail: err.message });
+  }
+});
 
 // ─────────────────────────────────────────────
 // GET /api/shootday/package/:project_id

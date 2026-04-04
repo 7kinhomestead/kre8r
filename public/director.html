@@ -339,6 +339,9 @@
             <div class="panel-title">CREW BRIEF</div>
             <div class="panel-header-sub">Share this with your crew before the shoot</div>
           </div>
+          <button class="btn btn-ghost" id="btn-crew-brief-pdf" style="display:none;" onclick="downloadCrewBriefPdf()">
+            📄 Download PDF
+          </button>
         </div>
         <div class="panel-body" id="crew-brief-body">
           <div class="empty-state" style="padding:40px 20px;">
@@ -501,6 +504,7 @@ function resetUI() {
   document.getElementById('coverage-badge').style.display = 'none';
   document.getElementById('btn-generate-pkg').style.display = 'none';
   document.getElementById('btn-pkg-download').disabled = true;
+  document.getElementById('btn-crew-brief-pdf').style.display = 'none';
   document.getElementById('mirror-panel').style.display = 'none';
   document.getElementById('qr-wrap').classList.remove('visible');
   document.getElementById('qr-container').innerHTML = '';
@@ -755,6 +759,7 @@ function buildCrewBrief(data) {
 // ─────────────────────────────────────────────────────────────────────────────
 function enablePackageButtons() {
   document.getElementById('btn-pkg-download').disabled = false;
+  document.getElementById('btn-crew-brief-pdf').style.display = 'inline-flex';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -793,6 +798,42 @@ async function generatePackage() {
   // Generate QR code pointing to the live endpoint (for phones on same network)
   const qrUrl = window.location.origin + url;
   generateQR(qrUrl);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOWNLOAD CREW BRIEF PDF
+// ─────────────────────────────────────────────────────────────────────────────
+async function downloadCrewBriefPdf() {
+  if (!currentProjectId) return;
+  const btn = document.getElementById('btn-crew-brief-pdf');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  try {
+    const res = await fetch(`/api/shootday/crew-brief/${currentProjectId}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || err.error || `HTTP ${res.status}`);
+    }
+    const blob     = await res.blob();
+    const blobUrl  = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+    const filename = res.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1]
+                     || `crew_brief_${currentProjectId}.pdf`;
+    const a = document.createElement('a');
+    a.href     = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    showToast('Crew brief PDF downloaded ✓', 'ok');
+  } catch (err) {
+    showToast('PDF failed: ' + err.message, 'err');
+  } finally {
+    btn.disabled  = false;
+    btn.innerHTML = orig;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
