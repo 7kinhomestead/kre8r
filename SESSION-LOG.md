@@ -72,11 +72,16 @@ d85366c  chore: Session 18 log + TODO update
 ---
 
 ## Server State — End of Session 19
-- PM2 online, 73mb, 3h uptime
-- All changes committed and pushed to master (`c34d4da`)
+- PM2 online, all changes committed and pushed to master
 - DigitalOcean deploy still needed: `pip install reportlab` required before crew brief PDF works on server
 - Project 23 (Propane Water Heater) confirmed: full id8r_data with concept, briefData, packageData — ready to run through PipΩr → WritΩr
 - Project 21 and 22 are duplicate tankless projects — consider archiving in favour of project 23
+
+## Live Tests Confirmed — End of Session 19
+
+**✅ Full pre-pipeline run (Id8Ωr → PipΩr → WritΩr):** Ran perfectly end-to-end. Id8Ωr concept card, brief block pre-fill, and all handoffs working as built.
+
+**✅ AutomatΩr → Kajabi broadcast:** Ran perfectly. 4,300 emails sent. Playwright flow fully proven in production.
 
 ---
 

@@ -12,65 +12,50 @@ Required for `GET /api/shootday/crew-brief/:project_id` (crew-brief.py) — exit
 
 ---
 
-## Task 1 — Run Project 23 (Propane Water Heater) through PipΩr → WritΩr
+## ✅ COMPLETED — Full pre-pipeline run (Id8Ωr → PipΩr → WritΩr)
+Ran perfectly end-to-end. Id8Ωr concept card, brief block pre-fill, all handoffs confirmed working.
 
-Project 23 has full `id8r_data` (concept, briefData, packageData all confirmed populated). The brief block will pre-fill screen 3 automatically. This is the first full Id8Ωr → PipΩr → WritΩr pipeline run.
-
-**Steps:**
-1. Open `http://localhost:3000/pipr.html?load_project=23`
-2. Confirm arrival banner shows + screen 1 pre-filled (title, high concept)
-3. Advance to screen 2 — confirm Id8Ωr concept card appears with headline + why
-4. Select story structure (Save the Cat recommended for this format)
-5. Advance to screen 3 — confirm full brief block is in the textarea
-6. Complete beat map on screen 4
-7. Mark pipr_complete → open WritΩr → select project 23 → generate script
-8. Confirm the Id8Ωr research context block appears in server logs during generation
-9. Archive projects 21 and 22 (duplicate tankless projects — superseded by 23)
+## ✅ COMPLETED — AutomatΩr → Kajabi broadcast live test
+Ran perfectly. 4,300 emails sent. Playwright automation fully proven in production.
 
 ---
 
-## Task 2 — Ingest 7 waiting proxy files and run selects on project 18
+## Task 1 — Fix VaultΩr ingest for project 18
 
-7 proxy `.mp4` files are sitting in `D:/kre8r/intake` unprocessed.
+7 proxy `.mp4` files are sitting in `D:/kre8r/intake` unprocessed. Ingest needs investigation — something in the intake/watcher flow is not picking them up correctly.
 
 **Steps:**
-1. Open VaultΩr → Ingest Folder → point at `D:/kre8r/intake` → run ingest
-2. Confirm clips 587 and 588 now have `proxy_path` set:
+1. Check server logs for VaultΩr watcher errors: `pm2 logs kre8r --lines 100`
+2. Open VaultΩr → Ingest Folder → point at `D:/kre8r/intake` → run ingest manually
+3. Confirm clips have `proxy_path` set after ingest:
    ```
    curl 'http://localhost:3000/api/vault/footage?project_id=18' | node -e "const d=[];process.stdin.on('data',c=>d.push(c));process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(d));r.forEach(c=>console.log(c.id, c.proxy_path));})"
    ```
-3. Open EditΩr → select project 18 → run selects
-4. Confirm transcription completes and selects are identified
+4. If watcher isn't picking up files — debug `src/vault/watcher.js` intake logic
+5. Once proxy_path is set → open EditΩr → select project 18 → run selects
 
 ---
 
-## Task 2 — Ingest 7 waiting proxy files and run selects on project 18
+## Task 2 — Deploy to DigitalOcean + install reportlab
 
-7 proxy `.mp4` files are sitting in `D:/kre8r/intake` unprocessed.
+```bash
+pip install reportlab
+cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
+sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
+```
 
-**Steps:**
-1. Open VaultΩr → Ingest Folder → point at `D:/kre8r/intake` → run ingest
-2. Confirm clips 587 and 588 now have `proxy_path` set:
-   ```
-   curl 'http://localhost:3000/api/vault/footage?project_id=18' | node -e "const d=[];process.stdin.on('data',c=>d.push(c));process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(d));r.forEach(c=>console.log(c.id, c.proxy_path));})"
-   ```
-3. Open EditΩr → select project 18 → run selects
-4. Confirm transcription completes and selects are identified
+Crew brief PDF route exits with code 2 if reportlab missing on the server.
 
 ---
 
-## Task 3 — Test AutomatΩr end-to-end with live Kajabi session
+## Task 3 — Archive duplicate projects 21 and 22
 
-Broadcast Playwright flow is wired. Needs a real live test.
+Projects 21 and 22 are duplicate tankless water heater projects superseded by project 23 (Propane Water Heater — full id8r_data confirmed).
 
 **Steps:**
-1. Open Chrome with `--remote-debugging-port=9222`
-2. Log into Kajabi manually
-3. Open AutomatΩr → Connect Chrome
-4. Generate a broadcast in MailΩr → Send via Kajabi
-5. Dry-run → verify screenshot shows correct preview
-6. Confirm → verify email lands in Kajabi drafts
-7. If Step 8 body injection fails: check if `tinymce.activeEditor` is accessible from top frame or needs `page.frame()` targeting the TinyMCE iframe
+1. Open PipΩr → settings gear on project 21 → Archive
+2. Open PipΩr → settings gear on project 22 → Archive
+3. Confirm only project 23 shows in active project lists across all tools
 
 ---
 
