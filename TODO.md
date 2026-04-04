@@ -2,6 +2,16 @@
 
 ---
 
+## Before Next Deploy — Run on DigitalOcean server
+
+```bash
+pip install reportlab
+```
+
+Required for `GET /api/shootday/crew-brief/:project_id` (crew-brief.py) — exits with code 2 if reportlab missing.
+
+---
+
 ## Task 1 — Run Project 21 (Tankless) through PipΩr properly
 
 Project 21 has `entry_point: script_first` and `high_concept` set but no story structure, beats, or pipr_complete flag. WritΩr won't generate a full script without beats.

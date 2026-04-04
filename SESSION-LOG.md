@@ -1,3 +1,84 @@
+# Kre8Ωr Session Log — 2026-04-04 (Session 18 — Crew Brief PDF + Data Flow Gaps)
+
+## What Was Built — Session 18
+
+---
+
+### DirectΩr + ShootDay UX Clarity (`public/director.html`, `public/shootday.html`)
+
+- DirectΩr subtitle updated: "Your PipΩr beat map becomes a shot list. Select a project to load everything."
+- `#selector-info` div shows beat count + structure + WritΩr flag after project load
+- Both package buttons renamed to "📱 Send to Cari's Phone →" with "Generates an offline page she can open without wifi" subtitle
+- Crew Brief panel: added "Share this with your crew before the shoot" descriptor + `📄 Download PDF` button (hidden until project loaded)
+- ShootDay: `#project-title-bar` shows `projectTitle · STORY STRUCTURE` when project loaded
+- ShootDay: Script tab labelled "WritΩr Script"
+- ShootDay: Project selector cards show EP_LABELS badge (Script First / Shoot First / Vault First / Hybrid)
+- ShootDay: One-time swipe tip card (localStorage `sd_swipe_shown`) prepended to shot list on first visit
+
+---
+
+### Crew Brief PDF (`scripts/pdf/crew-brief.py`, `src/routes/shootday.js`, `public/director.html`)
+
+**New Python script** `scripts/pdf/crew-brief.py` — full reportlab PDF generator:
+- Dark header with project title + date + target duration
+- High concept card (teal border)
+- Meta table: entry point, story structure, beats count, shoot location
+- Beat map — one card per beat with shot type badge (TH=teal, B-roll=amber, action=red), beat name, emotional function, reality note, SAY TO CAMERA box (teal left border)
+- Key Moments section — TH beats only, indexed
+- Footer
+- Reads JSON from stdin, writes PDF bytes to stdout
+
+**`src/routes/shootday.js`** — New `GET /api/shootday/crew-brief/:project_id` route:
+- Builds payload with project, beats, config, date, duration_minutes
+- Spawns `crew-brief.py` via detectPython() + spawn()
+- Returns `application/pdf` with Content-Disposition filename
+
+**`public/director.html`** — `downloadCrewBriefPdf()` function fetches route, creates blob URL, auto-downloads with project-specific filename.
+
+---
+
+### Data Flow Gap Fix (`src/routes/generate.js`, `src/routes/mailor.js`)
+
+**Problem identified:** PackageΩr, CaptionΩr, and MailΩr were generating from topic/clips alone — never reading the approved WritΩr script or project context from DB.
+
+**`src/routes/generate.js`** — PackageΩr and CaptionΩr routes both now call `db.getApprovedWritrScript(project_id)` and inject `APPROVED SCRIPT:\n{scriptText}` into the Claude prompt when a script exists.
+
+**`src/routes/mailor.js`** — Both `/broadcast` and `/sequence` routes now call `db.getProject(project_id)` and `db.getApprovedWritrScript(project_id)` when `project_id` is provided. Injects `PROJECT CONTEXT:` block with title, content_angle, high_concept, and first 500 chars of script.
+
+---
+
+### Commits This Session
+
+```
+0090197  feat: inject WritΩr script into PackageΩr, CaptionΩr, and MailΩr prompts
+0f1c8c6  feat: crew brief PDF download using reportlab
+3d9a4f8  feat: DirectΩr + ShootDay UX clarity improvements
+044ef84  chore: Session 17 log + TODO update
+```
+
+---
+
+## Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `public/director.html` | selector-info, PDF button, pkg-btn UX, downloadCrewBriefPdf() |
+| `public/shootday.html` | project-title-bar, EP_LABELS badge, WritΩr Script label, swipe tip |
+| `scripts/pdf/crew-brief.py` | New — full reportlab crew brief generator |
+| `src/routes/shootday.js` | detectPython(), crew-brief/:project_id route |
+| `src/routes/generate.js` | PackageΩr + CaptionΩr WritΩr script injection |
+| `src/routes/mailor.js` | broadcast + sequence project context injection |
+
+---
+
+## Server State — End of Session 18
+- All changes committed to master
+- DigitalOcean deploy needed: `pip install reportlab` required on server before PDF route works
+- Project 21 (Tankless Water Heater): needs PipΩr story structure + beats → then WritΩr
+- 7 proxy files still waiting in `D:/kre8r/intake` — ingest not yet triggered
+
+---
+
 # Kre8Ωr Session Log — 2026-04-03/04 (Session 17 — Id8Ωr→PipΩr Handoff, WritΩr Research Context, Nav Audit)
 
 ## What Was Built — Session 17
