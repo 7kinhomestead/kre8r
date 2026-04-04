@@ -661,7 +661,7 @@ function renderTrackRow(t) {
     <div class="track-row${isSelected ? ' is-selected' : ''}${isGenning ? ' is-generating' : ''}" id="track-row-${t.id}">
       <div class="track-var">V${t.generation_index}</div>
       <div class="track-content">
-        ${t.suno_prompt ? `<div class="track-prompt">${esc(t.suno_prompt)}</div>` : '<div class="track-prompt" style="color:var(--text-dimmer);font-style:italic">No prompt generated</div>'}
+        ${t.suno_prompt ? `<div class="track-prompt">${esc(t.suno_prompt)}<span class="prompt-char-count" style="display:block;font-size:10px;font-weight:600;margin-top:4px;color:${t.suno_prompt.length >= 200 ? 'var(--red)' : t.suno_prompt.length >= 180 ? 'var(--amber)' : 'var(--teal)'}">${t.suno_prompt.length}/200</span></div>` : '<div class="track-prompt" style="color:var(--text-dimmer);font-style:italic">No prompt generated</div>'}
         ${audioEl}
         <div class="track-actions">
           <button class="${selectBtnClass}" onclick="selectTrack(${t.id}, ${t.project_id})" ${isSelected ? 'disabled' : ''}>

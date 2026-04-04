@@ -179,7 +179,7 @@ router.post('/generate/:project_id', async (req, res) => {
           scene_index:      pt.scene_index,
           scene_type:       pt.scene_type,
           duration_seconds: pt.duration_seconds,
-          suno_prompt:      pt.suno_prompt,
+          suno_prompt:      pt.suno_prompt ? pt.suno_prompt.substring(0, 200) : null,
           generation_index: pt.generation_index,
           selected:         false
         });
