@@ -274,6 +274,11 @@
         <div class="entry-card-title">I HAVE SOME OF BOTH</div>
         <div class="entry-card-desc">Bring both. We'll connect them.</div>
       </div>
+      <div class="entry-card" id="ecard-vault_first" onclick="selectEntry('vault_first')">
+        <div class="entry-card-icon">🗄️</div>
+        <div class="entry-card-title">I HAVE FOOTAGE IN THE VAULT</div>
+        <div class="entry-card-desc">Describe what you shot or browse VaultΩr clips. WritΩr builds the story from what already exists.</div>
+      </div>
     </div>
   </div>
 
@@ -283,6 +288,10 @@
     <div class="screen-sub">Name it. Define it. Two sentences max.</div>
 
     <div id="valid-banner-1" class="validation-banner"></div>
+    <div id="id8r-arrival-banner" class="pipr-notice" style="display:none">
+      <span class="pipr-notice-icon">✨</span>
+      <span class="pipr-notice-text">Arrived from Id8Ωr — concept and entry point pre-loaded</span>
+    </div>
 
     <div class="field-group">
       <label class="field-label" for="f-title">Project Title</label>
@@ -998,7 +1007,6 @@ let _psCb = null;
       form.title        = p.title        || '';
       form.high_concept = p.high_concept || '';
       form.content_type = p.content_type || '';
-      form.entry_point  = p.entry_point  || 'script_first';
 
       // Pre-fill visible inputs on screen 1
       const titleEl = document.getElementById('f-title');
@@ -1010,13 +1018,17 @@ let _psCb = null;
       const ctEl = document.getElementById('f-content-type');
       if (ctEl && form.content_type) ctEl.value = form.content_type;
 
-      // Mark entry card selected and jump to screen 1
-      document.querySelectorAll('.entry-card').forEach(c => c.classList.remove('selected'));
-      const card = document.getElementById('ecard-' + form.entry_point);
-      if (card) card.classList.add('selected');
-
-      goToScreen(1);
-      showToast('Project loaded from Id8Ωr — ready to build your story');
+      if (p.entry_point) {
+        // Entry point known — auto-select card, advance to screen 1, show arrival banner
+        selectEntry(p.entry_point); // marks card + sets form.entry_point + goToScreen(1) after 300ms
+        setTimeout(() => {
+          const banner = document.getElementById('id8r-arrival-banner');
+          if (banner) banner.style.display = 'flex';
+        }, 350); // just after selectEntry's goToScreen fires
+      } else {
+        // Entry point unknown — stay on screen 0 so creator can choose manually
+        showToast('Project loaded from Id8Ωr — choose your entry point to continue');
+      }
     })
     .catch(() => showToast('Could not load project from Id8Ωr'));
 })();

@@ -408,6 +408,41 @@ router.post('/generate', async (req, res) => {
         id8rBlock,
         emit
       });
+    } else if (ep === 'vault_first') {
+      // vault_first — pull all VaultΩr clips for this project, build a clip inventory summary,
+      // then run shoot_first engine with that as the "what happened" context
+      const vaultClips   = db.getAllFootage({ project_id: projectId });
+      const clipSummary  = vaultClips.length
+        ? vaultClips.map(f => {
+            const name = f.original_filename || (f.file_path || '').split(/[\\/]/).pop() || 'clip';
+            const type = f.shot_type || 'unknown';
+            const dur  = f.duration_seconds ? ` (${Math.round(f.duration_seconds)}s)` : '';
+            const desc = f.transcript
+              ? f.transcript.split(/\s+/).slice(0, 30).join(' ') + '…'
+              : f.subject || f.topic || '(no description)';
+            return `- [${type}] ${name}${dur}: ${desc}`;
+          }).join('\n')
+        : '(no clips found in vault for this project — add footage via VaultΩr first)';
+
+      const vaultContext = [
+        'VAULT CLIPS FOR THIS PROJECT:',
+        clipSummary,
+        '',
+        what_happened || input_text
+          ? `CREATOR NOTES:\n${what_happened || input_text}`
+          : ''
+      ].filter(Boolean).join('\n');
+
+      emit?.({ stage: 'analyzing', message: `Found ${vaultClips.length} vault clip${vaultClips.length !== 1 ? 's' : ''} — building story…` });
+
+      result = await generateShootFirst({
+        projectId,
+        whatHappened: vaultContext,
+        footageRows:  vaultClips,
+        voiceProfiles,
+        id8rBlock,
+        emit
+      });
     } else {
       // hybrid — concept and what_happened arrive as separate fields from the client
       result = await generateHybrid({
