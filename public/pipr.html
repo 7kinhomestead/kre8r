@@ -346,6 +346,13 @@
 
     <div id="valid-banner-2" class="validation-banner"></div>
 
+    <!-- Id8Ωr concept card — shown only when arriving from Id8Ωr -->
+    <div id="id8r-concept-card" style="display:none;background:var(--teal-glow);border:1px solid var(--teal);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--teal);text-transform:uppercase;margin-bottom:6px;">✨ Id8Ωr Concept</div>
+      <div id="id8r-concept-headline" style="font-family:var(--font-head);font-size:17px;letter-spacing:1px;color:var(--text);margin-bottom:6px;"></div>
+      <div id="id8r-concept-why" style="font-size:13px;color:var(--text-dim);line-height:1.5;"></div>
+    </div>
+
     <div class="structure-grid">
       <div class="structure-card" id="scard-save_the_cat" onclick="selectStructure('save_the_cat')">
         <div class="structure-card-icon">🐱</div>
@@ -1017,6 +1024,68 @@ let _psCb = null;
 
       const ctEl = document.getElementById('f-content-type');
       if (ctEl && form.content_type) ctEl.value = form.content_type;
+
+      // Populate Id8Ωr concept card (screen 2) and content textareas (screen 3)
+      if (p.id8r_data) {
+        try {
+          const id8r = typeof p.id8r_data === 'string' ? JSON.parse(p.id8r_data) : p.id8r_data;
+          const concept  = id8r.chosenConcept  || {};
+          const pkg      = id8r.packageData    || {};
+          const research = id8r.researchSummary || '';
+
+          // Screen 2 — concept card
+          const card = document.getElementById('id8r-concept-card');
+          if (card && concept.headline) {
+            document.getElementById('id8r-concept-headline').textContent = concept.headline;
+            document.getElementById('id8r-concept-why').textContent      = concept.why || '';
+            card.style.display = 'block';
+          }
+
+          // Screen 3 — build brief block for the content textarea
+          const lines = [];
+          if (concept.headline) lines.push(`CONCEPT: ${concept.headline}`);
+          if (concept.why)      lines.push(`\nWHY THIS WORKS: ${concept.why}`);
+          if (concept.hook)     lines.push(`\nOPENING HOOK: ${concept.hook}`);
+          if (research) {
+            lines.push(`\nRESEARCH FINDINGS:\n${research.slice(0, 800)}${research.length > 800 ? '…' : ''}`);
+          }
+          const titles = pkg.titles || [];
+          if (titles[0])        lines.push(`\nSELECTED TITLE: ${titles[0].text || titles[0]}`);
+          const hooks = pkg.hooks || [];
+          if (hooks[0] || hooks[1]) {
+            lines.push('\nSELECTED HOOKS:');
+            if (hooks[0]) lines.push(`- ${hooks[0].text || hooks[0]}`);
+            if (hooks[1]) lines.push(`- ${hooks[1].text || hooks[1]}`);
+          }
+
+          const briefData = id8r.briefData || {};
+          const pb        = briefData.pipeline_brief || {};
+          if (briefData.elevator_pitch)      lines.push(`\nELEVATOR PITCH: ${briefData.elevator_pitch}`);
+          if (briefData.story_angle)         lines.push(`\nSTORY ANGLE:\n${briefData.story_angle}`);
+          if (briefData.talking_points?.length) {
+            lines.push('\nTALKING POINTS:');
+            briefData.talking_points.forEach(tp => lines.push(`- ${tp}`));
+          }
+          if (briefData.what_not_to_do?.length) {
+            lines.push('\nWHAT NOT TO DO:');
+            briefData.what_not_to_do.forEach(w => lines.push(`- ${w}`));
+          }
+          if (pb.concept_note) lines.push(`\nCONCEPT NOTE: ${pb.concept_note}`);
+
+          const brief = lines.join('\n');
+
+          if (brief) {
+            const scriptEl   = document.getElementById('f-script');
+            const happenedEl = document.getElementById('f-what-happened');
+            const hybridEl   = document.getElementById('f-hybrid-concept');
+            if (scriptEl)   scriptEl.value   = brief;
+            if (happenedEl) happenedEl.value = brief;
+            if (hybridEl)   hybridEl.value   = brief;
+          }
+        } catch (e) {
+          console.warn('[checkLoadProject] id8r_data parse error', e);
+        }
+      }
 
       if (p.entry_point) {
         // Entry point known — auto-select card, advance to screen 1, show arrival banner
