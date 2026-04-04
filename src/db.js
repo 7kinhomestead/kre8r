@@ -1084,6 +1084,18 @@ function getPendingSunoTracks(projectId) {
   );
 }
 
+function truncateLongSunoPrompts() {
+  // One-time maintenance: cap all existing suno_prompts to 200 chars
+  const tracks = _all(
+    `SELECT id, suno_prompt FROM composor_tracks WHERE suno_prompt IS NOT NULL AND length(suno_prompt) > 200`
+  );
+  tracks.forEach(t => {
+    _run(`UPDATE composor_tracks SET suno_prompt = ? WHERE id = ?`, [t.suno_prompt.substring(0, 200), t.id]);
+  });
+  persist();
+  return tracks.length;
+}
+
 function updateProjectComposorState(projectId, state) {
   _run(`UPDATE projects SET composor_state = ? WHERE id = ?`, [state, projectId]);
   persist();
@@ -1398,6 +1410,7 @@ module.exports = {
   selectComposorTrack,
   deleteComposorTracksByProject,
   getPendingSunoTracks,
+  truncateLongSunoPrompts,
   updateProjectComposorState,
   // EditΩr
   insertSelect,

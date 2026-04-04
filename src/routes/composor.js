@@ -590,4 +590,18 @@ router.post('/upload/:project_id', uploadMiddleware.single('file'), (req, res) =
   });
 });
 
+// ─────────────────────────────────────────────
+// POST /api/composor/truncate-prompts
+// One-time maintenance: cap all existing suno_prompts to 200 chars
+// ─────────────────────────────────────────────
+
+router.post('/truncate-prompts', (req, res) => {
+  try {
+    const updated = db.truncateLongSunoPrompts();
+    res.json({ ok: true, updated });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;

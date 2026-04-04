@@ -307,7 +307,8 @@
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);const id8r=JSON.parse\\(r.id8r_data||''''{}''''\\);console.log\\(JSON.stringify\\(id8r.briefData, null, 2\\)\\)}\\)\")",
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(''''type:'''', Array.isArray\\(r\\)?''''array'''':''''object''''\\);console.log\\(''''keys:'''', Object.keys\\(r\\).slice\\(0,5\\)\\);console.log\\(''''count:'''', Array.isArray\\(r\\)?r.length:r.projects?.length\\)}\\)\")",
       "Bash(curl -s \"http://localhost:3000/api/playwright/suno/prompts/23\")",
-      "Bash(curl -s \"http://localhost:3000/api/playwright/status\")"
+      "Bash(curl -s \"http://localhost:3000/api/playwright/status\")",
+      "Bash(curl -s -X POST \"http://localhost:3000/api/composor/truncate-prompts\")"
     ]
   }
 }
