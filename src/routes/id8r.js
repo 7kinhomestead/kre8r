@@ -583,10 +583,17 @@ router.post('/send-pipeline', async (req, res) => {
 
     const project = db.createProject(title, topic, null, null);
 
+    // Write brief fields to DB so PipΩr and WritΩr can pre-populate
+    db.updateProjectPipr(project.id, {
+      entry_point:  pb.entry_point  || 'script_first',
+      content_type: pb.content_angle || '',
+      high_concept: pb.high_concept  || '',
+    });
+
     const dest = destination || 'pipr';
     const redirectUrl = dest === 'writr'
       ? `/writr.html?project_id=${project.id}`
-      : `/pipr.html?project_id=${project.id}`;
+      : `/pipr.html?load_project=${project.id}`;
 
     res.json({ ok: true, project_id: project.id, redirect_url: redirectUrl });
   } catch (e) {

@@ -986,6 +986,41 @@ function showToast(msg, isError) {
 let _psProjectId = null;
 let _psCb = null;
 
+(function checkLoadProject() {
+  const pid = new URLSearchParams(window.location.search).get('load_project');
+  if (!pid) return;
+  fetch(`/api/projects/${parseInt(pid)}`)
+    .then(r => r.json())
+    .then(p => {
+      if (p.error) { showToast('Project not found'); return; }
+
+      // Pre-fill form object
+      form.title        = p.title        || '';
+      form.high_concept = p.high_concept || '';
+      form.content_type = p.content_type || '';
+      form.entry_point  = p.entry_point  || 'script_first';
+
+      // Pre-fill visible inputs on screen 1
+      const titleEl = document.getElementById('f-title');
+      if (titleEl) titleEl.value = form.title;
+
+      const hcEl = document.getElementById('f-high-concept');
+      if (hcEl) hcEl.value = form.high_concept;
+
+      const ctEl = document.getElementById('f-content-type');
+      if (ctEl && form.content_type) ctEl.value = form.content_type;
+
+      // Mark entry card selected and jump to screen 1
+      document.querySelectorAll('.entry-card').forEach(c => c.classList.remove('selected'));
+      const card = document.getElementById('ecard-' + form.entry_point);
+      if (card) card.classList.add('selected');
+
+      goToScreen(1);
+      showToast('Project loaded from Id8Ωr — ready to build your story');
+    })
+    .catch(() => showToast('Could not load project from Id8Ωr'));
+})();
+
 (function checkSettingsMode() {
   const pid = new URLSearchParams(window.location.search).get('project_id');
   if (!pid) return;
