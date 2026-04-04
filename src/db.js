@@ -1074,6 +1074,16 @@ function deleteComposorTracksByProject(projectId) {
   persist();
 }
 
+function getPendingSunoTracks(projectId) {
+  // Tracks that have a prompt written but no audio downloaded yet
+  return _all(
+    `SELECT * FROM composor_tracks
+     WHERE project_id = ? AND suno_prompt IS NOT NULL AND suno_track_path IS NULL
+     ORDER BY scene_index ASC, generation_index ASC`,
+    [projectId]
+  );
+}
+
 function updateProjectComposorState(projectId, state) {
   _run(`UPDATE projects SET composor_state = ? WHERE id = ?`, [state, projectId]);
   persist();
@@ -1387,6 +1397,7 @@ module.exports = {
   getComposorTracksByProject,
   selectComposorTrack,
   deleteComposorTracksByProject,
+  getPendingSunoTracks,
   updateProjectComposorState,
   // EditΩr
   insertSelect,

@@ -300,6 +300,18 @@
       <div style="font-size:12px;color:var(--text-dim)">Pick one track per scene. Audio generates in background.</div>
     </div>
 
+    <!-- Suno Playwright button — shown only when Chrome is connected + pending tracks exist -->
+    <div id="sunoPlaywrightWrap" style="display:none;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="sunoPlaywrightBtn" disabled>🎵 Generate All in Suno</button>
+      <span id="sunoPlaywrightStatus" style="font-size:12px;color:var(--text-dim);"></span>
+    </div>
+
+    <!-- Suno Playwright progress log -->
+    <div class="progress-wrap" id="sunoPlaywrightProgress">
+      <div class="progress-title">SUNO AUTOMATION</div>
+      <div class="progress-log" id="sunoPlaywrightLog"></div>
+    </div>
+
     <div id="tracksEmpty" class="empty-state">
       <div class="empty-icon">🎵</div>
       <div class="empty-title">NO TRACKS YET</div>
@@ -370,6 +382,106 @@ const davinciStatusMsg=document.getElementById('davinciStatusMsg');
 async function init() {
   await checkSunoKey();
   await loadProjects();
+  await checkPlaywrightStatus();
+}
+
+// ─── PLAYWRIGHT STATUS ────────────────────────
+let playwrightConnected = false;
+
+async function checkPlaywrightStatus() {
+  try {
+    const r = await fetch('/api/playwright/status');
+    const d = await r.json();
+    playwrightConnected = !!(d.connected);
+    updateSunoPlaywrightBtn();
+  } catch (_) {
+    playwrightConnected = false;
+  }
+}
+
+function updateSunoPlaywrightBtn() {
+  const wrap      = document.getElementById('sunoPlaywrightWrap');
+  const btn       = document.getElementById('sunoPlaywrightBtn');
+  const statusEl  = document.getElementById('sunoPlaywrightStatus');
+  if (!wrap) return;
+
+  if (!playwrightConnected) {
+    wrap.style.display = 'none';
+    return;
+  }
+  // Connected — show wrapper; button enabled only if project selected
+  wrap.style.display = 'flex';
+  btn.disabled = !projectId;
+  statusEl.textContent = projectId ? 'Chrome connected — will drive suno.com/create for each pending scene' : 'Select a project first';
+}
+
+// ─── SUNO PLAYWRIGHT RUN ─────────────────────
+const sunoPlaywrightProgress = document.getElementById('sunoPlaywrightProgress');
+const sunoPlaywrightLog      = document.getElementById('sunoPlaywrightLog');
+const sunoPlaywrightBtn      = document.getElementById('sunoPlaywrightBtn');
+
+if (sunoPlaywrightBtn) {
+  sunoPlaywrightBtn.addEventListener('click', runSunoPlaywright);
+}
+
+async function runSunoPlaywright() {
+  if (!projectId) return;
+  sunoPlaywrightBtn.disabled = true;
+  sunoPlaywrightBtn.textContent = '⏳ Generating…';
+  sunoPlaywrightProgress.classList.add('visible');
+  sunoPlaywrightLog.innerHTML = '';
+  logLine(sunoPlaywrightLog, '', `Starting Suno automation for project ${projectId}…`);
+
+  try {
+    const r = await fetch('/api/playwright/suno', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ project_id: projectId }),
+    });
+
+    if (!r.ok || !r.body) {
+      const err = await r.json().catch(() => ({}));
+      logLine(sunoPlaywrightLog, 'err', `Error: ${err.error || 'Unknown'}`);
+      return;
+    }
+
+    const reader  = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+
+      // SSE events are separated by \n\n
+      const events = buf.split('\n\n');
+      buf = events.pop(); // keep any trailing incomplete event
+
+      for (const evt of events) {
+        const dataLine = evt.split('\n').find(l => l.startsWith('data: '));
+        if (!dataLine) continue;
+        try {
+          const d   = JSON.parse(dataLine.slice(6));
+          const msg = d.message || d.error || '';
+          const cls = d.stage === 'error' || d.stage === 'scene_error' ? 'err'
+                    : d.stage === 'done'  || d.stage === 'scene_done'  ? 'ok'
+                    : d.stage === 'start' ? 'ok'
+                    : '';
+          if (msg) logLine(sunoPlaywrightLog, cls, msg);
+          if (d.stage === 'done' || d.stage === 'error') {
+            await loadTracks();
+          }
+        } catch (_) {}
+      }
+    }
+
+  } catch (e) {
+    logLine(sunoPlaywrightLog, 'err', 'Error: ' + e.message);
+  } finally {
+    sunoPlaywrightBtn.disabled = !projectId;
+    sunoPlaywrightBtn.textContent = '🎵 Generate All in Suno';
+  }
 }
 
 async function checkSunoKey() {
@@ -404,6 +516,7 @@ projectSelect.addEventListener('change', () => {
   generateBtn.disabled = !projectId;
   reanalyzeBtn.disabled = !projectId;
   clearBtn.disabled = !projectId;
+  updateSunoPlaywrightBtn();
   if (projectId) loadTracks();
 });
 

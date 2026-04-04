@@ -22,6 +22,8 @@
 const express = require('express');
 const router  = express.Router();
 const http    = require('http');
+const path    = require('path');
+const fs      = require('fs');
 
 const {
   sendBroadcast,
@@ -30,6 +32,9 @@ const {
   createAutomation,
   updateLandingPage,
 } = require('../playwright/kajabi');
+
+const { generateOnSuno } = require('../playwright/suno');
+const db = require('../db');
 
 // ─── Singleton connection state ────────────────────────────────────────────
 
@@ -293,6 +298,155 @@ router.post('/landing-page', async (req, res) => {
   } catch (e) {
     send({ stage: 'error', error: e.message });
   }
+  res.end();
+});
+
+// ─── GET /api/playwright/suno/prompts/:project_id ─────────────────────────
+// Returns tracks that have a prompt but no downloaded audio yet.
+
+router.get('/suno/prompts/:project_id', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  try {
+    const tracks = db.getPendingSunoTracks(projectId);
+    res.json({
+      project_id: projectId,
+      count:      tracks.length,
+      pending:    tracks.map(t => ({
+        id:               t.id,
+        scene_label:      t.scene_label,
+        scene_index:      t.scene_index,
+        suno_prompt:      t.suno_prompt,
+        generation_index: t.generation_index,
+      }))
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── POST /api/playwright/suno ────────────────────────────────────────────
+// SSE — fetches pending prompts for project, drives suno.com via Playwright,
+// downloads both generated tracks per scene, ingests into composor_tracks.
+
+router.post('/suno', async (req, res) => {
+  const send = sseSetup(res);
+  if (!await requireConnectionSSE(send, res)) return;
+
+  const activePage = await ensurePage();
+  if (!activePage) {
+    send({ stage: 'error', error: 'Connection lost. Reconnect Chrome.' });
+    return res.end();
+  }
+
+  const projectId = parseInt(req.body?.project_id, 10);
+  if (!projectId) {
+    send({ stage: 'error', error: 'project_id required' });
+    return res.end();
+  }
+
+  try {
+    const pending = db.getPendingSunoTracks(projectId);
+
+    if (!pending.length) {
+      send({ stage: 'done', message: 'No pending tracks found. Run scene analysis + Generate Music first to write prompts.' });
+      return res.end();
+    }
+
+    send({ stage: 'start', total: pending.length, message: `Found ${pending.length} pending track${pending.length !== 1 ? 's' : ''} — starting Suno automation` });
+
+    let successCount = 0;
+    let failCount    = 0;
+
+    for (let i = 0; i < pending.length; i++) {
+      const track = pending[i];
+
+      send({
+        stage:       'scene_start',
+        current:     i + 1,
+        total:       pending.length,
+        scene_label: track.scene_label,
+        message:     `Scene ${i + 1}/${pending.length}: Generating "${track.scene_label}"…`
+      });
+
+      const result = await generateOnSuno(activePage, {
+        prompt:          track.suno_prompt,
+        projectId,
+        sceneLabel:      track.scene_label,
+        sceneIndex:      track.scene_index,
+        generationIndex: track.generation_index,
+      });
+
+      if (!result.ok) {
+        failCount++;
+        send({
+          stage:       'scene_error',
+          current:     i + 1,
+          total:       pending.length,
+          scene_label: track.scene_label,
+          error:       result.error,
+          message:     `Scene ${i + 1}/${pending.length}: ✗ Failed — ${result.error}`
+        });
+        continue;
+      }
+
+      const files = result.files || [];
+
+      // File 0 → update existing track row (the one with the prompt)
+      if (files[0]) {
+        db.updateComposorTrack(track.id, {
+          suno_track_path: files[0].destPath,
+          suno_track_url:  files[0].audioUrl,
+          public_path:     files[0].publicPath,
+        });
+      }
+
+      // File 1 → insert as a second variation row for the same scene
+      if (files[1]) {
+        db.insertComposorTrack({
+          project_id:       projectId,
+          scene_label:      track.scene_label,
+          scene_index:      track.scene_index,
+          scene_type:       track.scene_type || 'buildup',
+          duration_seconds: null,
+          suno_prompt:      track.suno_prompt,
+          generation_index: track.generation_index + 1,
+          selected:         false,
+          suno_track_path:  files[1].destPath,
+          suno_track_url:   files[1].audioUrl,
+          public_path:      files[1].publicPath,
+        });
+      }
+
+      successCount++;
+      send({
+        stage:             'scene_done',
+        current:           i + 1,
+        total:             pending.length,
+        scene_label:       track.scene_label,
+        tracks_downloaded: files.length,
+        message:           `Scene ${i + 1}/${pending.length}: ✓ Downloaded ${files.length} track${files.length !== 1 ? 's' : ''}`
+      });
+    }
+
+    // Advance project composor state if any tracks came in
+    if (successCount > 0) {
+      db.updateProjectComposorState(projectId, 'awaiting_selection');
+    }
+
+    send({
+      stage:   'done',
+      success: successCount,
+      failed:  failCount,
+      message: `Complete — ${successCount} scene${successCount !== 1 ? 's' : ''} generated, ${failCount} failed`
+    });
+
+  } catch (e) {
+    console.error('[playwright/suno]', e);
+    send({ stage: 'error', error: e.message });
+  }
+
   res.end();
 });
 
