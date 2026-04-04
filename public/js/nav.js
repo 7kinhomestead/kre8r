@@ -28,10 +28,9 @@
         id: 'pre',
         label: 'Pre',
         items: [
-          { label: 'PipΩr',       href: '/pipr.html' },
-          { label: 'WritΩr',      href: '/writr.html' },
-          { label: 'Id8Ωr',       href: '/id8r.html' },
-          { label: 'ResearchΩr',  href: '/researchr.html',  soon: true, phase: 3 },
+          { label: 'Id8Ωr',   href: '/id8r.html' },
+          { label: 'PipΩr',   href: '/pipr.html' },
+          { label: 'WritΩr',  href: '/writr.html' },
         ]
       },
       {
@@ -41,17 +40,16 @@
           { label: 'DirectΩr',     href: '/director.html' },
           { label: 'ShootDay',     href: '/shootday.html' },
           { label: 'TeleprΩmpter', href: '/teleprompter.html' },
-          { label: 'CoverageΩr',  href: '/coverager.html',   soon: true, phase: 3 },
         ]
       },
       {
         id: 'post',
         label: 'Post',
         items: [
-          { label: 'VaultΩr',   href: '/vault.html' },
-          { label: 'EditΩr',    href: '/editor.html' },
-          { label: 'ComposΩr',  href: '/composor.html' },
-          { label: 'ReviewΩr',  href: '/reviewr.html' },
+          { label: 'VaultΩr',  href: '/vault.html' },
+          { label: 'EditΩr',   href: '/editor.html' },
+          { label: 'ReviewΩr', href: '/reviewr.html' },
+          { label: 'ComposΩr', href: '/composor.html' },
         ]
       },
       {
@@ -61,10 +59,10 @@
           { label: 'GateΩr',    sublabel: 'M1', href: '/m1-approval-dashboard.html' },
           { label: 'PackageΩr', sublabel: 'M2', href: '/m2-package-generator.html' },
           { label: 'CaptionΩr', sublabel: 'M3', href: '/m3-caption-generator.html' },
-          { label: 'MailΩr',      sublabel: 'M4', href: '/mailor.html' },
-          { label: 'AudienceΩr', sublabel: 'M5', href: '/audience.html' },
-          { label: 'AutomatΩr',  href: '/automator.html' },
-          { label: 'AnalytΩr',   href: '/analytr.html', soon: true, phase: 5 },
+          { label: 'MailΩr',    sublabel: 'M4', href: '/mailor.html' },
+          { label: 'AudiencΩr', sublabel: 'M5', href: '/audience.html' },
+          { label: 'AutomatΩr', href: '/automator.html' },
+          { label: 'AnalΩzr',   href: '/analytr.html', soon: true },
         ]
       }
     ]
