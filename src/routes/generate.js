@@ -149,6 +149,15 @@ Generate exactly 5 packages. Each must be a distinct angle — not variations of
       }
     }
 
+    // Inject approved WritΩr script if available — gives PackageΩr the actual script content
+    if (project_id) {
+      const script = db.getApprovedWritrScript(parseInt(project_id));
+      const scriptText = script?.generated_script || script?.full_script || '';
+      if (scriptText) {
+        userPrompt += `\nAPPROVED SCRIPT:\n${scriptText}\n`;
+      }
+    }
+
     userPrompt += `\nGenerate all 5 packages now. JSON only.`;
 
     const rawText = await callClaude(systemPrompt, userPrompt, 4000);
@@ -246,6 +255,16 @@ OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
     if (package_title) userPrompt += `Selected Package Title (tone anchor): ${package_title}\n`;
     if (content_angle) userPrompt += `Content Angle: ${angleMap[content_angle] || content_angle}\n`;
     if (caption_direction) userPrompt += `Creator Direction: ${caption_direction}\n`;
+
+    // Inject approved WritΩr script if available — gives CaptionΩr the actual script content
+    if (project_id) {
+      const script = db.getApprovedWritrScript(parseInt(project_id));
+      const scriptText = script?.generated_script || script?.full_script || '';
+      if (scriptText) {
+        userPrompt += `\nAPPROVED SCRIPT:\n${scriptText}\n`;
+      }
+    }
+
     userPrompt += `\nCLIPS:\n${clipLines}\n\nWrite all 5 platform captions for each clip. JSON only.`;
 
     const rawText = await callClaude(systemPrompt, userPrompt, 5000);

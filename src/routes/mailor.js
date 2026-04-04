@@ -165,26 +165,23 @@ RULES:
 - Every email has one job. One CTA. Don't pile on.
 - A/B means meaningfully different approaches — not just different subject lines. Different angle, different entry point, different emotional hook.`;
 
-    const userPrompt = `Write an A/B broadcast email pair for this situation:
+    let userPrompt = `Write an A/B broadcast email pair for this situation:\n\nPrompt: ${prompt}\nSegment: ${segment || 'everyone'}\nGoal: ${goal || 'not specified'}\n`;
 
-Prompt: ${prompt}
-Segment: ${segment || 'everyone'}
-Goal: ${goal || 'not specified'}
+    // Inject project context if available — gives MailΩr the actual video/script context
+    if (project_id) {
+      const proj   = db.getProject(parseInt(project_id));
+      const script = db.getApprovedWritrScript(parseInt(project_id));
+      if (proj || script) {
+        userPrompt += `\nPROJECT CONTEXT:\n`;
+        if (proj?.title)         userPrompt += `Title: ${proj.title}\n`;
+        if (proj?.content_angle) userPrompt += `Content Angle: ${proj.content_angle}\n`;
+        if (proj?.high_concept)  userPrompt += `High Concept: ${proj.high_concept}\n`;
+        const scriptText = script?.generated_script || script?.full_script || '';
+        if (scriptText)          userPrompt += `Script (first 500 chars): ${scriptText.slice(0, 500)}\n`;
+      }
+    }
 
-Return JSON only:
-{
-  "segment": "${segment || 'everyone'}",
-  "version_a": {
-    "label": "one word describing this approach",
-    "subject": "subject line",
-    "body": "full email body"
-  },
-  "version_b": {
-    "label": "one word describing this approach",
-    "subject": "subject line",
-    "body": "full email body"
-  }
-}`;
+    userPrompt += `\nReturn JSON only:\n{\n  "segment": "${segment || 'everyone'}",\n  "version_a": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  },\n  "version_b": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  }\n}`;
 
     const result = await callClaude(systemPrompt, userPrompt, 3000);
 
@@ -319,6 +316,21 @@ OUTPUT: valid JSON only, no preamble:
     if (live_offer)      userPrompt += `Live offer: ${live_offer}\n`;
     if (community_event) userPrompt += `Community event: ${community_event}\n`;
     if (email_direction) userPrompt += `Direction: ${email_direction}\n`;
+
+    // Inject project context from DB if project_id provided
+    if (project_id) {
+      const proj   = db.getProject(parseInt(project_id));
+      const script = db.getApprovedWritrScript(parseInt(project_id));
+      if (proj || script) {
+        userPrompt += `\nPROJECT CONTEXT:\n`;
+        if (proj?.title)         userPrompt += `Title: ${proj.title}\n`;
+        if (proj?.content_angle) userPrompt += `Content Angle: ${proj.content_angle}\n`;
+        if (proj?.high_concept)  userPrompt += `High Concept: ${proj.high_concept}\n`;
+        const scriptText = script?.generated_script || script?.full_script || '';
+        if (scriptText)          userPrompt += `Script (first 500 chars): ${scriptText.slice(0, 500)}\n`;
+      }
+    }
+
     userPrompt += `Tiers: ${activeTiers.join(', ')}\nJSON only.`;
 
     const result = await callClaude(systemPrompt, userPrompt, 6000);
