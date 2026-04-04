@@ -237,6 +237,18 @@
   .loading-row{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px 20px;color:var(--text-dim);font-size:13px;}
 
   /* ── TOAST ── */
+  .selector-info{
+    font-size:12px;color:var(--text-dim);padding:6px 20px 10px;
+    border-bottom:1px solid var(--border);margin-bottom:0;
+    display:none;
+  }
+  .selector-info span{color:var(--teal);font-weight:600;}
+
+  .pkg-btn-wrap{display:flex;flex-direction:column;gap:4px;}
+  .pkg-btn-sub{font-size:11px;color:var(--text-faint);font-weight:400;letter-spacing:0;}
+
+  .panel-header-sub{font-size:11px;color:var(--text-faint);font-weight:400;margin-top:1px;}
+
   #toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
   .toast{
     background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);
@@ -256,7 +268,7 @@
   <!-- PAGE HEADER -->
   <div class="page-header">
     <div class="page-title">DIRECT<em>Ω</em>R</div>
-    <div class="page-sub">Pre-production shot list, crew brief &amp; ShootDay package generator</div>
+    <div class="page-sub">Your PipΩr beat map becomes a shot list. Select a project to load everything.</div>
   </div>
 
   <!-- PROJECT SELECTOR BAR -->
@@ -267,6 +279,7 @@
     </select>
     <span id="structure-tag" class="structure-tag" style="display:none;"></span>
   </div>
+  <div id="selector-info" class="selector-info"></div>
 
   <!-- TWO-COLUMN LAYOUT -->
   <div class="two-col">
@@ -288,7 +301,7 @@
             </div>
           </div>
           <button class="btn btn-teal" id="btn-generate-pkg" style="display:none;" onclick="generatePackage()">
-            Generate ShootDay Package ↓
+            📱 Send to Cari's Phone →
           </button>
         </div>
 
@@ -322,7 +335,10 @@
       <!-- CREW BRIEF -->
       <div class="panel" id="crew-brief-panel">
         <div class="panel-header">
-          <span class="panel-title">CREW BRIEF</span>
+          <div>
+            <div class="panel-title">CREW BRIEF</div>
+            <div class="panel-header-sub">Share this with your crew before the shoot</div>
+          </div>
         </div>
         <div class="panel-body" id="crew-brief-body">
           <div class="empty-state" style="padding:40px 20px;">
@@ -343,9 +359,12 @@
             Generate a self-contained HTML file Cari can open on her phone — no wifi needed.
             The file includes the full shot list, beat prompts, and script.
           </p>
-          <button class="btn btn-teal" id="btn-pkg-download" onclick="generatePackage()" disabled>
-            Generate + Download
-          </button>
+          <div class="pkg-btn-wrap">
+            <button class="btn btn-teal" id="btn-pkg-download" onclick="generatePackage()" disabled>
+              📱 Send to Cari's Phone →
+            </button>
+            <span class="pkg-btn-sub">Generates an offline page she can open without wifi</span>
+          </div>
 
           <div id="qr-wrap">
             <div id="qr-container"></div>
@@ -477,6 +496,7 @@ async function onProjectChange(id) {
 // ─────────────────────────────────────────────────────────────────────────────
 function resetUI() {
   document.getElementById('structure-tag').style.display = 'none';
+  document.getElementById('selector-info').style.display = 'none';
   document.getElementById('beat-count').style.display = 'none';
   document.getElementById('coverage-badge').style.display = 'none';
   document.getElementById('btn-generate-pkg').style.display = 'none';
@@ -512,6 +532,18 @@ function updateStructureTag(data) {
   } else {
     tag.style.display = 'none';
   }
+
+  // Selector info line
+  const info = document.getElementById('selector-info');
+  const beatCount  = (data.beats || []).length;
+  const structLabel = structure ? structure.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : null;
+  const hasScript  = (data.beats || []).some(b => b.talking_head_prompt);
+  const parts = [];
+  parts.push(`Shot list generated from <span>${beatCount} beat${beatCount !== 1 ? 's' : ''}</span>`);
+  if (structLabel) parts.push(`Story: <span>${structLabel}</span>`);
+  if (hasScript)   parts.push(`Written by <span>WritΩr</span>`);
+  info.innerHTML = parts.join(' · ');
+  info.style.display = 'block';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

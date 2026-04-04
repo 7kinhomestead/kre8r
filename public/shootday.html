@@ -562,6 +562,53 @@ body {
 .settings-btn.danger { color: var(--red);  border-color: rgba(248,113,113,0.3); }
 .settings-btn.teal   { color: var(--teal); border-color: rgba(0,201,167,0.3);   }
 
+/* ─── Project title bar ─────────────────────────── */
+#project-title-bar {
+  display: none;
+  padding: 6px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#project-title-bar span { color: var(--teal); }
+
+/* ─── Swipe tip card ────────────────────────────── */
+.swipe-tip-card {
+  margin: 10px 12px 2px;
+  padding: 12px 14px;
+  background: rgba(0,201,167,0.07);
+  border: 1px solid rgba(0,201,167,0.22);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease both;
+}
+.swipe-tip-card .tip-text { flex: 1; }
+.swipe-tip-card .tip-dismiss { font-size: 16px; color: var(--dim); flex-shrink: 0; }
+
+/* ─── Entry point badge ─────────────────────────── */
+.project-ep-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
 /* ─── Project selector ──────────────────────────── */
 #project-selector {
   position: fixed;
@@ -833,6 +880,7 @@ body {
           <div class="coverage-fill" id="coverage-fill" style="width:0%"></div>
         </div>
       </div>
+      <div id="project-title-bar"></div>
       <div id="shots-list">
         <div class="empty-state">Select a project to begin.</div>
       </div>
@@ -869,7 +917,7 @@ body {
     </button>
     <button class="tab-btn" id="tab-script" onclick="switchTab('script')">
       <span class="tab-icon">📄</span>
-      <span>Script</span>
+      <span>WritΩr Script</span>
     </button>
     <button class="tab-btn" id="tab-review" onclick="switchTab('review')">
       <span class="tab-icon">✅</span>
@@ -1152,15 +1200,24 @@ async function showProjectSelector() {
       return;
     }
 
+    const EP_LABELS = {
+      script_first: 'Script First',
+      shoot_first:  'Shoot First',
+      vault_first:  'Vault First',
+      hybrid:       'Hybrid',
+    };
     listEl.innerHTML = '';
     for (const p of projects) {
       const card = document.createElement('div');
       card.className = 'project-card';
       const structure = p.story_structure || p.pipr_config?.story_structure || '';
+      const epKey     = p.entry_point || p.pipr_config?.entry_point || '';
+      const epLabel   = EP_LABELS[epKey] || (epKey ? epKey.replace(/_/g, ' ') : '');
       card.innerHTML = `
         <div class="project-title">${esc(p.title || 'Untitled')}</div>
         <div class="project-meta">
           ${structure ? `<span class="project-badge">${esc(structure)}</span>` : ''}
+          ${epLabel   ? `<span class="project-ep-badge">${esc(epLabel)}</span>` : ''}
         </div>
       `;
       card.addEventListener('click', () => selectProject(p.id));
@@ -1213,6 +1270,17 @@ async function fetchBeats(silent = false) {
 
   projectTitle = data.project_title || '';
 
+  // Update project title bar
+  const titleBar = document.getElementById('project-title-bar');
+  if (titleBar) {
+    const structure = data.project?.story_structure || data.story_structure || data.config?.story_structure || '';
+    const structLabel = structure ? structure.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
+    titleBar.innerHTML = projectTitle
+      ? (structLabel ? `${esc(projectTitle)} · <span>${esc(structLabel)}</span>` : esc(projectTitle))
+      : '';
+    titleBar.style.display = projectTitle ? 'block' : 'none';
+  }
+
   // Merge takes from server into local state
   beats = data.beats || [];
   for (const b of beats) {
@@ -1259,6 +1327,25 @@ function recalcCoverageLocal() {
 // ════════════════════════════════════════════════════════════════
 //  RENDER SHOTS
 // ════════════════════════════════════════════════════════════════
+function maybeShowSwipeTip(container) {
+  if (localStorage.getItem('sd_swipe_shown')) return;
+  localStorage.setItem('sd_swipe_shown', '1');
+  const tip = document.createElement('div');
+  tip.className = 'swipe-tip-card';
+  tip.innerHTML = `
+    <span class="tip-text">👆 Swipe right = Good take · Swipe left = Skip · Tap card for details</span>
+    <span class="tip-dismiss">✕</span>
+  `;
+  const dismiss = () => {
+    tip.style.transition = 'opacity 0.3s';
+    tip.style.opacity = '0';
+    setTimeout(() => tip.remove(), 300);
+  };
+  tip.addEventListener('click', dismiss);
+  setTimeout(dismiss, 5000);
+  container.prepend(tip);
+}
+
 function renderShots() {
   const list = document.getElementById('shots-list');
   if (!beats.length) {
@@ -1266,6 +1353,7 @@ function renderShots() {
     return;
   }
   list.innerHTML = '';
+  maybeShowSwipeTip(list);
   for (const beat of beats) {
     list.appendChild(buildShotCard(beat));
   }
