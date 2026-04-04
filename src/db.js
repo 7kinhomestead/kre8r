@@ -199,6 +199,12 @@ function runMigrations() {
     console.log('[DB] Migration: added projects.composor_state');
   }
 
+  // Id8Ωr: projects.id8r_data — JSON blob of research session (chosenConcept, researchSummary, packageData, briefData)
+  if (!projectsCols3.includes('id8r_data')) {
+    db.run('ALTER TABLE projects ADD COLUMN id8r_data TEXT');
+    console.log('[DB] Migration: added projects.id8r_data');
+  }
+
   // ComposΩr: composor_tracks table
   db.run(`CREATE TABLE IF NOT EXISTS composor_tracks (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1125,6 +1131,11 @@ function updateProjectEditorState(projectId, state) {
 // PIPΩR — Project config helpers
 // ─────────────────────────────────────────────
 
+function updateProjectId8r(projectId, data) {
+  _run(`UPDATE projects SET id8r_data = ? WHERE id = ?`, [JSON.stringify(data), projectId]);
+  persist();
+}
+
 function updateProjectPipr(projectId, fields) {
   const allowed = [
     'setup_depth', 'entry_point', 'story_structure', 'content_type',
@@ -1382,6 +1393,8 @@ module.exports = {
   getSelectsByProject,
   deleteSelectsByProject,
   updateProjectEditorState,
+  // Id8Ωr
+  updateProjectId8r,
   // PipΩr
   updateProjectPipr,
   updateProjectWritr,

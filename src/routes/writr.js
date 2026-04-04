@@ -351,6 +351,28 @@ router.post('/generate', async (req, res) => {
   const project = db.getProject(projectId);
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
+  // Build Id8Ωr research context block if available — injected into script generation prompts
+  let id8rBlock = '';
+  if (project.id8r_data) {
+    try {
+      const d = JSON.parse(project.id8r_data);
+      const lines = ['## CONTENT INTELLIGENCE FROM ID8ΩR RESEARCH'];
+      if (d.chosenConcept?.headline) lines.push(`Chosen Concept: ${d.chosenConcept.headline}`);
+      if (d.chosenConcept?.why)      lines.push(`Why this angle: ${d.chosenConcept.why}`);
+      if (d.chosenConcept?.hook)     lines.push(`Opening hook: ${d.chosenConcept.hook}`);
+      if (d.researchSummary)         lines.push(`Research findings: ${d.researchSummary.slice(0, 600)}`);
+      const titles = d.packageData?.titles;
+      if (Array.isArray(titles) && titles[0]) lines.push(`Selected title: ${titles[0]}`);
+      else if (typeof titles === 'string')     lines.push(`Selected title: ${titles}`);
+      if (d.briefData?.elevator_pitch)         lines.push(`Vision brief: ${d.briefData.elevator_pitch}`);
+      const tp = d.briefData?.talking_points;
+      if (Array.isArray(tp) && tp.length)      lines.push(`Talking points:\n${tp.map(p => `- ${p}`).join('\n')}`);
+      const angle = d.briefData?.pipeline_brief?.content_angle || project.content_type;
+      if (angle) lines.push(`Content angle: ${angle}`);
+      id8rBlock = lines.join('\n');
+    } catch (_) {}
+  }
+
   // Switch to SSE stream — client reads this response body directly
   const { write, end } = startSseResponse(req, res);
 
@@ -374,6 +396,7 @@ router.post('/generate', async (req, res) => {
         projectId,
         inputText: input_text || '',
         voiceProfiles,
+        id8rBlock,
         emit
       });
     } else if (ep === 'shoot_first') {
@@ -382,6 +405,7 @@ router.post('/generate', async (req, res) => {
         whatHappened: what_happened || input_text || '',
         footageRows:  footage,
         voiceProfiles,
+        id8rBlock,
         emit
       });
     } else {
@@ -392,6 +416,7 @@ router.post('/generate', async (req, res) => {
         whatCaptured: what_happened || footage_text || '',
         footageRows:  footage,
         voiceProfiles,
+        id8rBlock,
         emit
       });
     }

@@ -193,7 +193,7 @@ function repairReconcileJSON(raw) {
 // PROMPT 1 — BEAT RECONCILIATION ONLY (no script)
 // ─────────────────────────────────────────────
 
-function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles }) {
+function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles, id8rBlock }) {
   const voiceSummary = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText  = beatMapToText(config?.beats);
   const structure    = config?.story_structure || 'free_form';
@@ -216,7 +216,7 @@ ${voiceSummary}
 Content type: ${contentType}
 Story structure: ${structure}
 High concept: ${highConcept}
-
+${id8rBlock ? '\n' + id8rBlock + '\n' : ''}
 ## BEAT MAP (${structure})
 ${beatMapText}
 
@@ -422,7 +422,7 @@ Do NOT repeat any content from Part A.`;
  * @param {object[]} opts.footageRows    — footage records with .transcript
  * @param {Function} [opts.emit]         — SSE progress callback
  */
-async function generateHybrid({ projectId, concept, whatCaptured, footageRows, voiceProfiles, emit }) {
+async function generateHybrid({ projectId, concept, whatCaptured, footageRows, voiceProfiles, id8rBlock, emit }) {
   emit?.({ stage: 'analyzing', message: 'Loading project config and transcripts…' });
 
   const config  = loadProjectConfig(projectId);
@@ -434,7 +434,7 @@ async function generateHybrid({ projectId, concept, whatCaptured, footageRows, v
   emit?.({ stage: 'beat_mapping', message: 'Call 1 — Reconciling plan vs. reality…' });
 
   const reconcilePrompt = buildReconcilePrompt({
-    concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles
+    concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles, id8rBlock
   });
 
   // Use raw:true so we get the full response text for repair if JSON is truncated

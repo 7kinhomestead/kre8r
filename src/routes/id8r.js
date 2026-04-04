@@ -590,6 +590,14 @@ router.post('/send-pipeline', async (req, res) => {
       high_concept: pb.high_concept  || '',
     });
 
+    // Persist full Id8Ωr research session so WritΩr can inject creative context into prompts
+    db.updateProjectId8r(project.id, {
+      chosenConcept:   session.chosenConcept   || null,
+      researchSummary: session.researchSummary  || null,
+      packageData:     session.packageData      || null,
+      briefData:       session.briefData        || null,
+    });
+
     const dest = destination || 'pipr';
     const redirectUrl = dest === 'writr'
       ? `/writr.html?project_id=${project.id}`

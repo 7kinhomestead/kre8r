@@ -77,7 +77,7 @@ function summariseTranscripts(footageRows) {
   return combined;
 }
 
-function buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProfiles }) {
+function buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProfiles, id8rBlock }) {
   const voiceSummary  = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText   = beatMapToText(config?.beats);
   const structure     = config?.story_structure || 'free_form';
@@ -106,7 +106,7 @@ Content type: ${contentType}
 Story structure: ${structure}
 High concept: ${highConcept}
 Estimated duration: ${durationMins} minutes
-
+${id8rBlock ? '\n' + id8rBlock + '\n' : ''}
 ## BEAT MAP (${structure})
 ${beatMapText}
 
@@ -179,7 +179,7 @@ Return ONLY valid JSON — no markdown, no preamble:
  * @param {object[]}   opts.footageRows     — footage records with .transcript fields
  * @param {Function}   [opts.emit]          — SSE progress callback
  */
-async function generateShootFirst({ projectId, whatHappened, footageRows, voiceProfiles, emit }) {
+async function generateShootFirst({ projectId, whatHappened, footageRows, voiceProfiles, id8rBlock, emit }) {
   emit?.({ stage: 'analyzing', message: 'Reading project config and footage transcripts…' });
 
   const config  = loadProjectConfig(projectId);
@@ -193,7 +193,7 @@ async function generateShootFirst({ projectId, whatHappened, footageRows, voiceP
     message: `Finding story in ${transcriptCount} transcribed clip${transcriptCount !== 1 ? 's' : ''}…`
   });
 
-  const prompt = buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProfiles });
+  const prompt = buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProfiles, id8rBlock });
 
   emit?.({ stage: 'writing', message: 'Writing shooting script and talking head prompts…' });
 

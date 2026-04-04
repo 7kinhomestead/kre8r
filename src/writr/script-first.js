@@ -48,7 +48,7 @@ function beatMapToText(beats) {
   ).join('\n');
 }
 
-function buildPrompt({ inputText, config, profile, voiceProfiles }) {
+function buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock }) {
   const voiceSummary     = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText      = beatMapToText(config?.beats);
   const structure        = config?.story_structure || 'free_form';
@@ -74,7 +74,7 @@ Content type: ${contentType}
 Story structure: ${structure}
 High concept: ${highConcept}
 Estimated duration: ${durationMins} minutes
-
+${id8rBlock ? '\n' + id8rBlock + '\n' : ''}
 ## BEAT MAP (${structure})
 ${beatMapText}
 
@@ -133,7 +133,7 @@ Return ONLY valid JSON — no markdown, no preamble:
  * @param {Function} [opts.emit]     — SSE progress callback
  * @returns {{ beat_map, missing_beats, outline, script, hook_variations }}
  */
-async function generateScriptFirst({ projectId, inputText, voiceProfiles, emit }) {
+async function generateScriptFirst({ projectId, inputText, voiceProfiles, id8rBlock, emit }) {
   emit?.({ stage: 'analyzing', message: 'Reading project config and creator profile…' });
 
   const config  = loadProjectConfig(projectId);
@@ -143,7 +143,7 @@ async function generateScriptFirst({ projectId, inputText, voiceProfiles, emit }
 
   emit?.({ stage: 'beat_mapping', message: `Mapping content to ${config?.story_structure || 'beat'} structure…` });
 
-  const prompt = buildPrompt({ inputText, config, profile, voiceProfiles });
+  const prompt = buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock });
 
   emit?.({ stage: 'writing', message: 'Writing beat-mapped script draft…' });
 
