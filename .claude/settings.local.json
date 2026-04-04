@@ -277,7 +277,20 @@
       "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(JSON.stringify\\(p.kajabi || p.platform || {}, null, 2\\)\\);\")",
       "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(Object.keys\\(p\\)\\);\")",
       "Bash(node -e \"const p = require\\(''./creator-profile.json''\\); console.log\\(JSON.stringify\\(p.community, null, 2\\)\\);\")",
-      "Bash(node -e \"require\\(''./src/playwright/kajabi.js''\\); console.log\\(''OK''\\);\")"
+      "Bash(node -e \"require\\(''./src/playwright/kajabi.js''\\); console.log\\(''OK''\\);\")",
+      "Bash(curl 'http://localhost:3000/api/projects')",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);r.filter\\(p=>p.title&&p.title.includes\\(''''Tankless''''\\)\\).forEach\\(p=>console.log\\(JSON.stringify\\(p,null,2\\)\\)\\);}\\);\")",
+      "Bash(curl -X PATCH 'http://localhost:3000/api/pipr/21' -H 'Content-Type: application/json' -d '{\"\"pipr_complete\"\": 1}')",
+      "Bash(curl 'http://localhost:3000/api/projects/21')",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>console.log\\(JSON.stringify\\(JSON.parse\\(Buffer.concat\\(d\\)\\),null,2\\)\\)\\)\")",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(JSON.stringify\\(r.id8r_brief||r.vision_brief||r.brief||r,null,2\\)\\)}\\)\")",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(r.topic\\)}\\)\")",
+      "Bash(node -e \"require\\(''./src/routes/id8r.js''\\); console.log\\(''OK''\\);\")",
+      "Bash(node -e \"require\\(''./src/db.js''\\); console.log\\(''db ok''\\)\")",
+      "Bash(node -e \"require\\(''./src/routes/writr.js''\\); console.log\\(''writr ok''\\)\")",
+      "Bash(node -e \"require\\(''./src/writr/script-first.js''\\); console.log\\(''sf ok''\\)\")",
+      "Bash(node -e \"require\\(''./src/writr/shoot-first.js''\\); console.log\\(''shf ok''\\)\")",
+      "Bash(node -e \"require\\(''./src/writr/hybrid.js''\\); console.log\\(''hybrid ok''\\)\")"
     ]
   }
 }
