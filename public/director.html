@@ -243,6 +243,18 @@
     display:none;
   }
   .selector-info span{color:var(--teal);font-weight:600;}
+  .title-nudge{
+    display:none;
+    background:rgba(240,185,66,0.08);
+    border:1px solid rgba(240,185,66,0.35);
+    border-radius:var(--radius-sm);
+    color:var(--amber);
+    font-size:12px;
+    font-weight:500;
+    padding:9px 16px;
+    margin:10px 20px 0;
+    line-height:1.5;
+  }
 
   .pkg-btn-wrap{display:flex;flex-direction:column;gap:4px;}
   .pkg-btn-sub{font-size:11px;color:var(--text-faint);font-weight:400;letter-spacing:0;}
@@ -280,6 +292,9 @@
     <span id="structure-tag" class="structure-tag" style="display:none;"></span>
   </div>
   <div id="selector-info" class="selector-info"></div>
+  <div id="title-nudge" class="title-nudge">
+    ⚠ No number in title — your data shows titles with specific numbers outperform vague titles. Consider adding a dollar amount, day count, or quantity.
+  </div>
 
   <!-- TWO-COLUMN LAYOUT -->
   <div class="two-col">
@@ -477,6 +492,11 @@ async function onProjectChange(id) {
     enablePackageButtons();
     showMirrorPanel();
     startMirror(currentProjectId);
+
+    // Title number nudge — non-blocking amber banner
+    const projectTitle = data.project?.title || '';
+    const nudge = document.getElementById('title-nudge');
+    if (nudge) nudge.style.display = /\d/.test(projectTitle) ? 'none' : 'block';
   } catch (err) {
     document.getElementById('shot-list-body').innerHTML = `
       <div class="empty-state">
@@ -500,6 +520,8 @@ async function onProjectChange(id) {
 function resetUI() {
   document.getElementById('structure-tag').style.display = 'none';
   document.getElementById('selector-info').style.display = 'none';
+  const nudge = document.getElementById('title-nudge');
+  if (nudge) nudge.style.display = 'none';
   document.getElementById('beat-count').style.display = 'none';
   document.getElementById('coverage-badge').style.display = 'none';
   document.getElementById('btn-generate-pkg').style.display = 'none';

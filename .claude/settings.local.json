@@ -418,7 +418,14 @@
       "Bash(node --check C:/Users/18054/kre8r/check_script.js)",
       "Bash(node fix_analytr.js)",
       "Bash(timeout /t 3 /nobreak)",
-      "Bash(node --check \"C:\\\\Users\\\\18054\\\\kre8r\\\\public\\\\analytr.html\")"
+      "Bash(node --check \"C:\\\\Users\\\\18054\\\\kre8r\\\\public\\\\analytr.html\")",
+      "Bash(curl -s \"http://localhost:3000/api/analytr/content-dna/graph?refresh=1\")",
+      "Bash(node -e \"try{require\\(''./src/routes/analytr.js''\\);console.log\\(''analytr.js OK''\\);}catch\\(e\\){console.log\\(''FAIL:'',e.message\\);}\" --cwd C:/Users/18054/kre8r)",
+      "Bash(node -e \"try{require\\(''./src/routes/writr.js''\\);console.log\\(''writr.js OK''\\);}catch\\(e\\){console.log\\(''FAIL:'',e.message\\);}\" --cwd C:/Users/18054/kre8r)",
+      "Bash(node -e \"try{require\\(''./src/routes/id8r.js''\\);console.log\\(''id8r.js OK''\\);}catch\\(e\\){console.log\\(''FAIL:'',e.message\\);}\" --cwd C:/Users/18054/kre8r)",
+      "Bash(node -e \"try{require\\(''./src/routes/analytr.js''\\);console.log\\(''analytr OK''\\);}catch\\(e\\){console.log\\(''analytr FAIL:'',e.message\\);}\")",
+      "Bash(node -e \"try{require\\(''./src/routes/writr.js''\\);console.log\\(''writr OK''\\);}catch\\(e\\){console.log\\(''writr FAIL:'',e.message\\);}\")",
+      "Bash(node -e \"try{require\\(''./src/routes/id8r.js''\\);console.log\\(''id8r OK''\\);}catch\\(e\\){console.log\\(''id8r FAIL:'',e.message\\);}\")"
     ]
   }
 }

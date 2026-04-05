@@ -12,7 +12,30 @@
 const express = require('express');
 const multer  = require('multer');
 const router  = express.Router();
+const fs      = require('fs');
+const path    = require('path');
 const db      = require('../db');
+
+// ─── Video format helpers ──────────────────────────────────────────────────────
+
+function classifyFormat(isoDuration) {
+  if (!isoDuration) return 'longform';
+  const m = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 'longform';
+  const total = (parseInt(m[1] || 0)) * 3600 + (parseInt(m[2] || 0)) * 60 + (parseInt(m[3] || 0));
+  if (total === 0)   return 'live';
+  if (total < 60)    return 'short';
+  if (total < 180)   return 'micro';
+  if (total < 600)   return 'standard';
+  return 'longform';
+}
+
+function parseDurationSeconds(isoDuration) {
+  if (!isoDuration) return null;
+  const m = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return null;
+  return (parseInt(m[1] || 0)) * 3600 + (parseInt(m[2] || 0)) * 60 + (parseInt(m[3] || 0));
+}
 
 // ─── Multer: memory storage for thumbnail uploads ─────────────────────────────
 const upload = multer({
@@ -58,8 +81,16 @@ router.post('/coach', async (req, res) => {
   const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
 
   try {
-    const videos = db.getRecentProjectsWithAnalytics(10);
+    const allVideos   = db.getRecentProjectsWithAnalytics(30);
+    const fmtMapCoach = db.getYouTubeFormats();
+    // Filter to longform + standard; fall back to all if none classified yet
+    const longformVids = allVideos.filter(v => {
+      const f = fmtMapCoach[v.id]?.format;
+      return !f || f === 'longform' || f === 'standard';
+    });
+    const videos = (longformVids.length > 0 ? longformVids : allVideos).slice(0, 10);
     const health = db.getGlobalChannelHealth();
+    const shortsFiltered = longformVids.length > 0 && allVideos.length > longformVids.length;
 
     if (videos.length === 0) {
       send({ type: 'error', message: 'No video data yet. Add analytics data for your videos first.' });
@@ -67,7 +98,7 @@ router.post('/coach', async (req, res) => {
       return;
     }
 
-    send({ type: 'status', message: 'Analyzing your last ' + videos.length + ' videos...' });
+    send({ type: 'status', message: 'Analyzing your last ' + videos.length + ' long-form videos...' });
 
     const avgViews  = health.avg_views || 0;
     const bestVideo = health.best_video;
@@ -78,7 +109,7 @@ router.post('/coach', async (req, res) => {
 
     const prompt = `You are a supportive creative director coaching Jason at 7 Kin Homestead — 725k TikTok, 54k YouTube, 80k Lemon8. His brand is straight-talking, warm, funny, never corporate. Sharp-tongued neighbor talking over a fence. His content angles: financial (real cost breakdowns), system (opt out and win), rockrich (doing a lot with a little), howto, mistakes, lifestyle, viral.
 
-Here are his ${videos.length} most recent YouTube videos with performance data:
+${shortsFiltered ? `NOTE: Analysis based on ${videos.length} long-form videos (Shorts excluded from averages).\n\n` : ''}Here are his ${videos.length} most recent YouTube videos with performance data:
 ${videoList}
 
 His channel average is ${Number(avgViews).toLocaleString()} views per video.
@@ -190,13 +221,40 @@ router.post('/youtube-sync', async (req, res) => {
     send({ type: 'status', message: `Found ${withYT.length} project(s) with YouTube IDs. Syncing...` });
 
     const { default: fetch } = await import('node-fetch');
+
+    // ── Backfill: classify format for posts that don't have it yet ───────────
+    const formatMap     = db.getYouTubeFormats(); // { projectId: {format, duration_seconds} }
+    const needsFormat   = withYT.filter(p => !formatMap[p.id]?.format);
+    if (needsFormat.length > 0) {
+      send({ type: 'status', message: `Classifying format for ${needsFormat.length} video${needsFormat.length !== 1 ? 's' : ''}...` });
+      const fmtIds = needsFormat.map(p => p.youtube_video_id);
+      for (let i = 0; i < fmtIds.length; i += 50) {
+        const batch    = fmtIds.slice(i, i + 50);
+        const batchUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${encodeURIComponent(batch.join(','))}&key=${apiKey}`;
+        const batchRes = await fetch(batchUrl);
+        if (batchRes.ok) {
+          const batchData = await batchRes.json();
+          for (const item of batchData.items || []) {
+            const p      = needsFormat.find(x => x.youtube_video_id === item.id);
+            if (!p) continue;
+            const iso    = item.contentDetails?.duration || null;
+            const posts  = db.getPostsByProject(p.id);
+            const ytPost = posts.find(x => x.platform === 'youtube');
+            if (ytPost) db.updatePostFormat(ytPost.id, classifyFormat(iso), parseDurationSeconds(iso));
+          }
+        }
+        if (i + 50 < fmtIds.length) await new Promise(r => setTimeout(r, 200));
+      }
+      send({ type: 'status', message: `Format classification complete. Syncing stats...` });
+    }
+
     let synced = 0, failed = 0;
 
     for (const project of withYT) {
       try {
         send({ type: 'progress', message: `Fetching stats for "${project.title}"...` });
 
-        const ytUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${encodeURIComponent(project.youtube_video_id)}&key=${apiKey}`;
+        const ytUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${encodeURIComponent(project.youtube_video_id)}&key=${apiKey}`;
         const ytRes  = await fetch(ytUrl);
 
         if (!ytRes.ok) {
@@ -219,17 +277,25 @@ router.post('/youtube-sync', async (req, res) => {
         const posts = db.getPostsByProject(project.id);
         let ytPost  = posts.find(p => p.platform === 'youtube');
 
+        const durIso  = item.contentDetails?.duration || null;
+        const durFmt  = classifyFormat(durIso);
+        const durSecs = parseDurationSeconds(durIso);
+
         if (!ytPost) {
           const ytUrl2 = `https://www.youtube.com/watch?v=${project.youtube_video_id}`;
           const postId = db.savePost({
-            project_id: project.id,
-            platform:   'youtube',
-            url:        ytUrl2,
-            content:    project.title,
-            status:     'posted',
-            posted_at:  item.snippet?.publishedAt || new Date().toISOString(),
+            project_id:      project.id,
+            platform:        'youtube',
+            url:             ytUrl2,
+            content:         project.title,
+            status:          'posted',
+            posted_at:       item.snippet?.publishedAt || new Date().toISOString(),
+            format:          durFmt,
+            duration_seconds: durSecs,
           });
           ytPost = { id: postId };
+        } else if (!ytPost.format && durFmt) {
+          db.updatePostFormat(ytPost.id, durFmt, durSecs);
         }
 
         // Upsert metrics
@@ -276,6 +342,19 @@ router.post('/youtube-sync', async (req, res) => {
   }
 });
 
+// ─── Import Status ────────────────────────────────────────────────────────────
+// GET /api/analytr/import-status
+// Returns whether the channel has already been bulk-imported.
+
+router.get('/import-status', (req, res) => {
+  try {
+    const count = db.countImportedProjects();
+    res.json({ imported_count: count, is_imported: count > 20 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── YouTube Channel Import (SSE) ────────────────────────────────────────────
 // Imports ALL videos from the channel into Kre8Ωr as projects.
 // No OAuth needed — public channel data only via YOUTUBE_API_KEY + forHandle.
@@ -292,6 +371,18 @@ router.post('/youtube-import-channel', async (req, res) => {
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
       send({ type: 'error', message: 'YOUTUBE_API_KEY not set in .env.' });
+      res.end(); return;
+    }
+
+    // Guard: block re-import if channel already imported
+    const importedCount = db.countImportedProjects();
+    if (importedCount > 20) {
+      send({
+        type:    'error',
+        reason:  'already_imported',
+        count:   importedCount,
+        message: `Channel already imported (${importedCount} videos). Use Sync YouTube Data to update stats on existing videos.`,
+      });
       res.end(); return;
     }
 
@@ -359,13 +450,14 @@ router.post('/youtube-import-channel', async (req, res) => {
 
     send({ type: 'status', message: `${allVideoIds.length} total videos found. Fetching stats...` });
 
-    // ── Step 3: Fetch stats in batches of 50 ────────────────────────────────
-    const allStats = {}; // videoId → statistics
+    // ── Step 3: Fetch stats + contentDetails in batches of 50 ───────────────
+    const allStats     = {}; // videoId → statistics
+    const allDurations = {}; // videoId → { isoDuration, seconds, format }
     for (let i = 0; i < allVideoIds.length; i += 50) {
-      const batch  = allVideoIds.slice(i, i + 50);
-      const ids    = batch.join(',');
-      const statUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${encodeURIComponent(ids)}&key=${apiKey}`;
-      const statRes = await fetch(statUrl);
+      const batch    = allVideoIds.slice(i, i + 50);
+      const ids      = batch.join(',');
+      const statUrl  = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${encodeURIComponent(ids)}&key=${apiKey}`;
+      const statRes  = await fetch(statUrl);
       const statData = await statRes.json();
 
       if (!statRes.ok) {
@@ -375,6 +467,13 @@ router.post('/youtube-import-channel', async (req, res) => {
 
       for (const item of statData.items || []) {
         allStats[item.id] = item.statistics;
+        // Parse duration for format classification
+        const iso  = item.contentDetails?.duration || null;
+        allDurations[item.id] = {
+          isoDuration: iso,
+          seconds:     parseDurationSeconds(iso),
+          format:      classifyFormat(iso),
+        };
         // Prefer snippet fields from this call (more reliable than playlistItems)
         if (item.snippet) {
           videoMeta[item.id].title        = item.snippet.title       || videoMeta[item.id].title;
@@ -416,17 +515,23 @@ router.post('/youtube-import-channel', async (req, res) => {
         if (existing && stats.viewCount) {
           const posts  = db.getPostsByProject(existing.id);
           let ytPost   = posts.find(p => p.platform === 'youtube');
+          const durInfo = allDurations[videoId] || {};
           if (!ytPost) {
             const postId = db.savePost({
-              project_id:    existing.id,
-              platform:      'youtube',
-              url:           `https://www.youtube.com/watch?v=${videoId}`,
-              content:       meta.title,
-              status:        'posted',
-              posted_at:     meta.publishedAt || new Date().toISOString(),
-              thumbnail_url: meta.thumbnailUrl || null,
+              project_id:      existing.id,
+              platform:        'youtube',
+              url:             `https://www.youtube.com/watch?v=${videoId}`,
+              content:         meta.title,
+              status:          'posted',
+              posted_at:       meta.publishedAt || new Date().toISOString(),
+              thumbnail_url:   meta.thumbnailUrl || null,
+              format:          durInfo.format   || null,
+              duration_seconds: durInfo.seconds  || null,
             });
             ytPost = { id: postId };
+          } else if (!ytPost.format && durInfo.format) {
+            // Backfill format on existing post
+            db.updatePostFormat(ytPost.id, durInfo.format, durInfo.seconds || null);
           }
           db.upsertMetric(ytPost.id, existing.id, 'youtube', 'views',         parseInt(stats.viewCount)    || 0);
           db.upsertMetric(ytPost.id, existing.id, 'youtube', 'likes',         parseInt(stats.likeCount)    || 0);
@@ -439,20 +544,23 @@ router.post('/youtube-import-channel', async (req, res) => {
       try {
         const ytUrl   = `https://www.youtube.com/watch?v=${videoId}`;
         const desc    = meta.description ? meta.description.substring(0, 500) : null;
+        const durInfo = allDurations[videoId] || {};
 
         // Create project (mark as youtube_import so it stays out of production tool dropdowns)
         const project = db.createProject(meta.title, desc, ytUrl, videoId);
         db.setProjectSource(project.id, 'youtube_import');
 
-        // Create YouTube post record
+        // Create YouTube post record (with format classification)
         const postId = db.savePost({
-          project_id:    project.id,
-          platform:      'youtube',
-          url:           ytUrl,
-          content:       meta.title,
-          status:        'posted',
-          posted_at:     meta.publishedAt || new Date().toISOString(),
-          thumbnail_url: meta.thumbnailUrl || null,
+          project_id:      project.id,
+          platform:        'youtube',
+          url:             ytUrl,
+          content:         meta.title,
+          status:          'posted',
+          posted_at:       meta.publishedAt || new Date().toISOString(),
+          thumbnail_url:   meta.thumbnailUrl || null,
+          format:          durInfo.format   || null,
+          duration_seconds: durInfo.seconds  || null,
         });
 
         // Save metrics
@@ -661,24 +769,33 @@ router.get('/content-dna/graph', async (req, res) => {
       return res.json({ nodes: [], clusters: [], error: 'no_videos' });
     }
 
-    // Attach analytics to ALL projects (used for the full node list in the graph)
+    // Get format map for all projects (one query, no N+1)
+    const fmtMap = db.getYouTubeFormats(); // { projectId: {format, duration_seconds} }
+
+    // Attach analytics + format to ALL projects
     const allNodes = ytProjects.map(p => {
       const analytics = db.getAnalyticsByProject(p.id);
       const views    = analytics.find(m => m.metric_name === 'views')?.metric_value         || 0;
       const likes    = analytics.find(m => m.metric_name === 'likes')?.metric_value         || 0;
       const comments = analytics.find(m => m.metric_name === 'comment_count')?.metric_value || 0;
+      const fmt      = fmtMap[p.id]?.format || 'longform'; // default longform if unclassified
       return {
-        id:          p.id,
-        title:       p.title,
-        views:       Number(views),
-        likes:       Number(likes),
-        comments:    Number(comments),
-        youtube_url: p.youtube_url || (p.youtube_video_id ? `https://www.youtube.com/watch?v=${p.youtube_video_id}` : null),
+        id:               p.id,
+        title:            p.title,
+        views:            Number(views),
+        likes:            Number(likes),
+        comments:         Number(comments),
+        format:           fmt,
+        duration_seconds: fmtMap[p.id]?.duration_seconds || null,
+        youtube_url:      p.youtube_url || (p.youtube_video_id ? `https://www.youtube.com/watch?v=${p.youtube_video_id}` : null),
       };
     });
 
-    // Send only top 50 by view count to Claude for clustering — fast + token-safe
-    const top50 = [...allNodes].sort((a, b) => b.views - a.views).slice(0, 50);
+    // For Claude clustering: longform + standard only (Shorts skew the topic analysis)
+    const longformNodes = allNodes.filter(n => n.format === 'longform' || n.format === 'standard');
+
+    // Send only top 50 longform/standard by view count to Claude — fast + token-safe
+    const top50 = [...longformNodes].sort((a, b) => b.views - a.views).slice(0, 50);
     console.log(`[content-dna/graph] Sending top ${top50.length} of ${allNodes.length} videos to Claude for clustering`);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -773,6 +890,7 @@ Available colors (use each at most twice): teal, amber, coral, purple, green, bl
     };
 
     // Tag ALL nodes — videos not in top 50 inherit the fallback cluster
+    // Shorts get the fallback cluster automatically (they weren't sent to Claude)
     const fallbackCluster = parsed.clusters?.[0] || { id: 0, name: 'Other', color: 'teal' };
     const taggedNodes = allNodes.map(n => {
       const cluster = clusterMap[n.title.toLowerCase().trim()] || fallbackCluster;
@@ -785,13 +903,18 @@ Available colors (use each at most twice): teal, amber, coral, purple, green, bl
       };
     });
 
+    const longformTaggedCount = taggedNodes.filter(n => n.format === 'longform' || n.format === 'standard').length;
+    const shortsCount         = taggedNodes.filter(n => n.format === 'short').length;
+
     const result = {
-      nodes:     taggedNodes,
-      clusters:  parsed.clusters || [],
-      edges:     parsed.edges    || [],
-      cached_at: new Date().toISOString(),
-      total:     allNodes.length,
-      clustered: top50.length,
+      nodes:          taggedNodes,
+      clusters:       parsed.clusters || [],
+      edges:          parsed.edges    || [],
+      cached_at:      new Date().toISOString(),
+      total:          allNodes.length,
+      longform_count: longformTaggedCount,
+      shorts_count:   shortsCount,
+      clustered:      top50.length,
     };
 
     console.log(`[content-dna/graph] Done — ${taggedNodes.length} nodes tagged across ${result.clusters.length} clusters`);
@@ -977,24 +1100,45 @@ router.post('/content-secrets', async (req, res) => {
     }
 
     const { nodes, clusters, edges } = clusterData;
+
+    // Use longform + standard only for analysis (Shorts skew patterns)
+    const longformNodes  = nodes.filter(n => n.format !== 'short' && n.format !== 'live' && n.format !== 'micro');
+    const longformCount  = longformNodes.length;
+
+    // Refresh gate — locked unless longform count grew by 10+ or force=true
+    const forceOverride  = req.body?.force === true;
+    const cachedSecrets  = db.getKv('channel_dna_secrets');
+    const lastCount      = db.getKv('channel_dna_secrets_video_count') || 0;
+    if (!forceOverride && cachedSecrets && longformCount < lastCount + 10) {
+      const remaining = (lastCount + 10) - longformCount;
+      send({ type: 'locked', data: cachedSecrets, remaining, longform_count: longformCount, last_count: lastCount });
+      res.end(); return;
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) { send({ type: 'error', message: 'ANTHROPIC_API_KEY not set' }); res.end(); return; }
 
-    send({ type: 'status', message: `Scanning ${nodes.length} videos across ${clusters.length} clusters for hidden patterns...` });
+    const statusMsg = lastCount === 0
+      ? `Scanning your content universe for the first time (${longformCount} long-form videos)...`
+      : longformCount >= lastCount + 10
+        ? `\u2705 You've published ${longformCount - lastCount} new long-form videos — finding fresh patterns...`
+        : `Force-refreshing insights across ${longformCount} long-form videos...`;
+    send({ type: 'status', message: statusMsg });
 
-    const totalViews = nodes.reduce((s, n) => s + n.views, 0);
-    const avgViews   = nodes.length ? Math.round(totalViews / nodes.length) : 0;
-    const top20      = [...nodes].sort((a, b) => b.views - a.views).slice(0, 20);
+    const totalViews = longformNodes.reduce((s, n) => s + n.views, 0);
+    const avgViews   = longformCount ? Math.round(totalViews / longformCount) : 0;
+    const top20      = [...longformNodes].sort((a, b) => b.views - a.views).slice(0, 20);
 
     const clustersJson = JSON.stringify(clusters.map(c => {
-      const cn = nodes.filter(n => n.cluster_id === c.id);
+      const cn = longformNodes.filter(n => n.cluster_id === c.id);
+      if (!cn.length) return null;
       return {
         name:        c.name,
         video_count: cn.length,
-        avg_views:   Math.round(cn.reduce((s, n) => s + n.views, 0) / (cn.length || 1)),
+        avg_views:   Math.round(cn.reduce((s, n) => s + n.views, 0) / cn.length),
         top_video:   c.top_video || cn.sort((a, b) => b.views - a.views)[0]?.title || '',
       };
-    }), null, 2);
+    }).filter(Boolean), null, 2);
 
     const edgesJson = JSON.stringify(
       (edges || []).slice(0, 20).map(e => ({ source: e.source, target: e.target, reason: e.reason })),
@@ -1064,6 +1208,7 @@ Return ONLY a valid JSON array, no markdown, no commentary:
     catch { send({ type: 'error', message: 'Claude returned unexpected format. Try again.' }); res.end(); return; }
 
     db.setKv('channel_dna_secrets', parsed);
+    db.setKv('channel_dna_secrets_video_count', longformCount);
     send({ type: 'result', data: parsed });
     send({ type: 'done' });
     res.end();
@@ -1071,6 +1216,38 @@ Return ONLY a valid JSON array, no markdown, no commentary:
   } catch (err) {
     send({ type: 'error', message: err.message });
     res.end();
+  }
+});
+
+// ─── Save Secrets to Soul ─────────────────────────────────────────────────────
+// PATCH /api/analytr/save-secrets-to-soul
+// Writes top insights to creator-profile.json content_intelligence block.
+
+router.patch('/save-secrets-to-soul', (req, res) => {
+  try {
+    const secrets = db.getKv('channel_dna_secrets');
+    if (!secrets || !secrets.length) {
+      return res.status(404).json({ error: 'No secrets found. Run Discover Secrets first.' });
+    }
+
+    const clusterData    = db.getKv('channel_dna_clusters');
+    const allNodes       = clusterData?.nodes || [];
+    const longformCount  = allNodes.filter(n => n.format !== 'short' && n.format !== 'live' && n.format !== 'micro').length || allNodes.length;
+
+    const profilePath = path.join(__dirname, '../../creator-profile.json');
+    const profile     = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+
+    profile.content_intelligence = {
+      insights:                    secrets.slice(0, 7),
+      generated_at:                new Date().toISOString(),
+      video_count:                 longformCount,
+      next_update_at_video_count:  longformCount + 10,
+    };
+
+    fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf8');
+    res.json({ ok: true, saved: secrets.length, next_update_at: videoCount + 10 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

@@ -308,6 +308,19 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 .secrets-generate-btn{width:100%;padding:12px 20px;background:transparent;border:1px dashed var(--border-bright);border-radius:var(--radius-sm);color:var(--text-dim);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s,color .2s;margin-bottom:4px;}
 .secrets-generate-btn:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
 .secrets-generate-btn:disabled{opacity:.5;cursor:not-allowed;}
+.secrets-save-btn{display:none;background:var(--teal);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px;transition:background .2s,opacity .2s;}
+.secrets-save-btn:hover:not(:disabled){background:#0f766e;}
+.secrets-save-btn:disabled{opacity:.6;cursor:not-allowed;}
+.secrets-lock-overlay{display:flex;align-items:flex-start;gap:12px;background:rgba(20,184,166,.07);border:1px solid var(--teal);border-radius:var(--radius-sm);padding:14px 18px;margin-top:12px;}
+.secrets-lock-icon{font-size:1.5rem;flex-shrink:0;line-height:1;}
+.secrets-lock-msg{color:var(--teal);font-weight:600;font-size:.88rem;margin-bottom:4px;}
+.secrets-lock-sub{color:var(--text-dim);font-size:.78rem;}
+.secrets-force-btn{background:transparent;color:var(--text-dim);border:1px dashed var(--border-bright);border-radius:var(--radius-sm);padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;margin-top:8px;display:none;transition:border-color .2s,color .2s;}
+.secrets-force-btn:hover{color:var(--amber);border-color:var(--amber);}
+.graph-toggle-row{display:flex;align-items:center;gap:10px;margin-top:8px;}
+.graph-toggle-label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;user-select:none;}
+.graph-toggle-label input{accent-color:var(--teal);cursor:pointer;}
+.stat-breakdown{font-size:10px;color:var(--text-dimmer);margin-top:3px;letter-spacing:0.3px;}
 .secrets-card{border-left:3px solid var(--teal);background:var(--bg-card-2);border-radius:var(--radius-sm);padding:16px 18px;margin-top:14px;}
 .secrets-card.secrets-gap{border-left-color:var(--amber);}
 .secrets-card.secrets-opportunity{border-left-color:var(--green);}
@@ -349,11 +362,12 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         <div class="stat-label">Total Views</div>
         <div class="stat-value loading" id="statTotalViews">—</div>
         <div class="stat-meta" id="statTotalVideosMeta">loading...</div>
+        <div class="stat-breakdown" id="statFormatBreakdown"></div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Avg Views / Video</div>
-        <div class="stat-value loading" id="statAvgViews">—</div>
-        <div class="stat-meta">per project</div>
+        <div class="stat-label">Long-form Avg Views</div>
+        <div class="stat-value loading" id="statLongformAvg">—</div>
+        <div class="stat-meta">excl. Shorts</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Best Performing</div>
@@ -397,6 +411,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
           <button class="graph-zoom-btn" title="Zoom in" onclick="constellationZoomStep(1.4)">＋</button>
           <button class="graph-zoom-btn" title="Zoom out" onclick="constellationZoomStep(1/1.4)">－</button>
         </div>
+        <div class="graph-toggle-row" style="position:absolute;bottom:10px;left:12px;">
+          <label class="graph-toggle-label">
+            <input type="checkbox" id="showShortsToggle" onchange="toggleShortsVisibility(this.checked)">
+            Show Shorts
+          </label>
+          <span id="shortsCountLabel" style="font-size:11px;color:var(--text-dimmer);"></span>
+        </div>
       </div>
       <div id="constellationLegend" class="dna-legend"></div>
     </div>
@@ -413,7 +434,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         Discover Secrets →
       </button>
       <div id="secretsStatus" class="dna-status" style="display:none"></div>
+      <div id="secretsLock" class="secrets-lock-overlay" style="display:none">
+        <div class="secrets-lock-icon">🔒</div>
+        <div>
+          <div class="secrets-lock-msg" id="secretsLockMsg">Refresh unlocks in ? more long-form videos</div>
+          <div class="secrets-lock-sub">Your last analysis is shown below. New patterns surface every 10 long-form videos.</div>
+          <button class="secrets-force-btn" id="secretsForceBtn" onclick="forceRefreshSecrets()">
+            ⚡ Force Refresh — I made significant changes
+          </button>
+        </div>
+      </div>
       <div id="secretsCards"></div>
+      <button class="secrets-save-btn" id="secretsSaveBtn" onclick="saveSecretsToSoul()">
+        Save Insights to My Soul →
+      </button>
     </div>
   </div>
 
@@ -664,11 +698,28 @@ async function loadChannelHealth() {
     tvEl.classList.remove('loading');
 
     document.getElementById('statTotalVideosMeta').textContent =
-      `across ${data.total_videos} video${data.total_videos !== 1 ? 's' : ''}`;
+      'across ' + data.total_videos + ' video' + (data.total_videos !== 1 ? 's' : '');
 
-    const avgEl = document.getElementById('statAvgViews');
-    avgEl.textContent = fmtNum(data.avg_views);
-    avgEl.classList.remove('loading');
+    // Format breakdown
+    if (data.format_breakdown) {
+      const fb = data.format_breakdown;
+      const lfCount = (fb.longform || 0) + (fb.standard || 0);
+      const shCount = fb.short || 0;
+      const liveCount = fb.live || 0;
+      const parts = [];
+      if (lfCount)   parts.push(lfCount   + ' long-form');
+      if (shCount)   parts.push(shCount   + ' Shorts');
+      if (liveCount) parts.push(liveCount + ' live');
+      const breakdownEl = document.getElementById('statFormatBreakdown');
+      if (breakdownEl) breakdownEl.textContent = parts.join(' · ');
+    }
+
+    // Long-form avg views (separate from Shorts)
+    const lfAvgEl = document.getElementById('statLongformAvg');
+    if (lfAvgEl) {
+      lfAvgEl.textContent = fmtNum(data.longform_avg_views || 0);
+      lfAvgEl.classList.remove('loading');
+    }
 
     const bestEl = document.getElementById('statBestViews');
     if (data.best_video) {
@@ -1317,6 +1368,7 @@ function renderAbResults(data) {
 (async () => {
   await loadChannelHealth();
   await loadYtLinkRows();
+  checkImportStatus();
   loadConstellationGraph(false);
 })();
 
@@ -1453,8 +1505,19 @@ function renderConstellation(data) {
     };
   });
 
-  const maxViews = Math.max.apply(null, nodes.map(function(n) { return n.views; }).concat([1]));
-  function nodeR(n) { return 8 + Math.sqrt(n.views / maxViews) * 26; }
+  // Show/hide Shorts count label
+  var shortNodes = nodes.filter(function(n) { return n.format === 'short'; });
+  var shortsLbl  = document.getElementById('shortsCountLabel');
+  if (shortsLbl) shortsLbl.textContent = shortNodes.length > 0 ? '(' + shortNodes.length + ' hidden)' : '';
+
+  var longformCount = nodes.filter(function(n) { return n.format !== 'short'; }).length;
+  var maxViews = Math.max.apply(null,
+    nodes.filter(function(n) { return n.format !== 'short'; }).map(function(n) { return n.views; }).concat([1])
+  );
+  function nodeR(n) {
+    if (n.format === 'short') return 3;
+    return 8 + Math.sqrt(n.views / maxViews) * 26;
+  }
 
   // ── Force simulation: cluster gravity + weak charge + collision ───────────
   const sim = d3.forceSimulation(nodes)
@@ -1550,9 +1613,17 @@ function renderConstellation(data) {
 
   nodeG.append('circle')
     .attr('r',            function(n) { return nodeR(n); })
-    .attr('fill',         function(n) { return (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') + '33'; })
+    .attr('fill',         function(n) {
+      if (n.format === 'short') return 'rgba(255,255,255,0.05)';
+      return (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') + '33';
+    })
     .attr('stroke',       function(n) { return CLUSTER_COLORS[n.cluster_color] || '#3ecfb2'; })
-    .attr('stroke-width', 1.5);
+    .attr('stroke-width', function(n) { return n.format === 'short' ? 1 : 1.5; })
+    .attr('opacity',      function(n) { return n.format === 'short' ? 0.2 : 1; })
+    .attr('class',        function(n) { return n.format === 'short' ? 'node-short' : ''; });
+
+  // Hide shorts by default (toggle will show them)
+  nodeG.filter(function(n) { return n.format === 'short'; }).style('display', 'none');
 
   const nodeText = nodeG.append('text')
     .attr('text-anchor',       'middle')
@@ -1637,10 +1708,10 @@ function renderLegend(clusters) {
 
 // ─── Secrets of Your Content Universe ────────────────────────────────────────
 
-async function generateSecrets() {
-  const btn    = document.getElementById('secretsBtn');
-  const status = document.getElementById('secretsStatus');
-  const cards  = document.getElementById('secretsCards');
+async function generateSecrets(force) {
+  var btn    = document.getElementById('secretsBtn');
+  var status = document.getElementById('secretsStatus');
+  var cards  = document.getElementById('secretsCards');
 
   btn.disabled    = true;
   btn.textContent = 'Discovering...';
@@ -1649,8 +1720,17 @@ async function generateSecrets() {
   status.textContent     = 'Sending your content universe to Claude...';
   cards.innerHTML        = '';
 
+  // Hide lock + force button while running
+  document.getElementById('secretsLock').style.display = 'none';
+  var forceBtn = document.getElementById('secretsForceBtn');
+  if (forceBtn) forceBtn.style.display = 'none';
+
   try {
-    const r = await fetch('/api/analytr/content-secrets', { method: 'POST' });
+    var r = await fetch('/api/analytr/content-secrets', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ force: force === true }),
+    });
     if (!r.ok || !r.body) throw new Error('Request failed ' + r.status);
 
     const reader  = r.body.getReader();
@@ -1673,6 +1753,12 @@ async function generateSecrets() {
         } else if (evt.type === 'result') {
           status.style.display = 'none';
           renderSecrets(evt.data);
+          document.getElementById('secretsSaveBtn').style.display = 'inline-block';
+        } else if (evt.type === 'locked') {
+          status.style.display = 'none';
+          showSecretsLock(evt.remaining);
+          renderSecrets(evt.data);
+          document.getElementById('secretsSaveBtn').style.display = 'inline-block';
         } else if (evt.type === 'error') {
           status.textContent = '\u26a0 ' + evt.message;
           status.style.color = 'var(--red)';
@@ -1682,9 +1768,87 @@ async function generateSecrets() {
   } catch (err) {
     status.textContent = '\u26a0 ' + err.message;
     status.style.color = 'var(--red)';
-  } finally {
     btn.disabled    = false;
     btn.textContent = 'Discover Secrets \u2192';
+  }
+}
+
+function showSecretsLock(remaining) {
+  var lock      = document.getElementById('secretsLock');
+  var msg       = document.getElementById('secretsLockMsg');
+  var forceBtn  = document.getElementById('secretsForceBtn');
+  lock.style.display = 'flex';
+  msg.innerHTML = '\uD83D\uDD12 ' + remaining + ' more long-form video' + (remaining === 1 ? '' : 's') + ' until next refresh';
+  if (forceBtn) forceBtn.style.display = 'inline-block';
+  var btn = document.getElementById('secretsBtn');
+  btn.disabled    = true;
+  btn.textContent = '\uD83D\uDD12 Locked — publish more to refresh';
+}
+
+async function forceRefreshSecrets() {
+  if (!confirm('This will use API credits to regenerate your insights. Continue?')) return;
+  await generateSecrets(true);
+}
+
+async function checkImportStatus() {
+  try {
+    var r = await fetch('/api/analytr/import-status');
+    var d = await r.json();
+    if (d.is_imported) {
+      var btn = document.getElementById('importBtn');
+      if (!btn) return;
+      btn.disabled    = true;
+      btn.style.opacity      = '0.5';
+      btn.style.cursor       = 'not-allowed';
+      btn.style.borderColor  = 'var(--border)';
+      btn.style.color        = 'var(--text-dim)';
+      btn.innerHTML = '\u2713 Channel Imported (' + d.imported_count + ' videos)';
+      btn.title     = 'Use Sync YouTube Data to update stats on existing videos';
+      btn.onclick   = null;
+      // Add sub-note
+      var note = document.createElement('div');
+      note.style.cssText = 'font-size:11px;color:var(--text-dimmer);margin-top:6px;';
+      note.textContent   = 'New videos sync automatically when you click Sync';
+      btn.parentNode.insertBefore(note, btn.nextSibling);
+    }
+  } catch (_) {}
+}
+
+function toggleShortsVisibility(show) {
+  var svgEl = document.getElementById('constellationSvg');
+  if (!svgEl) return;
+  var shortsGroups = svgEl.querySelectorAll('.nodes g');
+  var lbl = document.getElementById('shortsCountLabel');
+  var hidden = 0;
+  shortsGroups.forEach(function(g) {
+    // Check if this node's data is a short — we stored class on the circle
+    var circle = g.querySelector('circle.node-short');
+    if (circle) {
+      g.style.display = show ? '' : 'none';
+      if (!show) hidden++;
+    }
+  });
+  if (lbl) lbl.textContent = (!show && hidden > 0) ? '(' + hidden + ' hidden)' : '';
+}
+
+async function saveSecretsToSoul() {
+  var btn = document.getElementById('secretsSaveBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Saving...';
+  try {
+    var r = await fetch('/api/analytr/save-secrets-to-soul', { method: 'PATCH' });
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Save failed');
+    btn.textContent       = '\u2713 Saved to Soul';
+    btn.style.background  = '#16a34a';
+    setTimeout(function() {
+      btn.textContent      = 'Save Insights to My Soul \u2192';
+      btn.style.background = '';
+      btn.disabled         = false;
+    }, 3000);
+  } catch (err) {
+    btn.textContent = '\u26a0 ' + err.message;
+    btn.disabled    = false;
   }
 }
 

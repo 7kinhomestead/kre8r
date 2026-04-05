@@ -143,3 +143,45 @@ This feature permanently answers the question of whether the AI is doing the cre
 - Proto-star physics: same forceSimulation as Constellation, but with higher alpha decay and smaller charge so clouds stay loose
 - Published event triggers migration animation: proto-star accelerates toward its Constellation position, opacity rises, size settles to view-count-based radius
 - Progress ring: SVG `stroke-dasharray` / `stroke-dashoffset` on 5 arc segments, one per pipeline component
+
+## V2.0 — Content Universe 3D Sphere (Three.js)
+
+Replace the 2D D3 constellation with an optional 3D sphere view using Three.js.
+
+### Visual rules
+- Videos plotted on surface of a sphere using spherical coordinates
+- Altitude above surface = performance above channel average (view count / avg)
+- Altitude below surface = underperformers, Shorts, live streams
+- Clusters grouped by longitude bands
+- Node size = view count
+- Node color = cluster color
+
+### Rotation behavior
+- Sphere slowly auto-rotates
+- Rotation direction biased toward highest-opportunity cluster (high views + low upload frequency)
+- Subtly suggests "this is where your attention should go" without explicit instruction
+- User can grab and rotate manually — sphere resumes auto-rotation after 3 seconds
+
+### Camera behavior
+- Default: full sphere view
+- Click cluster label: camera flies to that cluster face
+- Click individual node: camera zooms to video, shows stats card
+- Double click: fly back to full sphere
+
+### Toggle
+- Toggle between 2D constellation and 3D sphere with animated transition
+- The sphere IS the digital brain. The rotation IS the recommendation engine.
+
+### Implementation notes
+- Built with Three.js r128 (already available in artifact library)
+- `THREE.SphereGeometry` for the base sphere (transparent, wireframe or faint)
+- `THREE.Points` or instanced meshes for video nodes
+- `THREE.OrbitControls` for manual rotation — `autoRotate` flag with 3s resume timer
+- Spherical coordinates: `θ` = longitude (cluster band), `φ` = latitude (content type), `r` = base radius + performance altitude offset
+- Performance altitude: `(views / channelAvg - 1) * altitudeScale` — clamped to ±altitudeMax
+- Camera fly-to: `TWEEN.js` animating `camera.position` + `controls.target` to cluster centroid
+- Node click detection: `THREE.Raycaster` on canvas mouseclick
+- Stats card: HTML overlay positioned via `camera.project()` → CSS `left/top`
+- Shorts/live: plotted at `r - altitudeMax` (below surface), hidden by default (same toggle logic as 2D)
+- Cluster longitude bands: evenly divide 2π by cluster count, assign each cluster a `θ` band center
+- All node data pulled from existing `channel_dna_clusters` kv_store — no new API needed

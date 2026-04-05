@@ -200,6 +200,24 @@ router.post('/concepts', async (req, res) => {
       .map(a => `- ${a.label}: ${a.description}`)
       .join('\n');
 
+    // Read fresh creator-profile for dynamic content_intelligence (may have been updated by AnalΩzr)
+    let intelligenceBlock = '';
+    try {
+      const _fs  = require('fs');
+      const _pth = require('path');
+      const cp   = JSON.parse(_fs.readFileSync(_pth.join(__dirname, '../../creator-profile.json'), 'utf8'));
+      const ci   = cp.content_intelligence;
+      if (ci && Array.isArray(ci.insights) && ci.insights.length) {
+        const top3 = ci.insights.slice(0, 3);
+        intelligenceBlock = '\n\nCONTENT INTELLIGENCE FROM ANALYΩZR (patterns Claude found in all Jason\'s videos):\n'
+          + top3.map((ins, i) =>
+              (i + 1) + '. [' + ((ins.type || 'insight').toUpperCase()) + '] '
+              + (ins.title || '') + ': ' + (ins.insight || '')
+            ).join('\n')
+          + '\nUse these patterns to make concept 3 especially sharp — lean into what\'s already proven to work or exploit an identified gap.';
+      }
+    } catch (_) {}
+
     const result = await callClaudeJSON(
       `You are Id8Ωr, a creative strategist for Jason Rutland at 7 Kin Homestead (725k TikTok, homesteading content). Based on the conversation below, generate exactly 3 concept directions for Jason's video.
 
@@ -210,7 +228,7 @@ RULES:
 - Be specific to what Jason actually said, not generic. Use his real voice: straight-talking, funny, real numbers, never corporate.
 
 JASON'S CONTENT ANGLES:
-${anglesText}
+${anglesText}${intelligenceBlock}
 
 Return ONLY valid JSON in this exact shape:
 {

@@ -182,6 +182,14 @@ function runMigrations() {
     db.run('ALTER TABLE posts ADD COLUMN thumbnail_url TEXT');
     console.log('[DB] Migration: added posts.thumbnail_url');
   }
+  if (!postsCols.includes('format')) {
+    db.run('ALTER TABLE posts ADD COLUMN format TEXT');
+    console.log('[DB] Migration: added posts.format');
+  }
+  if (!postsCols.includes('duration_seconds')) {
+    db.run('ALTER TABLE posts ADD COLUMN duration_seconds INTEGER');
+    console.log('[DB] Migration: added posts.duration_seconds');
+  }
 
   // EditΩr: footage.transcript — full Whisper text stored inline for fast multi-clip analysis
   if (!footageCols.includes('transcript')) {
@@ -934,23 +942,25 @@ function upsertScript(projectId, { outline, full_script, approved_version }) {
 // POST HELPERS (AnalytΩr)
 // ─────────────────────────────────────────────
 
-function savePost({ project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle, thumbnail_url }) {
+function savePost({ project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle, thumbnail_url, format, duration_seconds }) {
   const result = _run(
-    `INSERT INTO posts (project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle, thumbnail_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO posts (project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle, thumbnail_url, format, duration_seconds)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       project_id,
-      caption_id     || null,
+      caption_id       || null,
       platform,
-      content        || null,
-      media_path     || null,
-      scheduled_at   || null,
-      posted_at      || null,
-      post_id        || null,
-      status         || 'posted',
-      url            || null,
-      angle          || null,
-      thumbnail_url  || null,
+      content          || null,
+      media_path       || null,
+      scheduled_at     || null,
+      posted_at        || null,
+      post_id          || null,
+      status           || 'posted',
+      url              || null,
+      angle            || null,
+      thumbnail_url    || null,
+      format           || null,
+      duration_seconds !== undefined ? duration_seconds : null,
     ]
   );
   persist();
@@ -962,7 +972,7 @@ function getPostsByProject(projectId) {
 }
 
 function updatePost(id, fields) {
-  const allowed = ['status', 'posted_at', 'post_id', 'url', 'error_message', 'angle', 'content', 'media_path'];
+  const allowed = ['status', 'posted_at', 'post_id', 'url', 'error_message', 'angle', 'content', 'media_path', 'format', 'duration_seconds'];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return;
   const setClauses = updates.map(k => `${k} = ?`).join(', ');
@@ -974,6 +984,27 @@ function deletePost(id) {
   _run(`DELETE FROM analytics WHERE post_id = ?`, [id]);
   _run(`DELETE FROM posts WHERE id = ?`, [id]);
   persist();
+}
+
+// AnalΩzr: format classification helpers ─────────────────────────────────────
+
+function updatePostFormat(postId, format, durationSeconds) {
+  _run('UPDATE posts SET format = ?, duration_seconds = ? WHERE id = ?', [format, durationSeconds, postId]);
+  persist();
+}
+
+// Returns {projectId: {format, duration_seconds}} for all youtube posts — used
+// by the graph route to filter/badge nodes without N+1 queries.
+function getYouTubeFormats() {
+  const rows = _all(`SELECT project_id, format, duration_seconds FROM posts WHERE platform = 'youtube'`);
+  const map  = {};
+  for (const r of rows) map[r.project_id] = { format: r.format || null, duration_seconds: r.duration_seconds };
+  return map;
+}
+
+// Count projects imported from YouTube channel bulk import.
+function countImportedProjects() {
+  return _get(`SELECT COUNT(*) as n FROM projects WHERE source = 'youtube_import'`)?.n || 0;
 }
 
 // ─────────────────────────────────────────────
@@ -1085,12 +1116,31 @@ function getGlobalChannelHealth() {
      WHERE a.metric_name = 'views' AND a.metric_value > 0 AND pr.topic IS NOT NULL
      GROUP BY pr.topic ORDER BY SUM(a.metric_value) DESC LIMIT 1`
   );
+  const longformAvg = _get(
+    `SELECT COALESCE(AVG(a.metric_value), 0) as n
+     FROM analytics a
+     JOIN posts po ON po.id = a.post_id
+     WHERE a.metric_name = 'views'
+       AND po.platform = 'youtube'
+       AND po.format IN ('longform', 'standard')`
+  );
+  const formatCounts = _all(
+    `SELECT COALESCE(po.format, 'longform') as fmt, COUNT(DISTINCT po.project_id) as n
+     FROM posts po
+     WHERE po.platform = 'youtube'
+     GROUP BY COALESCE(po.format, 'longform')`
+  );
+  const fmtBreakdown = { longform: 0, standard: 0, micro: 0, short: 0, live: 0 };
+  for (const row of formatCounts) fmtBreakdown[row.fmt] = row.n;
+
   return {
-    total_views:    totalViews?.n  || 0,
-    avg_views:      Math.round(avgViews?.n || 0),
-    best_video:     bestVideo      || null,
-    total_videos:   totalVideos?.n || 0,
-    top_topic:      topAngle?.topic || null,
+    total_views:          totalViews?.n  || 0,
+    avg_views:            Math.round(avgViews?.n || 0),
+    longform_avg_views:   Math.round(longformAvg?.n || 0),
+    best_video:           bestVideo      || null,
+    total_videos:         totalVideos?.n || 0,
+    top_topic:            topAngle?.topic || null,
+    format_breakdown:     fmtBreakdown,
   };
 }
 
@@ -1530,7 +1580,10 @@ module.exports = {
   savePost,
   getPostsByProject,
   updatePost,
+  updatePostFormat,
   deletePost,
+  getYouTubeFormats,
+  countImportedProjects,
   upsertMetric,
   getAnalyticsByPost,
   getAnalyticsByProject,

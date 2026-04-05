@@ -529,7 +529,27 @@
     "thumbnail_quality": 85
   },
   "audience_profile": {
-    "test": "ok"
+    "who_they_are": "Primarily millennials in their late 20s to early 40s who feel economically squeezed — renters or working-class homeowners stuck in jobs they tolerate, living paycheck to paycheck, skeptical of the conventional financial path after watching it fail themselves or their parents. They likely have a family or are building one, are drawn to self-reliance as both a practical and ideological response to economic instability, and have searched 'how to afford land' or 'off grid living on a budget' before finding this channel.",
+    "what_they_believe": [
+      "The traditional financial system is rigged against working-class people and mainstream advice like Dave Ramsey is designed for people who already have money",
+      "Real freedom means owning land and not depending on an employer or landlord for survival",
+      "It is possible to escape the system without being wealthy first — you just need the right information and enough courage",
+      "Self-sufficiency and community are more reliable safety nets than a 401k or government program"
+    ],
+    "what_they_fear": [
+      "That they will never be able to afford land or escape the rent-and-wage cycle before something breaks — health, job, or economy",
+      "That off-grid living is secretly only for people with savings or a trust fund, and the creators they watch had a hidden advantage they're not disclosing",
+      "That they will make a catastrophic financial mistake buying the wrong land or building the wrong system and lose everything",
+      "That their spouse or partner will never get on board, or that the lifestyle will destroy their family relationships"
+    ],
+    "why_they_watch": "They watch because this creator is the rare voice that speaks directly to their financial reality — not assuming savings, not glossing over hardship, but starting from negative $27 and showing every step. The creator functions as a permission structure: living proof that someone without money or credentials actually did this, which neutralizes the audience's primary excuse for not starting. The combination of anti-establishment framing and practical specificity makes viewers feel both validated in their distrust of the system and equipped to actually act.",
+    "content_that_converts": [
+      "Specific dollar amounts and real financial starting points (especially rock-bottom ones like '-$27') that make the leap feel accessible rather than aspirational",
+      "Direct challenges to mainstream financial or societal advice that validate the audience's existing skepticism and position the creator as an insider truth-teller",
+      "State-specific or tactic-specific land acquisition content (owner financing, cheap states, avoiding mistakes) that gives actionable next steps to someone ready to move",
+      "Income-from-homestead content that solves the 'but how do I pay for groceries' objection — the last practical barrier for fence-sitters",
+      "Raw failure and setback stories that build trust by proving the creator is not curating a highlight reel, making their successes feel credible and replicable"
+    ]
   },
-  "_audience_updated_at": "2026-04-05T07:23:45.186Z"
+  "_audience_updated_at": "2026-04-05T08:40:10.083Z"
 }

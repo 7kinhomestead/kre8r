@@ -373,6 +373,22 @@ router.post('/generate', async (req, res) => {
     } catch (_) {}
   }
 
+  // Append cross-channel intelligence from AnalΩzr if creator soul has it
+  try {
+    const _fs   = require('fs');
+    const _path = require('path');
+    const cp    = JSON.parse(_fs.readFileSync(_path.join(__dirname, '../../creator-profile.json'), 'utf8'));
+    const ci    = cp.content_intelligence;
+    if (ci && Array.isArray(ci.insights) && ci.insights.length) {
+      const top3 = ci.insights.slice(0, 3);
+      id8rBlock += '\n\n## CONTENT INTELLIGENCE FROM YOUR DIGITAL BRAIN\n'
+        + top3.map((ins, i) =>
+            (i + 1) + '. [' + ((ins.type || 'insight').toUpperCase()) + '] '
+            + (ins.title || '') + ': ' + (ins.insight || '')
+          ).join('\n');
+    }
+  } catch (_) {}
+
   // Switch to SSE stream — client reads this response body directly
   const { write, end } = startSseResponse(req, res);
 
