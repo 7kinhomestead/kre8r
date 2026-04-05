@@ -73,4 +73,31 @@ This cross-platform intelligence layer with AI coaching connected to the product
 6. Weekly coaching report automation
 7. Id8Ωr feedback loop
 
+## AnalΩzr — Content Format Discrimination
+
+In the Content DNA constellation and coaching report, discriminate between:
+- **Long form horizontal** — YouTube videos >3 min
+- **Short form vertical** — TikTok, YouTube Shorts, Reels
+- **Live streams** — filter these out of performance averages by default (they skew data)
+
+### How it works
+YouTube API already returns `contentDetails.duration` (ISO 8601, e.g. `PT12M34S`) — parse this at sync time to classify each video. Store `format` on the project or analytics record.
+
+### Constellation changes
+- Add format badge to each node: 📹 long form, ⚡ short form, 🔴 live
+- Live stream nodes visually dimmed (reduced opacity) in the constellation
+- Toggle in the DNA panel: "Include live streams" (off by default)
+
+### Coaching report changes
+- Live streams excluded from all performance averages by default
+- When excluded, a note: "X live streams excluded from averages — toggle to include"
+- Long form vs short form shown as separate performance bands — not averaged together
+
+### Implementation notes
+- `contentDetails.duration` must be requested in the YouTube API call (add to `part` param)
+- ISO 8601 duration parser: `PT0S` = live/premiere, `PT1M` = 1 min, `PT12M34S` = 12:34
+- Shorts threshold: duration ≤ 60s OR title contains `#shorts` OR vertical aspect ratio
+- Live detection: `duration = 'P0D'` or `liveBroadcastContent = 'none'` with zero duration
+- Store as `video_format` enum: `long_form` | `short_form` | `live`
+
 ## [Future wishes go here]
