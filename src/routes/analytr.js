@@ -695,7 +695,7 @@ router.get('/content-dna/graph', async (req, res) => {
       .map(n => `${n.title} | ${n.views.toLocaleString()} views | ${n.likes} likes | ${n.comments} comments`)
       .join('\n');
 
-    const clusterPrompt = `You are analyzing the YouTube channel of an off-grid homesteading creator to identify their highest-performing content clusters.
+    const clusterPrompt = `You are analyzing the YouTube channel of an off-grid homesteading creator to identify their highest-performing content clusters and the hidden connections between them.
 
 TOP 10 VIDEOS BY VIEW COUNT — these are the proven winners. Cluster names must reflect what these videos are about:
 ${top10Lines}
@@ -707,7 +707,9 @@ Now group all ${top50.length} videos below into 5-8 clusters using that principl
 All videos (title | views | likes | comments):
 ${videoLines}
 
-Assign every video to exactly one cluster. Return ONLY valid JSON, no markdown, no commentary:
+After assigning clusters, also identify 15-25 cross-cluster connections — pairs of videos from DIFFERENT clusters that share a strong thematic link. Focus on non-obvious, meaningful connections (e.g. a "how to buy land" video connecting to a "starting from nothing" video because both address the same fear). Skip obvious connections.
+
+Return ONLY valid JSON, no markdown, no commentary:
 {
   "clusters": [
     {
@@ -717,6 +719,9 @@ Assign every video to exactly one cluster. Return ONLY valid JSON, no markdown, 
       "top_video": "exact title of the highest-view video in this cluster",
       "videos": ["exact video title 1", "exact video title 2"]
     }
+  ],
+  "edges": [
+    { "source": "exact video title 1", "target": "exact video title 2", "reason": "both address starting from zero with no money" }
   ]
 }
 
@@ -783,6 +788,7 @@ Available colors (use each at most twice): teal, amber, coral, purple, green, bl
     const result = {
       nodes:     taggedNodes,
       clusters:  parsed.clusters || [],
+      edges:     parsed.edges    || [],
       cached_at: new Date().toISOString(),
       total:     allNodes.length,
       clustered: top50.length,
@@ -948,6 +954,123 @@ router.patch('/creator-profile-audience', async (req, res) => {
     res.json({ ok: true, updated_at: profile._audience_updated_at });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Content Secrets: hidden pattern analysis (SSE) ──────────────────────────
+// POST /api/analytr/content-secrets
+// Reads cluster + edge data from kv_store, finds non-obvious patterns via Claude.
+
+router.post('/content-secrets', async (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+  try {
+    const clusterData = db.getKv('channel_dna_clusters');
+    if (!clusterData || !clusterData.nodes?.length) {
+      send({ type: 'error', message: 'No cluster data found. Load the Constellation graph first.' });
+      res.end(); return;
+    }
+
+    const { nodes, clusters, edges } = clusterData;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) { send({ type: 'error', message: 'ANTHROPIC_API_KEY not set' }); res.end(); return; }
+
+    send({ type: 'status', message: `Scanning ${nodes.length} videos across ${clusters.length} clusters for hidden patterns...` });
+
+    const totalViews = nodes.reduce((s, n) => s + n.views, 0);
+    const avgViews   = nodes.length ? Math.round(totalViews / nodes.length) : 0;
+    const top20      = [...nodes].sort((a, b) => b.views - a.views).slice(0, 20);
+
+    const clustersJson = JSON.stringify(clusters.map(c => {
+      const cn = nodes.filter(n => n.cluster_id === c.id);
+      return {
+        name:        c.name,
+        video_count: cn.length,
+        avg_views:   Math.round(cn.reduce((s, n) => s + n.views, 0) / (cn.length || 1)),
+        top_video:   c.top_video || cn.sort((a, b) => b.views - a.views)[0]?.title || '',
+      };
+    }), null, 2);
+
+    const edgesJson = JSON.stringify(
+      (edges || []).slice(0, 20).map(e => ({ source: e.source, target: e.target, reason: e.reason })),
+      null, 2
+    );
+
+    const top20Lines = top20.map(v => `"${v.title}": ${v.views.toLocaleString()} views`).join('\n');
+
+    const secretsPrompt = `You are analyzing a YouTube creator's complete content universe.
+You have access to their video clusters, cross-cluster connections, and performance data.
+
+Clusters:
+${clustersJson}
+
+Cross-cluster connections Claude identified:
+${edgesJson}
+
+Top 20 performers:
+${top20Lines}
+
+Channel average: ${avgViews.toLocaleString()} views
+
+Find 5-7 non-obvious insights that a human creator would never notice from inside their own work. Think like an anthropologist studying an artifact, not a YouTube coach giving generic advice.
+
+Examples of the kind of insight we want:
+- "Your financial content and your failure/mistake content are secretly the same video — both give your audience permission to try something scary. That's why they cross-perform."
+- "You have never made a video that combines solar + financial angle even though those are your two strongest clusters. That video doesn't exist yet and it should."
+- "Your audience engagement peaks on videos where the title contains a negative number or admits failure. They trust you more when you're losing."
+
+Return ONLY a valid JSON array, no markdown, no commentary:
+[
+  {
+    "title": "short punchy name for this insight",
+    "insight": "2-3 sentence explanation",
+    "implication": "one specific action to take based on this",
+    "type": "pattern|gap|opportunity|warning"
+  }
+]`;
+
+    const { default: fetch } = await import('node-fetch');
+
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method:  'POST',
+      headers: {
+        'Content-Type':      'application/json',
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model:      process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+        max_tokens: 4000,
+        messages:   [{ role: 'user', content: secretsPrompt }],
+      }),
+    });
+
+    if (!claudeRes.ok) {
+      const err = await claudeRes.json().catch(() => ({}));
+      throw new Error(`Claude API error ${claudeRes.status}: ${err?.error?.message || ''}`);
+    }
+
+    const claudeData = await claudeRes.json();
+    const raw = claudeData.content[0].text.trim()
+      .replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch { send({ type: 'error', message: 'Claude returned unexpected format. Try again.' }); res.end(); return; }
+
+    db.setKv('channel_dna_secrets', parsed);
+    send({ type: 'result', data: parsed });
+    send({ type: 'done' });
+    res.end();
+
+  } catch (err) {
+    send({ type: 'error', message: err.message });
+    res.end();
   }
 });
 

@@ -304,6 +304,27 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 .graph-zoom-btn:hover{border-color:var(--teal);color:var(--teal);}
 /* cluster centroid labels */
 .cluster-label{pointer-events:none;font-family:'DM Sans',sans-serif;font-weight:700;letter-spacing:.5px;text-transform:uppercase;fill:#e8ebe6;paint-order:stroke;stroke:#0d1110;stroke-width:3px;stroke-linejoin:round;}
+/* ─── SECRETS PANEL ──────────────────────── */
+.secrets-generate-btn{width:100%;padding:12px 20px;background:transparent;border:1px dashed var(--border-bright);border-radius:var(--radius-sm);color:var(--text-dim);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s,color .2s;margin-bottom:4px;}
+.secrets-generate-btn:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
+.secrets-generate-btn:disabled{opacity:.5;cursor:not-allowed;}
+.secrets-card{border-left:3px solid var(--teal);background:var(--bg-card-2);border-radius:var(--radius-sm);padding:16px 18px;margin-top:14px;}
+.secrets-card.secrets-gap{border-left-color:var(--amber);}
+.secrets-card.secrets-opportunity{border-left-color:var(--green);}
+.secrets-card.secrets-warning{border-left-color:var(--red);}
+.secrets-card-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.secrets-icon{font-size:15px;flex-shrink:0;}
+.secrets-title{font-size:13px;font-weight:700;color:var(--text);flex:1;letter-spacing:.3px;}
+.secrets-type-badge{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.05);color:var(--text-dim);}
+.secrets-insight{font-size:13px;color:var(--text);line-height:1.65;margin-bottom:8px;}
+.secrets-implication{font-size:12px;color:var(--teal);line-height:1.5;}
+/* ─── COLLAPSIBLE VIDEOS ─────────────────── */
+.videos-toggle-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 0;margin-bottom:0;}
+.videos-toggle-header:hover .section-title{color:var(--teal);}
+.videos-toggle-arrow{font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;flex-shrink:0;transition:color .2s;padding-left:16px;}
+.videos-toggle-header:hover .videos-toggle-arrow{color:var(--teal);}
+.videos-show-more-btn{background:transparent;border:1px solid var(--border-bright);border-radius:var(--radius-sm);color:var(--text-dim);font-family:var(--font-body);font-size:12px;padding:8px 24px;cursor:pointer;transition:border-color .2s,color .2s;}
+.videos-show-more-btn:hover{border-color:var(--teal);color:var(--teal);}
 </style>
 </head>
 <body>
@@ -317,13 +338,12 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
     <div class="page-sub">Channel performance, pattern coaching, and YouTube sync — all in one place.</div>
   </div>
 
-  <!-- ─── SECTION 1: CHANNEL HEALTH ──────────── -->
+  <!-- ─── 1. CHANNEL HEALTH ────────────────────── -->
   <div class="section-spacer">
     <div class="section-header">
       <div class="section-title">CHANNEL HEALTH</div>
       <div class="section-sub">All-time stats across all projects</div>
     </div>
-
     <div class="stat-grid" id="statGrid">
       <div class="stat-card">
         <div class="stat-label">Total Views</div>
@@ -348,174 +368,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
     </div>
   </div>
 
-  <!-- ─── YOUTUBE LINK ───────────────────────── -->
-  <div class="section-spacer">
-    <div class="section-header">
-      <div class="section-title">YOUTUBE LINK</div>
-      <div class="section-sub">Paste a YouTube URL or video ID to link each project</div>
-    </div>
-    <div class="yt-link-wrap">
-      <div id="ytLinkRows">
-        <div style="padding:20px;color:var(--text-dimmer);font-size:13px;">Loading projects…</div>
-      </div>
-      <div class="yt-link-all">
-        <button class="yt-link-all-btn" id="linkAllBtn" onclick="linkAllAndSync()">▶ Link All &amp; Sync</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ─── SECTION 2: LAST 10 VIDEOS ───────────── -->
-  <div class="section-spacer">
-    <div class="section-header">
-      <div class="section-title">YOUR LAST 10 VIDEOS</div>
-      <div class="section-sub">Green = above avg · Amber = at avg · Red = below avg · Click to expand</div>
-    </div>
-
-    <div class="hint-bar">
-      💡 No YouTube data yet? <a href="#youtube-sync">Sync YouTube</a> below, or log stats manually via
-      <a href="/m2-package-generator.html">PackageΩr</a>.
-    </div>
-
-    <div class="video-list" id="videoList">
-      <div class="empty-state">
-        <div class="empty-icon">📊</div>
-        <div class="empty-title">LOADING...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ─── SECTION 3: PATTERN ANALYSIS ─────────── -->
-  <div class="section-spacer coaching-wrap">
-    <div class="section-header">
-      <div class="section-title">PATTERN ANALYSIS</div>
-      <div class="section-sub">Claude reads your last 10 videos and coaches you</div>
-    </div>
-
-    <button class="coach-btn" id="coachBtn" onclick="generateCoaching()">
-      <div class="coach-spinner"></div>
-      <span class="coach-btn-text">Generate Coaching Report</span>
-    </button>
-
-    <div class="coach-status" id="coachStatus"></div>
-    <div class="coach-error" id="coachError"></div>
-
-    <div class="performance-card" id="performanceCard">
-      <div class="performance-header">
-        <span>🎬</span>
-        <div class="performance-header-title">ON-CAMERA PERFORMANCE</div>
-      </div>
-      <div class="performance-body" id="performanceBody"></div>
-    </div>
-
-    <div class="coaching-card" id="coachingCard">
-      <div class="coaching-header">
-        <div class="coaching-header-title">COACHING REPORT</div>
-        <div class="coaching-header-date" id="coachDate"></div>
-      </div>
-      <div class="coaching-body">
-
-        <div class="coach-section">
-          <div class="coach-section-label"><span class="dot"></span> WHAT'S WORKING</div>
-          <ul class="coach-list" id="coachWorking"></ul>
-        </div>
-
-        <div class="coach-section">
-          <div class="coach-section-label"><span class="dot amber"></span> AREAS TO IMPROVE</div>
-          <ul class="coach-list improve" id="coachImprove"></ul>
-        </div>
-
-        <div class="coach-section">
-          <div class="coach-section-label"><span class="dot red"></span> #1 FOCUS THIS WEEK</div>
-          <div class="focus-box" id="coachFocus"></div>
-        </div>
-
-        <div class="coach-section">
-          <div class="coach-section-label"><span class="dot"></span> TRENDING TOPICS IN YOUR COMMENTS</div>
-          <div class="topic-tags" id="coachTopics"></div>
-        </div>
-
-        <div class="coach-section">
-          <div class="coaching-note" id="coachNote"></div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- ─── SECTION 5: THUMBNAIL A/B TESTER ──────── -->
-  <div class="section-spacer ab-wrap">
-    <div class="section-header">
-      <div class="section-title">THUMBNAIL A/B TESTER</div>
-      <div class="section-sub">Upload two thumbnails — Claude scores both and picks a winner</div>
-    </div>
-
-    <!-- Upload zones -->
-    <div class="ab-upload-grid">
-
-      <!-- Thumbnail A -->
-      <div>
-        <div class="ab-label-row">
-          <div class="ab-thumb-label">THUMBNAIL A</div>
-          <div class="ab-thumb-name" id="abNameA">No file chosen</div>
-        </div>
-        <div class="ab-zone" id="abZoneA" onclick="document.getElementById('abFileA').click()"
-             ondragover="abDragOver(event,'abZoneA')" ondragleave="abDragLeave('abZoneA')" ondrop="abDrop(event,'A')">
-          <div class="ab-zone-icon">🖼</div>
-          <div class="ab-zone-label">THUMBNAIL A</div>
-          <div class="ab-zone-hint">Click or drag &amp; drop · 16:9</div>
-          <div class="ab-overlay"><div class="ab-overlay-text">↺ Replace</div></div>
-        </div>
-        <input type="file" class="ab-file-input" id="abFileA" accept="image/*" onchange="abFileChosen(event,'A')">
-      </div>
-
-      <!-- Thumbnail B -->
-      <div>
-        <div class="ab-label-row">
-          <div class="ab-thumb-label">THUMBNAIL B</div>
-          <div class="ab-thumb-name" id="abNameB">No file chosen</div>
-        </div>
-        <div class="ab-zone" id="abZoneB" onclick="document.getElementById('abFileB').click()"
-             ondragover="abDragOver(event,'abZoneB')" ondragleave="abDragLeave('abZoneB')" ondrop="abDrop(event,'B')">
-          <div class="ab-zone-icon">🖼</div>
-          <div class="ab-zone-label">THUMBNAIL B</div>
-          <div class="ab-zone-hint">Click or drag &amp; drop · 16:9</div>
-          <div class="ab-overlay"><div class="ab-overlay-text">↺ Replace</div></div>
-        </div>
-        <input type="file" class="ab-file-input" id="abFileB" accept="image/*" onchange="abFileChosen(event,'B')">
-      </div>
-
-    </div>
-
-    <!-- Options row -->
-    <div class="ab-options">
-      <input class="ab-context-input" id="abContext" type="text"
-        placeholder="Optional: add context (e.g. 'this is for a video about building a root cellar')" />
-    </div>
-
-    <!-- Analyze button -->
-    <button class="ab-analyze-btn" id="abAnalyzeBtn" onclick="runAbTest()" disabled>
-      <div class="ab-spinner"></div>
-      <span class="ab-btn-text">Analyze Thumbnails →</span>
-    </button>
-    <div class="ab-status" id="abStatus"></div>
-    <div class="ab-error" id="abError"></div>
-
-    <!-- Results -->
-    <div class="ab-results" id="abResults">
-      <div class="ab-score-grid" id="abScoreGrid"></div>
-      <div class="ab-verdict" id="abVerdict"></div>
-    </div>
-  </div>
-
-
-  <!-- ─── CONTENT DNA ─────────────────────────── -->
+  <!-- ─── 2. CONTENT DNA — THE CONSTELLATION ───── -->
   <div class="section-spacer" id="content-dna">
     <div class="section-header">
       <div class="section-title">CONTENT DNA</div>
-      <div class="section-sub">Your actual niche, ideal audience, and content constellation — defined by data</div>
+      <div class="section-sub">Your content universe — every video, clustered by what actually performs</div>
     </div>
 
-    <!-- ─ Panel 1: Constellation Graph ─ -->
     <div class="dna-panel dna-panel-full" style="margin-bottom:16px;">
       <div class="dna-panel-header">
         <div class="dna-panel-title">✦ THE CONSTELLATION</div>
@@ -541,10 +400,27 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       </div>
       <div id="constellationLegend" class="dna-legend"></div>
     </div>
+  </div>
 
-    <!-- ─ Panels 2 + 3: Niche + Audience ─ -->
+  <!-- ─── 3. SECRETS OF YOUR CONTENT UNIVERSE ──── -->
+  <div class="section-spacer" id="content-secrets">
+    <div class="section-header">
+      <div class="section-title">🔭 SECRETS OF YOUR CONTENT UNIVERSE</div>
+      <div class="section-sub">Patterns and connections Claude found that you wouldn't notice from inside the work</div>
+    </div>
+    <div class="dna-panel dna-panel-full">
+      <button class="secrets-generate-btn" id="secretsBtn" onclick="generateSecrets()">
+        Discover Secrets →
+      </button>
+      <div id="secretsStatus" class="dna-status" style="display:none"></div>
+      <div id="secretsCards"></div>
+    </div>
+  </div>
+
+  <!-- ─── 4 + 5. NICHE DEFINITION + AUDIENCE ────── -->
+  <div class="section-spacer">
     <div class="dna-twin">
-      <!-- Panel 2: Niche Definition -->
+      <!-- YOUR ACTUAL NICHE -->
       <div class="dna-panel">
         <div class="dna-panel-header">
           <div class="dna-panel-title">YOUR ACTUAL NICHE</div>
@@ -560,7 +436,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         </div>
       </div>
 
-      <!-- Panel 3: Audience Profile -->
+      <!-- AUDIENCE PROFILE -->
       <div class="dna-panel" id="audiencePanel" style="display:none">
         <div class="dna-panel-header">
           <div class="dna-panel-title">AUDIENCE PROFILE</div>
@@ -572,13 +448,68 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
     </div>
   </div>
 
-  <!-- ─── SECTION 4: YOUTUBE SYNC ─────────────── -->
+  <!-- ─── 6. THUMBNAIL A/B TESTER ──────────────── -->
+  <div class="section-spacer ab-wrap">
+    <div class="section-header">
+      <div class="section-title">THUMBNAIL A/B TESTER</div>
+      <div class="section-sub">Upload two thumbnails — Claude scores both and picks a winner</div>
+    </div>
+
+    <div class="ab-upload-grid">
+      <div>
+        <div class="ab-label-row">
+          <div class="ab-thumb-label">THUMBNAIL A</div>
+          <div class="ab-thumb-name" id="abNameA">No file chosen</div>
+        </div>
+        <div class="ab-zone" id="abZoneA" onclick="document.getElementById('abFileA').click()"
+             ondragover="abDragOver(event,'abZoneA')" ondragleave="abDragLeave('abZoneA')" ondrop="abDrop(event,'A')">
+          <div class="ab-zone-icon">🖼</div>
+          <div class="ab-zone-label">THUMBNAIL A</div>
+          <div class="ab-zone-hint">Click or drag &amp; drop · 16:9</div>
+          <div class="ab-overlay"><div class="ab-overlay-text">↺ Replace</div></div>
+        </div>
+        <input type="file" class="ab-file-input" id="abFileA" accept="image/*" onchange="abFileChosen(event,'A')">
+      </div>
+      <div>
+        <div class="ab-label-row">
+          <div class="ab-thumb-label">THUMBNAIL B</div>
+          <div class="ab-thumb-name" id="abNameB">No file chosen</div>
+        </div>
+        <div class="ab-zone" id="abZoneB" onclick="document.getElementById('abFileB').click()"
+             ondragover="abDragOver(event,'abZoneB')" ondragleave="abDragLeave('abZoneB')" ondrop="abDrop(event,'B')">
+          <div class="ab-zone-icon">🖼</div>
+          <div class="ab-zone-label">THUMBNAIL B</div>
+          <div class="ab-zone-hint">Click or drag &amp; drop · 16:9</div>
+          <div class="ab-overlay"><div class="ab-overlay-text">↺ Replace</div></div>
+        </div>
+        <input type="file" class="ab-file-input" id="abFileB" accept="image/*" onchange="abFileChosen(event,'B')">
+      </div>
+    </div>
+
+    <div class="ab-options">
+      <input class="ab-context-input" id="abContext" type="text"
+        placeholder="Optional: add context (e.g. 'this is for a video about building a root cellar')" />
+    </div>
+
+    <button class="ab-analyze-btn" id="abAnalyzeBtn" onclick="runAbTest()" disabled>
+      <div class="ab-spinner"></div>
+      <span class="ab-btn-text">Analyze Thumbnails →</span>
+    </button>
+    <div class="ab-status" id="abStatus"></div>
+    <div class="ab-error" id="abError"></div>
+
+    <div class="ab-results" id="abResults">
+      <div class="ab-score-grid" id="abScoreGrid"></div>
+      <div class="ab-verdict" id="abVerdict"></div>
+    </div>
+  </div>
+
+  <!-- ─── 7. YOUTUBE SYNC ───────────────────────── -->
   <div class="section-spacer" id="youtube-sync">
     <div class="section-header">
       <div class="section-title">YOUTUBE SYNC</div>
       <div class="section-sub">Pulls views, likes, and comments from YouTube Data API v3</div>
     </div>
-
     <div class="sync-wrap">
       <div class="sync-row">
         <button class="sync-btn" id="syncBtn" onclick="syncYouTube()">
@@ -593,6 +524,91 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       </div>
       <div class="sync-log" id="syncLog"></div>
       <div class="sync-log" id="importLog" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- YouTube Link (moved here — lives with sync) -->
+    <div style="margin-top:24px;">
+      <div class="section-header" style="margin-bottom:14px;">
+        <div class="section-title" style="font-size:16px;">YOUTUBE LINK</div>
+        <div class="section-sub">Paste a YouTube URL or video ID to link each project</div>
+      </div>
+      <div class="yt-link-wrap">
+        <div id="ytLinkRows">
+          <div style="padding:20px;color:var(--text-dimmer);font-size:13px;">Loading projects…</div>
+        </div>
+        <div class="yt-link-all">
+          <button class="yt-link-all-btn" id="linkAllBtn" onclick="linkAllAndSync()">▶ Link All &amp; Sync</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── 8. PATTERN ANALYSIS ───────────────────── -->
+  <div class="section-spacer coaching-wrap">
+    <div class="section-header">
+      <div class="section-title">PATTERN ANALYSIS</div>
+      <div class="section-sub">Claude reads your last 10 videos and coaches you</div>
+    </div>
+    <button class="coach-btn" id="coachBtn" onclick="generateCoaching()">
+      <div class="coach-spinner"></div>
+      <span class="coach-btn-text">Generate Coaching Report</span>
+    </button>
+    <div class="coach-status" id="coachStatus"></div>
+    <div class="coach-error" id="coachError"></div>
+    <div class="performance-card" id="performanceCard">
+      <div class="performance-header">
+        <span>🎬</span>
+        <div class="performance-header-title">ON-CAMERA PERFORMANCE</div>
+      </div>
+      <div class="performance-body" id="performanceBody"></div>
+    </div>
+    <div class="coaching-card" id="coachingCard">
+      <div class="coaching-header">
+        <div class="coaching-header-title">COACHING REPORT</div>
+        <div class="coaching-header-date" id="coachDate"></div>
+      </div>
+      <div class="coaching-body">
+        <div class="coach-section">
+          <div class="coach-section-label"><span class="dot"></span> WHAT'S WORKING</div>
+          <ul class="coach-list" id="coachWorking"></ul>
+        </div>
+        <div class="coach-section">
+          <div class="coach-section-label"><span class="dot amber"></span> AREAS TO IMPROVE</div>
+          <ul class="coach-list improve" id="coachImprove"></ul>
+        </div>
+        <div class="coach-section">
+          <div class="coach-section-label"><span class="dot red"></span> #1 FOCUS THIS WEEK</div>
+          <div class="focus-box" id="coachFocus"></div>
+        </div>
+        <div class="coach-section">
+          <div class="coach-section-label"><span class="dot"></span> TRENDING TOPICS IN YOUR COMMENTS</div>
+          <div class="topic-tags" id="coachTopics"></div>
+        </div>
+        <div class="coach-section">
+          <div class="coaching-note" id="coachNote"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── 9. YOUR VIDEOS (collapsed by default) ─── -->
+  <div class="section-spacer" id="videos-section">
+    <div class="videos-toggle-header" onclick="toggleVideos()">
+      <div class="section-header" style="margin-bottom:0;flex:1;">
+        <div class="section-title">YOUR VIDEOS</div>
+        <div class="section-sub">Green = above avg · Amber = at avg · Red = below avg · Click to expand</div>
+      </div>
+      <span id="videosToggleArrow" class="videos-toggle-arrow">▼ Show All Videos</span>
+    </div>
+    <div id="videosContent" style="display:none;">
+      <div class="hint-bar" style="margin-top:14px;">
+        💡 No YouTube data yet? <a href="#youtube-sync">Sync YouTube</a> above, or log stats manually via
+        <a href="/m2-package-generator.html">PackageΩr</a>.
+      </div>
+      <div class="video-list" id="videoList"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <button id="videosShowMore" class="videos-show-more-btn" style="display:none" onclick="loadMoreVideos()">Show More ▼</button>
+      </div>
     </div>
   </div>
 
@@ -684,14 +700,28 @@ async function loadChannelHealth() {
   }
 }
 
-// ─── Section 2: Video List ────────────────────────────────────────────────────
+// ─── Section 9: Video List (collapsible, lazy loaded) ────────────────────────
+let _allVideos    = [];
+let _videosShowing = 10;
+let _videosLoaded  = false;
+
+function toggleVideos() {
+  const content = document.getElementById('videosContent');
+  const arrow   = document.getElementById('videosToggleArrow');
+  const isOpen  = content.style.display !== 'none';
+  content.style.display = isOpen ? 'none' : 'block';
+  arrow.textContent = isOpen ? '▼ Show All Videos' : '▲ Hide Videos';
+  if (!isOpen && !_videosLoaded) { _videosLoaded = true; loadVideos(); }
+}
+
 async function loadVideos() {
   const list = document.getElementById('videoList');
+  list.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">LOADING...</div></div>';
   try {
-    const res    = await fetch('/api/analytr/videos?limit=10');
-    const videos = await res.json();
+    const res   = await fetch('/api/analytr/videos?limit=50');
+    _allVideos  = await res.json();
 
-    if (!videos.length) {
+    if (!_allVideos.length) {
       list.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">📹</div>
@@ -701,69 +731,65 @@ async function loadVideos() {
       return;
     }
 
-    // Recalculate avg from this set if global avg is 0
-    const avg = globalAvgViews || (() => {
-      const withViews = videos.filter(v => v.total_views > 0);
-      if (!withViews.length) return 0;
-      return withViews.reduce((s, v) => s + v.total_views, 0) / withViews.length;
-    })();
-
-    list.innerHTML = videos.map((v, i) => {
-      const views = v.total_views;
-      const cls   = colorClass(views, avg);
-      const platforms = v.platforms
-        ? v.platforms.split(',').map(p => `<span class="platform-tag">${platformEmoji(p)} ${p}</span>`).join('')
-        : '<span class="platform-tag">—</span>';
-
-      const crVal = v.avg_completion_rate != null
-        ? Math.round(v.avg_completion_rate * 100) + '%'
-        : '—';
-
-      const allMetrics = buildDetailMetrics(v);
-
-      const thumb = v.thumbnail_url
-        ? `<img src="${v.thumbnail_url}" alt="" loading="lazy">`
-        : `<div class="no-thumb">📹</div>`;
-
-      return `
-        <div class="video-row" id="vrow-${i}" onclick="toggleRow(${i})">
-          <div class="video-summary">
-            <div class="vcol-thumbnail">${thumb}</div>
-            <div class="video-title-block">
-              <div class="video-title">${v.title || 'Untitled'}</div>
-              <div class="video-meta">
-                ${platforms}
-                ${v.last_posted_at ? `<span>${fmtDate(v.last_posted_at)}</span>` : ''}
-                ${v.topic ? `<span style="color:var(--text-dimmer)">${v.topic}</span>` : ''}
-              </div>
-            </div>
-            <div class="vcol vcol-views">
-              <div class="vcol-label">Views</div>
-              <div class="vcol-val ${cls}">${views ? fmtNum(views) : '<span class="none">—</span>'}</div>
-            </div>
-            <div class="vcol vcol-cr">
-              <div class="vcol-label">Completion</div>
-              <div class="vcol-val ${crVal !== '—' ? cls : 'none'}">${crVal}</div>
-            </div>
-            <div class="vcol vcol-comments">
-              <div class="vcol-label">Comments</div>
-              <div class="vcol-val none">${v.total_comments ? fmtNum(v.total_comments) : '—'}</div>
-            </div>
-            <div class="expand-arrow">▼</div>
-          </div>
-          <div class="video-detail">
-            <div class="detail-grid">${allMetrics}</div>
-            <div class="detail-actions">
-              <a href="/pipr.html?project_id=${v.id}" class="detail-link">📋 PipΩr Beat Map</a>
-              <a href="/writr.html?project_id=${v.id}" class="detail-link">✍ WritΩr Script</a>
-              ${v.youtube_video_id ? `<a href="https://www.youtube.com/watch?v=${v.youtube_video_id}" target="_blank" class="detail-link">▶ Watch on YouTube</a>` : ''}
-            </div>
-          </div>
-        </div>`;
-    }).join('');
+    _videosShowing = 10;
+    renderVideoRows();
 
   } catch (err) {
     list.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠</div><div class="empty-title">LOAD ERROR</div><div class="empty-desc">${err.message}</div></div>`;
+  }
+}
+
+function loadMoreVideos() {
+  _videosShowing = _allVideos.length;
+  renderVideoRows();
+  document.getElementById('videosShowMore').style.display = 'none';
+}
+
+function renderVideoRows() {
+  const list    = document.getElementById('videoList');
+  const videos  = _allVideos.slice(0, _videosShowing);
+  const showBtn = document.getElementById('videosShowMore');
+
+  // Recalculate avg from full set if global avg is 0
+  const avg = globalAvgViews || (() => {
+    const wv = _allVideos.filter(v => v.total_views > 0);
+    if (!wv.length) return 0;
+    return wv.reduce((s, v) => s + v.total_views, 0) / wv.length;
+  })();
+
+  list.innerHTML = videos.map(function(v, i) {
+    const views    = v.total_views;
+    const cls      = colorClass(views, avg);
+    const platforms = v.platforms
+      ? v.platforms.split(',').map(function(p) { return '<span class="platform-tag">' + platformEmoji(p) + ' ' + p + '</span>'; }).join('')
+      : '<span class="platform-tag">—</span>';
+    const crVal    = v.avg_completion_rate != null ? Math.round(v.avg_completion_rate * 100) + '%' : '—';
+    const thumb    = v.thumbnail_url ? '<img src="' + v.thumbnail_url + '" alt="" loading="lazy">' : '<div class="no-thumb">📹</div>';
+    const ytLink   = v.youtube_video_id ? '<a href="https://www.youtube.com/watch?v=' + v.youtube_video_id + '" target="_blank" class="detail-link">▶ Watch on YouTube</a>' : '';
+    return '<div class="video-row" id="vrow-' + i + '" onclick="toggleRow(' + i + ')">'
+      + '<div class="video-summary">'
+      + '<div class="vcol-thumbnail">' + thumb + '</div>'
+      + '<div class="video-title-block">'
+      + '<div class="video-title">' + (v.title || 'Untitled') + '</div>'
+      + '<div class="video-meta">' + platforms
+      + (v.last_posted_at ? '<span>' + fmtDate(v.last_posted_at) + '</span>' : '')
+      + '</div></div>'
+      + '<div class="vcol vcol-views"><div class="vcol-label">Views</div><div class="vcol-val ' + cls + '">' + (views ? fmtNum(views) : '<span class="none">—</span>') + '</div></div>'
+      + '<div class="vcol vcol-cr"><div class="vcol-label">Completion</div><div class="vcol-val ' + (crVal !== '—' ? cls : 'none') + '">' + crVal + '</div></div>'
+      + '<div class="vcol vcol-comments"><div class="vcol-label">Comments</div><div class="vcol-val none">' + (v.total_comments ? fmtNum(v.total_comments) : '—') + '</div></div>'
+      + '<div class="expand-arrow">▼</div>'
+      + '</div>'
+      + '<div class="video-detail"><div class="detail-grid">' + buildDetailMetrics(v) + '</div>'
+      + '<div class="detail-actions">'
+      + '<a href="/pipr.html?project_id=' + v.id + '" class="detail-link">📋 PipΩr Beat Map</a>'
+      + '<a href="/writr.html?project_id=' + v.id + '" class="detail-link">✍ WritΩr Script</a>'
+      + ytLink + '</div></div></div>';
+  }).join('');
+
+  if (showBtn) {
+    const remaining = _allVideos.length - _videosShowing;
+    showBtn.style.display = remaining > 0 ? 'inline-block' : 'none';
+    if (remaining > 0) showBtn.textContent = 'Show More (' + remaining + ' more) ▼';
   }
 }
 
@@ -1287,10 +1313,10 @@ function renderAbResults(data) {
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
+// Videos section is collapsed by default — loaded lazily on first expand.
 (async () => {
   await loadChannelHealth();
   await loadYtLinkRows();
-  await loadVideos();
   loadConstellationGraph(false);
 })();
 
@@ -1385,32 +1411,64 @@ function constellationZoomFit() {
 }
 
 function renderConstellation(data) {
-  const nodes   = data.nodes;
-  const svgEl   = document.getElementById('constellationSvg');
-  const W       = svgEl.clientWidth || 960;
-  const H       = 600;
+  const nodes = data.nodes;
+  const svgEl = document.getElementById('constellationSvg');
+  const W     = svgEl.clientWidth || 960;
+  const H     = 600;
 
-  // Build intra-cluster links
+  // ── Intra-cluster chain links (solid, cluster color) ──────────────────────
   const clusterGroups = {};
   nodes.forEach(function(n) {
     if (!clusterGroups[n.cluster_id]) clusterGroups[n.cluster_id] = [];
     clusterGroups[n.cluster_id].push(n);
   });
-  const links = [];
+  const intraLinks = [];
   Object.values(clusterGroups).forEach(function(group) {
     for (let i = 0; i < group.length - 1; i++) {
-      links.push({ source: group[i].id, target: group[i + 1].id });
+      intraLinks.push({ source: group[i].id, target: group[i + 1].id });
     }
+  });
+
+  // ── Cross-cluster semantic links from data.edges (title → id lookup) ──────
+  const nodeById    = {};
+  const nodeByTitle = {};
+  nodes.forEach(function(n) {
+    nodeById[n.id] = n;
+    nodeByTitle[n.title.toLowerCase().trim()] = n;
+  });
+  const crossLinks = (data.edges || []).map(function(e) {
+    const src = nodeByTitle[(e.source || '').toLowerCase().trim()];
+    const tgt = nodeByTitle[(e.target || '').toLowerCase().trim()];
+    if (!src || !tgt || src.id === tgt.id) return null;
+    return { source: src.id, target: tgt.id, reason: e.reason || '' };
+  }).filter(Boolean);
+
+  // ── Cluster centroid positions (grid layout, relative to canvas center) ───
+  const clusterList = data.clusters || [];
+  const clusterCentroids = {};
+  clusterList.forEach(function(c, i) {
+    clusterCentroids[c.id] = {
+      x: W / 2 + (i % 3) * 400 - 400,
+      y: H / 2 + Math.floor(i / 3) * 400 - 400,
+    };
   });
 
   const maxViews = Math.max.apply(null, nodes.map(function(n) { return n.views; }).concat([1]));
   function nodeR(n) { return 8 + Math.sqrt(n.views / maxViews) * 26; }
 
-  // Force simulation — no viewport clamping, nodes spread freely
+  // ── Force simulation: cluster gravity + weak charge + collision ───────────
   const sim = d3.forceSimulation(nodes)
-    .force('link',   d3.forceLink(links).id(function(n) { return n.id; }).distance(120).strength(0.5))
-    .force('charge', d3.forceManyBody().strength(-300))
-    .force('center', d3.forceCenter(W / 2, H / 2));
+    .force('cluster', function(alpha) {
+      nodes.forEach(function(d) {
+        const c = clusterCentroids[d.cluster_id];
+        if (!c) return;
+        d.vx -= (d.x - c.x) * alpha * 0.15;
+        d.vy -= (d.y - c.y) * alpha * 0.15;
+      });
+    })
+    .force('charge',    d3.forceManyBody().strength(-80))
+    .force('collision', d3.forceCollide().radius(function(n) { return nodeR(n) + 3; }))
+    .force('center',    d3.forceCenter(W / 2, H / 2));
   _constellationSim = sim;
 
   // ── Build SVG ──────────────────────────────────────────────────────────────
@@ -1418,36 +1476,40 @@ function renderConstellation(data) {
   svgSel.selectAll('*').remove();
   _constellationSvgSel = svgSel;
 
-  // Single zoom layer — everything lives inside this <g>
   const zoomG = svgSel.append('g').attr('class', 'zoom-layer');
 
-  // Links
-  const link = zoomG.append('g').attr('class', 'links')
-    .selectAll('line').data(links).enter().append('line')
+  // Intra-cluster links — solid, cluster color, opacity 0.3
+  const intraLink = zoomG.append('g').attr('class', 'intra-links')
+    .selectAll('line').data(intraLinks).enter().append('line')
       .attr('stroke', function(d) {
-        const srcId   = typeof d.source === 'object' ? d.source.id : d.source;
-        const srcNode = nodes.find(function(n) { return n.id === srcId; });
-        return srcNode ? (CLUSTER_COLORS[srcNode.cluster_color] || '#3ecfb2') : '#2a2e28';
+        const srcId = typeof d.source === 'object' ? d.source.id : d.source;
+        const n     = nodeById[srcId];
+        return n ? (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') : '#2a2e28';
       })
-      .attr('stroke-opacity', 0.25)
-      .attr('stroke-width', 1);
+      .attr('stroke-opacity', 0.3)
+      .attr('stroke-width',   1);
 
-  // Cluster centroid labels (shown at low zoom)
-  const clusterLabelG = zoomG.append('g').attr('class', 'cluster-labels');
+  // Cross-cluster links — dashed teal, opacity 0.5, slightly thicker
+  const crossLink = zoomG.append('g').attr('class', 'cross-links')
+    .selectAll('line').data(crossLinks).enter().append('line')
+      .attr('stroke',          '#3ecfb2')
+      .attr('stroke-opacity',  0.5)
+      .attr('stroke-width',    1.5)
+      .attr('stroke-dasharray','5,3');
+
+  // Cluster centroid labels
   const clusterLabelData = Object.keys(clusterGroups).map(function(cid) {
-    const group   = clusterGroups[cid];
-    const sample  = group[0];
-    return { id: cid, name: sample.cluster_name, color: sample.cluster_color, group: group };
+    const group  = clusterGroups[cid];
+    return { id: Number(cid), name: group[0].cluster_name, color: group[0].cluster_color, group: group };
   });
-  const clusterLabels = clusterLabelG.selectAll('text')
-    .data(clusterLabelData).enter().append('text')
-      .attr('class', 'cluster-label')
-      .attr('text-anchor', 'middle')
-      .attr('dominant-baseline', 'central')
-      .attr('fill', function(d) { return CLUSTER_COLORS[d.color] || '#3ecfb2'; })
+  const clusterLabels = zoomG.append('g').attr('class', 'cluster-labels')
+    .selectAll('text').data(clusterLabelData).enter().append('text')
+      .attr('class',            'cluster-label')
+      .attr('text-anchor',      'middle')
+      .attr('dominant-baseline','central')
+      .attr('fill',             function(d) { return CLUSTER_COLORS[d.color] || '#3ecfb2'; })
       .text(function(d) { return d.name.toUpperCase(); });
 
-  // Tooltip
   const tooltip = document.getElementById('graphTooltip');
 
   // Nodes
@@ -1459,65 +1521,59 @@ function renderConstellation(data) {
           if (!event.active) sim.alphaTarget(0.3).restart();
           d.fx = d.x; d.fy = d.y;
         })
-        .on('drag', function(event, d) { d.fx = event.x; d.fy = event.y; })
-        .on('end', function(event, d) {
+        .on('drag',  function(event, d) { d.fx = event.x; d.fy = event.y; })
+        .on('end',   function(event, d) {
           if (!event.active) sim.alphaTarget(0);
           d.fx = null; d.fy = null;
         })
       )
       .on('mouseover', function(event, d) {
-        const svgPos = svgEl.getBoundingClientRect();
+        const r = svgEl.getBoundingClientRect();
         tooltip.style.display = 'block';
-        tooltip.style.left    = (event.clientX - svgPos.left + 14) + 'px';
-        tooltip.style.top     = (event.clientY - svgPos.top  + 14) + 'px';
+        tooltip.style.left    = (event.clientX - r.left + 14) + 'px';
+        tooltip.style.top     = (event.clientY - r.top  + 14) + 'px';
         const clr = CLUSTER_COLORS[d.cluster_color] || '#3ecfb2';
-        const titleTxt = _currentZoomK >= 1.5 ? d.title
-          : (_currentZoomK >= 0.5 ? d.title.split(' ').slice(0, 6).join(' ') + '…' : d.title.split(' ').slice(0, 3).join(' ') + '…');
         tooltip.innerHTML = '<strong>' + d.title + '</strong>'
           + '<div class="tt-stat">👁 ' + Number(d.views).toLocaleString() + ' views</div>'
           + '<div class="tt-stat">👍 ' + Number(d.likes).toLocaleString() + ' likes</div>'
           + '<div class="tt-stat" style="color:' + clr + ';margin-top:4px;font-weight:700;">✶ ' + d.cluster_name + '</div>';
       })
       .on('mousemove', function(event) {
-        const svgPos = svgEl.getBoundingClientRect();
-        tooltip.style.left = (event.clientX - svgPos.left + 14) + 'px';
-        tooltip.style.top  = (event.clientY - svgPos.top  + 14) + 'px';
+        const r = svgEl.getBoundingClientRect();
+        tooltip.style.left = (event.clientX - r.left + 14) + 'px';
+        tooltip.style.top  = (event.clientY - r.top  + 14) + 'px';
       })
       .on('mouseout', function() { tooltip.style.display = 'none'; })
-      .on('click', function(event, d) {
+      .on('click',    function(event, d) {
         if (d.youtube_url) window.open(d.youtube_url, '_blank');
       });
 
   nodeG.append('circle')
-    .attr('r',           function(n) { return nodeR(n); })
-    .attr('fill',        function(n) { return (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') + '33'; })
-    .attr('stroke',      function(n) { return CLUSTER_COLORS[n.cluster_color] || '#3ecfb2'; })
+    .attr('r',            function(n) { return nodeR(n); })
+    .attr('fill',         function(n) { return (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') + '33'; })
+    .attr('stroke',       function(n) { return CLUSTER_COLORS[n.cluster_color] || '#3ecfb2'; })
     .attr('stroke-width', 1.5);
 
-  // Node text labels — visibility driven by zoom
   const nodeText = nodeG.append('text')
-    .attr('text-anchor',      'middle')
-    .attr('dominant-baseline','central')
-    .attr('fill',             '#e8ebe6')
-    .attr('font-size',        function(n) { return Math.max(8, Math.min(11, nodeR(n) * 0.45)) + 'px'; })
-    .attr('font-family',      'DM Sans, sans-serif')
-    .attr('pointer-events',   'none')
-    .attr('opacity', 0)  // start hidden; zoom handler reveals them
+    .attr('text-anchor',       'middle')
+    .attr('dominant-baseline', 'central')
+    .attr('fill',              '#e8ebe6')
+    .attr('font-size',         function(n) { return Math.max(8, Math.min(11, nodeR(n) * 0.45)) + 'px'; })
+    .attr('font-family',       'DM Sans, sans-serif')
+    .attr('pointer-events',    'none')
+    .attr('opacity',           0)
     .text(function(n) { return n.title.split(' ').slice(0, 4).join(' '); });
 
-  // ── Zoom behaviour ─────────────────────────────────────────────────────────
+  // ── Zoom behaviour (unchanged) ─────────────────────────────────────────────
   function applyZoomVisuals(k) {
     _currentZoomK = k;
     if (k < 0.5) {
-      // Galaxy: cluster labels large, nodes as dots, no node labels
       clusterLabels.attr('font-size', Math.round(18 / k) + 'px').attr('opacity', 1);
       nodeText.attr('opacity', 0);
     } else if (k <= 1.5) {
-      // Mid: cluster labels small, node labels on hover only (opacity 0 — tooltip handles it)
       clusterLabels.attr('font-size', Math.round(13 / k) + 'px').attr('opacity', 0.6);
       nodeText.attr('opacity', 0);
     } else {
-      // Detail: no cluster labels, all node labels visible
       clusterLabels.attr('opacity', 0);
       nodeText.attr('opacity', 1);
     }
@@ -1532,38 +1588,41 @@ function renderConstellation(data) {
   _constellationZoom = zoom;
   svgSel.call(zoom);
 
-  // ── Tick: update positions, cluster centroids ──────────────────────────────
+  // ── Tick ───────────────────────────────────────────────────────────────────
   sim.on('tick', function() {
-    link
+    intraLink
       .attr('x1', function(d) { return d.source.x; })
       .attr('y1', function(d) { return d.source.y; })
       .attr('x2', function(d) { return d.target.x; })
       .attr('y2', function(d) { return d.target.y; });
 
+    crossLink
+      .attr('x1', function(d) { return nodeById[d.source]?.x || 0; })
+      .attr('y1', function(d) { return nodeById[d.source]?.y || 0; })
+      .attr('x2', function(d) { return nodeById[d.target]?.x || 0; })
+      .attr('y2', function(d) { return nodeById[d.target]?.y || 0; });
+
     nodeG.attr('transform', function(d) {
       return 'translate(' + d.x + ',' + d.y + ')';
     });
 
-    // Recompute cluster centroids each tick
-    clusterLabels.attr('x', function(d) {
-      const xs = d.group.map(function(n) { return n.x || 0; });
-      return xs.reduce(function(a, b) { return a + b; }, 0) / xs.length;
-    }).attr('y', function(d) {
-      const ys = d.group.map(function(n) { return n.y || 0; });
-      return ys.reduce(function(a, b) { return a + b; }, 0) / ys.length;
-    });
+    clusterLabels
+      .attr('x', function(d) {
+        const xs = d.group.map(function(n) { return n.x || 0; });
+        return xs.reduce(function(a, b) { return a + b; }, 0) / xs.length;
+      })
+      .attr('y', function(d) {
+        const ys = d.group.map(function(n) { return n.y || 0; });
+        return ys.reduce(function(a, b) { return a + b; }, 0) / ys.length;
+      });
   });
 
-  // ── Initial state: galaxy view → animate to mid after 2s ──────────────────
-  const initK  = 0.15;
-  const initT  = d3.zoomIdentity.translate(W / 2 - initK * W / 2, H / 2 - initK * H / 2).scale(initK);
+  // ── Initial state: galaxy → mid after 2s ──────────────────────────────────
+  const initK = 0.15;
+  const initT = d3.zoomIdentity.translate(W / 2 - initK * W / 2, H / 2 - initK * H / 2).scale(initK);
   svgSel.call(zoom.transform, initT);
   applyZoomVisuals(initK);
-
-  // Wait for sim to cool a bit, then zoom to mid view
-  setTimeout(function() {
-    constellationZoomTo(0.5, undefined, undefined, 900);
-  }, 2000);
+  setTimeout(function() { constellationZoomTo(0.5, undefined, undefined, 900); }, 2000);
 }
 
 function renderLegend(clusters) {
@@ -1573,6 +1632,81 @@ function renderLegend(clusters) {
     return '<div class="dna-legend-item">'
       + '<div class="dna-legend-dot" style="background:' + hex + '"></div>'
       + '<span>' + c.name + '</span></div>';
+  }).join('');
+}
+
+// ─── Secrets of Your Content Universe ────────────────────────────────────────
+
+async function generateSecrets() {
+  const btn    = document.getElementById('secretsBtn');
+  const status = document.getElementById('secretsStatus');
+  const cards  = document.getElementById('secretsCards');
+
+  btn.disabled    = true;
+  btn.textContent = 'Discovering...';
+  status.style.display   = 'block';
+  status.style.color     = '';
+  status.textContent     = 'Sending your content universe to Claude...';
+  cards.innerHTML        = '';
+
+  try {
+    const r = await fetch('/api/analytr/content-secrets', { method: 'POST' });
+    if (!r.ok || !r.body) throw new Error('Request failed ' + r.status);
+
+    const reader  = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.startsWith('data: ')) continue;
+        let evt;
+        try { evt = JSON.parse(line.slice(6)); } catch(e) { continue; }
+        if (evt.type === 'status') {
+          status.textContent = evt.message;
+        } else if (evt.type === 'result') {
+          status.style.display = 'none';
+          renderSecrets(evt.data);
+        } else if (evt.type === 'error') {
+          status.textContent = '\u26a0 ' + evt.message;
+          status.style.color = 'var(--red)';
+        }
+      }
+    }
+  } catch (err) {
+    status.textContent = '\u26a0 ' + err.message;
+    status.style.color = 'var(--red)';
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Discover Secrets \u2192';
+  }
+}
+
+function renderSecrets(insights) {
+  const cards    = document.getElementById('secretsCards');
+  const colors   = { pattern: 'teal', gap: 'amber', opportunity: 'green', warning: 'red' };
+  const icons    = { pattern: '\uD83D\uDD2E', gap: '\uD83D\uDD73', opportunity: '\u26A1', warning: '\u26A0' };
+  const cssClass = { pattern: '', gap: 'secrets-gap', opportunity: 'secrets-opportunity', warning: 'secrets-warning' };
+
+  cards.innerHTML = (insights || []).map(function(ins) {
+    const type = ins.type || 'pattern';
+    const icon = icons[type] || '\u2736';
+    const cls  = cssClass[type] || '';
+    return '<div class="secrets-card ' + cls + '">'
+      + '<div class="secrets-card-header">'
+      + '<span class="secrets-icon">' + icon + '</span>'
+      + '<span class="secrets-title">' + (ins.title || '') + '</span>'
+      + '<span class="secrets-type-badge">' + type + '</span>'
+      + '</div>'
+      + '<div class="secrets-insight">' + (ins.insight || '') + '</div>'
+      + '<div class="secrets-implication">\u2192 ' + (ins.implication || '') + '</div>'
+      + '</div>';
   }).join('');
 }
 
