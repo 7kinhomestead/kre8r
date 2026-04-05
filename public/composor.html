@@ -869,6 +869,17 @@ function streamJob(jobId, barEl, logEl, onDone) {
       if (d.stage === 'track_saved' || d.stage === 'suno_downloaded') {
         loadTracks();
       }
+      if (d.stage === 'credits_exhausted') {
+        loadTracks();
+        const wrap = document.getElementById('tracksWrap') || document.querySelector('.tracks-wrap');
+        if (wrap && !document.getElementById('creditsBanner')) {
+          const banner = document.createElement('div');
+          banner.id = 'creditsBanner';
+          banner.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(240,185,66,0.12);border:1px solid rgba(240,185,66,0.35);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#f0b942;';
+          banner.innerHTML = '<span>\uD83D\uDCB3</span><span><strong>Credits exhausted</strong> \u2014 ' + (d.generated || 0) + ' track(s) generated. Remaining tracks marked for manual generation. Top up kie.ai then hit Reset to continue.</span>';
+          wrap.insertBefore(banner, wrap.firstChild);
+        }
+      }
     }
 
     if (msg.type === 'done') {

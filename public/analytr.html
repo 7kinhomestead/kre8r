@@ -1477,8 +1477,7 @@ async function generateContentDna() {
       const chunk = await reader.read();
       if (chunk.done) break;
       buffer += decoder.decode(chunk.value, { stream: true });
-      const lines = buffer.split('
-');
+      const lines = buffer.split('\n');
       buffer = lines.pop();
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];

@@ -149,9 +149,10 @@ async function submitGeneration(sunoPrompt) {
   const data = await response.json();
 
   if (data.code === 402 || data.code === 429) {
-    console.error(`[suno-client] ✗ ${provider.name} — no credits / rate limited (${data.code})`);
-    const err = new Error(`${provider.name} credits exhausted`);
-    err.noCredits = true;
+    // Throw silently — caller logs once and stamps DB; no repeated noise in pm2 logs
+    const err = new Error(`${provider.name} credits exhausted (code ${data.code})`);
+    err.noCredits   = true;
+    err.creditCode  = data.code;
     throw err;
   }
 
@@ -301,8 +302,9 @@ async function generateTrack({ sunoPrompt, projectId, sceneLabel, generationInde
 
   } catch (err) {
     if (err.noCredits) {
-      console.error(`[suno-client] ✗ No credits — returning prompt for manual generation`);
-      return { ok: false, reason: 'no_credits', suno_prompt: sunoPrompt, provider: provider?.name };
+      // Single-line, no stack — the composor route logs the summary once per queue
+      console.log(`[suno-client] no credits (${err.creditCode || '402'}) — returning prompt for manual generation`);
+      return { ok: false, reason: 'no_credits', creditCode: err.creditCode, suno_prompt: sunoPrompt, provider: provider?.name };
     }
     console.error(`[suno-client] ✗ generateTrack failed (${provider?.name}): ${err.message}`);
     return { ok: false, reason: 'api_error', error: err.message, provider: provider?.name };

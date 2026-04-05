@@ -192,8 +192,10 @@ router.post('/generate/:project_id', async (req, res) => {
       const sunoEnabled = isSunoConfigured();
       pushEvent(job, { stage: 'suno_start', enabled: sunoEnabled });
 
-      let generatedCount = 0;
-      let skippedCount   = 0;
+      let generatedCount      = 0;
+      let skippedCount        = 0;
+      let consecutiveNoCredits = 0;
+      const NO_CREDITS_BAIL   = 3; // abort queue after this many consecutive 402s
 
       for (const pt of promptResults) {
         if (!pt.suno_prompt) { skippedCount++; continue; }
@@ -226,6 +228,7 @@ router.post('/generate/:project_id', async (req, res) => {
         });
 
         if (result.ok) {
+          consecutiveNoCredits = 0; // reset on success
           db.updateComposorTrack(trackDbId, {
             suno_job_id:     result.suno_job_id,
             suno_track_url:  result.suno_track_url,
@@ -241,11 +244,14 @@ router.post('/generate/:project_id', async (req, res) => {
             public_path:      result.public_path
           });
         } else {
-          // Persist no_credits state to DB so the UI shows the manual prompt
-          // even after a page reload — suno_job_id sentinel 'NO_CREDITS' signals this.
+          // Stamp NO_CREDITS sentinel so UI shows manual-generation bar after reload
           if (result.reason === 'no_credits') {
             db.updateComposorTrack(trackDbId, { suno_job_id: 'NO_CREDITS' });
+            consecutiveNoCredits++;
+          } else {
+            consecutiveNoCredits = 0;
           }
+
           pushEvent(job, {
             stage:            'track_failed',
             scene_label:      pt.scene_label,
@@ -255,6 +261,30 @@ router.post('/generate/:project_id', async (req, res) => {
             suno_prompt:      result.suno_prompt || pt.suno_prompt || null,
           });
           skippedCount++;
+
+          // Bail out after 3 consecutive no_credits — stamp remaining tracks and stop
+          if (consecutiveNoCredits >= NO_CREDITS_BAIL) {
+            console.log(`[composor] ${NO_CREDITS_BAIL} consecutive 402s — pausing queue. Stamping remaining ${promptResults.length - generatedCount - skippedCount} tracks.`);
+
+            // Stamp all remaining un-stamped tracks as NO_CREDITS
+            for (const remaining of promptResults) {
+              const remId = trackIdMap[`${remaining.scene_index}_${remaining.generation_index}`];
+              if (remId && remId !== trackDbId) {
+                const track = db.getComposorTracksByProject(projectId).find(t => t.id === remId);
+                if (track && !track.suno_job_id) {
+                  db.updateComposorTrack(remId, { suno_job_id: 'NO_CREDITS' });
+                }
+              }
+            }
+
+            pushEvent(job, {
+              stage:             'credits_exhausted',
+              message:           'kie.ai account has no credits. All remaining tracks stamped for manual generation.',
+              generated:         generatedCount,
+              remaining:         promptResults.length - generatedCount - skippedCount,
+            });
+            break;
+          }
         }
       }
 
