@@ -290,13 +290,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 .dna-save-status.ok{color:var(--green);}
 .dna-save-status.err{color:var(--red);}
 /* ─── D3 CONSTELLATION ───────────────────────── */
-#constellationSvg{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:default;}
-.graph-tooltip{position:absolute;pointer-events:none;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--text);max-width:220px;line-height:1.5;display:none;z-index:100;}
+#constellationSvg{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:grab;user-select:none;}
+#constellationSvg:active{cursor:grabbing;}
+.graph-tooltip{position:absolute;pointer-events:none;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--text);max-width:240px;line-height:1.5;display:none;z-index:100;}
 .graph-tooltip strong{color:var(--teal);display:block;margin-bottom:4px;font-size:13px;line-height:1.3;}
 .graph-tooltip .tt-stat{color:var(--text-dim);font-size:11px;}
 .dna-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding:0 4px;}
 .dna-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);}
 .dna-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+/* zoom controls */
+.graph-zoom-controls{position:absolute;top:10px;right:12px;display:flex;gap:6px;z-index:10;}
+.graph-zoom-btn{background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:5px 10px;font-size:12px;cursor:pointer;line-height:1;transition:border-color .15s,color .15s;}
+.graph-zoom-btn:hover{border-color:var(--teal);color:var(--teal);}
+/* cluster centroid labels */
+.cluster-label{pointer-events:none;font-family:'DM Sans',sans-serif;font-weight:700;letter-spacing:.5px;text-transform:uppercase;fill:#e8ebe6;paint-order:stroke;stroke:#0d1110;stroke-width:3px;stroke-linejoin:round;}
 </style>
 </head>
 <body>
@@ -524,6 +531,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       <div id="constellationSvgWrap" style="display:none;position:relative;">
         <svg id="constellationSvg" width="100%" height="600" style="display:block;"></svg>
         <div id="graphTooltip" class="graph-tooltip"></div>
+        <div class="graph-zoom-controls">
+          <button class="graph-zoom-btn" title="Galaxy view — see all" onclick="constellationZoomGalaxy()">🔭</button>
+          <button class="graph-zoom-btn" title="Fit all nodes" onclick="constellationZoomFit()">⊡ Fit</button>
+          <button class="graph-zoom-btn" title="Reset zoom" onclick="constellationZoomReset()">⌖ Reset</button>
+          <button class="graph-zoom-btn" title="Zoom in" onclick="constellationZoomStep(1.4)">＋</button>
+          <button class="graph-zoom-btn" title="Zoom out" onclick="constellationZoomStep(1/1.4)">－</button>
+        </div>
       </div>
       <div id="constellationLegend" class="dna-legend"></div>
     </div>
@@ -1325,14 +1339,58 @@ async function loadConstellationGraph(forceRefresh) {
   }
 }
 
+// ─── Constellation zoom state (module-level so buttons can reach it) ───────
+let _constellationZoom   = null;   // d3.zoom behaviour
+let _constellationSvgSel = null;   // d3 selection of the SVG
+let _constellationSim    = null;   // force simulation ref
+let _currentZoomK        = 0.15;   // current zoom scale
+
+function constellationZoomTo(k, cx, cy, durationMs) {
+  if (!_constellationSvgSel || !_constellationZoom) return;
+  const svgEl = document.getElementById('constellationSvg');
+  const W = svgEl.clientWidth || 960;
+  const H = 600;
+  const tx = (cx !== undefined ? cx : W / 2);
+  const ty = (cy !== undefined ? cy : H / 2);
+  const t  = d3.zoomIdentity.translate(W / 2 - k * tx, H / 2 - k * ty).scale(k);
+  _constellationSvgSel
+    .transition().duration(durationMs || 600)
+    .call(_constellationZoom.transform, t);
+}
+
+function constellationZoomGalaxy() { constellationZoomTo(0.15, undefined, undefined, 600); }
+function constellationZoomReset()  { constellationZoomTo(1.0,  undefined, undefined, 600); }
+function constellationZoomStep(factor) {
+  if (!_constellationSvgSel || !_constellationZoom) return;
+  _constellationSvgSel.transition().duration(300)
+    .call(_constellationZoom.scaleBy, factor);
+}
+function constellationZoomFit() {
+  if (!_constellationSim) return;
+  const svgEl = document.getElementById('constellationSvg');
+  const W = svgEl.clientWidth || 960;
+  const H = 600;
+  const ns = _constellationSim.nodes();
+  if (!ns.length) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  ns.forEach(function(n) {
+    if (n.x < x0) x0 = n.x; if (n.y < y0) y0 = n.y;
+    if (n.x > x1) x1 = n.x; if (n.y > y1) y1 = n.y;
+  });
+  const pad = 40;
+  const k   = Math.min(0.9, (W - pad * 2) / (x1 - x0 + 1), (H - pad * 2) / (y1 - y0 + 1));
+  const cx  = (x0 + x1) / 2;
+  const cy  = (y0 + y1) / 2;
+  constellationZoomTo(k, cx, cy, 700);
+}
+
 function renderConstellation(data) {
   const nodes   = data.nodes;
   const svgEl   = document.getElementById('constellationSvg');
   const W       = svgEl.clientWidth || 960;
   const H       = 600;
-  svgEl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
 
-  // Build links: chain within each cluster
+  // Build intra-cluster links
   const clusterGroups = {};
   nodes.forEach(function(n) {
     if (!clusterGroups[n.cluster_id]) clusterGroups[n.cluster_id] = [];
@@ -1348,33 +1406,53 @@ function renderConstellation(data) {
   const maxViews = Math.max.apply(null, nodes.map(function(n) { return n.views; }).concat([1]));
   function nodeR(n) { return 8 + Math.sqrt(n.views / maxViews) * 26; }
 
+  // Force simulation — no viewport clamping, nodes spread freely
   const sim = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(links).id(function(n) { return n.id; }).distance(80).strength(0.6))
-    .force('charge', d3.forceManyBody().strength(-220))
-    .force('center', d3.forceCenter(W / 2, H / 2))
-    .force('collision', d3.forceCollide().radius(function(n) { return nodeR(n) + 8; }));
+    .force('link',   d3.forceLink(links).id(function(n) { return n.id; }).distance(120).strength(0.5))
+    .force('charge', d3.forceManyBody().strength(-300))
+    .force('center', d3.forceCenter(W / 2, H / 2));
+  _constellationSim = sim;
 
+  // ── Build SVG ──────────────────────────────────────────────────────────────
   const svgSel = d3.select(svgEl);
   svgSel.selectAll('*').remove();
+  _constellationSvgSel = svgSel;
 
-  const link = svgSel.append('g')
-    .selectAll('line')
-    .data(links)
-    .enter().append('line')
+  // Single zoom layer — everything lives inside this <g>
+  const zoomG = svgSel.append('g').attr('class', 'zoom-layer');
+
+  // Links
+  const link = zoomG.append('g').attr('class', 'links')
+    .selectAll('line').data(links).enter().append('line')
       .attr('stroke', function(d) {
-        const srcId  = typeof d.source === 'object' ? d.source.id : d.source;
+        const srcId   = typeof d.source === 'object' ? d.source.id : d.source;
         const srcNode = nodes.find(function(n) { return n.id === srcId; });
         return srcNode ? (CLUSTER_COLORS[srcNode.cluster_color] || '#3ecfb2') : '#2a2e28';
       })
-      .attr('stroke-opacity', 0.3)
-      .attr('stroke-width', 1.5);
+      .attr('stroke-opacity', 0.25)
+      .attr('stroke-width', 1);
 
+  // Cluster centroid labels (shown at low zoom)
+  const clusterLabelG = zoomG.append('g').attr('class', 'cluster-labels');
+  const clusterLabelData = Object.keys(clusterGroups).map(function(cid) {
+    const group   = clusterGroups[cid];
+    const sample  = group[0];
+    return { id: cid, name: sample.cluster_name, color: sample.cluster_color, group: group };
+  });
+  const clusterLabels = clusterLabelG.selectAll('text')
+    .data(clusterLabelData).enter().append('text')
+      .attr('class', 'cluster-label')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', function(d) { return CLUSTER_COLORS[d.color] || '#3ecfb2'; })
+      .text(function(d) { return d.name.toUpperCase(); });
+
+  // Tooltip
   const tooltip = document.getElementById('graphTooltip');
 
-  const nodeG = svgSel.append('g')
-    .selectAll('g')
-    .data(nodes)
-    .enter().append('g')
+  // Nodes
+  const nodeG = zoomG.append('g').attr('class', 'nodes')
+    .selectAll('g').data(nodes).enter().append('g')
       .attr('cursor', 'pointer')
       .call(d3.drag()
         .on('start', function(event, d) {
@@ -1390,9 +1468,11 @@ function renderConstellation(data) {
       .on('mouseover', function(event, d) {
         const svgPos = svgEl.getBoundingClientRect();
         tooltip.style.display = 'block';
-        tooltip.style.left = (event.clientX - svgPos.left + 14) + 'px';
-        tooltip.style.top  = (event.clientY - svgPos.top  + 14) + 'px';
+        tooltip.style.left    = (event.clientX - svgPos.left + 14) + 'px';
+        tooltip.style.top     = (event.clientY - svgPos.top  + 14) + 'px';
         const clr = CLUSTER_COLORS[d.cluster_color] || '#3ecfb2';
+        const titleTxt = _currentZoomK >= 1.5 ? d.title
+          : (_currentZoomK >= 0.5 ? d.title.split(' ').slice(0, 6).join(' ') + '…' : d.title.split(' ').slice(0, 3).join(' ') + '…');
         tooltip.innerHTML = '<strong>' + d.title + '</strong>'
           + '<div class="tt-stat">👁 ' + Number(d.views).toLocaleString() + ' views</div>'
           + '<div class="tt-stat">👍 ' + Number(d.likes).toLocaleString() + ' likes</div>'
@@ -1409,33 +1489,81 @@ function renderConstellation(data) {
       });
 
   nodeG.append('circle')
-    .attr('r', function(n) { return nodeR(n); })
-    .attr('fill', function(n) { return (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') + '33'; })
-    .attr('stroke', function(n) { return CLUSTER_COLORS[n.cluster_color] || '#3ecfb2'; })
+    .attr('r',           function(n) { return nodeR(n); })
+    .attr('fill',        function(n) { return (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') + '33'; })
+    .attr('stroke',      function(n) { return CLUSTER_COLORS[n.cluster_color] || '#3ecfb2'; })
     .attr('stroke-width', 1.5);
 
-  nodeG.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('dominant-baseline', 'central')
-    .attr('fill', '#e8ebe6')
-    .attr('font-size', function(n) { return Math.max(8, Math.min(11, nodeR(n) * 0.45)) + 'px'; })
-    .attr('font-family', 'DM Sans, sans-serif')
-    .attr('pointer-events', 'none')
+  // Node text labels — visibility driven by zoom
+  const nodeText = nodeG.append('text')
+    .attr('text-anchor',      'middle')
+    .attr('dominant-baseline','central')
+    .attr('fill',             '#e8ebe6')
+    .attr('font-size',        function(n) { return Math.max(8, Math.min(11, nodeR(n) * 0.45)) + 'px'; })
+    .attr('font-family',      'DM Sans, sans-serif')
+    .attr('pointer-events',   'none')
+    .attr('opacity', 0)  // start hidden; zoom handler reveals them
     .text(function(n) { return n.title.split(' ').slice(0, 4).join(' '); });
 
+  // ── Zoom behaviour ─────────────────────────────────────────────────────────
+  function applyZoomVisuals(k) {
+    _currentZoomK = k;
+    if (k < 0.5) {
+      // Galaxy: cluster labels large, nodes as dots, no node labels
+      clusterLabels.attr('font-size', Math.round(18 / k) + 'px').attr('opacity', 1);
+      nodeText.attr('opacity', 0);
+    } else if (k <= 1.5) {
+      // Mid: cluster labels small, node labels on hover only (opacity 0 — tooltip handles it)
+      clusterLabels.attr('font-size', Math.round(13 / k) + 'px').attr('opacity', 0.6);
+      nodeText.attr('opacity', 0);
+    } else {
+      // Detail: no cluster labels, all node labels visible
+      clusterLabels.attr('opacity', 0);
+      nodeText.attr('opacity', 1);
+    }
+  }
+
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', function(event) {
+      zoomG.attr('transform', event.transform);
+      applyZoomVisuals(event.transform.k);
+    });
+  _constellationZoom = zoom;
+  svgSel.call(zoom);
+
+  // ── Tick: update positions, cluster centroids ──────────────────────────────
   sim.on('tick', function() {
     link
       .attr('x1', function(d) { return d.source.x; })
       .attr('y1', function(d) { return d.source.y; })
       .attr('x2', function(d) { return d.target.x; })
       .attr('y2', function(d) { return d.target.y; });
+
     nodeG.attr('transform', function(d) {
-      const pad = nodeR(d) + 2;
-      d.x = Math.max(pad, Math.min(W - pad, d.x));
-      d.y = Math.max(pad, Math.min(H - pad, d.y));
       return 'translate(' + d.x + ',' + d.y + ')';
     });
+
+    // Recompute cluster centroids each tick
+    clusterLabels.attr('x', function(d) {
+      const xs = d.group.map(function(n) { return n.x || 0; });
+      return xs.reduce(function(a, b) { return a + b; }, 0) / xs.length;
+    }).attr('y', function(d) {
+      const ys = d.group.map(function(n) { return n.y || 0; });
+      return ys.reduce(function(a, b) { return a + b; }, 0) / ys.length;
+    });
   });
+
+  // ── Initial state: galaxy view → animate to mid after 2s ──────────────────
+  const initK  = 0.15;
+  const initT  = d3.zoomIdentity.translate(W / 2 - initK * W / 2, H / 2 - initK * H / 2).scale(initK);
+  svgSel.call(zoom.transform, initT);
+  applyZoomVisuals(initK);
+
+  // Wait for sim to cool a bit, then zoom to mid view
+  setTimeout(function() {
+    constellationZoomTo(0.5, undefined, undefined, 900);
+  }, 2000);
 }
 
 function renderLegend(clusters) {
