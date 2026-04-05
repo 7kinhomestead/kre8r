@@ -28,6 +28,7 @@
         id: 'pre',
         label: 'Pre',
         items: [
+          { label: 'Soul BuildΩr', href: '/soul-buildr.html', soul: true },
           { label: 'Id8Ωr',   href: '/id8r.html' },
           { label: 'PipΩr',   href: '/pipr.html' },
           { label: 'WritΩr',  href: '/writr.html' },
@@ -271,6 +272,12 @@
   flex-shrink: 0;
 }
 
+/* Soul badge — shown when no creator-profile.json yet */
+.kn-soul-badge {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
 /* Divider */
 .kn-divider {
   height: 1px;
@@ -422,7 +429,10 @@
         const soonHTML = item.soon
           ? `<span class="kn-soon-badge">Soon</span>`
           : '';
-        const rightHTML = sublabelHTML || soonHTML;
+        const soulHTML = item.soul
+          ? `<span class="kn-soul-badge" data-soul-badge>✨</span>`
+          : '';
+        const rightHTML = sublabelHTML || soonHTML || soulHTML;
 
         if (item.soon) {
           return `<span class="${classes}" tabindex="-1" aria-disabled="true">
@@ -461,6 +471,7 @@
         const classes = ['kn-mobile-item', active ? 'is-active' : '', item.soon ? 'is-soon' : ''].filter(Boolean).join(' ');
         const soonHTML = item.soon ? `<span class="kn-soon-badge">Soon</span>` : '';
         const sublabelHTML = item.sublabel ? `<span class="kn-item-sublabel">${item.sublabel}</span>` : '';
+        const soulHTML = item.soul ? `<span class="kn-soul-badge" data-soul-badge>✨</span>` : '';
 
         if (item.soon) {
           return `<span class="${classes}" aria-disabled="true">
@@ -470,7 +481,7 @@
         }
         return `<a href="${item.href}" class="${classes}">
           <span>${escHtml(item.label)}</span>
-          ${sublabelHTML}
+          ${sublabelHTML || soulHTML}
         </a>`;
       }).join('');
 
@@ -665,6 +676,15 @@
 
     container.innerHTML = buildNav();
     attachEvents(container);
+
+    // Hide ✨ soul badge if creator-profile.json already exists
+    fetch('/api/soul-buildr/status').then(function(r) { return r.json(); }).then(function(d) {
+      if (d.exists) {
+        document.querySelectorAll('[data-soul-badge]').forEach(function(el) {
+          el.style.display = 'none';
+        });
+      }
+    }).catch(function() {});
   };
 
 })();

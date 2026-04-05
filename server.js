@@ -63,6 +63,7 @@ app.use('/api/kajabi',       require('./src/routes/kajabi'));
 app.use('/api/id8r',         require('./src/routes/id8r'));
 app.use('/api/playwright',   require('./src/routes/playwright'));
 app.use('/api/analytr',      require('./src/routes/analytr'));
+app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

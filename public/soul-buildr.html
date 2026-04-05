@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soul BuildΩr — Kre8Ωr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+  --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
+  --amber:#f0b942; --red:#e05c5c; --green:#5cba8a; --purple:#a78bfa;
+  --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349; --text-faint:#2e3329;
+  --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+  --radius:10px; --radius-sm:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+@keyframes fadeUp   { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+@keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin     { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes slideInRight { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+@keyframes slideInLeft  { from{opacity:0;transform:translateX(-40px)} to{opacity:1;transform:translateX(0)} }
+
+/* ─── NAV ────────────────────────────────────────────────────────────────────── */
+#kre8r-nav { position:relative; z-index:200; }
+
+/* ─── WIZARD SHELL ───────────────────────────────────────────────────────────── */
+#wizardShell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── SCREEN 0 — MANIFESTO ───────────────────────────────────────────────────── */
+#screen0 {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+  animation: fadeIn 0.6s ease both;
+}
+#screen0.exiting { animation: fadeIn 0.4s ease reverse both; }
+
+.manifesto-eyebrow {
+  font-family: var(--font-head);
+  font-size: 11px;
+  letter-spacing: 5px;
+  color: var(--teal);
+  margin-bottom: 28px;
+  opacity: 0.8;
+}
+.manifesto-title {
+  font-family: var(--font-head);
+  font-size: clamp(42px, 10vw, 80px);
+  letter-spacing: 6px;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 32px;
+  max-width: 800px;
+}
+.manifesto-title em { font-style:normal; color:var(--teal); }
+.manifesto-body {
+  font-size: clamp(15px, 2.5vw, 18px);
+  color: var(--text-dim);
+  max-width: 560px;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.manifesto-sub {
+  font-size: 14px;
+  color: var(--text-dimmer);
+  max-width: 480px;
+  line-height: 1.6;
+  margin-bottom: 48px;
+}
+.manifesto-stars {
+  font-size: 22px;
+  letter-spacing: 8px;
+  color: var(--teal);
+  margin-bottom: 48px;
+  opacity: 0.6;
+}
+
+/* ─── WIZARD MAIN ────────────────────────────────────────────────────────────── */
+#wizardMain {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* Progress dots */
+.wizard-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 24px 0;
+}
+.wz-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  border: 1px solid var(--border);
+  transition: all 0.25s;
+  cursor: pointer;
+}
+.wz-dot.active  { background: var(--teal); border-color: var(--teal); transform: scale(1.3); }
+.wz-dot.done    { background: var(--teal-dim); border-color: var(--teal-dim); }
+
+/* Screen container */
+.wizard-screens {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.wz-screen {
+  display: none;
+  padding: 32px 24px 120px;
+  max-width: 680px;
+  margin: 0 auto;
+  animation: slideInRight 0.3s ease both;
+}
+.wz-screen.active    { display: block; }
+.wz-screen.slide-back { animation: slideInLeft 0.3s ease both; }
+
+.wz-screen-head {
+  margin-bottom: 32px;
+}
+.wz-screen-number {
+  font-family: var(--font-head);
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--teal);
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+.wz-screen-title {
+  font-family: var(--font-head);
+  font-size: clamp(34px, 7vw, 52px);
+  letter-spacing: 3px;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.wz-screen-title em { font-style:normal; color:var(--teal); }
+.wz-screen-sub {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+/* ─── FORM ELEMENTS ──────────────────────────────────────────────────────────── */
+.wz-field { margin-bottom: 20px; }
+.wz-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  margin-bottom: 7px;
+}
+.wz-label span { color: var(--teal); margin-left: 3px; }
+.wz-input, .wz-textarea, .wz-select {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  resize: none;
+}
+.wz-input:focus, .wz-textarea:focus, .wz-select:focus {
+  border-color: var(--teal);
+}
+.wz-input::placeholder, .wz-textarea::placeholder { color: var(--text-faint); }
+.wz-textarea { min-height: 100px; line-height: 1.5; }
+.wz-select { cursor: pointer; }
+.wz-select option { background: var(--bg-card); }
+
+.wz-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:520px) { .wz-field-row { grid-template-columns: 1fr; } }
+
+/* Toggle */
+.wz-toggle-row {
+  display: flex;
+  gap: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.wz-toggle-btn {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.wz-toggle-btn.active {
+  background: var(--teal-glow);
+  color: var(--teal);
+  font-weight: 700;
+}
+
+/* Checkboxes */
+.wz-checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+@media(max-width:420px) { .wz-checks { grid-template-columns: 1fr; } }
+.wz-check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+}
+.wz-check-item:hover { border-color: var(--border-bright); }
+.wz-check-item.checked { border-color: var(--teal); background: var(--teal-glow); }
+.wz-check-item input { display: none; }
+.wz-check-dot {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border-bright);
+  background: var(--bg-card-2);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  transition: all 0.12s;
+}
+.wz-check-item.checked .wz-check-dot {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--bg);
+}
+.wz-check-label { font-size: 13px; color: var(--text-dim); }
+.wz-check-item.checked .wz-check-label { color: var(--text); }
+
+/* Tone slider */
+.wz-slider-wrap { display: flex; flex-direction: column; gap: 6px; }
+.wz-slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dimmer); }
+.wz-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-bright);
+  outline: none;
+  cursor: pointer;
+}
+.wz-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--teal);
+  cursor: pointer;
+  box-shadow: 0 0 0 3px var(--teal-glow);
+}
+
+/* Tag pills */
+.wz-tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.wz-tag-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.wz-tag-pill.active {
+  background: var(--teal-glow);
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.wz-tag-pill .rm { font-size: 11px; opacity: 0.6; }
+
+.wz-tag-input-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.wz-tag-input-row .wz-input { margin-bottom: 0; }
+.wz-tag-add-btn {
+  background: var(--teal);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--bg);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.wz-tag-add-btn:hover { background: var(--teal-dim); }
+
+/* URL list */
+.wz-url-list { display: flex; flex-direction: column; gap: 8px; }
+.wz-url-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media(max-width:520px) { .wz-url-row { grid-template-columns: 1fr; } }
+
+/* Divider */
+.wz-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 28px 0;
+}
+.wz-divider-label {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dimmer);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: -8px 0 0;
+  background: var(--bg);
+  display: inline-block;
+  padding: 0 12px;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ─── NAVIGATION BUTTONS ─────────────────────────────────────────────────────── */
+.wizard-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+  padding: 20px 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 100;
+  max-width: 680px;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.wz-back-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 80px;
+}
+.wz-back-btn:hover { border-color: var(--border-bright); color: var(--text); }
+.wz-continue-btn {
+  background: var(--teal);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--bg);
+  font-family: var(--font-head);
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  padding: 10px 28px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+  max-width: 300px;
+}
+.wz-continue-btn:hover:not(:disabled) { background: var(--teal-dim); }
+.wz-continue-btn:disabled {
+  background: var(--bg-card-2);
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+/* Primary teal button (manifesto, update cards) */
+.btn-primary {
+  display: inline-block;
+  background: var(--teal);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--bg);
+  font-family: var(--font-head);
+  font-size: 20px;
+  letter-spacing: 2px;
+  padding: 14px 36px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.btn-primary:hover { background: var(--teal-dim); }
+
+/* ─── SCREEN 6 — GENERATION ──────────────────────────────────────────────────── */
+#screen6 {
+  display: none;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px;
+}
+#screen6.active { display: flex; }
+
+.gen-title {
+  font-family: var(--font-head);
+  font-size: clamp(36px, 8vw, 60px);
+  letter-spacing: 4px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.gen-title em { font-style:normal; color:var(--teal); }
+.gen-sub { font-size: 14px; color: var(--text-dim); margin-bottom: 48px; }
+
+.gen-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 48px;
+  text-align: left;
+}
+.gen-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  font-size: 14px;
+  color: var(--text-dimmer);
+  transition: all 0.25s;
+}
+.gen-step.active {
+  border-color: var(--teal);
+  color: var(--text);
+}
+.gen-step.done {
+  border-color: var(--border-bright);
+  color: var(--text-dim);
+}
+.gen-step-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-bright);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.25s;
+}
+.gen-step.active .gen-step-icon {
+  border-color: var(--teal);
+  background: var(--teal-glow);
+  animation: pulse 1.2s infinite;
+}
+.gen-step.done .gen-step-icon {
+  border-color: var(--green);
+  background: rgba(92,186,138,0.1);
+  color: var(--green);
+}
+
+/* Preview card */
+.gen-preview {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--teal);
+  border-radius: var(--radius);
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  text-align: left;
+  margin-bottom: 32px;
+  animation: fadeUp 0.4s ease both;
+}
+.gen-preview-row {
+  margin-bottom: 18px;
+}
+.gen-preview-row:last-child { margin-bottom: 0; }
+.gen-preview-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  margin-bottom: 5px;
+}
+.gen-preview-val {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.gen-preview-val.teal { color: var(--teal); font-weight: 600; }
+
+.gen-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  display: none;
+}
+.gen-adjust-btn {
+  background: none;
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 11px 22px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.gen-adjust-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+/* ─── UPDATE MODE ────────────────────────────────────────────────────────────── */
+#updateMode {
+  display: none;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+.update-header { margin-bottom: 32px; }
+.update-soul-card {
+  background: var(--bg-card);
+  border: 1px solid var(--teal);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+.update-soul-name {
+  font-family: var(--font-head);
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--teal);
+  margin-bottom: 4px;
+}
+.update-soul-meta { font-size: 12px; color: var(--text-dimmer); margin-bottom: 16px; }
+.update-soul-row {
+  display: flex; gap: 8px; align-items: baseline;
+  font-size: 13px; color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.update-soul-row strong { color: var(--text); min-width: 100px; }
+.update-soul-angles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.update-angle-pill {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border-bright);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.update-options { display: flex; flex-direction: column; gap: 10px; }
+.update-option-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  color: var(--text);
+}
+.update-option-card:hover { border-color: var(--border-bright); }
+.update-option-card.teal:hover { border-color: var(--teal); }
+.update-option-icon { font-size: 24px; flex-shrink: 0; }
+.update-option-label { font-size: 15px; font-weight: 600; color: var(--text); }
+.update-option-sub { font-size: 12px; color: var(--text-dimmer); margin-top: 2px; }
+
+/* Intelligence panel */
+.intel-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 16px;
+}
+.intel-insight {
+  background: var(--bg-card-2);
+  border-left: 2px solid var(--teal);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.intel-insight:last-child { margin-bottom: 0; }
+.intel-insight .it { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--teal); display: block; margin-bottom: 3px; }
+.intel-insight strong { color: var(--text); }
+
+/* Error message */
+.gen-error {
+  display: none;
+  background: rgba(224,92,92,0.1);
+  border: 1px solid var(--red);
+  border-radius: var(--radius-sm);
+  color: var(--red);
+  padding: 14px 18px;
+  font-size: 14px;
+  max-width: 480px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+</style>
+</head>
+<body>
+
+<div id="kre8r-nav"></div>
+
+<!-- ─── SCREEN 0: MANIFESTO ──────────────────────────────────────────────────── -->
+<div id="screen0">
+  <div class="manifesto-eyebrow">KRE8ΩR — SOUL BUILDΩR</div>
+  <div class="manifesto-title">YOUR CREATIVE<br><em>UNIVERSE</em><br>STARTS HERE</div>
+  <p class="manifesto-body">Kre8Ωr preserves and extends the impact of the creative art by turning every other part of this job into a science.</p>
+  <p class="manifesto-sub">The next 15 minutes will teach Kre8Ωr everything it needs to work in your voice, for your audience, toward your goals.</p>
+  <div class="manifesto-stars">✦ ✦ ✦</div>
+  <button class="btn-primary" onclick="startWizard()">Build My Soul →</button>
+</div>
+
+<!-- ─── WIZARD SHELL ──────────────────────────────────────────────────────────── -->
+<div id="wizardMain">
+
+  <!-- Progress dots -->
+  <div class="wizard-progress" id="wizardProgress">
+    <div class="wz-dot active" data-screen="1" onclick="goToScreen(1)"></div>
+    <div class="wz-dot" data-screen="2" onclick="goToScreen(2)"></div>
+    <div class="wz-dot" data-screen="3" onclick="goToScreen(3)"></div>
+    <div class="wz-dot" data-screen="4" onclick="goToScreen(4)"></div>
+    <div class="wz-dot" data-screen="5" onclick="goToScreen(5)"></div>
+  </div>
+
+  <div class="wizard-screens">
+
+    <!-- SCREEN 1: WHO YOU ARE -->
+    <div class="wz-screen active" id="screen1">
+      <div class="wz-screen-head">
+        <div class="wz-screen-number">01 / 05</div>
+        <div class="wz-screen-title">WHO <em>YOU</em> ARE</div>
+        <div class="wz-screen-sub">Not what you do — who you actually are. The machine needs to know.</div>
+      </div>
+
+      <div class="wz-field-row">
+        <div class="wz-field">
+          <label class="wz-label">Your Name <span>*</span></label>
+          <input class="wz-input" id="creator_name" type="text" placeholder="Jason Rutland" required>
+        </div>
+        <div class="wz-field">
+          <label class="wz-label">Channel Name <span>*</span></label>
+          <input class="wz-input" id="channel_name" type="text" placeholder="7 Kin Homestead">
+        </div>
+      </div>
+
+      <div class="wz-field-row">
+        <div class="wz-field">
+          <label class="wz-label">Channel Handle</label>
+          <input class="wz-input" id="handle" type="text" placeholder="@7kinhomestead">
+        </div>
+        <div class="wz-field">
+          <label class="wz-label">How Long Creating?</label>
+          <select class="wz-select" id="years_creating">
+            <option value="">— select —</option>
+            <option value="under_1yr">Under 1 year</option>
+            <option value="1_2yr">1–2 years</option>
+            <option value="2_5yr">2–5 years</option>
+            <option value="5yr_plus">5+ years</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Tagline — one sentence of what you do</label>
+        <input class="wz-input" id="tagline" type="text" placeholder="We went from broke to 3 acres and document every step">
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Full time or side hustle?</label>
+        <div class="wz-toggle-row">
+          <button class="wz-toggle-btn active" id="toggle_fulltime" onclick="setToggle('fulltime', 'Full Time', this)">Full Time</button>
+          <button class="wz-toggle-btn" id="toggle_sidehustle" onclick="setToggle('fulltime', 'Side Hustle', this)">Side Hustle</button>
+          <button class="wz-toggle-btn" id="toggle_transition" onclick="setToggle('fulltime', 'Transitioning', this)">Transitioning</button>
+        </div>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">What transformation are you documenting? <span>*</span></label>
+        <textarea class="wz-textarea" id="transformation" rows="3" placeholder="e.g. A family going from broke to financially free through homesteading"></textarea>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: YOUR VOICE -->
+    <div class="wz-screen" id="screen2">
+      <div class="wz-screen-head">
+        <div class="wz-screen-number">02 / 05</div>
+        <div class="wz-screen-title">YOUR <em>VOICE</em></div>
+        <div class="wz-screen-sub">Paste examples of your best writing — captions, scripts, emails, anything. Claude will read your actual words and learn how you communicate.</div>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Writing Sample 1 <span>*</span></label>
+        <textarea class="wz-textarea" id="sample1" rows="5" placeholder="Paste a caption, intro script, or email you wrote..."></textarea>
+      </div>
+      <div class="wz-field">
+        <label class="wz-label">Writing Sample 2</label>
+        <textarea class="wz-textarea" id="sample2" rows="5" placeholder="Another sample — different format or tone is ideal..."></textarea>
+      </div>
+      <div class="wz-field">
+        <label class="wz-label">Writing Sample 3 (optional)</label>
+        <textarea class="wz-textarea" id="sample3" rows="4" placeholder="Optional — add a third if you have it..."></textarea>
+      </div>
+
+      <div class="wz-divider"></div>
+      <div class="wz-divider-label">OR describe your voice</div>
+
+      <div class="wz-field" style="margin-top:24px;">
+        <label class="wz-label">Your voice is...</label>
+        <div class="wz-checks" id="voiceCheckboxes">
+          <label class="wz-check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="Direct and no-nonsense">
+            <div class="wz-check-dot"></div>
+            <span class="wz-check-label">Direct and no-nonsense</span>
+          </label>
+          <label class="wz-check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="Warm and personal">
+            <div class="wz-check-dot"></div>
+            <span class="wz-check-label">Warm and personal</span>
+          </label>
+          <label class="wz-check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="Educational and thorough">
+            <div class="wz-check-dot"></div>
+            <span class="wz-check-label">Educational and thorough</span>
+          </label>
+          <label class="wz-check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="Provocative and challenging">
+            <div class="wz-check-dot"></div>
+            <span class="wz-check-label">Provocative and challenging</span>
+          </label>
+          <label class="wz-check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="Humorous and self-deprecating">
+            <div class="wz-check-dot"></div>
+            <span class="wz-check-label">Humorous and self-deprecating</span>
+          </label>
+          <label class="wz-check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="Storytelling-first">
+            <div class="wz-check-dot"></div>
+            <span class="wz-check-label">Storytelling-first</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="wz-field" style="margin-top:20px;">
+        <label class="wz-label">Tone</label>
+        <div class="wz-slider-wrap">
+          <input type="range" class="wz-slider" id="tone_slider" min="1" max="10" value="4">
+          <div class="wz-slider-labels"><span>← Casual / Raw</span><span>Professional →</span></div>
+        </div>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Words or phrases you NEVER use</label>
+        <textarea class="wz-textarea" id="never_say" rows="2" placeholder="e.g. I never say synergy, hustle culture, or grind"></textarea>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: YOUR AUDIENCE -->
+    <div class="wz-screen" id="screen3">
+      <div class="wz-screen-head">
+        <div class="wz-screen-number">03 / 05</div>
+        <div class="wz-screen-title">YOUR <em>AUDIENCE</em></div>
+        <div class="wz-screen-sub">Who is the ONE person your best content is made for? Not demographics — the actual human.</div>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Age Range</label>
+        <div class="wz-slider-wrap">
+          <input type="range" class="wz-slider" id="audience_age_min" min="18" max="65" value="25" style="margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);">
+            <span>From: <strong id="ageMinLabel">25</strong></span>
+            <span>To: <strong id="ageMaxLabel">45</strong></span>
+          </div>
+          <input type="range" class="wz-slider" id="audience_age_max" min="18" max="65" value="45">
+        </div>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Their situation <span>*</span></label>
+        <textarea class="wz-textarea" id="audience_situation" rows="3" placeholder="e.g. Stuck in a job they tolerate, living paycheck to paycheck, scrolling at night wondering if there's another way"></textarea>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">What they believe</label>
+        <textarea class="wz-textarea" id="audience_belief" rows="2" placeholder="e.g. The system is rigged but there has to be another way"></textarea>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">What they fear</label>
+        <textarea class="wz-textarea" id="audience_fear" rows="2" placeholder="e.g. Making the leap too soon and losing everything"></textarea>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">What transformation do you give them?</label>
+        <textarea class="wz-textarea" id="audience_transformation" rows="2" placeholder="e.g. Proof that opting out is survivable — and then profitable"></textarea>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">What do they say in your comments most often?</label>
+        <textarea class="wz-textarea" id="comment_patterns" rows="2" placeholder="e.g. 'I didn't know this was possible' or 'I've been watching for a year building my courage'"></textarea>
+      </div>
+    </div>
+
+    <!-- SCREEN 4: YOUR CONTENT -->
+    <div class="wz-screen" id="screen4">
+      <div class="wz-screen-head">
+        <div class="wz-screen-number">04 / 05</div>
+        <div class="wz-screen-title">YOUR <em>CONTENT</em></div>
+        <div class="wz-screen-sub">Your best work teaches Claude what to amplify.</div>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Your 3–5 best performing videos</label>
+        <div class="wz-url-list" id="videoUrlList">
+          <div class="wz-url-row">
+            <input class="wz-input" type="text" placeholder="Title" data-video-title="0">
+            <input class="wz-input" type="url" placeholder="YouTube URL (optional)" data-video-url="0">
+          </div>
+          <div class="wz-url-row">
+            <input class="wz-input" type="text" placeholder="Title" data-video-title="1">
+            <input class="wz-input" type="url" placeholder="YouTube URL (optional)" data-video-url="1">
+          </div>
+          <div class="wz-url-row">
+            <input class="wz-input" type="text" placeholder="Title" data-video-title="2">
+            <input class="wz-input" type="url" placeholder="YouTube URL (optional)" data-video-url="2">
+          </div>
+        </div>
+        <button class="wz-tag-add-btn" style="margin-top:8px;padding:8px 14px;font-family:var(--font-body);font-size:13px;font-weight:500;" onclick="addVideoRow()">+ Add Another</button>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Content angles you return to most</label>
+        <textarea class="wz-textarea" id="content_angles_text" rows="2" placeholder="e.g. Real cost breakdowns, 'what we paid vs what it's worth', proving the system is optional"></textarea>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Content pillars — tag them</label>
+        <div class="wz-tag-input-row">
+          <input class="wz-input" id="pillarInput" type="text" placeholder="e.g. Off-Grid Living" onkeydown="if(event.key==='Enter'){event.preventDefault();addPillar();}">
+          <button class="wz-tag-add-btn" onclick="addPillar()">Add</button>
+        </div>
+        <div class="wz-tags-wrap" id="pillarTags"></div>
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Your contrarian take in your niche <span>*</span></label>
+        <textarea class="wz-textarea" id="contrarian_take" rows="3" placeholder="e.g. Most homesteading advice assumes you have money. Mine assumes you don't."></textarea>
+      </div>
+    </div>
+
+    <!-- SCREEN 5: YOUR SETUP -->
+    <div class="wz-screen" id="screen5">
+      <div class="wz-screen-head">
+        <div class="wz-screen-number">05 / 05</div>
+        <div class="wz-screen-title">YOUR <em>SETUP</em></div>
+        <div class="wz-screen-sub">Where you live on the internet. Where your files live on your machine.</div>
+      </div>
+
+      <div class="wz-field-row">
+        <div class="wz-field">
+          <label class="wz-label">YouTube Handle</label>
+          <input class="wz-input" id="youtube" type="text" placeholder="@7kinhomestead">
+        </div>
+        <div class="wz-field">
+          <label class="wz-label">TikTok Handle</label>
+          <input class="wz-input" id="tiktok" type="text" placeholder="@7kinhomestead">
+        </div>
+      </div>
+      <div class="wz-field-row">
+        <div class="wz-field">
+          <label class="wz-label">Instagram</label>
+          <input class="wz-input" id="instagram" type="text" placeholder="@7kinhomestead">
+        </div>
+        <div class="wz-field">
+          <label class="wz-label">Lemon8</label>
+          <input class="wz-input" id="lemon8" type="text" placeholder="@7kinhomestead">
+        </div>
+      </div>
+      <div class="wz-field">
+        <label class="wz-label">Facebook Page</label>
+        <input class="wz-input" id="facebook" type="text" placeholder="7 Kin Homestead">
+      </div>
+
+      <div class="wz-field-row">
+        <div class="wz-field">
+          <label class="wz-label">Primary Editor</label>
+          <select class="wz-select" id="editor">
+            <option value="DaVinci Resolve">DaVinci Resolve</option>
+            <option value="Premiere Pro">Premiere Pro</option>
+            <option value="Final Cut Pro">Final Cut Pro</option>
+            <option value="CapCut">CapCut</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="wz-field">
+          <label class="wz-label">Footage Folder Path</label>
+          <input class="wz-input" id="footage_path" type="text" value="D:\kre8r\intake">
+        </div>
+      </div>
+
+      <div class="wz-field-row">
+        <div class="wz-field">
+          <label class="wz-label">Community Platform</label>
+          <select class="wz-select" id="community_platform" onchange="toggleCommunityUrl()">
+            <option value="None">None</option>
+            <option value="Kajabi">Kajabi</option>
+            <option value="Skool">Skool</option>
+            <option value="Circle">Circle</option>
+            <option value="Mighty Networks">Mighty Networks</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="wz-field">
+          <label class="wz-label">Email Platform</label>
+          <select class="wz-select" id="email_platform">
+            <option value="None">None</option>
+            <option value="Kajabi">Kajabi</option>
+            <option value="ConvertKit">ConvertKit</option>
+            <option value="Mailchimp">Mailchimp</option>
+            <option value="Beehiiv">Beehiiv</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="wz-field" id="communityUrlField" style="display:none;">
+        <label class="wz-label">Community URL</label>
+        <input class="wz-input" id="community_url" type="text" placeholder="https://...">
+      </div>
+
+      <div class="wz-field">
+        <label class="wz-label">Publishing Cadence</label>
+        <select class="wz-select" id="cadence">
+          <option value="Daily">Daily</option>
+          <option value="2-3x per week">2–3× per week</option>
+          <option value="Weekly" selected>Weekly</option>
+          <option value="Bi-weekly">Bi-weekly</option>
+          <option value="Monthly">Monthly</option>
+        </select>
+      </div>
+    </div>
+
+  </div><!-- /wizard-screens -->
+
+  <!-- Bottom nav buttons -->
+  <div class="wizard-nav" id="wizardNav">
+    <button class="wz-back-btn" id="backBtn" onclick="wizardBack()" style="visibility:hidden;">← Back</button>
+    <button class="wz-continue-btn" id="continueBtn" onclick="wizardContinue()">CONTINUE →</button>
+  </div>
+
+</div><!-- /wizardMain -->
+
+<!-- ─── SCREEN 6: GENERATING ─────────────────────────────────────────────────── -->
+<div id="screen6">
+  <div class="gen-title">BUILDING YOUR <em>SOUL</em></div>
+  <p class="gen-sub">Claude is synthesizing everything you gave it into a living creator profile.</p>
+
+  <div class="gen-steps" id="genSteps">
+    <div class="gen-step" id="gstep0">
+      <div class="gen-step-icon">✦</div>
+      <span>Reading your voice samples...</span>
+    </div>
+    <div class="gen-step" id="gstep1">
+      <div class="gen-step-icon">✦</div>
+      <span>Analyzing your audience profile...</span>
+    </div>
+    <div class="gen-step" id="gstep2">
+      <div class="gen-step-icon">✦</div>
+      <span>Mapping your content angles...</span>
+    </div>
+    <div class="gen-step" id="gstep3">
+      <div class="gen-step-icon">✦</div>
+      <span>Synthesizing your creative identity...</span>
+    </div>
+    <div class="gen-step" id="gstep4">
+      <div class="gen-step-icon">✦</div>
+      <span>Writing your soul file...</span>
+    </div>
+  </div>
+
+  <div class="gen-error" id="genError"></div>
+
+  <div class="gen-preview" id="genPreview">
+    <div class="gen-preview-row">
+      <div class="gen-preview-label">Your Niche</div>
+      <div class="gen-preview-val" id="prevNiche"></div>
+    </div>
+    <div class="gen-preview-row">
+      <div class="gen-preview-label">Your Voice in 3 Words</div>
+      <div class="gen-preview-val teal" id="prevVoice"></div>
+    </div>
+    <div class="gen-preview-row">
+      <div class="gen-preview-label">Audience Avatar</div>
+      <div class="gen-preview-val" id="prevAvatar"></div>
+    </div>
+    <div class="gen-preview-row">
+      <div class="gen-preview-label">Top Content Angles</div>
+      <div class="gen-preview-val" id="prevAngles"></div>
+    </div>
+  </div>
+
+  <div class="gen-actions" id="genActions">
+    <button class="gen-adjust-btn" onclick="wizardAdjust()">← Let me adjust something</button>
+    <button class="btn-primary" onclick="enterKre8r()">Looks Good — Enter Kre8Ωr →</button>
+  </div>
+</div>
+
+<!-- ─── UPDATE MODE ───────────────────────────────────────────────────────────── -->
+<div id="updateMode">
+  <div class="update-header">
+    <div class="wz-screen-number" style="margin-bottom:8px;">SOUL BUILDΩR</div>
+    <div class="wz-screen-title">YOUR SOUL IS <em>ALIVE</em></div>
+    <div class="wz-screen-sub">Kre8Ωr is running on your creator profile. Update only what's changed.</div>
+  </div>
+
+  <div class="update-soul-card" id="updateSoulCard">
+    <div class="update-soul-name" id="updateCreatorName">—</div>
+    <div class="update-soul-meta" id="updateSoulMeta">Last updated: —</div>
+    <div class="update-soul-row"><strong>Voice:</strong> <span id="updateVoiceWords">—</span></div>
+    <div class="update-soul-row"><strong>Avatar:</strong> <span id="updateAvatarName">—</span></div>
+    <div class="update-soul-row" id="updateAnglesRow">
+      <strong>Angles:</strong>
+      <div class="update-soul-angles" id="updateAngles"></div>
+    </div>
+  </div>
+
+  <div class="update-options">
+    <div class="update-option-card" onclick="updateSection('voice')">
+      <div class="update-option-icon">🎙️</div>
+      <div>
+        <div class="update-option-label">My voice has evolved</div>
+        <div class="update-option-sub">Re-run voice analysis with new writing samples</div>
+      </div>
+    </div>
+    <div class="update-option-card" onclick="updateSection('audience')">
+      <div class="update-option-icon">👥</div>
+      <div>
+        <div class="update-option-label">My audience has shifted</div>
+        <div class="update-option-sub">Update your audience avatar and what drives them</div>
+      </div>
+    </div>
+    <div class="update-option-card" onclick="updateSection('content')">
+      <div class="update-option-icon">📊</div>
+      <div>
+        <div class="update-option-label">Add new content data</div>
+        <div class="update-option-sub">New best performers, angles, or contrarian takes</div>
+      </div>
+    </div>
+    <div class="update-option-card" onclick="updateSection('setup')">
+      <div class="update-option-icon">⚙️</div>
+      <div>
+        <div class="update-option-label">Update my setup</div>
+        <div class="update-option-sub">Platforms, paths, publishing cadence</div>
+      </div>
+    </div>
+    <div class="update-option-card teal" onclick="toggleIntelPanel()">
+      <div class="update-option-icon">🔮</div>
+      <div>
+        <div class="update-option-label">Intelligence from AnalΩzr</div>
+        <div class="update-option-sub">View secrets saved to your soul — add context around what Claude found</div>
+      </div>
+    </div>
+    <div class="update-option-card" onclick="fullRebuild()">
+      <div class="update-option-icon">🔄</div>
+      <div>
+        <div class="update-option-label">Full rebuild</div>
+        <div class="update-option-sub">Start from scratch — generate a completely new soul</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="intel-panel" id="intelPanel" style="display:none;">
+    <div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:14px;">SAVED INTELLIGENCE FROM ANALYΩZR</div>
+    <div id="intelInsights"></div>
+    <div id="intelEmpty" style="font-size:13px;color:var(--text-dimmer);display:none;">No intelligence saved yet. Run Secrets in AnalΩzr and click "Save to Soul."</div>
+  </div>
+</div>
+
+<script src="/js/nav.js" defer></script>
+<script>
+window.addEventListener('load', () => initNav());
+
+// ─── State ──────────────────────────────────────────────────────────────────
+var currentScreen = 1;
+var direction = 'forward';
+var wizardData = {};
+var contentPillars = [];
+var toggleValues = { fulltime: 'Full Time' };
+
+// ─── Boot: detect mode ───────────────────────────────────────────────────────
+(async function boot() {
+  try {
+    const r = await fetch('/api/soul-buildr/status');
+    const d = await r.json();
+
+    if (d.exists) {
+      // Update mode
+      document.getElementById('screen0').style.display = 'none';
+      document.getElementById('updateMode').style.display = 'block';
+      populateUpdateMode(d);
+    }
+    // If not exists: screen0 already visible (default)
+  } catch (_) {
+    // Server not ready yet — leave screen0 visible
+  }
+}());
+
+function populateUpdateMode(d) {
+  document.getElementById('updateCreatorName').textContent = (d.creator_name || 'Your Channel') + (d.channel_name ? ' — ' + d.channel_name : '');
+  if (d.last_updated) {
+    const dt = new Date(d.last_updated);
+    document.getElementById('updateSoulMeta').textContent = 'Last updated: ' + dt.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  }
+  document.getElementById('updateVoiceWords').textContent = d.voice_words || '—';
+  document.getElementById('updateAvatarName').textContent = d.avatar_name || '—';
+
+  const anglesEl = document.getElementById('updateAngles');
+  (d.content_angles || []).forEach(function(a) {
+    const pill = document.createElement('div');
+    pill.className = 'update-angle-pill';
+    pill.textContent = a;
+    anglesEl.appendChild(pill);
+  });
+
+  // Intelligence panel
+  if (d.content_intelligence && d.content_intelligence.insights && d.content_intelligence.insights.length) {
+    const el = document.getElementById('intelInsights');
+    d.content_intelligence.insights.forEach(function(ins) {
+      el.innerHTML += '<div class="intel-insight">'
+        + '<span class="it">' + (ins.type || 'insight').toUpperCase() + '</span>'
+        + '<strong>' + (ins.title || '') + '</strong>'
+        + (ins.insight ? ': ' + ins.insight : '')
+        + '</div>';
+    });
+  } else {
+    document.getElementById('intelEmpty').style.display = 'block';
+  }
+}
+
+function toggleIntelPanel() {
+  var p = document.getElementById('intelPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+function updateSection(section) {
+  // Jump to relevant wizard screen
+  document.getElementById('screen0').style.display = 'none';
+  document.getElementById('updateMode').style.display = 'none';
+  document.getElementById('wizardMain').style.display = 'flex';
+  document.getElementById('wizardProgress').style.display = 'flex';
+  document.getElementById('wizardNav').style.display = 'flex';
+
+  var screenMap = { voice: 2, audience: 3, content: 4, setup: 5 };
+  var target = screenMap[section] || 1;
+  currentScreen = target;
+  showScreen(target, 'forward');
+  updateProgress();
+}
+
+function fullRebuild() {
+  document.getElementById('updateMode').style.display = 'none';
+  document.getElementById('screen0').style.display = 'none';
+  document.getElementById('wizardMain').style.display = 'flex';
+  currentScreen = 1;
+  showScreen(1, 'forward');
+  updateProgress();
+}
+
+// ─── Wizard navigation ───────────────────────────────────────────────────────
+function startWizard() {
+  var s0 = document.getElementById('screen0');
+  s0.classList.add('exiting');
+  setTimeout(function() {
+    s0.style.display = 'none';
+    document.getElementById('wizardMain').style.display = 'flex';
+    currentScreen = 1;
+    showScreen(1, 'forward');
+    updateProgress();
+  }, 350);
+}
+
+function showScreen(n, dir) {
+  document.querySelectorAll('.wz-screen').forEach(function(el) {
+    el.classList.remove('active', 'slide-back');
+  });
+  var target = document.getElementById('screen' + n);
+  if (target) {
+    if (dir === 'back') target.classList.add('slide-back');
+    target.classList.add('active');
+  }
+
+  // Show/hide back button
+  var backBtn = document.getElementById('backBtn');
+  backBtn.style.visibility = n > 1 ? 'visible' : 'hidden';
+
+  // Update continue button
+  updateContinueBtn(n);
+}
+
+function updateProgress() {
+  document.querySelectorAll('.wz-dot').forEach(function(dot) {
+    var s = parseInt(dot.getAttribute('data-screen'));
+    dot.classList.remove('active', 'done');
+    if (s === currentScreen) dot.classList.add('active');
+    else if (s < currentScreen) dot.classList.add('done');
+  });
+}
+
+function wizardContinue() {
+  if (!validateScreen(currentScreen)) return;
+  collectScreen(currentScreen);
+
+  if (currentScreen >= 5) {
+    // Go to generation
+    document.getElementById('wizardMain').style.display = 'none';
+    document.getElementById('screen6').style.display = 'flex';
+    runGeneration();
+    return;
+  }
+
+  currentScreen++;
+  showScreen(currentScreen, 'forward');
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function wizardBack() {
+  if (currentScreen <= 1) return;
+  collectScreen(currentScreen);
+  currentScreen--;
+  showScreen(currentScreen, 'back');
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function goToScreen(n) {
+  if (n > currentScreen) return; // Can only go back via dots
+  collectScreen(currentScreen);
+  var dir = n < currentScreen ? 'back' : 'forward';
+  currentScreen = n;
+  showScreen(n, dir);
+  updateProgress();
+}
+
+// ─── Validation ──────────────────────────────────────────────────────────────
+function validateScreen(n) {
+  if (n === 1) {
+    return val('creator_name') && val('transformation');
+  }
+  if (n === 2) {
+    return val('sample1') || document.querySelectorAll('.wz-check-item.checked').length > 0;
+  }
+  if (n === 4) {
+    return val('contrarian_take');
+  }
+  return true;
+}
+
+function val(id) {
+  var el = document.getElementById(id);
+  return el && el.value.trim().length > 0;
+}
+
+function updateContinueBtn(n) {
+  // Just enable always — real validation on click
+  var btn = document.getElementById('continueBtn');
+  btn.disabled = false;
+  btn.textContent = n >= 5 ? 'GENERATE MY SOUL →' : 'CONTINUE →';
+}
+
+// ─── Data collection ─────────────────────────────────────────────────────────
+function collectScreen(n) {
+  if (n === 1) {
+    wizardData.creator_name  = gv('creator_name');
+    wizardData.channel_name  = gv('channel_name');
+    wizardData.handle        = gv('handle');
+    wizardData.tagline       = gv('tagline');
+    wizardData.years_creating = gv('years_creating');
+    wizardData.full_time     = toggleValues.fulltime;
+    wizardData.transformation = gv('transformation');
+  } else if (n === 2) {
+    wizardData.sample1 = gv('sample1');
+    wizardData.sample2 = gv('sample2');
+    wizardData.sample3 = gv('sample3');
+    wizardData.tone_slider = gv('tone_slider');
+    wizardData.never_say = gv('never_say');
+    wizardData.voice_checkboxes = Array.from(document.querySelectorAll('.wz-check-item.checked input'))
+      .map(function(el) { return el.value; });
+  } else if (n === 3) {
+    var ageMin = document.getElementById('audience_age_min').value;
+    var ageMax = document.getElementById('audience_age_max').value;
+    wizardData.audience_age           = ageMin + '–' + ageMax;
+    wizardData.audience_situation     = gv('audience_situation');
+    wizardData.audience_belief        = gv('audience_belief');
+    wizardData.audience_fear          = gv('audience_fear');
+    wizardData.audience_transformation = gv('audience_transformation');
+    wizardData.comment_patterns       = gv('comment_patterns');
+  } else if (n === 4) {
+    // Collect video rows
+    var videos = [];
+    var maxRows = document.querySelectorAll('[data-video-title]').length;
+    for (var i = 0; i < maxRows; i++) {
+      var titleEl = document.querySelector('[data-video-title="' + i + '"]');
+      var urlEl   = document.querySelector('[data-video-url="' + i + '"]');
+      if (titleEl && (titleEl.value.trim() || (urlEl && urlEl.value.trim()))) {
+        videos.push({ title: titleEl ? titleEl.value.trim() : '', url: urlEl ? urlEl.value.trim() : '' });
+      }
+    }
+    wizardData.best_videos        = videos;
+    wizardData.content_angles_text = gv('content_angles_text');
+    wizardData.content_pillars    = contentPillars.slice();
+    wizardData.contrarian_take    = gv('contrarian_take');
+  } else if (n === 5) {
+    wizardData.youtube           = gv('youtube');
+    wizardData.tiktok            = gv('tiktok');
+    wizardData.instagram         = gv('instagram');
+    wizardData.lemon8            = gv('lemon8');
+    wizardData.facebook          = gv('facebook');
+    wizardData.editor            = gv('editor');
+    wizardData.footage_path      = gv('footage_path');
+    wizardData.community_platform = gv('community_platform');
+    wizardData.community_url     = gv('community_url');
+    wizardData.email_platform    = gv('email_platform');
+    wizardData.cadence           = gv('cadence');
+  }
+}
+
+function gv(id) {
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+// ─── Generation ──────────────────────────────────────────────────────────────
+var GEN_STEPS = ['gstep0','gstep1','gstep2','gstep3','gstep4'];
+var genStepMap = {
+  'Reading your voice samples':      0,
+  'Analyzing your audience profile': 1,
+  'Mapping your content angles':     2,
+  'Synthesizing your creative':      3,
+  'Writing your soul file':          4,
+};
+
+async function runGeneration() {
+  var errorEl  = document.getElementById('genError');
+  var previewEl = document.getElementById('genPreview');
+  var actionsEl = document.getElementById('genActions');
+
+  errorEl.style.display  = 'none';
+  previewEl.style.display = 'none';
+  actionsEl.style.display = 'none';
+
+  // Collect final screen
+  collectScreen(5);
+
+  var lastActiveStep = -1;
+
+  function activateStep(idx) {
+    if (idx === lastActiveStep) return;
+    if (lastActiveStep >= 0) {
+      var prev = document.getElementById('gstep' + lastActiveStep);
+      if (prev) { prev.classList.remove('active'); prev.classList.add('done'); prev.querySelector('.gen-step-icon').textContent = '✓'; }
+    }
+    var cur = document.getElementById('gstep' + idx);
+    if (cur) cur.classList.add('active');
+    lastActiveStep = idx;
+  }
+
+  activateStep(0);
+
+  try {
+    var r = await fetch('/api/soul-buildr/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(wizardData),
+    });
+
+    if (!r.ok || !r.body) throw new Error('Request failed ' + r.status);
+
+    var reader  = r.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer  = '';
+
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      var lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (!line.startsWith('data: ')) continue;
+        var evt;
+        try { evt = JSON.parse(line.slice(6)); } catch(e) { continue; }
+
+        if (evt.type === 'status') {
+          // Map message to step
+          for (var key in genStepMap) {
+            if (evt.message.indexOf(key) !== -1) {
+              activateStep(genStepMap[key]);
+              break;
+            }
+          }
+        } else if (evt.type === 'done') {
+          // Mark all steps done
+          GEN_STEPS.forEach(function(id, idx) {
+            var el = document.getElementById(id);
+            if (el) { el.classList.remove('active'); el.classList.add('done'); el.querySelector('.gen-step-icon').textContent = '✓'; }
+          });
+          // Show preview
+          var p = evt.preview || {};
+          document.getElementById('prevNiche').textContent  = p.niche_sentence  || '—';
+          document.getElementById('prevVoice').textContent  = p.voice_words     || '—';
+          document.getElementById('prevAvatar').textContent = p.avatar_name     || '—';
+          document.getElementById('prevAngles').innerHTML   = (p.content_angles || []).map(function(a) {
+            return '<div style="margin-bottom:3px;">✦ ' + a + '</div>';
+          }).join('');
+          previewEl.style.display = 'block';
+          actionsEl.style.display = 'flex';
+        } else if (evt.type === 'error') {
+          errorEl.textContent = '⚠ ' + evt.message;
+          errorEl.style.display = 'block';
+        }
+      }
+    }
+  } catch (err) {
+    errorEl.textContent = '⚠ ' + err.message;
+    errorEl.style.display = 'block';
+  }
+}
+
+function enterKre8r() {
+  window.location.href = '/id8r.html';
+}
+
+function wizardAdjust() {
+  document.getElementById('screen6').style.display = 'none';
+  document.getElementById('wizardMain').style.display = 'flex';
+  currentScreen = 1;
+  showScreen(1, 'back');
+  updateProgress();
+}
+
+// ─── UI Helpers ──────────────────────────────────────────────────────────────
+function setToggle(key, val, btn) {
+  toggleValues[key] = val;
+  btn.closest('.wz-toggle-row').querySelectorAll('.wz-toggle-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  btn.classList.add('active');
+}
+
+function toggleCheck(label) {
+  label.classList.toggle('checked');
+  var dot = label.querySelector('.wz-check-dot');
+  if (label.classList.contains('checked')) dot.textContent = '✓';
+  else dot.textContent = '';
+}
+
+function toggleCommunityUrl() {
+  var val = document.getElementById('community_platform').value;
+  document.getElementById('communityUrlField').style.display = val !== 'None' ? 'block' : 'none';
+}
+
+function addPillar() {
+  var input = document.getElementById('pillarInput');
+  var text  = input.value.trim();
+  if (!text || contentPillars.includes(text)) { input.value = ''; return; }
+  contentPillars.push(text);
+  renderPillars();
+  input.value = '';
+  input.focus();
+}
+
+function removePillar(text) {
+  contentPillars = contentPillars.filter(function(p) { return p !== text; });
+  renderPillars();
+}
+
+function renderPillars() {
+  var wrap = document.getElementById('pillarTags');
+  wrap.innerHTML = contentPillars.map(function(p) {
+    return '<div class="wz-tag-pill active">'
+      + p
+      + ' <span class="rm" onclick="removePillar(\'' + p.replace(/'/g, "\\'") + '\')">✕</span>'
+      + '</div>';
+  }).join('');
+}
+
+var videoRowCount = 3;
+function addVideoRow() {
+  if (videoRowCount >= 5) return;
+  var list = document.getElementById('videoUrlList');
+  var row  = document.createElement('div');
+  row.className = 'wz-url-row';
+  row.innerHTML = '<input class="wz-input" type="text" placeholder="Title" data-video-title="' + videoRowCount + '">'
+    + '<input class="wz-input" type="url" placeholder="YouTube URL (optional)" data-video-url="' + videoRowCount + '">';
+  list.appendChild(row);
+  videoRowCount++;
+}
+
+// Age range labels
+document.getElementById('audience_age_min').addEventListener('input', function() {
+  document.getElementById('ageMinLabel').textContent = this.value;
+});
+document.getElementById('audience_age_max').addEventListener('input', function() {
+  document.getElementById('ageMaxLabel').textContent = this.value;
+});
+</script>
+</body>
+</html>
