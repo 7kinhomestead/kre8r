@@ -2,7 +2,109 @@
 
 ---
 
-## Task 0 — Add 2 sections to Production Runbook DOCX
+## Task 1 — Live test Content DNA niche + audience panels
+
+The constellation graph is confirmed working (263 nodes, real view counts, 7 clusters). The two SSE panels below it have not been tested end-to-end.
+
+**Steps:**
+1. Open `http://localhost:3000/analytr.html` → scroll to Content DNA section
+2. Confirm constellation renders with node sizing (biggest node = "How Do You Afford Off Grid Living?" at 421k views)
+3. Click **"Generate Content DNA"** → watch SSE stream in niche + audience panels
+4. If panels stay blank: check browser console for errors, check `POST /api/analytr/content-dna` in network tab
+5. Click **"Save to My Soul →"** → confirm `creator-profile.json` updates with audience data:
+   ```
+   curl http://localhost:3000/api/analytr/creator-profile-audience
+   ```
+6. Fix any bugs found
+
+---
+
+## Task 2 — Deploy to DigitalOcean
+
+All session-15 changes are on master but haven't been deployed.
+
+```bash
+cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
+sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
+```
+
+Also install reportlab if not already done (required for crew brief PDF route):
+```bash
+pip install reportlab
+```
+
+Verify after deploy: `https://kre8r.app/analytr.html` loads constellation graph.
+
+---
+
+## Task 3 — AnalΩzr: add `contentDetails.duration` to YouTube sync for format classification
+
+The WISHLIST entry is written. This is the first implementation step — store video format at sync time so the constellation can badge and filter correctly.
+
+**Steps:**
+1. In `src/routes/analytr.js`, find the YouTube API call that fetches video stats
+2. Add `contentDetails` to the `part` param: `part=snippet,statistics,contentDetails`
+3. Parse `contentDetails.duration` (ISO 8601) at sync time:
+   - `P0D` or `PT0S` → `live`
+   - `≤ PT60S` OR title contains `#shorts` → `short_form`
+   - Everything else → `long_form`
+4. Store as `video_format` in `analytics_metrics` or add column to projects table
+5. Pass `video_format` in graph nodes so the constellation JS can render badges (📹 / ⚡ / 🔴) and dim live nodes
+
+---
+
+## Carry-forward (still valid)
+
+### Add 2 sections to Production Runbook DOCX
+File: `C:/Users/18054/kre8r/Kre8r-Production-Runbook.docx`
+Rebuild via: `node C:/Users/18054/AppData/Local/Temp/outputs/build-runbook.js`
+Add SECTION A (File Paths) and SECTION B (DaVinci Pipeline) — full content in TODO.md archive below.
+
+### Fix VaultΩr ingest for project 18
+7 proxy `.mp4` files in `D:/kre8r/intake` unprocessed. See archived Task 1 below for steps.
+
+### Fix `davinci.js` → `runScript()` Python detection
+`runScript()` hardcodes `spawn('python', ...)` — fails where binary is `py` or `python3`.
+Add `detectPython()` pattern (already in `editor.js` and `composor.js`).
+
+### TeleprΩmpter 3-device live test
+1. Start display on laptop → Load Script → Start → note 4-digit session code
+2. Phone 1 (Control): `http://{ip}:3000/teleprompter.html?mode=control&session=XXXX`
+3. Phone 2 (Voice): `http://{ip}:3000/teleprompter.html?mode=voice&session=XXXX`
+
+### Id8Ωr — Remove debug log
+`console.log('[mindmap] messages chars...')` in `/mindmap` handler — remove once flow confirmed stable.
+
+---
+
+## PM2 Quick Reference
+
+```
+pm2 status              # check kre8r is running
+pm2 logs kre8r          # live server logs
+pm2 restart kre8r       # after pulling code changes
+pm2 save                # save process list after any pm2 changes
+```
+
+## Redeploy (after pushing new code)
+
+```
+bash /home/kre8r/kre8r/deploy/deploy.sh
+```
+
+---
+
+## Technical Debt
+
+**Engine vs Soul audit** — Systematic pass through all route handlers finding hardcoded creator data that should read from `creator-profile.json`. `generate.js` email route is a known offender. Est: 3–4 hours.
+
+**better-sqlite3 migration** — Replace sql.js before commercialization. Crash recovery risk, not just scale. If the server dies between a write and the next `persist()` call, that write is lost. Nearly a drop-in replacement. Est: 4–6 hours.
+
+---
+
+## ARCHIVE — Tasks from previous sessions
+
+### Add 2 sections to Production Runbook DOCX (logged Session 15)
 
 File: `C:/Users/18054/kre8r/Kre8r-Production-Runbook.docx`
 Rebuild via: `node C:/Users/18054/AppData/Local/Temp/outputs/build-runbook.js`
