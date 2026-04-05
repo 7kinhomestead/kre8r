@@ -262,6 +262,66 @@ The sphere is pointing at the gap before any analysis runs.
 - `velocityScore`: views in first 7 days (requires `posted_at` date + total views as proxy if daily breakdown unavailable)
 - All classification done at render time — no new API calls, no new DB columns needed
 
+## Beta Feedback System
+
+Closes the loop between beta users and the build — every piece of friction becomes a data point.
+
+### Floating Report Button
+- `⚠ Report Issue` button fixed to bottom-right on every page (injected via `nav.js`)
+- Always visible, never intrusive — subtle until hovered
+- Opens a modal without leaving the current page
+
+### Feedback Modal
+Three fields, no friction:
+- **What were you trying to do?** — short text
+- **What happened instead?** — short text
+- **Severity** — radio: 🔴 Blocked / 🟡 Annoying / 🟢 Suggestion
+
+### Auto-captured context (zero effort from user)
+- Current page URL
+- `project_id` from URL params or current session
+- Browser + OS string
+- Last 5 API calls (captured via a global fetch interceptor in nav.js)
+- Last 10 console errors (captured via `window.onerror` + `console.error` override in nav.js)
+- Timestamp
+
+### GitHub Issues Integration
+- Posts directly to GitHub Issues API with full JSON context attached as a code block
+- Labels auto-applied: `beta`, `bug` (severity 🔴), `ux` (severity 🟡), `feature-request` (severity 🟢)
+- Title generated from: `[PAGE] What they tried to do`
+- Token stored in `.env` as `GITHUB_TOKEN` — route proxies the call server-side so token never hits the browser
+
+### Optional Screenshot
+- "Include screenshot" checkbox in modal
+- Uses `html2canvas` to capture the current viewport
+- Attached to the GitHub issue as a base64 image in the body
+
+### NPS Prompt
+- Shown after a completed pipeline run (WritΩr script approved → transitions to DirectΩr)
+- Single question: "How likely are you to recommend Kre8Ωr to another creator?" (0–10 slider)
+- Optional: "What's the one thing that would make this a 10?"
+- Stored in `feedback` table, shown in admin dashboard
+
+### `/admin.html` Beta Dashboard
+Four panels:
+- **Active Users** — unique session IDs in the last 7/30 days, pipeline entry points
+- **Pipeline Completion Rates** — funnel visualization: Id8Ωr → PipΩr → WritΩr → DirectΩr → VaultΩr → Distribution. Drop-off rates between each stage.
+- **Open Issues** — live feed from GitHub Issues API, filtered by beta label. Click to open in GitHub.
+- **Satisfaction Scores** — NPS score over time (rolling 7/30 day), verbatim responses, trend line
+
+### Pipeline Completion Rate Tracking
+- New `pipeline_handoffs` table: `project_id`, `from_tool`, `to_tool`, `user_session`, `created_at`
+- Log entry on every tool handoff (e.g. PipΩr create → WritΩr open, WritΩr approve → DirectΩr open)
+- Handoff logged via a lightweight `POST /api/analytics/handoff` endpoint called from each tool's transition point
+- Admin dashboard queries this table to compute per-stage conversion rates
+
+### Implementation notes
+- `nav.js` already loads on every page — ideal injection point for fetch interceptor, error capture, and floating button
+- `html2canvas` loaded lazily only when screenshot checkbox is checked
+- `GITHUB_TOKEN` scoped to `issues:write` only on the private repo — no broader permissions needed
+- NPS trigger: check `localStorage.lastNpsShown` — show max once per 7 days, only after pipeline completion
+- Admin dashboard protected by same basic auth as `kre8r.app` (nginx level) — no new auth layer needed
+
 ## AnalΩzr — Playlist Generator
 From the Content DNA clusters and niche definition, suggest YouTube playlist structures that organize existing videos into intentional series.
 
