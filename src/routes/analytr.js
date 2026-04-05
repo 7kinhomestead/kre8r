@@ -257,7 +257,7 @@ router.post('/youtube-sync', async (req, res) => {
 
 // ─── YouTube Channel Import (SSE) ────────────────────────────────────────────
 // Imports ALL videos from the channel into Kre8Ωr as projects.
-// Auth priority: OAuth access_token → YOUTUBE_CHANNEL_ID env → forHandle search
+// No OAuth needed — public channel data only via YOUTUBE_API_KEY + forHandle.
 
 router.post('/youtube-import-channel', async (req, res) => {
   res.setHeader('Content-Type',  'text/event-stream');
@@ -274,30 +274,17 @@ router.post('/youtube-import-channel', async (req, res) => {
       res.end(); return;
     }
 
+    // Handle from env — no @ prefix (YouTube forHandle param doesn't need it)
+    const channelHandle = process.env.YOUTUBE_CHANNEL_HANDLE || '7kinhomestead';
+
     const { default: fetch } = await import('node-fetch');
 
-    // ── Step 1: Get uploads playlist ID ─────────────────────────────────────
-    send({ type: 'status', message: 'Fetching channel info...' });
+    // ── Step 1: Resolve uploads playlist ID via forHandle ───────────────────
+    send({ type: 'status', message: `Fetching channel info for @${channelHandle}...` });
 
-    let channelUrl;
-    const oauthToken     = process.env.YOUTUBE_ACCESS_TOKEN;
-    const channelIdEnv   = process.env.YOUTUBE_CHANNEL_ID;
-    const channelHandle  = '@7kinhomestead'; // from creator-profile.json
-
-    if (oauthToken) {
-      channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&mine=true&key=${apiKey}`;
-    } else if (channelIdEnv) {
-      channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${encodeURIComponent(channelIdEnv)}&key=${apiKey}`;
-    } else {
-      channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=${encodeURIComponent(channelHandle)}&key=${apiKey}`;
-    }
-
-    const chanHeaders = oauthToken
-      ? { Authorization: `Bearer ${oauthToken}` }
-      : {};
-
-    const chanRes  = await fetch(channelUrl, { headers: chanHeaders });
-    const chanData = await chanRes.json();
+    const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=${encodeURIComponent(channelHandle)}&key=${apiKey}`;
+    const chanRes    = await fetch(channelUrl);
+    const chanData   = await chanRes.json();
 
     if (!chanRes.ok) {
       throw new Error(chanData?.error?.message || `YouTube channels API error ${chanRes.status}`);
@@ -305,7 +292,7 @@ router.post('/youtube-import-channel', async (req, res) => {
 
     const channel = chanData.items?.[0];
     if (!channel) {
-      throw new Error(`Channel not found. Set YOUTUBE_CHANNEL_ID in .env or check the handle "${channelHandle}".`);
+      throw new Error(`Channel not found for handle "@${channelHandle}". Check YOUTUBE_CHANNEL_HANDLE in .env.`);
     }
 
     const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
