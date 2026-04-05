@@ -633,12 +633,24 @@ Respond in EXACTLY this JSON structure (no markdown, no commentary, just JSON):
 // Fetches all projects with youtube_video_id, clusters by title via Claude,
 // caches result in kv_store as 'channel_dna_clusters'.
 
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 router.get('/content-dna/graph', async (req, res) => {
+  console.log('[content-dna/graph] Hit — refresh:', !!req.query.refresh);
   try {
-    // Return cached clusters if available (unless ?refresh=1)
+    // Return cached result if fresh (< 24 h) and no ?refresh=1
     if (!req.query.refresh) {
       const cached = db.getKv('channel_dna_clusters');
-      if (cached) return res.json(cached);
+      if (cached) {
+        const age = cached.cached_at ? Date.now() - new Date(cached.cached_at).getTime() : Infinity;
+        if (age < CACHE_TTL_MS) {
+          console.log('[content-dna/graph] Serving from cache (age: ' + Math.round(age / 60000) + ' min)');
+          return res.json(cached);
+        }
+        console.log('[content-dna/graph] Cache stale — regenerating');
+      } else {
+        console.log('[content-dna/graph] No cache found — generating');
+      }
     }
 
     // Get all youtube projects with analytics
@@ -649,11 +661,11 @@ router.get('/content-dna/graph', async (req, res) => {
       return res.json({ nodes: [], clusters: [], error: 'no_videos' });
     }
 
-    // Attach analytics
-    const nodes = ytProjects.map(p => {
+    // Attach analytics to ALL projects (used for the full node list in the graph)
+    const allNodes = ytProjects.map(p => {
       const analytics = db.getAnalyticsByProject(p.id);
-      const views    = analytics.find(m => m.metric_name === 'views')?.value     || 0;
-      const likes    = analytics.find(m => m.metric_name === 'likes')?.value     || 0;
+      const views    = analytics.find(m => m.metric_name === 'views')?.value         || 0;
+      const likes    = analytics.find(m => m.metric_name === 'likes')?.value         || 0;
       const comments = analytics.find(m => m.metric_name === 'comment_count')?.value || 0;
       return {
         id:          p.id,
@@ -665,16 +677,20 @@ router.get('/content-dna/graph', async (req, res) => {
       };
     });
 
+    // Send only top 50 by view count to Claude for clustering — fast + token-safe
+    const top50 = [...allNodes].sort((a, b) => b.views - a.views).slice(0, 50);
+    console.log(`[content-dna/graph] Sending top ${top50.length} of ${allNodes.length} videos to Claude for clustering`);
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
 
     const { default: fetch } = await import('node-fetch');
 
-    const videoLines = nodes
+    const videoLines = top50
       .map(n => `${n.title} | ${n.views} views | ${n.likes} likes | ${n.comments} comments`)
       .join('\n');
 
-    const clusterPrompt = `Analyze these ${nodes.length} YouTube video titles and their performance data.
+    const clusterPrompt = `Analyze these ${top50.length} top-performing YouTube video titles and their performance data.
 Group them into 5-8 thematic clusters. Each cluster should represent a distinct content theme or audience need.
 Use cluster names that are specific, evocative, and 2-4 words (e.g. "Financial Escape", "Real Numbers Only", "Proof It's Possible").
 
@@ -726,7 +742,7 @@ Available colors (use each at most twice): teal, amber, coral, purple, green, bl
       return res.status(500).json({ error: 'Claude returned unexpected format', raw: rawText.slice(0, 200) });
     }
 
-    // Map cluster assignments back to nodes
+    // Map cluster assignments back to nodes by title lookup
     const clusterMap = {};
     for (const cluster of parsed.clusters || []) {
       for (const title of cluster.videos || []) {
@@ -740,8 +756,10 @@ Available colors (use each at most twice): teal, amber, coral, purple, green, bl
       orange: '#f0834a', rose: '#f06b9e',
     };
 
-    const taggedNodes = nodes.map(n => {
-      const cluster = clusterMap[n.title.toLowerCase().trim()] || parsed.clusters?.[0] || { id: 0, name: 'Other', color: 'teal' };
+    // Tag ALL nodes — videos not in top 50 inherit the fallback cluster
+    const fallbackCluster = parsed.clusters?.[0] || { id: 0, name: 'Other', color: 'teal' };
+    const taggedNodes = allNodes.map(n => {
+      const cluster = clusterMap[n.title.toLowerCase().trim()] || fallbackCluster;
       return {
         ...n,
         cluster_id:    cluster.id,
@@ -751,9 +769,17 @@ Available colors (use each at most twice): teal, amber, coral, purple, green, bl
       };
     });
 
-    const result = { nodes: taggedNodes, clusters: parsed.clusters || [] };
+    const result = {
+      nodes:     taggedNodes,
+      clusters:  parsed.clusters || [],
+      cached_at: new Date().toISOString(),
+      total:     allNodes.length,
+      clustered: top50.length,
+    };
 
-    // Cache for next load
+    console.log(`[content-dna/graph] Done — ${taggedNodes.length} nodes tagged across ${result.clusters.length} clusters`);
+
+    // Cache result
     db.setKv('channel_dna_clusters', result);
 
     res.json(result);

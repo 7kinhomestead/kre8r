@@ -408,7 +408,11 @@
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(''''kre8r projects:'''',r.length,''''|'''',''''first:'''', r[0]?.title?.slice\\(0,30\\)\\);}\\)\" echo \"\" curl -s \"http://localhost:3000/api/analytr/content-dna/graph\")",
       "Bash(curl -s \"http://localhost:3000/api/analytr/content-dna/graph\")",
       "Bash(curl -s \"http://localhost:3000/api/analytr/content-dna/graph\" 2)",
-      "Bash(1 pm2:*)"
+      "Bash(1 pm2:*)",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(''''nodes:'''',r.nodes?.length,''''clusters:'''',r.clusters?.length,''''cached_at:'''',r.cached_at,''''clustered:'''',r.clustered,''''total:'''',r.total\\);}\\)\")",
+      "Bash(curl -s http://localhost:3000/api/analytr/content-dna/graph)",
+      "Bash(curl -s \"http://localhost:3000/api/analytr/content-dna/graph\" -w \"\\\\nTime: %{time_total}s\\\\n\")",
+      "Bash(curl -s \"http://localhost:3000/api/analytr/content-dna/graph\" -o /dev/null -w \"Time: %{time_total}s\\\\n\")"
     ]
   }
 }
