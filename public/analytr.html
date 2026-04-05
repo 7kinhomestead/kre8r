@@ -3,89 +3,622 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kre8Ωr — AnalytΩr</title>
+<title>Kre8Ωr — AnalΩzr</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/global.css">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-  body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size:128px 128px; z-index:1000; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+:root {
+  --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+  --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
+  --amber:#f0b942; --amber-glow:rgba(240,185,66,0.12);
+  --red:#e05c5c;   --red-glow:rgba(224,92,92,0.12);
+  --green:#5cba8a; --green-glow:rgba(92,186,138,0.12);
+  --blue:#5b9cf6;  --blue-glow:rgba(91,156,246,0.10);
+  --purple:#a78bfa;
+  --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349; --text-faint:#2e3329;
+  --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+  --radius:10px; --radius-sm:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
-  .main { max-width: 680px; margin: 0 auto; padding: 80px 24px 120px; text-align: center; }
+/* ─── LAYOUT ─────────────────────────────────── */
+.main{max-width:1000px;margin:0 auto;padding:32px 20px 120px;}
 
-  .cs-phase {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-    padding: 4px 12px; border-radius: 20px;
-    background: var(--bg-card-2); border: 1px solid var(--border-bright); color: var(--text-dimmer);
-    margin-bottom: 28px; animation: fadeUp 0.3s ease both;
-  }
-  .cs-phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
+/* ─── PAGE HEADER ────────────────────────────── */
+.page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;}
+.page-title{font-family:var(--font-head);font-size:clamp(40px,9vw,64px);letter-spacing:4px;line-height:1;margin-bottom:8px;}
+.page-title em{font-style:normal;color:var(--teal);}
+.page-sub{color:var(--text-dim);font-size:14px;line-height:1.6;max-width:560px;}
 
-  .cs-icon { font-size: 64px; margin-bottom: 20px; animation: fadeUp 0.3s 0.05s ease both; }
+/* ─── SECTION HEADERS ────────────────────────── */
+.section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;}
+.section-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text);}
+.section-sub{font-size:12px;color:var(--text-dimmer);letter-spacing:0.3px;}
+.section-spacer{margin-bottom:40px;}
 
-  .cs-title {
-    font-family: var(--font-head); font-size: clamp(48px, 12vw, 96px);
-    letter-spacing: 4px; line-height: 0.9; color: var(--text);
-    margin-bottom: 16px; animation: fadeUp 0.3s 0.08s ease both;
-  }
-  .cs-title em { font-style: normal; color: var(--teal); }
+/* ─── STAT CARDS ─────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:40px;animation:fadeUp 0.4s 0.05s ease both;}
+@media(max-width:700px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:400px){.stat-grid{grid-template-columns:1fr;}}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;transition:border-color 0.15s;}
+.stat-card:hover{border-color:var(--border-bright);}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;}
+.stat-value{font-family:var(--font-head);font-size:36px;letter-spacing:1px;line-height:1;color:var(--teal);margin-bottom:4px;}
+.stat-value.loading{color:var(--text-faint);animation:pulse 1.2s infinite;}
+.stat-meta{font-size:12px;color:var(--text-dim);line-height:1.4;}
 
-  .cs-desc {
-    font-size: 16px; color: var(--text-mid, #8a9487); line-height: 1.7;
-    max-width: 480px; margin: 0 auto 36px;
-    animation: fadeUp 0.3s 0.11s ease both;
-  }
+/* ─── VIDEO TABLE ────────────────────────────── */
+.video-list{display:flex;flex-direction:column;gap:8px;animation:fadeUp 0.4s 0.1s ease both;}
+.video-row{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color 0.15s;cursor:pointer;}
+.video-row:hover{border-color:var(--border-bright);}
+.video-row.expanded{border-color:var(--teal);}
 
-  .cs-pipeline {
-    display: flex; align-items: center; justify-content: center; gap: 0;
-    margin-bottom: 48px; animation: fadeUp 0.3s 0.14s ease both;
-  }
-  .cs-stage {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-    color: var(--text-dimmer);
-  }
-  .cs-stage.active { color: var(--teal); }
-  .cs-stage-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint, #3a3e38); }
-  .cs-stage.active .cs-stage-dot { background: var(--teal); box-shadow: 0 0 0 4px var(--teal-glow); }
-  .cs-stage-line { width: 48px; height: 2px; background: var(--border); margin-bottom: 14px; }
+.video-summary{display:grid;grid-template-columns:1fr 90px 90px 80px 80px 30px;align-items:center;gap:12px;padding:14px 18px;}
+@media(max-width:700px){.video-summary{grid-template-columns:1fr 80px 80px 30px;}.vcol-cr,.vcol-comments{display:none;}}
+@media(max-width:480px){.video-summary{grid-template-columns:1fr 80px 30px;}.vcol-views{display:none;}}
 
-  .cs-back {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600; color: var(--text-dim);
-    text-decoration: none; padding: 10px 18px; border-radius: var(--radius-sm);
-    border: 1px solid var(--border-bright); transition: all 0.15s;
-    animation: fadeUp 0.3s 0.17s ease both;
-  }
-  .cs-back:hover { border-color: var(--teal); color: var(--teal); }
+.video-title-block{}
+.video-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3;}
+.video-meta{font-size:11px;color:var(--text-dimmer);display:flex;gap:8px;flex-wrap:wrap;}
+.platform-tag{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.5px;background:var(--bg-card-2);color:var(--text-dim);}
+
+.vcol{text-align:right;}
+.vcol-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:2px;}
+.vcol-val{font-size:15px;font-weight:600;}
+.vcol-val.green{color:var(--green);}
+.vcol-val.amber{color:var(--amber);}
+.vcol-val.red  {color:var(--red);}
+.vcol-val.none {color:var(--text-dimmer);font-size:12px;}
+
+.expand-arrow{color:var(--text-dimmer);font-size:12px;transition:transform 0.2s;}
+.video-row.expanded .expand-arrow{transform:rotate(180deg);}
+
+.video-detail{display:none;padding:0 18px 16px;border-top:1px solid var(--border);background:var(--bg-card-2);}
+.video-row.expanded .video-detail{display:block;}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding-top:14px;margin-bottom:14px;}
+.detail-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;}
+.detail-stat-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:4px;}
+.detail-stat-val{font-size:20px;font-family:var(--font-head);letter-spacing:0.5px;color:var(--text);}
+.detail-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.detail-link{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--teal);text-decoration:none;padding:6px 12px;border:1px solid var(--teal-glow);border-radius:var(--radius-sm);transition:all 0.15s;}
+.detail-link:hover{background:var(--teal-glow);}
+
+/* ─── NO DATA STATE ──────────────────────────── */
+.empty-state{text-align:center;padding:48px 24px;color:var(--text-dim);}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:0.5;}
+.empty-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text-dimmer);margin-bottom:8px;}
+.empty-desc{font-size:13px;line-height:1.6;max-width:400px;margin:0 auto;}
+
+/* ─── COACHING CARD ──────────────────────────── */
+.coaching-wrap{animation:fadeUp 0.4s 0.15s ease both;}
+.coach-btn{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:var(--bg);font-family:var(--font-body);font-size:14px;font-weight:700;padding:12px 24px;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;margin-bottom:16px;}
+.coach-btn:hover{background:var(--teal-dim);}
+.coach-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.coach-spinner{width:14px;height:14px;border:2px solid rgba(0,0,0,0.2);border-top-color:var(--bg);border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+.coach-btn.loading .coach-spinner{display:block;}
+.coach-btn.loading .coach-btn-text{opacity:0.7;}
+
+.coaching-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:none;}
+.coaching-card.visible{display:block;}
+.coaching-header{background:var(--teal);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+.coaching-header-title{font-family:var(--font-head);font-size:18px;letter-spacing:2px;color:var(--bg);}
+.coaching-header-date{font-size:11px;color:rgba(0,0,0,0.5);}
+.coaching-body{padding:20px 22px;}
+
+.coach-section{margin-bottom:20px;}
+.coach-section:last-child{margin-bottom:0;}
+.coach-section-label{font-family:var(--font-head);font-size:14px;letter-spacing:1.5px;color:var(--text-dimmer);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.coach-section-label .dot{width:8px;height:8px;border-radius:50%;background:var(--teal);}
+.coach-section-label .dot.amber{background:var(--amber);}
+.coach-section-label .dot.red{background:var(--red);}
+
+.coach-list{list-style:none;display:flex;flex-direction:column;gap:6px;}
+.coach-list li{display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.5;color:var(--text);}
+.coach-list li::before{content:'→';color:var(--teal);font-weight:700;flex-shrink:0;margin-top:1px;}
+.coach-list.improve li::before{color:var(--amber);}
+
+.focus-box{background:var(--teal-glow);border:1px solid var(--teal);border-radius:var(--radius-sm);padding:14px 16px;font-size:14px;color:var(--text);line-height:1.6;}
+.focus-box strong{color:var(--teal);font-weight:700;}
+
+.topic-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.topic-tag{padding:4px 12px;border-radius:20px;background:var(--bg-card-2);border:1px solid var(--border-bright);font-size:12px;color:var(--text-dim);}
+
+.coaching-note{background:var(--bg-card-2);border-radius:var(--radius-sm);padding:14px 16px;font-size:14px;color:var(--text-dim);line-height:1.7;font-style:italic;border-left:3px solid var(--teal);}
+
+.coach-status{font-size:13px;color:var(--text-dim);padding:12px 0;display:none;}
+.coach-status.visible{display:block;}
+.coach-error{font-size:13px;color:var(--red);padding:12px 0;display:none;}
+.coach-error.visible{display:block;}
+
+/* ─── YOUTUBE SYNC ───────────────────────────── */
+.sync-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;animation:fadeUp 0.4s 0.2s ease both;}
+.sync-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.sync-btn{display:inline-flex;align-items:center;gap:8px;background:var(--bg-card-2);color:var(--red);font-family:var(--font-body);font-size:13px;font-weight:700;padding:10px 20px;border:1px solid var(--red-glow);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;}
+.sync-btn:hover{background:var(--red-glow);border-color:var(--red);}
+.sync-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.sync-btn .sync-spinner{width:13px;height:13px;border:2px solid rgba(224,92,92,0.2);border-top-color:var(--red);border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+.sync-btn.loading .sync-spinner{display:block;}
+.sync-last{font-size:12px;color:var(--text-dimmer);}
+.sync-log{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;font-family:monospace;color:var(--text-dim);max-height:200px;overflow-y:auto;line-height:1.7;display:none;}
+.sync-log.visible{display:block;}
+.sync-log .log-ok{color:var(--green);}
+.sync-log .log-warn{color:var(--amber);}
+.sync-log .log-err{color:var(--red);}
+.sync-log .log-info{color:var(--teal);}
+.sync-log .log-done{color:var(--text);font-weight:700;}
+
+/* ─── MANUAL ENTRY HINT ──────────────────────── */
+.hint-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text-dimmer);}
+.hint-bar a{color:var(--teal);text-decoration:none;}
+.hint-bar a:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
 <div id="kre8r-nav"></div>
-<main class="main">
-  <div class="cs-phase"><span class="cs-phase-dot"></span>Coming in Phase 5</div>
-  <div class="cs-icon">📊</div>
-  <div class="cs-title">ANALYT<em>Ω</em>R</div>
-  <p class="cs-desc">Cross-platform analytics that connects TikTok, YouTube, and Lemon8 data to your production pipeline — so you know what worked and what to make more of.</p>
 
-  <div class="cs-pipeline">
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Pre</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Prod</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage"><div class="cs-stage-dot"></div>Post</div>
-    <div class="cs-stage-line"></div>
-    <div class="cs-stage active"><div class="cs-stage-dot"></div>Dist</div>
+<main class="main">
+
+  <!-- ─── PAGE HEADER ─────────────────────────── -->
+  <div class="page-header">
+    <div class="page-title">ANAL<em>Ω</em>ZR</div>
+    <div class="page-sub">Channel performance, pattern coaching, and YouTube sync — all in one place.</div>
   </div>
 
-  <a href="/" class="cs-back">← Back to Dashboard</a>
+  <!-- ─── SECTION 1: CHANNEL HEALTH ──────────── -->
+  <div class="section-spacer">
+    <div class="section-header">
+      <div class="section-title">CHANNEL HEALTH</div>
+      <div class="section-sub">All-time stats across all projects</div>
+    </div>
+
+    <div class="stat-grid" id="statGrid">
+      <div class="stat-card">
+        <div class="stat-label">Total Views</div>
+        <div class="stat-value loading" id="statTotalViews">—</div>
+        <div class="stat-meta" id="statTotalVideosMeta">loading...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Views / Video</div>
+        <div class="stat-value loading" id="statAvgViews">—</div>
+        <div class="stat-meta">per project</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Best Performing</div>
+        <div class="stat-value loading" id="statBestViews">—</div>
+        <div class="stat-meta" id="statBestTitle">loading...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Content Topic</div>
+        <div class="stat-value loading" id="statTopTopic" style="font-size:22px;letter-spacing:0.5px;">—</div>
+        <div class="stat-meta" id="statTopTopicMeta">by total views</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 2: LAST 10 VIDEOS ───────────── -->
+  <div class="section-spacer">
+    <div class="section-header">
+      <div class="section-title">YOUR LAST 10 VIDEOS</div>
+      <div class="section-sub">Green = above avg · Amber = at avg · Red = below avg · Click to expand</div>
+    </div>
+
+    <div class="hint-bar">
+      💡 No YouTube data yet? <a href="#youtube-sync">Sync YouTube</a> below, or log stats manually via
+      <a href="/m2-package-generator.html">PackageΩr</a>.
+    </div>
+
+    <div class="video-list" id="videoList">
+      <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-title">LOADING...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 3: PATTERN ANALYSIS ─────────── -->
+  <div class="section-spacer coaching-wrap">
+    <div class="section-header">
+      <div class="section-title">PATTERN ANALYSIS</div>
+      <div class="section-sub">Claude reads your last 10 videos and coaches you</div>
+    </div>
+
+    <button class="coach-btn" id="coachBtn" onclick="generateCoaching()">
+      <div class="coach-spinner"></div>
+      <span class="coach-btn-text">Generate Coaching Report</span>
+    </button>
+
+    <div class="coach-status" id="coachStatus"></div>
+    <div class="coach-error" id="coachError"></div>
+
+    <div class="coaching-card" id="coachingCard">
+      <div class="coaching-header">
+        <div class="coaching-header-title">COACHING REPORT</div>
+        <div class="coaching-header-date" id="coachDate"></div>
+      </div>
+      <div class="coaching-body">
+
+        <div class="coach-section">
+          <div class="coach-section-label"><span class="dot"></span> WHAT'S WORKING</div>
+          <ul class="coach-list" id="coachWorking"></ul>
+        </div>
+
+        <div class="coach-section">
+          <div class="coach-section-label"><span class="dot amber"></span> AREAS TO IMPROVE</div>
+          <ul class="coach-list improve" id="coachImprove"></ul>
+        </div>
+
+        <div class="coach-section">
+          <div class="coach-section-label"><span class="dot red"></span> #1 FOCUS THIS WEEK</div>
+          <div class="focus-box" id="coachFocus"></div>
+        </div>
+
+        <div class="coach-section">
+          <div class="coach-section-label"><span class="dot"></span> TRENDING TOPICS IN YOUR COMMENTS</div>
+          <div class="topic-tags" id="coachTopics"></div>
+        </div>
+
+        <div class="coach-section">
+          <div class="coaching-note" id="coachNote"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 4: YOUTUBE SYNC ─────────────── -->
+  <div class="section-spacer" id="youtube-sync">
+    <div class="section-header">
+      <div class="section-title">YOUTUBE SYNC</div>
+      <div class="section-sub">Pulls views, likes, and comments from YouTube Data API v3</div>
+    </div>
+
+    <div class="sync-wrap">
+      <div class="sync-row">
+        <button class="sync-btn" id="syncBtn" onclick="syncYouTube()">
+          <div class="sync-spinner"></div>
+          ▶ Sync YouTube Data
+        </button>
+        <div class="sync-last" id="syncLast">Never synced</div>
+      </div>
+      <div class="sync-log" id="syncLog"></div>
+    </div>
+  </div>
+
 </main>
-<script src="/js/nav.js"></script>
-<script>initNav();</script>
+
+<script src="/js/nav.js" defer></script>
+<script>
+window.addEventListener('load', () => initNav());
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let globalAvgViews = 0;
+let lastSyncedAt   = null;
+
+// ─── Format helpers ───────────────────────────────────────────────────────────
+function fmtNum(n) {
+  if (!n && n !== 0) return '—';
+  const num = Number(n);
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
+  if (num >= 1_000)     return (num / 1_000).toFixed(1)     + 'K';
+  return num.toLocaleString();
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  catch { return d; }
+}
+
+function platformEmoji(p) {
+  const map = { tiktok: '🎵', youtube: '▶', lemon8: '🍋', instagram: '📸', facebook: '👤' };
+  return map[p?.toLowerCase()] || '📱';
+}
+
+function colorClass(views, avg) {
+  if (!views || !avg) return 'none';
+  const ratio = views / avg;
+  if (ratio >= 1.2) return 'green';
+  if (ratio >= 0.8) return 'amber';
+  return 'red';
+}
+
+// ─── Section 1: Channel Health ────────────────────────────────────────────────
+async function loadChannelHealth() {
+  try {
+    const res  = await fetch('/api/analytr/channel-health');
+    const data = await res.json();
+
+    globalAvgViews = data.avg_views || 0;
+
+    const tvEl = document.getElementById('statTotalViews');
+    tvEl.textContent = fmtNum(data.total_views);
+    tvEl.classList.remove('loading');
+
+    document.getElementById('statTotalVideosMeta').textContent =
+      `across ${data.total_videos} video${data.total_videos !== 1 ? 's' : ''}`;
+
+    const avgEl = document.getElementById('statAvgViews');
+    avgEl.textContent = fmtNum(data.avg_views);
+    avgEl.classList.remove('loading');
+
+    const bestEl = document.getElementById('statBestViews');
+    if (data.best_video) {
+      bestEl.textContent = fmtNum(data.best_video.views);
+      bestEl.classList.remove('loading');
+      const titleEl = document.getElementById('statBestTitle');
+      titleEl.textContent = data.best_video.title
+        ? (data.best_video.title.length > 30 ? data.best_video.title.slice(0, 28) + '…' : data.best_video.title)
+        : data.best_video.platform || '';
+    } else {
+      bestEl.textContent = '—';
+      bestEl.classList.remove('loading');
+      document.getElementById('statBestTitle').textContent = 'no data yet';
+    }
+
+    const topicEl = document.getElementById('statTopTopic');
+    if (data.top_topic) {
+      topicEl.textContent = data.top_topic.length > 14
+        ? data.top_topic.slice(0, 12) + '…'
+        : data.top_topic;
+    } else {
+      topicEl.textContent = '—';
+      document.getElementById('statTopTopicMeta').textContent = 'no data yet';
+    }
+    topicEl.classList.remove('loading');
+
+  } catch (err) {
+    console.error('Channel health error:', err);
+  }
+}
+
+// ─── Section 2: Video List ────────────────────────────────────────────────────
+async function loadVideos() {
+  const list = document.getElementById('videoList');
+  try {
+    const res    = await fetch('/api/analytr/videos?limit=10');
+    const videos = await res.json();
+
+    if (!videos.length) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📹</div>
+          <div class="empty-title">NO VIDEOS YET</div>
+          <div class="empty-desc">Create your first project in PipΩr, then sync YouTube data or add metrics manually.</div>
+        </div>`;
+      return;
+    }
+
+    // Recalculate avg from this set if global avg is 0
+    const avg = globalAvgViews || (() => {
+      const withViews = videos.filter(v => v.total_views > 0);
+      if (!withViews.length) return 0;
+      return withViews.reduce((s, v) => s + v.total_views, 0) / withViews.length;
+    })();
+
+    list.innerHTML = videos.map((v, i) => {
+      const views = v.total_views;
+      const cls   = colorClass(views, avg);
+      const platforms = v.platforms
+        ? v.platforms.split(',').map(p => `<span class="platform-tag">${platformEmoji(p)} ${p}</span>`).join('')
+        : '<span class="platform-tag">—</span>';
+
+      const crVal = v.avg_completion_rate != null
+        ? Math.round(v.avg_completion_rate * 100) + '%'
+        : '—';
+
+      const allMetrics = buildDetailMetrics(v);
+
+      return `
+        <div class="video-row" id="vrow-${i}" onclick="toggleRow(${i})">
+          <div class="video-summary">
+            <div class="video-title-block">
+              <div class="video-title">${v.title || 'Untitled'}</div>
+              <div class="video-meta">
+                ${platforms}
+                ${v.last_posted_at ? `<span>${fmtDate(v.last_posted_at)}</span>` : ''}
+                ${v.topic ? `<span style="color:var(--text-dimmer)">${v.topic}</span>` : ''}
+              </div>
+            </div>
+            <div class="vcol vcol-views">
+              <div class="vcol-label">Views</div>
+              <div class="vcol-val ${cls}">${views ? fmtNum(views) : '<span class="none">—</span>'}</div>
+            </div>
+            <div class="vcol vcol-cr">
+              <div class="vcol-label">Completion</div>
+              <div class="vcol-val ${crVal !== '—' ? cls : 'none'}">${crVal}</div>
+            </div>
+            <div class="vcol vcol-comments">
+              <div class="vcol-label">Comments</div>
+              <div class="vcol-val none">${v.total_comments ? fmtNum(v.total_comments) : '—'}</div>
+            </div>
+            <div class="expand-arrow">▼</div>
+          </div>
+          <div class="video-detail">
+            <div class="detail-grid">${allMetrics}</div>
+            <div class="detail-actions">
+              <a href="/pipr.html?project_id=${v.id}" class="detail-link">📋 PipΩr Beat Map</a>
+              <a href="/writr.html?project_id=${v.id}" class="detail-link">✍ WritΩr Script</a>
+              ${v.youtube_video_id ? `<a href="https://www.youtube.com/watch?v=${v.youtube_video_id}" target="_blank" class="detail-link">▶ Watch on YouTube</a>` : ''}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch (err) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠</div><div class="empty-title">LOAD ERROR</div><div class="empty-desc">${err.message}</div></div>`;
+  }
+}
+
+function buildDetailMetrics(v) {
+  const metrics = [
+    { label: 'Total Views',    val: fmtNum(v.total_views) },
+    { label: 'Avg Completion', val: v.avg_completion_rate != null ? Math.round(v.avg_completion_rate * 100) + '%' : '—' },
+    { label: 'Comments',       val: fmtNum(v.total_comments) },
+    { label: 'Likes',          val: fmtNum(v.total_likes) },
+    { label: 'Published',      val: fmtDate(v.last_posted_at) || '—' },
+    { label: 'Project ID',     val: '#' + v.id },
+  ];
+  return metrics.map(m => `
+    <div class="detail-stat">
+      <div class="detail-stat-label">${m.label}</div>
+      <div class="detail-stat-val">${m.val || '—'}</div>
+    </div>`).join('');
+}
+
+function toggleRow(i) {
+  const row = document.getElementById(`vrow-${i}`);
+  row.classList.toggle('expanded');
+}
+
+// ─── Section 3: Coaching ──────────────────────────────────────────────────────
+async function generateCoaching() {
+  const btn    = document.getElementById('coachBtn');
+  const status = document.getElementById('coachStatus');
+  const errEl  = document.getElementById('coachError');
+  const card   = document.getElementById('coachingCard');
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+  card.classList.remove('visible');
+  errEl.classList.remove('visible');
+  status.textContent = 'Analyzing your videos...';
+  status.classList.add('visible');
+
+  try {
+    const res = await fetch('/api/analytr/coach', { method: 'POST' });
+    const reader = res.body.getReader();
+    const dec    = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const ev = JSON.parse(line.slice(5).trim());
+          handleCoachEvent(ev, status, errEl, card, btn);
+        } catch {}
+      }
+    }
+  } catch (err) {
+    errEl.textContent = 'Error: ' + err.message;
+    errEl.classList.add('visible');
+    status.classList.remove('visible');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function handleCoachEvent(ev, status, errEl, card, btn) {
+  if (ev.type === 'status') {
+    status.textContent = ev.message;
+    return;
+  }
+  if (ev.type === 'error') {
+    errEl.textContent = ev.message;
+    errEl.classList.add('visible');
+    status.classList.remove('visible');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    return;
+  }
+  if (ev.type === 'report') {
+    const d = ev.data;
+    document.getElementById('coachWorking').innerHTML =
+      (d.working_well || []).map(item => `<li>${item}</li>`).join('');
+    document.getElementById('coachImprove').innerHTML =
+      (d.improve || []).map(item => `<li>${item}</li>`).join('');
+    document.getElementById('coachFocus').innerHTML =
+      `<strong>This week:</strong> ${d.focus_this_week || ''}`;
+    document.getElementById('coachTopics').innerHTML =
+      (d.trending_topics || []).map(t => `<span class="topic-tag">${t}</span>`).join('');
+    document.getElementById('coachNote').textContent = d.coaching_note || '';
+    document.getElementById('coachDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    card.classList.add('visible');
+    return;
+  }
+  if (ev.type === 'done') {
+    status.classList.remove('visible');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+// ─── Section 4: YouTube Sync ──────────────────────────────────────────────────
+async function syncYouTube() {
+  const btn  = document.getElementById('syncBtn');
+  const log  = document.getElementById('syncLog');
+  const last = document.getElementById('syncLast');
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+  log.innerHTML = '';
+  log.classList.add('visible');
+
+  function appendLog(msg, cls) {
+    const line = document.createElement('div');
+    line.className = cls || '';
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  try {
+    const res = await fetch('/api/analytr/youtube-sync', { method: 'POST' });
+    const reader = res.body.getReader();
+    const dec    = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const ev = JSON.parse(line.slice(5).trim());
+          if (ev.type === 'error')    appendLog('✗ ' + ev.message, 'log-err');
+          else if (ev.type === 'warn')    appendLog(ev.message, 'log-warn');
+          else if (ev.type === 'status')  appendLog(ev.message, 'log-info');
+          else if (ev.type === 'progress') appendLog(ev.message, 'log-info');
+          else if (ev.type === 'synced')  appendLog(ev.message, 'log-ok');
+          else if (ev.type === 'done') {
+            appendLog(ev.message, 'log-done');
+            lastSyncedAt = ev.synced_at;
+            last.textContent = 'Last synced: ' + fmtDate(ev.synced_at);
+            // Reload stats after sync
+            await loadChannelHealth();
+            await loadVideos();
+          }
+        } catch {}
+      }
+    }
+  } catch (err) {
+    appendLog('Error: ' + err.message, 'log-err');
+  }
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await loadChannelHealth();
+  await loadVideos();
+})();
+</script>
 </body>
 </html>

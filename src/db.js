@@ -1010,6 +1010,71 @@ function getAnalyticsSummary(projectId) {
 }
 
 // ─────────────────────────────────────────────
+// ANALYTΩR — Global helpers
+// ─────────────────────────────────────────────
+
+function getGlobalChannelHealth() {
+  const totalViews = _get(
+    `SELECT COALESCE(SUM(metric_value),0) as n FROM analytics WHERE metric_name = 'views'`
+  );
+  const avgViews = _get(
+    `SELECT COALESCE(AVG(v),0) as n FROM (
+       SELECT SUM(metric_value) as v FROM analytics
+       WHERE metric_name = 'views'
+       GROUP BY project_id
+     )`
+  );
+  const bestVideo = _get(
+    `SELECT pr.id, pr.title, pr.topic, po.platform, po.url, a.metric_value as views
+     FROM analytics a
+     JOIN posts po ON po.id = a.post_id
+     JOIN projects pr ON pr.id = po.project_id
+     WHERE a.metric_name = 'views'
+     ORDER BY a.metric_value DESC LIMIT 1`
+  );
+  const totalVideos = _get(
+    `SELECT COUNT(*) as n FROM projects WHERE status != 'archived'`
+  );
+  const topAngle = _get(
+    `SELECT pr.topic, COUNT(*) as n
+     FROM projects pr
+     JOIN posts po ON po.project_id = pr.id
+     JOIN analytics a ON a.post_id = po.id
+     WHERE a.metric_name = 'views' AND a.metric_value > 0 AND pr.topic IS NOT NULL
+     GROUP BY pr.topic ORDER BY SUM(a.metric_value) DESC LIMIT 1`
+  );
+  return {
+    total_views:    totalViews?.n  || 0,
+    avg_views:      Math.round(avgViews?.n || 0),
+    best_video:     bestVideo      || null,
+    total_videos:   totalVideos?.n || 0,
+    top_topic:      topAngle?.topic || null,
+  };
+}
+
+function getRecentProjectsWithAnalytics(limit = 10) {
+  return _all(
+    `SELECT
+       pr.id, pr.title, pr.topic, pr.youtube_video_id, pr.created_at,
+       (SELECT MAX(po.posted_at) FROM posts po WHERE po.project_id = pr.id) as last_posted_at,
+       (SELECT GROUP_CONCAT(DISTINCT po.platform) FROM posts po WHERE po.project_id = pr.id) as platforms,
+       (SELECT SUM(a.metric_value) FROM analytics a JOIN posts po ON po.id = a.post_id
+        WHERE po.project_id = pr.id AND a.metric_name = 'views') as total_views,
+       (SELECT AVG(a.metric_value) FROM analytics a JOIN posts po ON po.id = a.post_id
+        WHERE po.project_id = pr.id AND a.metric_name = 'completion_rate') as avg_completion_rate,
+       (SELECT SUM(a.metric_value) FROM analytics a JOIN posts po ON po.id = a.post_id
+        WHERE po.project_id = pr.id AND a.metric_name = 'comment_count') as total_comments,
+       (SELECT SUM(a.metric_value) FROM analytics a JOIN posts po ON po.id = a.post_id
+        WHERE po.project_id = pr.id AND a.metric_name = 'likes') as total_likes
+     FROM projects pr
+     WHERE pr.status != 'archived'
+     ORDER BY pr.created_at DESC
+     LIMIT ?`,
+    [limit]
+  );
+}
+
+// ─────────────────────────────────────────────
 // COMPOSΩR — Track helpers
 // ─────────────────────────────────────────────
 
@@ -1403,6 +1468,8 @@ module.exports = {
   getAnalyticsByPost,
   getAnalyticsByProject,
   getAnalyticsSummary,
+  getGlobalChannelHealth,
+  getRecentProjectsWithAnalytics,
   // ComposΩr
   insertComposorTrack,
   updateComposorTrack,
