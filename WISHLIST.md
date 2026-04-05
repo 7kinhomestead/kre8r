@@ -100,4 +100,46 @@ YouTube API already returns `contentDetails.duration` (ISO 8601, e.g. `PT12M34S`
 - Live detection: `duration = 'P0D'` or `liveBroadcastContent = 'none'` with zero duration
 - Store as `video_format` enum: `long_form` | `short_form` | `live`
 
-## [Future wishes go here]
+## Nebula View — Stellar Nursery for In-Progress Projects
+
+**V2.0 centerpiece feature.** A companion view to the Constellation that shows projects currently moving through the pipeline as forming stars. The Constellation shows where you've been. The Nebula shows what's being born.
+
+### The core idea
+Published videos live in the Constellation as solid, sized stars. In-progress projects live in the Nebula as proto-stars at various stages of formation — visible, named, moving toward ignition.
+
+### Visual stages (pipeline → star formation)
+| Pipeline stage | Visual state |
+|---|---|
+| Id8Ωr complete | Faint gas cloud — low opacity particle cluster, barely visible |
+| PipΩr complete | Particles grouping, loose proto-star shape forming |
+| WritΩr approved | Glowing core visible, heat building |
+| Footage shot (VaultΩr has clips) | Star taking shape, corona visible, gravitational pull |
+| Published | Ignition — star leaves Nebula and joins the main Constellation |
+
+### Per-project display
+- Current pipeline stage label
+- 5-segment progress ring (Id8Ωr / PipΩr / WritΩr / VaultΩr / Published)
+- Estimated completion based on typical pipeline time per stage
+- Click → opens the project at its current pipeline stage (deep link)
+
+### View toggle
+- Single D3 canvas. Toggle button: `✦ Constellation` / `☁ Nebula`
+- Animated transition between views — published stars pull back and dim, in-progress clouds emerge, or vice versa
+- Both views use the same zoom/pan infrastructure already built
+
+### New user onboarding
+- New installations start in Nebula View with an empty canvas
+- Message in the center: *"Your creative universe starts here. Begin your first idea in Id8Ωr."*
+- First completed Id8Ωr session creates the first gas cloud — the creator's digital brain is born
+- This is the moment the system becomes theirs, not a tool they're using
+
+### Why this matters (the meat puppet answer)
+This feature permanently answers the question of whether the AI is doing the creative work. Watching YOUR ideas — with YOUR titles, YOUR structure, YOUR voice — form into YOUR stars in a space that belongs only to you makes the answer visceral, not intellectual. The creativity is yours. Kre8Ωr just gives it a home and a map.
+
+### Implementation notes
+- Pipeline stage read from `pipeline_state` table (already exists — `gate_a_approved`, beat map complete, script approved, footage in vault)
+- Particle system: D3 + canvas overlay or pure SVG `<circle>` elements with low opacity + CSS animation
+- Transition: `d3.transition()` with custom interpolators per node type
+- Proto-star physics: same forceSimulation as Constellation, but with higher alpha decay and smaller charge so clouds stay loose
+- Published event triggers migration animation: proto-star accelerates toward its Constellation position, opacity rises, size settles to view-count-based radius
+- Progress ring: SVG `stroke-dasharray` / `stroke-dashoffset` on 5 arc segments, one per pipeline component
