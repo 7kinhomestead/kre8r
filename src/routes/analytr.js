@@ -664,9 +664,9 @@ router.get('/content-dna/graph', async (req, res) => {
     // Attach analytics to ALL projects (used for the full node list in the graph)
     const allNodes = ytProjects.map(p => {
       const analytics = db.getAnalyticsByProject(p.id);
-      const views    = analytics.find(m => m.metric_name === 'views')?.value         || 0;
-      const likes    = analytics.find(m => m.metric_name === 'likes')?.value         || 0;
-      const comments = analytics.find(m => m.metric_name === 'comment_count')?.value || 0;
+      const views    = analytics.find(m => m.metric_name === 'views')?.metric_value         || 0;
+      const likes    = analytics.find(m => m.metric_name === 'likes')?.metric_value         || 0;
+      const comments = analytics.find(m => m.metric_name === 'comment_count')?.metric_value || 0;
       return {
         id:          p.id,
         title:       p.title,
