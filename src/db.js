@@ -341,6 +341,20 @@ function runMigrations() {
     db.run('ALTER TABLE writr_scripts ADD COLUMN session_id TEXT');
     console.log('[DB] Migration: added writr_scripts.session_id');
   }
+
+  // AnalΩzr: projects.source — kre8r (native) vs youtube_import
+  const projectsColsDna = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsColsDna.includes('source')) {
+    db.run("ALTER TABLE projects ADD COLUMN source TEXT NOT NULL DEFAULT 'kre8r'");
+    console.log('[DB] Migration: added projects.source');
+  }
+
+  // AnalΩzr: kv_store — generic key/value cache (channel DNA clusters, profiles, etc.)
+  db.run(`CREATE TABLE IF NOT EXISTS kv_store (
+    key        TEXT PRIMARY KEY,
+    value      TEXT,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
 }
 
 function persist() {
@@ -418,6 +432,29 @@ function getAllProjects() {
     WHERE p.status != 'archived'
     ORDER BY p.created_at DESC
   `);
+}
+
+function getAllProjectsBySource(source) {
+  return _all(`
+    SELECT p.*, ps.gate_a_approved, ps.gate_b_approved, ps.gate_c_approved,
+           ps.stage_status,
+           (SELECT COUNT(*) FROM packages WHERE project_id = p.id) as package_count,
+           (SELECT COUNT(*) FROM captions WHERE project_id = p.id AND approved = 1) as approved_captions,
+           (SELECT COUNT(*) FROM emails WHERE project_id = p.id AND approved = 1) as approved_emails,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND cut_type = 'social') as social_cuts,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND cut_type = 'social' AND approved = 1) as approved_cuts,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND clip_path IS NOT NULL) as extracted_clips,
+           (SELECT COUNT(*) FROM footage WHERE project_id = p.id) as footage_count
+    FROM projects p
+    LEFT JOIN pipeline_state ps ON ps.project_id = p.id
+    WHERE p.status != 'archived' AND p.source = ?
+    ORDER BY p.created_at DESC
+  `, [source]);
+}
+
+function setProjectSource(projectId, source) {
+  _run(`UPDATE projects SET source = ? WHERE id = ?`, [source, projectId]);
+  persist();
 }
 
 function updateProjectStage(projectId, stage) {
@@ -1403,12 +1440,29 @@ function getArchivedProjects() {
 // PIPELINE SUMMARY (for PipelineΩr dashboard)
 // ─────────────────────────────────────────────
 
-function getPipelineSummary() {
-  const projects = getAllProjects();
+function getPipelineSummary(source) {
+  const projects = source ? getAllProjectsBySource(source) : getAllProjects();
   return projects.map(p => ({
     ...p,
     needs_attention: !p.gate_a_approved || !p.gate_b_approved || !p.gate_c_approved
   }));
+}
+
+// ─────────────────────────────────────────────
+// KV STORE — generic key/value cache
+// ─────────────────────────────────────────────
+
+function getKv(key) {
+  const row = _get('SELECT value FROM kv_store WHERE key = ?', [key]);
+  return row ? JSON.parse(row.value) : null;
+}
+
+function setKv(key, value) {
+  _run(
+    `INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
+    [key, JSON.stringify(value)]
+  );
+  persist();
 }
 
 module.exports = {
@@ -1416,6 +1470,8 @@ module.exports = {
   createProject,
   getProject,
   getAllProjects,
+  getAllProjectsBySource,
+  setProjectSource,
   updateProjectStage,
   updateProjectMeta,
   savePackages,
@@ -1434,6 +1490,9 @@ module.exports = {
   deleteProject,
   getArchivedProjects,
   getPipelineSummary,
+  // KV Store
+  getKv,
+  setKv,
   // VaultΩr
   insertFootage,
   updateFootage,

@@ -123,6 +123,9 @@ async function submitGeneration(sunoPrompt) {
     instrumental: true,
     model:        SUNO_MODEL,
     prompt:       sunoPrompt.slice(0, 500),
+    // kie.ai requires callBackUrl to be present (422 without it).
+    // We still poll for results — the callback is a bonus notification.
+    callBackUrl:  'http://localhost:3000/api/composor/kie-callback',
   };
 
   console.log(`[suno-client] Submitting to ${provider.name} (${provider.baseUrl})`);
@@ -145,7 +148,15 @@ async function submitGeneration(sunoPrompt) {
 
   const data = await response.json();
 
+  if (data.code === 402 || data.code === 429) {
+    console.error(`[suno-client] ✗ ${provider.name} — no credits / rate limited (${data.code})`);
+    const err = new Error(`${provider.name} credits exhausted`);
+    err.noCredits = true;
+    throw err;
+  }
+
   if (data.code !== 200 || !data.data?.taskId) {
+    console.error(`[suno-client] ✗ ${provider.name} bad response: ${JSON.stringify(data)}`);
     throw new Error(`${provider.name} unexpected response: ${JSON.stringify(data)}`);
   }
 
@@ -289,6 +300,11 @@ async function generateTrack({ sunoPrompt, projectId, sceneLabel, generationInde
     };
 
   } catch (err) {
+    if (err.noCredits) {
+      console.error(`[suno-client] ✗ No credits — returning prompt for manual generation`);
+      return { ok: false, reason: 'no_credits', suno_prompt: sunoPrompt, provider: provider?.name };
+    }
+    console.error(`[suno-client] ✗ generateTrack failed (${provider?.name}): ${err.message}`);
     return { ok: false, reason: 'api_error', error: err.message, provider: provider?.name };
   }
 }

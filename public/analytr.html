@@ -187,6 +187,116 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 .hint-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text-dimmer);}
 .hint-bar a{color:var(--teal);text-decoration:none;}
 .hint-bar a:hover{text-decoration:underline;}
+
+/* ─── THUMBNAIL A/B TESTER ───────────────────── */
+.ab-wrap{animation:fadeUp 0.4s 0.25s ease both;}
+.ab-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+@media(max-width:600px){.ab-upload-grid{grid-template-columns:1fr;}}
+.ab-zone{background:var(--bg-card);border:2px dashed var(--border-bright);border-radius:var(--radius);aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+.ab-zone:hover,.ab-zone.dragover{border-color:var(--teal);background:var(--teal-glow);}
+.ab-zone.has-image{border-style:solid;border-color:var(--teal);}
+.ab-zone-label{font-family:var(--font-head);font-size:18px;letter-spacing:2px;color:var(--text-dimmer);margin-bottom:6px;pointer-events:none;}
+.ab-zone-hint{font-size:11px;color:var(--text-dimmer);pointer-events:none;}
+.ab-zone-icon{font-size:32px;margin-bottom:8px;opacity:0.5;pointer-events:none;}
+.ab-zone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:calc(var(--radius) - 2px);}
+.ab-zone .ab-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;}
+.ab-zone:hover .ab-overlay{opacity:1;}
+.ab-overlay-text{font-size:12px;font-weight:700;color:var(--text);letter-spacing:0.5px;}
+.ab-file-input{display:none;}
+.ab-label-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.ab-thumb-label{font-family:var(--font-head);font-size:13px;letter-spacing:1.5px;color:var(--text-dimmer);}
+.ab-thumb-name{font-size:11px;color:var(--text-dimmer);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+
+.ab-options{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.ab-context-input{flex:1;min-width:200px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;font-family:var(--font-body);color:var(--text);outline:none;transition:border-color 0.15s;}
+.ab-context-input:focus{border-color:var(--teal);}
+.ab-context-input::placeholder{color:var(--text-dimmer);}
+
+.ab-analyze-btn{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:var(--bg);font-family:var(--font-body);font-size:14px;font-weight:700;padding:12px 28px;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;}
+.ab-analyze-btn:hover{background:var(--teal-dim);}
+.ab-analyze-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.ab-analyze-btn .ab-spinner{width:14px;height:14px;border:2px solid rgba(0,0,0,0.2);border-top-color:var(--bg);border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+.ab-analyze-btn.loading .ab-spinner{display:block;}
+.ab-analyze-btn.loading .ab-btn-text{opacity:0.7;}
+.ab-status{font-size:13px;color:var(--text-dim);margin-top:10px;display:none;}
+.ab-status.visible{display:block;}
+.ab-error{font-size:13px;color:var(--red);margin-top:10px;display:none;}
+.ab-error.visible{display:block;}
+
+.ab-results{margin-top:24px;display:none;}
+.ab-results.visible{display:block;}
+.ab-score-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+@media(max-width:600px){.ab-score-grid{grid-template-columns:1fr;}}
+.ab-score-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;transition:border-color 0.2s;}
+.ab-score-card.winner{border-color:var(--teal);}
+.ab-score-card.loser{opacity:0.75;}
+.ab-score-header{padding:14px 18px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ab-score-name{font-family:var(--font-head);font-size:20px;letter-spacing:2px;}
+.ab-winner-badge{background:var(--teal);color:var(--bg);font-size:10px;font-weight:800;letter-spacing:1px;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+.ab-score-total{font-family:var(--font-head);font-size:32px;letter-spacing:1px;color:var(--teal);}
+.ab-score-total.loser-score{color:var(--text-dimmer);}
+.ab-score-body{padding:14px 18px;}
+.ab-dim-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.ab-dim-label{font-size:11px;font-weight:600;letter-spacing:0.5px;color:var(--text-dimmer);width:130px;flex-shrink:0;}
+.ab-dim-bar-wrap{flex:1;height:6px;background:var(--bg-card-2);border-radius:3px;overflow:hidden;}
+.ab-dim-bar{height:100%;border-radius:3px;background:var(--teal);transition:width 0.6s ease;}
+.ab-score-card.loser .ab-dim-bar{background:var(--text-dimmer);}
+.ab-dim-val{font-size:12px;font-weight:700;color:var(--text);width:20px;text-align:right;flex-shrink:0;}
+.ab-score-note{margin-top:12px;border-top:1px solid var(--border);padding-top:12px;}
+.ab-score-note-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:4px;}
+.ab-score-note-text{font-size:12px;color:var(--text-dim);line-height:1.55;}
+.ab-score-note-text.weakness{color:var(--amber);}
+
+.ab-verdict{background:var(--bg-card);border:1px solid var(--teal);border-radius:var(--radius);padding:20px 22px;}
+.ab-verdict-title{font-family:var(--font-head);font-size:16px;letter-spacing:2px;color:var(--teal);margin-bottom:10px;}
+.ab-verdict-text{font-size:14px;color:var(--text);line-height:1.65;margin-bottom:14px;}
+.ab-verdict-improvement{background:var(--amber-glow);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--text);line-height:1.6;}
+.ab-verdict-improvement strong{color:var(--amber);font-weight:700;}
+
+/* ─── CONTENT DNA ────────────────────────────── */
+.dna-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:0;}
+.dna-panel-full{width:100%;}
+.dna-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;}
+.dna-panel-title{font-family:var(--font-head);font-size:18px;letter-spacing:2px;color:var(--teal);}
+.dna-refresh-btn{background:var(--bg-card-2);border:1px solid var(--border-bright);color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:700;padding:7px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;}
+.dna-refresh-btn:hover{border-color:var(--teal);color:var(--teal);}
+.dna-twin{display:grid;grid-template-columns:1fr 1fr;gap:16px;animation:fadeUp 0.4s 0.2s ease both;}
+@media(max-width:750px){.dna-twin{grid-template-columns:1fr;}}
+.dna-generate-btn{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:var(--bg);font-family:var(--font-body);font-size:14px;font-weight:700;padding:11px 20px;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;margin-bottom:14px;width:100%;}
+.dna-generate-btn:hover{background:var(--teal-dim);}
+.dna-generate-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.dna-save-btn{background:transparent;border:1px solid var(--teal);color:var(--teal);font-family:var(--font-body);font-size:12px;font-weight:700;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;white-space:nowrap;}
+.dna-save-btn:hover{background:var(--teal-glow);}
+.dna-loading{display:flex;align-items:center;gap:12px;padding:48px 24px;color:var(--text-dimmer);font-size:14px;}
+.dna-spin{width:20px;height:20px;border:2px solid var(--border-bright);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
+.dna-empty{text-align:center;padding:48px 24px;color:var(--text-dimmer);font-size:14px;}
+.dna-status{font-size:13px;color:var(--text-dim);padding:8px 0;margin-bottom:8px;}
+.dna-niche-def{background:var(--bg-card-2);border-left:3px solid var(--teal);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 16px;font-size:14px;color:var(--text);line-height:1.75;margin-bottom:16px;}
+.dna-pillars-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:10px;}
+.dna-pillars{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0;}
+.dna-pill{background:var(--teal-glow);border:1px solid rgba(62,207,178,0.3);color:var(--teal);font-size:12px;font-weight:700;padding:5px 13px;border-radius:20px;letter-spacing:0.3px;}
+.dna-audience-cards{display:flex;flex-direction:column;gap:12px;}
+.dna-aud-card{background:var(--bg-card-2);border-radius:var(--radius-sm);padding:14px 16px;}
+.dna-aud-card-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.dna-aud-icon{font-size:18px;flex-shrink:0;}
+.dna-aud-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);}
+.dna-aud-text{font-size:13px;color:var(--text);line-height:1.6;}
+.dna-aud-list{list-style:none;display:flex;flex-direction:column;gap:5px;margin-top:4px;}
+.dna-aud-list li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text);line-height:1.5;}
+.dna-aud-list li::before{content:'→';color:var(--teal);font-weight:700;flex-shrink:0;}
+.dna-aud-list.fears li::before{content:'⚡';color:var(--amber);}
+.dna-aud-list.converts li::before{content:'✓';color:var(--green);}
+.dna-save-status{font-size:13px;padding:8px 0;margin-top:8px;}
+.dna-save-status.ok{color:var(--green);}
+.dna-save-status.err{color:var(--red);}
+/* ─── D3 CONSTELLATION ───────────────────────── */
+#constellationSvg{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:default;}
+.graph-tooltip{position:absolute;pointer-events:none;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--text);max-width:220px;line-height:1.5;display:none;z-index:100;}
+.graph-tooltip strong{color:var(--teal);display:block;margin-bottom:4px;font-size:13px;line-height:1.3;}
+.graph-tooltip .tt-stat{color:var(--text-dim);font-size:11px;}
+.dna-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding:0 4px;}
+.dna-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);}
+.dna-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -325,6 +435,129 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
     </div>
   </div>
 
+  <!-- ─── SECTION 5: THUMBNAIL A/B TESTER ──────── -->
+  <div class="section-spacer ab-wrap">
+    <div class="section-header">
+      <div class="section-title">THUMBNAIL A/B TESTER</div>
+      <div class="section-sub">Upload two thumbnails — Claude scores both and picks a winner</div>
+    </div>
+
+    <!-- Upload zones -->
+    <div class="ab-upload-grid">
+
+      <!-- Thumbnail A -->
+      <div>
+        <div class="ab-label-row">
+          <div class="ab-thumb-label">THUMBNAIL A</div>
+          <div class="ab-thumb-name" id="abNameA">No file chosen</div>
+        </div>
+        <div class="ab-zone" id="abZoneA" onclick="document.getElementById('abFileA').click()"
+             ondragover="abDragOver(event,'abZoneA')" ondragleave="abDragLeave('abZoneA')" ondrop="abDrop(event,'A')">
+          <div class="ab-zone-icon">🖼</div>
+          <div class="ab-zone-label">THUMBNAIL A</div>
+          <div class="ab-zone-hint">Click or drag &amp; drop · 16:9</div>
+          <div class="ab-overlay"><div class="ab-overlay-text">↺ Replace</div></div>
+        </div>
+        <input type="file" class="ab-file-input" id="abFileA" accept="image/*" onchange="abFileChosen(event,'A')">
+      </div>
+
+      <!-- Thumbnail B -->
+      <div>
+        <div class="ab-label-row">
+          <div class="ab-thumb-label">THUMBNAIL B</div>
+          <div class="ab-thumb-name" id="abNameB">No file chosen</div>
+        </div>
+        <div class="ab-zone" id="abZoneB" onclick="document.getElementById('abFileB').click()"
+             ondragover="abDragOver(event,'abZoneB')" ondragleave="abDragLeave('abZoneB')" ondrop="abDrop(event,'B')">
+          <div class="ab-zone-icon">🖼</div>
+          <div class="ab-zone-label">THUMBNAIL B</div>
+          <div class="ab-zone-hint">Click or drag &amp; drop · 16:9</div>
+          <div class="ab-overlay"><div class="ab-overlay-text">↺ Replace</div></div>
+        </div>
+        <input type="file" class="ab-file-input" id="abFileB" accept="image/*" onchange="abFileChosen(event,'B')">
+      </div>
+
+    </div>
+
+    <!-- Options row -->
+    <div class="ab-options">
+      <input class="ab-context-input" id="abContext" type="text"
+        placeholder="Optional: add context (e.g. 'this is for a video about building a root cellar')" />
+    </div>
+
+    <!-- Analyze button -->
+    <button class="ab-analyze-btn" id="abAnalyzeBtn" onclick="runAbTest()" disabled>
+      <div class="ab-spinner"></div>
+      <span class="ab-btn-text">Analyze Thumbnails →</span>
+    </button>
+    <div class="ab-status" id="abStatus"></div>
+    <div class="ab-error" id="abError"></div>
+
+    <!-- Results -->
+    <div class="ab-results" id="abResults">
+      <div class="ab-score-grid" id="abScoreGrid"></div>
+      <div class="ab-verdict" id="abVerdict"></div>
+    </div>
+  </div>
+
+
+  <!-- ─── CONTENT DNA ─────────────────────────── -->
+  <div class="section-spacer" id="content-dna">
+    <div class="section-header">
+      <div class="section-title">CONTENT DNA</div>
+      <div class="section-sub">Your actual niche, ideal audience, and content constellation — defined by data</div>
+    </div>
+
+    <!-- ─ Panel 1: Constellation Graph ─ -->
+    <div class="dna-panel dna-panel-full" style="margin-bottom:16px;">
+      <div class="dna-panel-header">
+        <div class="dna-panel-title">✦ THE CONSTELLATION</div>
+        <button class="dna-refresh-btn" onclick="loadConstellationGraph(true)">↺ Regenerate Clusters</button>
+      </div>
+      <div id="constellationLoading" class="dna-loading">
+        <div class="dna-spin"></div>
+        <span>Analyzing your content library...</span>
+      </div>
+      <div id="constellationEmpty" class="dna-empty" style="display:none">
+        No YouTube videos found. Import your channel first.
+      </div>
+      <div id="constellationSvgWrap" style="display:none;position:relative;">
+        <svg id="constellationSvg" width="100%" height="600" style="display:block;"></svg>
+        <div id="graphTooltip" class="graph-tooltip"></div>
+      </div>
+      <div id="constellationLegend" class="dna-legend"></div>
+    </div>
+
+    <!-- ─ Panels 2 + 3: Niche + Audience ─ -->
+    <div class="dna-twin">
+      <!-- Panel 2: Niche Definition -->
+      <div class="dna-panel">
+        <div class="dna-panel-header">
+          <div class="dna-panel-title">YOUR ACTUAL NICHE</div>
+        </div>
+        <button class="dna-generate-btn" id="dnaGenerateBtn" onclick="generateContentDna()">
+          Generate Niche Definition →
+        </button>
+        <div id="dnaStatus" class="dna-status" style="display:none"></div>
+        <div id="nicheDef" class="dna-niche-def" style="display:none"></div>
+        <div id="pillarsWrap" style="display:none">
+          <div class="dna-pillars-label">CONTENT PILLARS</div>
+          <div id="pillars" class="dna-pillars"></div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Audience Profile -->
+      <div class="dna-panel" id="audiencePanel" style="display:none">
+        <div class="dna-panel-header">
+          <div class="dna-panel-title">AUDIENCE PROFILE</div>
+          <button class="dna-save-btn" onclick="saveToSoul()">💾 Save to My Soul →</button>
+        </div>
+        <div id="audienceCards" class="dna-audience-cards"></div>
+        <div id="saveStatus" class="dna-save-status" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ─── SECTION 4: YOUTUBE SYNC ─────────────── -->
   <div class="section-spacer" id="youtube-sync">
     <div class="section-header">
@@ -351,6 +584,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="/js/nav.js" defer></script>
 <script>
 window.addEventListener('load', () => initNav());
@@ -881,12 +1115,474 @@ async function importChannel() {
   syncBtn.disabled = false;
 }
 
+// ─── Section 5: Thumbnail A/B Tester ─────────────────────────────────────────
+
+const abFiles = { A: null, B: null };
+
+function abCheckReady() {
+  document.getElementById('abAnalyzeBtn').disabled = !(abFiles.A && abFiles.B);
+}
+
+function abFileChosen(e, side) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  abSetFile(side, file);
+}
+
+function abSetFile(side, file) {
+  abFiles[side] = file;
+  const zone   = document.getElementById(`abZone${side}`);
+  const nameEl = document.getElementById(`abName${side}`);
+  nameEl.textContent = file.name.length > 30 ? file.name.slice(0, 28) + '…' : file.name;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Remove old img if present
+    const old = zone.querySelector('img');
+    if (old) old.remove();
+    const img = document.createElement('img');
+    img.src = e.target.result;
+    img.alt = `Thumbnail ${side}`;
+    zone.appendChild(img);
+    zone.classList.add('has-image');
+    // Keep the overlay div at the end
+    const overlay = zone.querySelector('.ab-overlay');
+    if (overlay) zone.appendChild(overlay);
+  };
+  reader.readAsDataURL(file);
+  abCheckReady();
+}
+
+function abDragOver(e, zoneId) {
+  e.preventDefault();
+  document.getElementById(zoneId).classList.add('dragover');
+}
+function abDragLeave(zoneId) {
+  document.getElementById(zoneId).classList.remove('dragover');
+}
+function abDrop(e, side) {
+  e.preventDefault();
+  const zoneId = `abZone${side}`;
+  document.getElementById(zoneId).classList.remove('dragover');
+  const file = e.dataTransfer.files?.[0];
+  if (file && file.type.startsWith('image/')) abSetFile(side, file);
+}
+
+async function runAbTest() {
+  const btn    = document.getElementById('abAnalyzeBtn');
+  const status = document.getElementById('abStatus');
+  const errEl  = document.getElementById('abError');
+  const results = document.getElementById('abResults');
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+  errEl.classList.remove('visible');
+  results.classList.remove('visible');
+  status.textContent = 'Sending thumbnails to Claude…';
+  status.classList.add('visible');
+
+  try {
+    const form = new FormData();
+    form.append('thumbnailA', abFiles.A, abFiles.A.name);
+    form.append('thumbnailB', abFiles.B, abFiles.B.name);
+    const ctx = document.getElementById('abContext').value.trim();
+    if (ctx) form.append('context', ctx);
+
+    const res = await fetch('/api/analytr/thumbnail-ab', { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    renderAbResults(data);
+    status.classList.remove('visible');
+
+  } catch (err) {
+    errEl.textContent = 'Error: ' + err.message;
+    errEl.classList.add('visible');
+    status.classList.remove('visible');
+  }
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+}
+
+function renderAbResults(data) {
+  const dims = [
+    { key: 'emotional_hook',   label: 'Emotional Hook'  },
+    { key: 'text_readability', label: 'Text Readability' },
+    { key: 'visual_clarity',   label: 'Visual Clarity'  },
+    { key: 'click_worthiness', label: 'Click-Worthiness' },
+    { key: 'brand_fit',        label: 'Brand Fit'       },
+  ];
+
+  const winner = data.winner === 'A' ? 'thumbnailA' : 'thumbnailB';
+  const loser  = winner === 'thumbnailA' ? 'thumbnailB' : 'thumbnailA';
+  const winLetter = data.winner === 'A' ? 'A' : 'B';
+  const loseLetter = winLetter === 'A' ? 'B' : 'A';
+
+  function scoreCard(key, letter) {
+    const d       = data[key];
+    const isWinner = key === winner;
+    const totalCls = isWinner ? '' : 'loser-score';
+    const cardCls  = isWinner ? 'ab-score-card winner' : 'ab-score-card loser';
+    const badge    = isWinner ? '<span class="ab-winner-badge">USE THIS ONE ✓</span>' : '';
+    const barRows  = dims.map(dim => {
+      const val = Number(d[dim.key]) || 0;
+      const pct = Math.round(val * 10);
+      return `
+        <div class="ab-dim-row">
+          <div class="ab-dim-label">${dim.label}</div>
+          <div class="ab-dim-bar-wrap"><div class="ab-dim-bar" style="width:${pct}%"></div></div>
+          <div class="ab-dim-val">${val}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="${cardCls}">
+        <div class="ab-score-header">
+          <div class="ab-score-name">THUMBNAIL ${letter}</div>
+          ${badge}
+        </div>
+        <div class="ab-score-body">
+          <div class="ab-score-total ${totalCls}">${d.total} <span style="font-size:14px;color:var(--text-dimmer);letter-spacing:0">/50</span></div>
+          ${barRows}
+          <div class="ab-score-note">
+            <div class="ab-score-note-label">✓ Strengths</div>
+            <div class="ab-score-note-text">${d.strengths || '—'}</div>
+            <div class="ab-score-note-label" style="margin-top:8px">↑ Weaknesses</div>
+            <div class="ab-score-note-text weakness">${d.weaknesses || '—'}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('abScoreGrid').innerHTML =
+    scoreCard('thumbnailA', 'A') + scoreCard('thumbnailB', 'B');
+
+  document.getElementById('abVerdict').innerHTML = `
+    <div class="ab-verdict-title">THE VERDICT</div>
+    <div class="ab-verdict-text">${data.reasoning || ''}</div>
+    <div class="ab-verdict-improvement">
+      <strong>💡 How to fix Thumbnail ${loseLetter}:</strong> ${data.improvement || ''}
+    </div>`;
+
+  document.getElementById('abResults').classList.add('visible');
+  document.getElementById('abResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 (async () => {
   await loadChannelHealth();
   await loadYtLinkRows();
   await loadVideos();
+  loadConstellationGraph(false);
 })();
+
+// ─── Content DNA ──────────────────────────────────────────────────────────────
+
+const CLUSTER_COLORS = {
+  teal:   '#3ecfb2', amber:  '#f0b942', coral: '#e05c5c',
+  purple: '#a78bfa', green:  '#5cba8a', blue:  '#5b9cf6',
+  orange: '#f0834a', rose:   '#f06b9e',
+};
+
+let _dnaData   = null;
+let _dnaResult = null;
+
+async function loadConstellationGraph(forceRefresh) {
+  const loading = document.getElementById('constellationLoading');
+  const empty   = document.getElementById('constellationEmpty');
+  const svgWrap = document.getElementById('constellationSvgWrap');
+  const legend  = document.getElementById('constellationLegend');
+
+  loading.style.display = 'flex';
+  empty.style.display   = 'none';
+  svgWrap.style.display = 'none';
+  legend.innerHTML      = '';
+
+  try {
+    const url  = '/api/analytr/content-dna/graph' + (forceRefresh ? '?refresh=1' : '');
+    const r    = await fetch(url);
+    const data = await r.json();
+
+    loading.style.display = 'none';
+
+    if (data.error === 'no_videos' || !data.nodes || !data.nodes.length) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    _dnaData = data;
+    svgWrap.style.display = 'block';
+    renderConstellation(data);
+    renderLegend(data.clusters || []);
+  } catch (err) {
+    loading.style.display = 'none';
+    empty.textContent = 'Failed to load constellation: ' + err.message;
+    empty.style.display = 'block';
+  }
+}
+
+function renderConstellation(data) {
+  const nodes   = data.nodes;
+  const svgEl   = document.getElementById('constellationSvg');
+  const W       = svgEl.clientWidth || 960;
+  const H       = 600;
+  svgEl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+  // Build links: chain within each cluster
+  const clusterGroups = {};
+  nodes.forEach(function(n) {
+    if (!clusterGroups[n.cluster_id]) clusterGroups[n.cluster_id] = [];
+    clusterGroups[n.cluster_id].push(n);
+  });
+  const links = [];
+  Object.values(clusterGroups).forEach(function(group) {
+    for (let i = 0; i < group.length - 1; i++) {
+      links.push({ source: group[i].id, target: group[i + 1].id });
+    }
+  });
+
+  const maxViews = Math.max.apply(null, nodes.map(function(n) { return n.views; }).concat([1]));
+  function nodeR(n) { return 8 + Math.sqrt(n.views / maxViews) * 26; }
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(function(n) { return n.id; }).distance(80).strength(0.6))
+    .force('charge', d3.forceManyBody().strength(-220))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide().radius(function(n) { return nodeR(n) + 8; }));
+
+  const svgSel = d3.select(svgEl);
+  svgSel.selectAll('*').remove();
+
+  const link = svgSel.append('g')
+    .selectAll('line')
+    .data(links)
+    .enter().append('line')
+      .attr('stroke', function(d) {
+        const srcId  = typeof d.source === 'object' ? d.source.id : d.source;
+        const srcNode = nodes.find(function(n) { return n.id === srcId; });
+        return srcNode ? (CLUSTER_COLORS[srcNode.cluster_color] || '#3ecfb2') : '#2a2e28';
+      })
+      .attr('stroke-opacity', 0.3)
+      .attr('stroke-width', 1.5);
+
+  const tooltip = document.getElementById('graphTooltip');
+
+  const nodeG = svgSel.append('g')
+    .selectAll('g')
+    .data(nodes)
+    .enter().append('g')
+      .attr('cursor', 'pointer')
+      .call(d3.drag()
+        .on('start', function(event, d) {
+          if (!event.active) sim.alphaTarget(0.3).restart();
+          d.fx = d.x; d.fy = d.y;
+        })
+        .on('drag', function(event, d) { d.fx = event.x; d.fy = event.y; })
+        .on('end', function(event, d) {
+          if (!event.active) sim.alphaTarget(0);
+          d.fx = null; d.fy = null;
+        })
+      )
+      .on('mouseover', function(event, d) {
+        const svgPos = svgEl.getBoundingClientRect();
+        tooltip.style.display = 'block';
+        tooltip.style.left = (event.clientX - svgPos.left + 14) + 'px';
+        tooltip.style.top  = (event.clientY - svgPos.top  + 14) + 'px';
+        const clr = CLUSTER_COLORS[d.cluster_color] || '#3ecfb2';
+        tooltip.innerHTML = '<strong>' + d.title + '</strong>'
+          + '<div class="tt-stat">👁 ' + Number(d.views).toLocaleString() + ' views</div>'
+          + '<div class="tt-stat">👍 ' + Number(d.likes).toLocaleString() + ' likes</div>'
+          + '<div class="tt-stat" style="color:' + clr + ';margin-top:4px;font-weight:700;">✶ ' + d.cluster_name + '</div>';
+      })
+      .on('mousemove', function(event) {
+        const svgPos = svgEl.getBoundingClientRect();
+        tooltip.style.left = (event.clientX - svgPos.left + 14) + 'px';
+        tooltip.style.top  = (event.clientY - svgPos.top  + 14) + 'px';
+      })
+      .on('mouseout', function() { tooltip.style.display = 'none'; })
+      .on('click', function(event, d) {
+        if (d.youtube_url) window.open(d.youtube_url, '_blank');
+      });
+
+  nodeG.append('circle')
+    .attr('r', function(n) { return nodeR(n); })
+    .attr('fill', function(n) { return (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') + '33'; })
+    .attr('stroke', function(n) { return CLUSTER_COLORS[n.cluster_color] || '#3ecfb2'; })
+    .attr('stroke-width', 1.5);
+
+  nodeG.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'central')
+    .attr('fill', '#e8ebe6')
+    .attr('font-size', function(n) { return Math.max(8, Math.min(11, nodeR(n) * 0.45)) + 'px'; })
+    .attr('font-family', 'DM Sans, sans-serif')
+    .attr('pointer-events', 'none')
+    .text(function(n) { return n.title.split(' ').slice(0, 4).join(' '); });
+
+  sim.on('tick', function() {
+    link
+      .attr('x1', function(d) { return d.source.x; })
+      .attr('y1', function(d) { return d.source.y; })
+      .attr('x2', function(d) { return d.target.x; })
+      .attr('y2', function(d) { return d.target.y; });
+    nodeG.attr('transform', function(d) {
+      const pad = nodeR(d) + 2;
+      d.x = Math.max(pad, Math.min(W - pad, d.x));
+      d.y = Math.max(pad, Math.min(H - pad, d.y));
+      return 'translate(' + d.x + ',' + d.y + ')';
+    });
+  });
+}
+
+function renderLegend(clusters) {
+  const legend = document.getElementById('constellationLegend');
+  legend.innerHTML = clusters.map(function(c) {
+    const hex = CLUSTER_COLORS[c.color] || '#3ecfb2';
+    return '<div class="dna-legend-item">'
+      + '<div class="dna-legend-dot" style="background:' + hex + '"></div>'
+      + '<span>' + c.name + '</span></div>';
+  }).join('');
+}
+
+async function generateContentDna() {
+  const btn       = document.getElementById('dnaGenerateBtn');
+  const status    = document.getElementById('dnaStatus');
+  const nicheDef  = document.getElementById('nicheDef');
+  const pillarsWr = document.getElementById('pillarsWrap');
+  const pillars   = document.getElementById('pillars');
+  const audPanel  = document.getElementById('audiencePanel');
+
+  btn.disabled         = true;
+  btn.textContent      = 'Analyzing...';
+  status.style.display = 'block';
+  status.textContent   = 'Sending your content library to Claude...';
+  status.style.color   = '';
+  nicheDef.style.display  = 'none';
+  pillarsWr.style.display = 'none';
+  audPanel.style.display  = 'none';
+
+  try {
+    const r = await fetch('/api/analytr/content-dna', { method: 'POST' });
+    if (!r.ok || !r.body) throw new Error('Request failed ' + r.status);
+
+    const reader  = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      const lines = buffer.split('
+');
+      buffer = lines.pop();
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.startsWith('data: ')) continue;
+        let evt;
+        try { evt = JSON.parse(line.slice(6)); } catch(e) { continue; }
+        if (evt.type === 'status') {
+          status.textContent = evt.message;
+        } else if (evt.type === 'result') {
+          _dnaResult = evt.data;
+          renderDnaResult(evt.data);
+          status.style.display = 'none';
+        } else if (evt.type === 'error') {
+          throw new Error(evt.message);
+        }
+      }
+    }
+  } catch (err) {
+    status.textContent = '✗ ' + err.message;
+    status.style.color = 'var(--red)';
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Regenerate →';
+  }
+}
+
+function renderDnaResult(data) {
+  const nicheDef  = document.getElementById('nicheDef');
+  const pillarsWr = document.getElementById('pillarsWrap');
+  const pillars   = document.getElementById('pillars');
+  const audPanel  = document.getElementById('audiencePanel');
+  const audCards  = document.getElementById('audienceCards');
+
+  nicheDef.textContent    = data.niche_definition || '';
+  nicheDef.style.display  = 'block';
+
+  const pillarItems = data.content_pillars || [];
+  pillars.innerHTML       = pillarItems.map(function(p) {
+    return '<div class="dna-pill">' + p + '</div>';
+  }).join('');
+  pillarsWr.style.display = 'block';
+
+  if (data.audience_profile) {
+    const ap = data.audience_profile;
+
+    function listHtml(items, cls) {
+      return '<ul class="dna-aud-list ' + (cls || '') + '">'
+        + (items || []).map(function(i) { return '<li>' + i + '</li>'; }).join('')
+        + '</ul>';
+    }
+
+    audCards.innerHTML =
+      '<div class="dna-aud-card">'
+        + '<div class="dna-aud-card-header"><span class="dna-aud-icon">&#x1F465;</span><span class="dna-aud-label">WHO THEY ARE</span></div>'
+        + '<div class="dna-aud-text">' + (ap.who_they_are || '') + '</div>'
+      + '</div>'
+      + '<div class="dna-aud-card">'
+        + '<div class="dna-aud-card-header"><span class="dna-aud-icon">&#x1F4A1;</span><span class="dna-aud-label">WHAT THEY BELIEVE</span></div>'
+        + listHtml(ap.what_they_believe)
+      + '</div>'
+      + '<div class="dna-aud-card">'
+        + '<div class="dna-aud-card-header"><span class="dna-aud-icon">&#x26A1;</span><span class="dna-aud-label">WHAT THEY FEAR</span></div>'
+        + listHtml(ap.what_they_fear, 'fears')
+      + '</div>'
+      + '<div class="dna-aud-card">'
+        + '<div class="dna-aud-card-header"><span class="dna-aud-icon">&#x1F3AF;</span><span class="dna-aud-label">WHY THEY WATCH YOU</span></div>'
+        + '<div class="dna-aud-text">' + (ap.why_they_watch || '') + '</div>'
+      + '</div>'
+      + '<div class="dna-aud-card">'
+        + '<div class="dna-aud-card-header"><span class="dna-aud-icon">&#x2705;</span><span class="dna-aud-label">CONTENT THAT CONVERTS</span></div>'
+        + listHtml(ap.content_that_converts, 'converts')
+      + '</div>';
+
+    audPanel.style.display = 'block';
+  }
+}
+
+async function saveToSoul() {
+  if (!_dnaResult || !_dnaResult.audience_profile) return;
+  const btn    = document.querySelector('.dna-save-btn');
+  const status = document.getElementById('saveStatus');
+  btn.disabled    = true;
+  btn.textContent = 'Saving...';
+  status.style.display = 'none';
+  try {
+    const r = await fetch('/api/analytr/creator-profile-audience', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ audience_profile: _dnaResult.audience_profile }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Save failed');
+    status.textContent   = '✓ Saved to creator-profile.json';
+    status.className     = 'dna-save-status ok';
+    status.style.display = 'block';
+    btn.textContent = '✓ Saved';
+  } catch (err) {
+    status.textContent   = '✗ ' + err.message;
+    status.className     = 'dna-save-status err';
+    status.style.display = 'block';
+    btn.disabled    = false;
+    btn.textContent = '💾 Save to My Soul →';
+  }
+}
 </script>
 </body>
 </html>

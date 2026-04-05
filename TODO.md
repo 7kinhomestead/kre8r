@@ -2,6 +2,74 @@
 
 ---
 
+## Task 0 — Add 2 sections to Production Runbook DOCX
+
+File: `C:/Users/18054/kre8r/Kre8r-Production-Runbook.docx`
+Rebuild via: `node C:/Users/18054/AppData/Local/Temp/outputs/build-runbook.js`
+
+Add these two sections, formatted consistently with the rest (dark phase headers, data flow bars, tip/warning boxes):
+
+### SECTION A: FILE PATHS & WHERE EVERYTHING LIVES
+
+| Item | Location |
+|---|---|
+| Footage Intake | `D:\kre8r\intake\` |
+| Proxy Files | `D:\kre8r\proxy\` |
+| Music Files | `[kre8r]\public\music\{project_id}\` |
+| Project Configs | `[kre8r]\project-configs\{project_id}\project-config.json` |
+| Beat Maps | Same as project configs — filesystem not DB |
+| Crew Brief PDFs | Generated on demand, downloaded to browser |
+| Id8Ωr Research | DB — `projects.id8r_data` (JSON blob) — NOT a file |
+| WritΩr Scripts | DB — `writr_scripts` table |
+| Selects | DB — `selects` table |
+| Captions | DB — `captions` table |
+| Email sequences | DB — `emails` table |
+| YouTube thumbnails | DB — `posts` table (URLs) |
+| Database location | `[kre8r]\kre8r.db` |
+| Suno music prompts | DB — `composor_tracks.suno_prompt` |
+
+**IMPORTANT NOTE on Id8Ωr Research:**
+The research phase (websites visited, insights found, links collected) currently lives ONLY in the browser session during the Id8Ωr conversation. The final synthesized data (chosen concept, research summary, package data, vision brief) gets saved to the DB when you click Send to PipΩr. The raw research links and individual website data are NOT currently saved anywhere permanently — this is a known gap to fix in a future session.
+
+### SECTION B: THE DAVINCI PIPELINE — HOW IT WORKS
+
+DaVinci Resolve integration happens at two points:
+
+**Trigger 1 — BRAW Proxy Generation (VaultΩr)**
+- When: Automatically when a .BRAW file is detected in `D:\kre8r\intake`
+- How: VaultΩr calls a DaVinci Python script via the Resolve API
+- What it does:
+  1. Opens DaVinci Resolve (must be running)
+  2. Imports the BRAW file into the media pool
+  3. Generates a proxy file at reduced resolution
+  4. Saves proxy to `D:\kre8r\proxy\`
+  5. VaultΩr links the proxy back to the original BRAW record in DB
+- Requirements: DaVinci Resolve must be OPEN and running before dropping footage
+- If it fails: Check DaVinci is open, check proxy path exists, check Python API is enabled in DaVinci preferences
+
+**Trigger 2 — Audio Timeline Push (ComposΩr)**
+- When: You click 'Push to DaVinci' in ComposΩr after selecting one track per scene
+- How: ComposΩr calls a DaVinci Python script via the Resolve API
+- What it does:
+  1. Opens or connects to current DaVinci project
+  2. Creates a new timeline called '04_AUDIO'
+  3. Places each selected music track at its scene's approximate start position
+  4. Sets audio level to -6dB on the music track
+  5. You then edit around this audio timeline in DaVinci manually
+- Requirements: DaVinci must be OPEN with your project loaded
+- If it fails: Make sure your DaVinci project is open, not just Resolve itself
+
+**What Kre8Ωr does NOT do in DaVinci (yet):**
+- Does not create video timelines automatically
+- Does not place footage clips on timeline
+- Does not export or render
+- Does not apply color grades
+- The editing itself is still done manually in DaVinci
+
+**Intended future state:** SelectsΩr will eventually generate a DaVinci XML/EDL file that auto-assembles a rough cut from the approved selects. That feature is on the wishlist but not yet built.
+
+---
+
 ## Before Next Deploy — Run on DigitalOcean server
 
 ```bash

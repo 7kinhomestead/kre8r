@@ -145,6 +145,10 @@
   .track-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
   .suno-fallback{display:flex;align-items:center;gap:8px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.3);border-radius:var(--radius-sm);padding:8px 12px;font-size:11px;color:var(--teal);line-height:1.4;}
   .suno-fallback a{color:var(--teal);font-weight:600;}
+  .no-credits-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--amber-glow);border:1px solid rgba(240,185,66,0.35);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:8px;}
+  .no-credits-icon{font-size:14px;flex-shrink:0;}
+  .no-credits-text{font-size:12px;color:var(--amber);line-height:1.4;flex:1;min-width:120px;}
+  .no-credits-text strong{font-weight:700;}
   .prompt-mode-banner{background:linear-gradient(135deg,rgba(62,207,178,0.07),rgba(62,207,178,0.03));border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:none;}
   .prompt-mode-banner.show{display:flex;align-items:flex-start;gap:12px;}
   .prompt-mode-icon{font-size:22px;flex-shrink:0;margin-top:2px;}
@@ -500,7 +504,7 @@ async function checkSunoKey() {
 }
 
 async function loadProjects() {
-  const r = await fetch('/api/projects');
+  const r = await fetch('/api/projects?source=kre8r');
   const d = await r.json();
   projectSelect.innerHTML = '<option value="">— select a project —</option>';
   (Array.isArray(d) ? d : d.projects || []).forEach(p => {
@@ -640,13 +644,28 @@ function renderTracks(sceneList) {
 }
 
 function renderTrackRow(t) {
-  const hasAudio   = !!t.public_path;
-  const isSelected = !!t.selected;
-  const isGenning  = !hasAudio && !!t.suno_prompt;
+  const hasAudio    = !!t.public_path;
+  const isSelected  = !!t.selected;
+  const noCredits   = t.suno_job_id === 'NO_CREDITS';
+  const isGenning   = !hasAudio && !noCredits && !!t.suno_prompt;
+
+  const promptAttrForCard = t.suno_prompt
+    ? esc(t.suno_prompt).replace(/'/g, '&#39;')
+    : '';
 
   let audioEl = '';
   if (hasAudio) {
     audioEl = `<audio class="track-audio" controls src="${esc(t.public_path)}" preload="none"></audio>`;
+  } else if (noCredits && t.suno_prompt) {
+    audioEl = `
+      <div class="no-credits-bar">
+        <div class="no-credits-icon">💳</div>
+        <div class="no-credits-text">
+          <strong>No credits</strong> — generate this manually, then upload above.
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="copyPrompt(this, '${promptAttrForCard}')">📋 Copy Prompt</button>
+        <a href="https://suno.com/create" target="_blank" rel="noopener" class="btn btn-suno btn-sm">Open Suno →</a>
+      </div>`;
   } else if (isGenning && sunoOk) {
     audioEl = `<div class="track-audio-placeholder"><span class="spinner spinner-teal"></span> Generating audio…</div>`;
   } else if (t.suno_prompt && !sunoOk) {
@@ -655,7 +674,7 @@ function renderTrackRow(t) {
 
   const selectBtnClass = isSelected ? 'btn btn-selected btn-sm' : 'btn btn-ghost btn-sm';
   const selectBtnText  = isSelected ? '✓ Selected' : 'Select';
-  const promptAttr     = t.suno_prompt ? esc(t.suno_prompt).replace(/'/g, '&#39;') : '';
+  const promptAttr     = promptAttrForCard; // defined above, shared with no-credits-bar
 
   return `
     <div class="track-row${isSelected ? ' is-selected' : ''}${isGenning ? ' is-generating' : ''}" id="track-row-${t.id}">

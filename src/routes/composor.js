@@ -241,12 +241,18 @@ router.post('/generate/:project_id', async (req, res) => {
             public_path:      result.public_path
           });
         } else {
+          // Persist no_credits state to DB so the UI shows the manual prompt
+          // even after a page reload — suno_job_id sentinel 'NO_CREDITS' signals this.
+          if (result.reason === 'no_credits') {
+            db.updateComposorTrack(trackDbId, { suno_job_id: 'NO_CREDITS' });
+          }
           pushEvent(job, {
             stage:            'track_failed',
             scene_label:      pt.scene_label,
             generation_index: pt.generation_index,
             reason:           result.reason,
-            error:            result.error
+            error:            result.error,
+            suno_prompt:      result.suno_prompt || pt.suno_prompt || null,
           });
           skippedCount++;
         }
@@ -279,6 +285,22 @@ router.get('/status/:job_id', (req, res) => {
   const job = jobs.get(req.params.job_id);
   if (!job) return res.status(404).json({ error: 'Job not found' });
   sseStream(job, req, res);
+});
+
+// ─────────────────────────────────────────────
+// POST /api/composor/reset/:project_id
+// Clears stale composor_state so generation can restart
+// ─────────────────────────────────────────────
+
+router.post('/reset/:project_id', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  try {
+    db.updateProjectComposorState(projectId, null);
+    res.json({ ok: true, project_id: projectId, message: 'ComposΩr state reset — ready to generate' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─────────────────────────────────────────────

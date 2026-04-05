@@ -9,9 +9,11 @@ const router  = express.Router();
 const db      = require('../db');
 
 // GET /api/projects — all active projects
+// Optional ?source=kre8r filter to exclude youtube_import projects from tool dropdowns
 router.get('/', (req, res) => {
   try {
-    const projects = db.getPipelineSummary();
+    const { source } = req.query;
+    const projects = db.getPipelineSummary(source || null);
     res.json(projects);
   } catch (err) {
     res.status(500).json({ error: err.message });

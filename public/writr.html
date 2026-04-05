@@ -665,7 +665,7 @@ async function init() {
 
 async function loadProjects() {
   try {
-    const r = await fetch('/api/projects');
+    const r = await fetch('/api/projects?source=kre8r');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const projects = await r.json();
     const sel = document.getElementById('projectSelect');
