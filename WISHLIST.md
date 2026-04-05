@@ -261,3 +261,19 @@ The sphere is pointing at the gap before any analysis runs.
 - `viralCoefficient`: `(likes + comments * 3) / views` — proxy for share-worthy engagement
 - `velocityScore`: views in first 7 days (requires `posted_at` date + total views as proxy if daily breakdown unavailable)
 - All classification done at render time — no new API calls, no new DB columns needed
+
+## AnalΩzr — Playlist Generator
+From the Content DNA clusters and niche definition, suggest YouTube playlist structures that organize existing videos into intentional series.
+
+How it works:
+- Each Content DNA cluster maps to a suggested playlist name and description
+- Top performers from each cluster are auto-ranked by views and pre-selected
+- 'Financial Rebellion' playlist auto-populated from Financial Escape cluster top performers
+- Creator reviews suggested playlists, reorders or removes videos, then approves
+- One-click create playlist via YouTube Data API v3 (`playlists.insert` + `playlistItems.insert`)
+- Playlist titles and descriptions written in Jason's voice using creator-profile.json
+
+Why it matters:
+- Playlists are the second-biggest driver of YouTube watch time after the algorithm
+- The Content DNA graph already has the cluster data — playlist generation is just applying that structure to the YouTube interface
+- Zero new analysis needed — it's a distribution layer on top of work already done
