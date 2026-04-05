@@ -1,9 +1,15 @@
 /**
  * Soul BuildΩr — src/routes/soul-buildr.js
  *
- * GET  /api/soul-buildr/status           — detect first-run vs update mode
- * POST /api/soul-buildr/generate         — SSE: generate creator-profile.json from wizard data
- * PATCH /api/soul-buildr/update-section  — update a specific section of creator-profile.json
+ * GET  /api/soul-buildr/status                     — detect first-run vs update mode
+ * POST /api/soul-buildr/generate                   — SSE: generate creator-profile.json from wizard data
+ * PATCH /api/soul-buildr/update-section            — update a specific section of creator-profile.json
+ * GET  /api/soul-buildr/collaborators              — list all collaborator soul files
+ * GET  /api/soul-buildr/collaborator/:slug         — read one collaborator profile
+ * POST /api/soul-buildr/collaborator/generate      — SSE: generate collaborator profile (3-screen wizard)
+ * POST /api/soul-buildr/collaborator/import        — save uploaded .kre8r JSON as collaborator profile
+ * GET  /api/soul-buildr/export                     — download primary soul as .kre8r
+ * GET  /api/soul-buildr/collaborator/:slug/export  — download collaborator soul as .kre8r
  */
 
 'use strict';
@@ -14,6 +20,7 @@ const fs       = require('fs');
 const path     = require('path');
 
 const PROFILE_PATH = path.join(__dirname, '../../creator-profile.json');
+const ROOT_PATH    = path.join(__dirname, '../../');
 
 function readProfile() {
   try {
@@ -299,6 +306,203 @@ router.patch('/update-section', (req, res) => {
     res.json({ ok: true, profile });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COLLABORATOR SOUL SUPPORT
+// ─────────────────────────────────────────────────────────────────────────────
+
+function listCollabFiles() {
+  try {
+    return fs.readdirSync(ROOT_PATH)
+      .filter(f => /^creator-profile-.+\.json$/.test(f))
+      .map(f => {
+        const slug = f.replace('creator-profile-', '').replace('.json', '');
+        try {
+          const p = JSON.parse(fs.readFileSync(path.join(ROOT_PATH, f), 'utf8'));
+          return {
+            slug,
+            name:        p.creator?.name  || slug,
+            role:        p.creator?.role  || 'Collaborator',
+            badge:       p.badge          || { letter: slug[0].toUpperCase(), color: 'amber' },
+            voice_words: (p.voice?.tone_descriptors || []).slice(0, 3).join(', ') || '',
+          };
+        } catch (_) {
+          return { slug, name: slug, role: 'Collaborator',
+                   badge: { letter: slug[0].toUpperCase(), color: 'amber' }, voice_words: '' };
+        }
+      });
+  } catch (_) { return []; }
+}
+
+// GET /collaborators
+router.get('/collaborators', (req, res) => {
+  res.json({ ok: true, collaborators: listCollabFiles() });
+});
+
+// GET /collaborator/:slug  (must come before /collaborator/generate to avoid :slug matching "generate")
+router.get('/collaborator/:slug/export', (req, res) => {
+  try {
+    const slug     = req.params.slug.replace(/[^a-z0-9-]/gi, '');
+    const filePath = path.join(ROOT_PATH, `creator-profile-${slug}.json`);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+    const profile  = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const name     = (profile.creator?.name || slug).toLowerCase().replace(/\s+/g, '-');
+    res.setHeader('Content-Disposition', `attachment; filename="creator-soul-${name}.kre8r"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(profile, null, 2));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/collaborator/:slug', (req, res) => {
+  try {
+    const slug     = req.params.slug.replace(/[^a-z0-9-]/gi, '');
+    const filePath = path.join(ROOT_PATH, `creator-profile-${slug}.json`);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Collaborator not found' });
+    res.json({ ok: true, profile: JSON.parse(fs.readFileSync(filePath, 'utf8')) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /export — download primary soul as .kre8r
+router.get('/export', (req, res) => {
+  try {
+    const profile = readProfile();
+    if (!profile) return res.status(404).json({ error: 'No profile found' });
+    const name = (profile.creator?.name || 'creator').toLowerCase().replace(/\s+/g, '-');
+    res.setHeader('Content-Disposition', `attachment; filename="creator-soul-${name}.kre8r"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(profile, null, 2));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /collaborator/import — accept JSON body, save as creator-profile-{slug}.json
+router.post('/collaborator/import', (req, res) => {
+  try {
+    const profile = req.body;
+    if (!profile || typeof profile !== 'object') {
+      return res.status(400).json({ error: 'Invalid profile JSON' });
+    }
+    const rawSlug = profile.slug ||
+      (profile.creator?.name || 'collaborator').toLowerCase()
+        .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const slug = rawSlug || 'collaborator';
+    if (!profile.meta) profile.meta = {};
+    profile.meta.imported_at = new Date().toISOString();
+    profile.type = profile.type || 'collaborator';
+    const filePath = path.join(ROOT_PATH, `creator-profile-${slug}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(profile, null, 2), 'utf8');
+    res.json({ ok: true, slug, name: profile.creator?.name || slug });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /collaborator/generate (SSE) — 3-screen wizard → collaborator profile
+router.post('/collaborator/generate', async (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+
+  function sse(obj) { res.write('data: ' + JSON.stringify(obj) + '\n\n'); }
+
+  try {
+    const { name, role, badge_letter, badge_color, voice_samples, never_say, tone_descriptors } = req.body;
+    if (!name) throw new Error('Collaborator name is required');
+
+    sse({ type: 'status', message: '✦ Analyzing voice samples...' });
+    await new Promise(r => setTimeout(r, 600));
+    sse({ type: 'status', message: '✦ Building collaborator soul...' });
+
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'collaborator';
+
+    const prompt = `You are building a collaborator profile for a multi-creator content production system.
+Return ONLY valid JSON. No preamble, no explanation, no markdown fences.
+
+COLLABORATOR DATA:
+Name: ${name}
+Role: ${role || 'Collaborator'}
+Badge: ${badge_letter || name[0].toUpperCase()} (${badge_color || 'amber'})
+Voice descriptors: ${(tone_descriptors || []).join(', ') || 'not specified'}
+Never says: ${never_say || 'not specified'}
+
+VOICE SAMPLES:
+${voice_samples || 'No writing samples provided — infer from role and name.'}
+
+Generate a collaborator profile JSON:
+{
+  "type": "collaborator",
+  "slug": "${slug}",
+  "creator": {
+    "name": "${name}",
+    "role": "${role || 'Collaborator'}"
+  },
+  "voice": {
+    "tone_descriptors": ["...", "..."],
+    "never_say": ["..."],
+    "writing_style": "A paragraph describing how this person communicates on camera. Be specific and useful for an AI script writer.",
+    "sentence_patterns": "...",
+    "humor_style": "...",
+    "avg_sentence_length": "short/medium/long",
+    "signature_phrases": ["..."]
+  },
+  "badge": {
+    "letter": "${badge_letter || name[0].toUpperCase()}",
+    "color": "${badge_color || 'amber'}"
+  },
+  "meta": {
+    "created_at": "${new Date().toISOString()}",
+    "version": "1.0",
+    "soul_builder_version": "1.0"
+  }
+}`;
+
+    const { default: fetch } = await import('node-fetch');
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
+
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model:      process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        messages:   [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!claudeRes.ok) {
+      const e = await claudeRes.json().catch(() => ({}));
+      throw new Error(e?.error?.message || `Claude API error ${claudeRes.status}`);
+    }
+
+    const claudeData = await claudeRes.json();
+    let raw = claudeData.content[0].text.trim()
+      .replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+    let profile;
+    try {
+      profile = JSON.parse(raw);
+    } catch (_) {
+      const s = raw.indexOf('{'), e2 = raw.lastIndexOf('}');
+      if (s !== -1 && e2 !== -1) profile = JSON.parse(raw.slice(s, e2 + 1));
+      else throw new Error('Malformed JSON from Claude');
+    }
+
+    if (!profile.slug) profile.slug = slug;
+    const finalSlug = profile.slug;
+
+    const filePath = path.join(ROOT_PATH, `creator-profile-${finalSlug}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(profile, null, 2), 'utf8');
+
+    sse({ type: 'done', slug: finalSlug, name: profile.creator?.name || name, badge: profile.badge });
+
+  } catch (err) {
+    sse({ type: 'error', message: err.message });
+  } finally {
+    res.end();
   }
 });
 

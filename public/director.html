@@ -137,6 +137,12 @@
   .badge-green{background:rgba(92,186,138,0.12);border:1px solid rgba(92,186,138,0.3);color:var(--green);}
   .badge-dim{background:var(--bg-card);border:1px solid var(--border);color:var(--text-faint);}
   .badge-red{background:rgba(224,92,92,0.12);border:1px solid rgba(224,92,92,0.3);color:var(--red);}
+  /* ── SPEAKER BADGE ── */
+  .speaker-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:0.5px;}
+  .speaker-badge-j{background:rgba(20,184,166,0.12);border:1px solid rgba(20,184,166,0.3);color:#14b8a6;}
+  .speaker-badge-c{background:rgba(240,185,66,0.12);border:1px solid rgba(240,185,66,0.3);color:#f0b942;}
+  .speaker-badge-g{background:rgba(92,186,138,0.12);border:1px solid rgba(92,186,138,0.3);color:#5cba8a;}
+  .speaker-badge-other{background:var(--bg-card);border:1px solid var(--border-bright);color:var(--text-dim);}
 
   /* ── SHOT STATUS OVERLAY ── */
   .shot-status-icon{
@@ -406,6 +412,7 @@
 let currentProjectId = null;
 let currentBeats     = [];
 let mirrorInterval   = null;
+let _speakerMap      = {};  // beatIndex → speaker letter (e.g. 'J', 'C')
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TOAST
@@ -492,6 +499,7 @@ async function onProjectChange(id) {
     enablePackageButtons();
     showMirrorPanel();
     startMirror(currentProjectId);
+    loadSpeakerMap(currentProjectId); // non-blocking — updates shot cards when script loads
 
     // Title number nudge — non-blocking amber banner
     const projectTitle = data.project?.title || '';
@@ -575,6 +583,14 @@ function updateStructureTag(data) {
 // ─────────────────────────────────────────────────────────────────────────────
 // BUILD SHOT LIST
 // ─────────────────────────────────────────────────────────────────────────────
+function speakerBadge(beatIndex) {
+  const letter = _speakerMap[beatIndex];
+  if (!letter) return '';
+  const colorMap = { J: 'j', C: 'c', G: 'g' };
+  const cls = colorMap[letter] || 'other';
+  return `<span class="speaker-badge speaker-badge-${cls}">${letter}</span>`;
+}
+
 function shotTypeBadge(beat) {
   if (beat.talking_head_prompt || beat.shot_type === 'talking_head') {
     return '<span class="badge badge-teal">Talking Head</span>';
@@ -674,6 +690,7 @@ function buildShotList(data) {
           ${durHtml}
         </div>
         <div class="shot-card-badges">
+          ${speakerBadge(beat.index)}
           ${shotTypeBadge(beat)}
           ${priorityBadge(beat, total)}
         </div>
@@ -682,6 +699,40 @@ function buildShotList(data) {
 
   document.getElementById('shot-list-body').innerHTML =
     `<div class="shot-list">${cards}</div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPEAKER MAP — parse [SPEAKER] labels from approved script
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadSpeakerMap(projectId) {
+  _speakerMap = {};
+  try {
+    const r = await fetch(`/api/teleprompter/script/${projectId}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d.ok || !d.script_text) return;
+
+    // Split script into beat sections by [● BEAT: ...] markers
+    const sections = d.script_text.split(/\[●[^\]]*\]/);
+    // sections[0] = pre-beat preamble; sections[1] = beat 1, sections[2] = beat 2, etc.
+    sections.forEach((section, idx) => {
+      if (idx === 0) return; // skip preamble
+      const beatIndex = idx;
+      // First non-empty line of this beat section may have [SPEAKER] label
+      const firstLine = section.split('\n').map(l => l.trim()).find(l => l.length > 0) || '';
+      const m = firstLine.match(/^\[([A-Z]+)\]/);
+      if (m) _speakerMap[beatIndex] = m[1][0].toUpperCase(); // store first letter
+    });
+
+    // If any speaker assignments were found, re-render the shot list
+    if (Object.keys(_speakerMap).length > 0 && currentBeats.length > 0) {
+      // Re-fetch and re-render to inject badges without a full page reload
+      const beatsRes = await fetch(`/api/shootday/${projectId}/beats`);
+      if (!beatsRes.ok) return;
+      const beatsData = await beatsRes.json();
+      buildShotList(beatsData);
+    }
+  } catch (_) {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

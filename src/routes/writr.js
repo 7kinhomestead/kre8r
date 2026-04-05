@@ -389,6 +389,55 @@ router.post('/generate', async (req, res) => {
     }
   } catch (_) {}
 
+  // ── MULTI-VOICE: load collaborator souls if project has them ──────────────
+  try {
+    const collaborators = db.getProjectCollaborators(projectId);
+    const collabSlugs   = (collaborators || []).filter(s => s !== 'primary');
+    if (collabSlugs.length > 0) {
+      const _fs      = require('fs');
+      const _path    = require('path');
+      const rootPath = _path.join(__dirname, '..', '..');
+      const primary  = JSON.parse(_fs.readFileSync(_path.join(rootPath, 'creator-profile.json'), 'utf8'));
+      const primaryName = primary.creator?.name || 'Creator';
+      const primaryFirst = primaryName.split(' ')[0].toUpperCase();
+
+      const collabProfiles = collabSlugs
+        .map(slug => {
+          try {
+            return JSON.parse(_fs.readFileSync(_path.join(rootPath, `creator-profile-${slug}.json`), 'utf8'));
+          } catch (_) { return null; }
+        })
+        .filter(Boolean);
+
+      if (collabProfiles.length > 0) {
+        let multiVoice = '\n\n## MULTI-CREATOR PRODUCTION\n';
+        multiVoice += 'This video features multiple creators. Write each section in the correct speaker\'s voice.\n\n';
+        multiVoice += `PRIMARY — ${primaryName} [${primaryFirst}]:\n`;
+        multiVoice += (primary.voice?.writing_style || 'Direct, warm, conversational.') + '\n\n';
+
+        const collabFirstNames = [];
+        for (const cp of collabProfiles) {
+          const cName  = cp.creator?.name || 'Collaborator';
+          const cRole  = cp.creator?.role || 'Co-presenter';
+          const cFirst = cName.split(' ')[0].toUpperCase();
+          const cBadge = cp.badge?.letter || cFirst;
+          collabFirstNames.push(cFirst);
+          multiVoice += `COLLABORATOR — ${cName} [${cBadge}]:\n`;
+          multiVoice += `Role: ${cRole}\n`;
+          multiVoice += (cp.voice?.writing_style || 'Natural, authentic voice.') + '\n\n';
+        }
+
+        multiVoice += 'SPEAKER LABELING RULES:\n';
+        multiVoice += `- Begin EVERY beat section with a speaker label on its own line: [${primaryFirst}] or [${collabFirstNames.join('] or [')}]\n`;
+        multiVoice += '- Write each creator\'s lines in THEIR voice — do not homogenize\n';
+        multiVoice += '- Both creators may appear in the same beat — label each speaking block separately\n';
+        multiVoice += '- Labels must be in square brackets, all caps, first name only, no punctuation after';
+
+        id8rBlock += multiVoice;
+      }
+    }
+  } catch (_) {}
+
   // Switch to SSE stream — client reads this response body directly
   const { write, end } = startSseResponse(req, res);
 

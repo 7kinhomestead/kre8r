@@ -73,6 +73,52 @@ function buildConfig(projectId, body) {
 }
 
 // ─────────────────────────────────────────────
+// GET /api/pipr/collaborators
+// Returns primary creator + all collaborator soul files for "Who's in this video?"
+// ─────────────────────────────────────────────
+
+router.get('/collaborators', (req, res) => {
+  try {
+    const rootPath = path.join(__dirname, '..', '..');
+    const primary  = (() => {
+      try {
+        const p = JSON.parse(fs.readFileSync(path.join(rootPath, 'creator-profile.json'), 'utf8'));
+        return [{
+          slug:    'primary',
+          name:    p.creator?.name || 'Creator',
+          role:    'Primary Creator',
+          badge:   { letter: (p.creator?.name || 'C')[0].toUpperCase(), color: 'teal' },
+          primary: true
+        }];
+      } catch (_) { return []; }
+    })();
+
+    const collaborators = fs.readdirSync(rootPath)
+      .filter(f => /^creator-profile-.+\.json$/.test(f))
+      .map(f => {
+        const slug = f.replace('creator-profile-', '').replace('.json', '');
+        try {
+          const p = JSON.parse(fs.readFileSync(path.join(rootPath, f), 'utf8'));
+          return {
+            slug,
+            name:    p.creator?.name  || slug,
+            role:    p.creator?.role  || 'Collaborator',
+            badge:   p.badge          || { letter: slug[0].toUpperCase(), color: 'amber' },
+            primary: false
+          };
+        } catch (_) {
+          return { slug, name: slug, role: 'Collaborator',
+                   badge: { letter: slug[0].toUpperCase(), color: 'amber' }, primary: false };
+        }
+      });
+
+    res.json({ ok: true, creators: [...primary, ...collaborators] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // POST /api/pipr/create
 // ─────────────────────────────────────────────
 
@@ -105,6 +151,11 @@ router.post('/create', (req, res) => {
       estimated_duration_minutes:  parseInt(estimated_duration_minutes) || null,
       pipr_complete:               1
     });
+
+    // Save collaborators if provided
+    if (req.body.collaborators && Array.isArray(req.body.collaborators)) {
+      db.updateProjectCollaborators(projectId, req.body.collaborators);
+    }
 
     // Generate and write project-config.json
     const config = buildConfig(projectId, req.body);
@@ -230,6 +281,11 @@ router.patch('/:project_id', (req, res) => {
       if (req.body[k] !== undefined) dbFields[k] = req.body[k];
     }
     if (Object.keys(dbFields).length) db.updateProjectPipr(projectId, dbFields);
+
+    // Update collaborators if provided
+    if (req.body.collaborators && Array.isArray(req.body.collaborators)) {
+      db.updateProjectCollaborators(projectId, req.body.collaborators);
+    }
 
     res.json({ ok: true, config });
   } catch (err) {

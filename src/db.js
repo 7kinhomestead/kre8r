@@ -363,6 +363,13 @@ function runMigrations() {
     value      TEXT,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
+
+  // Collaborator soul support — JSON array of creator slugs assigned to a project
+  const projectsColsCollab = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  if (!projectsColsCollab.includes('collaborators')) {
+    db.run('ALTER TABLE projects ADD COLUMN collaborators TEXT');
+    console.log('[DB] Migration: added projects.collaborators');
+  }
 }
 
 function persist() {
@@ -1638,12 +1645,31 @@ module.exports = {
   getApprovedWritrScript,
   updateWritrScript,
   approveWritrScript,
+  // Collaborator Soul
+  getProjectCollaborators,
+  updateProjectCollaborators,
   // ShootDay
   getShootTakes,
   upsertShootTake,
   resetShootTakes
 };
 
+
+// ─────────────────────────────────────────────
+// COLLABORATOR SOUL — helpers
+// ─────────────────────────────────────────────
+
+function getProjectCollaborators(projectId) {
+  const p = _get(`SELECT collaborators FROM projects WHERE id = ?`, [projectId]);
+  if (!p?.collaborators) return [];
+  try { return JSON.parse(p.collaborators); } catch (_) { return []; }
+}
+
+function updateProjectCollaborators(projectId, collaborators) {
+  _run(`UPDATE projects SET collaborators = ? WHERE id = ?`,
+       [JSON.stringify(collaborators), projectId]);
+  persist();
+}
 
 // ─────────────────────────────────────────────
 // SHOOTDAY — Take helpers

@@ -88,6 +88,19 @@
   @media(max-width:600px){.field-row{grid-template-columns:1fr;}}
   .field-error{font-size:12px;color:var(--amber);margin-top:4px;display:none;}
   .field-error.visible{display:block;}
+  /* ── COLLABORATOR CHECKLIST (Screen 1) ── */
+  .collab-section-heading{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin:24px 0 10px;}
+  .collab-checklist{display:flex;flex-direction:column;gap:8px;}
+  .collab-check-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;user-select:none;}
+  .collab-check-row:hover{border-color:var(--border-bright);}
+  .collab-check-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--teal);flex-shrink:0;}
+  .collab-cbadge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:0.5px;flex-shrink:0;}
+  .collab-cbadge-teal{background:rgba(20,184,166,0.1);border:1px solid rgba(20,184,166,0.3);color:#14b8a6;}
+  .collab-cbadge-amber{background:rgba(240,185,66,0.1);border:1px solid rgba(240,185,66,0.3);color:#f0b942;}
+  .collab-cbadge-green{background:rgba(92,186,138,0.1);border:1px solid rgba(92,186,138,0.3);color:#5cba8a;}
+  .collab-name-block{display:flex;flex-direction:column;min-width:0;}
+  .collab-cname{font-size:13px;font-weight:600;color:var(--text);}
+  .collab-crole{font-size:11px;color:var(--text-dim);}
 
   /* ── STRUCTURE CARDS (Screen 2) ── */
   .structure-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;}
@@ -331,6 +344,12 @@
           <option value="short_form">Short Form</option>
         </select>
       </div>
+    </div>
+
+    <!-- WHO'S IN THIS VIDEO? — shown only when collaborators exist -->
+    <div id="collaborators-section" style="display:none;">
+      <div class="collab-section-heading">WHO'S IN THIS VIDEO?</div>
+      <div class="collab-checklist" id="collaborators-checklist"></div>
     </div>
 
     <div class="wizard-nav">
@@ -592,6 +611,55 @@ const form = {
 
 let currentStep = 0;
 const TOTAL_STEPS = 5;
+
+// ── COLLABORATORS ──
+var availableCreators     = [];
+var selectedCollaborators = ['primary'];
+
+async function loadCollaborators() {
+  try {
+    const r = await fetch('/api/pipr/collaborators');
+    const d = await r.json();
+    if (!d.ok) return;
+    availableCreators = d.creators || [];
+    // Only show section if there are collaborators beyond the primary creator
+    if (availableCreators.length < 2) return;
+
+    const section  = document.getElementById('collaborators-section');
+    const list     = document.getElementById('collaborators-checklist');
+    if (!section || !list) return;
+    section.style.display = '';
+
+    list.innerHTML = availableCreators.map(c => {
+      const badgeColor  = c.badge?.color || (c.primary ? 'teal' : 'amber');
+      const badgeLetter = c.badge?.letter || (c.name || '?')[0].toUpperCase();
+      const isChecked   = c.primary;
+      const isDisabled  = c.primary;
+      return `<label class="collab-check-row">
+        <input type="checkbox" value="${c.slug}"
+          ${isChecked ? 'checked' : ''}
+          ${isDisabled ? 'disabled' : ''}
+          onchange="toggleCollaborator('${c.slug}', this.checked)">
+        <span class="collab-cbadge collab-cbadge-${badgeColor}">${badgeLetter}</span>
+        <div class="collab-name-block">
+          <span class="collab-cname">${c.name}${c.primary ? ' <span style="color:var(--text-dim);font-weight:400;">(you)</span>' : ''}</span>
+          <span class="collab-crole">${c.role}</span>
+        </div>
+      </label>`;
+    }).join('');
+  } catch (_) {}
+}
+
+function toggleCollaborator(slug, checked) {
+  if (checked) {
+    if (!selectedCollaborators.includes(slug)) selectedCollaborators.push(slug);
+  } else {
+    selectedCollaborators = selectedCollaborators.filter(s => s !== slug);
+  }
+}
+
+// Load collaborators on init
+loadCollaborators();
 
 // ── STEP INDICATOR ──
 function updateStepIndicator(step) {
@@ -951,7 +1019,8 @@ async function createProject() {
     hybrid_footage: form.hybrid_footage,
     emotional_palette: form.emotional_palette,
     musical_theme: form.musical_theme,
-    beat_overrides: form.beat_overrides
+    beat_overrides: form.beat_overrides,
+    collaborators:  selectedCollaborators.length > 0 ? selectedCollaborators : undefined
   };
 
   try {

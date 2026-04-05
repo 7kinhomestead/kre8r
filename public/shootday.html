@@ -356,7 +356,13 @@ body {
   border-color: var(--teal);
   background: rgba(0,201,167,0.05);
 }
-.beat-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.beat-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+/* ── SPEAKER BADGE ── */
+.speaker-bdg{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:0.5px;margin-left:auto;}
+.speaker-bdg-j{background:rgba(20,184,166,0.12);border:1px solid rgba(20,184,166,0.3);color:#14b8a6;}
+.speaker-bdg-c{background:rgba(240,185,66,0.12);border:1px solid rgba(240,185,66,0.3);color:#f0b942;}
+.speaker-bdg-g{background:rgba(92,186,138,0.12);border:1px solid rgba(92,186,138,0.3);color:#5cba8a;}
+.speaker-bdg-other{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);}
 .beat-status-dot {
   width: 10px; height: 10px;
   border-radius: 50%;
@@ -1064,6 +1070,7 @@ let projectId    = null;
 let projectTitle = '';
 let beats        = [];     // raw beat objects from server
 let scriptData   = null;   // { beats, clean, raw, story_structure }
+let _speakerMap  = {};     // beatIndex → speaker letter (J, C, etc.)
 let scriptLoaded = false;
 let takes        = {};     // beat_index → { status, take_number, note }
 let prefs = {
@@ -1705,8 +1712,23 @@ function showScriptMode(mode) {
   document.getElementById('clean-view-inner').style.display = mode === 'clean' ? '' : 'none';
 }
 
+function buildSpeakerMapFromScript(raw) {
+  _speakerMap = {};
+  if (!raw) return;
+  const sections = raw.split(/\[●[^\]]*\]/);
+  sections.forEach(function(section, idx) {
+    if (idx === 0) return; // skip preamble
+    const firstLine = section.split('\n').map(function(l) { return l.trim(); }).find(function(l) { return l.length > 0; }) || '';
+    const m = firstLine.match(/^\[([A-Z]+)\]/);
+    if (m) _speakerMap[idx] = m[1][0].toUpperCase();
+  });
+}
+
 function renderScriptView() {
   if (!scriptData) return;
+
+  // Build speaker map from raw script (non-destructive — empty map if no labels found)
+  buildSpeakerMapFromScript(scriptData.raw || '');
 
   // Beats view
   const beatsInner = document.getElementById('beats-view-inner');
@@ -1725,10 +1747,16 @@ function renderScriptView() {
       card.className = 'beat-card';
       card.dataset.beatIdx = idx;
 
+      const spkLetter = _speakerMap[idx];
+      const spkBadge  = spkLetter
+        ? `<span class="speaker-bdg speaker-bdg-${spkLetter.toLowerCase()}">${spkLetter}</span>`
+        : '';
+
       card.innerHTML = `
         <div class="beat-card-header">
           <div class="beat-status-dot ${isGood ? 'good' : 'needed'}"></div>
           <div class="beat-card-name">${esc(b.name || b.beat_name || `Beat ${idx}`)}</div>
+          ${spkBadge}
         </div>
         ${b.emotional_function ? `<div class="beat-card-fn">${esc(b.emotional_function)}</div>` : ''}
         ${b.talking_head_prompt ? `<div class="beat-card-prompt">${esc(b.talking_head_prompt)}</div>` : ''}
