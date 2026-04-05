@@ -58,35 +58,45 @@ router.post('/coach', async (req, res) => {
 
     send({ type: 'status', message: 'Analyzing your last ' + videos.length + ' videos...' });
 
-    const videoList = videos.map((v, i) => {
-      const views    = v.total_views     ? `${Number(v.total_views).toLocaleString()} views` : 'no view data';
-      const cr       = v.avg_completion_rate ? `${Math.round(v.avg_completion_rate * 100)}% completion` : '';
-      const comments = v.total_comments  ? `${v.total_comments} comments` : '';
-      const platforms = v.platforms || 'unknown platform';
-      const stats    = [views, cr, comments].filter(Boolean).join(', ');
-      return `${i + 1}. "${v.title}" (${platforms}) — ${stats || 'no stats yet'}`;
-    }).join('\n');
+    const avgViews  = health.avg_views || 0;
+    const bestVideo = health.best_video;
 
-    const prompt = `You are a supportive creative director coaching a homesteading content creator. Jason runs 7 Kin Homestead — 725k TikTok, 54k YouTube, 80k Lemon8. His brand is straight-talking, warm, funny, never corporate. Sharp-tongued neighbor talking over a fence. His content angles: financial (real cost breakdowns), system (opt out and win), rockrich (doing a lot with a little), howto, mistakes, lifestyle, viral.
+    const videoList = videos.map(v =>
+      `- "${v.title}": ${v.total_views ? Number(v.total_views).toLocaleString() : 0} views, ${v.total_likes ? Number(v.total_likes).toLocaleString() : 0} likes, ${v.total_comments ? Number(v.total_comments).toLocaleString() : 0} comments`
+    ).join('\n');
 
-Analyze his last ${videos.length} videos and give specific, constructive, encouraging feedback. Focus on patterns not individual failures. Always end with one specific actionable thing to do this week. Reference actual video titles and data.
+    const prompt = `You are a supportive creative director coaching Jason at 7 Kin Homestead — 725k TikTok, 54k YouTube, 80k Lemon8. His brand is straight-talking, warm, funny, never corporate. Sharp-tongued neighbor talking over a fence. His content angles: financial (real cost breakdowns), system (opt out and win), rockrich (doing a lot with a little), howto, mistakes, lifestyle, viral.
 
-Channel overview:
-- Total all-time views: ${Number(health.total_views).toLocaleString()}
-- Average views per video: ${Number(health.avg_views).toLocaleString()}
-- Best video: ${health.best_video ? `"${health.best_video.title}" (${Number(health.best_video.views).toLocaleString()} views)` : 'no data'}
-- Top content topic: ${health.top_topic || 'varied'}
-
-Last ${videos.length} videos:
+Here are his ${videos.length} most recent YouTube videos with performance data:
 ${videoList}
 
-Respond in exactly this JSON structure:
+His channel average is ${Number(avgViews).toLocaleString()} views per video.
+His best performing video is ${bestVideo ? `"${bestVideo.title}" with ${Number(bestVideo.views).toLocaleString()} views` : 'not yet determined'}.
+Total all-time views: ${Number(health.total_views).toLocaleString()}.
+
+Give him:
+1. 3 specific things working well based on his actual data — reference real video titles
+2. 3 specific things to improve — specific and actionable, not generic
+3. His #1 focus for this week — one concrete thing he should do or make
+4. 2-3 trending topics his audience would love based on his content themes
+5. One encouraging note about his channel trajectory — warm, direct, no fluff, in his voice
+6. On-camera performance feedback — based on the engagement patterns, comment counts, and video topics, give Jason genuine constructive feedback on his on-camera performance. Consider:
+   - Are high-comment videos ones where he's more personal/vulnerable?
+   - Do tutorial-style videos perform differently than story-driven ones?
+   - What does the data suggest about his energy, pacing, or delivery?
+   - What's one specific on-camera habit to work on?
+   Be a great director — honest, specific, kind but not soft. The goal is measurable improvement not comfort. Think: "Your best friend who happens to be Martin Scorsese."
+
+Be specific, use his actual video titles, be encouraging not brutal.
+
+Respond in exactly this JSON structure (no markdown, no commentary, just JSON):
 {
-  "working_well": ["specific point 1", "specific point 2", "specific point 3"],
-  "improve": ["specific point 1", "specific point 2", "specific point 3"],
+  "working_well": ["point 1", "point 2", "point 3"],
+  "improve": ["point 1", "point 2", "point 3"],
   "focus_this_week": "One specific, concrete, actionable thing Jason should do or make this week.",
   "trending_topics": ["topic 1", "topic 2", "topic 3"],
-  "coaching_note": "A 2-3 sentence encouraging closing note in Jason's tone — warm, direct, no fluff."
+  "coaching_note": "2-3 sentences. Warm, direct, in Jason's tone.",
+  "performance": "3-4 sentences of genuine on-camera performance coaching. Specific, director-level, actionable."
 }`;
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -322,9 +332,10 @@ router.post('/youtube-import-channel', async (req, res) => {
         if (vid) {
           allVideoIds.push(vid);
           videoMeta[vid] = {
-            title:       item.snippet.title       || 'Untitled',
-            description: item.snippet.description || '',
-            publishedAt: item.snippet.publishedAt || null,
+            title:        item.snippet.title       || 'Untitled',
+            description:  item.snippet.description || '',
+            publishedAt:  item.snippet.publishedAt || null,
+            thumbnailUrl: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || null,
           };
         }
       }
@@ -353,11 +364,15 @@ router.post('/youtube-import-channel', async (req, res) => {
 
       for (const item of statData.items || []) {
         allStats[item.id] = item.statistics;
-        // Prefer snippet title/description from this call (more reliable)
+        // Prefer snippet fields from this call (more reliable than playlistItems)
         if (item.snippet) {
-          videoMeta[item.id].title       = item.snippet.title       || videoMeta[item.id].title;
-          videoMeta[item.id].description = item.snippet.description || videoMeta[item.id].description;
-          videoMeta[item.id].publishedAt = item.snippet.publishedAt || videoMeta[item.id].publishedAt;
+          videoMeta[item.id].title        = item.snippet.title       || videoMeta[item.id].title;
+          videoMeta[item.id].description  = item.snippet.description || videoMeta[item.id].description;
+          videoMeta[item.id].publishedAt  = item.snippet.publishedAt || videoMeta[item.id].publishedAt;
+          videoMeta[item.id].thumbnailUrl = item.snippet.thumbnails?.medium?.url
+            || item.snippet.thumbnails?.default?.url
+            || videoMeta[item.id].thumbnailUrl
+            || null;
         }
       }
 
@@ -392,12 +407,13 @@ router.post('/youtube-import-channel', async (req, res) => {
           let ytPost   = posts.find(p => p.platform === 'youtube');
           if (!ytPost) {
             const postId = db.savePost({
-              project_id: existing.id,
-              platform:   'youtube',
-              url:        `https://www.youtube.com/watch?v=${videoId}`,
-              content:    meta.title,
-              status:     'posted',
-              posted_at:  meta.publishedAt || new Date().toISOString(),
+              project_id:    existing.id,
+              platform:      'youtube',
+              url:           `https://www.youtube.com/watch?v=${videoId}`,
+              content:       meta.title,
+              status:        'posted',
+              posted_at:     meta.publishedAt || new Date().toISOString(),
+              thumbnail_url: meta.thumbnailUrl || null,
             });
             ytPost = { id: postId };
           }
@@ -418,12 +434,13 @@ router.post('/youtube-import-channel', async (req, res) => {
 
         // Create YouTube post record
         const postId = db.savePost({
-          project_id: project.id,
-          platform:   'youtube',
-          url:        ytUrl,
-          content:    meta.title,
-          status:     'posted',
-          posted_at:  meta.publishedAt || new Date().toISOString(),
+          project_id:    project.id,
+          platform:      'youtube',
+          url:           ytUrl,
+          content:       meta.title,
+          status:        'posted',
+          posted_at:     meta.publishedAt || new Date().toISOString(),
+          thumbnail_url: meta.thumbnailUrl || null,
         });
 
         // Save metrics

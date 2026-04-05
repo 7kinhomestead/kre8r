@@ -178,6 +178,10 @@ function runMigrations() {
     db.run('ALTER TABLE posts ADD COLUMN angle TEXT');
     console.log('[DB] Migration: added posts.angle');
   }
+  if (!postsCols.includes('thumbnail_url')) {
+    db.run('ALTER TABLE posts ADD COLUMN thumbnail_url TEXT');
+    console.log('[DB] Migration: added posts.thumbnail_url');
+  }
 
   // EditΩr: footage.transcript — full Whisper text stored inline for fast multi-clip analysis
   if (!footageCols.includes('transcript')) {
@@ -893,22 +897,23 @@ function upsertScript(projectId, { outline, full_script, approved_version }) {
 // POST HELPERS (AnalytΩr)
 // ─────────────────────────────────────────────
 
-function savePost({ project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle }) {
+function savePost({ project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle, thumbnail_url }) {
   const result = _run(
-    `INSERT INTO posts (project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO posts (project_id, caption_id, platform, content, media_path, scheduled_at, posted_at, post_id, status, url, angle, thumbnail_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       project_id,
-      caption_id   || null,
+      caption_id     || null,
       platform,
-      content      || null,
-      media_path   || null,
-      scheduled_at || null,
-      posted_at    || null,
-      post_id      || null,
-      status       || 'posted',
-      url          || null,
-      angle        || null
+      content        || null,
+      media_path     || null,
+      scheduled_at   || null,
+      posted_at      || null,
+      post_id        || null,
+      status         || 'posted',
+      url            || null,
+      angle          || null,
+      thumbnail_url  || null,
     ]
   );
   persist();
@@ -1057,6 +1062,7 @@ function getRecentProjectsWithAnalytics(limit = 10) {
     `SELECT
        pr.id, pr.title, pr.topic, pr.youtube_video_id, pr.created_at,
        (SELECT MAX(po.posted_at) FROM posts po WHERE po.project_id = pr.id) as last_posted_at,
+       (SELECT po.thumbnail_url FROM posts po WHERE po.project_id = pr.id AND po.platform = 'youtube' AND po.thumbnail_url IS NOT NULL LIMIT 1) as thumbnail_url,
        (SELECT GROUP_CONCAT(DISTINCT po.platform) FROM posts po WHERE po.project_id = pr.id) as platforms,
        (SELECT SUM(a.metric_value) FROM analytics a JOIN posts po ON po.id = a.post_id
         WHERE po.project_id = pr.id AND a.metric_name = 'views') as total_views,
