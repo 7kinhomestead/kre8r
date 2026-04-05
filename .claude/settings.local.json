@@ -428,7 +428,25 @@
       "Bash(node -e \"try{require\\(''./src/routes/id8r.js''\\);console.log\\(''id8r OK''\\);}catch\\(e\\){console.log\\(''id8r FAIL:'',e.message\\);}\")",
       "Bash(node -e \"try{require\\(''./src/routes/analytr.js''\\);console.log\\(''OK''\\);}catch\\(e\\){console.log\\(''FAIL:'',e.message\\);}\")",
       "Bash(node -e \"require\\(''./src/routes/analytr.js''\\); console.log\\(''analytr.js OK''\\)\")",
-      "Bash(curl -s \"http://localhost:3000/api/analytr/niche\")"
+      "Bash(curl -s \"http://localhost:3000/api/analytr/niche\")",
+      "Bash(grep -v \"//.*fetch\")",
+      "Bash(C:/Users/18054/kre8r/WISHLIST.md:*)",
+      "Bash(curl -s http://localhost:3000/api/soul-buildr/status)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/soul-buildr.html)",
+      "Bash(node -e \"const p=require\\(''./creator-profile.json''\\); console.log\\(typeof p.content_angles, JSON.stringify\\(p.content_angles\\).slice\\(0,200\\)\\)\")",
+      "Bash(node -e \"const d=require\\(''''fs''''\\).readFileSync\\(''''/dev/stdin'''',''''utf8''''\\); const j=JSON.parse\\(d\\); console.log\\(''''exists:'''',j.exists,''''name:'''',j.creator_name,''''angles:'''',j.content_angles?.slice\\(0,3\\)\\)\")",
+      "Bash(node:*)",
+      "Bash(curl -s http://localhost:3000/api/mirrr/channel-health)",
+      "Bash(npm list:*)",
+      "Bash(python scripts/office/validate.py C:/Users/18054/outputs/Kre8r-Production-Runbook-V2.docx)",
+      "Bash(curl -s http://localhost:3000/api/soul-buildr/collaborators)",
+      "Bash(curl -s http://localhost:3000/api/pipr/collaborators)",
+      "Bash(curl -s \"http://localhost:3000/api/soul-buildr/export\" -I)",
+      "Bash(dir C:/Users/18054/outputs/)",
+      "Bash(find C:/Users/18054 -name *.docx)",
+      "Bash(find C:/Users/18054/kre8r -name *.pdf -o -name generate*.js -o -name build*.js)",
+      "Bash(python scripts/office/unpack.py docs/7-Kin-Content-OS-Architecture.docx /tmp/arch-unpacked/)",
+      "Bash(python scripts/office/unpack.py Kre8r-Production-Runbook.docx /tmp/runbook-v1-unpacked/)"
     ]
   }
 }
