@@ -37,6 +37,18 @@ function parseDurationSeconds(isoDuration) {
   return (parseInt(m[1] || 0)) * 3600 + (parseInt(m[2] || 0)) * 60 + (parseInt(m[3] || 0));
 }
 
+// Deterministically identifies live stream / junk titles that never go to Claude.
+function isLiveStream(title) {
+  if (!title) return false;
+  const t = title.toLowerCase().trim();
+  if (t === '7 kin homestead')    return true;
+  if (t.includes('is live'))      return true;
+  if (t.includes('livestream'))   return true;
+  if (t.includes('live stream'))  return true;
+  if (t.startsWith('7 kin homestead is')) return true;
+  return false;
+}
+
 // ─── Multer: memory storage for thumbnail uploads ─────────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -875,7 +887,16 @@ Available colors (use each at most twice): teal, amber, coral, purple, green, bl
       return res.status(500).json({ error: 'Claude returned unexpected format', raw: rawText.slice(0, 200) });
     }
 
-    // Map cluster assignments back to nodes by title lookup
+    const COLORS = {
+      teal: '#3ecfb2', amber: '#f0b942', coral: '#e05c5c',
+      purple: '#a78bfa', green: '#5cba8a', blue: '#5b9cf6',
+      orange: '#f0834a', rose: '#f06b9e',
+    };
+
+    // ── Live stream cluster (deterministic, never sent to Claude) ────────────
+    const LIVE_CLUSTER = { id: 999, name: 'Live Streams', color: 'rose', top_video: '', videos: [] };
+
+    // ── Build initial clusterMap from first-pass top-50 results ─────────────
     const clusterMap = {};
     for (const cluster of parsed.clusters || []) {
       for (const title of cluster.videos || []) {
@@ -883,41 +904,138 @@ Available colors (use each at most twice): teal, amber, coral, purple, green, bl
       }
     }
 
-    const COLORS = {
-      teal: '#3ecfb2', amber: '#f0b942', coral: '#e05c5c',
-      purple: '#a78bfa', green: '#5cba8a', blue: '#5b9cf6',
-      orange: '#f0834a', rose: '#f06b9e',
-    };
-
-    // Tag ALL nodes — videos not in top 50 inherit the fallback cluster
-    // Shorts get the fallback cluster automatically (they weren't sent to Claude)
     const fallbackCluster = parsed.clusters?.[0] || { id: 0, name: 'Other', color: 'teal' };
+
+    // Nodes that need second-pass classification:
+    //   • NOT in the top-50 already clustered by Claude
+    //   • NOT a live stream (those are pre-classified deterministically)
+    const top50Ids         = new Set(top50.map(n => n.id));
+    const remainingNonLive = allNodes.filter(n => !top50Ids.has(n.id) && !isLiveStream(n.title));
+    const hasLiveVideos    = allNodes.some(n => isLiveStream(n.title));
+
+    // ── Second pass: Claude classifies every remaining video ─────────────────
+    if (remainingNonLive.length > 0) {
+      console.log(`[content-dna/graph] Second pass: classifying ${remainingNonLive.length} remaining videos`);
+
+      const clusterDefs = (parsed.clusters || [])
+        .map(c => `CLUSTER ${c.id} — ${c.name}: exemplified by "${(c.videos || []).slice(0, 3).join('", "')}"`)
+        .join('\n');
+
+      const BATCH_SIZE = 80;
+      for (let i = 0; i < remainingNonLive.length; i += BATCH_SIZE) {
+        const batch      = remainingNonLive.slice(i, i + BATCH_SIZE);
+        const titleLines = batch.map((v, idx) => `${idx + 1}. ${v.title}`).join('\n');
+
+        const classifyPrompt =
+`Here are ${(parsed.clusters || []).length} content clusters with their defining characteristics:
+${clusterDefs}
+
+Classify each of these video titles into the single best cluster.
+Be strict — if a video is clearly a build series episode, put it in the build cluster not financial.
+If a title starts with a number like "Part 10:" it's almost certainly a series episode.
+Live streams (title contains "is live" or "livestream") → always classify as cluster 999.
+
+Titles to classify:
+${titleLines}
+
+Return ONLY a JSON object mapping list number to cluster id, no markdown, no commentary:
+{ "1": cluster_id, "2": cluster_id, ... }`;
+
+        try {
+          const classRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method:  'POST',
+            headers: {
+              'Content-Type':      'application/json',
+              'x-api-key':         apiKey,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model:      process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+              max_tokens: 1024,
+              messages:   [{ role: 'user', content: classifyPrompt }],
+            }),
+          });
+
+          if (!classRes.ok) {
+            console.warn(`[content-dna/graph] Classify batch ${i} API error ${classRes.status} — falling back`);
+          } else {
+            const classData = await classRes.json();
+            const classRaw  = classData.content[0].text.trim()
+              .replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+            let classResult = {};
+            try { classResult = JSON.parse(classRaw); }
+            catch { console.warn(`[content-dna/graph] Classify batch ${i} JSON parse failed`); }
+
+            for (const [numStr, clusterId] of Object.entries(classResult)) {
+              const idx = parseInt(numStr) - 1;
+              if (isNaN(idx) || idx < 0 || idx >= batch.length) continue;
+              const found = (parsed.clusters || []).find(c => c.id === Number(clusterId));
+              clusterMap[batch[idx].title.toLowerCase().trim()] = found || fallbackCluster;
+            }
+          }
+        } catch (batchErr) {
+          console.warn(`[content-dna/graph] Classify batch ${i} threw:`, batchErr.message);
+        }
+
+        if (i + BATCH_SIZE < remainingNonLive.length) await new Promise(r => setTimeout(r, 300));
+      }
+
+      console.log(`[content-dna/graph] Second pass done — clusterMap now has ${Object.keys(clusterMap).length} entries`);
+    }
+
+    // ── Tag ALL nodes with final assignments ──────────────────────────────────
     const taggedNodes = allNodes.map(n => {
-      const cluster = clusterMap[n.title.toLowerCase().trim()] || fallbackCluster;
+      // Live streams: deterministic, never touched by Claude
+      if (isLiveStream(n.title)) {
+        return {
+          ...n,
+          cluster_id:            LIVE_CLUSTER.id,
+          cluster_name:          LIVE_CLUSTER.name,
+          cluster_color:         LIVE_CLUSTER.color,
+          cluster_hex:           COLORS.rose,
+          classification_method: 'live',
+        };
+      }
+      const key     = n.title.toLowerCase().trim();
+      const cluster = clusterMap[key] || fallbackCluster;
+      const method  = clusterMap[key]
+        ? (top50Ids.has(n.id) ? 'claude_top50' : 'claude_classified')
+        : 'fallback';
       return {
         ...n,
-        cluster_id:    cluster.id,
-        cluster_name:  cluster.name,
-        cluster_color: cluster.color,
-        cluster_hex:   COLORS[cluster.color] || COLORS.teal,
+        cluster_id:            cluster.id,
+        cluster_name:          cluster.name,
+        cluster_color:         cluster.color,
+        cluster_hex:           COLORS[cluster.color] || COLORS.teal,
+        classification_method: method,
       };
     });
 
-    const longformTaggedCount = taggedNodes.filter(n => n.format === 'longform' || n.format === 'standard').length;
-    const shortsCount         = taggedNodes.filter(n => n.format === 'short').length;
+    // Add live stream cluster to list if any live videos exist
+    const finalClusters = hasLiveVideos
+      ? [...(parsed.clusters || []), { ...LIVE_CLUSTER, video_count: allNodes.filter(n => isLiveStream(n.title)).length }]
+      : (parsed.clusters || []);
+
+    const longformTaggedCount  = taggedNodes.filter(n => n.format === 'longform' || n.format === 'standard').length;
+    const shortsCount          = taggedNodes.filter(n => n.format === 'short').length;
+    const claudeClassifiedCount = taggedNodes.filter(n => n.classification_method === 'claude_classified').length;
+    const fallbackCount         = taggedNodes.filter(n => n.classification_method === 'fallback').length;
+    const liveCount             = taggedNodes.filter(n => n.classification_method === 'live').length;
+
+    console.log(`[content-dna/graph] Done — ${taggedNodes.length} nodes across ${finalClusters.length} clusters`);
+    console.log(`[content-dna/graph] Methods — top50: ${top50.length}, claude_classified: ${claudeClassifiedCount}, live: ${liveCount}, fallback: ${fallbackCount}`);
 
     const result = {
       nodes:          taggedNodes,
-      clusters:       parsed.clusters || [],
+      clusters:       finalClusters,
       edges:          parsed.edges    || [],
       cached_at:      new Date().toISOString(),
       total:          allNodes.length,
       longform_count: longformTaggedCount,
       shorts_count:   shortsCount,
-      clustered:      top50.length,
+      clustered:      top50.length + claudeClassifiedCount,
     };
-
-    console.log(`[content-dna/graph] Done — ${taggedNodes.length} nodes tagged across ${result.clusters.length} clusters`);
 
     // Cache result
     db.setKv('channel_dna_clusters', result);
@@ -1246,6 +1364,20 @@ router.patch('/save-secrets-to-soul', (req, res) => {
 
     fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf8');
     res.json({ ok: true, saved: secrets.length, next_update_at: videoCount + 10 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /niche — channel niche definition for universe label ─────────────────
+router.get('/niche', (req, res) => {
+  try {
+    const cached = db.getKv('channel_dna_profile');
+    if (!cached) return res.json({ niche_definition: null, content_pillars: [] });
+    res.json({
+      niche_definition: cached.niche_definition || null,
+      content_pillars:  cached.content_pillars  || [],
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -401,15 +401,14 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       <div id="constellationEmpty" class="dna-empty" style="display:none">
         No YouTube videos found. Import your channel first.
       </div>
-      <div id="constellationSvgWrap" style="display:none;position:relative;">
-        <svg id="constellationSvg" width="100%" height="600" style="display:block;"></svg>
+      <div id="universeContainer" style="display:none;position:relative;width:100%;height:600px;background:#060910;border-radius:12px;overflow:hidden;">
+        <canvas id="universeCanvas" style="display:block;width:100%;height:100%;"></canvas>
         <div id="graphTooltip" class="graph-tooltip"></div>
+        <div id="universeNicheLabel" style="position:absolute;top:12px;left:16px;font-size:11px;color:rgba(255,255,255,0.3);font-family:'DM Sans',sans-serif;max-width:340px;pointer-events:none;"></div>
         <div class="graph-zoom-controls">
-          <button class="graph-zoom-btn" title="Galaxy view — see all" onclick="constellationZoomGalaxy()">🔭</button>
-          <button class="graph-zoom-btn" title="Fit all nodes" onclick="constellationZoomFit()">⊡ Fit</button>
-          <button class="graph-zoom-btn" title="Reset zoom" onclick="constellationZoomReset()">⌖ Reset</button>
-          <button class="graph-zoom-btn" title="Zoom in" onclick="constellationZoomStep(1.4)">＋</button>
-          <button class="graph-zoom-btn" title="Zoom out" onclick="constellationZoomStep(1/1.4)">－</button>
+          <button class="graph-zoom-btn" title="Reset view" onclick="universeZoomReset()">⌖ Reset</button>
+          <button class="graph-zoom-btn" title="Zoom in" onclick="universeZoomIn()">＋</button>
+          <button class="graph-zoom-btn" title="Zoom out" onclick="universeZoomOut()">－</button>
         </div>
         <div class="graph-toggle-row" style="position:absolute;bottom:10px;left:12px;">
           <label class="graph-toggle-label">
@@ -648,7 +647,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
 <script src="/js/nav.js" defer></script>
 <script>
 window.addEventListener('load', () => initNav());
@@ -656,6 +656,15 @@ window.addEventListener('load', () => initNav());
 // ─── State ────────────────────────────────────────────────────────────────────
 let globalAvgViews = 0;
 let lastSyncedAt   = null;
+
+// ─── Three.js Universe state ──────────────────────────────────────────────────
+let _universeScene        = null;
+let _universeCamera       = null;
+let _universeRenderer     = null;
+let _universeAnimId       = null;
+let _universeGroup        = null;
+let _universeNodeMeshes   = [];
+let _universeShortsMeshes = [];
 
 // ─── Format helpers ───────────────────────────────────────────────────────────
 function fmtNum(n) {
@@ -1384,15 +1393,15 @@ let _dnaData   = null;
 let _dnaResult = null;
 
 async function loadConstellationGraph(forceRefresh) {
-  const loading = document.getElementById('constellationLoading');
-  const empty   = document.getElementById('constellationEmpty');
-  const svgWrap = document.getElementById('constellationSvgWrap');
-  const legend  = document.getElementById('constellationLegend');
+  const loading   = document.getElementById('constellationLoading');
+  const empty     = document.getElementById('constellationEmpty');
+  const container = document.getElementById('universeContainer');
+  const legend    = document.getElementById('constellationLegend');
 
-  loading.style.display = 'flex';
-  empty.style.display   = 'none';
-  svgWrap.style.display = 'none';
-  legend.innerHTML      = '';
+  loading.style.display   = 'flex';
+  empty.style.display     = 'none';
+  container.style.display = 'none';
+  legend.innerHTML        = '';
 
   try {
     const url  = '/api/analytr/content-dna/graph' + (forceRefresh ? '?refresh=1' : '');
@@ -1407,302 +1416,364 @@ async function loadConstellationGraph(forceRefresh) {
     }
 
     _dnaData = data;
-    svgWrap.style.display = 'block';
-    renderConstellation(data);
-    renderLegend(data.clusters || []);
+    container.style.display = 'block';
+    renderUniverse(data);
+    renderStellarLegend();
   } catch (err) {
     loading.style.display = 'none';
-    empty.textContent = 'Failed to load constellation: ' + err.message;
+    empty.textContent = 'Failed to load universe: ' + err.message;
     empty.style.display = 'block';
   }
 }
 
-// ─── Constellation zoom state (module-level so buttons can reach it) ───────
-let _constellationZoom   = null;   // d3.zoom behaviour
-let _constellationSvgSel = null;   // d3 selection of the SVG
-let _constellationSim    = null;   // force simulation ref
-let _currentZoomK        = 0.15;   // current zoom scale
+// ─── Three.js Universe zoom controls ─────────────────────────────────────────
+function universeZoomReset() {
+  if (!_universeCamera) return;
+  new TWEEN.Tween(_universeCamera.position)
+    .to({ z: 600 }, 600)
+    .easing(TWEEN.Easing.Quadratic.Out)
+    .start();
+}
+function universeZoomIn() {
+  if (!_universeCamera) return;
+  _universeCamera.position.z = Math.max(150, _universeCamera.position.z - 80);
+}
+function universeZoomOut() {
+  if (!_universeCamera) return;
+  _universeCamera.position.z = Math.min(1400, _universeCamera.position.z + 80);
+}
 
-function constellationZoomTo(k, cx, cy, durationMs) {
-  if (!_constellationSvgSel || !_constellationZoom) return;
-  const svgEl = document.getElementById('constellationSvg');
-  const W = svgEl.clientWidth || 960;
+// ─── Stellar classification — performance → Kelvin → RGB ────────────────────
+function getStellarClass(score) {
+  if (score >= 8000) return { cls: 'O',  label: 'Viral Outlier (10x+)',  color: new THREE.Color(0x7090ff), glow: 3.5 };
+  if (score >= 6000) return { cls: 'B',  label: 'Major Hit (5–10x)',     color: new THREE.Color(0xa0c0ff), glow: 2.5 };
+  if (score >= 5000) return { cls: 'A',  label: 'Strong (2–5x)',         color: new THREE.Color(0xffffff), glow: 2.0 };
+  if (score >= 4000) return { cls: 'F',  label: 'Above Average',         color: new THREE.Color(0xffe88a), glow: 1.5 };
+  if (score >= 3000) return { cls: 'G',  label: 'Channel Average',       color: new THREE.Color(0xffd060), glow: 1.2 };
+  if (score >= 2000) return { cls: 'K',  label: 'Below Average',         color: new THREE.Color(0xff9a40), glow: 1.0 };
+  if (score >= 1000) return { cls: 'M',  label: 'Low Performer',         color: new THREE.Color(0xff4040), glow: 0.7 };
+  if (score >= 500)  return { cls: 'BD', label: 'Failed Experiment',     color: new THREE.Color(0x5a3820), glow: 0.0 };
+  return               { cls: 'GG', label: 'Live / Junk',              color: new THREE.Color(0x253040), glow: 0.0 };
+}
+
+// ─── Three.js 3D Content Universe ────────────────────────────────────────────
+function renderUniverse(data) {
+  const container = document.getElementById('universeContainer');
+  const canvas    = document.getElementById('universeCanvas');
+
+  // ── Teardown any previous renderer ─────────────────────────────────────────
+  if (_universeAnimId) { cancelAnimationFrame(_universeAnimId); _universeAnimId = null; }
+  if (_universeRenderer) { _universeRenderer.dispose(); _universeRenderer = null; }
+
+  const W = container.clientWidth  || 960;
   const H = 600;
-  const tx = (cx !== undefined ? cx : W / 2);
-  const ty = (cy !== undefined ? cy : H / 2);
-  const t  = d3.zoomIdentity.translate(W / 2 - k * tx, H / 2 - k * ty).scale(k);
-  _constellationSvgSel
-    .transition().duration(durationMs || 600)
-    .call(_constellationZoom.transform, t);
-}
 
-function constellationZoomGalaxy() { constellationZoomTo(0.15, undefined, undefined, 600); }
-function constellationZoomReset()  { constellationZoomTo(1.0,  undefined, undefined, 600); }
-function constellationZoomStep(factor) {
-  if (!_constellationSvgSel || !_constellationZoom) return;
-  _constellationSvgSel.transition().duration(300)
-    .call(_constellationZoom.scaleBy, factor);
-}
-function constellationZoomFit() {
-  if (!_constellationSim) return;
-  const svgEl = document.getElementById('constellationSvg');
-  const W = svgEl.clientWidth || 960;
-  const H = 600;
-  const ns = _constellationSim.nodes();
-  if (!ns.length) return;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  ns.forEach(function(n) {
-    if (n.x < x0) x0 = n.x; if (n.y < y0) y0 = n.y;
-    if (n.x > x1) x1 = n.x; if (n.y > y1) y1 = n.y;
-  });
-  const pad = 40;
-  const k   = Math.min(0.9, (W - pad * 2) / (x1 - x0 + 1), (H - pad * 2) / (y1 - y0 + 1));
-  const cx  = (x0 + x1) / 2;
-  const cy  = (y0 + y1) / 2;
-  constellationZoomTo(k, cx, cy, 700);
-}
+  // ── Scene ───────────────────────────────────────────────────────────────────
+  const scene = new THREE.Scene();
+  scene.fog   = new THREE.FogExp2(0x060910, 0.00045);
+  _universeScene = scene;
 
-function renderConstellation(data) {
-  const nodes = data.nodes;
-  const svgEl = document.getElementById('constellationSvg');
-  const W     = svgEl.clientWidth || 960;
-  const H     = 600;
+  // ── Camera ──────────────────────────────────────────────────────────────────
+  const camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 6000);
+  camera.position.set(0, 0, 640);
+  _universeCamera = camera;
 
-  // ── Intra-cluster chain links (solid, cluster color) ──────────────────────
-  const clusterGroups = {};
-  nodes.forEach(function(n) {
-    if (!clusterGroups[n.cluster_id]) clusterGroups[n.cluster_id] = [];
-    clusterGroups[n.cluster_id].push(n);
-  });
-  const intraLinks = [];
-  Object.values(clusterGroups).forEach(function(group) {
-    for (let i = 0; i < group.length - 1; i++) {
-      intraLinks.push({ source: group[i].id, target: group[i + 1].id });
+  // ── Renderer ─────────────────────────────────────────────────────────────────
+  const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H, false);   // false = don't set CSS size (CSS already does 100%)
+  renderer.setClearColor(0x060910);
+  _universeRenderer = renderer;
+
+  // ── Lights ───────────────────────────────────────────────────────────────────
+  scene.add(new THREE.AmbientLight(0x223344, 0.7));
+  const pLight = new THREE.PointLight(0xffffff, 1.2, 3000);
+  pLight.position.set(300, 400, 500);
+  scene.add(pLight);
+
+  // ── Universe group — everything that rotates ─────────────────────────────────
+  const uGroup = new THREE.Group();
+  scene.add(uGroup);
+  _universeGroup = uGroup;
+
+  // ── Wireframe sphere base ────────────────────────────────────────────────────
+  const sphereMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(230, 28, 28),
+    new THREE.MeshBasicMaterial({ color: 0x0e1825, wireframe: true, transparent: true, opacity: 0.07 })
+  );
+  uGroup.add(sphereMesh);
+
+  // ── Starfield background (not in uGroup — stays fixed) ──────────────────────
+  (function() {
+    const N = 900;
+    const pos = new Float32Array(N * 3);
+    for (var i = 0; i < N; i++) {
+      var r     = 1400 + Math.random() * 600;
+      var theta = Math.random() * Math.PI * 2;
+      var phi   = Math.acos(2 * Math.random() - 1);
+      pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+      pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i*3+2] = r * Math.cos(phi);
     }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.4, transparent: true, opacity: 0.45 })));
+  }());
+
+  // ── Node positioning data ────────────────────────────────────────────────────
+  const nodes    = data.nodes;
+  const clusters = data.clusters || [];
+  const SPHERE_R = 230;
+  const chanAvg  = globalAvgViews || 1;
+  const maxViews = Math.max.apply(null, nodes.map(function(n) { return n.views; }).concat([1]));
+
+  // Assign each cluster a longitude band (θ)
+  var clusterTheta = {};
+  clusters.forEach(function(c, i) {
+    clusterTheta[c.id] = (i / Math.max(clusters.length, 1)) * Math.PI * 2;
   });
 
-  // ── Cross-cluster semantic links from data.edges (title → id lookup) ──────
-  const nodeById    = {};
-  const nodeByTitle = {};
-  nodes.forEach(function(n) {
-    nodeById[n.id] = n;
-    nodeByTitle[n.title.toLowerCase().trim()] = n;
-  });
-  const crossLinks = (data.edges || []).map(function(e) {
-    const src = nodeByTitle[(e.source || '').toLowerCase().trim()];
-    const tgt = nodeByTitle[(e.target || '').toLowerCase().trim()];
-    if (!src || !tgt || src.id === tgt.id) return null;
-    return { source: src.id, target: tgt.id, reason: e.reason || '' };
-  }).filter(Boolean);
+  // Geometry cache — reuse same SphereGeometry across similarly-sized nodes
+  var geoCache = {};
+  function getNodeGeo(r) {
+    var key = Math.round(r * 2) / 2;   // round to 0.5 steps
+    if (!geoCache[key]) geoCache[key] = new THREE.SphereGeometry(key, 7, 7);
+    return geoCache[key];
+  }
 
-  // ── Cluster centroid positions (grid layout, relative to canvas center) ───
-  const clusterList = data.clusters || [];
-  const clusterCentroids = {};
-  clusterList.forEach(function(c, i) {
-    clusterCentroids[c.id] = {
-      x: W / 2 + (i % 3) * 400 - 400,
-      y: H / 2 + Math.floor(i / 3) * 400 - 400,
-    };
+  // ── Build node meshes ────────────────────────────────────────────────────────
+  var nodeMeshes   = [];
+  var shortsMeshes = [];
+  // Per-cluster accumulator for label centroid
+  var clusterSums  = {};   // {id: {x,y,z,count}}
+
+  nodes.forEach(function(node) {
+    // Stellar classification
+    var viewsRatio = node.views / chanAvg;
+    var score      = Math.max(100, Math.min(10000, viewsRatio * 2500));
+    var sc         = getStellarClass(score);
+
+    // Spherical coords: θ = cluster longitude, φ = random spread, r = altitude
+    var thetaBase  = clusterTheta[node.cluster_id] !== undefined
+      ? clusterTheta[node.cluster_id] : Math.random() * Math.PI * 2;
+    var theta = thetaBase + (Math.random() - 0.5) * 1.3;
+    var phi   = Math.PI * 0.12 + Math.random() * Math.PI * 0.76;  // avoid poles
+
+    // Altitude: performance above/below sphere surface (±70 px)
+    var isShortOrLive = (node.format === 'short' || node.format === 'live');
+    var altOffset = isShortOrLive
+      ? -45 - Math.random() * 20
+      : Math.max(-50, Math.min(70, (viewsRatio - 1) * 28));
+    var r = SPHERE_R + altOffset;
+
+    var x = r * Math.sin(phi) * Math.cos(theta);
+    var y = r * Math.sin(phi) * Math.sin(theta);
+    var z = r * Math.cos(phi);
+
+    // Node visual radius
+    var nodeR = isShortOrLive ? 2.0
+      : Math.max(3.5, 3.5 + Math.sqrt(node.views / maxViews) * 13);
+
+    var mat = new THREE.MeshBasicMaterial({
+      color:       sc.color,
+      transparent: true,
+      opacity:     isShortOrLive ? 0.22 : Math.min(0.95, 0.6 + sc.glow * 0.08),
+    });
+    var mesh = new THREE.Mesh(getNodeGeo(nodeR), mat);
+    mesh.position.set(x, y, z);
+    mesh.userData = { node: node, score: score, sc: sc };
+
+    // Glow halo for strong performers
+    if (sc.glow >= 2.0 && !isShortOrLive) {
+      var haloMat = new THREE.MeshBasicMaterial({
+        color: sc.color, transparent: true, opacity: 0.09 * sc.glow,
+      });
+      var halo = new THREE.Mesh(getNodeGeo(nodeR * 2.2), haloMat);
+      halo.position.copy(mesh.position);
+      uGroup.add(halo);
+    }
+
+    uGroup.add(mesh);
+    nodeMeshes.push(mesh);
+    if (isShortOrLive) {
+      shortsMeshes.push(mesh);
+      mesh.visible = false;   // hidden by default
+    }
+
+    // Accumulate cluster centroid
+    if (!clusterSums[node.cluster_id]) clusterSums[node.cluster_id] = { x:0, y:0, z:0, count:0 };
+    clusterSums[node.cluster_id].x += x;
+    clusterSums[node.cluster_id].y += y;
+    clusterSums[node.cluster_id].z += z;
+    clusterSums[node.cluster_id].count++;
   });
 
-  // Show/hide Shorts count label
+  _universeNodeMeshes   = nodeMeshes;
+  _universeShortsMeshes = shortsMeshes;
+
+  // ── Cluster label sprites ────────────────────────────────────────────────────
+  clusters.forEach(function(c) {
+    var sum = clusterSums[c.id];
+    if (!sum || sum.count === 0) return;
+
+    // Average cluster position, pushed outward from sphere center
+    var avg = new THREE.Vector3(sum.x / sum.count, sum.y / sum.count, sum.z / sum.count);
+    avg.normalize().multiplyScalar(SPHERE_R + 55);
+
+    // Draw label onto an offscreen canvas → CanvasTexture → Sprite
+    var cv  = document.createElement('canvas');
+    cv.width  = 320;
+    cv.height = 64;
+    var ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.font      = 'bold 17px "DM Sans", sans-serif';
+    ctx.fillStyle = CLUSTER_COLORS[c.color] || '#3ecfb2';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(c.name.toUpperCase(), cv.width / 2, cv.height / 2);
+
+    var tex        = new THREE.CanvasTexture(cv);
+    var spriteMat  = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.85, depthWrite: false });
+    var sprite     = new THREE.Sprite(spriteMat);
+    sprite.position.copy(avg);
+    sprite.scale.set(90, 22, 1);
+    sprite.userData = { isLabel: true, clusterId: c.id };
+    uGroup.add(sprite);
+  });
+
+  // ── Tooltip + interaction ────────────────────────────────────────────────────
+  var raycaster = new THREE.Raycaster();
+  var mouse2    = new THREE.Vector2();
+  var tooltip   = document.getElementById('graphTooltip');
+
+  var isDragging = false;
+  var isRotating = true;
+  var rotateTimer = null;
+  var prevDrag   = { x: 0, y: 0 };
+
+  function onMouseMove(e) {
+    var rect = canvas.getBoundingClientRect();
+    mouse2.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+    mouse2.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+
+    if (isDragging) {
+      var dx = (e.clientX - prevDrag.x) * 0.005;
+      var dy = (e.clientY - prevDrag.y) * 0.005;
+      uGroup.rotation.y += dx;
+      uGroup.rotation.x += dy;
+      prevDrag = { x: e.clientX, y: e.clientY };
+      tooltip.style.display = 'none';
+      return;
+    }
+
+    // Hover — raycast only against non-short visible nodes
+    var visibleNodes = nodeMeshes.filter(function(m) { return m.visible && !m.userData.node.format !== 'short'; });
+    raycaster.setFromCamera(mouse2, camera);
+    var hits = raycaster.intersectObjects(nodeMeshes);
+    if (hits.length && hits[0].object.visible) {
+      var nd  = hits[0].object.userData.node;
+      var sc  = hits[0].object.userData.sc;
+      var clr = CLUSTER_COLORS[nd.cluster_color] || '#3ecfb2';
+      var hex = '#' + sc.color.getHexString();
+      tooltip.style.display = 'block';
+      tooltip.style.left    = (e.clientX - rect.left + 16) + 'px';
+      tooltip.style.top     = (e.clientY - rect.top  - 16) + 'px';
+      tooltip.innerHTML = '<strong>' + nd.title + '</strong>'
+        + '<div class="tt-stat">\uD83D\uDC41 ' + Number(nd.views).toLocaleString() + ' views</div>'
+        + '<div class="tt-stat">\uD83D\uDC4D ' + Number(nd.likes).toLocaleString() + ' likes</div>'
+        + '<div class="tt-stat" style="color:' + clr + ';margin-top:4px;font-weight:700;">\u2736 ' + nd.cluster_name + '</div>'
+        + '<div class="tt-stat" style="color:' + hex + ';font-size:10px;">Class ' + sc.cls + ' \u2014 ' + sc.label + '</div>';
+      canvas.style.cursor = 'pointer';
+    } else {
+      tooltip.style.display = 'none';
+      canvas.style.cursor   = '';
+    }
+  }
+
+  function onMouseDown(e) {
+    isDragging = true;
+    isRotating = false;
+    if (rotateTimer) clearTimeout(rotateTimer);
+    prevDrag = { x: e.clientX, y: e.clientY };
+  }
+
+  function onMouseUp(e) {
+    if (!isDragging) return;
+    // Only count as click if barely moved
+    var dx = e.clientX - prevDrag.x;
+    var dy = e.clientY - prevDrag.y;
+    if (Math.abs(dx) < 4 && Math.abs(dy) < 4) {
+      // Click: raycast and open video
+      var rect = canvas.getBoundingClientRect();
+      mouse2.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+      mouse2.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse2, camera);
+      var hits = raycaster.intersectObjects(nodeMeshes);
+      if (hits.length && hits[0].object.visible) {
+        var nd = hits[0].object.userData.node;
+        if (nd.youtube_url) window.open(nd.youtube_url, '_blank');
+      }
+    }
+    isDragging = false;
+    rotateTimer = setTimeout(function() { isRotating = true; }, 3000);
+  }
+
+  function onWheel(e) {
+    e.preventDefault();
+    camera.position.z = Math.max(150, Math.min(1400, camera.position.z + e.deltaY * 0.5));
+  }
+
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mousedown', onMouseDown);
+  canvas.addEventListener('mouseup',   onMouseUp);
+  canvas.addEventListener('wheel',     onWheel, { passive: false });
+
+  // Cleanup previous listeners on re-render (stored on canvas element)
+  if (canvas._uCleanup) canvas._uCleanup();
+  canvas._uCleanup = function() {
+    canvas.removeEventListener('mousemove', onMouseMove);
+    canvas.removeEventListener('mousedown', onMouseDown);
+    canvas.removeEventListener('mouseup',   onMouseUp);
+    canvas.removeEventListener('wheel',     onWheel);
+  };
+
+  // ── Shorts count label ────────────────────────────────────────────────────────
   var shortNodes = nodes.filter(function(n) { return n.format === 'short'; });
   var shortsLbl  = document.getElementById('shortsCountLabel');
   if (shortsLbl) shortsLbl.textContent = shortNodes.length > 0 ? '(' + shortNodes.length + ' hidden)' : '';
 
-  var longformCount = nodes.filter(function(n) { return n.format !== 'short'; }).length;
-  var maxViews = Math.max.apply(null,
-    nodes.filter(function(n) { return n.format !== 'short'; }).map(function(n) { return n.views; }).concat([1])
-  );
-  function nodeR(n) {
-    if (n.format === 'short') return 3;
-    return 8 + Math.sqrt(n.views / maxViews) * 26;
+  // ── Niche label (async, non-blocking) ────────────────────────────────────────
+  fetch('/api/analytr/niche').then(function(r) { return r.json(); }).then(function(d) {
+    var nl = document.getElementById('universeNicheLabel');
+    if (nl && d.niche_definition) nl.textContent = d.niche_definition;
+  }).catch(function() {});
+
+  // ── Render loop ───────────────────────────────────────────────────────────────
+  function animate(time) {
+    _universeAnimId = requestAnimationFrame(animate);
+    if (typeof TWEEN !== 'undefined') TWEEN.update(time);
+    if (isRotating && !isDragging) uGroup.rotation.y += 0.0007;
+    renderer.render(scene, camera);
   }
-
-  // ── Force simulation: cluster gravity + weak charge + collision ───────────
-  const sim = d3.forceSimulation(nodes)
-    .force('cluster', function(alpha) {
-      nodes.forEach(function(d) {
-        const c = clusterCentroids[d.cluster_id];
-        if (!c) return;
-        d.vx -= (d.x - c.x) * alpha * 0.15;
-        d.vy -= (d.y - c.y) * alpha * 0.15;
-      });
-    })
-    .force('charge',    d3.forceManyBody().strength(-80))
-    .force('collision', d3.forceCollide().radius(function(n) { return nodeR(n) + 3; }))
-    .force('center',    d3.forceCenter(W / 2, H / 2));
-  _constellationSim = sim;
-
-  // ── Build SVG ──────────────────────────────────────────────────────────────
-  const svgSel = d3.select(svgEl);
-  svgSel.selectAll('*').remove();
-  _constellationSvgSel = svgSel;
-
-  const zoomG = svgSel.append('g').attr('class', 'zoom-layer');
-
-  // Intra-cluster links — solid, cluster color, opacity 0.3
-  const intraLink = zoomG.append('g').attr('class', 'intra-links')
-    .selectAll('line').data(intraLinks).enter().append('line')
-      .attr('stroke', function(d) {
-        const srcId = typeof d.source === 'object' ? d.source.id : d.source;
-        const n     = nodeById[srcId];
-        return n ? (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') : '#2a2e28';
-      })
-      .attr('stroke-opacity', 0.3)
-      .attr('stroke-width',   1);
-
-  // Cross-cluster links — dashed teal, opacity 0.5, slightly thicker
-  const crossLink = zoomG.append('g').attr('class', 'cross-links')
-    .selectAll('line').data(crossLinks).enter().append('line')
-      .attr('stroke',          '#3ecfb2')
-      .attr('stroke-opacity',  0.5)
-      .attr('stroke-width',    1.5)
-      .attr('stroke-dasharray','5,3');
-
-  // Cluster centroid labels
-  const clusterLabelData = Object.keys(clusterGroups).map(function(cid) {
-    const group  = clusterGroups[cid];
-    return { id: Number(cid), name: group[0].cluster_name, color: group[0].cluster_color, group: group };
-  });
-  const clusterLabels = zoomG.append('g').attr('class', 'cluster-labels')
-    .selectAll('text').data(clusterLabelData).enter().append('text')
-      .attr('class',            'cluster-label')
-      .attr('text-anchor',      'middle')
-      .attr('dominant-baseline','central')
-      .attr('fill',             function(d) { return CLUSTER_COLORS[d.color] || '#3ecfb2'; })
-      .text(function(d) { return d.name.toUpperCase(); });
-
-  const tooltip = document.getElementById('graphTooltip');
-
-  // Nodes
-  const nodeG = zoomG.append('g').attr('class', 'nodes')
-    .selectAll('g').data(nodes).enter().append('g')
-      .attr('cursor', 'pointer')
-      .call(d3.drag()
-        .on('start', function(event, d) {
-          if (!event.active) sim.alphaTarget(0.3).restart();
-          d.fx = d.x; d.fy = d.y;
-        })
-        .on('drag',  function(event, d) { d.fx = event.x; d.fy = event.y; })
-        .on('end',   function(event, d) {
-          if (!event.active) sim.alphaTarget(0);
-          d.fx = null; d.fy = null;
-        })
-      )
-      .on('mouseover', function(event, d) {
-        const r = svgEl.getBoundingClientRect();
-        tooltip.style.display = 'block';
-        tooltip.style.left    = (event.clientX - r.left + 14) + 'px';
-        tooltip.style.top     = (event.clientY - r.top  + 14) + 'px';
-        const clr = CLUSTER_COLORS[d.cluster_color] || '#3ecfb2';
-        tooltip.innerHTML = '<strong>' + d.title + '</strong>'
-          + '<div class="tt-stat">👁 ' + Number(d.views).toLocaleString() + ' views</div>'
-          + '<div class="tt-stat">👍 ' + Number(d.likes).toLocaleString() + ' likes</div>'
-          + '<div class="tt-stat" style="color:' + clr + ';margin-top:4px;font-weight:700;">✶ ' + d.cluster_name + '</div>';
-      })
-      .on('mousemove', function(event) {
-        const r = svgEl.getBoundingClientRect();
-        tooltip.style.left = (event.clientX - r.left + 14) + 'px';
-        tooltip.style.top  = (event.clientY - r.top  + 14) + 'px';
-      })
-      .on('mouseout', function() { tooltip.style.display = 'none'; })
-      .on('click',    function(event, d) {
-        if (d.youtube_url) window.open(d.youtube_url, '_blank');
-      });
-
-  nodeG.append('circle')
-    .attr('r',            function(n) { return nodeR(n); })
-    .attr('fill',         function(n) {
-      if (n.format === 'short') return 'rgba(255,255,255,0.05)';
-      return (CLUSTER_COLORS[n.cluster_color] || '#3ecfb2') + '33';
-    })
-    .attr('stroke',       function(n) { return CLUSTER_COLORS[n.cluster_color] || '#3ecfb2'; })
-    .attr('stroke-width', function(n) { return n.format === 'short' ? 1 : 1.5; })
-    .attr('opacity',      function(n) { return n.format === 'short' ? 0.2 : 1; })
-    .attr('class',        function(n) { return n.format === 'short' ? 'node-short' : ''; });
-
-  // Hide shorts by default (toggle will show them)
-  nodeG.filter(function(n) { return n.format === 'short'; }).style('display', 'none');
-
-  const nodeText = nodeG.append('text')
-    .attr('text-anchor',       'middle')
-    .attr('dominant-baseline', 'central')
-    .attr('fill',              '#e8ebe6')
-    .attr('font-size',         function(n) { return Math.max(8, Math.min(11, nodeR(n) * 0.45)) + 'px'; })
-    .attr('font-family',       'DM Sans, sans-serif')
-    .attr('pointer-events',    'none')
-    .attr('opacity',           0)
-    .text(function(n) { return n.title.split(' ').slice(0, 4).join(' '); });
-
-  // ── Zoom behaviour (unchanged) ─────────────────────────────────────────────
-  function applyZoomVisuals(k) {
-    _currentZoomK = k;
-    if (k < 0.5) {
-      clusterLabels.attr('font-size', Math.round(18 / k) + 'px').attr('opacity', 1);
-      nodeText.attr('opacity', 0);
-    } else if (k <= 1.5) {
-      clusterLabels.attr('font-size', Math.round(13 / k) + 'px').attr('opacity', 0.6);
-      nodeText.attr('opacity', 0);
-    } else {
-      clusterLabels.attr('opacity', 0);
-      nodeText.attr('opacity', 1);
-    }
-  }
-
-  const zoom = d3.zoom()
-    .scaleExtent([0.1, 4])
-    .on('zoom', function(event) {
-      zoomG.attr('transform', event.transform);
-      applyZoomVisuals(event.transform.k);
-    });
-  _constellationZoom = zoom;
-  svgSel.call(zoom);
-
-  // ── Tick ───────────────────────────────────────────────────────────────────
-  sim.on('tick', function() {
-    intraLink
-      .attr('x1', function(d) { return d.source.x; })
-      .attr('y1', function(d) { return d.source.y; })
-      .attr('x2', function(d) { return d.target.x; })
-      .attr('y2', function(d) { return d.target.y; });
-
-    crossLink
-      .attr('x1', function(d) { return nodeById[d.source]?.x || 0; })
-      .attr('y1', function(d) { return nodeById[d.source]?.y || 0; })
-      .attr('x2', function(d) { return nodeById[d.target]?.x || 0; })
-      .attr('y2', function(d) { return nodeById[d.target]?.y || 0; });
-
-    nodeG.attr('transform', function(d) {
-      return 'translate(' + d.x + ',' + d.y + ')';
-    });
-
-    clusterLabels
-      .attr('x', function(d) {
-        const xs = d.group.map(function(n) { return n.x || 0; });
-        return xs.reduce(function(a, b) { return a + b; }, 0) / xs.length;
-      })
-      .attr('y', function(d) {
-        const ys = d.group.map(function(n) { return n.y || 0; });
-        return ys.reduce(function(a, b) { return a + b; }, 0) / ys.length;
-      });
-  });
-
-  // ── Initial state: galaxy → mid after 2s ──────────────────────────────────
-  const initK = 0.15;
-  const initT = d3.zoomIdentity.translate(W / 2 - initK * W / 2, H / 2 - initK * H / 2).scale(initK);
-  svgSel.call(zoom.transform, initT);
-  applyZoomVisuals(initK);
-  setTimeout(function() { constellationZoomTo(0.5, undefined, undefined, 900); }, 2000);
+  animate(0);
 }
 
-function renderLegend(clusters) {
-  const legend = document.getElementById('constellationLegend');
-  legend.innerHTML = clusters.map(function(c) {
-    const hex = CLUSTER_COLORS[c.color] || '#3ecfb2';
+// ─── Stellar legend ───────────────────────────────────────────────────────────
+function renderStellarLegend() {
+  var legend  = document.getElementById('constellationLegend');
+  var classes = [
+    { cls: 'O',  color: '#7090ff', label: 'Viral Outlier (10x+)' },
+    { cls: 'B',  color: '#a0c0ff', label: 'Major Hit (5–10x)' },
+    { cls: 'A',  color: '#ffffff', label: 'Strong Performer (2–5x)' },
+    { cls: 'F',  color: '#ffe88a', label: 'Above Average' },
+    { cls: 'G',  color: '#ffd060', label: 'Channel Average' },
+    { cls: 'K',  color: '#ff9a40', label: 'Below Average' },
+    { cls: 'M',  color: '#ff4040', label: 'Low Performer' },
+  ];
+  legend.innerHTML = classes.map(function(c) {
     return '<div class="dna-legend-item">'
-      + '<div class="dna-legend-dot" style="background:' + hex + '"></div>'
-      + '<span>' + c.name + '</span></div>';
+      + '<div class="dna-legend-dot" style="background:' + c.color + ';box-shadow:0 0 6px ' + c.color + '55;"></div>'
+      + '<span><strong>Class ' + c.cls + '</strong> \u2014 ' + c.label + '</span></div>';
   }).join('');
 }
 
@@ -1815,20 +1886,13 @@ async function checkImportStatus() {
 }
 
 function toggleShortsVisibility(show) {
-  var svgEl = document.getElementById('constellationSvg');
-  if (!svgEl) return;
-  var shortsGroups = svgEl.querySelectorAll('.nodes g');
+  if (!_universeShortsMeshes) return;
+  _universeShortsMeshes.forEach(function(m) { m.visible = !!show; });
   var lbl = document.getElementById('shortsCountLabel');
-  var hidden = 0;
-  shortsGroups.forEach(function(g) {
-    // Check if this node's data is a short — we stored class on the circle
-    var circle = g.querySelector('circle.node-short');
-    if (circle) {
-      g.style.display = show ? '' : 'none';
-      if (!show) hidden++;
-    }
-  });
-  if (lbl) lbl.textContent = (!show && hidden > 0) ? '(' + hidden + ' hidden)' : '';
+  if (lbl) {
+    lbl.textContent = (!show && _universeShortsMeshes.length > 0)
+      ? '(' + _universeShortsMeshes.length + ' hidden)' : '';
+  }
 }
 
 async function saveSecretsToSoul() {
