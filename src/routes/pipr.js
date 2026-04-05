@@ -135,7 +135,7 @@ router.get('/beats-preview', (req, res) => {
 
 router.get('/report', (req, res) => {
   try {
-    const projects = db.getAllProjects();
+    const projects = db.getKre8rProjects();
     const report = projects.map(p => {
       const config = readConfig(p.id);
       if (!config || !config.beats || config.beats.length === 0) {

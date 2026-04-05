@@ -12,7 +12,7 @@ const CORE_PLATFORMS = ['tiktok', 'youtube', 'instagram', 'facebook', 'lemon8'];
 // GET /api/operator — full dashboard data in one shot
 router.get('/', (req, res) => {
   try {
-    const projects = db.getAllProjects();
+    const projects = db.getKre8rProjects();
 
     // For each project, get posted platforms
     const projectsWithPosts = projects.map(p => {

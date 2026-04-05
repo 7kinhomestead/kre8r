@@ -63,7 +63,7 @@
           { label: 'MailΩr',    sublabel: 'M4', href: '/mailor.html' },
           { label: 'AudiencΩr', sublabel: 'M5', href: '/audience.html' },
           { label: 'AutomatΩr', href: '/automator.html' },
-          { label: 'AnalΩzr',   href: '/analytr.html', soon: true },
+          { label: 'MirrΩr',    href: '/mirrr.html' },
         ]
       }
     ]

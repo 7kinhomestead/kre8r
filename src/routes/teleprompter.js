@@ -58,7 +58,7 @@ function getLocalIP() {
 
 // GET /api/teleprompter/scripts
 router.get('/scripts', (req, res) => {
-  const projects = db.getAllProjects();
+  const projects = db.getKre8rProjects();
   const result   = [];
 
   for (const p of projects) {

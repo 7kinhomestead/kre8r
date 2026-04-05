@@ -442,6 +442,26 @@ function getAllProjects() {
   `);
 }
 
+// Native Kre8Ωr projects only — excludes youtube_import.
+// Use this everywhere EXCEPT MirrΩr which needs the full YouTube history.
+function getKre8rProjects() {
+  return _all(`
+    SELECT p.*, ps.gate_a_approved, ps.gate_b_approved, ps.gate_c_approved,
+           ps.stage_status,
+           (SELECT COUNT(*) FROM packages WHERE project_id = p.id) as package_count,
+           (SELECT COUNT(*) FROM captions WHERE project_id = p.id AND approved = 1) as approved_captions,
+           (SELECT COUNT(*) FROM emails WHERE project_id = p.id AND approved = 1) as approved_emails,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND cut_type = 'social') as social_cuts,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND cut_type = 'social' AND approved = 1) as approved_cuts,
+           (SELECT COUNT(*) FROM cuts WHERE project_id = p.id AND clip_path IS NOT NULL) as extracted_clips,
+           (SELECT COUNT(*) FROM footage WHERE project_id = p.id) as footage_count
+    FROM projects p
+    LEFT JOIN pipeline_state ps ON ps.project_id = p.id
+    WHERE p.status != 'archived' AND p.source != 'youtube_import'
+    ORDER BY p.created_at DESC
+  `);
+}
+
 function getAllProjectsBySource(source) {
   return _all(`
     SELECT p.*, ps.gate_a_approved, ps.gate_b_approved, ps.gate_c_approved,
@@ -1491,7 +1511,8 @@ function getArchivedProjects() {
 // ─────────────────────────────────────────────
 
 function getPipelineSummary(source) {
-  const projects = source ? getAllProjectsBySource(source) : getAllProjects();
+  // When source is explicitly 'youtube_import' (MirrΩr) use the full set; otherwise native projects only.
+  const projects = source ? getAllProjectsBySource(source) : getKre8rProjects();
   return projects.map(p => ({
     ...p,
     needs_attention: !p.gate_a_approved || !p.gate_b_approved || !p.gate_c_approved
@@ -1520,6 +1541,7 @@ module.exports = {
   createProject,
   getProject,
   getAllProjects,
+  getKre8rProjects,
   getAllProjectsBySource,
   setProjectSource,
   updateProjectStage,

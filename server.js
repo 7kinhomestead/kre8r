@@ -62,7 +62,9 @@ app.use('/api/mailor',       require('./src/routes/mailor'));
 app.use('/api/kajabi',       require('./src/routes/kajabi'));
 app.use('/api/id8r',         require('./src/routes/id8r'));
 app.use('/api/playwright',   require('./src/routes/playwright'));
-app.use('/api/analytr',      require('./src/routes/analytr'));
+const mirrRouter = require('./src/routes/mirrr');
+app.use('/api/mirrr',        mirrRouter);          // MirrΩr (new canonical)
+app.use('/api/analytr',      mirrRouter);           // legacy alias — keep so old bookmarks don't 404
 app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
 
 // Creator profile — served to all tools

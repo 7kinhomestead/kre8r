@@ -197,7 +197,7 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
 - Cari creator profile (second voice profile for Rock Rich Shows)
 - Configurable workflow order (onboarding wizard)
-- AnalΩzr — analytics tool (replaces AnalytΩr — old name was bad)
+- MirrΩr (`/mirrr.html`) — replaces MirrΩr. Channel intelligence, 3D Content Universe, coaching, secrets. Route: /api/mirrr (legacy /api/mirrr alias kept)
 - RetentΩr — viral clip / retention cut module (post-edit, split from SelectsΩr)
 - CoverageΩr — coverage tracking
 - Affiliate link manager

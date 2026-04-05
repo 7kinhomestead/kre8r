@@ -207,9 +207,9 @@ d85366c  chore: Session 18 log + TODO update
 - Pre: Id8Ωr, PipΩr, WritΩr
 - Prod: DirectΩr, ShootDay, TeleprΩmpter
 - Post: VaultΩr, EditΩr, ReviewΩr, ComposΩr
-- Dist: GateΩr (M1), PackageΩr (M2), CaptionΩr (M3), MailΩr (M4), AudiencΩr (M5), AutomatΩr, AnalΩzr (soon)
+- Dist: GateΩr (M1), PackageΩr (M2), CaptionΩr (M3), MailΩr (M4), AudiencΩr (M5), AutomatΩr, MirrΩr (soon)
 - Removed: ResearchΩr, CoverageΩr, m4-email-generator
-- Renamed: AnalytΩr → AnalΩzr, fixed AudienceΩr → AudiencΩr
+- Renamed: AnalytΩr → MirrΩr, fixed AudienceΩr → AudiencΩr
 
 **`public/mailor.html`** — Added missing `initNav()` call.
 
@@ -621,14 +621,14 @@ a0f2063  feat: VaultΩr direct device upload with live progress
 
 ### What Was Built
 
-**AnalΩzr — Content DNA (new section in analytr.html)**
+**MirrΩr — Content DNA (new section in mirrr.html)**
 - D3.js v7 force-directed constellation graph — 263 YouTube nodes sized by view count, colored by topic cluster
 - Niche Definition panel — SSE-streamed Claude analysis of channel identity
 - Audience Profile panel — structured cards (demographics, desires, fears, trust signals) with "Save to My Soul →" button that writes to `creator-profile.json`
-- Three new routes in `src/routes/analytr.js`:
-  - `GET /api/analytr/content-dna/graph` — builds node/cluster data, top-50 clustering, 24h kv_store cache
-  - `POST /api/analytr/content-dna` — streams Claude niche + audience analysis via SSE
-  - `PATCH /api/analytr/creator-profile-audience` — saves audience profile to creator-profile.json
+- Three new routes in `src/routes/mirrr.js`:
+  - `GET /api/mirrr/content-dna/graph` — builds node/cluster data, top-50 clustering, 24h kv_store cache
+  - `POST /api/mirrr/content-dna` — streams Claude niche + audience analysis via SSE
+  - `PATCH /api/mirrr/creator-profile-audience` — saves audience profile to creator-profile.json
 
 **Graph clustering improvements**
 - Cache-first: serves from `kv_store` in 4.7ms on hit; busts on `?refresh=1`
@@ -646,10 +646,10 @@ a0f2063  feat: VaultΩr direct device upload with live progress
 - `CREATE TABLE IF NOT EXISTS kv_store (key TEXT PRIMARY KEY, value TEXT, updated_at DATETIME)` added to `src/db.js` migrations
 - `getKv(key)` / `setKv(key, value)` helpers added and exported
 
-**AnalΩzr stat cards bug fix**
+**MirrΩr stat cards bug fix**
 - Root cause: `buffer.split('\n')` in inject-dna-js.js evaluated the `\n` as a literal LF character inside a backtick template literal, embedding a real newline into the HTML file at `buffer.split('` + LF + `');`
 - This broke the entire inline `<script>` block, silently preventing `loadChannelHealth()` from ever running
-- Fixed via hex byte replacement (`0a` → `5c6e`) using `fix_analytr.js`
+- Fixed via hex byte replacement (`0a` → `5c6e`) using `fix_mirrr.js`
 - Verified clean with extracted script block check — "No broken LF pattern found — CLEAN"
 
 **Graph metric bug fix**
@@ -665,13 +665,13 @@ a0f2063  feat: VaultΩr direct device upload with live progress
 - `public/composor.html`: `credits_exhausted` event now renders amber 💳 banner with generated count and manual generation instructions
 
 **WISHLIST.md**
-- Added: AnalΩzr Content Format Discrimination (long form / short form / live stream, `contentDetails.duration` parsing, format badges on constellation nodes, live streams dimmed + excluded from coaching averages by default)
+- Added: MirrΩr Content Format Discrimination (long form / short form / live stream, `contentDetails.duration` parsing, format badges on constellation nodes, live streams dimmed + excluded from coaching averages by default)
 
 ### Files Changed
 | File | Change |
 |---|---|
-| `public/analytr.html` | Content DNA section (graph, niche panel, audience panel), D3.js, fixed LF syntax bug |
-| `src/routes/analytr.js` | 3 new content-dna routes, YouTube import source stamp, graph metric fix, improved clustering prompt |
+| `public/mirrr.html` | Content DNA section (graph, niche panel, audience panel), D3.js, fixed LF syntax bug |
+| `src/routes/mirrr.js` | 3 new content-dna routes, YouTube import source stamp, graph metric fix, improved clustering prompt |
 | `src/db.js` | `projects.source` migration, `kv_store` table, `getKv`/`setKv`, `getAllProjectsBySource`, `setProjectSource`, `getPipelineSummary(source)` |
 | `src/routes/projects.js` | `?source=` filter on `GET /api/projects` |
 | `src/composor/suno-client.js` | 402/429 noCredits error, no console.error spam |
@@ -683,7 +683,7 @@ a0f2063  feat: VaultΩr direct device upload with live progress
 | `public/editor.html` | `?source=kre8r` on projects fetch |
 | `public/reviewr.html` | `?source=kre8r` on projects fetch |
 | `WISHLIST.md` | Content format discrimination entry |
-| `fix_analytr.js` | One-shot hex repair script (kept in repo) |
+| `fix_mirrr.js` | One-shot hex repair script (kept in repo) |
 
 ### Known Issues Identified This Session
 - "Financial Escape" cluster absorbs 227 of 263 videos — channel's content skews heavily financial, this is accurate not a bug. Will naturally rebalance when TikTok/Lemon8 data is added.
@@ -692,9 +692,9 @@ a0f2063  feat: VaultΩr direct device upload with live progress
 ### Commits This Session
 ```
 c253b66  feat: cluster names anchored to top-performing videos — top 10 explicit, performance defines identity
-bc51706  wish: AnalΩzr content format discrimination — long form / short form / live stream
+bc51706  wish: MirrΩr content format discrimination — long form / short form / live stream
 bd97196  fix: graph nodes now read metric_value (not .value) — real view counts restore node sizing
-624516e  fix: AnalΩzr stat cards JS parse bug, kie.ai 402 noise suppression, ComposΩr credits exhausted banner
+624516e  fix: MirrΩr stat cards JS parse bug, kie.ai 402 noise suppression, ComposΩr credits exhausted banner
 42f5d29  fix: kie.ai noise suppression, stat cards syntax fix, credits_exhausted UI banner
 3053422  feat: Content DNA graph caching, top 50 clustering, source discrimination fix
 f3dce5b  feat: Content DNA constellation graph, niche definition, audience profile, dropdown pollution fix
