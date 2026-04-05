@@ -154,6 +154,28 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 .sync-log .log-info{color:var(--teal);}
 .sync-log .log-done{color:var(--text);font-weight:700;}
 
+/* ─── YOUTUBE LINK SECTION ───────────────────── */
+.yt-link-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;animation:fadeUp 0.4s 0.07s ease both;}
+.yt-link-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);}
+.yt-link-row:last-of-type{border-bottom:none;}
+.yt-link-row:hover{background:var(--bg-card-2);}
+.yt-link-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.yt-link-status{font-size:11px;margin-top:3px;display:flex;align-items:center;gap:5px;}
+.yt-link-status.linked{color:var(--teal);}
+.yt-link-status.unlinked{color:var(--amber);}
+.yt-input{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;font-family:var(--font-body);color:var(--text);width:220px;outline:none;transition:border-color 0.15s;}
+.yt-input:focus{border-color:var(--teal);}
+.yt-input::placeholder{color:var(--text-dimmer);}
+@media(max-width:640px){.yt-input{width:130px;}}
+.yt-btn{background:var(--bg-card-2);border:1px solid var(--border-bright);color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:700;padding:7px 14px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.yt-btn:hover{border-color:var(--teal);color:var(--teal);}
+.yt-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.yt-btn.saving{opacity:0.6;}
+.yt-link-all{display:flex;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--border);background:var(--bg-card-2);}
+.yt-link-all-btn{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:var(--bg);font-family:var(--font-body);font-size:13px;font-weight:700;padding:10px 20px;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;}
+.yt-link-all-btn:hover{background:var(--teal-dim);}
+.yt-link-all-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
 /* ─── MANUAL ENTRY HINT ──────────────────────── */
 .hint-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text-dimmer);}
 .hint-bar a{color:var(--teal);text-decoration:none;}
@@ -198,6 +220,22 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         <div class="stat-label">Top Content Topic</div>
         <div class="stat-value loading" id="statTopTopic" style="font-size:22px;letter-spacing:0.5px;">—</div>
         <div class="stat-meta" id="statTopTopicMeta">by total views</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── YOUTUBE LINK ───────────────────────── -->
+  <div class="section-spacer">
+    <div class="section-header">
+      <div class="section-title">YOUTUBE LINK</div>
+      <div class="section-sub">Paste a YouTube URL or video ID to link each project</div>
+    </div>
+    <div class="yt-link-wrap">
+      <div id="ytLinkRows">
+        <div style="padding:20px;color:var(--text-dimmer);font-size:13px;">Loading projects…</div>
+      </div>
+      <div class="yt-link-all">
+        <button class="yt-link-all-btn" id="linkAllBtn" onclick="linkAllAndSync()">▶ Link All &amp; Sync</button>
       </div>
     </div>
   </div>
@@ -285,9 +323,14 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
           <div class="sync-spinner"></div>
           ▶ Sync YouTube Data
         </button>
+        <button class="sync-btn" id="importBtn" onclick="importChannel()" style="color:var(--teal);border-color:var(--teal-glow);">
+          <div class="sync-spinner" style="border-color:rgba(62,207,178,0.2);border-top-color:var(--teal);"></div>
+          ⬇ Import Entire YouTube Channel
+        </button>
         <div class="sync-last" id="syncLast">Never synced</div>
       </div>
       <div class="sync-log" id="syncLog"></div>
+      <div class="sync-log" id="importLog" style="margin-top:8px;"></div>
     </div>
   </div>
 
@@ -614,9 +657,210 @@ async function syncYouTube() {
   btn.disabled = false;
 }
 
+// ─── YouTube Link Section ─────────────────────────────────────────────────────
+
+function parseVideoId(input) {
+  if (!input) return null;
+  input = input.trim();
+  // youtu.be/ID
+  let m = input.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  // youtube.com/watch?v=ID
+  m = input.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  // youtube.com/shorts/ID
+  m = input.match(/\/shorts\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  // raw 11-char ID
+  if (/^[A-Za-z0-9_-]{11}$/.test(input)) return input;
+  return null;
+}
+
+let ytProjects = [];
+
+async function loadYtLinkRows() {
+  const container = document.getElementById('ytLinkRows');
+  try {
+    const res  = await fetch('/api/projects');
+    const data = await res.json();
+    ytProjects = Array.isArray(data) ? data : (data.projects || []);
+
+    if (!ytProjects.length) {
+      container.innerHTML = '<div style="padding:20px;color:var(--text-dimmer);font-size:13px;">No projects found.</div>';
+      return;
+    }
+
+    container.innerHTML = ytProjects.map(p => {
+      const linked  = !!p.youtube_video_id;
+      const statusHtml = linked
+        ? `<div class="yt-link-status linked">✓ ${p.youtube_video_id}</div>`
+        : `<div class="yt-link-status unlinked">⚠ Not linked</div>`;
+      return `
+        <div class="yt-link-row" id="ytrow-${p.id}">
+          <div>
+            <div class="yt-link-title">${p.title || 'Untitled'}</div>
+            ${statusHtml}
+          </div>
+          <input class="yt-input" id="ytinput-${p.id}"
+            placeholder="youtube.com/watch?v=… or ID"
+            value="${linked ? p.youtube_video_id : ''}" />
+          <button class="yt-btn" id="ytbtn-${p.id}" onclick="linkVideo(${p.id})">Link</button>
+        </div>`;
+    }).join('');
+
+  } catch (err) {
+    container.innerHTML = `<div style="padding:20px;color:var(--red);font-size:13px;">Error: ${err.message}</div>`;
+  }
+}
+
+async function linkVideo(projectId) {
+  const input  = document.getElementById(`ytinput-${projectId}`);
+  const btn    = document.getElementById(`ytbtn-${projectId}`);
+  const row    = document.getElementById(`ytrow-${projectId}`);
+  const rawVal = input.value.trim();
+
+  const videoId = parseVideoId(rawVal);
+  if (!videoId) {
+    input.style.borderColor = 'var(--red)';
+    input.placeholder = 'Invalid URL or ID';
+    setTimeout(() => { input.style.borderColor = ''; }, 2000);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.classList.add('saving');
+  btn.textContent = '…';
+
+  try {
+    const res = await fetch(`/api/projects/${projectId}/meta`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ youtube_video_id: videoId }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    // Update in-memory project list
+    const proj = ytProjects.find(p => p.id === projectId);
+    if (proj) proj.youtube_video_id = videoId;
+
+    // Update row UI
+    const statusEl = row.querySelector('.yt-link-status');
+    statusEl.className = 'yt-link-status linked';
+    statusEl.textContent = '✓ ' + videoId;
+    input.value = videoId;
+    btn.textContent = '✓';
+    btn.style.color = 'var(--teal)';
+    btn.style.borderColor = 'var(--teal)';
+    setTimeout(() => {
+      btn.textContent = 'Link';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+      btn.disabled = false;
+      btn.classList.remove('saving');
+    }, 2000);
+
+  } catch (err) {
+    btn.textContent = '✗';
+    btn.style.color = 'var(--red)';
+    setTimeout(() => {
+      btn.textContent = 'Link';
+      btn.style.color = '';
+      btn.disabled = false;
+      btn.classList.remove('saving');
+    }, 2000);
+  }
+}
+
+async function linkAllAndSync() {
+  const btn = document.getElementById('linkAllBtn');
+  btn.disabled = true;
+  btn.textContent = 'Linking…';
+
+  // Link any with a value in the input that isn't already saved
+  const pendingLinks = ytProjects.filter(p => {
+    const input = document.getElementById(`ytinput-${p.id}`);
+    if (!input) return false;
+    const vid = parseVideoId(input.value.trim());
+    return vid && vid !== p.youtube_video_id;
+  });
+
+  for (const p of pendingLinks) {
+    await linkVideo(p.id);
+  }
+
+  btn.textContent = 'Syncing…';
+
+  // Scroll to sync section and run sync
+  document.getElementById('youtube-sync').scrollIntoView({ behavior: 'smooth' });
+  await syncYouTube();
+
+  btn.disabled = false;
+  btn.textContent = '▶ Link All & Sync';
+}
+
+// ─── YouTube Channel Import ───────────────────────────────────────────────────
+async function importChannel() {
+  const btn    = document.getElementById('importBtn');
+  const log    = document.getElementById('importLog');
+  const syncBtn = document.getElementById('syncBtn');
+
+  btn.classList.add('loading');
+  btn.disabled  = true;
+  syncBtn.disabled = true;
+  log.innerHTML = '';
+  log.classList.add('visible');
+
+  function appendLog(msg, cls) {
+    const line = document.createElement('div');
+    line.className = cls || '';
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  try {
+    const res    = await fetch('/api/analytr/youtube-import-channel', { method: 'POST' });
+    const reader = res.body.getReader();
+    const dec    = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const ev = JSON.parse(line.slice(5).trim());
+          if (ev.type === 'error')    appendLog('✗ ' + ev.message, 'log-err');
+          else if (ev.type === 'warn')    appendLog(ev.message, 'log-warn');
+          else if (ev.type === 'status')  appendLog(ev.message, 'log-info');
+          else if (ev.type === 'progress') appendLog(ev.message, 'log-info');
+          else if (ev.type === 'done') {
+            appendLog(ev.message, 'log-done');
+            // Reload everything after import
+            await loadChannelHealth();
+            await loadYtLinkRows();
+            await loadVideos();
+          }
+        } catch {}
+      }
+    }
+  } catch (err) {
+    appendLog('Error: ' + err.message, 'log-err');
+  }
+
+  btn.classList.remove('loading');
+  btn.disabled  = false;
+  syncBtn.disabled = false;
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 (async () => {
   await loadChannelHealth();
+  await loadYtLinkRows();
   await loadVideos();
 })();
 </script>

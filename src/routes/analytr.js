@@ -255,4 +255,220 @@ router.post('/youtube-sync', async (req, res) => {
   }
 });
 
+// ─── YouTube Channel Import (SSE) ────────────────────────────────────────────
+// Imports ALL videos from the channel into Kre8Ωr as projects.
+// Auth priority: OAuth access_token → YOUTUBE_CHANNEL_ID env → forHandle search
+
+router.post('/youtube-import-channel', async (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+  try {
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    if (!apiKey) {
+      send({ type: 'error', message: 'YOUTUBE_API_KEY not set in .env.' });
+      res.end(); return;
+    }
+
+    const { default: fetch } = await import('node-fetch');
+
+    // ── Step 1: Get uploads playlist ID ─────────────────────────────────────
+    send({ type: 'status', message: 'Fetching channel info...' });
+
+    let channelUrl;
+    const oauthToken     = process.env.YOUTUBE_ACCESS_TOKEN;
+    const channelIdEnv   = process.env.YOUTUBE_CHANNEL_ID;
+    const channelHandle  = '@7kinhomestead'; // from creator-profile.json
+
+    if (oauthToken) {
+      channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&mine=true&key=${apiKey}`;
+    } else if (channelIdEnv) {
+      channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${encodeURIComponent(channelIdEnv)}&key=${apiKey}`;
+    } else {
+      channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=${encodeURIComponent(channelHandle)}&key=${apiKey}`;
+    }
+
+    const chanHeaders = oauthToken
+      ? { Authorization: `Bearer ${oauthToken}` }
+      : {};
+
+    const chanRes  = await fetch(channelUrl, { headers: chanHeaders });
+    const chanData = await chanRes.json();
+
+    if (!chanRes.ok) {
+      throw new Error(chanData?.error?.message || `YouTube channels API error ${chanRes.status}`);
+    }
+
+    const channel = chanData.items?.[0];
+    if (!channel) {
+      throw new Error(`Channel not found. Set YOUTUBE_CHANNEL_ID in .env or check the handle "${channelHandle}".`);
+    }
+
+    const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploadsPlaylistId) {
+      throw new Error('Could not find uploads playlist for this channel.');
+    }
+
+    send({ type: 'status', message: `Found uploads playlist. Fetching video list...` });
+
+    // ── Step 2: Paginate through all playlist items ──────────────────────────
+    const allVideoIds = [];
+    const videoMeta   = {}; // videoId → { title, description, publishedAt }
+    let pageToken     = null;
+
+    do {
+      const pageParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+      const listUrl   = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageParam}&key=${apiKey}`;
+      const listRes   = await fetch(listUrl);
+      const listData  = await listRes.json();
+
+      if (!listRes.ok) {
+        throw new Error(listData?.error?.message || `PlaylistItems API error ${listRes.status}`);
+      }
+
+      for (const item of listData.items || []) {
+        const vid = item.snippet?.resourceId?.videoId;
+        if (vid) {
+          allVideoIds.push(vid);
+          videoMeta[vid] = {
+            title:       item.snippet.title       || 'Untitled',
+            description: item.snippet.description || '',
+            publishedAt: item.snippet.publishedAt || null,
+          };
+        }
+      }
+
+      pageToken = listData.nextPageToken || null;
+      send({ type: 'progress', message: `Found ${allVideoIds.length} videos so far...` });
+
+      if (pageToken) await new Promise(r => setTimeout(r, 200));
+    } while (pageToken);
+
+    send({ type: 'status', message: `${allVideoIds.length} total videos found. Fetching stats...` });
+
+    // ── Step 3: Fetch stats in batches of 50 ────────────────────────────────
+    const allStats = {}; // videoId → statistics
+    for (let i = 0; i < allVideoIds.length; i += 50) {
+      const batch  = allVideoIds.slice(i, i + 50);
+      const ids    = batch.join(',');
+      const statUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${encodeURIComponent(ids)}&key=${apiKey}`;
+      const statRes = await fetch(statUrl);
+      const statData = await statRes.json();
+
+      if (!statRes.ok) {
+        send({ type: 'warn', message: `Stats batch error: ${statData?.error?.message || statRes.status}` });
+        continue;
+      }
+
+      for (const item of statData.items || []) {
+        allStats[item.id] = item.statistics;
+        // Prefer snippet title/description from this call (more reliable)
+        if (item.snippet) {
+          videoMeta[item.id].title       = item.snippet.title       || videoMeta[item.id].title;
+          videoMeta[item.id].description = item.snippet.description || videoMeta[item.id].description;
+          videoMeta[item.id].publishedAt = item.snippet.publishedAt || videoMeta[item.id].publishedAt;
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    // ── Step 4: Import each video as a project ───────────────────────────────
+    let imported = 0, skipped = 0, failed = 0;
+
+    // Build a set of existing youtube_video_ids for fast lookup
+    const existingProjects  = db.getAllProjects();
+    const existingVideoIds  = new Set(
+      existingProjects.map(p => p.youtube_video_id).filter(Boolean)
+    );
+
+    for (let i = 0; i < allVideoIds.length; i++) {
+      const videoId = allVideoIds[i];
+      const meta    = videoMeta[videoId] || {};
+      const stats   = allStats[videoId]  || {};
+
+      send({
+        type: 'progress',
+        message: `Importing ${i + 1}/${allVideoIds.length}: "${meta.title}"`,
+      });
+
+      // Skip if already linked to a project
+      if (existingVideoIds.has(videoId)) {
+        // Still sync stats for the existing project
+        const existing = existingProjects.find(p => p.youtube_video_id === videoId);
+        if (existing && stats.viewCount) {
+          const posts  = db.getPostsByProject(existing.id);
+          let ytPost   = posts.find(p => p.platform === 'youtube');
+          if (!ytPost) {
+            const postId = db.savePost({
+              project_id: existing.id,
+              platform:   'youtube',
+              url:        `https://www.youtube.com/watch?v=${videoId}`,
+              content:    meta.title,
+              status:     'posted',
+              posted_at:  meta.publishedAt || new Date().toISOString(),
+            });
+            ytPost = { id: postId };
+          }
+          db.upsertMetric(ytPost.id, existing.id, 'youtube', 'views',         parseInt(stats.viewCount)    || 0);
+          db.upsertMetric(ytPost.id, existing.id, 'youtube', 'likes',         parseInt(stats.likeCount)    || 0);
+          db.upsertMetric(ytPost.id, existing.id, 'youtube', 'comment_count', parseInt(stats.commentCount) || 0);
+        }
+        skipped++;
+        continue;
+      }
+
+      try {
+        const ytUrl   = `https://www.youtube.com/watch?v=${videoId}`;
+        const desc    = meta.description ? meta.description.substring(0, 500) : null;
+
+        // Create project
+        const project = db.createProject(meta.title, desc, ytUrl, videoId);
+
+        // Create YouTube post record
+        const postId = db.savePost({
+          project_id: project.id,
+          platform:   'youtube',
+          url:        ytUrl,
+          content:    meta.title,
+          status:     'posted',
+          posted_at:  meta.publishedAt || new Date().toISOString(),
+        });
+
+        // Save metrics
+        if (stats.viewCount !== undefined) {
+          db.upsertMetric(postId, project.id, 'youtube', 'views',         parseInt(stats.viewCount)    || 0);
+          db.upsertMetric(postId, project.id, 'youtube', 'likes',         parseInt(stats.likeCount)    || 0);
+          db.upsertMetric(postId, project.id, 'youtube', 'comment_count', parseInt(stats.commentCount) || 0);
+        }
+
+        existingVideoIds.add(videoId);
+        imported++;
+
+      } catch (err) {
+        send({ type: 'warn', message: `✗ "${meta.title}" — ${err.message}` });
+        failed++;
+      }
+    }
+
+    send({
+      type: 'done',
+      message: `Import complete — ${imported} imported, ${skipped} already existed, ${failed} failed.`,
+      imported,
+      skipped,
+      failed,
+      total: allVideoIds.length,
+    });
+    res.end();
+
+  } catch (err) {
+    send({ type: 'error', message: err.message });
+    res.end();
+  }
+});
+
 module.exports = router;
