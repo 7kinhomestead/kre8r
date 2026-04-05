@@ -686,15 +686,25 @@ router.get('/content-dna/graph', async (req, res) => {
 
     const { default: fetch } = await import('node-fetch');
 
-    const videoLines = top50
-      .map(n => `${n.title} | ${n.views} views | ${n.likes} likes | ${n.comments} comments`)
+    const top10 = top50.slice(0, 10);
+    const top10Lines = top10
+      .map((n, i) => `#${i + 1} — ${n.title} | ${n.views.toLocaleString()} views`)
       .join('\n');
 
-    const clusterPrompt = `Analyze these ${top50.length} top-performing YouTube video titles and their performance data.
-Group them into 5-8 thematic clusters. Each cluster should represent a distinct content theme or audience need.
-Use cluster names that are specific, evocative, and 2-4 words (e.g. "Financial Escape", "Real Numbers Only", "Proof It's Possible").
+    const videoLines = top50
+      .map(n => `${n.title} | ${n.views.toLocaleString()} views | ${n.likes} likes | ${n.comments} comments`)
+      .join('\n');
 
-Videos (title | views | likes | comments):
+    const clusterPrompt = `You are analyzing the YouTube channel of an off-grid homesteading creator to identify their highest-performing content clusters.
+
+TOP 10 VIDEOS BY VIEW COUNT — these are the proven winners. Cluster names must reflect what these videos are about:
+${top10Lines}
+
+RULE: Name each cluster after what the HIGH-PERFORMING videos in that cluster are actually about — not by keyword pattern-matching across all titles. A cluster called "Financial Escape" earns that name because the #1 video with 421k views is about affording off-grid living, not because several titles contain the word "financial". The top video in a cluster defines the cluster's identity.
+
+Now group all ${top50.length} videos below into 5-8 clusters using that principle. Each cluster should represent a distinct audience need that has proven traction. Use names that are specific, evocative, and 2-4 words.
+
+All videos (title | views | likes | comments):
 ${videoLines}
 
 Assign every video to exactly one cluster. Return ONLY valid JSON, no markdown, no commentary:
@@ -704,6 +714,7 @@ Assign every video to exactly one cluster. Return ONLY valid JSON, no markdown, 
       "id": 1,
       "name": "Financial Escape",
       "color": "teal",
+      "top_video": "exact title of the highest-view video in this cluster",
       "videos": ["exact video title 1", "exact video title 2"]
     }
   ]
