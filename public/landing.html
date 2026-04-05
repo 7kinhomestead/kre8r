@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kre8Ωr — Create Without Limit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f0e;
+      --bg-deep: #0a0d0c;
+      --teal: #00c2a8;
+      --amber: #f0b942;
+      --green: #4caf77;
+      --purple: #9b6dff;
+      --card: #141614;
+      --border: #1e2120;
+      --text: #e8e8e8;
+      --muted: #888;
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body: system-ui, -apple-system, sans-serif;
+      --glow: 0 0 20px rgba(0,194,168,0.15);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* FIXED NAV */
+    #sticky-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: rgba(14,15,14,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transform: translateY(-100%);
+      transition: transform 0.3s ease;
+    }
+    #sticky-nav.visible { transform: translateY(0); }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 28px;
+      color: var(--text);
+      letter-spacing: 2px;
+    }
+    .nav-logo span { color: var(--teal); }
+    .nav-cta {
+      background: var(--teal);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 16px;
+      letter-spacing: 1px;
+      padding: 8px 22px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* SECTION ANIMATIONS */
+    .animate-section {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .animate-section.in-view {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* SECTION WRAPPER */
+    section {
+      padding: 100px 40px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-header {
+      font-family: var(--font-display);
+      font-size: 56px;
+      letter-spacing: 2px;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 60px;
+    }
+    .teal { color: var(--teal); }
+    .amber { color: var(--amber); }
+
+    /* ================================
+       SECTION 1 — HERO
+    ================================ */
+    #hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 24px;
+      overflow: hidden;
+    }
+    #particle-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 120px;
+      letter-spacing: 6px;
+      line-height: 1;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+    .hero-subhead {
+      font-family: var(--font-display);
+      font-size: 22px;
+      letter-spacing: 3px;
+      color: var(--teal);
+      margin-bottom: 20px;
+    }
+    .hero-body {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto 36px;
+    }
+    .hero-ctas {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+    .btn-primary {
+      background: var(--teal);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 18px;
+      letter-spacing: 1px;
+      padding: 14px 32px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+      box-shadow: 0 0 28px rgba(0,194,168,0.4);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--teal);
+      font-family: var(--font-display);
+      font-size: 18px;
+      letter-spacing: 1px;
+      padding: 13px 32px;
+      border: 1px solid var(--teal);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .btn-ghost:hover {
+      background: rgba(0,194,168,0.08);
+      box-shadow: 0 0 20px rgba(0,194,168,0.2);
+    }
+    .hero-tagline {
+      font-size: 11px;
+      letter-spacing: 6px;
+      color: var(--teal);
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 48px;
+      max-width: 480px;
+      width: 90%;
+      text-align: center;
+      box-shadow: var(--glow);
+    }
+    .modal-box h2 {
+      font-family: var(--font-display);
+      font-size: 36px;
+      color: var(--teal);
+      margin-bottom: 16px;
+    }
+    .modal-box p { color: var(--muted); margin-bottom: 24px; }
+    .modal-close {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 10px 24px;
+      cursor: pointer;
+      font-family: var(--font-display);
+      font-size: 16px;
+      letter-spacing: 1px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .modal-close:hover { color: var(--teal); border-color: var(--teal); }
+
+    /* ================================
+       SECTION 2 — THE PROBLEM
+    ================================ */
+    #problem {
+      background: var(--bg);
+    }
+    .problem-header {
+      font-family: var(--font-display);
+      font-size: 56px;
+      letter-spacing: 2px;
+      color: var(--text);
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto 60px;
+    }
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-bottom: 60px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--teal);
+      padding: 36px 28px;
+      text-align: center;
+    }
+    .stat-number {
+      font-family: var(--font-display);
+      font-size: 72px;
+      color: var(--teal);
+      letter-spacing: 2px;
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+    .stat-desc {
+      font-size: 16px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .problem-kicker {
+      font-family: var(--font-display);
+      font-size: 28px;
+      letter-spacing: 2px;
+      color: var(--teal);
+      text-align: center;
+    }
+
+    /* ================================
+       SECTION 3 — THE PIPELINE
+    ================================ */
+    #pipeline {
+      background: var(--bg-deep);
+    }
+    .phase-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .phase-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--teal);
+      padding: 28px 22px;
+    }
+    .phase-name {
+      font-family: var(--font-display);
+      font-size: 28px;
+      color: var(--teal);
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+    .phase-tools {
+      list-style: none;
+    }
+    .phase-tools li {
+      font-size: 14px;
+      color: var(--text);
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(30,33,32,0.6);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .phase-tools li:last-child { border-bottom: none; }
+    .tool-bullet {
+      color: var(--teal);
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .pipeline-footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ================================
+       SECTION 4 — CONSTELLATION
+    ================================ */
+    #constellation {
+      background: var(--bg);
+    }
+    .constellation-panel {
+      background: #0a0d0c;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      height: 480px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 28px;
+      box-shadow: var(--glow);
+    }
+    #const-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .const-label {
+      position: absolute;
+      font-family: var(--font-display);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: rgba(232,232,232,0.5);
+      pointer-events: none;
+      text-shadow: 0 0 8px rgba(0,194,168,0.3);
+    }
+    .const-badge {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(10,13,12,0.85);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      border-radius: 4px;
+    }
+    .constellation-caption {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 16px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+    .constellation-sub {
+      text-align: center;
+      max-width: 620px;
+      margin: 0 auto;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    /* ================================
+       SECTION 5 — CASE STUDY
+    ================================ */
+    #case-study {
+      background: var(--bg-deep);
+    }
+    .case-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+    .case-story p {
+      color: var(--muted);
+      font-size: 17px;
+      margin-bottom: 20px;
+      line-height: 1.75;
+    }
+    .case-story p strong {
+      color: var(--text);
+    }
+    .results-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .result-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--teal);
+      padding: 18px 22px;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+    .result-number {
+      font-family: var(--font-display);
+      font-size: 36px;
+      color: var(--teal);
+      letter-spacing: 1px;
+      flex-shrink: 0;
+      min-width: 90px;
+    }
+    .result-label {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* ================================
+       SECTION 6 — THE TOOLS
+    ================================ */
+    #tools {
+      background: var(--bg);
+    }
+
+    /* MOCKUP GRID */
+    .mockup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 60px;
+    }
+    .mockup-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      height: 280px;
+      overflow: hidden;
+    }
+    .mockup-header {
+      font-family: var(--font-display);
+      font-size: 16px;
+      letter-spacing: 1px;
+      color: var(--teal);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+
+    /* WritΩr mockup */
+    .beat-card {
+      background: #1a1e1d;
+      border-left: 3px solid var(--teal);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border-radius: 0 4px 4px 0;
+    }
+    .beat-card.cari { border-left-color: var(--amber); }
+    .beat-badge {
+      font-family: var(--font-display);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--teal);
+      background: rgba(0,194,168,0.1);
+      padding: 2px 6px;
+      border-radius: 2px;
+      display: inline-block;
+      margin-bottom: 5px;
+    }
+    .beat-badge.cari {
+      color: var(--amber);
+      background: rgba(240,185,66,0.1);
+    }
+    .beat-text {
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    /* Id8Ωr mockup */
+    .concept-card {
+      background: #1a1e1d;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      position: relative;
+    }
+    .concept-card.featured { border-color: var(--teal); }
+    .new-badge {
+      font-family: var(--font-display);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--teal);
+      background: rgba(0,194,168,0.12);
+      border: 1px solid rgba(0,194,168,0.3);
+      padding: 2px 6px;
+      border-radius: 2px;
+      display: inline-block;
+      margin-bottom: 5px;
+    }
+    .concept-title {
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .concept-hook {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* MirrΩr mockup */
+    .coaching-metrics {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .metric-chip {
+      background: #1a1e1d;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .metric-chip .mval {
+      font-family: var(--font-display);
+      font-size: 14px;
+      letter-spacing: 1px;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .metric-chip .mlabel {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+    .dna-block {
+      background: #1a1e1d;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 12px;
+    }
+    .dna-title {
+      font-family: var(--font-display);
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--teal);
+      margin-bottom: 6px;
+    }
+    .dna-text {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Pipeline mockup */
+    .pipeline-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .pipeline-row:last-child { border-bottom: none; }
+    .pipe-title {
+      font-size: 12px;
+      color: var(--text);
+      flex: 1;
+    }
+    .pipe-badge {
+      font-family: var(--font-display);
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
+    .pipe-badge.plan { background: rgba(0,194,168,0.15); color: var(--teal); }
+    .pipe-badge.make { background: rgba(240,185,66,0.15); color: var(--amber); }
+    .pipe-badge.dist { background: rgba(76,175,119,0.15); color: var(--green); }
+    .pipe-bar-wrap {
+      width: 70px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .pipe-bar-fill {
+      height: 100%;
+      background: var(--teal);
+      border-radius: 2px;
+    }
+
+    /* TOOL CARDS GRID */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .tool-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 20px 18px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .tool-card:hover {
+      border-color: rgba(0,194,168,0.3);
+      box-shadow: var(--glow);
+    }
+    .tool-name {
+      font-family: var(--font-display);
+      font-size: 20px;
+      letter-spacing: 1px;
+      color: var(--teal);
+      margin-bottom: 6px;
+    }
+    .tool-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .phase-badge {
+      font-family: var(--font-display);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      padding: 3px 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+    .phase-badge.plan { background: rgba(0,194,168,0.12); color: var(--teal); border: 1px solid rgba(0,194,168,0.25); }
+    .phase-badge.make { background: rgba(240,185,66,0.12); color: var(--amber); border: 1px solid rgba(240,185,66,0.25); }
+    .phase-badge.distribute { background: rgba(76,175,119,0.12); color: var(--green); border: 1px solid rgba(76,175,119,0.25); }
+    .phase-badge.mirrr { background: rgba(155,109,255,0.12); color: var(--purple); border: 1px solid rgba(155,109,255,0.25); }
+
+    /* ================================
+       SECTION 7 — PHILOSOPHY
+    ================================ */
+    #philosophy {
+      background: var(--bg-deep);
+      text-align: center;
+    }
+    .pull-quote {
+      font-family: var(--font-display);
+      font-size: 40px;
+      letter-spacing: 4px;
+      color: var(--text);
+      max-width: 800px;
+      margin: 0 auto 28px;
+      line-height: 1.15;
+    }
+    .philosophy-body {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 680px;
+      margin: 0 auto 56px;
+      line-height: 1.75;
+    }
+    .etymology-card {
+      background: var(--card);
+      border: 1px solid var(--teal);
+      box-shadow: var(--glow);
+      max-width: 480px;
+      margin: 0 auto 20px;
+      padding: 32px 36px;
+      text-align: left;
+    }
+    .etymology-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .etymology-table td {
+      padding: 7px 0;
+      font-size: 15px;
+      vertical-align: top;
+    }
+    .etymology-table td:first-child {
+      font-family: var(--font-display);
+      letter-spacing: 2px;
+      color: var(--teal);
+      width: 60px;
+    }
+    .etymology-table td:nth-child(2) {
+      color: var(--muted);
+      padding: 7px 12px;
+      font-size: 13px;
+    }
+    .etymology-table td:last-child {
+      color: var(--text);
+      font-size: 14px;
+    }
+    .etymology-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 12px 0;
+    }
+    .etymology-sine {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-align: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+    .etymology-sine strong { color: var(--teal); }
+    .philosophy-kicker {
+      font-size: 13px;
+      color: var(--teal);
+      letter-spacing: 2px;
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* ================================
+       SECTION 8 — BETA
+    ================================ */
+    #beta {
+      background: var(--bg-deep);
+      text-align: center;
+    }
+    .beta-header {
+      font-family: var(--font-display);
+      font-size: 56px;
+      letter-spacing: 2px;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .beta-subhead {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 48px;
+    }
+    .beta-form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      box-shadow: var(--glow);
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 40px 36px;
+      text-align: left;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-family: var(--font-display);
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      background: #1a1e1d;
+      border: 1px solid #2a2e2c;
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: var(--font-body);
+      outline: none;
+      transition: border-color 0.2s;
+      border-radius: 0;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    .form-group select option {
+      background: #1a1e1d;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--teal);
+    }
+    .form-group textarea { resize: vertical; }
+    .btn-submit {
+      width: 100%;
+      background: var(--teal);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 20px;
+      letter-spacing: 2px;
+      padding: 16px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s, box-shadow 0.2s;
+      margin-top: 8px;
+    }
+    .btn-submit:hover:not(:disabled) {
+      opacity: 0.9;
+      box-shadow: 0 0 28px rgba(0,194,168,0.35);
+    }
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .form-error {
+      color: #e05555;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+    .success-message {
+      text-align: center;
+      padding: 20px;
+    }
+    .success-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(0,194,168,0.15);
+      border: 2px solid var(--teal);
+      color: var(--teal);
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .success-message h3 {
+      font-family: var(--font-display);
+      font-size: 32px;
+      letter-spacing: 2px;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .success-message p { color: var(--muted); font-size: 16px; }
+
+    /* ================================
+       SECTION 9 — FOOTER
+    ================================ */
+    footer {
+      background: var(--bg-deep);
+      border-top: 1px solid var(--teal);
+      padding: 40px 40px;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .footer-brand .foot-logo {
+      font-family: var(--font-display);
+      font-size: 32px;
+      letter-spacing: 2px;
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+    }
+    .footer-brand .foot-tagline {
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .footer-brand .foot-url {
+      font-size: 12px;
+      color: var(--teal);
+      letter-spacing: 1px;
+    }
+    .footer-copy {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+    .footer-links a {
+      font-family: var(--font-display);
+      font-size: 16px;
+      letter-spacing: 1px;
+      color: var(--teal);
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .footer-links a:hover { opacity: 0.7; }
+
+    /* ================================
+       RESPONSIVE
+    ================================ */
+    @media (max-width: 1024px) {
+      .phase-grid { grid-template-columns: repeat(2,1fr); }
+      .tools-grid { grid-template-columns: repeat(2,1fr); }
+      .mockup-grid { grid-template-columns: 1fr 1fr; }
+      .case-grid { grid-template-columns: 1fr; gap: 40px; }
+    }
+    @media (max-width: 768px) {
+      section { padding: 70px 24px; }
+      .hero-title { font-size: 64px; }
+      .hero-subhead { font-size: 17px; }
+      .hero-body { font-size: 16px; }
+      .section-header { font-size: 40px; }
+      .problem-header { font-size: 38px; }
+      .stat-cards { grid-template-columns: 1fr; }
+      .phase-grid { grid-template-columns: 1fr; }
+      .tools-grid { grid-template-columns: 1fr; }
+      .mockup-grid { grid-template-columns: 1fr; }
+      .pull-quote { font-size: 28px; }
+      .etymology-card { padding: 24px 20px; }
+      .beta-form-card { padding: 28px 20px; }
+      .footer-inner { flex-direction: column; text-align: center; align-items: center; }
+      .footer-links { justify-content: center; }
+      #sticky-nav { padding: 12px 20px; }
+      .coaching-metrics { grid-template-columns: repeat(3,1fr); }
+    }
+    @media (max-width: 480px) {
+      .hero-title { font-size: 54px; }
+      .hero-ctas { flex-direction: column; align-items: center; }
+      .btn-primary, .btn-ghost { width: 100%; max-width: 280px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- FIXED STICKY NAV -->
+<nav id="sticky-nav" aria-label="Site navigation">
+  <span class="nav-logo">KRE8<span>Ω</span>R</span>
+  <a href="#beta" class="nav-cta">Request Beta</a>
+</nav>
+
+<!-- DEMO MODAL -->
+<div class="modal-overlay" id="demo-modal" role="dialog" aria-modal="true" aria-label="Demo coming soon">
+  <div class="modal-box">
+    <h2>Demo Coming Soon</h2>
+    <p>We're putting the finishing touches on the walkthrough video. Join the beta list and you'll get early access.</p>
+    <button class="modal-close" id="modal-close-btn">Close</button>
+  </div>
+</div>
+
+<!-- ================================
+     SECTION 1 — HERO
+================================ -->
+<section id="hero">
+  <canvas id="particle-canvas" aria-hidden="true"></canvas>
+  <div class="hero-content">
+    <h1 class="hero-title">KRE8<span class="teal">Ω</span>R</h1>
+    <p class="hero-subhead">Create without limit. Distribute without resistance.</p>
+    <p class="hero-body">The AI-native content production operating system for serious creators.</p>
+    <div class="hero-ctas">
+      <a href="#beta" class="btn-primary">Request Beta Access →</a>
+      <button class="btn-ghost" id="demo-btn">Watch the Demo</button>
+    </div>
+    <p class="hero-tagline">SINE RESISTENTIA</p>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 2 — THE PROBLEM
+================================ -->
+<section id="problem">
+  <div class="container animate-section">
+    <h2 class="problem-header">You became a creator to create.</h2>
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-number">80%</div>
+        <div class="stat-desc">of a creator's time spent on non-creative tasks</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">12+</div>
+        <div class="stat-desc">tools the average creator juggles to publish one video</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">Year 2</div>
+        <div class="stat-desc">when most creators quit — not from lack of talent, from exhaustion</div>
+      </div>
+    </div>
+    <p class="problem-kicker">Kre8Ωr exists to fix that.</p>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 3 — THE PIPELINE
+================================ -->
+<section id="pipeline">
+  <div class="container animate-section">
+    <h2 class="section-header">One pipeline. Every step.</h2>
+    <div class="phase-grid">
+      <div class="phase-card">
+        <div class="phase-name">PLAN</div>
+        <ul class="phase-tools">
+          <li><span class="tool-bullet">Ω</span> Soul BuildΩr</li>
+          <li><span class="tool-bullet">Ω</span> Id8Ωr</li>
+          <li><span class="tool-bullet">Ω</span> PipΩr</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <div class="phase-name">MAKE</div>
+        <ul class="phase-tools">
+          <li><span class="tool-bullet">Ω</span> WritΩr</li>
+          <li><span class="tool-bullet">Ω</span> DirectΩr</li>
+          <li><span class="tool-bullet">Ω</span> ShootDay</li>
+          <li><span class="tool-bullet">Ω</span> TeleprΩmpter</li>
+          <li><span class="tool-bullet">Ω</span> VaultΩr</li>
+          <li><span class="tool-bullet">Ω</span> EditΩr</li>
+          <li><span class="tool-bullet">Ω</span> ReviewΩr</li>
+          <li><span class="tool-bullet">Ω</span> ComposΩr</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <div class="phase-name">DISTRIBUTE</div>
+        <ul class="phase-tools">
+          <li><span class="tool-bullet">Ω</span> GateΩr</li>
+          <li><span class="tool-bullet">Ω</span> PackageΩr</li>
+          <li><span class="tool-bullet">Ω</span> CaptionΩr</li>
+          <li><span class="tool-bullet">Ω</span> MailΩr</li>
+          <li><span class="tool-bullet">Ω</span> AutomatΩr</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <div class="phase-name">MirrΩr</div>
+        <ul class="phase-tools">
+          <li><span class="tool-bullet">Ω</span> Channel DNA</li>
+          <li><span class="tool-bullet">Ω</span> Constellation</li>
+          <li><span class="tool-bullet">Ω</span> AI Coaching</li>
+        </ul>
+      </div>
+    </div>
+    <p class="pipeline-footer">From raw idea to published video to performance intelligence. All in one place.</p>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 4 — CONSTELLATION
+================================ -->
+<section id="constellation">
+  <div class="container animate-section">
+    <h2 class="section-header">Your creative universe, visualized.</h2>
+    <div class="constellation-panel">
+      <canvas id="const-canvas" aria-label="Interactive constellation visualization of 263 videos organized by theme and performance"></canvas>
+      <!-- Cluster labels positioned via JS -->
+      <div class="const-badge">263 videos &bull; 3 years &bull; 4 clusters</div>
+    </div>
+    <p class="constellation-caption">263 videos. 3 years of creative work. Displayed as a living galaxy — sized by performance, colored by temperature, organized by theme.</p>
+    <p class="constellation-sub">MirrΩr shows you what your audience already loves about you — so you can do more of it deliberately.</p>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 5 — CASE STUDY
+================================ -->
+<section id="case-study">
+  <div class="container animate-section">
+    <h2 class="section-header">Built by a creator. Proven on a real channel.</h2>
+    <div class="case-grid">
+      <div class="case-story">
+        <p>7 Kin Homestead is a homesteading channel built from <strong>-$27 and 3 acres</strong>. Jason Rutland built Kre8Ωr because the tools didn't exist.</p>
+        <p>Then he used it to discover his channel's real identity: <strong>a financial rebellion channel dressed in homesteading clothing.</strong></p>
+        <p>That insight — found in Session 18 after analyzing 263 videos — changed everything.</p>
+      </div>
+      <div class="results-cards">
+        <div class="result-card">
+          <div class="result-number">2.2M</div>
+          <div class="result-label">total views across all platforms</div>
+        </div>
+        <div class="result-card">
+          <div class="result-number">421K</div>
+          <div class="result-label">views on best single video</div>
+        </div>
+        <div class="result-card">
+          <div class="result-number">4,300</div>
+          <div class="result-label">email subscribers</div>
+        </div>
+        <div class="result-card">
+          <div class="result-number">Session 18</div>
+          <div class="result-label">first AI-automated broadcast sent to full list</div>
+        </div>
+        <div class="result-card">
+          <div class="result-number">8 words</div>
+          <div class="result-label">niche defined by MirrΩr after 263 video analysis</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 6 — THE TOOLS
+================================ -->
+<section id="tools">
+  <div class="container animate-section">
+    <h2 class="section-header">Every tool you need. Nothing you don't.</h2>
+
+    <!-- 4 MOCKUP PANELS -->
+    <div class="mockup-grid">
+
+      <!-- Mockup 1: WritΩr -->
+      <div class="mockup-panel">
+        <div class="mockup-header">WritΩr — Script Generation</div>
+        <div class="beat-card">
+          <div class="beat-badge">JASON</div>
+          <div class="beat-text">"The thing about building a root cellar is nobody tells you how much you're going to dig..."</div>
+        </div>
+        <div class="beat-card cari">
+          <div class="beat-badge cari">CARI</div>
+          <div class="beat-text">"When Jason said 'small project' I didn't think he meant 'moving the entire mountain'..."</div>
+        </div>
+        <div class="beat-card">
+          <div class="beat-badge">JASON</div>
+          <div class="beat-text">"Here's the math that changed how I think about every build on this property..."</div>
+        </div>
+      </div>
+
+      <!-- Mockup 2: Id8Ωr -->
+      <div class="mockup-panel">
+        <div class="mockup-header">Id8Ωr — Concept Package</div>
+        <div class="concept-card featured">
+          <div class="new-badge">✨ NEW ANGLE</div>
+          <div class="concept-title">We Built a Root Cellar For $47 (The Math Nobody Shows You)</div>
+          <div class="concept-hook">Counter-intuitive cost breakdown that reframes "homesteading" as financial strategy</div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-title">Year 3 Reality Check: What Off-Grid Living Actually Costs</div>
+          <div class="concept-hook">Raw numbers — no filter, no sponsored sugar-coating</div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-title">The $27 Rule: How We Make Every Dollar Work Twice</div>
+          <div class="concept-hook">The system behind building a homestead with nothing</div>
+        </div>
+      </div>
+
+      <!-- Mockup 3: MirrΩr Coaching -->
+      <div class="mockup-panel">
+        <div class="mockup-header">MirrΩr — Weekly Coaching</div>
+        <div class="coaching-metrics">
+          <div class="metric-chip">
+            <span class="mval" style="color:#4caf77">↑ 34%</span>
+            <span class="mlabel">Engagement up this week</span>
+          </div>
+          <div class="metric-chip">
+            <span class="mval" style="color:var(--amber)">⚡ VIRAL</span>
+            <span class="mlabel">2 videos 5x+ channel avg</span>
+          </div>
+          <div class="metric-chip">
+            <span class="mval" style="color:var(--teal)">🎯 FOCUS</span>
+            <span class="mlabel">Financial Rebellion cluster</span>
+          </div>
+        </div>
+        <div class="dna-block">
+          <div class="dna-title">CHANNEL DNA</div>
+          <div class="dna-text">
+            Financial Rebellion (41%) — your strongest cluster<br>
+            Homestead Systems (28%) — high retention<br>
+            Family Resilience (19%) — emotional peaks<br>
+            Viral Moments (12%) — 3 videos in top 1%
+          </div>
+        </div>
+      </div>
+
+      <!-- Mockup 4: Pipeline -->
+      <div class="mockup-panel">
+        <div class="mockup-header">Pipeline — 4 Active Projects</div>
+        <div class="pipeline-row">
+          <div class="pipe-title">Root Cellar Build</div>
+          <div class="pipe-badge make">MAKE</div>
+          <div class="pipe-bar-wrap"><div class="pipe-bar-fill" style="width:60%"></div></div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipe-title">Year 3 Finance</div>
+          <div class="pipe-badge plan">PLAN</div>
+          <div class="pipe-bar-wrap"><div class="pipe-bar-fill" style="width:25%"></div></div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipe-title">Water System</div>
+          <div class="pipe-badge dist">DISTRIBUTE</div>
+          <div class="pipe-bar-wrap"><div class="pipe-bar-fill" style="width:90%"></div></div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipe-title">Homestead Tour</div>
+          <div class="pipe-badge make">MAKE</div>
+          <div class="pipe-bar-wrap"><div class="pipe-bar-fill" style="width:45%"></div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 17 TOOL CARDS -->
+    <div class="tools-grid">
+      <div class="tool-card">
+        <div class="tool-name">Soul BuildΩr</div>
+        <div class="tool-desc">Your voice, your angles, your creative DNA</div>
+        <span class="phase-badge plan">PLAN</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Id8Ωr</div>
+        <div class="tool-desc">From curiosity to camera-ready concept in minutes</div>
+        <span class="phase-badge plan">PLAN</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">PipΩr</div>
+        <div class="tool-desc">Story structure and beat maps before you shoot</div>
+        <span class="phase-badge plan">PLAN</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">WritΩr</div>
+        <div class="tool-desc">Scripts in your actual voice — not AI voice</div>
+        <span class="phase-badge make">MAKE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">DirectΩr</div>
+        <div class="tool-desc">Shot lists and crew briefs, generated automatically</div>
+        <span class="phase-badge make">MAKE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">ShootDay</div>
+        <div class="tool-desc">Day-of checklist and offline QR package</div>
+        <span class="phase-badge make">MAKE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">TeleprΩmpter</div>
+        <div class="tool-desc">3-device system: display, control, voice scroll</div>
+        <span class="phase-badge make">MAKE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">VaultΩr</div>
+        <div class="tool-desc">Footage intelligence database — every clip tagged and searchable</div>
+        <span class="phase-badge make">MAKE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">EditΩr</div>
+        <div class="tool-desc">AI selects your best takes before you open the timeline</div>
+        <span class="phase-badge make">MAKE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">ReviewΩr</div>
+        <div class="tool-desc">Rough cut approval in one screen</div>
+        <span class="phase-badge make">MAKE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">ComposΩr</div>
+        <div class="tool-desc">Scene analysis and music prompt generation</div>
+        <span class="phase-badge make">MAKE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">GateΩr</div>
+        <div class="tool-desc">Community gating — who gets what</div>
+        <span class="phase-badge distribute">DISTRIBUTE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">PackageΩr</div>
+        <div class="tool-desc">Platform-specific packaging, one click</div>
+        <span class="phase-badge distribute">DISTRIBUTE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">CaptionΩr</div>
+        <div class="tool-desc">AI captions tuned for each platform's algorithm</div>
+        <span class="phase-badge distribute">DISTRIBUTE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">MailΩr</div>
+        <div class="tool-desc">Broadcasts, blog posts, community posts — your voice</div>
+        <span class="phase-badge distribute">DISTRIBUTE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">AutomatΩr</div>
+        <div class="tool-desc">Scheduled distribution and workflow automation</div>
+        <span class="phase-badge distribute">DISTRIBUTE</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">MirrΩr</div>
+        <div class="tool-desc">Channel DNA, constellation view, AI coaching</div>
+        <span class="phase-badge mirrr">MirrΩr</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 7 — PHILOSOPHY
+================================ -->
+<section id="philosophy">
+  <div class="container animate-section">
+    <blockquote class="pull-quote">"The tool is the support structure.<br>You are the art."</blockquote>
+    <p class="philosophy-body">Kre8Ωr handles the research, the structure, the blank page, the distribution, the analysis. You handle the thing nobody else can do: being you, on camera, telling your story.</p>
+
+    <div class="etymology-card">
+      <table class="etymology-table">
+        <tbody>
+          <tr>
+            <td>KRE</td>
+            <td>=</td>
+            <td>Go / Do Something (Jaffa)</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>=</td>
+            <td>Infinity — without limit</td>
+          </tr>
+          <tr>
+            <td>Ω</td>
+            <td>=</td>
+            <td>Ohms — resistance removed</td>
+          </tr>
+        </tbody>
+      </table>
+      <hr class="etymology-divider">
+      <div class="etymology-sine"><strong>SINE RESISTENTIA</strong> &nbsp;=&nbsp; Without resistance (Latin)</div>
+    </div>
+    <p class="philosophy-kicker">"The name is the philosophy."</p>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 8 — BETA ACCESS
+================================ -->
+<section id="beta">
+  <div class="container animate-section">
+    <h2 class="beta-header">Join the founding creators.</h2>
+    <p class="beta-subhead">Kre8Ωr is in private beta. We're onboarding serious creators who treat content like a business.</p>
+
+    <div class="beta-form-card">
+      <form id="beta-form" novalidate>
+        <div class="form-group">
+          <label for="f-name">Name</label>
+          <input type="text" id="f-name" name="name" required placeholder="Your name">
+        </div>
+        <div class="form-group">
+          <label for="f-channel">Channel URL</label>
+          <input type="url" id="f-channel" name="channelUrl" required placeholder="https://youtube.com/@yourchannel">
+        </div>
+        <div class="form-group">
+          <label for="f-platform">Primary Platform</label>
+          <select id="f-platform" name="platform" required>
+            <option value="" disabled selected>Select platform</option>
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram</option>
+            <option value="lemon8">Lemon8</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="f-frequency">Monthly Upload Frequency</label>
+          <select id="f-frequency" name="frequency" required>
+            <option value="" disabled selected>Select frequency</option>
+            <option value="1-2">1–2 videos</option>
+            <option value="3-4">3–4 videos</option>
+            <option value="5-8">5–8 videos</option>
+            <option value="8+">8+ videos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="f-why">Why do you want access?</label>
+          <textarea id="f-why" name="why" rows="4" required placeholder="Tell us about your channel and what you're trying to build..."></textarea>
+        </div>
+        <button type="submit" class="btn-submit" id="submit-btn">REQUEST BETA ACCESS →</button>
+        <div class="form-error" id="form-error"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 9 — FOOTER
+================================ -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="foot-logo">KRE8<span class="teal">Ω</span>R</span>
+      <span class="foot-tagline">Sine Resistentia</span>
+      <span class="foot-url">kre8r.app</span>
+    </div>
+    <div class="footer-copy">&copy; 2026 Kre8Ωr. All rights reserved.</div>
+    <div class="footer-links">
+      <a href="#beta">Beta Access</a>
+      <a href="mailto:hello@kre8r.app">Media Kit</a>
+      <a href="mailto:hello@kre8r.app">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ============================================
+     PARTICLE CANVAS — HERO
+  ============================================ */
+  (function() {
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, particles;
+
+    function resize() {
+      W = canvas.width = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+    }
+
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < 120; i++) {
+        particles.push({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          r: 2
+        });
+      }
+    }
+
+    function drawParticles() {
+      ctx.clearRect(0, 0, W, H);
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = W;
+        if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H;
+        if (p.y > H) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,194,168,0.4)';
+        ctx.fill();
+      }
+      requestAnimationFrame(drawParticles);
+    }
+
+    resize();
+    initParticles();
+    drawParticles();
+    window.addEventListener('resize', () => { resize(); initParticles(); });
+  })();
+
+  /* ============================================
+     CONSTELLATION CANVAS — SECTION 4
+  ============================================ */
+  (function() {
+    const canvas = document.getElementById('const-canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+
+    // Cluster definitions: [cx_frac, cy_frac, label, x_offset, y_offset]
+    const clusters = [
+      { cx: 0.22, cy: 0.38, label: 'FINANCIAL REBELLION',    lx: -10,  ly: -18 },
+      { cx: 0.62, cy: 0.55, label: 'HOMESTEAD SYSTEMS',      lx: -10,  ly: -18 },
+      { cx: 0.40, cy: 0.72, label: 'FAMILY RESILIENCE',      lx: -10,  ly: -18 },
+      { cx: 0.78, cy: 0.28, label: 'VIRAL MOMENTS',          lx: -10,  ly: -18 }
+    ];
+
+    // dot configs: [cluster_idx, color, size_min, size_max, count]
+    const dotGroups = [
+      { cluster: 0, color: '#4a9eff', sMin: 8,  sMax: 14, count: 5  }, // blue - viral
+      { cluster: 1, color: '#00c2a8', sMin: 6,  sMax: 10, count: 8  }, // teal - strong
+      { cluster: 2, color: '#f0c040', sMin: 5,  sMax: 8,  count: 12 }, // yellow - avg
+      { cluster: 3, color: '#f08030', sMin: 4,  sMax: 6,  count: 10 }, // orange - below
+      { cluster: 0, color: '#e04444', sMin: 3,  sMax: 4,  count: 5  }  // red - low
+    ];
+
+    let dots = [];
+    let time = 0;
+
+    function resize() {
+      W = canvas.width = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+    }
+
+    function initDots() {
+      dots = [];
+      for (const g of dotGroups) {
+        const cl = clusters[g.cluster];
+        for (let i = 0; i < g.count; i++) {
+          const spread = 0.14;
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.random() * spread;
+          dots.push({
+            bx: cl.cx + Math.cos(angle) * dist,
+            by: cl.cy + Math.sin(angle) * dist,
+            r: g.sMin + Math.random() * (g.sMax - g.sMin),
+            color: g.color,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.0003 + Math.random() * 0.0004,
+            drift: (Math.random() - 0.5) * 0.004
+          });
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      time += 0.016;
+
+      // Connection lines between nearby dots
+      ctx.save();
+      for (let i = 0; i < dots.length; i++) {
+        const a = dots[i];
+        const ax = (a.bx + Math.sin(time * a.speed * 1000 + a.phase) * a.drift) * W;
+        const ay = (a.by + Math.cos(time * a.speed * 800 + a.phase) * a.drift) * H;
+        for (let j = i + 1; j < dots.length; j++) {
+          const b = dots[j];
+          const bx = (b.bx + Math.sin(time * b.speed * 1000 + b.phase) * b.drift) * W;
+          const by = (b.by + Math.cos(time * b.speed * 800 + b.phase) * b.drift) * H;
+          const dx = ax - bx, dy = ay - by;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+
+      // Draw dots
+      for (const d of dots) {
+        const x = (d.bx + Math.sin(time * d.speed * 1000 + d.phase) * d.drift) * W;
+        const y = (d.by + Math.cos(time * d.speed * 800 + d.phase) * d.drift) * H;
+
+        // Glow
+        const grd = ctx.createRadialGradient(x, y, 0, x, y, d.r * 3);
+        grd.addColorStop(0, d.color + '55');
+        grd.addColorStop(1, 'transparent');
+        ctx.beginPath();
+        ctx.arc(x, y, d.r * 3, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+
+        // Core
+        ctx.beginPath();
+        ctx.arc(x, y, d.r / 2, 0, Math.PI * 2);
+        ctx.fillStyle = d.color;
+        ctx.fill();
+      }
+
+      // Cluster labels
+      ctx.font = '500 11px Bebas Neue, sans-serif';
+      ctx.letterSpacing = '2px';
+      for (const cl of clusters) {
+        ctx.fillStyle = 'rgba(232,232,232,0.45)';
+        ctx.fillText(cl.label, cl.cx * W + (cl.lx || 0), cl.cy * H + (cl.ly || 0));
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    initDots();
+    draw();
+    window.addEventListener('resize', () => { resize(); initDots(); });
+  })();
+
+  /* ============================================
+     INTERSECTION OBSERVER — SECTION ANIMATIONS
+  ============================================ */
+  (function() {
+    const sections = document.querySelectorAll('.animate-section');
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in-view');
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(s => obs.observe(s));
+  })();
+
+  /* ============================================
+     STICKY NAV — SHOW/HIDE
+  ============================================ */
+  (function() {
+    const nav = document.getElementById('sticky-nav');
+    const hero = document.getElementById('hero');
+    const obs = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) {
+        nav.classList.add('visible');
+      } else {
+        nav.classList.remove('visible');
+      }
+    }, { threshold: 0.1 });
+    obs.observe(hero);
+  })();
+
+  /* ============================================
+     DEMO MODAL
+  ============================================ */
+  (function() {
+    const modal = document.getElementById('demo-modal');
+    const openBtn = document.getElementById('demo-btn');
+    const closeBtn = document.getElementById('modal-close-btn');
+
+    openBtn.addEventListener('click', () => modal.classList.add('open'));
+    closeBtn.addEventListener('click', () => modal.classList.remove('open'));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('open');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') modal.classList.remove('open');
+    });
+  })();
+
+  /* ============================================
+     BETA FORM SUBMISSION
+  ============================================ */
+  (function() {
+    const form = document.getElementById('beta-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorEl = document.getElementById('form-error');
+    const formCard = document.querySelector('.beta-form-card');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.style.display = 'none';
+
+      const data = {
+        name: form.name.value.trim(),
+        channel_url: form.channelUrl.value.trim(),
+        platform: form.platform.value,
+        upload_frequency: form.frequency.value,
+        why_text: form.why.value.trim()
+      };
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'SENDING...';
+
+      try {
+        const res = await fetch('/api/beta/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+          formCard.innerHTML = `
+            <div class="success-message">
+              <div class="success-icon">&#10003;</div>
+              <h3>Application received.</h3>
+              <p>We'll be in touch within 48 hours.</p>
+            </div>
+          `;
+        } else {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || 'Something went wrong. Please try again.');
+        }
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'REQUEST BETA ACCESS →';
+      }
+    });
+  })();
+
+  /* ============================================
+     SMOOTH SCROLL — ANCHOR LINKS
+  ============================================ */
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+</body>
+</html>

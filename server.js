@@ -66,6 +66,17 @@ const mirrRouter = require('./src/routes/mirrr');
 app.use('/api/mirrr',        mirrRouter);          // MirrΩr (new canonical)
 app.use('/api/analytr',      mirrRouter);           // legacy alias — keep so old bookmarks don't 404
 app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
+app.use('/api/beta',         require('./src/routes/beta'));
+
+// ─────────────────────────────────────────────
+// PUBLIC MARKETING PAGES — no auth required
+// These three routes must be explicitly declared BEFORE any future auth
+// middleware so they remain publicly accessible on kre8r.app.
+// On production (DigitalOcean), add to nginx: location ~ ^/(landing|media-kit|beta-invite) { auth_basic off; }
+// ─────────────────────────────────────────────
+app.get('/landing',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
+app.get('/media-kit',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
+app.get('/beta-invite',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

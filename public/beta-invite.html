@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kre8ΩR — Private Beta Invitation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f0e;
+      --card: #141614;
+      --border: #1e2120;
+      --teal: #00c2a8;
+      --amber: #f0b942;
+      --text: #e8e8e8;
+      --muted: #888;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+    }
+
+    .invite-wrap {
+      width: 100%;
+      max-width: 680px;
+      animation: fadeIn 0.8s ease both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .teal  { color: var(--teal); }
+    .amber { color: var(--amber); }
+    .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
+
+    /* TOP */
+    .top {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .wordmark {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 64px;
+      line-height: 1;
+      color: var(--text);
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .invite-label {
+      font-size: 13px;
+      font-variant: small-caps;
+      letter-spacing: 0.28em;
+      color: var(--teal);
+      text-transform: lowercase;
+      font-variant-caps: all-small-caps;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--teal), transparent);
+      margin: 28px 0;
+    }
+
+    /* INVITATION MESSAGE */
+    .invite-headline {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      color: var(--text);
+      letter-spacing: 0.04em;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+
+    .invite-intro {
+      font-size: 17px;
+      color: #b8b8b8;
+      line-height: 1.75;
+      margin-bottom: 36px;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px 36px;
+      margin-bottom: 20px;
+    }
+
+    .card-teal  { border-left: 4px solid var(--teal); }
+    .card-amber { border-left: 4px solid var(--amber); }
+
+    .card-access {
+      border: 1px solid rgba(0,194,168,0.35);
+      border-radius: 8px;
+      background: var(--card);
+      padding: 36px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0,194,168,0.08), inset 0 0 40px rgba(0,194,168,0.03);
+    }
+
+    .card-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.1em;
+      margin-bottom: 20px;
+    }
+
+    .card-teal  .card-label { color: var(--teal); }
+    .card-amber .card-label { color: var(--amber); }
+    .card-access .card-label { color: var(--teal); text-align: center; margin-bottom: 28px; }
+
+    /* CHECKLISTS */
+    .checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .checklist li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      font-size: 15px;
+      color: #c0c0c0;
+      line-height: 1.6;
+    }
+
+    .check-icon {
+      flex-shrink: 0;
+      margin-top: 1px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .check-teal  { color: var(--teal); }
+    .check-amber { color: var(--amber); }
+
+    /* ACCESS BLOCK */
+    .access-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .access-row {
+      display: flex;
+      gap: 16px;
+      align-items: baseline;
+    }
+
+    .access-key {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      width: 88px;
+      flex-shrink: 0;
+    }
+
+    .access-val {
+      font-family: monospace;
+      font-size: 16px;
+      color: var(--teal);
+      letter-spacing: 0.04em;
+    }
+
+    .access-note {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 20px;
+      font-style: italic;
+    }
+
+    /* GETTING STARTED */
+    .started-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--text);
+      letter-spacing: 0.06em;
+      margin-bottom: 24px;
+    }
+
+    .steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .steps li {
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      font-size: 15px;
+      color: #c0c0c0;
+      line-height: 1.6;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0,194,168,0.12);
+      border: 1px solid rgba(0,194,168,0.3);
+      color: var(--teal);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0;
+    }
+
+    .steps li strong {
+      color: var(--text);
+    }
+
+    .steps li a {
+      color: var(--muted);
+      font-size: 13px;
+      font-family: monospace;
+    }
+
+    /* CONTACT */
+    .contact-block {
+      text-align: center;
+      margin: 40px 0 0;
+      padding: 32px 0 0;
+    }
+
+    .contact-block p {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .contact-block a {
+      color: var(--teal);
+      text-decoration: none;
+      font-size: 16px;
+      border-bottom: 1px solid rgba(0,194,168,0.3);
+      padding-bottom: 2px;
+      transition: border-color 0.2s;
+    }
+
+    .contact-block a:hover { border-color: var(--teal); }
+
+    /* BOTTOM DIVIDER */
+    .bottom-divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--teal), transparent);
+      margin: 36px 0 24px;
+    }
+
+    /* FOOTER */
+    .footer {
+      text-align: center;
+    }
+
+    .footer-wordmark {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      color: var(--text);
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    .footer-latin {
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .footer-sub {
+      font-size: 12px;
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 500px) {
+      body { padding: 32px 16px; }
+      .wordmark { font-size: 48px; }
+      .invite-headline { font-size: 28px; }
+      .card, .card-access { padding: 24px 20px; }
+      .access-key { width: 72px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="invite-wrap">
+
+    <!-- TOP -->
+    <div class="top">
+      <div class="wordmark">KRE8<span class="teal">Ω</span>R</div>
+      <div class="invite-label">Private Beta Invitation</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- INVITATION MESSAGE -->
+    <div class="invite-headline">You've been selected for the Kre8<span class="teal">Ω</span>r private beta.</div>
+    <p class="invite-intro">This is the tool we built for ourselves. You're getting early access because we think you're the kind of creator it was made for.</p>
+
+    <!-- WHAT YOU GET -->
+    <div class="card card-teal">
+      <div class="card-label">What You Get</div>
+      <ul class="checklist">
+        <li><span class="check-icon check-teal">✓</span> Full access to all 17 production tools</li>
+        <li><span class="check-icon check-teal">✓</span> Direct line to the founder — report bugs, request features</li>
+        <li><span class="check-icon check-teal">✓</span> Shape the product before public launch</li>
+        <li><span class="check-icon check-teal">✓</span> Your feedback directly influences the roadmap</li>
+        <li><span class="check-icon check-teal">✓</span> Founding member pricing when Kre8<span class="teal">Ω</span>r commercializes</li>
+      </ul>
+    </div>
+
+    <!-- WHAT WE NEED -->
+    <div class="card card-amber">
+      <div class="card-label">What We Need From You</div>
+      <ul class="checklist">
+        <li><span class="check-icon check-amber">→</span> Use it on a real video, not a test</li>
+        <li><span class="check-icon check-amber">→</span> Report every bug, every friction point, every moment of confusion</li>
+        <li><span class="check-icon check-amber">→</span> Be honest — harsh feedback is more valuable than polite silence</li>
+        <li><span class="check-icon check-amber">→</span> One 15-minute feedback call (optional but appreciated)</li>
+      </ul>
+    </div>
+
+    <!-- YOUR ACCESS -->
+    <div class="card-access">
+      <div class="card-label">Your Access</div>
+      <div class="access-fields">
+        <div class="access-row">
+          <span class="access-key">URL:</span>
+          <span class="access-val">kre8r.app</span>
+        </div>
+        <div class="access-row">
+          <span class="access-key">Username:</span>
+          <span class="access-val">[USERNAME_PLACEHOLDER]</span>
+        </div>
+        <div class="access-row">
+          <span class="access-key">Password:</span>
+          <span class="access-val">[PASSWORD_PLACEHOLDER]</span>
+        </div>
+      </div>
+      <p class="access-note">Credentials are personal — please don't share.</p>
+    </div>
+
+    <!-- GETTING STARTED -->
+    <div class="started-heading">Getting Started</div>
+    <ol class="steps">
+      <li>
+        <div class="step-num">1</div>
+        <div>Go to <strong>Soul Build<span class="teal">Ω</span>r</strong> <a href="/soul-buildr.html">(/soul-buildr.html)</a></div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div>Build your creator soul — voice profile, content angles, platform data. Takes ~15 minutes.</div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div>Start your first video in <strong>Id8<span class="teal">Ω</span>r</strong> <a href="/id8r.html">(/id8r.html)</a></div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div>Follow the pipeline. Each tool hands off to the next automatically.</div>
+      </li>
+      <li>
+        <div class="step-num">5</div>
+        <div>Hit the <span class="amber">⚠ Report Issue</span> button any time you hit friction.</div>
+      </li>
+    </ol>
+
+    <!-- CONTACT -->
+    <div class="contact-block">
+      <p>Questions? Hit reply or reach out directly:</p>
+      <a href="mailto:hello@kre8r.app">hello@kre8r.app</a>
+    </div>
+
+    <div class="bottom-divider"></div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div class="footer-wordmark">KRE8<span class="teal">Ω</span>R</div>
+      <div class="footer-latin">Sine Resistentia</div>
+      <div class="footer-copy">&copy; 2026 Kre8<span class="teal">Ω</span>r</div>
+      <div class="footer-sub">Built on a homestead. For the rest of us.</div>
+    </div>
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kre8ΩR — Media Kit 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f0e;
+      --card: #141614;
+      --border: #1e2120;
+      --teal: #00c2a8;
+      --amber: #f0b942;
+      --text: #e8e8e8;
+      --muted: #888;
+      --cover-bg: #0a0d0c;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+    .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.02em; }
+
+    .teal { color: var(--teal); }
+    .amber { color: var(--amber); }
+    .muted { color: var(--muted); }
+
+    /* NAV */
+    .site-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(14, 15, 14, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 56px;
+    }
+
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: 0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--teal); }
+
+    /* SECTIONS */
+    section { padding: 100px 48px; max-width: 1100px; margin: 0 auto; }
+
+    .section-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .section-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 64px;
+      line-height: 1;
+      color: var(--text);
+      margin-bottom: 48px;
+    }
+
+    .divider {
+      width: 64px;
+      height: 2px;
+      background: var(--teal);
+      margin: 24px 0 48px;
+    }
+
+    /* COVER */
+    #cover {
+      min-height: 100vh;
+      background: var(--cover-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 40%, rgba(0,194,168,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cover-wordmark {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(64px, 12vw, 96px);
+      line-height: 1;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      margin-bottom: 20px;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .cover-sub {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(18px, 3vw, 28px);
+      color: var(--teal);
+      letter-spacing: 0.15em;
+      margin-bottom: 32px;
+      animation: fadeUp 0.8s 0.15s ease both;
+    }
+
+    .cover-tagline {
+      font-size: 20px;
+      color: var(--text);
+      margin-bottom: 8px;
+      animation: fadeUp 0.8s 0.25s ease both;
+    }
+
+    .cover-latin {
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+      animation: fadeUp 0.8s 0.35s ease both;
+    }
+
+    .cover-date {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      margin-bottom: 24px;
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+
+    .cover-link {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      color: var(--teal);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      border-bottom: 1px solid rgba(0,194,168,0.3);
+      padding-bottom: 2px;
+      transition: border-color 0.2s;
+      animation: fadeUp 0.8s 0.5s ease both;
+    }
+
+    .cover-link:hover { border-color: var(--teal); }
+
+    /* BRAND STORY */
+    #brand-story p {
+      font-size: 18px;
+      color: #c8c8c8;
+      line-height: 1.85;
+      max-width: 720px;
+      margin-bottom: 28px;
+    }
+
+    /* PROBLEM / SOLUTION */
+    #problem-solution .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    .problem-card, .solution-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 40px;
+    }
+
+    .problem-card { border-top: 3px solid var(--amber); }
+    .solution-card { border-top: 3px solid var(--teal); }
+
+    .card-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.08em;
+      margin-bottom: 24px;
+    }
+
+    .problem-card .card-heading { color: var(--amber); }
+    .solution-card .card-heading { color: var(--teal); }
+
+    .problem-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .problem-list li {
+      color: #c0c0c0;
+      padding-left: 20px;
+      position: relative;
+      font-size: 15px;
+    }
+
+    .problem-list li::before {
+      content: '×';
+      position: absolute;
+      left: 0;
+      color: var(--amber);
+      font-weight: 700;
+    }
+
+    .solution-card p {
+      font-size: 17px;
+      color: #c0c0c0;
+      line-height: 1.75;
+    }
+
+    /* PRODUCT */
+    #product .phase-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .phase-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 36px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .phase-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .phase-card.plan::before { background: var(--teal); }
+    .phase-card.make::before { background: linear-gradient(90deg, var(--teal), var(--amber)); }
+    .phase-card.distribute::before { background: var(--amber); }
+    .phase-card.mirror::before { background: linear-gradient(90deg, var(--amber), #e879f9); }
+
+    .phase-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .phase-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .phase-tools {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .phase-tools span {
+      color: var(--teal);
+    }
+
+    /* CASE STUDY */
+    #case-study .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 56px;
+    }
+
+    .stat-cell {
+      background: var(--card);
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+
+    .stat-value.highlight { color: var(--teal); }
+
+    #case-study .story-block {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--teal);
+      border-radius: 0 8px 8px 0;
+      padding: 40px 48px;
+    }
+
+    #case-study .story-block p {
+      font-size: 17px;
+      color: #c0c0c0;
+      line-height: 1.85;
+    }
+
+    #case-study .insight {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      color: var(--teal);
+      margin-top: 20px;
+      letter-spacing: 0.04em;
+    }
+
+    /* PHILOSOPHY */
+    #philosophy {
+      text-align: center;
+      padding: 120px 48px;
+    }
+
+    #philosophy .big-quote {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 5vw, 64px);
+      color: var(--text);
+      line-height: 1.1;
+      max-width: 800px;
+      margin: 0 auto 48px;
+      position: relative;
+    }
+
+    #philosophy .big-quote::before,
+    #philosophy .big-quote::after {
+      content: '"';
+      color: var(--teal);
+      font-size: 0.9em;
+    }
+
+    #philosophy p {
+      font-size: 17px;
+      color: #c0c0c0;
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.85;
+    }
+
+    /* BRAND ASSETS */
+    #brand-assets .swatches {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 64px;
+    }
+
+    .swatch-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .swatch-color {
+      height: 100px;
+    }
+
+    .swatch-info {
+      padding: 16px;
+    }
+
+    .swatch-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      color: var(--text);
+      margin-bottom: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    .swatch-hex {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--teal);
+      margin-bottom: 6px;
+    }
+
+    .swatch-use {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .assets-subheading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--text);
+      letter-spacing: 0.06em;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .type-sample {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px;
+      margin-bottom: 16px;
+    }
+
+    .type-label {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .type-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      color: var(--text);
+      letter-spacing: 0.05em;
+    }
+
+    .type-body-sample {
+      font-size: 18px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .wordmark-row {
+      display: flex;
+      align-items: baseline;
+      gap: 48px;
+      flex-wrap: wrap;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 40px;
+      margin-bottom: 16px;
+    }
+
+    .wordmark-note {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .voice-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .voice-rule {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--teal);
+      border-radius: 0 8px 8px 0;
+      padding: 20px 24px;
+      font-size: 15px;
+      color: #c0c0c0;
+      font-style: italic;
+    }
+
+    /* BETA */
+    #beta-access {
+      text-align: center;
+      padding: 100px 48px;
+    }
+
+    .beta-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 80px 64px;
+      max-width: 680px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .beta-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(0,194,168,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .beta-card p {
+      font-size: 17px;
+      color: #c0c0c0;
+      line-height: 1.75;
+      margin-bottom: 40px;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      background: var(--teal);
+      color: #0a0d0c;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.12em;
+      padding: 16px 48px;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .btn-primary:hover {
+      background: #00d4b8;
+      transform: translateY(-1px);
+    }
+
+    /* CONTACT */
+    #contact {
+      padding: 80px 48px;
+      text-align: center;
+    }
+
+    #contact p {
+      font-size: 17px;
+      color: #c0c0c0;
+      margin-bottom: 24px;
+    }
+
+    .contact-links {
+      display: flex;
+      gap: 48px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .contact-item {
+      text-align: left;
+    }
+
+    .contact-item-label {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .contact-item a {
+      color: var(--teal);
+      text-decoration: none;
+      font-size: 17px;
+      border-bottom: 1px solid rgba(0,194,168,0.3);
+      padding-bottom: 1px;
+      transition: border-color 0.2s;
+    }
+
+    .contact-item a:hover { border-color: var(--teal); }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px;
+      text-align: center;
+    }
+
+    .footer-wordmark {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      color: var(--text);
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .footer-latin {
+      font-size: 12px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fadeUp 0.7s ease both;
+    }
+
+    /* SCROLL REVEAL — handled via IntersectionObserver */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* PRINT */
+    @media print {
+      body { background: #fff !important; color: #111 !important; font-size: 12pt; }
+      .site-nav, .btn-primary { display: none !important; }
+      section { padding: 48pt 0; max-width: 100%; page-break-before: always; }
+      #cover { page-break-before: avoid; background: #fff !important; min-height: auto; padding: 48pt 0; }
+      .cover-wordmark { font-size: 72pt; color: #111 !important; }
+      .cover-sub, .cover-link, .teal, .section-label, .phase-card.plan::before { color: #000 !important; }
+      .cover-link { color: #000 !important; border-color: #999 !important; }
+      .card-heading, .stat-value.highlight, .swatch-hex { color: #111 !important; }
+      .problem-card, .solution-card, .phase-card, .swatch-card, .type-sample, .wordmark-row, .beta-card, .story-block, .voice-rule {
+        background: #f9f9f9 !important;
+        border: 1pt solid #ccc !important;
+      }
+      #philosophy .big-quote::before, #philosophy .big-quote::after { color: #444 !important; }
+      .muted, .phase-tools, .swatch-use, #brand-story p, .solution-card p, #case-study .story-block p,
+      #philosophy p, .beta-card p, #contact p { color: #333 !important; }
+      .phase-card::before { display: none; }
+      .stats-grid { background: #ccc !important; }
+      .stat-cell { background: #fff !important; border: 1pt solid #ccc; }
+      footer { border-top: 1pt solid #ccc; }
+      .footer-wordmark, .footer-latin, .footer-copy { color: #333 !important; }
+      .divider { background: #333 !important; }
+      .voice-rule { border-left-color: #333 !important; }
+    }
+
+    @media (max-width: 800px) {
+      section { padding: 64px 24px; }
+      #problem-solution .two-col { grid-template-columns: 1fr; }
+      #product .phase-grid { grid-template-columns: 1fr; }
+      #case-study .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      #brand-assets .swatches { grid-template-columns: repeat(2, 1fr); }
+      .voice-grid { grid-template-columns: 1fr; }
+      .site-nav { padding: 0 24px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="site-nav">
+    <a href="/" class="nav-logo">KRE8<span class="teal">Ω</span>R</a>
+    <ul class="nav-links">
+      <li><a href="#brand-story">Story</a></li>
+      <li><a href="#product">Product</a></li>
+      <li><a href="#case-study">Case Study</a></li>
+      <li><a href="#brand-assets">Brand Assets</a></li>
+      <li><a href="#beta-access">Beta</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- COVER -->
+  <section id="cover">
+    <div class="cover-wordmark">KRE8<span class="teal">Ω</span>R</div>
+    <div class="cover-sub">AI-NATIVE CONTENT PRODUCTION OS</div>
+    <p class="cover-tagline">Create without limit. Distribute without resistance.</p>
+    <p class="cover-latin">Sine Resistentia</p>
+    <p class="cover-date">Media Kit — April 2026</p>
+    <a href="https://kre8r.app" class="cover-link">kre8r.app</a>
+  </section>
+
+  <!-- BRAND STORY -->
+  <section id="brand-story">
+    <div class="reveal">
+      <div class="section-label">Origin</div>
+      <h2 class="section-heading">The Origin</h2>
+      <div class="divider"></div>
+      <p>Kre8<span class="teal">Ω</span>r was born from a problem without a solution. Jason Rutland, creator of 7 Kin Homestead, was building a life on 3 acres from -$27 when he realized the content tools available to him were built for corporations, not creators. Research took hours. Structure took days. Distribution was a second full-time job. So he built a better system.</p>
+      <p>The name carries the philosophy in every character. KRE comes from Jaffa — the warrior language of the Goa'uld in Stargate — meaning 'Go' or 'Do Something.' The 8 is infinity rotated: boundless, without limit. The <span class="teal">Ω</span> (Omega) is the unit of electrical resistance — and its removal. Sine Resistentia: without resistance. Latin. The name isn't branding. It's a mission statement.</p>
+    </div>
+  </section>
+
+  <!-- PROBLEM / SOLUTION -->
+  <section id="problem-solution">
+    <div class="reveal">
+      <div class="section-label">The Case for Change</div>
+      <h2 class="section-heading">Problem &amp; Solution</h2>
+      <div class="divider"></div>
+      <div class="two-col">
+        <div class="problem-card">
+          <div class="card-heading">The Problem</div>
+          <ul class="problem-list">
+            <li>80% of creative time is administrative</li>
+            <li>12+ disconnected tools to publish one video</li>
+            <li>No tool connects production to distribution to intelligence</li>
+            <li>Creators quit before year 2 — not from lack of talent, from exhaustion</li>
+          </ul>
+        </div>
+        <div class="solution-card">
+          <div class="card-heading">The Solution</div>
+          <p>A single operating system that takes a creator from raw idea to published video to performance intelligence — with AI handling every step that doesn't require a human.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRODUCT OVERVIEW -->
+  <section id="product">
+    <div class="reveal">
+      <div class="section-label">Product</div>
+      <h2 class="section-heading">The Full Pipeline</h2>
+      <div class="divider"></div>
+      <div class="phase-grid">
+
+        <div class="phase-card plan">
+          <div class="phase-num">PHASE 01</div>
+          <div class="phase-name">Plan</div>
+          <div class="phase-tools">
+            <span>Soul BuildΩr</span> — creator DNA &amp; voice profile<br>
+            <span>Id8Ωr</span> — AI-powered ideation engine<br>
+            <span>PipΩr</span> — story structure &amp; beat mapping
+          </div>
+        </div>
+
+        <div class="phase-card make">
+          <div class="phase-num">PHASE 02</div>
+          <div class="phase-name">Make</div>
+          <div class="phase-tools">
+            <span>WritΩr</span> — scripting in your voice<br>
+            <span>DirectΩr</span> — shot lists &amp; crew briefs<br>
+            <span>ShootDay</span> — day-of checklist<br>
+            <span>TeleprΩmpter</span> — 3-device voice-driven system<br>
+            <span>VaultΩr</span> — footage intelligence database<br>
+            <span>EditΩr</span> — AI selects engine<br>
+            <span>ReviewΩr</span> — rough cut approval<br>
+            <span>ComposΩr</span> — scene analysis &amp; music
+          </div>
+        </div>
+
+        <div class="phase-card distribute">
+          <div class="phase-num">PHASE 03</div>
+          <div class="phase-name">Distribute</div>
+          <div class="phase-tools">
+            <span>GateΩr</span> — community gating<br>
+            <span>PackageΩr</span> — platform packaging<br>
+            <span>CaptionΩr</span> — AI captions per platform<br>
+            <span>MailΩr</span> — broadcast emails &amp; community posts<br>
+            <span>AutomatΩr</span> — scheduled distribution
+          </div>
+        </div>
+
+        <div class="phase-card mirror">
+          <div class="phase-num">INTELLIGENCE</div>
+          <div class="phase-name">MirrΩr</div>
+          <div class="phase-tools">
+            <span>Channel DNA</span> — deep content analysis<br>
+            <span>Constellation View</span> — 3D content universe<br>
+            <span>AI Coaching</span> — pattern-based strategy<br>
+            <span>Cross-Platform Intelligence</span> — unified insight
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CASE STUDY -->
+  <section id="case-study">
+    <div class="reveal">
+      <div class="section-label">Proof of Concept</div>
+      <h2 class="section-heading">7 Kin Homestead</h2>
+      <div class="divider"></div>
+
+      <div class="stats-grid">
+        <div class="stat-cell">
+          <div class="stat-label">Channel</div>
+          <div class="stat-value" style="font-size:22px;">7 Kin Homestead</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Total Views</div>
+          <div class="stat-value highlight">2.2M</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Best Video</div>
+          <div class="stat-value highlight">421K</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Email List</div>
+          <div class="stat-value">4,300</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">TikTok</div>
+          <div class="stat-value highlight">725K</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">YouTube</div>
+          <div class="stat-value">54K</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Lemon8</div>
+          <div class="stat-value">80K</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Paid Community</div>
+          <div class="stat-value" style="font-size:20px;">Rock Rich</div>
+        </div>
+      </div>
+
+      <div class="story-block">
+        <p>Jason built Kre8<span class="teal">Ω</span>r on his own channel first. In Session 18, after analyzing 263 videos through MirrΩr, the AI identified a pattern Jason hadn't consciously named: his audience wasn't coming for homesteading content. They were coming for financial rebellion content dressed in homesteading clothing.</p>
+        <div class="insight">"Financial rebellion channel dressed in homesteading clothing."</div>
+        <p style="margin-top:20px;">That eight-word insight reoriented the entire content strategy. That's what a system built for intelligence does — it sees what the creator can't.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHILOSOPHY -->
+  <section id="philosophy">
+    <div class="reveal">
+      <div class="section-label">Philosophy</div>
+      <div class="big-quote">The tool is the support structure. You are the art.</div>
+      <p>Kre8<span class="teal">Ω</span>r exists at the intersection of creative freedom and production discipline. It removes the resistance between having an idea and that idea reaching an audience. Every feature is evaluated against a single question: does this reduce decisions for the creator, or add one? If it adds one — it gets redesigned.</p>
+    </div>
+  </section>
+
+  <!-- BRAND ASSETS -->
+  <section id="brand-assets">
+    <div class="reveal">
+      <div class="section-label">Identity System</div>
+      <h2 class="section-heading">Brand Assets</h2>
+      <div class="divider"></div>
+
+      <div class="assets-subheading">Color Palette</div>
+      <div class="swatches">
+        <div class="swatch-card">
+          <div class="swatch-color" style="background:#00c2a8;"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Kre8<span class="teal">Ω</span>r Teal</div>
+            <div class="swatch-hex">#00c2a8</div>
+            <div class="swatch-use">Primary accent, CTAs, <span class="teal">Ω</span> character</div>
+          </div>
+        </div>
+        <div class="swatch-card">
+          <div class="swatch-color" style="background:#0e0f0e; border-bottom:1px solid #2a2e2a;"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Void</div>
+            <div class="swatch-hex">#0e0f0e</div>
+            <div class="swatch-use">Page background</div>
+          </div>
+        </div>
+        <div class="swatch-card">
+          <div class="swatch-color" style="background:#f0b942;"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Signal Amber</div>
+            <div class="swatch-hex">#f0b942</div>
+            <div class="swatch-use">Warnings, collaborator badges</div>
+          </div>
+        </div>
+        <div class="swatch-card">
+          <div class="swatch-color" style="background:#e8e8e8;"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Creator White</div>
+            <div class="swatch-hex">#e8e8e8</div>
+            <div class="swatch-use">Primary text</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="assets-subheading">Typography</div>
+      <div class="type-sample">
+        <div class="type-label">Display — Bebas Neue</div>
+        <div class="type-display">KRE8<span class="teal">Ω</span>R ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789</div>
+      </div>
+      <div class="type-sample">
+        <div class="type-label">Body — System Sans (system-ui)</div>
+        <div class="type-body-sample">The quick brown fox jumps over the lazy dog.</div>
+      </div>
+
+      <div class="assets-subheading" style="margin-top:48px;">Wordmark</div>
+      <div class="wordmark-row">
+        <span class="bebas teal" style="font-size:72px; color:var(--text);">KRE8<span class="teal">Ω</span>R</span>
+        <span class="bebas" style="font-size:48px; color:var(--text);">KRE8<span class="teal">Ω</span>R</span>
+        <span class="bebas" style="font-size:24px; color:var(--text);">KRE8<span class="teal">Ω</span>R</span>
+      </div>
+      <p class="wordmark-note"><span class="teal">Ω</span> (Omega) always renders in Kre8<span class="teal">Ω</span>r Teal (#00c2a8). Never deviate from this rule in any context.</p>
+
+      <div class="assets-subheading" style="margin-top:48px;">Voice Guidelines</div>
+      <div class="voice-grid">
+        <div class="voice-rule">"Straight-talking, warm, never corporate."</div>
+        <div class="voice-rule">"The sharp-tongued neighbor talking over a fence."</div>
+        <div class="voice-rule">"Goes off-script — those moments are frequently better."</div>
+        <div class="voice-rule">"No jargon. No fluff. Real numbers, real results."</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BETA ACCESS -->
+  <section id="beta-access">
+    <div class="reveal">
+      <div class="beta-card">
+        <div class="section-label" style="margin-bottom:16px;">Private Beta</div>
+        <h2 class="bebas" style="font-size:48px; margin-bottom:24px;">Join the Beta</h2>
+        <p>Kre8<span class="teal">Ω</span>r is currently in private beta. We are onboarding serious creators who treat content like a business.</p>
+        <a href="/landing.html#beta" class="btn-primary">Request Beta Access</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="reveal">
+      <div class="section-label">Get in Touch</div>
+      <h2 class="section-heading">Contact</h2>
+      <div class="divider" style="margin:0 auto 32px;"></div>
+      <p>For media inquiries, partnership discussions, or beta access:</p>
+      <div class="contact-links">
+        <div class="contact-item">
+          <div class="contact-item-label">Email</div>
+          <a href="mailto:hello@kre8r.app">hello@kre8r.app</a>
+        </div>
+        <div class="contact-item">
+          <div class="contact-item-label">Web</div>
+          <a href="https://kre8r.app">kre8r.app</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-wordmark">KRE8<span class="teal">Ω</span>R</div>
+    <div class="footer-latin">Sine Resistentia</div>
+    <div class="footer-copy">&copy; 2026 Kre8<span class="teal">Ω</span>r. All rights reserved.</div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>

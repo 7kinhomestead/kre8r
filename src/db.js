@@ -370,6 +370,20 @@ function runMigrations() {
     db.run('ALTER TABLE projects ADD COLUMN collaborators TEXT');
     console.log('[DB] Migration: added projects.collaborators');
   }
+
+  // Beta applications — public landing page form submissions
+  db.run(`CREATE TABLE IF NOT EXISTS beta_applications (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    name             TEXT    NOT NULL,
+    channel_url      TEXT    NOT NULL,
+    platform         TEXT,
+    upload_frequency TEXT,
+    why_text         TEXT,
+    status           TEXT    NOT NULL DEFAULT 'pending',
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_beta_status ON beta_applications(status)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_beta_created ON beta_applications(created_at)');
 }
 
 function persist() {
@@ -1543,6 +1557,29 @@ function setKv(key, value) {
   persist();
 }
 
+// ─────────────────────────────────────────────
+// BETA APPLICATIONS — helpers
+// ─────────────────────────────────────────────
+
+function insertBetaApplication({ name, channel_url, platform, upload_frequency, why_text }) {
+  const result = _run(
+    `INSERT INTO beta_applications (name, channel_url, platform, upload_frequency, why_text)
+     VALUES (?, ?, ?, ?, ?)`,
+    [name, channel_url, platform || null, upload_frequency || null, why_text || null]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getAllBetaApplications() {
+  return _all(`SELECT * FROM beta_applications ORDER BY created_at DESC`);
+}
+
+function updateBetaApplicationStatus(id, status) {
+  _run(`UPDATE beta_applications SET status = ? WHERE id = ?`, [status, id]);
+  persist();
+}
+
 module.exports = {
   initDb,
   createProject,
@@ -1651,7 +1688,11 @@ module.exports = {
   // ShootDay
   getShootTakes,
   upsertShootTake,
-  resetShootTakes
+  resetShootTakes,
+  // Beta Applications
+  insertBetaApplication,
+  getAllBetaApplications,
+  updateBetaApplicationStatus
 };
 
 
