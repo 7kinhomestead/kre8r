@@ -425,7 +425,10 @@
       "Bash(node -e \"try{require\\(''./src/routes/id8r.js''\\);console.log\\(''id8r.js OK''\\);}catch\\(e\\){console.log\\(''FAIL:'',e.message\\);}\" --cwd C:/Users/18054/kre8r)",
       "Bash(node -e \"try{require\\(''./src/routes/analytr.js''\\);console.log\\(''analytr OK''\\);}catch\\(e\\){console.log\\(''analytr FAIL:'',e.message\\);}\")",
       "Bash(node -e \"try{require\\(''./src/routes/writr.js''\\);console.log\\(''writr OK''\\);}catch\\(e\\){console.log\\(''writr FAIL:'',e.message\\);}\")",
-      "Bash(node -e \"try{require\\(''./src/routes/id8r.js''\\);console.log\\(''id8r OK''\\);}catch\\(e\\){console.log\\(''id8r FAIL:'',e.message\\);}\")"
+      "Bash(node -e \"try{require\\(''./src/routes/id8r.js''\\);console.log\\(''id8r OK''\\);}catch\\(e\\){console.log\\(''id8r FAIL:'',e.message\\);}\")",
+      "Bash(node -e \"try{require\\(''./src/routes/analytr.js''\\);console.log\\(''OK''\\);}catch\\(e\\){console.log\\(''FAIL:'',e.message\\);}\")",
+      "Bash(node -e \"require\\(''./src/routes/analytr.js''\\); console.log\\(''analytr.js OK''\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/analytr/niche\")"
     ]
   }
 }

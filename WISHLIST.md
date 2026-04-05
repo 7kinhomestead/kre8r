@@ -185,3 +185,79 @@ Replace the 2D D3 constellation with an optional 3D sphere view using Three.js.
 - Shorts/live: plotted at `r - altitudeMax` (below surface), hidden by default (same toggle logic as 2D)
 - Cluster longitude bands: evenly divide 2π by cluster count, assign each cluster a `θ` band center
 - All node data pulled from existing `channel_dna_clusters` kv_store — no new API needed
+
+## V2.0 — Stellar Classification System for Content Universe Sphere
+
+Replace cluster-color node coloring with astrophysics-accurate stellar classification based on composite video performance score. Color is **performance**, not cluster identity.
+
+### Performance → Kelvin Formula
+
+```js
+const stellarScore = (
+  (views / channelAvg)              * 0.4 +
+  (engagementRate / avgEngagement)  * 0.3 +
+  (velocityScore / avgVelocity)     * 0.2 +
+  (viralCoefficient / avgViral)     * 0.1
+) * 2500; // maps to 0–10,000K range
+```
+
+### Spectral Classes
+
+| Class | Color | Kelvin | Meaning |
+|-------|-------|--------|---------|
+| O | Blue Supergiant | 8000K+ | Viral outlier — 10x+ channel average |
+| B | Blue-White Giant | 6000K+ | Major hit — 5–10x average |
+| A | White Star | 5000K+ | Strong performer — 2–5x average |
+| F | Yellow-White | 4000K+ | Above average — 1–2x |
+| G | Yellow / Sun | 3000K+ | At channel average |
+| K | Orange | 2000K+ | Below average |
+| M | Red Dwarf | 1000K+ | Low performer |
+| Brown Dwarf | Dark Brown | 500K+ | Failed experiment — <10% of average |
+| Gas Giant | Banded, semi-transparent | <500K | Live stream reposts, not real videos |
+
+### Special Events
+
+**Supernova** — video hits 10x average:
+- Explosion particle animation at node position
+- Nearby cluster nodes briefly brighten
+- Shows traffic flow lines between connected videos in the `edges` graph
+
+**Black Hole formation** — outlier so extreme it gets its own gravitational field:
+- Pulls its cluster visually toward it (nearby nodes drift inward)
+- Notification: "This outlier may indicate a new channel direction" with one-click Id8Ωr brief button
+
+**New channel seed** — if the Black Hole outlier is thematically distinct from all existing clusters:
+- Suggests spinning up a second channel
+- One-click creates a new Id8Ωr session seeded with that video's topic
+
+### Node appearance by spectral class
+
+- **O / B class**: bloom glow effect, lens flare, larger corona radius
+- **A / F class**: bright white-yellow star, standard corona
+- **G class**: standard star appearance, warm yellow
+- **M class**: smaller, dimmer, slight red tint, no corona
+- **Brown Dwarf**: very small, dark brown, barely visible — radius ~2px
+- **Gas Giant**: banded texture, no glow, semi-transparent — rendered as ring rather than sphere
+
+### The core insight
+
+Cluster identity → shown by **orbital position** (longitude band on the sphere)
+Performance → shown by **stellar temperature** (color)
+
+A creator can immediately see: *bright blue cluster = winning content territory.*
+No coaching text needed — the physics shows the opportunity.
+
+**The Homestead Income example:**
+4 videos averaging 74k views = tiny cluster of blue giants.
+The visual communicates instantly: tiny cluster, insanely bright.
+The sphere is pointing at the gap before any analysis runs.
+
+### Implementation notes
+- `stellarScore` computed client-side from `channel_dna_clusters` node data + `channel-health` avg values
+- Kelvin → RGB: standard blackbody approximation (`Mitchell Charity` formula or lookup table)
+- Bloom: `THREE.UnrealBloomPass` in a `THREE.EffectComposer` pipeline — applied per-node intensity based on K value
+- Supernova particle system: `THREE.Points` burst emitter, short-lived (`lifetime ~2s`), triggered on first render if node K > 8000
+- Black Hole gravity: custom `alphaTarget` force applied to nearby nodes in the OrbitControls tick loop
+- `viralCoefficient`: `(likes + comments * 3) / views` — proxy for share-worthy engagement
+- `velocityScore`: views in first 7 days (requires `posted_at` date + total views as proxy if daily breakdown unavailable)
+- All classification done at render time — no new API calls, no new DB columns needed
