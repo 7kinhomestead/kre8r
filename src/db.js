@@ -1068,7 +1068,9 @@ function getRecentProjectsWithAnalytics(limit = 10) {
         WHERE po.project_id = pr.id AND a.metric_name = 'likes') as total_likes
      FROM projects pr
      WHERE pr.status != 'archived'
-     ORDER BY pr.created_at DESC
+     ORDER BY
+       (SELECT MAX(po.posted_at) FROM posts po WHERE po.project_id = pr.id) DESC,
+       pr.created_at DESC
      LIMIT ?`,
     [limit]
   );
