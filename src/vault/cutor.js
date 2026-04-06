@@ -18,6 +18,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const db = require('../db');
+const { getCreatorContext } = require('../utils/creator-context');
 
 const ANTHROPIC_VERSION = '2023-06-01';
 const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
@@ -43,7 +44,8 @@ function buildPrompt({ transcript, script, contentAngle, packageTitle, footageMe
     .map(s => `[${s.start.toFixed(2)}s → ${s.end.toFixed(2)}s] ${s.text}`)
     .join('\n');
 
-  return `You are CutΩr, a video editing AI for 7 Kin Homestead — a homesteading and off-grid living channel with 725K TikTok followers. Your job is to identify the best short-form clip moments from a transcript with word-level timestamps.
+  const { brand: cutBrand, followerSummary: cutFs, niche: cutNiche } = getCreatorContext();
+  return `You are CutΩr, a video editing AI for ${cutBrand} — a ${cutNiche} channel with ${cutFs}. Your job is to identify the best short-form clip moments from a transcript with word-level timestamps.
 
 ${angleSection}
 ${scriptSection}

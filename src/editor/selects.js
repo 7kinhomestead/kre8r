@@ -46,6 +46,7 @@ const path = require('path');
 
 const db                        = require('../db');
 const { transcribeFile }        = require('../vault/transcribe');
+const { getCreatorContext }     = require('../utils/creator-context');
 
 const ANTHROPIC_VERSION    = '2023-06-01';
 const MODEL                = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
@@ -188,7 +189,8 @@ function buildSelectsPrompt({ clips, script, concept, projectTitle }) {
     ].join('\n');
   }).join('\n\n---\n\n');
 
-  return `You are SelectsΩr, the editing intelligence for 7 Kin Homestead — a homesteading and off-grid living channel with 725K TikTok followers. You are analyzing multiple takes of talking-head clips to build a selects timeline for a long-form YouTube video.
+  const { brand: selBrand, followerSummary: selFs, niche: selNiche } = getCreatorContext();
+  return `You are SelectsΩr, the editing intelligence for ${selBrand} — a ${selNiche} channel with ${selFs}. You are analyzing multiple takes of talking-head clips to build a selects timeline for a long-form YouTube video.
 
 ## PROJECT: ${projectTitle || 'Unnamed Project'}
 

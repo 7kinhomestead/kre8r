@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Kre8Ωr App Icon — 512×512
+    Design: Bold K with Ω integrated into the notch negative space.
+    Dark background #0e0f0e, teal #00c2a8.
+    Readable at 32px.
+  -->
+  <defs>
+    <linearGradient id="teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4b8"/>
+      <stop offset="100%" stop-color="#009e88"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="#0e0f0e"/>
+
+  <!-- ── K glyph ── -->
+
+  <!-- Vertical bar -->
+  <rect x="76" y="64" width="64" height="384" rx="12" fill="url(#teal)"/>
+
+  <!-- Upper arm: from notch (140,256) up-right to (400,64), ~50px thick -->
+  <!--   Parallelogram: two parallel edges along the arm direction + cap ends   -->
+  <polygon
+    points="140,208  140,256  400,64  352,64"
+    fill="url(#teal)"/>
+
+  <!-- Lower arm: from notch (140,256) down-right to (400,448) -->
+  <polygon
+    points="140,256  140,304  352,448  400,448"
+    fill="url(#teal)"/>
+
+  <!-- ── Ω glyph — centred in the notch region ── -->
+  <!--
+    Centre: (282, 270)
+    Outer radius ry=74, rx=78 (slightly wider than tall)
+    Inner radius ry=46, rx=49
+
+    Arc opening: faces DOWN — endpoints are at the bottom of the arc
+    Outer arc endpoints: at angle ±150° from +x (SVG: y-down, 0°=right, CW positive)
+      P_left  = centre + (rx·cos150°, ry·sin150°) = (282-67.5, 270+37) = (214.5, 307)
+      P_right = centre + (rx·cos30°,  ry·sin30°)  = (282+67.5, 270+37) = (349.5, 307)
+
+    In SVG arc command, sweep=1 (CW) goes from P_left to P_right by wrapping OVER the top.
+
+    Inner arc endpoints at ±150°:
+      Q_left  = (282-42.4, 270+23) = (239.6, 293)
+      Q_right = (282+42.4, 270+23) = (324.4, 293)
+    sweep=0 (CCW) returns from Q_right to Q_left over the top.
+
+    Feet: rectangular blocks, height 32, aligning foot outer walls at x=200,365
+  -->
+  <path
+    d="
+      M 200,307
+      L 214.5,307
+      A 78,74 0 1,1 349.5,307
+      L 365,307
+      L 365,339
+      L 330,339
+      L 330,307
+      A 49,46 0 1,0 234,307
+      L 234,339
+      L 200,339
+      Z
+    "
+    fill="url(#teal)"
+  />
+
+</svg>

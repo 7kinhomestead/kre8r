@@ -9,6 +9,7 @@
 'use strict';
 
 const express        = require('express');
+const { getCreatorContext } = require('../utils/creator-context');
 const router         = express.Router();
 const path           = require('path');
 const fs             = require('fs');
@@ -123,7 +124,7 @@ router.post('/create-project', async (req, res) => {
       '--project_name', project.title.replace(/\s+/g, '-') + nameSuffix,
       '--footage_json', JSON.stringify(footageByType),
       '--content_angle', project.content_angle || '',
-      '--creator_name',  '7 Kin Homestead'
+      '--creator_name',  getCreatorContext().brand
     ];
     if (script?.full_script)   args.push('--script_text', script.full_script.slice(0, 2000));
     if (pkg?.hook)             args.push('--package_hook', pkg.hook);

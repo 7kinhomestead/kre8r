@@ -20,6 +20,7 @@ const router  = express.Router();
 const crypto  = require('crypto');
 const path    = require('path');
 const db      = require('../db');
+const { getCreatorContext } = require('../utils/creator-context');
 
 const creatorProfile = require(path.join(__dirname, '../../creator-profile.json'));
 
@@ -44,14 +45,22 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 // ─── Mode System Prompts ───────────────────────────────────────────────────────
+// Built at request-time so creator-profile.json changes are picked up live.
 
-const SYSTEM_PROMPTS = {
-  shape_it: `You are Id8Ωr, a creative collaborator for Jason, a homesteading content creator at 7 Kin Homestead with 725k TikTok followers. Jason has a raw idea and needs help shaping it into a compelling video concept. Your job is to ask smart, targeted questions that help him find the best angle, hook, and packaging for his idea. Ask no more than 2-3 questions at a time. Be direct, warm, and genuinely curious. Never suggest ideas yet — just understand what he's working with. When you have enough, say RESEARCH_READY.`,
+function buildSystemPrompts() {
+  const { brand, creatorName, followerSummary, niche } = getCreatorContext();
+  const identity = `${brand} (${followerSummary})`;
+  return {
+    shape_it: `You are Id8Ωr, a creative collaborator for ${creatorName}, a ${niche} content creator at ${identity}. ${creatorName} has a raw idea and needs help shaping it into a compelling video concept. Your job is to ask smart, targeted questions that help find the best angle, hook, and packaging for the idea. Ask no more than 2-3 questions at a time. Be direct, warm, and genuinely curious. Never suggest ideas yet — just understand what they're working with. When you have enough, say RESEARCH_READY.`,
 
-  find_it: `You are Id8Ωr, a creative collaborator for Jason, a homesteading content creator at 7 Kin Homestead with 725k TikTok followers. Jason needs a video idea. Ask him about: what's been on his mind lately, what his audience has been asking, what he knows better than anyone else, and what he's been avoiding making. Ask no more than 2-3 questions at a time. When you have a strong enough seed to work with, say RESEARCH_READY.`,
+    find_it: `You are Id8Ωr, a creative collaborator for ${creatorName}, a ${niche} content creator at ${identity}. ${creatorName} needs a video idea. Ask about: what's been on their mind lately, what the audience has been asking, what they know better than anyone else, and what they've been avoiding making. Ask no more than 2-3 questions at a time. When you have a strong enough seed to work with, say RESEARCH_READY.`,
 
-  deep_dive: `You are Id8Ωr, a creative collaborator for Jason, a homesteading content creator at 7 Kin Homestead with 725k TikTok followers. Jason has a topic but needs depth. Ask him what he already knows about it, what he's unsure about, and what specific claim or insight he wants to be able to make confidently on camera. Ask no more than 2-3 questions at a time. When you understand the knowledge gap, say RESEARCH_READY.`,
-};
+    deep_dive: `You are Id8Ωr, a creative collaborator for ${creatorName}, a ${niche} content creator at ${identity}. ${creatorName} has a topic but needs depth. Ask what they already know about it, what they're unsure about, and what specific claim or insight they want to be able to make confidently on camera. Ask no more than 2-3 questions at a time. When you understand the knowledge gap, say RESEARCH_READY.`,
+  };
+}
+
+// Keep a reference for use in this module; rebuilt per-request at route level
+let SYSTEM_PROMPTS = buildSystemPrompts();
 
 // ─── Claude API Helper ─────────────────────────────────────────────────────────
 
@@ -126,6 +135,8 @@ function getRecentMessages(messages, maxExchanges = 6) {
 router.post('/start', async (req, res) => {
   try {
     const { mode } = req.body;
+    // Rebuild prompts fresh on each session start so creator-profile.json changes are live
+    SYSTEM_PROMPTS = buildSystemPrompts();
     if (!mode || !SYSTEM_PROMPTS[mode]) {
       return res.status(400).json({ error: 'mode is required: shape_it | find_it | deep_dive' });
     }
@@ -205,8 +216,10 @@ router.post('/concepts', async (req, res) => {
     const session = sessions.get(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
+    const { brand, creatorName, followerSummary, niche } = getCreatorContext();
+
     const conversationText = getRecentMessages(session.messages)
-      .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
+      .map(m => `${m.role === 'user' ? creatorName : 'Id8r'}: ${m.content}`)
       .join('\n');
 
     const angles = Object.values(creatorProfile.content_angles || {});
@@ -223,7 +236,7 @@ router.post('/concepts', async (req, res) => {
       const ci   = cp.content_intelligence;
       if (ci && Array.isArray(ci.insights) && ci.insights.length) {
         const top3 = ci.insights.slice(0, 3);
-        intelligenceBlock = '\n\nCONTENT INTELLIGENCE FROM ANALYΩZR (patterns Claude found in all Jason\'s videos):\n'
+        intelligenceBlock = `\n\nCONTENT INTELLIGENCE FROM ANALYΩZR (patterns Claude found in all ${creatorName}'s videos):\n`
           + top3.map((ins, i) =>
               (i + 1) + '. [' + ((ins.type || 'insight').toUpperCase()) + '] '
               + (ins.title || '') + ': ' + (ins.insight || '')
@@ -233,15 +246,15 @@ router.post('/concepts', async (req, res) => {
     } catch (_) {}
 
     const result = await callClaudeJSON(
-      `You are Id8Ωr, a creative strategist for Jason Rutland at 7 Kin Homestead (725k TikTok, homesteading content). Based on the conversation below, generate exactly 3 concept directions for Jason's video.
+      `You are Id8Ωr, a creative strategist for ${brand} (${followerSummary}, ${niche} content). Based on the conversation below, generate exactly 3 concept directions for the next video.
 
 RULES:
-- Concepts 1 and 2 MUST use angles from the provided list below. Pick the 2 best fits for what Jason described.
+- Concepts 1 and 2 MUST use angles from the provided list below. Pick the 2 best fits for what was described.
 - Concept 3 MUST be a novel angle you invent — something NOT on the list. A fresh frame, an unexpected lens, a creative repackage of the topic that doesn't fit any existing category.
 - Each concept must be meaningfully different — different audience hook, different emotional entry point.
-- Be specific to what Jason actually said, not generic. Use his real voice: straight-talking, funny, real numbers, never corporate.
+- Be specific to what was discussed, not generic. Match the creator's real voice: straight-talking, funny, real numbers, never corporate.
 
-JASON'S CONTENT ANGLES:
+CONTENT ANGLES:
 ${anglesText}${intelligenceBlock}
 
 Return ONLY valid JSON in this exact shape:
@@ -251,24 +264,24 @@ Return ONLY valid JSON in this exact shape:
       "id": 1,
       "angle": "Label from the angles list",
       "headline": "one punchy sentence — the video in a nutshell",
-      "why": "one sentence — why this works for Jason's audience specifically",
-      "hook": "the first 1-2 sentences of the video, in Jason's voice",
+      "why": "one sentence — why this works for this audience specifically",
+      "hook": "the first 1-2 sentences of the video, in the creator's voice",
       "is_novel": false
     },
     {
       "id": 2,
       "angle": "Label from the angles list",
       "headline": "one punchy sentence — the video in a nutshell",
-      "why": "one sentence — why this works for Jason's audience specifically",
-      "hook": "the first 1-2 sentences of the video, in Jason's voice",
+      "why": "one sentence — why this works for this audience specifically",
+      "hook": "the first 1-2 sentences of the video, in the creator's voice",
       "is_novel": false
     },
     {
       "id": 3,
       "angle": "Your invented angle name",
       "headline": "one punchy sentence — the video in a nutshell",
-      "why": "one sentence — why this novel frame works for Jason's audience specifically",
-      "hook": "the first 1-2 sentences of the video, in Jason's voice",
+      "why": "one sentence — why this novel frame works for this audience specifically",
+      "hook": "the first 1-2 sentences of the video, in the creator's voice",
       "is_novel": true
     }
   ]
@@ -347,8 +360,10 @@ router.post('/research', async (req, res) => {
       return res.end();
     }
 
+    const { brand: _brand, creatorName: _cn, followerSummary: _fs, niche: _niche } = getCreatorContext();
+
     const conversationText = getRecentMessages(session.messages)
-      .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
+      .map(m => `${m.role === 'user' ? _cn : 'Id8r'}: ${m.content}`)
       .join('\n');
 
     // Focused research on chosen concept
@@ -368,7 +383,7 @@ router.post('/research', async (req, res) => {
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
       const data = await callClaude(
-        `You are a YouTube research analyst for 7 Kin Homestead, a homesteading channel with 725k TikTok followers. Search for the top performing YouTube videos on the topic from the conversation below. Return maximum 5-7 video examples with titles and channel names only — no URLs needed, no full lists. Summarize what's working: common angles, what's missing, and one key content gap.`,
+        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Search for the top performing YouTube videos on the topic from the conversation below. Return maximum 5-7 video examples with titles and channel names only — no URLs needed, no full lists. Summarize what's working: common angles, what's missing, and one key content gap.`,
         [{
           role: 'user',
           content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch YouTube for top performing videos on this specific angle. Return 5-7 examples (title + channel name only), the common approach across them, and the biggest content gap.`,
@@ -400,7 +415,7 @@ router.post('/research', async (req, res) => {
     send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
       const data = await callClaude(
-        `You are a research analyst for 7 Kin Homestead, a homesteading content creator. Search for statistics, studies, recent news, and compelling data hooks related to the topic. Focus on numbers and facts that would make a homesteading audience lean in.`,
+        `You are a research analyst for ${_brand}, a ${_niche} content creator. Search for statistics, studies, recent news, and compelling data hooks related to the topic. Focus on numbers and facts that would make the target audience lean in.`,
         [{
           role: 'user',
           content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch for relevant statistics, studies, news hooks, and data points that strengthen this specific concept.`,
@@ -498,8 +513,11 @@ router.post('/package', async (req, res) => {
     const session = sessions.get(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
+    const { brand: pkgBrand, creatorName: pkgCn, followerSummary: pkgFs, niche: pkgNiche, voiceSummary: pkgVoice, profile: pkgProfile } = getCreatorContext();
+    const voiceTraits = pkgProfile?.voice?.traits?.join('. ') || pkgVoice;
+
     const conversationText = getRecentMessages(session.messages)
-      .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
+      .map(m => `${m.role === 'user' ? pkgCn : 'Id8r'}: ${m.content}`)
       .join('\n');
 
     const researchSummary = session.researchSummary || 'No research data.';
@@ -509,9 +527,9 @@ router.post('/package', async (req, res) => {
       : '';
 
     const result = await callClaudeJSON(
-      `You are a YouTube packaging expert for 7 Kin Homestead, a homesteading creator with 725k TikTok followers. Generate packaging options based on the conversation and research.
+      `You are a YouTube packaging expert for ${pkgBrand} (${pkgNiche}, ${pkgFs}). Generate packaging options based on the conversation and research.
 
-The creator's voice: straight-talking, warm, funny, never corporate. Real numbers. Self-deprecating. Uses "Kevin" as a foil.
+The creator's voice: ${voiceTraits}
 
 Return ONLY valid JSON:
 {
@@ -557,14 +575,16 @@ router.post('/brief', async (req, res) => {
     const session = sessions.get(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
+    const { brand: briefBrand, creatorName: briefCn } = getCreatorContext();
+
     const conversationText = getRecentMessages(session.messages)
-      .map(m => `${m.role === 'user' ? 'Jason' : 'Id8r'}: ${m.content}`)
+      .map(m => `${m.role === 'user' ? briefCn : 'Id8r'}: ${m.content}`)
       .join('\n');
 
     const researchSummary = session.researchSummary || 'No research data.';
 
     const result = await callClaudeJSON(
-      `You are Id8Ωr, a creative strategist for 7 Kin Homestead. Generate a complete Vision Brief for this video concept.
+      `You are Id8Ωr, a creative strategist for ${briefBrand}. Generate a complete Vision Brief for this video concept.
 
 Return ONLY valid JSON in this exact shape:
 {

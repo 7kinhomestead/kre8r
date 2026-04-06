@@ -37,6 +37,7 @@ const path = require('path');
 const { callWhisper } = require('../vault/transcribe');
 const { callClaude } = require('../utils/claude'); // shared Claude caller
 const db = require('../db');
+const { getCreatorContext } = require('../utils/creator-context');
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -148,7 +149,8 @@ async function detectHighEnergy(clip, segments) {
     .map(s => `[${fmtTs(s.start)}] ${s.text}`)
     .join('\n');
 
-  const prompt = `You are reviewing a transcript from a freeform talking-head video for a homesteading creator named Jason.
+  const { creatorName: snCn, niche: snNiche } = getCreatorContext();
+  const prompt = `You are reviewing a transcript from a freeform talking-head video for a ${snNiche} creator named ${snCn}.
 
 Your ONLY job is to flag segments that feel high-energy, emotionally charged, or like a genuine "rant" or breakthrough moment.
 
@@ -334,7 +336,8 @@ async function detectOffScriptGold(clips, script) {
       .map(s => `[${fmtTs(s.start)}] ${s.text}`)
       .join('\n');
 
-    const prompt = `You are reviewing footage from a homesteading creator named Jason.
+    const { creatorName: osCn, niche: osNiche } = getCreatorContext();
+    const prompt = `You are reviewing footage from a ${osNiche} creator named ${osCn}.
 
 Script for this video:
 ${script.slice(0, 1500)}
@@ -342,7 +345,7 @@ ${script.slice(0, 1500)}
 Transcript from clip footage_id:${clip.footage_id}:
 ${transcriptText}
 
-Find any moments where Jason goes OFF-SCRIPT in a way that feels genuine, surprising, or more real than the scripted content. These are gold.
+Find any moments where ${osCn} goes OFF-SCRIPT in a way that feels genuine, surprising, or more real than the scripted content. These are gold.
 
 DO NOT flag scripted content. Only flag genuinely unscripted moments.
 

@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { getCreatorContext, getCommunityBlock } = require('../utils/creator-context');
 
 const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -69,34 +70,31 @@ router.post('/packages', async (req, res) => {
       extra_context
     } = req.body;
 
-    const angleDescriptions = {
-      financial: 'FINANCIAL TAKE: Lead with money — what it costs, what it saves, the ROI math, the real numbers. The audience wants to know if this makes financial sense for a regular person.',
-      system:    'SYSTEM IS RIGGED: Frame around systemic failures — why the mainstream approach doesn\'t serve regular people, what the establishment doesn\'t want you to know, how to opt out and win anyway.',
-      rockrich:  'ROCK RICH EPISODE: The art of doing a lot with a little. Resourcefulness, ingenuity, and self-sufficiency as a superpower. Not poverty — strategy. This is what ROCK RICH is all about.',
-      howto:     'PRACTICAL HOW-TO: Step-by-step, no fluff. The creator is the guide. Practical, actionable, achievable for a regular person with basic tools.',
-      mistakes:  'MISTAKES / WHAT NOT TO DO: Hard-won lessons. The creator made the mistakes so the viewer doesn\'t have to. Self-deprecating but genuinely useful.',
-      lifestyle: 'LIFESTYLE / DAY-IN-LIFE: Bring the viewer into the homestead. Warm, real, showing the texture of the life — not just the practical tips.',
-      viral:     'HIGH CURIOSITY / VIRAL: Open with a provocative question, a surprising fact, or a counterintuitive claim. Designed to stop the scroll and create genuine curiosity.',
-      community: 'COMMUNITY CALL-TO-ACTION: Build toward ROCK RICH. The video should make the viewer feel like they\'re on the outside of something they want to be part of.'
-    };
+    const { brand, followerSummary, communityName, voiceSummary, profile: cp } = getCreatorContext();
+    const communityBlock = getCommunityBlock();
+    const cpAngles = cp?.content_angles || {};
+
+    const angleDescriptions = Object.fromEntries(
+      Object.entries(cpAngles).map(([k, a]) => [k, `${(a.label || k).toUpperCase()}: ${a.description || ''}`])
+    );
 
     const goalMap = {
-      grow: 'Grow the audience — titles and hooks that attract new subscribers',
-      community: 'Drive to ROCK RICH community — build desire for the paid community',
+      grow:      'Grow the audience — titles and hooks that attract new subscribers',
+      community: `Drive to ${communityName} community — build desire for the paid community`,
       evergreen: 'Build evergreen archive — search-optimised, timeless value',
-      viral: 'Maximize viral potential — hooks and formats that get shared'
+      viral:     'Maximize viral potential — hooks and formats that get shared'
     };
 
     const activeAngles = (angles || ['financial', 'system', 'rockrich'])
       .map(a => angleDescriptions[a]).filter(Boolean).join('\n\n');
 
-    const systemPrompt = `You are the content strategist for 7 Kin Homestead — a homesteading and off-grid living channel with 725k TikTok followers, 54k YouTube subscribers, 80k Lemon8 followers, and a paid Kajabi community called ROCK RICH.
+    const systemPrompt = `You are the content strategist for ${brand} — ${followerSummary}, and a paid Kajabi community called ${communityName}.
 
 CREATOR VOICE:
-Straight-talking, warm, encouraging, genuinely funny — "the most unserious serious person to ever make a video." Never corporate, never salesy. Slips a joke in to cut tension. Real numbers always.
+${voiceSummary}
 
 COMMUNITY:
-ROCK RICH on Kajabi — The Greenhouse (free), The Garden ($19/month), The Founding 50 ($297 one-time). Every piece of content should have a conversion purpose: watch the video, or enter the funnel.
+${communityBlock}
 
 CONTENT ANGLES AVAILABLE:
 ${activeAngles}
@@ -113,14 +111,14 @@ OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
       "hook": "TikTok/short-form hook — the first line that stops the scroll",
       "rationale": "2-3 sentences on why this angle works for this content and audience",
       "thumbnail_concept": "Detailed thumbnail description — what's in frame, text overlay, creator expression",
-      "youtube_description": "150-220 word YouTube description with natural keyword placement, CTA to ROCK RICH community"
+      "youtube_description": "150-220 word YouTube description with natural keyword placement, CTA to ${communityName} community"
     }
   ]
 }
 
 Generate exactly 5 packages. Each must be a distinct angle — not variations of the same idea.`;
 
-    let userPrompt = `Generate 5 content packages for this 7 Kin Homestead video.\n\n`;
+    let userPrompt = `Generate 5 content packages for this ${brand} video.\n\n`;
     if (youtube_url) userPrompt += `YouTube URL: ${youtube_url}\n`;
     if (youtube_video_id) userPrompt += `Video ID: ${youtube_video_id}\n`;
     if (topic) userPrompt += `Video topic: ${topic}\n`;
@@ -208,17 +206,13 @@ router.post('/captions', async (req, res) => {
       return res.status(400).json({ error: 'At least one clip is required' });
     }
 
-    const angleMap = {
-      financial: 'Financial angle — lead with money, savings, ROI, real numbers',
-      system:    'System is rigged — frame around why mainstream approaches fail regular people',
-      rockrich:  'Rock Rich — doing a lot with a little, resourcefulness as a superpower',
-      howto:     'Practical how-to — step-by-step, achievable for anyone',
-      mistakes:  'Mistakes / What Not To Do — hard-won lessons so the viewer doesn\'t have to',
-      lifestyle: 'Lifestyle / Day-in-Life — real life on the homestead',
-      viral:     'High Curiosity — counterintuitive, scroll-stopping'
-    };
+    const { brand: captBrand, followerSummary: captFs, profile: captCp } = getCreatorContext();
+    const captAngles = captCp?.content_angles || {};
+    const angleMap = Object.fromEntries(
+      Object.entries(captAngles).map(([k, a]) => [k, `${a.label || k} — ${a.description || ''}`])
+    );
 
-    const systemPrompt = `You are the social media voice for 7 Kin Homestead — homesteading and off-grid living, 725k TikTok, 54k YouTube, 80k Lemon8.
+    const systemPrompt = `You are the social media voice for ${captBrand} — ${captFs}.
 
 CREATOR VOICE: Straight-talking, warm, encouraging, genuinely funny. Never corporate. Slips jokes in. Real numbers always.
 
@@ -308,25 +302,19 @@ router.post('/emails', async (req, res) => {
 
     const activeTiers = tiers || ['greenhouse', 'garden', 'founding'];
 
-    const angleMap = {
-      financial: 'Financial Take — real numbers, cost savings, ROI math',
-      system:    'System Is Rigged — opting out of broken systems, doing it yourself',
-      rockrich:  'Rock Rich Episode — doing a lot with a little, resourcefulness as a superpower',
-      howto:     'Practical How-To — step by step, achievable for anyone',
-      mistakes:  'Mistakes / What Not To Do — hard-won lessons so the viewer doesn\'t have to',
-      lifestyle: 'Lifestyle / Day-in-Life — real life on the homestead',
-      viral:     'High Curiosity — counterintuitive, scroll-stopping'
-    };
+    const { brand: emailBrand, followerSummary: emailFs, communityName: emailComm, voiceSummary: emailVoice, profile: emailCp } = getCreatorContext();
+    const emailAnglesCp = emailCp?.content_angles || {};
+    const angleMap = Object.fromEntries(
+      Object.entries(emailAnglesCp).map(([k, a]) => [k, `${a.label || k} — ${a.description || ''}`])
+    );
+    const emailCommunityBlock = getCommunityBlock();
 
-    const systemPrompt = `You are the email strategist and copywriter for 7 Kin Homestead — a homesteading and off-grid living channel with 725k TikTok followers, 54k YouTube subscribers, and a paid community called ROCK RICH on Kajabi.
+    const systemPrompt = `You are the email strategist and copywriter for ${emailBrand} — ${emailFs}, and a paid community called ${emailComm} on Kajabi.
 
-ROCK RICH TIERS:
-- The Greenhouse: Free tier. These people are curious but haven't committed. They watch, they like the vibe. Goal: get them to join The Garden. Never make them feel like second-class citizens — just make The Garden feel like a natural next step.
-- The Garden: $19/month paid members. They chose to be here. Reward that. Give them a deeper insight, an exclusive feel, make them glad they joined.
-- The Founding 50: $297 one-time, limited spots. These are the inner circle. Treat them like it. Early access energy, insider tone, make them feel like they got in on something real.
+${emailCommunityBlock}
 
 CREATOR VOICE:
-Straight-talking, warm, encouraging, genuinely funny. Slips a joke in to cut tension when things get heavy. "The most unserious serious person to ever make a video." Never corporate, never salesy — feels like a message from a smart friend who happens to homestead. Plain text only — no markdown, no asterisks, no symbols.
+${emailVoice} Plain text only — no markdown, no asterisks, no symbols.
 
 EMAIL STRATEGY:
 - Day 0: Everyone gets the same email. One job: get them to watch the video. Short, warm, feels like a personal heads-up not a newsletter blast.

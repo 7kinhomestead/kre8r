@@ -15,6 +15,7 @@ const router  = express.Router();
 const fs      = require('fs');
 const path    = require('path');
 const db      = require('../db');
+const { getCreatorContext } = require('../utils/creator-context');
 
 // ─── Video format helpers ──────────────────────────────────────────────────────
 
@@ -40,12 +41,13 @@ function parseDurationSeconds(isoDuration) {
 // Deterministically identifies live stream / junk titles that never go to Claude.
 function isLiveStream(title) {
   if (!title) return false;
-  const t = title.toLowerCase().trim();
-  if (t === '7 kin homestead')    return true;
-  if (t.includes('is live'))      return true;
-  if (t.includes('livestream'))   return true;
-  if (t.includes('live stream'))  return true;
-  if (t.startsWith('7 kin homestead is')) return true;
+  const t    = title.toLowerCase().trim();
+  const brand = (getCreatorContext().brand || '').toLowerCase();
+  if (t === brand)                    return true;
+  if (t.includes('is live'))          return true;
+  if (t.includes('livestream'))       return true;
+  if (t.includes('live stream'))      return true;
+  if (brand && t.startsWith(brand + ' is')) return true;
   return false;
 }
 
@@ -119,37 +121,39 @@ router.post('/coach', async (req, res) => {
       `- "${v.title}": ${v.total_views ? Number(v.total_views).toLocaleString() : 0} views, ${v.total_likes ? Number(v.total_likes).toLocaleString() : 0} likes, ${v.total_comments ? Number(v.total_comments).toLocaleString() : 0} comments`
     ).join('\n');
 
-    const prompt = `You are a supportive creative director coaching Jason at 7 Kin Homestead — 725k TikTok, 54k YouTube, 80k Lemon8. His brand is straight-talking, warm, funny, never corporate. Sharp-tongued neighbor talking over a fence. His content angles: financial (real cost breakdowns), system (opt out and win), rockrich (doing a lot with a little), howto, mistakes, lifestyle, viral.
+    const { brand: coachBrand, creatorName: coachCn, followerSummary: coachFs, voiceSummary: coachVoice, contentAnglesText: coachAngles } = getCreatorContext();
 
-${shortsFiltered ? `NOTE: Analysis based on ${videos.length} long-form videos (Shorts excluded from averages).\n\n` : ''}Here are his ${videos.length} most recent YouTube videos with performance data:
+    const prompt = `You are a supportive creative director coaching ${coachCn} at ${coachBrand} — ${coachFs}. Voice: ${coachVoice}. Content angles: ${coachAngles.replace(/\n/g, ', ')}.
+
+${shortsFiltered ? `NOTE: Analysis based on ${videos.length} long-form videos (Shorts excluded from averages).\n\n` : ''}Here are the ${videos.length} most recent YouTube videos with performance data:
 ${videoList}
 
-His channel average is ${Number(avgViews).toLocaleString()} views per video.
-His best performing video is ${bestVideo ? `"${bestVideo.title}" with ${Number(bestVideo.views).toLocaleString()} views` : 'not yet determined'}.
+Channel average is ${Number(avgViews).toLocaleString()} views per video.
+Best performing video is ${bestVideo ? `"${bestVideo.title}" with ${Number(bestVideo.views).toLocaleString()} views` : 'not yet determined'}.
 Total all-time views: ${Number(health.total_views).toLocaleString()}.
 
-Give him:
-1. 3 specific things working well based on his actual data — reference real video titles
+Give ${coachCn}:
+1. 3 specific things working well based on actual data — reference real video titles
 2. 3 specific things to improve — specific and actionable, not generic
-3. His #1 focus for this week — one concrete thing he should do or make
-4. 2-3 trending topics his audience would love based on his content themes
-5. One encouraging note about his channel trajectory — warm, direct, no fluff, in his voice
-6. On-camera performance feedback — based on the engagement patterns, comment counts, and video topics, give Jason genuine constructive feedback on his on-camera performance. Consider:
-   - Are high-comment videos ones where he's more personal/vulnerable?
+3. #1 focus for this week — one concrete thing to do or make
+4. 2-3 trending topics the audience would love based on content themes
+5. One encouraging note about the channel trajectory — warm, direct, no fluff, in the creator's voice
+6. On-camera performance feedback — based on engagement patterns, comment counts, and video topics, give genuine constructive feedback on on-camera performance. Consider:
+   - Are high-comment videos ones where the creator is more personal/vulnerable?
    - Do tutorial-style videos perform differently than story-driven ones?
-   - What does the data suggest about his energy, pacing, or delivery?
+   - What does the data suggest about energy, pacing, or delivery?
    - What's one specific on-camera habit to work on?
-   Be a great director — honest, specific, kind but not soft. The goal is measurable improvement not comfort. Think: "Your best friend who happens to be Martin Scorsese."
+   Be a great director — honest, specific, kind but not soft. The goal is measurable improvement not comfort.
 
-Be specific, use his actual video titles, be encouraging not brutal.
+Be specific, use actual video titles, be encouraging not brutal.
 
 Respond in exactly this JSON structure (no markdown, no commentary, just JSON):
 {
   "working_well": ["point 1", "point 2", "point 3"],
   "improve": ["point 1", "point 2", "point 3"],
-  "focus_this_week": "One specific, concrete, actionable thing Jason should do or make this week.",
+  "focus_this_week": "One specific, concrete, actionable thing to do or make this week.",
   "trending_topics": ["topic 1", "topic 2", "topic 3"],
-  "coaching_note": "2-3 sentences. Warm, direct, in Jason's tone.",
+  "coaching_note": "2-3 sentences. Warm, direct, in the creator's tone.",
   "performance": "3-4 sentences of genuine on-camera performance coaching. Specific, director-level, actionable."
 }`;
 
@@ -398,8 +402,8 @@ router.post('/youtube-import-channel', async (req, res) => {
       res.end(); return;
     }
 
-    // Handle from env — no @ prefix (YouTube forHandle param doesn't need it)
-    const channelHandle = process.env.YOUTUBE_CHANNEL_HANDLE || '7kinhomestead';
+    // Handle from env or creator-profile.json — no @ prefix (YouTube forHandle param doesn't need it)
+    const channelHandle = process.env.YOUTUBE_CHANNEL_HANDLE || getCreatorContext().youtubeHandle;
 
     const { default: fetch } = await import('node-fetch');
 
@@ -636,10 +640,12 @@ router.post('/thumbnail-ab', upload.fields([
 
     const { default: fetch } = await import('node-fetch');
 
-    const prompt = `You are a YouTube thumbnail expert specializing in homesteading and off-grid content for 7 Kin Homestead (Jason Rutland — 725k TikTok, 54k YouTube). Jason's best-performing thumbnails follow this formula:
-- Authentic emotion on Jason's face (surprise, pride, exasperation, delight)
+    const { brand: thumbBrand, creatorName: thumbCn, followerSummary: thumbFs, niche: thumbNiche } = getCreatorContext();
+
+    const prompt = `You are a YouTube thumbnail expert specializing in ${thumbNiche} content for ${thumbBrand} (${thumbFs}). The creator's best-performing thumbnails follow this formula:
+- Authentic emotion on the creator's face (surprise, pride, exasperation, delight)
 - Bold readable numbers or short text (3-5 words max)
-- Natural outdoor / homestead backgrounds
+- Natural outdoor backgrounds
 - High contrast, warm tones
 - Feels real, not polished — the anti-stock-photo${contextLine}
 
@@ -650,7 +656,7 @@ Score EACH thumbnail on these 5 dimensions (0–10 each):
 2. text_readability — Is the text bold, legible, and fast to read at thumbnail size?
 3. visual_clarity — Is the composition clean and uncluttered?
 4. click_worthiness — Would a casual scroller stop and click THIS?
-5. brand_fit — Does it feel like 7 Kin Homestead — authentic, real, not corporate?
+5. brand_fit — Does it feel like ${thumbBrand} — authentic, real, not corporate?
 
 Respond in EXACTLY this JSON structure (no markdown, no commentary, just JSON):
 {
@@ -1089,9 +1095,11 @@ Avg views: ${cAvg.toLocaleString()}
 Top performer: "${topNode?.title || 'N/A'}" (${(topNode?.views || 0).toLocaleString()} views)`;
     }).join('\n\n');
 
+    const { brand: dnaBrand, tiktokHandle: dnaHandle } = getCreatorContext();
+
     const dnaPrompt = `You are analyzing a YouTube creator's complete content library to define their actual niche and ideal audience avatar.
 
-Channel: 7 Kin Homestead (@7kinhomestead)
+Channel: ${dnaBrand} (${dnaHandle})
 Total videos: ${nodes.length}
 Total views: ${totalViews.toLocaleString()}
 Channel average: ${avgViews.toLocaleString()} views per video

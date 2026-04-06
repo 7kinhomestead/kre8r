@@ -23,6 +23,7 @@ const fs     = require('fs');
 const crypto = require('crypto');
 
 const db = require('../db');
+const { getCreatorContext } = require('../utils/creator-context');
 
 if (process.env.FFMPEG_PATH)  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
 if (process.env.FFPROBE_PATH) ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
@@ -264,7 +265,8 @@ async function extractThumbnails(filePath, duration) {
 // CLAUDE VISION — MULTI-IMAGE CLASSIFICATION
 // ─────────────────────────────────────────────
 
-const VISION_PROMPT = `You are analyzing three thumbnails from different points in a video clip (early, middle, late) from a homesteading and off-grid living content creator (7 Kin Homestead). Use all three frames together to make your classification — do not judge on any single frame alone. A blurry early frame with sharp middle and late frames is a usable or hero clip, not a discard. Return ONLY a JSON object:
+const _vCtx = getCreatorContext();
+const VISION_PROMPT = `You are analyzing three thumbnails from different points in a video clip (early, middle, late) from a ${_vCtx.niche} content creator (${_vCtx.brand}). Use all three frames together to make your classification — do not judge on any single frame alone. A blurry early frame with sharp middle and late frames is a usable or hero clip, not a discard. Return ONLY a JSON object:
 {
   "shot_type": "one of: dialogue, talking-head, b-roll, action, completed-video, unusable",
   "subcategory": "one of: wide, medium, close-up, detail, null — only for b-roll, null for all others",

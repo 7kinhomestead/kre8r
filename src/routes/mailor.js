@@ -56,11 +56,12 @@ async function callClaude(systemPrompt, userPrompt, maxTokens = 4000) {
 }
 
 function buildTierContext(profile) {
-  const tiers = profile?.community?.tiers || {};
-  const lines = ['ROCK RICH COMMUNITY TIERS:'];
-  if (tiers.greenhouse) lines.push(`- Greenhouse (Free): ${tiers.greenhouse.description || 'Free members — curious, not yet committed. Goal: convert to Garden.'}`);
-  if (tiers.garden)     lines.push(`- Garden ($19/mo): ${tiers.garden.description     || 'Paid members. Reward their commitment. Make them glad they joined.'}`);
-  if (tiers.founding)   lines.push(`- Founding 50 ($297 one-time): ${tiers.founding.description || 'Inner circle. Limited spots. Insider tone. Early access energy.'}`);
+  const tiers        = profile?.community?.tiers || {};
+  const communityName = profile?.community?.name || 'Community';
+  const lines = [`${communityName} COMMUNITY TIERS:`];
+  if (tiers.greenhouse)  lines.push(`- ${tiers.greenhouse.label || 'Greenhouse'} (${tiers.greenhouse.price || 'Free'}): ${tiers.greenhouse.description || 'Free members — curious, not yet committed. Goal: convert to paid tier.'}`);
+  if (tiers.garden)      lines.push(`- ${tiers.garden.label || 'Garden'} (${tiers.garden.price || '$19/mo'}): ${tiers.garden.description || 'Paid members. Reward their commitment. Make them glad they joined.'}`);
+  if (tiers.founding_50) lines.push(`- ${tiers.founding_50.label || 'Founding 50'} (${tiers.founding_50.price || '$297 one-time'}): ${tiers.founding_50.description || 'Inner circle. Limited spots. Insider tone. Early access energy.'}`);
   return lines.join('\n');
 }
 
@@ -151,7 +152,17 @@ router.post('/broadcast', async (req, res) => {
     const voiceContext = buildVoiceContext(profile, voiceProfiles);
     const tierContext  = buildTierContext(profile);
 
-    const systemPrompt = `You are the email copywriter for 7 Kin Homestead — a homesteading creator with 725k TikTok, 54k YouTube, and a paid community called ROCK RICH on Kajabi.
+    const brand        = profile?.creator?.brand    || 'the creator';
+    const communityNm  = profile?.community?.name   || 'the community';
+    const followerStr  = (() => {
+      const p = profile?.platforms || {};
+      const parts = [];
+      if (p.tiktok?.followers)    parts.push(`${Math.round(p.tiktok.followers/1000)}k TikTok`);
+      if (p.youtube?.subscribers) parts.push(`${Math.round(p.youtube.subscribers/1000)}k YouTube`);
+      return parts.join(', ');
+    })();
+
+    const systemPrompt = `You are the email copywriter for ${brand} — a creator with ${followerStr}, and a paid community called ${communityNm} on Kajabi.
 
 ${tierContext}
 
@@ -196,7 +207,7 @@ RULES:
 Segment: ${segment || 'everyone'}
 Goal: ${goal || 'not specified'}
 
-Write a complete blog post in Jason's voice. Plain text only. Include a title, 3-5 paragraphs, and a clear call to action at the end.
+Write a complete blog post in the creator's voice. Plain text only. Include a title, 3-5 paragraphs, and a clear call to action at the end.
 
 Return JSON only:
 {
@@ -281,7 +292,8 @@ router.post('/sequence', async (req, res) => {
       viral:     'High Curiosity — counterintuitive, scroll-stopping',
     };
 
-    const systemPrompt = `You are the email strategist for 7 Kin Homestead.
+    const brand2       = profile?.creator?.brand   || 'the creator';
+    const systemPrompt = `You are the email strategist for ${brand2}.
 
 ${tierContext}
 

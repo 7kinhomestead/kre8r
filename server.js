@@ -128,7 +128,7 @@ app.get('/api/creator-profile', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    instance: '7-kin-homestead',
+    instance: require('./creator-profile.json').instance,
     version: '1.0',
     anthropic_configured: !!process.env.ANTHROPIC_API_KEY
   });
@@ -194,8 +194,13 @@ async function start() {
       : '\x1b[33m⚠ ANTHROPIC_API_KEY not set — add to .env to enable generation\x1b[0m';
 
     console.log('');
+    const _cp      = require('./creator-profile.json');
+    const _brand   = (_cp?.creator?.brand || _cp?.instance || 'INSTANCE').toUpperCase();
+    const _banner  = `KRE8\u03a9R \u2014 ${_brand}`;
+    const _pad     = Math.max(0, Math.floor((42 - _banner.length) / 2));
+    const _bannerL = ' '.repeat(_pad) + _banner + ' '.repeat(Math.max(0, 42 - _pad - _banner.length));
     console.log('\x1b[36m╔══════════════════════════════════════════╗\x1b[0m');
-    console.log('\x1b[36m║         KRE8\u03a9R — 7 KIN HOMESTEAD         ║\x1b[0m');
+    console.log(`\x1b[36m║${_bannerL}║\x1b[0m`);
     console.log('\x1b[36m╚══════════════════════════════════════════╝\x1b[0m');
     console.log('');
     console.log(`  \x1b[32m▶ Running:\x1b[0m  http://localhost:${PORT}`);

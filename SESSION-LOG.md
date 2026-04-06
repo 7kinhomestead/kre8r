@@ -1,3 +1,74 @@
+# Kre8Ωr Session Log — 2026-04-05 (Session 21 — Engine vs Soul Audit + better-sqlite3 Migration)
+
+## What Was Built — Session 21
+
+---
+
+### Engine vs Soul Audit — Complete
+
+Full audit of all hardcoded creator-specific data across the codebase. Every violation replaced with reads from `creator-profile.json` via shared utility.
+
+**New utility: `src/utils/creator-context.js`**
+- `getCreatorContext()` — returns brand, creatorName, partnerName, voiceSummary, communityName, communityTiers, followerSummary, tiktokHandle, youtubeHandle, niche, tagline, contentAnglesText, profile
+- `getCreatorOneLiner()`, `getCommunityBlock()`, `getVoiceBlock()`, `loadProfile()`
+- `fmtFollowers()` helper (725000 → "725k")
+
+**Files fixed (12 total):**
+- `src/routes/id8r.js` — Replaced static `SYSTEM_PROMPTS` with `buildSystemPrompts()` fn using `getCreatorContext()`; all 8 callClaude sites pass sessionId; "Jason"/"7 Kin"/"725k" all sourced from profile
+- `src/routes/generate.js` — System prompts, angle descriptions, goal map all dynamic from profile
+- `src/routes/mailor.js` — `buildTierContext()` reads profile tiers; brand/community/followers dynamic; `founding_50` key fix
+- `src/routes/analytr.js` — `isLiveStream()`, channel handle, coaching/thumbnail/DNA prompts all dynamic
+- `src/routes/mirrr.js` — Same fixes as analytr.js
+- `src/editor/selects.js` — Prompt uses profile niche/brand/followers
+- `src/editor/selects-new.js` — Freeform rant and off-script gold prompts use profile fields
+- `src/vault/intake.js` — VISION_PROMPT uses profile niche/brand
+- `src/vault/cutor.js` — CutΩr system prompt uses profile fields
+- `src/routes/davinci.js` — `--creator_name` arg uses `getCreatorContext().brand`
+
+**`creator-profile.json` additions:**
+- Added `creator.name`, `creator.full_name`, `creator.partner`, `creator.niche`, `creator.tagline`, `creator.mission` fields
+
+---
+
+### better-sqlite3 Migration — Complete
+
+Migrated from sql.js (WebAssembly in-memory) to better-sqlite3 (native synchronous SQLite).
+
+**`src/db.js`:**
+- `const Database = require('better-sqlite3')` replacing sql.js
+- `initDb()` now synchronous; WAL mode + foreign keys enabled via PRAGMA
+- New helpers: `_run()`, `_get()`, `_all()` wrapping better-sqlite3 prepared statements
+- `persist()` removed entirely — better-sqlite3 writes directly to disk
+- `token_usage` table added (tool, session_id, input_tokens, output_tokens, estimated_cost)
+- `logTokenUsage()` and `getTokenStats()` exported
+
+**`server.js`:**
+- `await initDb()` → `initDb()` (synchronous)
+- Health check includes `instance` from creator-profile.json
+- Console banner dynamically reads brand name from creator-profile.json
+
+---
+
+### Token Tracking — Id8Ωr
+
+- All Claude API calls in id8r.js now log to `token_usage` table with sessionId
+- `src/routes/beta.js` — `GET /api/beta/token-stats` endpoint
+- `public/admin.html` — Section 6 "Token Usage & AI Cost" with stat cards + per-tool breakdown table
+
+---
+
+### App Icon + Favicon
+
+- **`public/images/kre8r-icon.svg`** — 512×512 app icon. Bold K with Ω integrated into notch negative space. Dark background #0e0f0e, teal gradient #00d4b8→#009e88, rounded corners rx=80.
+- **`public/favicon.svg`** — Same design, square (no rx) for favicon compatibility.
+
+---
+
+## Commits This Session
+- (see git log)
+
+---
+
 # Kre8Ωr Session Log — 2026-04-05 (Session 20 — Marketing Kit + Collaborator Soul System)
 
 ## What Was Built — Session 20
