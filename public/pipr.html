@@ -104,14 +104,30 @@
   .collab-crole{font-size:11px;color:var(--text-dim);}
 
   /* ── STRUCTURE CARDS (Screen 2) ── */
-  .structure-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;}
+  .structure-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
   @media(max-width:580px){.structure-grid{grid-template-columns:1fr;}}
-  .structure-card{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius);padding:22px 20px;cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;gap:10px;}
+  .structure-card{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius);padding:18px 16px;cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;gap:8px;position:relative;}
   .structure-card:hover{border-color:var(--border-bright);background:var(--bg-card-2);}
   .structure-card.selected{border-color:var(--teal);background:var(--teal-glow);box-shadow:0 0 0 1px var(--teal) inset;}
-  .structure-card-icon{font-size:26px;line-height:1;}
-  .structure-card-title{font-family:var(--font-head);font-size:18px;letter-spacing:1.5px;color:var(--text);}
-  .structure-card-desc{font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .structure-card-top{display:flex;align-items:flex-start;gap:8px;}
+  .structure-card-icon{font-size:22px;line-height:1;flex-shrink:0;}
+  .structure-card-badge{font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:20px;background:rgba(62,207,178,0.15);border:1px solid rgba(62,207,178,0.4);color:var(--teal);margin-left:auto;flex-shrink:0;align-self:flex-start;}
+  .structure-card-title{font-family:var(--font-head);font-size:15px;letter-spacing:1px;color:var(--text);}
+  .structure-card-desc{font-size:12px;color:var(--text-dim);line-height:1.5;}
+  .structure-card-meta{font-size:11px;color:var(--text-dimmer);line-height:1.5;}
+  .structure-card-meta span{color:var(--text-dim);font-weight:600;}
+  .structure-card-details{font-size:11px;color:var(--text-dimmer);}
+  .structure-card-details summary{cursor:pointer;color:var(--text-dimmer);font-weight:600;list-style:none;display:flex;align-items:center;gap:4px;user-select:none;}
+  .structure-card-details summary::after{content:'▸';font-size:9px;transition:transform 0.15s;}
+  .structure-card-details[open] summary::after{transform:rotate(90deg);}
+  .structure-card-retention{margin-top:6px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:5px;color:var(--text-dim);line-height:1.5;font-size:11px;}
+  /* Beat preview below grid */
+  .structure-beat-preview{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px;}
+  .structure-beat-preview-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .structure-beat-preview-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);}
+  .structure-beat-preview-count{font-size:11px;color:var(--text-dimmer);}
+  .structure-beat-pills{display:flex;flex-wrap:wrap;gap:6px;}
+  .structure-beat-pill{font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-dim);white-space:nowrap;}
 
   /* ── SETUP DEPTH PILLS ── */
   .setup-depth-row{margin-bottom:8px;}
@@ -375,25 +391,154 @@
 
     <div class="structure-grid">
       <div class="structure-card" id="scard-save_the_cat" onclick="selectStructure('save_the_cat')">
-        <div class="structure-card-icon">🐱</div>
+        <div class="structure-card-top"><div class="structure-card-icon">🐱</div></div>
         <div class="structure-card-title">SAVE THE CAT</div>
         <div class="structure-card-desc">15 beats. For Rock Rich Episodes and reality storytelling.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Long-form reality, Rock Rich Episodes</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Emotional arcs and reversals keep viewers locked in — the All Is Lost moment is one of YouTube's strongest retention beats.</div>
+        </details>
       </div>
       <div class="structure-card" id="scard-story_circle" onclick="selectStructure('story_circle')">
-        <div class="structure-card-icon">⭕</div>
+        <div class="structure-card-top"><div class="structure-card-icon">⭕</div></div>
         <div class="structure-card-title">STORY CIRCLE</div>
         <div class="structure-card-desc">8 beats. Dan Harmon's structure. Fast, clean.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Shorter videos, fast content cycles</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">The need established at beat 2 creates a loop that only closes at beat 8 — viewers subconsciously stay to see it close.</div>
+        </details>
       </div>
       <div class="structure-card" id="scard-vsl_arc" onclick="selectStructure('vsl_arc')">
-        <div class="structure-card-icon">📈</div>
+        <div class="structure-card-top"><div class="structure-card-icon">📈</div></div>
         <div class="structure-card-title">VSL ARC</div>
         <div class="structure-card-desc">7 beats. For sales and community videos. Hook to CTA.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Rock Rich community, offers, launches</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Agitation raises emotional stakes before the solution — viewers need to hear the offer to resolve the tension.</div>
+        </details>
       </div>
       <div class="structure-card" id="scard-free_form" onclick="selectStructure('free_form')">
-        <div class="structure-card-icon">🌊</div>
+        <div class="structure-card-top"><div class="structure-card-icon">🌊</div></div>
         <div class="structure-card-title">FREE FORM</div>
         <div class="structure-card-desc">No fixed structure. Claude identifies natural sections from footage.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Experimental, talking head, unplanned shoots</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Your natural energy and personality drive retention — best used when the content is inherently compelling.</div>
+        </details>
       </div>
+
+      <div class="structure-card" id="scard-confession_arc" onclick="selectStructure('confession_arc')">
+        <div class="structure-card-top"><div class="structure-card-icon">🎙️</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">THE CONFESSION ARC</div>
+        <div class="structure-card-desc">Admit something uncomfortable, then reveal what you discovered.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Contrarian takes, "I was wrong" videos</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Vulnerability creates immediate trust — viewers stay to see if you're for real.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-before_after_bridge" onclick="selectStructure('before_after_bridge')">
+        <div class="structure-card-top"><div class="structure-card-icon">🌉</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">BEFORE/AFTER BRIDGE</div>
+        <div class="structure-card-desc">The painful before, the exact moment of change, the bridge, and how they can cross it.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Transformation content, homestead journey</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Viewers stay to see if the "after" is real.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-myth_buster" onclick="selectStructure('myth_buster')">
+        <div class="structure-card-top"><div class="structure-card-icon">💥</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">THE MYTH BUSTER</div>
+        <div class="structure-card-desc">State the common belief, dismantle it piece by piece, reveal the truth.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Financial rebellion, contrarian content</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Creates cognitive dissonance — viewers MUST stay to resolve it.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-documentary_arc" onclick="selectStructure('documentary_arc')">
+        <div class="structure-card-top"><div class="structure-card-icon">🎬</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">DOCUMENTARY ARC</div>
+        <div class="structure-card-desc">Follow the problem in real time — unresolved tension keeps viewers watching.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Reality content, homestead builds, day-in-the-life</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Viewers need to see what happens — same as a thriller.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-tutorial_with_stakes" onclick="selectStructure('tutorial_with_stakes')">
+        <div class="structure-card-top"><div class="structure-card-icon">⚡</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">TUTORIAL WITH STAKES</div>
+        <div class="structure-card-desc">A how-to elevated into a story by showing what could go wrong.</div>
+        <div class="structure-card-meta"><span>Best for:</span> DIY, solar, build content</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Stakes turn a tutorial into a story — viewers care about the outcome.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-explainer_pyramid" onclick="selectStructure('explainer_pyramid')">
+        <div class="structure-card-top"><div class="structure-card-icon">🔺</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">THE EXPLAINER PYRAMID</div>
+        <div class="structure-card-desc">Start with the shocking conclusion, build the case, return with new meaning.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Financial, data-driven, opinion content</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Counterintuitive opening creates a "how did they get there?" loop.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-heros_gauntlet" onclick="selectStructure('heros_gauntlet')">
+        <div class="structure-card-top"><div class="structure-card-icon">⚔️</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">THE HERO'S GAUNTLET</div>
+        <div class="structure-card-desc">Three escalating obstacles create three retention peaks in one video.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Epic builds, multi-day projects, survival content</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Three-obstacle structure creates natural retention spikes throughout.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-virality_pyramid" onclick="selectStructure('virality_pyramid')">
+        <div class="structure-card-top"><div class="structure-card-icon">🌋</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">THE VIRALITY PYRAMID</div>
+        <div class="structure-card-desc">Believable conflict + impossible goal + vulnerable honest pursuit = channel-defining video.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Long-term series, channel-defining videos</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">The goal is SO audacious viewers subscribe just to see if you pull it off.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-permission_structure" onclick="selectStructure('permission_structure')">
+        <div class="structure-card-top"><div class="structure-card-icon">🔑</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">THE PERMISSION STRUCTURE</div>
+        <div class="structure-card-desc">Prove the thing they want is actually possible — then give them permission to want it.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Financial escape content, lifestyle content, Rock Rich</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Speaks directly to the viewer's internal objection — they stay because you're talking TO them.</div>
+        </details>
+      </div>
+      <div class="structure-card" id="scard-dual_timeline" onclick="selectStructure('dual_timeline')">
+        <div class="structure-card-top"><div class="structure-card-icon">⏳</div><div class="structure-card-badge">NEW</div></div>
+        <div class="structure-card-title">THE DUAL TIMELINE</div>
+        <div class="structure-card-desc">Non-linear storytelling — present and past intercut to create a puzzle viewers stay to solve.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Emotional stories, relationship content, family videos</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Non-linear structure creates a puzzle — viewers stay to assemble the full picture.</div>
+        </details>
+      </div>
+    </div>
+
+    <div id="structure-beat-preview" style="display:none;" class="structure-beat-preview">
+      <div class="structure-beat-preview-header">
+        <div class="structure-beat-preview-label" id="sbp-label"></div>
+        <div class="structure-beat-preview-count" id="sbp-count"></div>
+      </div>
+      <div class="structure-beat-pills" id="sbp-pills"></div>
     </div>
 
     <div class="setup-depth-row" id="depth-row" style="display:none;">
@@ -715,6 +860,20 @@ function selectStructure(val) {
   depthRow.style.display = 'flex';
   depthRow.style.flexDirection = 'column';
 
+  // Beat preview below grid
+  const beats = BEAT_TEMPLATES[val] || [];
+  const preview = document.getElementById('structure-beat-preview');
+  if (beats.length) {
+    document.getElementById('sbp-label').textContent = card ? card.querySelector('.structure-card-title').textContent : val;
+    document.getElementById('sbp-count').textContent = beats.length + ' beats';
+    document.getElementById('sbp-pills').innerHTML = beats.map(b =>
+      `<div class="structure-beat-pill">${b.name}</div>`
+    ).join('');
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+
   clearBanner('valid-banner-2');
 }
 
@@ -746,43 +905,119 @@ function handleCustomSelect(selectId, wrapId) {
   wrap.style.display = sel.value === 'custom' ? 'block' : 'none';
 }
 
-// ── BEAT TEMPLATES (client-side — no server call needed) ──
+// ── BEAT TEMPLATES (client-side — mirrors src/pipr/beats.js) ──
 const BEAT_TEMPLATES = {
   save_the_cat: [
-    {index:1,  name:"Opening Image",      target_pct:0,  emotional_function:"Establish the world as it is before anything changes. A single image or moment that captures the starting state.", reality_note:"What does life look like at the start of this story? What are you doing, where are you, what's the mood?"},
-    {index:2,  name:"Theme Stated",       target_pct:5,  emotional_function:"Someone says (or implies) what this story is really about. The thesis of the episode.", reality_note:"What's the deeper point of this video beyond the surface topic? When do you say it out loud?"},
-    {index:3,  name:"Set-Up",             target_pct:1,  emotional_function:"Establish the world, the people, the stakes. What does the audience need to know before things change?", reality_note:"Context, background, who's involved, what the situation is."},
-    {index:4,  name:"Catalyst",           target_pct:10, emotional_function:"The inciting incident. Something happens that sets the story in motion. No going back.", reality_note:"What was the moment things changed? The discovery, the decision, the problem that started everything."},
-    {index:5,  name:"Debate",             target_pct:12, emotional_function:"The protagonist wrestles with whether to go. Internal conflict, weighing options.", reality_note:"What were you unsure about? What almost made you not do this? Be honest about the doubt."},
-    {index:6,  name:"Break into Two",     target_pct:25, emotional_function:"The decision is made. We enter the upside-down world. The adventure begins.", reality_note:"The moment you committed. When you said yes, bought the thing, started the project."},
-    {index:7,  name:"B Story",            target_pct:30, emotional_function:"A secondary storyline begins — often where the real theme lives. A relationship, a parallel lesson.", reality_note:"Is there a person, relationship, or parallel situation woven into this story? What's the emotional undercurrent?"},
-    {index:8,  name:"Fun and Games",      target_pct:30, emotional_function:"The promise of the premise. This is what the audience came to see. The bulk of the content.", reality_note:"The actual doing of the thing. The process, the work, the moments that make this video worth watching."},
-    {index:9,  name:"Midpoint",           target_pct:50, emotional_function:"A false victory or false defeat. Stakes are raised. The story shifts.", reality_note:"Halfway through — what changed? What worked better than expected or worse than expected?"},
-    {index:10, name:"Bad Guys Close In",  target_pct:55, emotional_function:"Things start to go wrong. External pressure, internal doubt, complications mount.", reality_note:"What went wrong? What was harder than expected? What almost derailed everything?"},
-    {index:11, name:"All Is Lost",        target_pct:75, emotional_function:"The lowest point. The worst moment. Everything seems to have failed.", reality_note:"The moment you were most frustrated, defeated, or ready to quit. Be real about this."},
-    {index:12, name:"Dark Night of the Soul", target_pct:75, emotional_function:"Sitting with the failure. Processing. The quiet before the solution.", reality_note:"What did you think about at the worst moment? What did you almost decide?"},
-    {index:13, name:"Break into Three",   target_pct:80, emotional_function:"The solution appears. A new idea, a realization, help arrives.", reality_note:"What changed? What was the insight, the fix, the person who helped, the thing you tried differently?"},
-    {index:14, name:"Finale",             target_pct:80, emotional_function:"Execute the solution. The climax. Everything comes together.", reality_note:"The resolution. What happened when you applied the solution? Show the result."},
-    {index:15, name:"Final Image",        target_pct:99, emotional_function:"The world as it is now. Mirror of the Opening Image but changed.", reality_note:"Where are you now compared to where you started? What does this look like after?"}
+    {index:1,  name:"Opening Image",       target_pct:0,  emotional_function:"Establish the world as it is before anything changes.", reality_note:"What does life look like at the start of this story?"},
+    {index:2,  name:"Theme Stated",        target_pct:5,  emotional_function:"Someone says (or implies) what this story is really about.", reality_note:"What's the deeper point of this video?"},
+    {index:3,  name:"Set-Up",              target_pct:1,  emotional_function:"Establish the world, the people, the stakes.", reality_note:"Context, background, who's involved."},
+    {index:4,  name:"Catalyst",            target_pct:10, emotional_function:"The inciting incident. Something happens that sets the story in motion.", reality_note:"The moment things changed."},
+    {index:5,  name:"Debate",              target_pct:12, emotional_function:"The protagonist wrestles with whether to go.", reality_note:"What were you unsure about?"},
+    {index:6,  name:"Break into Two",      target_pct:25, emotional_function:"The decision is made. The adventure begins.", reality_note:"The moment you committed."},
+    {index:7,  name:"B Story",             target_pct:30, emotional_function:"A secondary storyline begins.", reality_note:"A person, relationship, or parallel lesson."},
+    {index:8,  name:"Fun and Games",       target_pct:30, emotional_function:"The promise of the premise. The bulk of the content.", reality_note:"The actual doing of the thing."},
+    {index:9,  name:"Midpoint",            target_pct:50, emotional_function:"A false victory or false defeat. Stakes are raised.", reality_note:"Halfway through — what changed?"},
+    {index:10, name:"Bad Guys Close In",   target_pct:55, emotional_function:"Things start to go wrong.", reality_note:"What went wrong? What almost derailed everything?"},
+    {index:11, name:"All Is Lost",         target_pct:75, emotional_function:"The lowest point. Everything seems to have failed.", reality_note:"The moment you were most defeated."},
+    {index:12, name:"Dark Night of the Soul", target_pct:75, emotional_function:"Sitting with the failure. The quiet before the solution.", reality_note:"What did you think about at the worst moment?"},
+    {index:13, name:"Break into Three",    target_pct:80, emotional_function:"The solution appears.", reality_note:"What changed? The insight or fix."},
+    {index:14, name:"Finale",              target_pct:80, emotional_function:"Execute the solution. Everything comes together.", reality_note:"The resolution."},
+    {index:15, name:"Final Image",         target_pct:99, emotional_function:"The world as it is now. Mirror of the Opening Image.", reality_note:"Where are you now vs. where you started?"}
   ],
   story_circle: [
-    {index:1, name:"You",     target_pct:0,  emotional_function:"Establish the hero in their comfort zone.", reality_note:"Who are you and what is normal for you right now?"},
-    {index:2, name:"Need",    target_pct:10, emotional_function:"Something is wrong or missing. A want or need emerges.", reality_note:"What problem, gap, or desire started this story?"},
-    {index:3, name:"Go",      target_pct:25, emotional_function:"Cross the threshold. Enter the unknown.", reality_note:"The moment you committed and stepped into unfamiliar territory."},
-    {index:4, name:"Search",  target_pct:37, emotional_function:"The road of trials. Adapt to the new situation.", reality_note:"The process, the struggle, the figuring-it-out phase."},
-    {index:5, name:"Find",    target_pct:50, emotional_function:"Get what you were looking for — but at a cost.", reality_note:"The result, the discovery, the thing you were working toward."},
-    {index:6, name:"Take",    target_pct:62, emotional_function:"Pay the price. The consequence of getting what you wanted.", reality_note:"What did it cost? What changed because of what you found?"},
-    {index:7, name:"Return",  target_pct:75, emotional_function:"Come back to where you started — but different.", reality_note:"Back to normal life — but what's different now?"},
-    {index:8, name:"Change",  target_pct:87, emotional_function:"The transformation is complete. The lesson lands.", reality_note:"What do you know now that you didn't before? What changed in you?"}
+    {index:1, name:"You",    target_pct:0,  emotional_function:"Establish the hero in their comfort zone.", reality_note:"Who are you and what is normal right now?"},
+    {index:2, name:"Need",   target_pct:10, emotional_function:"Something is wrong or missing.", reality_note:"What problem or desire started this story?"},
+    {index:3, name:"Go",     target_pct:25, emotional_function:"Cross the threshold. Enter the unknown.", reality_note:"The moment you committed."},
+    {index:4, name:"Search", target_pct:37, emotional_function:"The road of trials. Adapt to the new situation.", reality_note:"The process, the struggle."},
+    {index:5, name:"Find",   target_pct:50, emotional_function:"Get what you were looking for — but at a cost.", reality_note:"The result, the discovery."},
+    {index:6, name:"Take",   target_pct:62, emotional_function:"Pay the price.", reality_note:"What did it cost?"},
+    {index:7, name:"Return", target_pct:75, emotional_function:"Come back to where you started — but different.", reality_note:"Back to normal — but what's different?"},
+    {index:8, name:"Change", target_pct:87, emotional_function:"The transformation is complete.", reality_note:"What do you know now that you didn't before?"}
   ],
   vsl_arc: [
-    {index:1, name:"Hook",      target_pct:0,  emotional_function:"Stop the scroll. Create immediate curiosity or recognition.", reality_note:"What's the one thing that makes someone stop and watch?"},
-    {index:2, name:"Problem",   target_pct:10, emotional_function:"Name the pain. Make them feel seen and understood.", reality_note:"What problem does your audience have that this video addresses?"},
-    {index:3, name:"Agitation", target_pct:20, emotional_function:"Make the problem feel urgent. What happens if nothing changes?", reality_note:"Why does this problem matter? What's the cost of staying stuck?"},
-    {index:4, name:"Solution",  target_pct:35, emotional_function:"Introduce the answer. Hope arrives.", reality_note:"What's the solution you're presenting? How does it change things?"},
-    {index:5, name:"Proof",     target_pct:50, emotional_function:"Show it works. Credibility, results, evidence.", reality_note:"What proof do you have? Results, testimonials, your own story."},
-    {index:6, name:"Offer",     target_pct:75, emotional_function:"The specific ask. What they get, what it costs, why now.", reality_note:"What exactly are you offering? Be specific and clear."},
-    {index:7, name:"CTA",       target_pct:90, emotional_function:"The direct call to action. One clear next step.", reality_note:"What's the one thing you want them to do right now?"}
+    {index:1, name:"Hook",      target_pct:0,  emotional_function:"Stop the scroll.", reality_note:"What makes someone stop and watch?"},
+    {index:2, name:"Problem",   target_pct:10, emotional_function:"Name the pain. Make them feel seen.", reality_note:"What problem does your audience have?"},
+    {index:3, name:"Agitation", target_pct:20, emotional_function:"Make the problem feel urgent.", reality_note:"What's the cost of staying stuck?"},
+    {index:4, name:"Solution",  target_pct:35, emotional_function:"Introduce the answer.", reality_note:"What's the solution you're presenting?"},
+    {index:5, name:"Proof",     target_pct:50, emotional_function:"Show it works.", reality_note:"What proof do you have?"},
+    {index:6, name:"Offer",     target_pct:75, emotional_function:"The specific ask.", reality_note:"What exactly are you offering?"},
+    {index:7, name:"CTA",       target_pct:90, emotional_function:"The direct call to action.", reality_note:"One clear next step."}
+  ],
+  confession_arc: [
+    {index:1, name:"Uncomfortable Admission",  target_pct:0,  emotional_function:"Admit something uncomfortable upfront.", reality_note:"What's the thing you're admitting?"},
+    {index:2, name:"Why It Matters",           target_pct:15, emotional_function:"Establish the stakes of the admission.", reality_note:"Why should the viewer care?"},
+    {index:3, name:"What You Discovered",      target_pct:35, emotional_function:"The investigation or journey that followed.", reality_note:"What did you find out?"},
+    {index:4, name:"The Uncomfortable Truth",  target_pct:65, emotional_function:"The real conclusion — harder to say than the opening.", reality_note:"What's the truth most people don't want to hear?"},
+    {index:5, name:"What To Do About It",      target_pct:85, emotional_function:"Actionable resolution.", reality_note:"The practical takeaway."}
+  ],
+  before_after_bridge: [
+    {index:1, name:"Pain of Before",            target_pct:0,  emotional_function:"Paint the painful starting state vividly.", reality_note:"What was life like before? Be specific."},
+    {index:2, name:"The Exact Moment of Change",target_pct:20, emotional_function:"Pinpoint when everything shifted.", reality_note:"What exactly happened?"},
+    {index:3, name:"The Bridge — What You Did", target_pct:35, emotional_function:"The specific actions taken.", reality_note:"What did you do? The actual steps."},
+    {index:4, name:"The After",                 target_pct:65, emotional_function:"Show the after state clearly.", reality_note:"What does life look like now?"},
+    {index:5, name:"How They Can Get There",    target_pct:85, emotional_function:"Give the audience a path.", reality_note:"What's the clear next step?"}
+  ],
+  myth_buster: [
+    {index:1, name:"State the Common Belief",   target_pct:0,  emotional_function:"Establish what everyone believes.", reality_note:"What's the conventional wisdom you're about to destroy?"},
+    {index:2, name:"Why People Believe It",     target_pct:15, emotional_function:"Validate why the myth exists.", reality_note:"Where does this belief come from?"},
+    {index:3, name:"Dismantle It — Point 1",    target_pct:30, emotional_function:"First crack in the belief.", reality_note:"First evidence the belief is wrong."},
+    {index:4, name:"Dismantle It — Point 2",    target_pct:50, emotional_function:"The evidence builds.", reality_note:"Second evidence. Stronger than the first."},
+    {index:5, name:"Dismantle It — Point 3",    target_pct:65, emotional_function:"The final blow.", reality_note:"Third and decisive evidence."},
+    {index:6, name:"Reveal the Truth",          target_pct:80, emotional_function:"The real answer emerges.", reality_note:"What's actually true?"},
+    {index:7, name:"The Better Path",           target_pct:90, emotional_function:"What to do instead.", reality_note:"What should someone do with this new truth?"}
+  ],
+  documentary_arc: [
+    {index:1, name:"Set the Scene",             target_pct:0,  emotional_function:"Establish the world, location, stakes.", reality_note:"Where are you? Set it up like a documentary."},
+    {index:2, name:"Inciting Moment",           target_pct:10, emotional_function:"Something kicks the story into gear.", reality_note:"What problem or discovery starts the story?"},
+    {index:3, name:"Follow the Problem",        target_pct:25, emotional_function:"Real-time pursuit — unresolved.", reality_note:"Follow it as it develops."},
+    {index:4, name:"Crisis Point",              target_pct:60, emotional_function:"Things get harder, more uncertain.", reality_note:"When did it feel most difficult?"},
+    {index:5, name:"Resolution",                target_pct:80, emotional_function:"The outcome reveals itself.", reality_note:"What happened? How did it resolve?"},
+    {index:6, name:"Reflection",                target_pct:92, emotional_function:"Step back and find the meaning.", reality_note:"What does this experience mean?"}
+  ],
+  tutorial_with_stakes: [
+    {index:1, name:"What We're Building + Why", target_pct:0,  emotional_function:"Goal + significance — this is a story, not just a tutorial.", reality_note:"What are we building? Why does it matter?"},
+    {index:2, name:"The Challenge / What Could Go Wrong", target_pct:15, emotional_function:"Raise the stakes before it starts.", reality_note:"What could fail? Real consequences."},
+    {index:3, name:"Step by Step with Real Problems",     target_pct:30, emotional_function:"The tutorial — showing complications as they happen.", reality_note:"Real process including mistakes and adjustments."},
+    {index:4, name:"The Result",                target_pct:80, emotional_function:"Did it work? Show the actual outcome.", reality_note:"What was the result? Be honest."},
+    {index:5, name:"Lesson Learned",            target_pct:90, emotional_function:"The takeaway that elevates this beyond a how-to.", reality_note:"What's the one thing someone watching should know?"}
+  ],
+  explainer_pyramid: [
+    {index:1, name:"Shocking Conclusion First",             target_pct:0,  emotional_function:"Drop the counterintuitive conclusion at the very start.", reality_note:"State it boldly before explaining anything."},
+    {index:2, name:"Zoom Out to Context",                   target_pct:15, emotional_function:"Where does this conclusion sit? Why care?", reality_note:"The bigger picture context."},
+    {index:3, name:"Drill into Evidence",                   target_pct:30, emotional_function:"Build the case piece by piece.", reality_note:"Walk through evidence systematically."},
+    {index:4, name:"Return to Conclusion with New Meaning", target_pct:75, emotional_function:"Circle back — it lands differently now.", reality_note:"Restate the conclusion. It should feel earned."},
+    {index:5, name:"What This Means for YOU",               target_pct:88, emotional_function:"Make it personal — applied to the viewer's life.", reality_note:"What should someone watching actually do?"}
+  ],
+  heros_gauntlet: [
+    {index:1, name:"Normal World",                   target_pct:0,  emotional_function:"Establish the status quo.", reality_note:"What's normal before the gauntlet?"},
+    {index:2, name:"Impossible Challenge Accepted",  target_pct:10, emotional_function:"The hero commits to something that seems beyond reach.", reality_note:"What's the challenge? State it — make it sound hard."},
+    {index:3, name:"Obstacle 1",                     target_pct:20, emotional_function:"First challenge — sets expectations.", reality_note:"First obstacle. How was it overcome?"},
+    {index:4, name:"Obstacle 2",                     target_pct:45, emotional_function:"Harder than the first. Stakes raised.", reality_note:"Second obstacle. How did you handle it?"},
+    {index:5, name:"Obstacle 3 + Moment of Doubt",   target_pct:65, emotional_function:"Hardest challenge + lowest emotional point.", reality_note:"Third and worst obstacle. Moment of doubt."},
+    {index:6, name:"Unexpected Solution",            target_pct:80, emotional_function:"The breakthrough from an unexpected angle.", reality_note:"What solved it?"},
+    {index:7, name:"Victory + Lesson",               target_pct:90, emotional_function:"Resolution and earned wisdom.", reality_note:"What was won? What was learned?"}
+  ],
+  virality_pyramid: [
+    {index:1, name:"Believable Conflict (Real Stakes)", target_pct:0,  emotional_function:"Establish stakes that feel real.", reality_note:"What's the real conflict? What's actually at stake?"},
+    {index:2, name:"The Impossible Goal Stated Clearly",target_pct:15, emotional_function:"Name the audacious goal.", reality_note:"What are you trying to do? Make it sound as hard as it is."},
+    {index:3, name:"First Vulnerable Step",             target_pct:30, emotional_function:"The first imperfect attempt.", reality_note:"The first real action. Show the vulnerability."},
+    {index:4, name:"Honest Struggle Shown",             target_pct:50, emotional_function:"The messy middle — real difficulty.", reality_note:"What's actually hard? Show it without cleaning it up."},
+    {index:5, name:"Payoff That Validates the Journey", target_pct:82, emotional_function:"The resolution that makes the struggle worthwhile.", reality_note:"The result. Does it validate what was risked?"}
+  ],
+  permission_structure: [
+    {index:1, name:"The Thing Everyone Wants But Thinks They Can't Have", target_pct:0,  emotional_function:"Name the desire most people have but think is impossible.", reality_note:"Name it directly — don't dance around it."},
+    {index:2, name:"Why They Think They Can't Have It",                   target_pct:15, emotional_function:"Validate the objection.", reality_note:"What are the actual objections?"},
+    {index:3, name:"Proof That's Wrong — You Did It",                    target_pct:30, emotional_function:"Your story as evidence.", reality_note:"Walk through how you actually did it."},
+    {index:4, name:"The Exact Path",                                      target_pct:65, emotional_function:"Specific, actionable — not vague inspiration.", reality_note:"What's the actual path? Be specific."},
+    {index:5, name:"You're Allowed to Want This",                         target_pct:88, emotional_function:"Explicit permission.", reality_note:"Give them permission. Say it directly."}
+  ],
+  dual_timeline: [
+    {index:1, name:"Present Moment (In the Middle of Something)", target_pct:0,  emotional_function:"Drop in at a moment of tension — in medias res.", reality_note:"Where are you right now in the story?"},
+    {index:2, name:"Flashback to How It Started",                 target_pct:15, emotional_function:"Cut to the beginning — contrast with present.", reality_note:"How did this start?"},
+    {index:3, name:"Back to Present, Deeper In",                  target_pct:30, emotional_function:"Return to present — further developed.", reality_note:"Back to now — what's happening at a deeper level?"},
+    {index:4, name:"Earlier Flashback, More Context",             target_pct:50, emotional_function:"Another layer of past — emotional backstory.", reality_note:"More context from the past."},
+    {index:5, name:"Present Resolution",                          target_pct:72, emotional_function:"The present timeline resolves.", reality_note:"What happens in the present?"},
+    {index:6, name:"Full Circle Moment",                          target_pct:90, emotional_function:"Past and present unify into understanding.", reality_note:"The moment where it all connects."}
   ]
 };
 
@@ -1111,36 +1346,45 @@ let _psCb = null;
             card.style.display = 'block';
           }
 
-          // Screen 3 — build brief block for the content textarea
+          // Screen 3 — build comprehensive brief for the content textarea
+          const briefData = id8r.briefData || {};
+          const pb        = briefData.pipeline_brief || {};
+          const titles    = pkg.titles || [];
+          const hooks     = pkg.hooks  || [];
+
           const lines = [];
+
+          // ── Concept block ──
           if (concept.headline) lines.push(`CONCEPT: ${concept.headline}`);
           if (concept.why)      lines.push(`\nWHY THIS WORKS: ${concept.why}`);
           if (concept.hook)     lines.push(`\nOPENING HOOK: ${concept.hook}`);
-          if (research) {
-            lines.push(`\nRESEARCH FINDINGS:\n${research.slice(0, 800)}${research.length > 800 ? '…' : ''}`);
-          }
-          const titles = pkg.titles || [];
-          if (titles[0])        lines.push(`\nSELECTED TITLE: ${titles[0].text || titles[0]}`);
-          const hooks = pkg.hooks || [];
-          if (hooks[0] || hooks[1]) {
-            lines.push('\nSELECTED HOOKS:');
-            if (hooks[0]) lines.push(`- ${hooks[0].text || hooks[0]}`);
-            if (hooks[1]) lines.push(`- ${hooks[1].text || hooks[1]}`);
-          }
 
-          const briefData = id8r.briefData || {};
-          const pb        = briefData.pipeline_brief || {};
-          if (briefData.elevator_pitch)      lines.push(`\nELEVATOR PITCH: ${briefData.elevator_pitch}`);
-          if (briefData.story_angle)         lines.push(`\nSTORY ANGLE:\n${briefData.story_angle}`);
+          // ── Brief block ──
+          if (briefData.elevator_pitch)  lines.push(`\nELEVATOR PITCH: ${briefData.elevator_pitch}`);
+          if (briefData.audience_insight)lines.push(`\nAUDIENCE INSIGHT: ${briefData.audience_insight}`);
+          if (briefData.story_angle)     lines.push(`\nSTORY ANGLE:\n${briefData.story_angle}`);
+
           if (briefData.talking_points?.length) {
             lines.push('\nTALKING POINTS:');
             briefData.talking_points.forEach(tp => lines.push(`- ${tp}`));
           }
+
           if (briefData.what_not_to_do?.length) {
             lines.push('\nWHAT NOT TO DO:');
             briefData.what_not_to_do.forEach(w => lines.push(`- ${w}`));
           }
-          if (pb.concept_note) lines.push(`\nCONCEPT NOTE: ${pb.concept_note}`);
+
+          // ── Package block ──
+          if (titles.length) {
+            lines.push('\nTITLE OPTIONS:');
+            titles.forEach((t, i) => lines.push(`${i + 1}. ${t.text || t}`));
+          }
+          if (hooks.length) {
+            lines.push('\nHOOK OPTIONS:');
+            hooks.forEach((h, i) => lines.push(`${i + 1}. ${h.text || h}`));
+          }
+
+          if (pb.concept_note) lines.push(`\nCONCEPT NOTE:\n${pb.concept_note}`);
 
           const brief = lines.join('\n');
 
