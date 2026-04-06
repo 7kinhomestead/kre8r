@@ -592,7 +592,7 @@ router.post('/analyze-voice', voiceUpload.array('clips', 6), async (req, res) =>
 
         // Whisper transcription
         execSync(
-          `whisper "${wavPath}" --model base --output_format txt --output_dir "${os.tmpdir()}"`,
+          `whisper "${wavPath}" --model base --device cuda --output_format txt --output_dir "${os.tmpdir()}"`,
           { timeout: 300_000, stdio: 'pipe' }
         );
 
