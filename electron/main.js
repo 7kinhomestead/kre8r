@@ -8,6 +8,7 @@
 
 const { app, BrowserWindow, shell, protocol, ipcMain } = require('electron');
 const path   = require('path');
+const fs     = require('fs');
 const { spawn } = require('child_process');
 const http   = require('http');
 
@@ -27,8 +28,19 @@ function startServer() {
   return new Promise((resolve) => {
     const serverPath = path.join(__dirname, '../server.js');
 
-    // Use the same Node.js binary that's running Electron
-    serverProcess = spawn(process.execPath, [serverPath], {
+    // ── First-run: copy creator-profile.json to userData if missing ──────────
+    const profileDest = path.join(app.getPath('userData'), 'creator-profile.json');
+    const profileSrc  = path.join(__dirname, '../creator-profile.json');
+    if (!fs.existsSync(profileDest) && fs.existsSync(profileSrc)) {
+      fs.mkdirSync(app.getPath('userData'), { recursive: true });
+      fs.copyFileSync(profileSrc, profileDest);
+      console.log('[Electron] Copied creator-profile.json →', profileDest);
+    }
+
+    // Spawn server with system Node.js (not Electron's bundled node)
+    // so native modules compiled for system Node (better-sqlite3, etc.) load correctly.
+    const nodeBin = process.platform === 'win32' ? 'node.exe' : 'node';
+    serverProcess = spawn(nodeBin, [serverPath], {
       env: {
         ...process.env,
         PORT:                String(PORT),
