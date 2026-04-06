@@ -14,13 +14,26 @@
 
 'use strict';
 
-const express  = require('express');
-const router   = express.Router();
-const fs       = require('fs');
-const path     = require('path');
+const express      = require('express');
+const router       = express.Router();
+const fs           = require('fs');
+const path         = require('path');
+const os           = require('os');
+const { execSync } = require('child_process');
+const multer       = require('multer');
+const { callClaude } = require('../utils/claude');
 
 const PROFILE_PATH = path.join(__dirname, '../../creator-profile.json');
 const ROOT_PATH    = path.join(__dirname, '../../');
+
+// ─── Multer: voice clip uploads ───────────────────────────────────────────────
+const voiceUpload = multer({
+  dest: os.tmpdir(),
+  limits: { files: 6, fileSize: 500 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    cb(null, /\.(mp4|mov|m4a|mp3|wav|webm|ogg)$/i.test(file.originalname));
+  },
+});
 
 function readProfile() {
   try {
@@ -396,7 +409,7 @@ router.post('/collaborator/import', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /collaborator/generate (SSE) — 3-screen wizard → collaborator profile
+// POST /collaborator/generate (SSE) — legacy text-only path (used when analyze-voice was skipped)
 router.post('/collaborator/generate', async (req, res) => {
   res.setHeader('Content-Type',  'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -405,7 +418,11 @@ router.post('/collaborator/generate', async (req, res) => {
   function sse(obj) { res.write('data: ' + JSON.stringify(obj) + '\n\n'); }
 
   try {
-    const { name, role, badge_letter, badge_color, voice_samples, never_say, tone_descriptors } = req.body;
+    const {
+      name, role, badge_letter, badge_color,
+      voice_samples, never_say, tone_descriptors,
+      role_in_videos, relationship_dynamic, beats_typically_covers,
+    } = req.body;
     if (!name) throw new Error('Collaborator name is required');
 
     sse({ type: 'status', message: '✦ Analyzing voice samples...' });
@@ -494,6 +511,22 @@ Generate a collaborator profile JSON:
     if (!profile.slug) profile.slug = slug;
     const finalSlug = profile.slug;
 
+    // Inject new structured fields if provided
+    if (role_in_videos)        profile.role_in_videos          = role_in_videos;
+    if (relationship_dynamic)  profile.relationship_to_primary  = relationship_dynamic;
+    if (beats_typically_covers) profile.beats_typically_covers  = beats_typically_covers;
+    // Legacy aliases for WritΩr
+    if (!profile.voice) profile.voice = {};
+    if (!profile.voice.tone_descriptors && profile.voice.signature_phrases) {
+      profile.voice.tone_descriptors = profile.voice.signature_phrases.slice(0, 3);
+    }
+    if (!profile.voice.never_say && never_say) {
+      profile.voice.never_say = [never_say];
+    }
+    if (!profile.voice.writing_style && profile.voice.writing_guidelines) {
+      profile.voice.writing_style = profile.voice.writing_guidelines;
+    }
+
     const filePath = path.join(ROOT_PATH, `creator-profile-${finalSlug}.json`);
     fs.writeFileSync(filePath, JSON.stringify(profile, null, 2), 'utf8');
 
@@ -503,6 +536,225 @@ Generate a collaborator profile JSON:
     sse({ type: 'error', message: err.message });
   } finally {
     res.end();
+  }
+});
+
+// ─── POST /analyze-voice (SSE) ───────────────────────────────────────────────
+// Accepts: multipart — up to 6 clip files + transcript_text + descriptors + tone_slider + never_say + collab_name
+// Returns SSE stream → { type:'status'|'done'|'error', ... }
+router.post('/analyze-voice', voiceUpload.array('clips', 6), async (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  function sse(obj) { res.write('data: ' + JSON.stringify(obj) + '\n\n'); }
+
+  const files          = req.files || [];
+  const transcriptText = (req.body.transcript_text || '').trim();
+  const descriptors    = (req.body.descriptors     || '').trim();
+  const toneSlider     = req.body.tone_slider       || '5';
+  const neverSay       = (req.body.never_say        || '').trim();
+  const collabName     = (req.body.collab_name      || 'this person').trim();
+
+  const allTranscripts = [];
+  const tmpToClean     = [];
+
+  try {
+    // ── Phase 1: transcribe each uploaded clip ──────────────────────────────
+    for (let i = 0; i < files.length; i++) {
+      const file    = files[i];
+      const wavPath = file.path + '.wav';
+      tmpToClean.push(file.path, wavPath);
+
+      sse({ type: 'status', step: 'transcribe', clip: i + 1, total: files.length,
+            message: `Transcribing clip ${i + 1} of ${files.length}...` });
+
+      try {
+        // Extract mono 16 kHz WAV
+        execSync(
+          `ffmpeg -y -i "${file.path}" -ar 16000 -ac 1 -f wav "${wavPath}"`,
+          { timeout: 120_000, stdio: 'pipe' }
+        );
+
+        // Whisper transcription
+        execSync(
+          `whisper "${wavPath}" --model base --output_format txt --output_dir "${os.tmpdir()}"`,
+          { timeout: 300_000, stdio: 'pipe' }
+        );
+
+        // Whisper names output: <input_basename_no_ext>.txt in output_dir
+        const txtPath = path.join(os.tmpdir(), path.basename(wavPath, '.wav') + '.txt');
+        tmpToClean.push(txtPath);
+
+        if (fs.existsSync(txtPath)) {
+          const txt = fs.readFileSync(txtPath, 'utf8').trim();
+          if (txt) allTranscripts.push(`[Clip ${i + 1} — ${file.originalname}]\n${txt}`);
+        }
+      } catch (_clipErr) {
+        sse({ type: 'status', message: `Clip ${i + 1}: transcription failed — skipping...` });
+      }
+    }
+
+    // ── Phase 2: add pasted transcript ─────────────────────────────────────
+    if (transcriptText) {
+      allTranscripts.push(`[Pasted Transcript]\n${transcriptText}`);
+    }
+
+    if (allTranscripts.length === 0 && !descriptors) {
+      throw new Error('Nothing to analyze — provide video clips, a transcript, or voice descriptors.');
+    }
+
+    sse({ type: 'status', step: 'analyze', message: 'Analyzing voice patterns...' });
+
+    // ── Phase 3: Claude deep voice analysis ────────────────────────────────
+    const transcriptBlock = allTranscripts.length > 0
+      ? `TRANSCRIPTS FROM THEIR ON-CAMERA FOOTAGE:\n${allTranscripts.join('\n\n---\n\n')}\n\n`
+      : '';
+
+    const descriptorBlock = descriptors
+      ? `VOICE DESCRIPTORS (how the creator describes their voice): ${descriptors}\n`
+        + `Tone (1=very casual, 10=very professional): ${toneSlider}\n`
+        + `They would never say: ${neverSay || 'not specified'}\n\n`
+      : '';
+
+    sse({ type: 'status', step: 'claude', message: 'Building voice profile...' });
+
+    const prompt = `You are analyzing on-camera content to build a detailed voice profile for a content creator named ${collabName}.
+This profile will be used by an AI system to write scripts authentically in their voice.
+
+${transcriptBlock}${descriptorBlock}Analyze their speaking voice in extreme detail.
+${allTranscripts.length === 0 ? 'No transcripts are available — infer from the voice descriptors provided.' : 'Be specific and reference actual phrases from the transcripts.'}
+
+Return a comprehensive JSON voice profile. Return ONLY valid JSON — no preamble, no markdown:
+
+{
+  "voice_in_3_words": ["word1", "word2", "word3"],
+  "voice_summary": "2-3 sentences describing their overall voice and on-camera presence",
+  "energy_level": "high/medium/low — with description of how that energy shows up",
+  "sentence_patterns": {
+    "average_length": "short/medium/long",
+    "structure": "description of how they construct sentences — fragments, run-ons, rhetorical questions, etc.",
+    "examples": ["example phrase", "another example"]
+  },
+  "humor_style": {
+    "type": "self-deprecating/observational/dry/none",
+    "description": "how humor shows up in their speech",
+    "examples": ["funny moment or constructed example"]
+  },
+  "authority_markers": {
+    "type": "personal experience/expertise/story/question",
+    "description": "how they establish credibility or trust with their audience"
+  },
+  "filler_words": ["um", "like", "you know"],
+  "signature_phrases": ["phrases that feel distinctly them", "recurring structures"],
+  "emotional_range": "description of emotional variation — do they stay even-keel or swing wide?",
+  "relationship_to_camera": "friend/teacher/peer/entertainer — with description of how they treat their audience",
+  "pacing": "fast/medium/slow — description of their verbal rhythm and how it shifts",
+  "vocabulary_level": "simple/conversational/educated — with specific word-choice examples",
+  "unique_characteristics": ["3-5 things that make this voice unmistakably theirs"],
+  "what_not_to_write": ["3-5 things that would feel wrong or out of character in their voice"],
+  "writing_guidelines": "One detailed paragraph with specific instructions for writing in this voice. Be concrete enough that someone who has never met this person could write convincingly as them."
+}
+
+This profile must capture their actual voice with enough specificity to be useful for AI script generation.
+Return ONLY valid JSON.`;
+
+    const raw = await callClaude(prompt, 4096);
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+    let profile;
+    try {
+      profile = JSON.parse(cleaned);
+    } catch (_) {
+      const s = cleaned.indexOf('{');
+      const e = cleaned.lastIndexOf('}');
+      if (s !== -1 && e !== -1) {
+        profile = JSON.parse(cleaned.slice(s, e + 1));
+      } else {
+        throw new Error('Claude returned malformed JSON — please try again');
+      }
+    }
+
+    profile._analyzed_clips   = files.length;
+    profile._has_transcript   = transcriptText.length > 0;
+    profile._has_descriptors  = descriptors.length > 0;
+
+    sse({ type: 'done', profile });
+
+  } catch (err) {
+    sse({ type: 'error', message: err.message });
+  } finally {
+    tmpToClean.forEach(f => { try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch (_) {} });
+    res.end();
+  }
+});
+
+// ─── POST /collaborator/save ──────────────────────────────────────────────────
+// Direct save — used after voice analysis preview confirmed ("This sounds like them ✓")
+// No Claude call needed — voice_profile already analyzed.
+router.post('/collaborator/save', (req, res) => {
+  try {
+    const {
+      name, role_in_videos, relationship_dynamic, beats_typically_covers,
+      voice_profile, badge_letter, badge_color,
+    } = req.body;
+
+    if (!name)          return res.status(400).json({ error: 'name is required' });
+    if (!voice_profile) return res.status(400).json({ error: 'voice_profile is required' });
+
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'collaborator';
+
+    const soul = {
+      type: 'collaborator',
+      slug,
+      creator: {
+        name,
+        role:  role_in_videos || 'Collaborator',
+      },
+      voice: {
+        // Rich fields from analyze-voice
+        voice_in_3_words:       voice_profile.voice_in_3_words       || [],
+        voice_summary:          voice_profile.voice_summary           || '',
+        energy_level:           voice_profile.energy_level            || '',
+        sentence_patterns:      voice_profile.sentence_patterns       || {},
+        humor_style:            voice_profile.humor_style             || {},
+        authority_markers:      voice_profile.authority_markers       || {},
+        filler_words:           voice_profile.filler_words            || [],
+        signature_phrases:      voice_profile.signature_phrases       || [],
+        emotional_range:        voice_profile.emotional_range         || '',
+        relationship_to_camera: voice_profile.relationship_to_camera  || '',
+        pacing:                 voice_profile.pacing                  || '',
+        vocabulary_level:       voice_profile.vocabulary_level        || '',
+        unique_characteristics: voice_profile.unique_characteristics  || [],
+        what_not_to_write:      voice_profile.what_not_to_write       || [],
+        writing_guidelines:     voice_profile.writing_guidelines      || '',
+        // Legacy aliases for WritΩr compatibility
+        tone_descriptors:       voice_profile.voice_in_3_words        || [],
+        never_say:              voice_profile.what_not_to_write       || [],
+        writing_style:          voice_profile.voice_summary           || '',
+      },
+      role_in_videos:          role_in_videos        || '',
+      beats_typically_covers:  beats_typically_covers || '',
+      relationship_to_primary: relationship_dynamic  || '',
+      badge: {
+        letter: (badge_letter || name[0] || 'C').toUpperCase(),
+        color:  badge_color || 'amber',
+      },
+      meta: {
+        created_at:      new Date().toISOString(),
+        analyzed_clips:  voice_profile._analyzed_clips  || 0,
+        has_transcript:  voice_profile._has_transcript  || false,
+        has_descriptors: voice_profile._has_descriptors || false,
+        version:         '1.0',
+        soul_builder_version: '2.0',
+      },
+    };
+
+    const filePath = path.join(ROOT_PATH, `creator-profile-${slug}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(soul, null, 2), 'utf8');
+
+    res.json({ ok: true, slug, name });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

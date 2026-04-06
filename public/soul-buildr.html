@@ -745,6 +745,133 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
   margin-top: 20px; padding-top: 20px;
   border-top: 1px solid var(--border);
 }
+
+/* ─── COLLAB WIZARD v2: VOICE TABS ──────────────────────────────────────────── */
+.cv-tabs {
+  display: flex; gap: 6px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border); padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+.cv-tab-btn {
+  background: none; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-dim);
+  font-family: var(--font-body); font-size: 12px; font-weight: 500;
+  padding: 6px 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.cv-tab-btn:hover { border-color: var(--teal); color: var(--teal); }
+.cv-tab-btn.active { background: var(--teal-glow); border-color: var(--teal); color: var(--teal); }
+
+/* ─── UPLOAD ZONE ────────────────────────────────────────────────────────────── */
+.cv-upload-zone {
+  border: 2px dashed var(--border-bright); border-radius: var(--radius);
+  padding: 28px 20px; text-align: center; cursor: pointer; transition: all 0.2s;
+  background: var(--bg-card);
+}
+.cv-upload-zone:hover, .cv-upload-zone.drag-over {
+  border-color: var(--teal); background: var(--teal-glow);
+}
+.cv-upload-zone-icon { font-size: 28px; margin-bottom: 8px; }
+.cv-upload-zone-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.cv-upload-zone-sub { font-size: 11px; color: var(--text-dim); }
+.cv-file-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.cv-file-chip {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 7px 12px; font-size: 12px;
+}
+.cv-file-icon { font-size: 14px; flex-shrink: 0; }
+.cv-file-name { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cv-file-size { color: var(--text-dimmer); font-size: 11px; flex-shrink: 0; }
+.cv-file-remove {
+  background: none; border: none; color: var(--text-dimmer); cursor: pointer;
+  font-size: 15px; padding: 0 2px; flex-shrink: 0; line-height: 1;
+}
+.cv-file-remove:hover { color: var(--red); }
+.cv-upload-count { font-size: 11px; color: var(--text-dimmer); margin-top: 8px; text-align: right; }
+
+/* ─── ANALYSIS PROGRESS ──────────────────────────────────────────────────────── */
+.cv-analysis-wrap {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin: 12px 0;
+}
+.cv-analysis-step {
+  font-size: 13px; color: var(--text-dimmer);
+  padding: 5px 0; transition: color 0.3s; display: flex; align-items: center; gap: 8px;
+}
+.cv-analysis-step::before { content: '✦'; font-size: 10px; opacity: 0.4; flex-shrink: 0; }
+.cv-analysis-step.active { color: var(--teal); }
+.cv-analysis-step.active::before { opacity: 1; animation: pulse 1.2s infinite; }
+.cv-analysis-step.done { color: var(--green); }
+.cv-analysis-step.done::before { content: '✓'; opacity: 1; animation: none; }
+
+/* ─── VOICE PROFILE PREVIEW ──────────────────────────────────────────────────── */
+.cv-profile-preview { display: flex; flex-direction: column; gap: 16px; }
+.cv-3words {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 4px 0 8px;
+}
+.cv-word-badge {
+  font-family: var(--font-head); font-size: 20px; letter-spacing: 2px;
+  color: var(--teal); background: var(--teal-glow);
+  border: 1px solid rgba(62,207,178,0.25); border-radius: var(--radius-sm);
+  padding: 5px 16px;
+}
+.cv-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-dimmer); margin-bottom: 6px;
+}
+.cv-summary-text {
+  font-size: 13px; color: var(--text); line-height: 1.65;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px;
+}
+.cv-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.cv-chip {
+  font-size: 11px; color: var(--text-dim); background: var(--bg-card-2);
+  border: 1px solid var(--border); border-radius: 20px; padding: 3px 11px;
+}
+.cv-chip.teal { background: var(--teal-glow); border-color: rgba(62,207,178,0.3); color: var(--teal); }
+.cv-chip.red  { background: rgba(224,92,92,0.08); border-color: rgba(224,92,92,0.3); color: #e05c5c; }
+.cv-guidelines {
+  font-size: 13px; color: var(--text-dim); line-height: 1.65;
+  background: var(--bg-card); border-left: 3px solid var(--teal-dim);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 12px 14px;
+}
+.cv-expand-btn {
+  background: none; border: none; color: var(--teal-dim);
+  font-size: 12px; cursor: pointer; font-family: var(--font-body); padding: 0;
+}
+.cv-expand-btn:hover { color: var(--teal); text-decoration: underline; }
+.cv-full-json {
+  background: var(--bg-card-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px; font-size: 11px;
+  color: var(--text-dimmer); font-family: monospace;
+  max-height: 180px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-word; display: none;
+}
+.cv-metadata-row {
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.cv-meta-item {
+  font-size: 11px; color: var(--text-dimmer);
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 5px 10px;
+}
+.cv-meta-item strong { color: var(--text-dim); }
+
+/* ─── COLLAB CHECKBOX GRID ───────────────────────────────────────────────────── */
+.cv-checkbox-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+.cv-check-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 13px; cursor: pointer;
+  font-size: 12px; color: var(--text-dim); transition: all 0.15s; user-select: none;
+}
+.cv-check-pill:hover { border-color: var(--teal-dim); color: var(--text); }
+.cv-check-pill.selected { background: var(--teal-glow); border-color: var(--teal); color: var(--teal); }
+.cv-check-pill input { display: none; }
+.cv-slider-wrap { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.cv-slider-label { font-size: 11px; color: var(--text-dimmer); min-width: 52px; }
+.cv-slider { flex: 1; accent-color: var(--teal); }
 </style>
 </head>
 <body>
@@ -1167,37 +1294,55 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
   </div>
 </div>
 
-<!-- ─── COLLABORATOR WIZARD OVERLAY ──────────────────────────────────────────── -->
+<!-- ─── COLLABORATOR WIZARD OVERLAY v2 ───────────────────────────────────────── -->
 <div id="collabOverlay" style="display:none;">
   <div class="collab-wiz-wrap">
     <div class="collab-progress" id="collabProgress">
       <span class="cp-dot active" id="cdot-0"></span>
       <span class="cp-dot" id="cdot-1"></span>
       <span class="cp-dot" id="cdot-2"></span>
+      <span class="cp-dot" id="cdot-3"></span>
     </div>
 
-    <!-- Screen C1: Who Are They? -->
+    <!-- ── Screen C1: Who Are They? ──────────────────────────────────────────── -->
     <div class="collab-screen" id="cscreen-0">
-      <div class="wz-screen-number">COLLABORATOR SOUL — 1 OF 3</div>
+      <div class="wz-screen-number">COLLABORATOR SOUL — 1 OF 4</div>
       <div class="wz-screen-title">WHO ARE THEY?</div>
-      <div class="wz-screen-sub">The basics — enough for Kre8Ωr to know who's speaking.</div>
+      <div class="wz-screen-sub">Identity and role — enough for Kre8Ωr to know who's speaking.</div>
 
       <div class="field-group">
         <label class="field-label" for="c-name">Full Name</label>
         <input class="field-input" id="c-name" type="text" placeholder="Cari Rutland" autocomplete="off">
       </div>
       <div class="field-group">
-        <label class="field-label" for="c-role">Role in your videos</label>
-        <input class="field-input" id="c-role" type="text" placeholder="Co-presenter, camera operator, co-host...">
+        <label class="field-label" for="c-role">Role in videos</label>
+        <select class="field-input" id="c-role">
+          <option value="">Select role...</option>
+          <option value="Co-Host">Co-Host</option>
+          <option value="Reactor">Reactor</option>
+          <option value="Expert">Expert</option>
+          <option value="Cam Op / Director">Cam Op / Director</option>
+          <option value="Guest">Guest</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="c-relationship">Relationship dynamic</label>
+        <input class="field-input" id="c-relationship" type="text"
+          placeholder="e.g. The deadpan counterpoint to Jason's energy">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="c-beats">Parts of videos they typically own</label>
+        <input class="field-input" id="c-beats" type="text"
+          placeholder="e.g. Behind-camera direction, emotional reactions, practical demos">
       </div>
       <div class="field-row">
         <div class="field-group">
-          <label class="field-label" for="c-badge-letter">Badge Letter</label>
+          <label class="field-label" for="c-badge-letter">Badge</label>
           <input class="field-input" id="c-badge-letter" type="text" maxlength="2"
             placeholder="C" style="text-align:center;font-weight:700;font-size:18px;">
         </div>
         <div class="field-group">
-          <label class="field-label" for="c-badge-color">Badge Color</label>
+          <label class="field-label" for="c-badge-color">Color</label>
           <select class="field-input" id="c-badge-color">
             <option value="amber">Amber</option>
             <option value="green">Green</option>
@@ -1211,46 +1356,132 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       </div>
     </div>
 
-    <!-- Screen C2: Their Voice -->
+    <!-- ── Screen C2: Their Voice ─────────────────────────────────────────────── -->
     <div class="collab-screen" id="cscreen-1" style="display:none;">
-      <div class="wz-screen-number">COLLABORATOR SOUL — 2 OF 3</div>
-      <div class="wz-screen-title">THEIR VOICE</div>
-      <div class="wz-screen-sub">Paste their writing or describe how they talk on camera.</div>
+      <div class="wz-screen-number">COLLABORATOR SOUL — 2 OF 4</div>
+      <div class="wz-screen-title">THEIR <em>VOICE</em></div>
+      <div class="wz-screen-sub">Give Claude something real to analyze. Best results: upload actual clips.</div>
 
-      <div class="field-group">
-        <label class="field-label" for="c-voice-samples">Writing Samples / How They Talk</label>
-        <textarea class="field-input" id="c-voice-samples" rows="5"
-          placeholder="Paste their captions, comment replies, or just describe how they speak on camera..."></textarea>
+      <!-- Voice input option tabs -->
+      <div class="cv-tabs">
+        <button class="cv-tab-btn active" id="cvtab-btn-upload" onclick="setCollabVoiceTab('upload',this)">📹 Upload Clips</button>
+        <button class="cv-tab-btn" id="cvtab-btn-paste"  onclick="setCollabVoiceTab('paste',this)">📄 Paste Transcript</button>
+        <button class="cv-tab-btn" id="cvtab-btn-describe" onclick="setCollabVoiceTab('describe',this)">✏️ Describe Voice</button>
       </div>
-      <div class="field-group">
-        <label class="field-label" for="c-tone-descriptors">3 words that describe their voice</label>
-        <input class="field-input" id="c-tone-descriptors" type="text"
-          placeholder="e.g. calm, grounded, curious">
+
+      <!-- Tab A: Upload clips -->
+      <div class="cv-tab-content" id="cvtab-upload">
+        <div class="cv-upload-zone" id="cvUploadZone"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="handleCollabDrop(event)"
+             onclick="document.getElementById('cvFileInput').click()">
+          <div class="cv-upload-zone-icon">📹</div>
+          <div class="cv-upload-zone-title">Drop video or audio clips here</div>
+          <div class="cv-upload-zone-sub">Up to 6 files · .mp4 .mov .m4a .mp3 .wav</div>
+          <input type="file" id="cvFileInput" multiple
+                 accept=".mp4,.mov,.m4a,.mp3,.wav,.webm"
+                 style="display:none;" onchange="handleCollabFiles(this.files)">
+        </div>
+        <div class="cv-file-list" id="cvFileList" style="display:none;"></div>
+        <div class="cv-upload-count" id="cvFileCount"></div>
       </div>
-      <div class="field-group">
-        <label class="field-label" for="c-never-say">They would never say...</label>
-        <input class="field-input" id="c-never-say" type="text"
-          placeholder="e.g. synergize, growth hacking...">
+
+      <!-- Tab B: Paste transcript -->
+      <div class="cv-tab-content" id="cvtab-paste" style="display:none;">
+        <div class="field-group">
+          <label class="field-label">Paste what they say on camera</label>
+          <textarea class="field-input" id="c-transcript-text" rows="9"
+            placeholder="Paste captions, script excerpts, comment replies, DMs, voicemails — anything in their actual words. The more the better."></textarea>
+        </div>
       </div>
+
+      <!-- Tab C: Describe voice -->
+      <div class="cv-tab-content" id="cvtab-describe" style="display:none;">
+        <div class="field-group">
+          <label class="field-label">Voice descriptors — pick all that apply</label>
+          <div class="cv-checkbox-grid">
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Direct and no-nonsense">Direct and no-nonsense</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Warm and personal">Warm and personal</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Educational and thorough">Educational</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Humorous and self-deprecating">Self-deprecating humor</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Dry wit">Dry wit</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Calm and grounded">Calm and grounded</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Reactive and expressive">Reactive and expressive</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Storytelling-first">Storytelling-first</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Provocative and challenging">Provocative</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Observational">Observational</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Matter-of-fact">Matter-of-fact</label>
+            <label class="cv-check-pill" onclick="this.classList.toggle('selected')">
+              <input type="checkbox" value="Enthusiastic and energetic">High energy</label>
+          </div>
+        </div>
+        <div class="field-group" style="margin-top:14px;">
+          <label class="field-label">Tone</label>
+          <div class="cv-slider-wrap">
+            <span class="cv-slider-label" style="text-align:right;">← casual</span>
+            <input type="range" class="cv-slider" id="c-tone-slider" min="1" max="10" value="4">
+            <span class="cv-slider-label">pro →</span>
+          </div>
+        </div>
+        <div class="field-group" style="margin-top:14px;">
+          <label class="field-label">They would never say...</label>
+          <input class="field-input" id="c-never-say" type="text"
+            placeholder="e.g. synergize, growth hacking, circle back">
+        </div>
+      </div>
+
+      <!-- Analysis progress strip (shown during SSE) -->
+      <div class="cv-analysis-wrap" id="cvAnalysisWrap" style="display:none;">
+        <div class="cv-analysis-step" id="cva-transcribe">Transcribing clips...</div>
+        <div class="cv-analysis-step" id="cva-analyze">Analyzing voice patterns...</div>
+        <div class="cv-analysis-step" id="cva-claude">Building voice profile...</div>
+      </div>
+
+      <div class="gen-error" id="cvAnalysisError" style="display:none;margin-top:12px;"></div>
+
       <div class="wizard-nav">
         <button class="gen-adjust-btn" onclick="collabBack(1)">← Back</button>
-        <button class="btn-primary" onclick="collabNext(1)">Generate Soul →</button>
+        <button class="btn-primary" id="cvAnalyzeBtn" onclick="collabNext(1)">Analyze Voice →</button>
       </div>
     </div>
 
-    <!-- Screen C3: Generation -->
+    <!-- ── Screen C3: Voice Profile Preview ──────────────────────────────────── -->
     <div class="collab-screen" id="cscreen-2" style="display:none;">
-      <div class="wz-screen-number">COLLABORATOR SOUL — 3 OF 3</div>
-      <div class="wz-screen-title">BUILDING THEIR <em>SOUL</em></div>
+      <div class="wz-screen-number">COLLABORATOR SOUL — 3 OF 4</div>
+      <div class="wz-screen-title">THEIR VOICE <em>PROFILE</em></div>
+      <div class="wz-screen-sub">Claude read their voice. Does this sound like them?</div>
+
+      <div class="cv-profile-preview" id="cvProfilePreview">
+        <!-- Populated by renderCollabVoiceProfile() -->
+      </div>
+
+      <div class="wizard-nav" style="margin-top:24px;">
+        <button class="gen-adjust-btn" onclick="collabBack(2)">← Let me adjust</button>
+        <button class="btn-primary" onclick="collabNext(2)">This sounds like them ✓</button>
+      </div>
+    </div>
+
+    <!-- ── Screen C4: Done ────────────────────────────────────────────────────── -->
+    <div class="collab-screen" id="cscreen-3" style="display:none;">
+      <div class="wz-screen-number">COLLABORATOR SOUL — COMPLETE</div>
+      <div class="wz-screen-title">SOUL <em>SAVED</em></div>
 
       <div class="gen-steps" id="collabGenSteps" style="max-width:100%;">
         <div class="gen-step" id="cgstep-0">
           <div class="gen-step-icon">✦</div>
-          <span>Analyzing voice samples...</span>
-        </div>
-        <div class="gen-step" id="cgstep-1">
-          <div class="gen-step-icon">✦</div>
-          <span>Building collaborator soul...</span>
+          <span>Saving soul file...</span>
         </div>
       </div>
       <div class="gen-error" id="collabGenError"></div>
@@ -1263,12 +1494,17 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
           <div class="gen-preview-label">Soul File</div>
           <div class="gen-preview-val" id="collabDoneFile"></div>
         </div>
+        <div class="gen-preview-row" id="collabDoneClipsRow" style="display:none;">
+          <div class="gen-preview-label">Analyzed</div>
+          <div class="gen-preview-val" id="collabDoneClips"></div>
+        </div>
       </div>
-      <div class="gen-actions" id="collabDoneActions">
+      <div class="gen-actions" id="collabDoneActions" style="display:none;">
         <button class="gen-adjust-btn" onclick="startCollabWizard()">Add Another →</button>
         <button class="btn-primary" onclick="closeCollabWizard()">Done ✓</button>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -1796,48 +2032,151 @@ document.getElementById('audience_age_max').addEventListener('input', function()
   document.getElementById('ageMaxLabel').textContent = this.value;
 });
 
-// ─── COLLABORATOR WIZARD ─────────────────────────────────────────────────────
+// ─── COLLABORATOR WIZARD v2 STATE ──────────────────────────────────────────
+var collabScreen      = 0;
+var collabVoiceTab    = 'upload';
+var collabFiles       = [];      // Array of File objects
+var collabVoiceProfile = null;  // Analyzed voice profile from /analyze-voice
 
-var collabScreen = 0;
+// ─── TAB SWITCHING ──────────────────────────────────────────────────────────
+function setCollabVoiceTab(tab, btn) {
+  collabVoiceTab = tab;
+  ['upload','paste','describe'].forEach(function(t) {
+    var content = document.getElementById('cvtab-' + t);
+    var b       = document.getElementById('cvtab-btn-' + t);
+    if (content) content.style.display = t === tab ? '' : 'none';
+    if (b)       b.className = 'cv-tab-btn' + (t === tab ? ' active' : '');
+  });
+}
 
+// ─── FILE HANDLING ──────────────────────────────────────────────────────────
+function handleCollabDrop(e) {
+  e.preventDefault();
+  document.getElementById('cvUploadZone').classList.remove('drag-over');
+  handleCollabFiles(e.dataTransfer.files);
+}
+
+function handleCollabFiles(fileList) {
+  var allowed = /\.(mp4|mov|m4a|mp3|wav|webm)$/i;
+  var added = 0;
+  for (var i = 0; i < fileList.length; i++) {
+    if (!allowed.test(fileList[i].name)) continue;
+    if (collabFiles.length >= 6) break;
+    collabFiles.push(fileList[i]);
+    added++;
+  }
+  renderCollabFileList();
+  // Clear input so same file can be re-added
+  var inp = document.getElementById('cvFileInput');
+  if (inp) inp.value = '';
+}
+
+function removeCollabFile(idx) {
+  collabFiles.splice(idx, 1);
+  renderCollabFileList();
+}
+
+function renderCollabFileList() {
+  var listEl  = document.getElementById('cvFileList');
+  var countEl = document.getElementById('cvFileCount');
+  if (!listEl) return;
+  if (collabFiles.length === 0) {
+    listEl.style.display  = 'none';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  listEl.style.display = '';
+  var icons = { mp4:'🎬', mov:'🎬', m4a:'🎵', mp3:'🎵', wav:'🎵', webm:'🎬' };
+  listEl.innerHTML = collabFiles.map(function(f, i) {
+    var ext  = (f.name.split('.').pop() || '').toLowerCase();
+    var icon = icons[ext] || '📄';
+    var mb   = (f.size / 1048576).toFixed(1);
+    return '<div class="cv-file-chip">'
+      + '<span class="cv-file-icon">' + icon + '</span>'
+      + '<span class="cv-file-name">' + esc(f.name) + '</span>'
+      + '<span class="cv-file-size">' + mb + ' MB</span>'
+      + '<button class="cv-file-remove" onclick="removeCollabFile(' + i + ')" title="Remove">✕</button>'
+      + '</div>';
+  }).join('');
+  if (countEl) countEl.textContent = collabFiles.length + ' of 6 clips selected';
+}
+
+// ─── NAVIGATION ─────────────────────────────────────────────────────────────
 function startCollabWizard() {
-  // Reset all fields
-  ['c-name','c-role','c-badge-letter','c-tone-descriptors','c-never-say'].forEach(function(id) {
+  // Reset all state
+  collabFiles        = [];
+  collabVoiceProfile = null;
+  collabVoiceTab     = 'upload';
+
+  // Clear fields
+  ['c-name','c-badge-letter','c-relationship','c-beats',
+   'c-transcript-text','c-never-say'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
-  var vs = document.getElementById('c-voice-samples');
-  if (vs) vs.value = '';
-  var bc = document.getElementById('c-badge-color');
-  if (bc) bc.value = 'amber';
-  // Reset generation screen
-  var err = document.getElementById('collabGenError');
-  if (err) { err.style.display = 'none'; err.textContent = ''; }
-  var done = document.getElementById('collabDoneCard');
-  if (done) done.style.display = 'none';
-  var doneAct = document.getElementById('collabDoneActions');
-  if (doneAct) doneAct.style.display = 'none';
-  ['cgstep-0','cgstep-1'].forEach(function(id) {
-    var s = document.getElementById(id);
-    if (s) s.className = 'gen-step';
+  var roleEl = document.getElementById('c-role');
+  if (roleEl) roleEl.value = '';
+  var bcEl = document.getElementById('c-badge-color');
+  if (bcEl) bcEl.value = 'amber';
+  var slEl = document.getElementById('c-tone-slider');
+  if (slEl) slEl.value = '4';
+
+  // Uncheck all descriptor pills
+  document.querySelectorAll('.cv-check-pill').forEach(function(p) {
+    p.classList.remove('selected');
   });
+
+  // Reset file list
+  renderCollabFileList();
+
+  // Reset tabs
+  setCollabVoiceTab('upload', null);
+  ['upload','paste','describe'].forEach(function(t) {
+    var b = document.getElementById('cvtab-btn-' + t);
+    if (b) b.className = 'cv-tab-btn' + (t === 'upload' ? ' active' : '');
+  });
+
+  // Reset analysis UI
+  var wrap = document.getElementById('cvAnalysisWrap');
+  if (wrap) wrap.style.display = 'none';
+  ['cva-transcribe','cva-analyze','cva-claude'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.className = 'cv-analysis-step';
+  });
+  var errEl = document.getElementById('cvAnalysisError');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  var btn = document.getElementById('cvAnalyzeBtn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Analyze Voice →'; }
+
+  // Reset C3 preview
+  var prev = document.getElementById('cvProfilePreview');
+  if (prev) prev.innerHTML = '';
+
+  // Reset C4 done screen
+  var ge = document.getElementById('collabGenError');
+  if (ge) { ge.style.display = 'none'; ge.textContent = ''; }
+  var dc = document.getElementById('collabDoneCard');
+  if (dc) dc.style.display = 'none';
+  var da = document.getElementById('collabDoneActions');
+  if (da) da.style.display = 'none';
+  var gs = document.getElementById('cgstep-0');
+  if (gs) gs.className = 'gen-step';
+
   goCollabScreen(0);
   document.getElementById('collabOverlay').style.display = 'flex';
 }
 
 function closeCollabWizard() {
   document.getElementById('collabOverlay').style.display = 'none';
-  loadCollaboratorsUpdate(); // refresh list in update mode
+  loadCollaboratorsUpdate();
 }
 
 function goCollabScreen(n) {
-  [0,1,2].forEach(function(i) {
-    var s = document.getElementById('cscreen-' + i);
-    if (s) s.style.display = i === n ? '' : 'none';
+  [0,1,2,3].forEach(function(i) {
+    var s   = document.getElementById('cscreen-' + i);
     var dot = document.getElementById('cdot-' + i);
-    if (dot) {
-      dot.className = 'cp-dot' + (i < n ? ' done' : i === n ? ' active' : '');
-    }
+    if (s) s.style.display = i === n ? '' : 'none';
+    if (dot) dot.className = 'cp-dot' + (i < n ? ' done' : i === n ? ' active' : '');
   });
   collabScreen = n;
 }
@@ -1848,54 +2187,87 @@ function collabNext(fromScreen) {
     if (!name) { alert('Please enter a name.'); return; }
     goCollabScreen(1);
   } else if (fromScreen === 1) {
-    goCollabScreen(2);
-    runCollabGenerate();
+    // Trigger voice analysis
+    runCollabVoiceAnalysis();
+  } else if (fromScreen === 2) {
+    // "This sounds like them" — save soul
+    goCollabScreen(3);
+    saveCollabSoul();
   }
 }
 
 function collabBack(fromScreen) {
+  if (fromScreen === 2) {
+    // Coming back from preview — re-enable analyze button
+    var btn = document.getElementById('cvAnalyzeBtn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Analyze Voice →'; }
+    var wrap = document.getElementById('cvAnalysisWrap');
+    if (wrap) wrap.style.display = 'none';
+  }
   goCollabScreen(fromScreen - 1);
 }
 
-async function runCollabGenerate() {
-  var steps = ['cgstep-0','cgstep-1'];
-  var activeStep = 0;
+// ─── VOICE ANALYSIS (SSE) ───────────────────────────────────────────────────
+async function runCollabVoiceAnalysis() {
+  var name = (document.getElementById('c-name').value || '').trim();
 
-  function setStep(i) {
-    steps.forEach(function(id, idx) {
+  // Collect inputs
+  var transcriptText = '';
+  var descriptors    = [];
+
+  if (collabVoiceTab === 'paste') {
+    transcriptText = (document.getElementById('c-transcript-text').value || '').trim();
+    if (!transcriptText) { alert('Please paste some transcript text.'); return; }
+  } else if (collabVoiceTab === 'describe') {
+    descriptors = Array.from(document.querySelectorAll('.cv-check-pill.selected input'))
+      .map(function(el) { return el.value; });
+    if (!descriptors.length) { alert('Please select at least one voice descriptor.'); return; }
+  } else {
+    // upload — can have 0 files if user just wants Claude to guess from name/role
+    // but at least 1 file required for a proper upload
+    if (collabFiles.length === 0) { alert('Please add at least one clip, or switch to Paste Transcript or Describe Voice.'); return; }
+  }
+
+  // UI: show analysis progress, disable button
+  var btn     = document.getElementById('cvAnalyzeBtn');
+  var errEl   = document.getElementById('cvAnalysisError');
+  var wrapEl  = document.getElementById('cvAnalysisWrap');
+  if (btn)   { btn.disabled = true; btn.textContent = 'Analyzing...'; }
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  if (wrapEl) wrapEl.style.display = '';
+
+  var stepIds = ['cva-transcribe', 'cva-analyze', 'cva-claude'];
+  function setAStep(activeId) {
+    stepIds.forEach(function(id) {
       var el = document.getElementById(id);
       if (!el) return;
-      if (idx < i) el.className = 'gen-step done';
-      else if (idx === i) el.className = 'gen-step active';
-      else el.className = 'gen-step';
+      if (id === activeId)           el.className = 'cv-analysis-step active';
+      else if (stepIds.indexOf(id) < stepIds.indexOf(activeId))
+                                     el.className = 'cv-analysis-step done';
+      else                           el.className = 'cv-analysis-step';
     });
-    activeStep = i;
   }
-  setStep(0);
-
-  var payload = {
-    name:             (document.getElementById('c-name').value || '').trim(),
-    role:             (document.getElementById('c-role').value || '').trim(),
-    badge_letter:     (document.getElementById('c-badge-letter').value || '').trim().toUpperCase(),
-    badge_color:      document.getElementById('c-badge-color').value,
-    voice_samples:    (document.getElementById('c-voice-samples').value || '').trim(),
-    tone_descriptors: (document.getElementById('c-tone-descriptors').value || '')
-                        .split(',').map(function(s) { return s.trim(); }).filter(Boolean),
-    never_say:        (document.getElementById('c-never-say').value || '').trim()
-  };
-
-  var errEl = document.getElementById('collabGenError');
+  setAStep('cva-transcribe');
 
   try {
-    var res = await fetch('/api/soul-buildr/collaborator/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    // Build FormData
+    var fd = new FormData();
+    fd.append('collab_name', name);
 
-    var reader   = res.body.getReader();
-    var decoder  = new TextDecoder();
-    var buffer   = '';
+    if (collabVoiceTab === 'upload') {
+      collabFiles.forEach(function(f) { fd.append('clips', f); });
+    } else if (collabVoiceTab === 'paste') {
+      fd.append('transcript_text', transcriptText);
+    } else {
+      fd.append('descriptors',   descriptors.join(', '));
+      fd.append('tone_slider',   document.getElementById('c-tone-slider').value || '4');
+      fd.append('never_say',     (document.getElementById('c-never-say').value || '').trim());
+    }
+
+    var res     = await fetch('/api/soul-buildr/analyze-voice', { method: 'POST', body: fd });
+    var reader  = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer  = '';
 
     while (true) {
       var chunk = await reader.read();
@@ -1903,25 +2275,33 @@ async function runCollabGenerate() {
       buffer += decoder.decode(chunk.value, { stream: true });
       var lines = buffer.split('\n');
       buffer = lines.pop();
-      for (var line of lines) {
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
         if (!line.startsWith('data:')) continue;
         var msg;
         try { msg = JSON.parse(line.slice(5).trim()); } catch (_) { continue; }
+
         if (msg.type === 'status') {
-          setStep(Math.min(activeStep + 1, steps.length - 1));
+          // Map backend step to UI step
+          if (msg.step === 'transcribe' || (msg.message && msg.message.includes('Transcrib'))) {
+            setAStep('cva-transcribe');
+          } else if (msg.step === 'analyze' || (msg.message && msg.message.includes('voice pattern'))) {
+            setAStep('cva-analyze');
+          } else if (msg.step === 'claude' || (msg.message && msg.message.includes('Building'))) {
+            setAStep('cva-claude');
+          }
         } else if (msg.type === 'done') {
-          steps.forEach(function(id) {
+          // Mark all done
+          stepIds.forEach(function(id) {
             var el = document.getElementById(id);
-            if (el) el.className = 'gen-step done';
+            if (el) el.className = 'cv-analysis-step done';
           });
-          var doneCard = document.getElementById('collabDoneCard');
-          doneCard.style.display = '';
-          document.getElementById('collabDoneName').textContent =
-            msg.name + (msg.badge ? ' [' + msg.badge.letter + ']' : '');
-          document.getElementById('collabDoneFile').textContent =
-            'creator-profile-' + msg.slug + '.json';
-          var actEl = document.getElementById('collabDoneActions');
-          if (actEl) actEl.style.display = 'flex';
+          collabVoiceProfile = msg.profile;
+          // Advance to preview screen
+          setTimeout(function() {
+            renderCollabVoiceProfile(msg.profile);
+            goCollabScreen(2);
+          }, 500);
         } else if (msg.type === 'error') {
           throw new Error(msg.message);
         }
@@ -1929,6 +2309,180 @@ async function runCollabGenerate() {
     }
   } catch (err) {
     if (errEl) { errEl.style.display = ''; errEl.textContent = '✕ ' + err.message; }
+    if (btn)   { btn.disabled = false; btn.textContent = 'Analyze Voice →'; }
+  }
+}
+
+// ─── VOICE PROFILE RENDERER ─────────────────────────────────────────────────
+function renderCollabVoiceProfile(p) {
+  var el = document.getElementById('cvProfilePreview');
+  if (!el || !p) return;
+
+  var words3 = (p.voice_in_3_words || []).slice(0, 3);
+  var chips  = function(arr, cls) {
+    return (arr || []).map(function(c) {
+      return '<span class="cv-chip' + (cls ? ' ' + cls : '') + '">' + esc(String(c)) + '</span>';
+    }).join('');
+  };
+
+  var metaLine = '';
+  if (p._analyzed_clips > 0) metaLine += '<span class="cv-meta-item"><strong>' + p._analyzed_clips + '</strong> clips analyzed</span> ';
+  if (p.energy_level)        metaLine += '<span class="cv-meta-item"><strong>Energy:</strong> ' + esc(p.energy_level.split('—')[0].trim()) + '</span> ';
+  if (p.pacing)              metaLine += '<span class="cv-meta-item"><strong>Pacing:</strong> ' + esc(p.pacing.split('—')[0].trim()) + '</span>';
+
+  var humEx = (p.humor_style && p.humor_style.examples && p.humor_style.examples[0])
+    ? ' <em style="color:var(--text-dimmer);font-style:italic;font-size:11px;">"' + esc(p.humor_style.examples[0]) + '"</em>'
+    : '';
+  var humDesc = (p.humor_style && p.humor_style.type)
+    ? esc(p.humor_style.type) + (p.humor_style.description ? ' — ' + esc(p.humor_style.description) : '') + humEx
+    : '';
+
+  var vocabEx = (p.sentence_patterns && p.sentence_patterns.examples && p.sentence_patterns.examples.length)
+    ? p.sentence_patterns.examples.slice(0,2).map(function(e){ return '<span class="cv-chip">"' + esc(e) + '"</span>'; }).join('')
+    : '';
+
+  var html = '';
+
+  // Voice in 3 words
+  if (words3.length) {
+    html += '<div>';
+    html += '<div class="cv-section-label">Voice in 3 words</div>';
+    html += '<div class="cv-3words">' + words3.map(function(w) {
+      return '<span class="cv-word-badge">' + esc(w.toUpperCase()) + '</span>';
+    }).join('') + '</div>';
+    html += '</div>';
+  }
+
+  // Summary
+  if (p.voice_summary) {
+    html += '<div>';
+    html += '<div class="cv-section-label">Voice summary</div>';
+    html += '<div class="cv-summary-text">' + esc(p.voice_summary) + '</div>';
+    html += '</div>';
+  }
+
+  // Metadata pills
+  if (metaLine) {
+    html += '<div class="cv-metadata-row">' + metaLine + '</div>';
+  }
+
+  // Unique characteristics
+  if (p.unique_characteristics && p.unique_characteristics.length) {
+    html += '<div>';
+    html += '<div class="cv-section-label">What makes their voice distinctive</div>';
+    html += '<div class="cv-chip-row">' + chips(p.unique_characteristics, 'teal') + '</div>';
+    html += '</div>';
+  }
+
+  // Humor
+  if (humDesc) {
+    html += '<div>';
+    html += '<div class="cv-section-label">Humor style</div>';
+    html += '<div class="cv-summary-text" style="font-size:12px;">' + humDesc + '</div>';
+    html += '</div>';
+  }
+
+  // Sentence examples
+  if (vocabEx) {
+    html += '<div>';
+    html += '<div class="cv-section-label">How they talk</div>';
+    html += '<div class="cv-chip-row">' + vocabEx + '</div>';
+    html += '</div>';
+  }
+
+  // Signature phrases
+  if (p.signature_phrases && p.signature_phrases.length) {
+    html += '<div>';
+    html += '<div class="cv-section-label">Signature phrases</div>';
+    html += '<div class="cv-chip-row">' + chips(p.signature_phrases) + '</div>';
+    html += '</div>';
+  }
+
+  // What not to write
+  if (p.what_not_to_write && p.what_not_to_write.length) {
+    html += '<div>';
+    html += '<div class="cv-section-label">What NOT to write</div>';
+    html += '<div class="cv-chip-row">' + chips(p.what_not_to_write, 'red') + '</div>';
+    html += '</div>';
+  }
+
+  // Writing guidelines
+  if (p.writing_guidelines) {
+    html += '<div>';
+    html += '<div class="cv-section-label">Writing guidelines</div>';
+    html += '<div class="cv-guidelines">' + esc(p.writing_guidelines) + '</div>';
+    html += '</div>';
+  }
+
+  // Expand full JSON
+  html += '<div>';
+  html += '<button class="cv-expand-btn" onclick="cvToggleJson(this)">▸ Show full voice profile JSON</button>';
+  html += '<pre class="cv-full-json" id="cvFullJson">' + esc(JSON.stringify(p, null, 2)) + '</pre>';
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+function cvToggleJson(btn) {
+  var el = document.getElementById('cvFullJson');
+  if (!el) return;
+  var open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  btn.textContent  = (open ? '▸ Show' : '▾ Hide') + ' full voice profile JSON';
+}
+
+// ─── SAVE (after preview confirmed) ─────────────────────────────────────────
+async function saveCollabSoul() {
+  var stepEl  = document.getElementById('cgstep-0');
+  var errEl   = document.getElementById('collabGenError');
+  var doneCard = document.getElementById('collabDoneCard');
+  var doneAct  = document.getElementById('collabDoneActions');
+
+  if (stepEl)  stepEl.className = 'gen-step active';
+  if (errEl)  { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+  var name = (document.getElementById('c-name').value || '').trim();
+
+  var payload = {
+    name:                   name,
+    role_in_videos:         document.getElementById('c-role').value || '',
+    relationship_dynamic:   (document.getElementById('c-relationship').value || '').trim(),
+    beats_typically_covers: (document.getElementById('c-beats').value || '').trim(),
+    badge_letter:           (document.getElementById('c-badge-letter').value || '').trim().toUpperCase() || name[0],
+    badge_color:            document.getElementById('c-badge-color').value || 'amber',
+    voice_profile:          collabVoiceProfile,
+  };
+
+  try {
+    var res = await fetch('/api/soul-buildr/collaborator/save', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    var d = await res.json();
+    if (!d.ok) throw new Error(d.error || 'Save failed');
+
+    if (stepEl)  stepEl.className = 'gen-step done';
+    if (doneCard) doneCard.style.display = '';
+
+    document.getElementById('collabDoneName').textContent =
+      d.name + ' [' + (payload.badge_letter || '?') + ']';
+    document.getElementById('collabDoneFile').textContent =
+      'creator-profile-' + d.slug + '.json';
+
+    // Show clip count if applicable
+    var clips = (collabVoiceProfile && collabVoiceProfile._analyzed_clips) || 0;
+    if (clips > 0) {
+      var clipsRow = document.getElementById('collabDoneClipsRow');
+      var clipsVal = document.getElementById('collabDoneClips');
+      if (clipsRow) clipsRow.style.display = '';
+      if (clipsVal) clipsVal.textContent = clips + ' video clip' + (clips !== 1 ? 's' : '');
+    }
+
+    if (doneAct) doneAct.style.display = 'flex';
+  } catch (err) {
+    if (stepEl)  stepEl.className = 'gen-step';
+    if (errEl)  { errEl.style.display = ''; errEl.textContent = '✕ ' + err.message; }
   }
 }
 
