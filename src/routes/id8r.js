@@ -55,7 +55,7 @@ const SYSTEM_PROMPTS = {
 
 // ─── Claude API Helper ─────────────────────────────────────────────────────────
 
-async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null) {
+async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null, _sessionId = null) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
   const { default: fetch } = await import('node-fetch');
@@ -84,16 +84,28 @@ async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null)
     throw new Error(err?.error?.message || `Claude API ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // ── Token tracking ──────────────────────────────────────
+  try {
+    const usage = data.usage || {};
+    const input  = usage.input_tokens  || 0;
+    const output = usage.output_tokens || 0;
+    // claude-sonnet-4-6: $3/M input, $15/M output
+    const cost = (input * 0.000003) + (output * 0.000015);
+    db.logTokenUsage({ tool: 'id8r', session_id: _sessionId, input_tokens: input, output_tokens: output, estimated_cost: cost });
+  } catch (_) { /* non-fatal — never break the response */ }
+
+  return data;
 }
 
-async function callClaudeText(systemPrompt, messages, maxTokens = 512) {
-  const data = await callClaude(systemPrompt, messages, maxTokens);
+async function callClaudeText(systemPrompt, messages, maxTokens = 512, sessionId = null) {
+  const data = await callClaude(systemPrompt, messages, maxTokens, null, sessionId);
   return data.content[0].text.trim();
 }
 
-async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024) {
-  const raw = await callClaudeText(systemPrompt, messages, maxTokens);
+async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024, sessionId = null) {
+  const raw = await callClaudeText(systemPrompt, messages, maxTokens, sessionId);
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
   try { return JSON.parse(cleaned); } catch {
     throw new Error(`Claude returned malformed JSON. First 300 chars: ${cleaned.slice(0, 300)}`);
@@ -124,7 +136,8 @@ router.post('/start', async (req, res) => {
     const firstMessage = await callClaudeText(
       systemPrompt,
       [{ role: 'user', content: "Let's get started." }],
-      256
+      256,
+      sessionId
     );
 
     sessions.set(sessionId, {
@@ -167,7 +180,8 @@ router.post('/respond', async (req, res) => {
     const reply = await callClaudeText(
       session.systemPrompt,
       getRecentMessages(session.messages),
-      512
+      512,
+      session_id
     );
 
     session.messages.push({ role: 'assistant', content: reply });
@@ -263,7 +277,8 @@ Return ONLY valid JSON in this exact shape:
         role: 'user',
         content: `Conversation:\n${conversationText}\n\nGenerate 3 concept directions: 2 from the angles list, 1 novel angle you invent.`,
       }],
-      1000
+      1000,
+      session_id
     );
 
     session.concepts = result.concepts || [];
@@ -359,7 +374,8 @@ router.post('/research', async (req, res) => {
           content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch YouTube for top performing videos on this specific angle. Return 5-7 examples (title + channel name only), the common approach across them, and the biggest content gap.`,
         }],
         1024,
-        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }]
+        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
+        session_id
       );
       const fullText = data.content
         .map(block => {
@@ -390,7 +406,8 @@ router.post('/research', async (req, res) => {
           content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch for relevant statistics, studies, news hooks, and data points that strengthen this specific concept.`,
         }],
         1024,
-        [{ type: 'web_search_20260209', name: 'web_search' }]
+        [{ type: 'web_search_20260209', name: 'web_search' }],
+        session_id
       );
       const fullText = data.content
         .map(block => {
@@ -454,7 +471,8 @@ router.post('/research', async (req, res) => {
           role: 'user',
           content: `Summarize these research results into bullet points under 400 words:\n\nYouTube: ${results.youtube.slice(0, 2000)}\n\nData: ${results.data.slice(0, 2000)}\n\nVault: ${results.vault.slice(0, 500)}`,
         }],
-        600
+        600,
+        session_id
       );
     } catch (e) {
       console.error('[id8r] summarization failed:', e.message);
@@ -517,7 +535,8 @@ Return ONLY valid JSON:
         role: 'user',
         content: `Conversation:\n${conversationText}${chosenContext}\n\nResearch:\n${researchSummary}\n\nGenerate 3 titles, 3 thumbnails, 3 hooks.`,
       }],
-      1024
+      1024,
+      session_id
     );
 
     session.packageData = result;
@@ -569,7 +588,8 @@ Return ONLY valid JSON in this exact shape:
         role: 'user',
         content: `Conversation:\n${conversationText}\n\nResearch:\n${researchSummary}\n\nSelected Title: ${selected_title || 'TBD'}\nSelected Thumbnail: ${JSON.stringify(selected_thumbnail) || 'TBD'}\nSelected Hook: ${JSON.stringify(selected_hook) || 'TBD'}\n\nGenerate the complete Vision Brief JSON.`,
       }],
-      4096
+      4096,
+      session_id
     );
 
     session.briefData = result;

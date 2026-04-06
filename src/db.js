@@ -1,14 +1,14 @@
 /**
  * Kre8Ωr Database — src/db.js
- * sql.js (pure WebAssembly SQLite) — no native compilation required.
- * In-memory database with manual persistence via db.export() → disk.
+ * better-sqlite3 — native synchronous SQLite, WAL mode, direct disk writes.
+ * No in-memory buffering, no manual persist() calls, real ACID transactions.
  */
 
-const initSqlJs = require('sql.js');
+const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, '..', 'database', 'kre8r.db');
+const DB_PATH    = path.join(__dirname, '..', 'database', 'kre8r.db');
 const SCHEMA_PATH = path.join(__dirname, '..', 'database', 'schema.sql');
 
 let db;
@@ -17,81 +17,79 @@ let db;
 // INIT & PERSISTENCE
 // ─────────────────────────────────────────────
 
-async function initDb() {
-  const SQL = await initSqlJs();
+function initDb() {
+  // Ensure database directory exists
+  const dbDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
-  if (fs.existsSync(DB_PATH)) {
-    const buffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(buffer);
-  } else {
-    db = new SQL.Database();
-  }
+  db = new Database(DB_PATH);
 
-  db.run('PRAGMA foreign_keys=ON');
+  // WAL mode: concurrent reads, no full-file rewrite on every write
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
   db.exec(schema);
   runMigrations();
-  persist();
   return db;
 }
 
 function runMigrations() {
   // Add columns to footage table that were introduced in Phase 2.
   // ALTER TABLE ADD COLUMN is safe on existing data — new rows get NULL.
-  const footageCols = (db.exec('PRAGMA table_info(footage)')[0]?.values || [])
-    .map(r => r[1]);
+  const footageCols = db.pragma('table_info(footage)').map(r => r.name);
 
   if (!footageCols.includes('creation_timestamp')) {
-    db.run('ALTER TABLE footage ADD COLUMN creation_timestamp TEXT');
+    db.exec('ALTER TABLE footage ADD COLUMN creation_timestamp TEXT');
     console.log('[DB] Migration: added footage.creation_timestamp');
   }
   if (!footageCols.includes('organized_path')) {
-    db.run('ALTER TABLE footage ADD COLUMN organized_path TEXT');
+    db.exec('ALTER TABLE footage ADD COLUMN organized_path TEXT');
     console.log('[DB] Migration: added footage.organized_path');
   }
   if (!footageCols.includes('transcript_path')) {
-    db.run('ALTER TABLE footage ADD COLUMN transcript_path TEXT');
+    db.exec('ALTER TABLE footage ADD COLUMN transcript_path TEXT');
     console.log('[DB] Migration: added footage.transcript_path');
   }
 
   // CutΩr columns on cuts table
-  const cutsCols = (db.exec('PRAGMA table_info(cuts)')[0]?.values || []).map(r => r[1]);
+  const cutsCols = db.pragma('table_info(cuts)').map(r => r.name);
   if (!cutsCols.includes('reasoning')) {
-    db.run('ALTER TABLE cuts ADD COLUMN reasoning TEXT');
+    db.exec('ALTER TABLE cuts ADD COLUMN reasoning TEXT');
     console.log('[DB] Migration: added cuts.reasoning');
   }
   if (!cutsCols.includes('clip_path')) {
-    db.run('ALTER TABLE cuts ADD COLUMN clip_path TEXT');
+    db.exec('ALTER TABLE cuts ADD COLUMN clip_path TEXT');
     console.log('[DB] Migration: added cuts.clip_path');
   }
   if (!cutsCols.includes('rank')) {
-    db.run('ALTER TABLE cuts ADD COLUMN rank INTEGER');
+    db.exec('ALTER TABLE cuts ADD COLUMN rank INTEGER');
     console.log('[DB] Migration: added cuts.rank');
   }
   if (!cutsCols.includes('transcript_excerpt')) {
-    db.run('ALTER TABLE cuts ADD COLUMN transcript_excerpt TEXT');
+    db.exec('ALTER TABLE cuts ADD COLUMN transcript_excerpt TEXT');
     console.log('[DB] Migration: added cuts.transcript_excerpt');
   }
   if (!cutsCols.includes('why_it_matters')) {
-    db.run('ALTER TABLE cuts ADD COLUMN why_it_matters TEXT');
+    db.exec('ALTER TABLE cuts ADD COLUMN why_it_matters TEXT');
     console.log('[DB] Migration: added cuts.why_it_matters');
   }
   if (!cutsCols.includes('suggested_use')) {
-    db.run('ALTER TABLE cuts ADD COLUMN suggested_use TEXT');
+    db.exec('ALTER TABLE cuts ADD COLUMN suggested_use TEXT');
     console.log('[DB] Migration: added cuts.suggested_use');
   }
   if (!cutsCols.includes('saved_for_later')) {
-    db.run('ALTER TABLE cuts ADD COLUMN saved_for_later INTEGER NOT NULL DEFAULT 0');
+    db.exec('ALTER TABLE cuts ADD COLUMN saved_for_later INTEGER NOT NULL DEFAULT 0');
     console.log('[DB] Migration: added cuts.saved_for_later');
   }
 
   // VaultΩr: orientation column + resolution-based backfill
   if (!footageCols.includes('orientation')) {
-    db.run('ALTER TABLE footage ADD COLUMN orientation TEXT');
+    db.exec('ALTER TABLE footage ADD COLUMN orientation TEXT');
     console.log('[DB] Migration: added footage.orientation');
     // Backfill existing records from their resolution string (e.g. "1920x1080")
     // width > height * 1.1 → horizontal, height > width * 1.1 → vertical, else → square
-    db.run(`
+    db.exec(`
       UPDATE footage SET orientation = CASE
         WHEN resolution IS NULL THEN NULL
         WHEN CAST(SUBSTR(resolution, 1, INSTR(resolution, 'x') - 1) AS REAL)
@@ -108,38 +106,38 @@ function runMigrations() {
   }
 
   // Projects table: DaVinci columns
-  const projectsCols = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  const projectsCols = db.pragma('table_info(projects)').map(r => r.name);
   if (!projectsCols.includes('davinci_project_name')) {
-    db.run('ALTER TABLE projects ADD COLUMN davinci_project_name TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN davinci_project_name TEXT');
     console.log('[DB] Migration: added projects.davinci_project_name');
   }
   if (!projectsCols.includes('davinci_project_state')) {
-    db.run('ALTER TABLE projects ADD COLUMN davinci_project_state TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN davinci_project_state TEXT');
     console.log('[DB] Migration: added projects.davinci_project_state');
   }
   if (!projectsCols.includes('davinci_last_updated')) {
-    db.run('ALTER TABLE projects ADD COLUMN davinci_last_updated DATETIME');
+    db.exec('ALTER TABLE projects ADD COLUMN davinci_last_updated DATETIME');
     console.log('[DB] Migration: added projects.davinci_last_updated');
   }
 
   // CutΩr: off_script_gold flag on footage (set when gold moments are found)
   if (!footageCols.includes('off_script_gold')) {
-    db.run('ALTER TABLE footage ADD COLUMN off_script_gold INTEGER NOT NULL DEFAULT 0');
+    db.exec('ALTER TABLE footage ADD COLUMN off_script_gold INTEGER NOT NULL DEFAULT 0');
     console.log('[DB] Migration: added footage.off_script_gold');
   }
 
   // Footage table: BRAW proxy columns
   if (!footageCols.includes('braw_source_path')) {
-    db.run('ALTER TABLE footage ADD COLUMN braw_source_path TEXT');
+    db.exec('ALTER TABLE footage ADD COLUMN braw_source_path TEXT');
     console.log('[DB] Migration: added footage.braw_source_path');
   }
   if (!footageCols.includes('is_proxy')) {
-    db.run('ALTER TABLE footage ADD COLUMN is_proxy INTEGER NOT NULL DEFAULT 0');
+    db.exec('ALTER TABLE footage ADD COLUMN is_proxy INTEGER NOT NULL DEFAULT 0');
     console.log('[DB] Migration: added footage.is_proxy');
   }
 
   // DaVinci timelines table
-  db.run(`CREATE TABLE IF NOT EXISTS davinci_timelines (
+  db.exec(`CREATE TABLE IF NOT EXISTS davinci_timelines (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id     INTEGER NOT NULL,
     timeline_name  TEXT NOT NULL,
@@ -150,10 +148,10 @@ function runMigrations() {
     notes          TEXT,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   )`);
-  db.run('CREATE INDEX IF NOT EXISTS idx_davinci_tl_project ON davinci_timelines(project_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_davinci_tl_project ON davinci_timelines(project_id)');
 
   // VaultΩr: clip_distribution table (CREATE TABLE IF NOT EXISTS is safe)
-  db.run(`CREATE TABLE IF NOT EXISTS clip_distribution (
+  db.exec(`CREATE TABLE IF NOT EXISTS clip_distribution (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     footage_id      INTEGER NOT NULL,
     platform        TEXT NOT NULL,
@@ -165,60 +163,60 @@ function runMigrations() {
     UNIQUE(footage_id, platform),
     FOREIGN KEY (footage_id) REFERENCES footage(id) ON DELETE CASCADE
   )`);
-  db.run('CREATE INDEX IF NOT EXISTS idx_clip_dist_footage  ON clip_distribution(footage_id)');
-  db.run('CREATE INDEX IF NOT EXISTS idx_clip_dist_platform ON clip_distribution(platform)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_clip_dist_footage  ON clip_distribution(footage_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_clip_dist_platform ON clip_distribution(platform)');
 
   // AnalytΩr: add url column to posts
-  const postsCols = (db.exec('PRAGMA table_info(posts)')[0]?.values || []).map(r => r[1]);
+  const postsCols = db.pragma('table_info(posts)').map(r => r.name);
   if (!postsCols.includes('url')) {
-    db.run('ALTER TABLE posts ADD COLUMN url TEXT');
+    db.exec('ALTER TABLE posts ADD COLUMN url TEXT');
     console.log('[DB] Migration: added posts.url');
   }
   if (!postsCols.includes('angle')) {
-    db.run('ALTER TABLE posts ADD COLUMN angle TEXT');
+    db.exec('ALTER TABLE posts ADD COLUMN angle TEXT');
     console.log('[DB] Migration: added posts.angle');
   }
   if (!postsCols.includes('thumbnail_url')) {
-    db.run('ALTER TABLE posts ADD COLUMN thumbnail_url TEXT');
+    db.exec('ALTER TABLE posts ADD COLUMN thumbnail_url TEXT');
     console.log('[DB] Migration: added posts.thumbnail_url');
   }
   if (!postsCols.includes('format')) {
-    db.run('ALTER TABLE posts ADD COLUMN format TEXT');
+    db.exec('ALTER TABLE posts ADD COLUMN format TEXT');
     console.log('[DB] Migration: added posts.format');
   }
   if (!postsCols.includes('duration_seconds')) {
-    db.run('ALTER TABLE posts ADD COLUMN duration_seconds INTEGER');
+    db.exec('ALTER TABLE posts ADD COLUMN duration_seconds INTEGER');
     console.log('[DB] Migration: added posts.duration_seconds');
   }
 
   // EditΩr: footage.transcript — full Whisper text stored inline for fast multi-clip analysis
   if (!footageCols.includes('transcript')) {
-    db.run('ALTER TABLE footage ADD COLUMN transcript TEXT');
+    db.exec('ALTER TABLE footage ADD COLUMN transcript TEXT');
     console.log('[DB] Migration: added footage.transcript');
   }
 
   // EditΩr: projects.editor_state
-  const projectsCols2 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  const projectsCols2 = db.pragma('table_info(projects)').map(r => r.name);
   if (!projectsCols2.includes('editor_state')) {
-    db.run('ALTER TABLE projects ADD COLUMN editor_state TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN editor_state TEXT');
     console.log('[DB] Migration: added projects.editor_state');
   }
 
   // ComposΩr: projects.composor_state
-  const projectsCols3 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  const projectsCols3 = db.pragma('table_info(projects)').map(r => r.name);
   if (!projectsCols3.includes('composor_state')) {
-    db.run('ALTER TABLE projects ADD COLUMN composor_state TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN composor_state TEXT');
     console.log('[DB] Migration: added projects.composor_state');
   }
 
   // Id8Ωr: projects.id8r_data — JSON blob of research session (chosenConcept, researchSummary, packageData, briefData)
   if (!projectsCols3.includes('id8r_data')) {
-    db.run('ALTER TABLE projects ADD COLUMN id8r_data TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN id8r_data TEXT');
     console.log('[DB] Migration: added projects.id8r_data');
   }
 
   // ComposΩr: composor_tracks table
-  db.run(`CREATE TABLE IF NOT EXISTS composor_tracks (
+  db.exec(`CREATE TABLE IF NOT EXISTS composor_tracks (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id        INTEGER NOT NULL,
     scene_label       TEXT    NOT NULL,
@@ -237,15 +235,15 @@ function runMigrations() {
   )`);
 
   // ComposΩr: public_path column (added after initial table creation)
-  const composorCols = (db.exec('PRAGMA table_info(composor_tracks)')[0]?.values || []).map(r => r[1]);
+  const composorCols = db.pragma('table_info(composor_tracks)').map(r => r.name);
   if (!composorCols.includes('public_path')) {
-    db.run('ALTER TABLE composor_tracks ADD COLUMN public_path TEXT');
+    db.exec('ALTER TABLE composor_tracks ADD COLUMN public_path TEXT');
     console.log('[DB] Migration: added composor_tracks.public_path');
   }
-  db.run('CREATE INDEX IF NOT EXISTS idx_composor_project ON composor_tracks(project_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_composor_project ON composor_tracks(project_id)');
 
   // EditΩr: selects table
-  db.run(`CREATE TABLE IF NOT EXISTS selects (
+  db.exec(`CREATE TABLE IF NOT EXISTS selects (
     id                        INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id                INTEGER NOT NULL,
     script_section            TEXT    NOT NULL,
@@ -259,10 +257,10 @@ function runMigrations() {
     created_at                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   )`);
-  db.run('CREATE INDEX IF NOT EXISTS idx_selects_project ON selects(project_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_selects_project ON selects(project_id)');
 
   // WritΩr: writr_scripts table
-  db.run(`CREATE TABLE IF NOT EXISTS writr_scripts (
+  db.exec(`CREATE TABLE IF NOT EXISTS writr_scripts (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id        INTEGER NOT NULL,
     entry_point       TEXT    NOT NULL DEFAULT 'shoot_first',
@@ -282,10 +280,10 @@ function runMigrations() {
     updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   )`);
-  db.run('CREATE INDEX IF NOT EXISTS idx_writr_scripts_project ON writr_scripts(project_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_writr_scripts_project ON writr_scripts(project_id)');
 
   // DirectΩr / ShootDay: shoot_takes table
-  db.run(`CREATE TABLE IF NOT EXISTS shoot_takes (
+  db.exec(`CREATE TABLE IF NOT EXISTS shoot_takes (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id  INTEGER NOT NULL,
     beat_index  INTEGER NOT NULL,
@@ -297,82 +295,82 @@ function runMigrations() {
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   )`);
-  db.run('CREATE INDEX IF NOT EXISTS idx_shoot_takes_project ON shoot_takes(project_id)');
-  db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_shoot_takes_beat ON shoot_takes(project_id, beat_index)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_shoot_takes_project ON shoot_takes(project_id)');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_shoot_takes_beat ON shoot_takes(project_id, beat_index)');
 
   // PipΩr: project config columns
-  const projectsCols4 = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  const projectsCols4 = db.pragma('table_info(projects)').map(r => r.name);
   if (!projectsCols4.includes('setup_depth')) {
-    db.run('ALTER TABLE projects ADD COLUMN setup_depth TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN setup_depth TEXT');
     console.log('[DB] Migration: added projects.setup_depth');
   }
   if (!projectsCols4.includes('entry_point')) {
-    db.run('ALTER TABLE projects ADD COLUMN entry_point TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN entry_point TEXT');
     console.log('[DB] Migration: added projects.entry_point');
   }
   if (!projectsCols4.includes('story_structure')) {
-    db.run('ALTER TABLE projects ADD COLUMN story_structure TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN story_structure TEXT');
     console.log('[DB] Migration: added projects.story_structure');
   }
   if (!projectsCols4.includes('content_type')) {
-    db.run('ALTER TABLE projects ADD COLUMN content_type TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN content_type TEXT');
     console.log('[DB] Migration: added projects.content_type');
   }
   if (!projectsCols4.includes('high_concept')) {
-    db.run('ALTER TABLE projects ADD COLUMN high_concept TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN high_concept TEXT');
     console.log('[DB] Migration: added projects.high_concept');
   }
   if (!projectsCols4.includes('estimated_duration_minutes')) {
-    db.run('ALTER TABLE projects ADD COLUMN estimated_duration_minutes INTEGER');
+    db.exec('ALTER TABLE projects ADD COLUMN estimated_duration_minutes INTEGER');
     console.log('[DB] Migration: added projects.estimated_duration_minutes');
   }
   if (!projectsCols4.includes('pipr_complete')) {
-    db.run('ALTER TABLE projects ADD COLUMN pipr_complete INTEGER NOT NULL DEFAULT 0');
+    db.exec('ALTER TABLE projects ADD COLUMN pipr_complete INTEGER NOT NULL DEFAULT 0');
     console.log('[DB] Migration: added projects.pipr_complete');
   }
   if (!projectsCols4.includes('writr_complete')) {
-    db.run('ALTER TABLE projects ADD COLUMN writr_complete INTEGER NOT NULL DEFAULT 0');
+    db.exec('ALTER TABLE projects ADD COLUMN writr_complete INTEGER NOT NULL DEFAULT 0');
     console.log('[DB] Migration: added projects.writr_complete');
   }
   if (!projectsCols4.includes('active_script_id')) {
-    db.run('ALTER TABLE projects ADD COLUMN active_script_id INTEGER');
+    db.exec('ALTER TABLE projects ADD COLUMN active_script_id INTEGER');
     console.log('[DB] Migration: added projects.active_script_id');
   }
 
   // WritΩr: three output modes + session grouping
-  const writrScriptsCols = (db.exec('PRAGMA table_info(writr_scripts)')[0]?.values || []).map(r => r[1]);
+  const writrScriptsCols = db.pragma('table_info(writr_scripts)').map(r => r.name);
   if (!writrScriptsCols.includes('mode')) {
-    db.run("ALTER TABLE writr_scripts ADD COLUMN mode TEXT NOT NULL DEFAULT 'full'");
+    db.exec("ALTER TABLE writr_scripts ADD COLUMN mode TEXT NOT NULL DEFAULT 'full'");
     console.log('[DB] Migration: added writr_scripts.mode');
   }
   if (!writrScriptsCols.includes('session_id')) {
-    db.run('ALTER TABLE writr_scripts ADD COLUMN session_id TEXT');
+    db.exec('ALTER TABLE writr_scripts ADD COLUMN session_id TEXT');
     console.log('[DB] Migration: added writr_scripts.session_id');
   }
 
   // AnalΩzr: projects.source — kre8r (native) vs youtube_import
-  const projectsColsDna = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  const projectsColsDna = db.pragma('table_info(projects)').map(r => r.name);
   if (!projectsColsDna.includes('source')) {
-    db.run("ALTER TABLE projects ADD COLUMN source TEXT NOT NULL DEFAULT 'kre8r'");
+    db.exec("ALTER TABLE projects ADD COLUMN source TEXT NOT NULL DEFAULT 'kre8r'");
     console.log('[DB] Migration: added projects.source');
   }
 
   // AnalΩzr: kv_store — generic key/value cache (channel DNA clusters, profiles, etc.)
-  db.run(`CREATE TABLE IF NOT EXISTS kv_store (
+  db.exec(`CREATE TABLE IF NOT EXISTS kv_store (
     key        TEXT PRIMARY KEY,
     value      TEXT,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
 
   // Collaborator soul support — JSON array of creator slugs assigned to a project
-  const projectsColsCollab = (db.exec('PRAGMA table_info(projects)')[0]?.values || []).map(r => r[1]);
+  const projectsColsCollab = db.pragma('table_info(projects)').map(r => r.name);
   if (!projectsColsCollab.includes('collaborators')) {
-    db.run('ALTER TABLE projects ADD COLUMN collaborators TEXT');
+    db.exec('ALTER TABLE projects ADD COLUMN collaborators TEXT');
     console.log('[DB] Migration: added projects.collaborators');
   }
 
   // Beta applications — public landing page form submissions
-  db.run(`CREATE TABLE IF NOT EXISTS beta_applications (
+  db.exec(`CREATE TABLE IF NOT EXISTS beta_applications (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     name             TEXT    NOT NULL,
     channel_url      TEXT    NOT NULL,
@@ -382,11 +380,11 @@ function runMigrations() {
     status           TEXT    NOT NULL DEFAULT 'pending',
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
-  db.run('CREATE INDEX IF NOT EXISTS idx_beta_status ON beta_applications(status)');
-  db.run('CREATE INDEX IF NOT EXISTS idx_beta_created ON beta_applications(created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_beta_status ON beta_applications(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_beta_created ON beta_applications(created_at)');
 
   // Bug reports — in-app beta feedback
-  db.run(`CREATE TABLE IF NOT EXISTS bug_reports (
+  db.exec(`CREATE TABLE IF NOT EXISTS bug_reports (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     what_tried       TEXT,
     what_happened    TEXT,
@@ -400,12 +398,12 @@ function runMigrations() {
     status           TEXT    NOT NULL DEFAULT 'open',
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
-  db.run('CREATE INDEX IF NOT EXISTS idx_bugreports_status   ON bug_reports(status)');
-  db.run('CREATE INDEX IF NOT EXISTS idx_bugreports_severity ON bug_reports(severity)');
-  db.run('CREATE INDEX IF NOT EXISTS idx_bugreports_created  ON bug_reports(created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_bugreports_status   ON bug_reports(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_bugreports_severity ON bug_reports(severity)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_bugreports_created  ON bug_reports(created_at)');
 
   // NPS scores — post-workflow satisfaction
-  db.run(`CREATE TABLE IF NOT EXISTS nps_scores (
+  db.exec(`CREATE TABLE IF NOT EXISTS nps_scores (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     score      INTEGER NOT NULL,
     comment    TEXT,
@@ -413,41 +411,40 @@ function runMigrations() {
     project_id INTEGER,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
-  db.run('CREATE INDEX IF NOT EXISTS idx_nps_created ON nps_scores(created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_nps_created ON nps_scores(created_at)');
+
+  // Token usage tracking — AI API cost monitoring
+  db.exec(`CREATE TABLE IF NOT EXISTS token_usage (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    tool             TEXT    NOT NULL,
+    session_id       TEXT,
+    input_tokens     INTEGER NOT NULL DEFAULT 0,
+    output_tokens    INTEGER NOT NULL DEFAULT 0,
+    estimated_cost   REAL    NOT NULL DEFAULT 0,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_token_tool    ON token_usage(tool)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_token_session ON token_usage(session_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_token_created ON token_usage(created_at)');
 }
 
-function persist() {
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
-}
+// persist() removed — better-sqlite3 writes directly to disk on every operation
 
 // ─────────────────────────────────────────────
-// LOW-LEVEL HELPERS (replace better-sqlite3 API)
+// LOW-LEVEL HELPERS — better-sqlite3 API
 // ─────────────────────────────────────────────
 
 function _run(sql, params = []) {
-  const stmt = db.prepare(sql);
-  stmt.run(params);
-  const rowid = db.exec('SELECT last_insert_rowid()')[0]?.values[0]?.[0] ?? null;
-  stmt.free();
-  return { lastInsertRowid: rowid };
+  const result = db.prepare(sql).run(params);
+  return { lastInsertRowid: result.lastInsertRowid };
 }
 
 function _get(sql, params = []) {
-  const stmt = db.prepare(sql);
-  if (params.length) stmt.bind(params);
-  const row = stmt.step() ? stmt.getAsObject() : null;
-  stmt.free();
-  return row;
+  return db.prepare(sql).get(params) ?? null;
 }
 
 function _all(sql, params = []) {
-  const stmt = db.prepare(sql);
-  if (params.length) stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free();
-  return rows;
+  return db.prepare(sql).all(params);
 }
 
 // ─────────────────────────────────────────────
@@ -461,7 +458,6 @@ function createProject(title, topic, youtubeUrl, youtubeVideoId) {
   );
   const projectId = result.lastInsertRowid;
   _run(`INSERT INTO pipeline_state (project_id) VALUES (?)`, [projectId]);
-  persist();
   return getProject(projectId);
 }
 
@@ -533,7 +529,6 @@ function getAllProjectsBySource(source) {
 
 function setProjectSource(projectId, source) {
   _run(`UPDATE projects SET source = ? WHERE id = ?`, [source, projectId]);
-  persist();
 }
 
 function updateProjectStage(projectId, stage) {
@@ -550,7 +545,6 @@ function updateProjectMeta(projectId, { youtube_url, youtube_video_id, topic }) 
      WHERE id = ?`,
     [youtube_url || null, youtube_video_id || null, topic || null, projectId]
   );
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -569,7 +563,6 @@ function savePackages(projectId, packages) {
   }
 
   updateProjectStage(projectId, 'M2');
-  persist();
 }
 
 function getPackages(projectId) {
@@ -589,7 +582,6 @@ function selectPackage(projectId, packageNumber, note) {
     [projectId]
   );
   updateProjectStage(projectId, 'M3');
-  persist();
 }
 
 function getSelectedPackage(projectId) {
@@ -622,7 +614,6 @@ function saveCaptions(projectId, clips) {
   }
 
   updateProjectStage(projectId, 'M3-captions');
-  persist();
 }
 
 function getCaptions(projectId) {
@@ -631,7 +622,6 @@ function getCaptions(projectId) {
 
 function approveCaption(captionId) {
   _run(`UPDATE captions SET approved = 1, approved_at = CURRENT_TIMESTAMP WHERE id = ?`, [captionId]);
-  persist();
 }
 
 function approveAllCaptions(projectId) {
@@ -642,7 +632,6 @@ function approveAllCaptions(projectId) {
     [projectId]
   );
   updateProjectStage(projectId, 'M4');
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -675,7 +664,6 @@ function saveEmails(projectId, emailData) {
   }
 
   updateProjectStage(projectId, 'M4-emails');
-  persist();
 }
 
 function getEmails(projectId) {
@@ -690,7 +678,6 @@ function approveAllEmails(projectId) {
     [projectId]
   );
   updateProjectStage(projectId, 'M5');
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -727,7 +714,6 @@ function insertFootage(record) {
       record.is_proxy           ? 1 : 0
     ]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -743,7 +729,6 @@ function updateFootage(id, fields) {
   const setClauses = updates.map(k => `${k} = ?`).join(', ');
   const values = updates.map(k => fields[k]);
   _run(`UPDATE footage SET ${setClauses} WHERE id = ?`, [...values, id]);
-  persist();
 }
 
 function getFootageById(id) {
@@ -795,12 +780,10 @@ function upsertDistribution({ footage_id, platform, posted_at, post_url, posted_
        notes           = excluded.notes`,
     [footage_id, platform, posted_at || null, post_url || null, posted_manually ?? 1, notes || null]
   );
-  persist();
 }
 
 function deleteDistribution(footage_id, platform) {
   _run(`DELETE FROM clip_distribution WHERE footage_id = ? AND platform = ?`, [footage_id, platform]);
-  persist();
 }
 
 function getDistributionByFootage(footage_id) {
@@ -852,7 +835,6 @@ function updateProjectDavinciState(projectId, newState, davinciProjectName) {
   const values = [newState];
   if (davinciProjectName) { sets.push('davinci_project_name = ?'); values.push(davinciProjectName); }
   _run(`UPDATE projects SET ${sets.join(', ')} WHERE id = ?`, [...values, projectId]);
-  persist();
 }
 
 function createDavinciTimeline({ project_id, timeline_name, timeline_index, state, notes }) {
@@ -861,7 +843,6 @@ function createDavinciTimeline({ project_id, timeline_name, timeline_index, stat
      VALUES (?, ?, ?, ?, ?)`,
     [project_id, timeline_name, timeline_index ?? 1, state ?? 'pending', notes ?? null]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -879,7 +860,6 @@ function updateDavinciTimeline(id, fields) {
   const sets   = updates.map(k => `${k} = ?`);
   const values = updates.map(k => fields[k]);
   _run(`UPDATE davinci_timelines SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
-  persist();
 }
 
 function getDavinciProjectStatus(projectId) {
@@ -940,7 +920,6 @@ function insertCut(cut) {
       cut.suggested_use       || null
     ]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -957,12 +936,10 @@ function getCutById(id) {
 
 function approveCut(id) {
   _run(`UPDATE cuts SET approved = 1, approved_at = CURRENT_TIMESTAMP WHERE id = ?`, [id]);
-  persist();
 }
 
 function updateCutClipPath(id, clipPath) {
   _run(`UPDATE cuts SET clip_path = ? WHERE id = ?`, [clipPath, id]);
-  persist();
 }
 
 function deleteCutsByProject(projectId) {
@@ -973,12 +950,10 @@ function deleteCutsByProject(projectId) {
      AND NOT (cut_type = 'off_script_gold' AND (saved_for_later = 1 OR approved = 1))`,
     [projectId]
   );
-  persist();
 }
 
 function saveOffScriptGoldForLater(cutId) {
   _run(`UPDATE cuts SET saved_for_later = 1 WHERE id = ?`, [cutId]);
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -1006,7 +981,6 @@ function upsertScript(projectId, { outline, full_script, approved_version }) {
       [projectId, outline || null, full_script || null, approved_version || null]
     );
   }
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -1034,7 +1008,6 @@ function savePost({ project_id, caption_id, platform, content, media_path, sched
       duration_seconds !== undefined ? duration_seconds : null,
     ]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -1048,20 +1021,17 @@ function updatePost(id, fields) {
   if (updates.length === 0) return;
   const setClauses = updates.map(k => `${k} = ?`).join(', ');
   _run(`UPDATE posts SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), id]);
-  persist();
 }
 
 function deletePost(id) {
   _run(`DELETE FROM analytics WHERE post_id = ?`, [id]);
   _run(`DELETE FROM posts WHERE id = ?`, [id]);
-  persist();
 }
 
 // AnalΩzr: format classification helpers ─────────────────────────────────────
 
 function updatePostFormat(postId, format, durationSeconds) {
   _run('UPDATE posts SET format = ?, duration_seconds = ? WHERE id = ?', [format, durationSeconds, postId]);
-  persist();
 }
 
 // Returns {projectId: {format, duration_seconds}} for all youtube posts — used
@@ -1099,7 +1069,6 @@ function upsertMetric(postId, projectId, platform, metricName, metricValue) {
       [postId, projectId, platform, metricName, metricValue]
     );
   }
-  persist();
 }
 
 function getAnalyticsByPost(postId) {
@@ -1266,7 +1235,6 @@ function insertComposorTrack(track) {
       track.generation_index   ?? 1
     ]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -1276,7 +1244,6 @@ function updateComposorTrack(id, fields) {
   if (!sets.length) return;
   const sql     = `UPDATE composor_tracks SET ${sets.map(k => `${k} = ?`).join(', ')} WHERE id = ?`;
   _run(sql, [...sets.map(k => fields[k]), id]);
-  persist();
 }
 
 function getComposorTracksByProject(projectId) {
@@ -1297,12 +1264,10 @@ function selectComposorTrack(trackId) {
   );
   // Select this one
   _run(`UPDATE composor_tracks SET selected = 1 WHERE id = ?`, [trackId]);
-  persist();
 }
 
 function deleteComposorTracksByProject(projectId) {
   _run(`DELETE FROM composor_tracks WHERE project_id = ?`, [projectId]);
-  persist();
 }
 
 function getPendingSunoTracks(projectId) {
@@ -1323,13 +1288,11 @@ function truncateLongSunoPrompts() {
   tracks.forEach(t => {
     _run(`UPDATE composor_tracks SET suno_prompt = ? WHERE id = ?`, [t.suno_prompt.substring(0, 200), t.id]);
   });
-  persist();
   return tracks.length;
 }
 
 function updateProjectComposorState(projectId, state) {
   _run(`UPDATE projects SET composor_state = ? WHERE id = ?`, [state, projectId]);
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -1354,7 +1317,6 @@ function insertSelect(section) {
       section.davinci_timeline_position ?? section.section_index ?? 0
     ]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -1372,12 +1334,10 @@ function getSelectsByProject(projectId) {
 
 function deleteSelectsByProject(projectId) {
   _run(`DELETE FROM selects WHERE project_id = ?`, [projectId]);
-  persist();
 }
 
 function updateProjectEditorState(projectId, state) {
   _run(`UPDATE projects SET editor_state = ? WHERE id = ?`, [state, projectId]);
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -1386,7 +1346,6 @@ function updateProjectEditorState(projectId, state) {
 
 function updateProjectId8r(projectId, data) {
   _run(`UPDATE projects SET id8r_data = ? WHERE id = ?`, [JSON.stringify(data), projectId]);
-  persist();
 }
 
 function updateProjectPipr(projectId, fields) {
@@ -1398,7 +1357,6 @@ function updateProjectPipr(projectId, fields) {
   if (!updates.length) return;
   const setClauses = updates.map(k => `${k} = ?`).join(', ');
   _run(`UPDATE projects SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), projectId]);
-  persist();
 }
 
 function updateProjectWritr(projectId, fields) {
@@ -1407,7 +1365,6 @@ function updateProjectWritr(projectId, fields) {
   if (!updates.length) return;
   const setClauses = updates.map(k => `${k} = ?`).join(', ');
   _run(`UPDATE projects SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), projectId]);
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -1440,7 +1397,6 @@ function insertWritrScript(data) {
       data.session_id        || null
     ]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -1492,7 +1448,6 @@ function updateWritrScript(id, fields) {
   );
   sets.push('updated_at = CURRENT_TIMESTAMP');
   _run(`UPDATE writr_scripts SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
-  persist();
 }
 
 function approveWritrScript(projectId, scriptId) {
@@ -1523,7 +1478,6 @@ function approveWritrScript(projectId, scriptId) {
       outline:          ws.generated_outline || null
     });
   }
-  persist();
 }
 
 // ─────────────────────────────────────────────
@@ -1532,18 +1486,15 @@ function approveWritrScript(projectId, scriptId) {
 
 function archiveProject(id) {
   _run(`UPDATE projects SET status = 'archived' WHERE id = ?`, [id]);
-  persist();
 }
 
 function unarchiveProject(id) {
   _run(`UPDATE projects SET status = 'active' WHERE id = ?`, [id]);
-  persist();
 }
 
 function deleteProject(id) {
   // ON DELETE CASCADE in schema handles all child table cleanup automatically
   _run(`DELETE FROM projects WHERE id = ?`, [id]);
-  persist();
 }
 
 function getArchivedProjects() {
@@ -1584,7 +1535,80 @@ function setKv(key, value) {
     `INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
     [key, JSON.stringify(value)]
   );
-  persist();
+}
+
+// ─────────────────────────────────────────────
+// TOKEN USAGE — helpers
+// ─────────────────────────────────────────────
+
+function logTokenUsage({ tool, session_id, input_tokens, output_tokens, estimated_cost }) {
+  _run(
+    `INSERT INTO token_usage (tool, session_id, input_tokens, output_tokens, estimated_cost)
+     VALUES (?, ?, ?, ?, ?)`,
+    [tool, session_id || null, input_tokens || 0, output_tokens || 0, estimated_cost || 0]
+  );
+  // No persist() needed — better-sqlite3 writes on every operation
+}
+
+function getTokenStats() {
+  const today = new Date().toISOString().split('T')[0];
+
+  const todayTotals = _get(
+    `SELECT
+       COALESCE(SUM(input_tokens), 0)   AS input_tokens,
+       COALESCE(SUM(output_tokens), 0)  AS output_tokens,
+       COALESCE(SUM(estimated_cost), 0) AS estimated_cost
+     FROM token_usage
+     WHERE DATE(created_at) = ?`,
+    [today]
+  );
+
+  const allTime = _get(
+    `SELECT
+       COALESCE(SUM(input_tokens), 0)   AS input_tokens,
+       COALESCE(SUM(output_tokens), 0)  AS output_tokens,
+       COALESCE(SUM(estimated_cost), 0) AS estimated_cost
+     FROM token_usage`
+  );
+
+  const byTool = _all(
+    `SELECT tool,
+       SUM(input_tokens)   AS input_tokens,
+       SUM(output_tokens)  AS output_tokens,
+       SUM(estimated_cost) AS estimated_cost,
+       COUNT(*)            AS call_count
+     FROM token_usage
+     GROUP BY tool
+     ORDER BY SUM(estimated_cost) DESC`
+  );
+
+  const id8rAvg = _get(
+    `SELECT
+       COALESCE(AVG(session_cost), 0) AS avg_cost,
+       COUNT(*)                       AS session_count
+     FROM (
+       SELECT session_id, SUM(estimated_cost) AS session_cost
+       FROM token_usage
+       WHERE tool = 'id8r' AND session_id IS NOT NULL
+       GROUP BY session_id
+     )`
+  );
+
+  return {
+    today: {
+      input_tokens:  todayTotals?.input_tokens  || 0,
+      output_tokens: todayTotals?.output_tokens || 0,
+      estimated_cost: Math.round((todayTotals?.estimated_cost || 0) * 10000) / 10000
+    },
+    all_time: {
+      input_tokens:  allTime?.input_tokens  || 0,
+      output_tokens: allTime?.output_tokens || 0,
+      estimated_cost: Math.round((allTime?.estimated_cost || 0) * 10000) / 10000
+    },
+    by_tool: byTool,
+    id8r_avg_cost: Math.round((id8rAvg?.avg_cost || 0) * 10000) / 10000,
+    id8r_session_count: id8rAvg?.session_count || 0
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -1608,7 +1632,6 @@ function insertBugReport({ what_tried, what_happened, severity, page, project_id
       reporter_name    || null
     ]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -1618,7 +1641,6 @@ function getBugReports() {
 
 function updateBugReportStatus(id, status) {
   _run(`UPDATE bug_reports SET status = ? WHERE id = ?`, [status, id]);
-  persist();
 }
 
 function getBugReportStats() {
@@ -1641,7 +1663,6 @@ function insertNpsScore({ score, comment, page, project_id }) {
     `INSERT INTO nps_scores (score, comment, page, project_id) VALUES (?, ?, ?, ?)`,
     [score, comment || null, page || null, project_id || null]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -1727,7 +1748,6 @@ function insertBetaApplication({ name, channel_url, platform, upload_frequency, 
      VALUES (?, ?, ?, ?, ?)`,
     [name, channel_url, platform || null, upload_frequency || null, why_text || null]
   );
-  persist();
   return result.lastInsertRowid;
 }
 
@@ -1737,7 +1757,64 @@ function getAllBetaApplications() {
 
 function updateBetaApplicationStatus(id, status) {
   _run(`UPDATE beta_applications SET status = ? WHERE id = ?`, [status, id]);
-  persist();
+}
+
+// ─────────────────────────────────────────────
+// COLLABORATOR SOUL — helpers
+// ─────────────────────────────────────────────
+
+function getProjectCollaborators(projectId) {
+  const p = _get(`SELECT collaborators FROM projects WHERE id = ?`, [projectId]);
+  if (!p?.collaborators) return [];
+  try { return JSON.parse(p.collaborators); } catch (_) { return []; }
+}
+
+function updateProjectCollaborators(projectId, collaborators) {
+  _run(`UPDATE projects SET collaborators = ? WHERE id = ?`,
+       [JSON.stringify(collaborators), projectId]);
+}
+
+// ─────────────────────────────────────────────
+// SHOOTDAY — Take helpers
+// ─────────────────────────────────────────────
+
+function getShootTakes(projectId) {
+  return _all(
+    `SELECT * FROM shoot_takes WHERE project_id = ? ORDER BY beat_index ASC`,
+    [projectId]
+  );
+}
+
+function upsertShootTake(projectId, beatIndex, beatName, status, note) {
+  const existing = _get(
+    `SELECT id, take_number FROM shoot_takes WHERE project_id = ? AND beat_index = ?`,
+    [projectId, beatIndex]
+  );
+  if (existing) {
+    const newTake = status === 'needed'
+      ? existing.take_number              // reset doesn't increment
+      : (existing.take_number + 1);      // good/skip = new take attempt
+    _run(
+      `UPDATE shoot_takes SET status = ?, note = ?, take_number = ?,
+         beat_name = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE project_id = ? AND beat_index = ?`,
+      [status, note || null, newTake, beatName || '', projectId, beatIndex]
+    );
+  } else {
+    _run(
+      `INSERT INTO shoot_takes (project_id, beat_index, beat_name, take_number, status, note)
+       VALUES (?, ?, ?, 1, ?, ?)`,
+      [projectId, beatIndex, beatName || '', status, note || null]
+    );
+  }
+  return _get(
+    `SELECT * FROM shoot_takes WHERE project_id = ? AND beat_index = ?`,
+    [projectId, beatIndex]
+  );
+}
+
+function resetShootTakes(projectId) {
+  _run(`DELETE FROM shoot_takes WHERE project_id = ?`, [projectId]);
 }
 
 module.exports = {
@@ -1769,6 +1846,9 @@ module.exports = {
   // KV Store
   getKv,
   setKv,
+  // Token Usage
+  logTokenUsage,
+  getTokenStats,
   // VaultΩr
   insertFootage,
   updateFootage,
@@ -1866,66 +1946,3 @@ module.exports = {
   getBetaFunnel,
   getBetaStats
 };
-
-
-// ─────────────────────────────────────────────
-// COLLABORATOR SOUL — helpers
-// ─────────────────────────────────────────────
-
-function getProjectCollaborators(projectId) {
-  const p = _get(`SELECT collaborators FROM projects WHERE id = ?`, [projectId]);
-  if (!p?.collaborators) return [];
-  try { return JSON.parse(p.collaborators); } catch (_) { return []; }
-}
-
-function updateProjectCollaborators(projectId, collaborators) {
-  _run(`UPDATE projects SET collaborators = ? WHERE id = ?`,
-       [JSON.stringify(collaborators), projectId]);
-  persist();
-}
-
-// ─────────────────────────────────────────────
-// SHOOTDAY — Take helpers
-// ─────────────────────────────────────────────
-
-function getShootTakes(projectId) {
-  return _all(
-    `SELECT * FROM shoot_takes WHERE project_id = ? ORDER BY beat_index ASC`,
-    [projectId]
-  );
-}
-
-function upsertShootTake(projectId, beatIndex, beatName, status, note) {
-  const existing = _get(
-    `SELECT id, take_number FROM shoot_takes WHERE project_id = ? AND beat_index = ?`,
-    [projectId, beatIndex]
-  );
-  if (existing) {
-    const newTake = status === 'needed'
-      ? existing.take_number              // reset doesn't increment
-      : (existing.take_number + 1);      // good/skip = new take attempt
-    _run(
-      `UPDATE shoot_takes SET status = ?, note = ?, take_number = ?,
-         beat_name = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE project_id = ? AND beat_index = ?`,
-      [status, note || null, newTake, beatName || '', projectId, beatIndex]
-    );
-  } else {
-    _run(
-      `INSERT INTO shoot_takes (project_id, beat_index, beat_name, take_number, status, note)
-       VALUES (?, ?, ?, 1, ?, ?)`,
-      [projectId, beatIndex, beatName || '', status, note || null]
-    );
-  }
-  persist();
-  return _get(
-    `SELECT * FROM shoot_takes WHERE project_id = ? AND beat_index = ?`,
-    [projectId, beatIndex]
-  );
-}
-
-function resetShootTakes(projectId) {
-  _run(`DELETE FROM shoot_takes WHERE project_id = ?`, [projectId]);
-  persist();
-}
-

@@ -183,4 +183,17 @@ router.get('/stats', (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────
+// TOKEN STATS — AI API usage and cost tracking
+// ─────────────────────────────────────────────
+
+router.get('/token-stats', (req, res) => {
+  try {
+    const stats = db.getTokenStats();
+    res.json({ ok: true, ...stats });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;

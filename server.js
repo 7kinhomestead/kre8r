@@ -160,7 +160,7 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 });
 
 // ─────────────────────────────────────────────
-// START — async so we can await sql.js init
+// START — synchronous init (better-sqlite3)
 // ─────────────────────────────────────────────
 const { initDb } = require('./src/db');
 
@@ -168,8 +168,8 @@ const { startWatcher } = require('./src/vault/watcher');
 
 async function start() {
   try {
-    await initDb();
-    console.log('[DB] SQLite database ready at database/kre8r.db');
+    initDb();
+    console.log('[DB] SQLite database ready at database/kre8r.db (better-sqlite3 WAL)');
   } catch (err) {
     console.error('[DB] Failed to initialize database:', err.message);
     process.exit(1);

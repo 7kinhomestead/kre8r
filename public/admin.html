@@ -548,6 +548,12 @@
       <div id="nps-container"><div class="loading-text">Loading...</div></div>
     </div>
 
+    <!-- SECTION 6: TOKEN USAGE -->
+    <div class="section">
+      <div class="section-header">Token Usage & AI Cost</div>
+      <div id="token-container"><div class="loading-text">Loading...</div></div>
+    </div>
+
   </div>
 
   <script>
@@ -1020,6 +1026,66 @@
       }
     }
 
+    // ─── SECTION 6: TOKEN USAGE ──────────────────────────────────────────────
+
+    async function loadTokenStats() {
+      const container = document.getElementById('token-container');
+      try {
+        const res  = await fetch('/api/beta/token-stats');
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+
+        const { today, all_time, by_tool, id8r_avg_cost, id8r_session_count } = data;
+
+        const fmtCost = v => `$${Number(v).toFixed(4)}`;
+        const fmtNum  = v => Number(v).toLocaleString();
+
+        const toolRows = (by_tool || []).map(t => `
+          <tr>
+            <td><strong>${t.tool}</strong></td>
+            <td>${fmtNum(t.input_tokens)}</td>
+            <td>${fmtNum(t.output_tokens)}</td>
+            <td>${t.call_count}</td>
+            <td style="color:var(--teal)">${fmtCost(t.estimated_cost)}</td>
+          </tr>`).join('');
+
+        container.innerHTML = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">
+            <div style="background:var(--surface2);border-radius:8px;padding:16px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtCost(today.estimated_cost)}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">Today's Cost</div>
+              <div style="font-size:11px;color:var(--muted)">${fmtNum(today.input_tokens)} in / ${fmtNum(today.output_tokens)} out</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:16px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtCost(all_time.estimated_cost)}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">All-Time Cost</div>
+              <div style="font-size:11px;color:var(--muted)">${fmtNum(all_time.input_tokens)} in / ${fmtNum(all_time.output_tokens)} out</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:16px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtCost(id8r_avg_cost)}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">Avg Id8Ωr Session</div>
+              <div style="font-size:11px;color:var(--muted)">${id8r_session_count} sessions tracked</div>
+            </div>
+          </div>
+          ${toolRows ? `
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);color:var(--muted)">
+                <th style="text-align:left;padding:6px 8px">Tool</th>
+                <th style="text-align:right;padding:6px 8px">Input Tokens</th>
+                <th style="text-align:right;padding:6px 8px">Output Tokens</th>
+                <th style="text-align:right;padding:6px 8px">Calls</th>
+                <th style="text-align:right;padding:6px 8px">Cost</th>
+              </tr>
+            </thead>
+            <tbody>${toolRows}</tbody>
+          </table>` : '<p style="color:var(--muted);font-size:13px">No token usage recorded yet. Run an Id8Ωr session to start tracking.</p>'}`;
+      } catch (e) {
+        console.error('loadTokenStats error', e);
+        container.innerHTML = `<p class="error-text">Failed to load token stats: ${e.message}</p>`;
+      }
+    }
+
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1028,7 +1094,8 @@
         loadBugReports(),
         loadFunnel(),
         loadApplications(),
-        loadNPS()
+        loadNPS(),
+        loadTokenStats()
       ]);
     });
   </script>
