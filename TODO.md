@@ -2,6 +2,27 @@
 
 ---
 
+## ⚡ HIGH PRIORITY — Electron AppData DB Auto-Backup
+
+In `electron/main.js`, after the server starts and the ready poll resolves, add a 5-minute interval that copies the live AppData DB to the project folder. Survives power outages and AppData corruption.
+
+```js
+setInterval(() => {
+  try {
+    fs.copyFileSync(
+      path.join(app.getPath('userData'), 'kre8r.db'),
+      path.join(__dirname, '../database/kre8r-electron-backup.db')
+    );
+  } catch (err) {
+    console.warn('[Electron] DB backup failed:', err.message);
+  }
+}, 300_000); // every 5 minutes
+```
+
+Add `database/kre8r-electron-backup.db` to `.gitignore` and the electron-builder `files` exclusion list (same as `kre8r.db`).
+
+---
+
 ## Task 1 — Live test Content DNA niche + audience panels
 
 The constellation graph is confirmed working (263 nodes, real view counts, 7 clusters). The two SSE panels below it have not been tested end-to-end.

@@ -322,6 +322,27 @@ Four panels:
 - NPS trigger: check `localStorage.lastNpsShown` — show max once per 7 days, only after pipeline completion
 - Admin dashboard protected by same basic auth as `kre8r.app` (nginx level) — no new auth layer needed
 
+## ⚡ HIGH PRIORITY — Electron AppData DB Auto-Backup
+
+In `electron/main.js`, after the server ready poll resolves, set a 5-minute interval that copies the live AppData DB to the project folder. Survives power outages and AppData corruption.
+
+```js
+setInterval(() => {
+  try {
+    fs.copyFileSync(
+      path.join(app.getPath('userData'), 'kre8r.db'),
+      path.join(__dirname, '../database/kre8r-electron-backup.db')
+    );
+  } catch (err) {
+    console.warn('[Electron] DB backup failed:', err.message);
+  }
+}, 300_000); // every 5 minutes
+```
+
+Add `database/kre8r-electron-backup.db` to `.gitignore` and the electron-builder `files` exclusion list.
+
+Why it matters: the AppData DB is the single source of truth in Electron mode. A power outage or filesystem corruption with no backup = total data loss for the user. This is a one-liner that eliminates that risk.
+
 ## Session Auto-Save + Crash Recovery
 
 ### Auto-Save
