@@ -476,7 +476,9 @@
       "Bash(kill 7269 7310)",
       "Bash(npm rebuild:*)",
       "Bash(ls \"C:\\\\Users\\\\18054\\\\AppData\\\\Roaming\\\\kre8r\"\" 2>&1 && echo \"---\" && ls \"C:Users18054AppDataRoamingKre8r\"\")",
-      "Bash(taskkill //F //PID 39764)"
+      "Bash(taskkill //F //PID 39764)",
+      "Bash(taskkill /F /IM electron.exe /T)",
+      "Bash(taskkill //F //IM electron.exe //T)"
     ]
   }
 }
