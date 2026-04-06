@@ -1,7 +1,7 @@
 /**
  * scripts/generate-icons.js
- * Converts kre8r-icon.svg into PNG files at every size needed by
- * Electron (Windows .ico source, macOS .icns source, taskbar, etc.)
+ * Generates PNG icon files at every size needed by Electron.
+ * Source: public/images/kre8r-icon.png (master 512×512)
  *
  * Usage: node scripts/generate-icons.js
  */
@@ -12,25 +12,24 @@ const sharp = require('sharp');
 const path  = require('path');
 const fs    = require('fs');
 
-const svgPath = path.join(__dirname, '../public/images/kre8r-icon.svg');
+const srcPath = path.join(__dirname, '../public/images/kre8r-icon.png');
 const outDir  = path.join(__dirname, '../public/images');
 
-const sizes = [512, 256, 128, 64, 32, 16];
+// Sizes needed: 512 (master), 256, 128, 64, 32, 16
+const sizes = [256, 128, 64, 32, 16];
 
 async function generateIcons() {
-  if (!fs.existsSync(svgPath)) {
-    console.error('✗ SVG not found:', svgPath);
+  if (!fs.existsSync(srcPath)) {
+    console.error('✗ Source icon not found:', srcPath);
     process.exit(1);
   }
 
-  const svg = fs.readFileSync(svgPath);
+  const meta = await sharp(srcPath).metadata();
+  console.log(`Source: ${meta.width}×${meta.height} ${meta.format}`);
 
   for (const size of sizes) {
-    const outPath = path.join(outDir, size === 512
-      ? 'kre8r-icon.png'
-      : `kre8r-icon-${size}.png`
-    );
-    await sharp(svg).resize(size, size).png().toFile(outPath);
+    const outPath = path.join(outDir, `kre8r-icon-${size}.png`);
+    await sharp(srcPath).resize(size, size).png().toFile(outPath);
     console.log(`✓ ${size}×${size}  →  ${path.basename(outPath)}`);
   }
 
