@@ -33,7 +33,8 @@ const voiceUpload = multer({
   dest: os.tmpdir(),
   limits: { files: 6, fileSize: 500 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    cb(null, /\.(mp4|mov|m4a|mp3|wav|webm|ogg)$/i.test(file.originalname));
+    // Accept all common audio/video formats including .mp3
+    cb(null, /\.(mp4|mov|m4a|mp3|wav|webm|ogg|aac|flac)$/i.test(file.originalname));
   },
 });
 
@@ -557,6 +558,10 @@ Generate a collaborator profile JSON:
 // ─── POST /analyze-voice (SSE) ───────────────────────────────────────────────
 // Accepts: multipart — up to 6 clip files + transcript_text + descriptors + tone_slider + never_say + collab_name
 // Returns SSE stream → { type:'status'|'done'|'error', ... }
+
+// Whisper executable name differs by platform
+const WHISPER_BIN = process.platform === 'win32' ? 'whisper.exe' : 'whisper';
+
 router.post('/analyze-voice', voiceUpload.array('clips', 6), async (req, res) => {
   res.setHeader('Content-Type',  'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -576,34 +581,40 @@ router.post('/analyze-voice', voiceUpload.array('clips', 6), async (req, res) =>
   try {
     // ── Phase 1: transcribe each uploaded clip ──────────────────────────────
     for (let i = 0; i < files.length; i++) {
-      const file    = files[i];
-      const wavPath = file.path + '.wav';
+      const file = files[i];
+
+      // Safe temp name: no spaces, no special chars — use index + timestamp
+      const safeBase = `kre8r_clip_${i}_${Date.now()}`;
+      const wavPath  = path.join(os.tmpdir(), safeBase + '.wav');
       tmpToClean.push(file.path, wavPath);
 
       sse({ type: 'status', step: 'transcribe', clip: i + 1, total: files.length,
             message: `Transcribing clip ${i + 1} of ${files.length}...` });
 
       try {
-        // Extract mono 16 kHz WAV
+        // Resample to 16 kHz mono WAV — works for .mp3, .mp4, .mov, .m4a, .wav, etc.
         execSync(
-          `ffmpeg -y -i "${file.path}" -ar 16000 -ac 1 -f wav "${wavPath}"`,
+          `ffmpeg -y -i "${file.path}" -ar 16000 -ac 1 "${wavPath}"`,
           { timeout: 120_000, stdio: 'pipe' }
         );
 
-        // Whisper transcription
+        // Whisper transcription — GPU accelerated, small model, English forced
         execSync(
-          `whisper "${wavPath}" --model base --device cuda --output_format txt --output_dir "${os.tmpdir()}"`,
-          { timeout: 300_000, stdio: 'pipe' }
+          `"${WHISPER_BIN}" "${wavPath}" --model small --language en --device cuda --output_format txt --output_dir "${os.tmpdir()}"`,
+          { timeout: 600_000, stdio: 'pipe' }   // 10 min per clip
         );
 
-        // Whisper names output: <input_basename_no_ext>.txt in output_dir
-        const txtPath = path.join(os.tmpdir(), path.basename(wavPath, '.wav') + '.txt');
+        // Whisper names output: <basename_no_ext>.txt in output_dir
+        const txtPath = path.join(os.tmpdir(), safeBase + '.txt');
         tmpToClean.push(txtPath);
 
         if (fs.existsSync(txtPath)) {
           const txt = fs.readFileSync(txtPath, 'utf8').trim();
           if (txt) allTranscripts.push(`[Clip ${i + 1} — ${file.originalname}]\n${txt}`);
         }
+
+        sse({ type: 'status', step: 'transcribe', clip: i + 1, total: files.length,
+              message: `Clip ${i + 1} of ${files.length} transcribed ✓` });
       } catch (_clipErr) {
         sse({ type: 'status', message: `Clip ${i + 1}: transcription failed — skipping...` });
       }
