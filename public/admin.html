@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kre8Ωr Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f0e;
+      --card: #141614;
+      --border: #1e2120;
+      --teal: #00c2a8;
+      --amber: #f0b942;
+      --red: #ef4444;
+      --green: #22c55e;
+      --text: #e8e8e8;
+      --muted: #888;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    .admin-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: #0a0b0a;
+      border-bottom: 1px solid var(--border);
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+
+    .admin-nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.05em;
+      color: var(--text);
+    }
+
+    .admin-nav-logo span { color: var(--teal); }
+
+    .admin-nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.15s;
+    }
+
+    .admin-nav a:hover { color: var(--teal); }
+
+    /* MAIN */
+    .main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 72px 24px 60px;
+    }
+
+    /* SECTION */
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-header {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      padding-left: 14px;
+      border-left: 4px solid var(--teal);
+      margin-bottom: 20px;
+      position: sticky;
+      top: 52px;
+      background: var(--bg);
+      padding-top: 12px;
+      padding-bottom: 12px;
+      z-index: 10;
+    }
+
+    /* STAT CARDS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 560px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--teal);
+      border-radius: 6px;
+      padding: 20px 16px 16px;
+    }
+
+    .stat-number {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      line-height: 1;
+      color: var(--teal);
+      letter-spacing: 0.02em;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 6px;
+    }
+
+    /* FILTER BUTTONS */
+    .section-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 52px;
+      background: var(--bg);
+      padding-top: 12px;
+      padding-bottom: 12px;
+      z-index: 10;
+      margin-bottom: 20px;
+    }
+
+    .section-header-row .section-header {
+      position: static;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .filter-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    .filter-btn:hover { border-color: var(--teal); color: var(--text); }
+    .filter-btn.active { border-color: var(--teal); color: var(--teal); background: rgba(0,194,168,0.08); }
+
+    /* TABLE */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      background: #0a0b0a;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { filter: brightness(1.1); }
+
+    tbody td {
+      padding: 10px 14px;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    /* BUG ROW COLORS */
+    tr.sev-blocker { background: #2a1515; }
+    tr.sev-annoying { background: #2a2010; }
+    tr.sev-minor { background: var(--card); }
+
+    /* BADGES */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .badge-blocker { background: var(--red); color: #0e0f0e; }
+    .badge-annoying { background: var(--amber); color: #0e0f0e; }
+    .badge-minor { background: var(--green); color: #0e0f0e; }
+
+    .badge-tiktok { background: #2563eb; color: #fff; }
+    .badge-youtube { background: #dc2626; color: #fff; }
+    .badge-instagram { background: #9333ea; color: #fff; }
+    .badge-lemon8 { background: var(--green); color: #0e0f0e; }
+    .badge-other { background: #555; color: var(--text); }
+
+    /* STATUS SELECT */
+    .status-select {
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 20px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+    }
+
+    .status-select.open { border: 1px solid var(--red); }
+    .status-select.in-progress { border: 1px solid var(--amber); }
+    .status-select.resolved { border: 1px solid var(--green); }
+    .status-select.pending { border: 1px solid var(--muted); }
+    .status-select.approved { border: 1px solid var(--green); }
+    .status-select.rejected { border: 1px solid var(--red); }
+    .status-select.waitlisted { border: 1px solid var(--amber); }
+
+    /* EXPAND ROW */
+    .expand-row td {
+      padding: 0;
+      cursor: default;
+    }
+
+    .expand-content {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease;
+      background: #0a0b0a;
+    }
+
+    .expand-content.open {
+      max-height: 600px;
+    }
+
+    .expand-inner {
+      padding: 16px 20px;
+    }
+
+    pre.detail-code {
+      background: #0e0f0e;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 14px;
+      font-size: 12px;
+      color: var(--teal);
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-family: 'Courier New', monospace;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    /* FUNNEL */
+    .funnel-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .funnel-row { display: flex; align-items: center; gap: 14px; }
+
+    .funnel-label {
+      width: 160px;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .funnel-bar-wrap {
+      flex: 1;
+      background: var(--border);
+      border-radius: 3px;
+      height: 28px;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .funnel-bar-fill {
+      height: 100%;
+      background: var(--teal);
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+
+    .funnel-bar-wrap.zero {
+      border-left: 3px solid var(--red);
+    }
+
+    .funnel-meta {
+      width: 130px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .funnel-count { color: var(--text); }
+    .funnel-pct { color: var(--muted); }
+
+    .dropoff-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    .dropoff-high { background: rgba(240,185,66,0.15); color: var(--amber); }
+    .dropoff-low { color: #444; }
+
+    /* NPS SECTION */
+    .nps-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 640px) {
+      .nps-layout { grid-template-columns: 1fr; }
+    }
+
+    .nps-gauge {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 32px 20px;
+      text-align: center;
+    }
+
+    .nps-score-number {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 80px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+
+    .nps-score-number.red { color: var(--red); }
+    .nps-score-number.amber { color: var(--amber); }
+    .nps-score-number.teal { color: var(--teal); }
+
+    .nps-responses {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .nps-list-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .nps-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nps-item:last-child { border-bottom: none; }
+
+    .nps-stars { color: var(--amber); font-size: 15px; letter-spacing: 1px; }
+
+    .nps-comment {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+      font-style: italic;
+    }
+
+    .nps-time {
+      color: #555;
+      font-size: 11px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* APP ROW COLORS */
+    tr.app-approved { background: #0a2e0a; }
+    tr.app-rejected { background: #2a0a0a; }
+    tr.app-waitlisted { background: #2a200a; }
+
+    /* INVITE BTN */
+    .invite-btn {
+      background: transparent;
+      border: 1px solid var(--teal);
+      color: var(--teal);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .invite-btn:hover { background: rgba(0,194,168,0.1); }
+
+    /* EMPTY / LOADING / ERROR STATES */
+    .empty-state {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .empty-state .empty-emoji { font-size: 36px; margin-bottom: 12px; }
+    .empty-state p { color: var(--muted); }
+
+    .loading-text { color: var(--muted); padding: 24px 0; text-align: center; }
+    .error-text { color: var(--red); padding: 12px 0; }
+
+    /* CHANNEL LINK */
+    .channel-link {
+      color: var(--teal);
+      text-decoration: none;
+      font-size: 12px;
+    }
+
+    .channel-link:hover { text-decoration: underline; }
+
+    /* RESPONSIVE TABLE TEXT */
+    @media (max-width: 768px) {
+      tbody td { font-size: 12px; padding: 8px 10px; }
+      thead th { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="admin-nav">
+    <div class="admin-nav-logo">KRE8<span>Ω</span>R ADMIN</div>
+    <a href="/">← Back to App</a>
+  </nav>
+
+  <div class="main">
+
+    <!-- SECTION 1: STATS -->
+    <div class="section">
+      <div class="section-header">Overview</div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-number" id="stat-souls">—</div>
+          <div class="stat-label">Beta Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-pipeline">—</div>
+          <div class="stat-label">Pipeline Runs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-open-bugs">—</div>
+          <div class="stat-label">Open Bugs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-resolved-bugs">—</div>
+          <div class="stat-label">Resolved Bugs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-nps">—</div>
+          <div class="stat-label">Avg NPS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: BUG REPORTS -->
+    <div class="section">
+      <div class="section-header-row">
+        <div class="section-header" style="position:static;margin-bottom:0;padding-top:0;padding-bottom:0;">Bug Reports</div>
+        <div class="filter-btns">
+          <button class="filter-btn active" data-sev="all" onclick="setBugFilter('all')">All</button>
+          <button class="filter-btn" data-sev="blocker" onclick="setBugFilter('blocker')">🔴 Blockers</button>
+          <button class="filter-btn" data-sev="annoying" onclick="setBugFilter('annoying')">🟡 Annoying</button>
+          <button class="filter-btn" data-sev="minor" onclick="setBugFilter('minor')">🟢 Minor</button>
+        </div>
+      </div>
+      <div id="bugs-container"><div class="loading-text">Loading...</div></div>
+    </div>
+
+    <!-- SECTION 3: FUNNEL -->
+    <div class="section">
+      <div class="section-header">Pipeline Funnel</div>
+      <div id="funnel-container"><div class="loading-text">Loading...</div></div>
+    </div>
+
+    <!-- SECTION 4: BETA APPLICATIONS -->
+    <div class="section">
+      <div class="section-header">Beta Applications</div>
+      <div id="applications-container"><div class="loading-text">Loading...</div></div>
+    </div>
+
+    <!-- SECTION 5: NPS -->
+    <div class="section">
+      <div class="section-header">NPS Scores</div>
+      <div id="nps-container"><div class="loading-text">Loading...</div></div>
+    </div>
+
+  </div>
+
+  <script>
+    // ─── STATE ───────────────────────────────────────────────────────────────
+    let bugReportsData = [];
+    let currentBugFilter = 'all';
+
+    // ─── UTILITIES ───────────────────────────────────────────────────────────
+
+    function timeAgo(dateString) {
+      if (!dateString) return '—';
+      const now = Date.now();
+      const then = new Date(dateString).getTime();
+      if (isNaN(then)) return '—';
+      const diff = Math.floor((now - then) / 1000);
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+      return `${Math.floor(diff / 2592000)}mo ago`;
+    }
+
+    function truncate(str, n) {
+      if (!str) return '';
+      str = String(str);
+      return str.length > n ? str.slice(0, n) + '…' : str;
+    }
+
+    function severityBadge(s) {
+      if (!s) return '';
+      const sl = s.toLowerCase();
+      if (sl === 'blocker') return `<span class="badge badge-blocker">🔴 BLOCKER</span>`;
+      if (sl === 'annoying') return `<span class="badge badge-annoying">🟡 ANNOYING</span>`;
+      if (sl === 'minor') return `<span class="badge badge-minor">🟢 MINOR</span>`;
+      return `<span class="badge" style="background:#333;color:var(--text)">${s}</span>`;
+    }
+
+    function platformBadge(platform) {
+      if (!platform) return '<span class="badge badge-other">Other</span>';
+      const p = platform.toLowerCase();
+      if (p.includes('tiktok')) return `<span class="badge badge-tiktok">TikTok</span>`;
+      if (p.includes('youtube')) return `<span class="badge badge-youtube">YouTube</span>`;
+      if (p.includes('instagram')) return `<span class="badge badge-instagram">Instagram</span>`;
+      if (p.includes('lemon8')) return `<span class="badge badge-lemon8">Lemon8</span>`;
+      return `<span class="badge badge-other">${platform}</span>`;
+    }
+
+    function pageLabel(pathname) {
+      if (!pathname) return '—';
+      const parts = pathname.split('/').filter(Boolean);
+      return parts[parts.length - 1] || pathname;
+    }
+
+    function statusSelectClass(status) {
+      const map = {
+        'open': 'open',
+        'in-progress': 'in-progress',
+        'resolved': 'resolved',
+        'pending': 'pending',
+        'approved': 'approved',
+        'rejected': 'rejected',
+        'waitlisted': 'waitlisted'
+      };
+      return map[status] || '';
+    }
+
+    function emptyState(emoji, msg) {
+      return `<div class="empty-state"><div class="empty-emoji">${emoji}</div><p>${msg}</p></div>`;
+    }
+
+    // ─── SECTION 1: STATS ────────────────────────────────────────────────────
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/beta/stats');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        document.getElementById('stat-souls').textContent = d.soul_count ?? '—';
+        document.getElementById('stat-pipeline').textContent = d.pipeline_runs ?? '—';
+        document.getElementById('stat-open-bugs').textContent = d.open_bugs ?? '—';
+        document.getElementById('stat-resolved-bugs').textContent = d.resolved_bugs ?? '—';
+        const nps = d.avg_nps;
+        document.getElementById('stat-nps').textContent =
+          (nps !== null && nps !== undefined && !isNaN(nps))
+            ? Number(nps).toFixed(1)
+            : '—';
+      } catch (e) {
+        console.error('loadStats error', e);
+        ['stat-souls','stat-pipeline','stat-open-bugs','stat-resolved-bugs','stat-nps']
+          .forEach(id => {
+            document.getElementById(id).textContent = 'ERR';
+            document.getElementById(id).style.color = 'var(--red)';
+          });
+      }
+    }
+
+    // ─── SECTION 2: BUG REPORTS ──────────────────────────────────────────────
+
+    async function loadBugReports() {
+      const container = document.getElementById('bugs-container');
+      try {
+        const res = await fetch('/api/beta/reports');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        bugReportsData = await res.json();
+        renderBugTable();
+      } catch (e) {
+        console.error('loadBugReports error', e);
+        container.innerHTML = `<p class="error-text">Failed to load bug reports: ${e.message}</p>`;
+      }
+    }
+
+    function setBugFilter(sev) {
+      currentBugFilter = sev;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.sev === sev);
+      });
+      renderBugTable();
+    }
+
+    function renderBugTable() {
+      const container = document.getElementById('bugs-container');
+      const data = currentBugFilter === 'all'
+        ? bugReportsData
+        : bugReportsData.filter(r => (r.severity || '').toLowerCase() === currentBugFilter);
+
+      if (!data.length) {
+        container.innerHTML = emptyState('🐛', 'No bug reports yet.');
+        return;
+      }
+
+      const rows = data.map((r, idx) => {
+        const sevClass = `sev-${(r.severity || 'minor').toLowerCase()}`;
+        const statusCls = statusSelectClass(r.status || 'open');
+        const trId = `bug-row-${r.id || idx}`;
+        const expandId = `bug-expand-${r.id || idx}`;
+
+        // Build detail content
+        let consoleErrors = '';
+        if (r.console_errors) {
+          try {
+            const errs = typeof r.console_errors === 'string'
+              ? JSON.parse(r.console_errors)
+              : r.console_errors;
+            if (Array.isArray(errs) && errs.length) {
+              consoleErrors = '\nConsole Errors:\n' + errs.map(e => '  • ' + e).join('\n');
+            }
+          } catch {}
+        }
+
+        const detail = [
+          `Page:       ${r.page || r.url || '—'}`,
+          `Project ID: ${r.project_id || '—'}`,
+          `Browser:    ${r.browser || '—'}`,
+          `Timestamp:  ${r.created_at || '—'}`,
+          `\nWhat They Tried:\n  ${r.action_attempted || '—'}`,
+          `\nWhat Happened:\n  ${r.actual_behavior || r.description || '—'}`,
+          consoleErrors
+        ].filter(Boolean).join('\n');
+
+        return `
+          <tr class="${sevClass}" id="${trId}" onclick="toggleBugExpand('${expandId}', event)">
+            <td>${severityBadge(r.severity)}</td>
+            <td style="font-size:12px;color:var(--muted)">${pageLabel(r.page || r.url || '')}</td>
+            <td title="${(r.action_attempted || '').replace(/"/g, '&quot;')}">${truncate(r.action_attempted, 60)}</td>
+            <td title="${(r.actual_behavior || r.description || '').replace(/"/g, '&quot;')}">${truncate(r.actual_behavior || r.description, 60)}</td>
+            <td>${r.reporter_name || 'Anonymous'}</td>
+            <td style="color:var(--muted);white-space:nowrap">${timeAgo(r.created_at)}</td>
+            <td onclick="event.stopPropagation()">
+              <select class="status-select ${statusCls}"
+                onchange="updateBugStatus(${r.id}, this.value, this)"
+                onclick="event.stopPropagation()">
+                <option value="open" ${(r.status||'open')==='open'?'selected':''}>Open</option>
+                <option value="in-progress" ${r.status==='in-progress'?'selected':''}>In Progress</option>
+                <option value="resolved" ${r.status==='resolved'?'selected':''}>Resolved</option>
+              </select>
+            </td>
+          </tr>
+          <tr class="expand-row">
+            <td colspan="7">
+              <div class="expand-content" id="${expandId}">
+                <div class="expand-inner">
+                  <pre class="detail-code">${escapeHtml(detail)}</pre>
+                </div>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Sev</th>
+                <th>Tool/Page</th>
+                <th>What They Tried</th>
+                <th>What Happened</th>
+                <th>Reporter</th>
+                <th>Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    function toggleBugExpand(expandId, event) {
+      const el = document.getElementById(expandId);
+      if (!el) return;
+      el.classList.toggle('open');
+    }
+
+    async function updateBugStatus(id, status, selectEl) {
+      const prevClass = selectEl.className;
+      try {
+        const res = await fetch(`/api/beta/report/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // Update class
+        selectEl.className = `status-select ${statusSelectClass(status)}`;
+        // Update local data
+        const rec = bugReportsData.find(r => r.id === id);
+        if (rec) rec.status = status;
+        // Refresh stats
+        loadStats();
+      } catch (e) {
+        console.error('updateBugStatus error', e);
+        selectEl.className = prevClass;
+        alert(`Failed to update status: ${e.message}`);
+      }
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ─── SECTION 3: FUNNEL ───────────────────────────────────────────────────
+
+    const FUNNEL_ORDER = [
+      { stage: 'soul',      label: 'Soul BuildΩr' },
+      { stage: 'id8r',      label: 'Id8Ωr' },
+      { stage: 'pipr',      label: 'PipΩr' },
+      { stage: 'writr',     label: 'WritΩr' },
+      { stage: 'director',  label: 'DirectΩr' },
+      { stage: 'vault',     label: 'VaultΩr' },
+      { stage: 'mirrr',     label: 'MirrΩr' },
+    ];
+
+    async function loadFunnel() {
+      const container = document.getElementById('funnel-container');
+      try {
+        const res = await fetch('/api/beta/funnel');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Build map
+        const byStage = {};
+        (Array.isArray(data) ? data : []).forEach(row => {
+          byStage[row.stage] = row;
+        });
+
+        // Determine first stage count for relative %
+        const firstStage = FUNNEL_ORDER[0].stage;
+        const firstCount = byStage[firstStage]?.count ?? 0;
+
+        let prevCount = null;
+        const rows = FUNNEL_ORDER.map(({ stage, label }) => {
+          const row = byStage[stage];
+          const count = row?.count ?? 0;
+          const pct = firstCount > 0 ? Math.round((count / firstCount) * 100) : (count > 0 ? 100 : 0);
+
+          let dropoffHtml = '';
+          if (prevCount !== null && prevCount > 0) {
+            const drop = Math.round(((prevCount - count) / prevCount) * 100);
+            if (drop > 0) {
+              const cls = drop > 20 ? 'dropoff-high' : 'dropoff-low';
+              dropoffHtml = `<span class="dropoff-badge ${cls}">↓${drop}%</span>`;
+            }
+          }
+          prevCount = count;
+
+          const barWrapClass = count === 0 ? 'funnel-bar-wrap zero' : 'funnel-bar-wrap';
+          const barWidth = Math.max(0, Math.min(100, pct));
+
+          return `
+            <div class="funnel-row">
+              <div class="funnel-label">${label}</div>
+              <div class="${barWrapClass}">
+                <div class="funnel-bar-fill" style="width:${barWidth}%"></div>
+              </div>
+              <div class="funnel-meta">
+                <span class="funnel-count">${count}</span>
+                <span class="funnel-pct">(${pct}%)</span>
+                ${dropoffHtml}
+              </div>
+            </div>`;
+        }).join('');
+
+        container.innerHTML = `<div class="funnel-list">${rows}</div>`;
+      } catch (e) {
+        console.error('loadFunnel error', e);
+        container.innerHTML = `<p class="error-text">Failed to load funnel: ${e.message}</p>`;
+      }
+    }
+
+    // ─── SECTION 4: BETA APPLICATIONS ────────────────────────────────────────
+
+    async function loadApplications() {
+      const container = document.getElementById('applications-container');
+      try {
+        const res = await fetch('/api/beta/applications');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (!data.length) {
+          container.innerHTML = emptyState('📋', 'No applications yet.');
+          return;
+        }
+
+        const rows = data.map(app => {
+          const rowClass = app.status === 'approved' ? 'app-approved'
+                         : app.status === 'rejected' ? 'app-rejected'
+                         : app.status === 'waitlisted' ? 'app-waitlisted'
+                         : '';
+          const statusCls = statusSelectClass(app.status || 'pending');
+          const encodedName = encodeURIComponent(app.name || '');
+          const channelHtml = app.channel_url
+            ? `<a class="channel-link" href="${escapeHtml(app.channel_url)}" target="_blank" rel="noopener">${truncate(app.channel_url, 30)}</a>`
+            : (app.channel || '—');
+
+          return `
+            <tr class="${rowClass}">
+              <td>${escapeHtml(app.name || '—')}</td>
+              <td>${channelHtml}</td>
+              <td>${platformBadge(app.platform)}</td>
+              <td style="color:var(--muted)">${escapeHtml(app.upload_frequency || '—')}</td>
+              <td title="${(app.why || '').replace(/"/g, '&quot;')}">${escapeHtml(truncate(app.why, 80))}</td>
+              <td style="color:var(--muted);white-space:nowrap">${timeAgo(app.created_at)}</td>
+              <td onclick="event.stopPropagation()">
+                <select class="status-select ${statusCls}"
+                  onchange="updateAppStatus(${app.id}, this.value, this)">
+                  <option value="pending" ${(app.status||'pending')==='pending'?'selected':''}>Pending</option>
+                  <option value="approved" ${app.status==='approved'?'selected':''}>Approved</option>
+                  <option value="rejected" ${app.status==='rejected'?'selected':''}>Rejected</option>
+                  <option value="waitlisted" ${app.status==='waitlisted'?'selected':''}>Waitlisted</option>
+                </select>
+              </td>
+              <td>
+                <a class="invite-btn" href="/beta-invite.html?name=${encodedName}" target="_blank">
+                  Generate Invite →
+                </a>
+              </td>
+            </tr>`;
+        }).join('');
+
+        container.innerHTML = `
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Channel</th>
+                  <th>Platform</th>
+                  <th>Frequency</th>
+                  <th>Why</th>
+                  <th>Applied</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      } catch (e) {
+        console.error('loadApplications error', e);
+        container.innerHTML = `<p class="error-text">Failed to load applications: ${e.message}</p>`;
+      }
+    }
+
+    async function updateAppStatus(id, status, selectEl) {
+      const prevClass = selectEl.className;
+      try {
+        const res = await fetch(`/api/beta/applications/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        selectEl.className = `status-select ${statusSelectClass(status)}`;
+        // Update row color
+        const row = selectEl.closest('tr');
+        if (row) {
+          row.className = status === 'approved' ? 'app-approved'
+                        : status === 'rejected'  ? 'app-rejected'
+                        : status === 'waitlisted' ? 'app-waitlisted'
+                        : '';
+        }
+      } catch (e) {
+        console.error('updateAppStatus error', e);
+        selectEl.className = prevClass;
+        alert(`Failed to update status: ${e.message}`);
+      }
+    }
+
+    // ─── SECTION 5: NPS ──────────────────────────────────────────────────────
+
+    async function loadNPS() {
+      const container = document.getElementById('nps-container');
+      try {
+        const res = await fetch('/api/beta/nps');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const scores = Array.isArray(data) ? data : (data.scores || []);
+        const avg = data.avg_nps ?? (scores.length
+          ? scores.reduce((a, s) => a + (s.score || 0), 0) / scores.length
+          : null);
+
+        // Gauge
+        let avgDisplay = '—';
+        let scoreColor = 'teal';
+        if (avg !== null && !isNaN(avg)) {
+          const n = Number(avg);
+          avgDisplay = n.toFixed(1);
+          scoreColor = n <= 4 ? 'red' : n <= 7 ? 'amber' : 'teal';
+        }
+
+        // Recent list (last 10)
+        const recent = scores.slice(0, 10);
+        let listHtml = '';
+        if (recent.length) {
+          listHtml = recent.map(s => {
+            const score = s.score || 0;
+            const stars = '★'.repeat(score) + '☆'.repeat(10 - score);
+            const commentHtml = s.comment
+              ? `<div class="nps-comment">"${escapeHtml(truncate(s.comment, 100))}"</div>`
+              : '';
+            return `
+              <div class="nps-item">
+                <div>
+                  <div class="nps-stars">${stars}</div>
+                  ${commentHtml}
+                </div>
+                <div class="nps-time">${timeAgo(s.created_at)}</div>
+              </div>`;
+          }).join('');
+        } else {
+          listHtml = `<div style="padding:24px;text-align:center;color:var(--muted)">No NPS responses yet.</div>`;
+        }
+
+        container.innerHTML = `
+          <div class="nps-layout">
+            <div class="nps-gauge">
+              <div class="nps-score-number ${scoreColor}">${avgDisplay}</div>
+              <div class="nps-responses">(${scores.length} response${scores.length === 1 ? '' : 's'})</div>
+            </div>
+            <div class="nps-list-wrap">${listHtml}</div>
+          </div>`;
+      } catch (e) {
+        console.error('loadNPS error', e);
+        container.innerHTML = `<p class="error-text">Failed to load NPS data: ${e.message}</p>`;
+      }
+    }
+
+    // ─── INIT ─────────────────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', () => {
+      Promise.all([
+        loadStats(),
+        loadBugReports(),
+        loadFunnel(),
+        loadApplications(),
+        loadNPS()
+      ]);
+    });
+  </script>
+</body>
+</html>

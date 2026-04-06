@@ -49,6 +49,10 @@ app.get('/media-kit.html',   (req, res) => res.sendFile(path.join(__dirname, 'pu
 app.get('/beta-invite',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
 app.get('/beta-invite.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
 
+// Admin dashboard — behind nginx basic auth on production
+app.get('/admin',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+
 // ─────────────────────────────────────────────
 // STATIC FILES
 // ─────────────────────────────────────────────

@@ -384,6 +384,36 @@ function runMigrations() {
   )`);
   db.run('CREATE INDEX IF NOT EXISTS idx_beta_status ON beta_applications(status)');
   db.run('CREATE INDEX IF NOT EXISTS idx_beta_created ON beta_applications(created_at)');
+
+  // Bug reports — in-app beta feedback
+  db.run(`CREATE TABLE IF NOT EXISTS bug_reports (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    what_tried       TEXT,
+    what_happened    TEXT,
+    severity         TEXT    NOT NULL DEFAULT 'minor',
+    page             TEXT,
+    project_id       INTEGER,
+    browser          TEXT,
+    console_errors   TEXT,
+    timestamp        TEXT,
+    reporter_name    TEXT,
+    status           TEXT    NOT NULL DEFAULT 'open',
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_bugreports_status   ON bug_reports(status)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_bugreports_severity ON bug_reports(severity)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_bugreports_created  ON bug_reports(created_at)');
+
+  // NPS scores — post-workflow satisfaction
+  db.run(`CREATE TABLE IF NOT EXISTS nps_scores (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    score      INTEGER NOT NULL,
+    comment    TEXT,
+    page       TEXT,
+    project_id INTEGER,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.run('CREATE INDEX IF NOT EXISTS idx_nps_created ON nps_scores(created_at)');
 }
 
 function persist() {
@@ -1558,6 +1588,136 @@ function setKv(key, value) {
 }
 
 // ─────────────────────────────────────────────
+// BUG REPORTS — helpers
+// ─────────────────────────────────────────────
+
+function insertBugReport({ what_tried, what_happened, severity, page, project_id, browser, console_errors, timestamp, reporter_name }) {
+  const result = _run(
+    `INSERT INTO bug_reports
+       (what_tried, what_happened, severity, page, project_id, browser, console_errors, timestamp, reporter_name)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      what_tried       || null,
+      what_happened    || null,
+      severity         || 'minor',
+      page             || null,
+      project_id       || null,
+      browser          || null,
+      console_errors   || null,
+      timestamp        || new Date().toISOString(),
+      reporter_name    || null
+    ]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getBugReports() {
+  return _all(`SELECT * FROM bug_reports ORDER BY created_at DESC`);
+}
+
+function updateBugReportStatus(id, status) {
+  _run(`UPDATE bug_reports SET status = ? WHERE id = ?`, [status, id]);
+  persist();
+}
+
+function getBugReportStats() {
+  const open     = _get(`SELECT COUNT(*) as n FROM bug_reports WHERE status = 'open'`);
+  const resolved = _get(`SELECT COUNT(*) as n FROM bug_reports WHERE status = 'resolved'`);
+  const inProg   = _get(`SELECT COUNT(*) as n FROM bug_reports WHERE status = 'in-progress'`);
+  return {
+    open:        open?.n     || 0,
+    resolved:    resolved?.n || 0,
+    in_progress: inProg?.n   || 0
+  };
+}
+
+// ─────────────────────────────────────────────
+// NPS SCORES — helpers
+// ─────────────────────────────────────────────
+
+function insertNpsScore({ score, comment, page, project_id }) {
+  const result = _run(
+    `INSERT INTO nps_scores (score, comment, page, project_id) VALUES (?, ?, ?, ?)`,
+    [score, comment || null, page || null, project_id || null]
+  );
+  persist();
+  return result.lastInsertRowid;
+}
+
+function getNpsScores() {
+  return _all(`SELECT * FROM nps_scores ORDER BY created_at DESC`);
+}
+
+function getNpsAverage() {
+  const row = _get(`SELECT AVG(score) as avg, COUNT(*) as n FROM nps_scores`);
+  return { avg: row?.avg ? Math.round(row.avg * 10) / 10 : null, count: row?.n || 0 };
+}
+
+// ─────────────────────────────────────────────
+// BETA FUNNEL — pipeline completion at each stage
+// ─────────────────────────────────────────────
+
+function getBetaFunnel() {
+  const total = _get(`SELECT COUNT(*) as n FROM projects WHERE source = 'kre8r'`);
+  const base  = total?.n || 0;
+
+  const pipr  = _get(`SELECT COUNT(*) as n FROM projects WHERE source = 'kre8r' AND pipr_complete = 1`);
+  const writr = _get(`SELECT COUNT(*) as n FROM projects WHERE source = 'kre8r' AND writr_complete = 1`);
+  const vault = _get(`SELECT COUNT(*) as n FROM projects p WHERE p.source = 'kre8r'
+    AND EXISTS (SELECT 1 FROM footage f WHERE f.project_id = p.id)`);
+  const mirrr = _get(`SELECT COUNT(*) as n FROM projects WHERE source = 'kre8r'
+    AND youtube_video_id IS NOT NULL AND youtube_video_id != ''`);
+
+  // id8r: projects that have id8r_data set
+  const id8r  = _get(`SELECT COUNT(*) as n FROM projects WHERE source = 'kre8r'
+    AND id8r_data IS NOT NULL AND id8r_data != ''`);
+
+  // director: projects with at least one shoot_take record
+  const director = _get(`SELECT COUNT(*) as n FROM projects p WHERE p.source = 'kre8r'
+    AND EXISTS (SELECT 1 FROM shoot_takes st WHERE st.project_id = p.id)`);
+
+  const stages = [
+    { stage: 'soul',     label: 'Soul BuildΩr', count: base },
+    { stage: 'id8r',     label: 'Id8Ωr',         count: id8r?.n    || 0 },
+    { stage: 'pipr',     label: 'PipΩr',          count: pipr?.n    || 0 },
+    { stage: 'writr',    label: 'WritΩr',          count: writr?.n   || 0 },
+    { stage: 'director', label: 'DirectΩr',        count: director?.n || 0 },
+    { stage: 'vault',    label: 'VaultΩr',         count: vault?.n   || 0 },
+    { stage: 'mirrr',    label: 'MirrΩr',          count: mirrr?.n   || 0 }
+  ];
+
+  return stages.map((s, i) => ({
+    ...s,
+    percentage: base > 0 ? Math.round((s.count / base) * 100) : 0,
+    dropoff:    i > 0 ? stages[i - 1].count - s.count : 0,
+    dropoff_pct: i > 0 && stages[i - 1].count > 0
+      ? Math.round(((stages[i - 1].count - s.count) / stages[i - 1].count) * 100)
+      : 0
+  }));
+}
+
+// ─────────────────────────────────────────────
+// BETA STATS — overview numbers for admin dashboard
+// ─────────────────────────────────────────────
+
+function getBetaStats() {
+  const bugs       = getBugReportStats();
+  const nps        = getNpsAverage();
+  const pipelines  = _get(`SELECT COUNT(*) as n FROM projects WHERE source = 'kre8r'`);
+  // soul_count: always 1 primary + any collaborator files (counted separately via file listing)
+  return {
+    soul_count:    1,
+    pipeline_runs: pipelines?.n || 0,
+    open_bugs:     bugs.open,
+    resolved_bugs: bugs.resolved,
+    in_progress_bugs: bugs.in_progress,
+    avg_nps:       nps.avg,
+    nps_count:     nps.count
+  };
+}
+
+// ─────────────────────────────────────────────
 // BETA APPLICATIONS — helpers
 // ─────────────────────────────────────────────
 
@@ -1692,7 +1852,19 @@ module.exports = {
   // Beta Applications
   insertBetaApplication,
   getAllBetaApplications,
-  updateBetaApplicationStatus
+  updateBetaApplicationStatus,
+  // Bug Reports
+  insertBugReport,
+  getBugReports,
+  updateBugReportStatus,
+  getBugReportStats,
+  // NPS
+  insertNpsScore,
+  getNpsScores,
+  getNpsAverage,
+  // Funnel + Stats
+  getBetaFunnel,
+  getBetaStats
 };
 
 
