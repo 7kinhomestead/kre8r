@@ -720,20 +720,12 @@ Return a comprehensive JSON voice profile. Return ONLY valid JSON — no preambl
 This profile must capture their actual voice with enough specificity to be useful for AI script generation.
 Return ONLY valid JSON.`;
 
-    const raw = await callClaude(prompt, 4096);
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-
-    let profile;
-    try {
-      profile = JSON.parse(cleaned);
-    } catch (_) {
-      const s = cleaned.indexOf('{');
-      const e = cleaned.lastIndexOf('}');
-      if (s !== -1 && e !== -1) {
-        profile = JSON.parse(cleaned.slice(s, e + 1));
-      } else {
-        throw new Error('Claude returned malformed JSON — please try again');
-      }
+    // callClaude() already strips markdown fences, parses JSON, and returns a JS object.
+    // Do NOT call .replace() on it — that crashes with "raw.replace is not a function".
+    // Use the result directly as the profile object.
+    const profile = await callClaude(prompt, 4096);
+    if (!profile || typeof profile !== 'object') {
+      throw new Error('Claude returned an unexpected response — please try again');
     }
 
     profile._analyzed_clips   = files.length;
