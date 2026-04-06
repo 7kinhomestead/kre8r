@@ -28,7 +28,10 @@ const AMBER_HD  = 'B45309';   // dark amber — if/then header
 const RED       = 'EF4444';   // red — errors, do-not-do
 const RED_HD    = 'B91C1C';   // dark red — warning box header
 
-const OUTPUT = path.join('C:/Users/18054/outputs', 'Kre8r-Production-Runbook-V2.docx');
+const OUTPUT = path.join(
+  process.env.KREA8R_OUTPUT_DIR || path.join(__dirname, 'outputs'),
+  'Kre8r-Production-Runbook-V2.docx'
+);
 
 // ─── PAGE CONSTANTS ────────────────────────────────────────────────────────────
 const W  = 9360;  // content width DXA (US Letter, 0.75" margins)

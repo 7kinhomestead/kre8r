@@ -26,7 +26,10 @@ const C_WHITE    = "FFFFFF";
 const C_TEXT     = "111827";
 
 // ─── OUTPUT PATH ─────────────────────────────────────────────────────────────
-const OUTPUT_PATH = "C:/Users/18054/AppData/Local/Temp/outputs/Kre8r-Production-Runbook.docx";
+const OUTPUT_PATH = path.join(
+  process.env.KREA8R_OUTPUT_DIR || path.join(__dirname, 'outputs'),
+  'Kre8r-Production-Runbook.docx'
+);
 
 // ─── NUMBERING CONFIG ────────────────────────────────────────────────────────
 const STEP_REFS = [

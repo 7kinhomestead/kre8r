@@ -8,6 +8,28 @@
 
 require('dotenv').config({ override: true });
 
+// ─────────────────────────────────────────────
+// PROCESS-LEVEL ERROR HANDLERS — must be first
+// ─────────────────────────────────────────────
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION]', {
+    time:   new Date().toISOString(),
+    reason: reason?.message || String(reason),
+    stack:  reason?.stack
+  });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', {
+    time:    new Date().toISOString(),
+    message: err.message,
+    stack:   err.stack
+  });
+  // Give the logger time to flush, then exit — uncaught exceptions leave the
+  // process in an undefined state and should not be silently swallowed.
+  process.exit(1);
+});
+
 const express = require('express');
 const http    = require('http');
 const cors    = require('cors');
@@ -34,6 +56,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Request ID — attached to every request so errors are traceable in logs
+app.use((req, res, next) => {
+  req.id = Date.now().toString(36) + Math.random().toString(36).slice(2);
+  res.setHeader('X-Request-ID', req.id);
+  next();
+});
 
 // ─────────────────────────────────────────────
 // PUBLIC MARKETING PAGES — no auth, declared FIRST
@@ -110,6 +139,24 @@ app.get('/api/health', (req, res) => {
 // ─────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ─────────────────────────────────────────────
+// GLOBAL ERROR HANDLER — must be last app.use()
+// ─────────────────────────────────────────────
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+  console.error('[API ERROR]', {
+    requestId: req.id,
+    method:    req.method,
+    url:       req.url,
+    error:     err.message,
+    stack:     err.stack
+  });
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    error:     'Internal server error',
+    requestId: req.id
+  });
 });
 
 // ─────────────────────────────────────────────

@@ -139,7 +139,7 @@ Contrarian take: ${data.contrarian_take || ''}
 SETUP:
 ${platforms}
 Editor: ${data.editor || 'DaVinci Resolve'}
-Footage path: ${data.footage_path || 'D:\\kre8r\\intake'}
+Footage path: ${data.footage_path || ''}
 Community platform: ${data.community_platform || 'None'}
 Community URL: ${data.community_url || ''}
 Email platform: ${data.email_platform || 'None'}

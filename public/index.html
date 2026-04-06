@@ -360,6 +360,24 @@
   .toast.green { border-color: var(--green); color: var(--green); }
   .toast.amber { border-color: var(--amber); color: var(--amber); }
 
+  /* ─── KANBAN COLUMNS ─── */
+  .kanban-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+  @media (max-width: 900px) { .kanban-cols { grid-template-columns: 1fr; } }
+  .kanban-col-header {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-head); font-size: 11px; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--text-dimmer);
+    border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 10px;
+  }
+  .kanban-col-header.in-progress { color: var(--teal); border-color: rgba(62,207,178,0.25); }
+  .kanban-col-header.awaiting    { color: var(--amber); border-color: rgba(200,150,40,0.3); }
+  .kanban-col-header.complete    { color: var(--green); border-color: rgba(74,222,128,0.25); }
+  .kanban-count { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 20px; }
+  .kanban-count.teal  { background: var(--teal-glow);  color: var(--teal);  border: 1px solid rgba(62,207,178,0.25); }
+  .kanban-count.amber { background: var(--amber-glow); color: var(--amber); border: 1px solid var(--amber-border); }
+  .kanban-count.green { background: var(--green-glow); color: var(--green); border: 1px solid var(--green-border); }
+  .kanban-empty { font-size: 12px; color: var(--text-faint); padding: 16px 0; text-align: center; }
+
   /* ─── RESPONSIVE ─── */
   @media (max-width: 640px) {
     .main { padding: 20px 14px 80px; }
@@ -419,6 +437,22 @@
       </div>
       <span class="btn-cta">PipΩr Wizard →</span>
     </a>
+
+    <!-- KANBAN VIEW -->
+    <div class="kanban-cols" id="kanban-cols" style="display:none">
+      <div>
+        <div class="kanban-col-header in-progress">In Progress <span class="kanban-count teal" id="kb-count-progress">0</span></div>
+        <div class="projects-grid" id="kb-col-progress"></div>
+      </div>
+      <div>
+        <div class="kanban-col-header awaiting">Awaiting Action <span class="kanban-count amber" id="kb-count-awaiting">0</span></div>
+        <div class="projects-grid" id="kb-col-awaiting"></div>
+      </div>
+      <div>
+        <div class="kanban-col-header complete">Complete <span class="kanban-count green" id="kb-count-complete">0</span></div>
+        <div class="projects-grid" id="kb-col-complete"></div>
+      </div>
+    </div>
 
     <div class="projects-grid" id="projects-grid">
       <div class="empty-state" id="empty-state">
@@ -677,12 +711,15 @@ function renderAttentionZone() {
 // PROJECTS ZONE
 // ─────────────────────────────────────────────
 function renderProjectsZone() {
-  const grid = document.getElementById('projects-grid');
-  const empty = document.getElementById('empty-state');
-  const badge = document.getElementById('project-count-badge');
+  const grid   = document.getElementById('projects-grid');
+  const empty  = document.getElementById('empty-state');
+  const badge  = document.getElementById('project-count-badge');
+  const kanban = document.getElementById('kanban-cols');
 
   if (!_projects || _projects.length === 0) {
     empty.style.display = 'block';
+    kanban.style.display = 'none';
+    grid.style.display = 'none';
     return;
   }
 
@@ -690,8 +727,30 @@ function renderProjectsZone() {
   badge.textContent = `${_projects.length} active`;
   badge.style.display = '';
 
-  const cards = _projects.map((p, i) => buildProjectCard(p, i));
-  grid.innerHTML = cards.join('');
+  // ── Kanban grouping ──────────────────────────────────────
+  // COMPLETE: gate_c_approved — all distribution gates passed
+  // AWAITING ACTION: needs creator to act now (blocked)
+  // IN PROGRESS: active work, no immediate blocker
+  const recent = _projects.slice(0, 10); // max 10
+  const cols   = { progress: [], awaiting: [], complete: [] };
+
+  recent.forEach((p, i) => {
+    const card = buildProjectCard(p, i);
+    if (p.gate_c_approved)          cols.complete.push(card);
+    else if (projectNeedsAttention(p)) cols.awaiting.push(card);
+    else                               cols.progress.push(card);
+  });
+
+  document.getElementById('kb-col-progress').innerHTML = cols.progress.join('') || '<div class="kanban-empty">None active</div>';
+  document.getElementById('kb-col-awaiting').innerHTML = cols.awaiting.join('') || '<div class="kanban-empty">No blockers ✓</div>';
+  document.getElementById('kb-col-complete').innerHTML = cols.complete.join('') || '<div class="kanban-empty">None yet</div>';
+  document.getElementById('kb-count-progress').textContent = cols.progress.length;
+  document.getElementById('kb-count-awaiting').textContent = cols.awaiting.length;
+  document.getElementById('kb-count-complete').textContent = cols.complete.length;
+  kanban.style.display = '';
+
+  // Keep flat list hidden (kanban is primary view now)
+  grid.style.display = 'none';
 }
 
 function buildProjectCard(p, i) {
@@ -709,8 +768,8 @@ function buildProjectCard(p, i) {
     ? `<span class="pc-struct-badge active">${esc(p.story_structure)}</span>`
     : '';
 
-  // Pipeline bar
-  const stageNames = ['Pre', 'Prod', 'Post', 'Dist'];
+  // Pipeline bar — 6 granular stages
+  const stageNames = ['Id8Ωr', 'PipΩr', 'WritΩr', 'Shoot', 'Post', 'Dist'];
   const stagesHTML = stageNames.map((name, si) => {
     const done = si < stage.index;
     const current = si === stage.index;
@@ -805,11 +864,18 @@ function projectNeedsAttention(p) {
 }
 
 function getProjectStage(p) {
-  if (p.gate_c_approved) return { index: 3, label: 'Distributing' };
-  if (p.gate_a_approved) return { index: 3, label: 'Distribution' };
-  if (p.extracted_clips > 0 || p.footage_count > 0 || p.writr_complete) return { index: 2, label: 'Post-Production' };
-  if (p.pipr_complete) return { index: 1, label: 'In Production' };
-  return { index: 0, label: 'Pre-Production' };
+  // 6-stage granular pipeline: Id8Ωr(0) → PipΩr(1) → WritΩr(2) → Shoot(3) → Post(4) → Dist(5)
+  if (p.gate_c_approved || p.gate_a_approved)
+    return { index: 5, label: 'Distributing' };
+  if (p.footage_count > 0 || p.extracted_clips > 0)
+    return { index: 4, label: 'Post-Production' };
+  if (p.writr_complete)
+    return { index: 3, label: 'Ready to Shoot' };
+  if (p.pipr_complete)
+    return { index: 2, label: 'Scripting' };
+  if (p.id8r_data)
+    return { index: 1, label: 'Story Structure' };
+  return { index: 0, label: 'Ideation' };
 }
 
 function getNextAction(p) {
