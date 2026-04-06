@@ -322,6 +322,38 @@ Four panels:
 - NPS trigger: check `localStorage.lastNpsShown` — show max once per 7 days, only after pipeline completion
 - Admin dashboard protected by same basic auth as `kre8r.app` (nginx level) — no new auth layer needed
 
+## Session Auto-Save + Crash Recovery
+
+### Auto-Save
+Every active SSE session (Id8Ωr conversations, WritΩr generation in progress) auto-saves its current state to the DB every 60 seconds. This means a crash, power loss, or accidental close doesn't wipe in-progress work.
+
+What gets saved:
+- **Id8Ωr** — full conversation history, mode, current phase (brainstorm / research / package), any partial research results
+- **WritΩr** — script in progress, selected beat map, voice blend setting, any partial Claude output
+
+How it works:
+- Each SSE session has a `session_id` (already generated for Id8Ωr)
+- A `session_autosave` table stores: `session_id`, `tool`, `state_json`, `updated_at`
+- Client sends `POST /api/session/autosave` every 60 seconds with serialized state
+- Server upserts into `session_autosave` — one row per session, always the latest
+
+### Crash Detection + Recovery
+On app load, each tool checks for an unclean shutdown:
+- An "active" session flag is set when a tool starts generating, cleared on clean completion or navigation away
+- If the flag is set on load (app was killed mid-session), the tool queries for the last autosave
+- A recovery banner appears: *"Looks like something went wrong last time. Restore your last session?"*
+- User can restore (loads `state_json` back into the UI) or dismiss (clears the autosave row)
+
+### Implementation notes
+- `session_autosave` table: `session_id TEXT PK`, `tool TEXT`, `project_id INT`, `state_json TEXT`, `updated_at INT`
+- `localStorage.activeSession` = `{tool, session_id}` — set on start, cleared on finish
+- On load: if `localStorage.activeSession` exists, fetch `/api/session/autosave/:session_id` — if row exists, show recovery banner
+- Clean completion / navigation away: `DELETE FROM session_autosave WHERE session_id = ?` + clear localStorage flag
+- 60s client timer: `setInterval(() => saveState(), 60_000)` — only runs while SSE is open
+
+### Why it matters
+A 45-minute Id8Ωr research session or a long WritΩr generation run represents real time invested. One crash erasing that is a trust-destroying experience for beta users. Auto-save + recovery is table stakes for any tool that runs long AI operations.
+
 ## AnalΩzr — Playlist Generator
 From the Content DNA clusters and niche definition, suggest YouTube playlist structures that organize existing videos into intentional series.
 
