@@ -2346,6 +2346,8 @@ async function runCollabVoiceAnalysis() {
   }
   setAStep('cva-transcribe');
 
+  var gotDone = false;  // tracks whether a type:'done' event was received
+
   try {
     // Build FormData
     var fd = new FormData();
@@ -2376,7 +2378,12 @@ async function runCollabVoiceAnalysis() {
         var line = lines[i];
         if (!line.startsWith('data:')) continue;
         var msg;
-        try { msg = JSON.parse(line.slice(5).trim()); } catch (_) { continue; }
+        try { msg = JSON.parse(line.slice(5).trim()); } catch (_) {
+          console.warn('[analyze-voice SSE] Failed to parse line:', line);
+          continue;
+        }
+
+        console.log('[analyze-voice SSE] event:', msg.type, msg);
 
         if (msg.type === 'status') {
           if (msg.step === 'transcribe' || (msg.message && msg.message.includes('Transcrib'))) {
@@ -2387,6 +2394,7 @@ async function runCollabVoiceAnalysis() {
             setAStep('cva-claude');
           }
         } else if (msg.type === 'done') {
+          gotDone = true;
           stopCvTimer();
           setCvProgress(100, 'Done ✓');
           stepIds.forEach(function(id) {
@@ -2394,14 +2402,25 @@ async function runCollabVoiceAnalysis() {
             if (el) el.className = 'cv-analysis-step done';
           });
           collabVoiceProfile = msg.profile;
+          console.log('[analyze-voice SSE] done — profile keys:', msg.profile ? Object.keys(msg.profile) : 'null');
+          var capturedProfile = msg.profile;
           setTimeout(function() {
-            renderCollabVoiceProfile(msg.profile);
+            try { renderCollabVoiceProfile(capturedProfile); } catch (renderErr) {
+              console.error('[analyze-voice] renderCollabVoiceProfile threw:', renderErr);
+            }
             goCollabScreen(2);
+            if (btn) { btn.disabled = false; btn.textContent = 'Analyze Voice →'; }
           }, 600);
         } else if (msg.type === 'error') {
           throw new Error(msg.message);
         }
       }
+    }
+
+    // Stream closed — if we never got a done event, show an error instead of silently freezing
+    if (!gotDone) {
+      console.error('[analyze-voice SSE] Stream closed without a done event. Buffer remainder:', buffer);
+      throw new Error('Analysis stream ended unexpectedly — please try again');
     }
   } catch (err) {
     stopCvTimer();

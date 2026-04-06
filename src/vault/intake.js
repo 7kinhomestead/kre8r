@@ -265,8 +265,9 @@ async function extractThumbnails(filePath, duration) {
 // CLAUDE VISION — MULTI-IMAGE CLASSIFICATION
 // ─────────────────────────────────────────────
 
-const _vCtx = getCreatorContext();
-const VISION_PROMPT = `You are analyzing three thumbnails from different points in a video clip (early, middle, late) from a ${_vCtx.niche} content creator (${_vCtx.brand}). Use all three frames together to make your classification — do not judge on any single frame alone. A blurry early frame with sharp middle and late frames is a usable or hero clip, not a discard. Return ONLY a JSON object:
+function getVisionPrompt() {
+  const _vCtx = getCreatorContext();
+  return `You are analyzing three thumbnails from different points in a video clip (early, middle, late) from a ${_vCtx.niche} content creator (${_vCtx.brand}). Use all three frames together to make your classification — do not judge on any single frame alone. A blurry early frame with sharp middle and late frames is a usable or hero clip, not a discard. Return ONLY a JSON object:
 {
   "shot_type": "one of: dialogue, talking-head, b-roll, action, completed-video, unusable",
   "subcategory": "one of: wide, medium, close-up, detail, null — only for b-roll, null for all others",
@@ -276,6 +277,7 @@ const VISION_PROMPT = `You are analyzing three thumbnails from different points 
   "orientation": "one of: horizontal, vertical, square"
 }
 Be specific in descriptions. 'Person talking in front of trees' is not useful. 'Creator in grey shirt speaking to camera, outdoor background with forest visible, good lighting' is useful.`;
+}
 
 const SHOT_TYPE_ALIASES = {
   'talking_head' : 'talking-head',
@@ -310,7 +312,7 @@ async function classifyWithVision(thumbs) {
 
   if (content.length === 0) throw new Error('No thumbnail images available for Vision');
 
-  content.push({ type: 'text', text: VISION_PROMPT });
+  content.push({ type: 'text', text: getVisionPrompt() });
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

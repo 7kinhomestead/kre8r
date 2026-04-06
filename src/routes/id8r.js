@@ -58,8 +58,9 @@ function buildSystemPrompts() {
   };
 }
 
-// Keep a reference for use in this module; rebuilt per-request at route level
-let SYSTEM_PROMPTS = buildSystemPrompts();
+// Initialized lazily — rebuilt per-request at route level so creator-profile.json changes are live
+// and so the module can load without a profile present (fresh install / Electron first-run)
+let SYSTEM_PROMPTS = null;
 
 // ─── Claude API Helper ─────────────────────────────────────────────────────────
 
