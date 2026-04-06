@@ -452,7 +452,18 @@
       "Bash(ls C:/Users/18054/kre8r/*.config.js C:/Users/18054/kre8r/ecosystem*)",
       "Bash(grep -c 'await db\\\\.' C:/Users/18054/kre8r/src/routes/*.js)",
       "Bash(grep -n \"D:\\\\\\\\kre8r\\\\|D:/kre8r\" \"C:/Users/18054/kre8r/server.js\")",
-      "Bash(grep -n \"D:\\\\\\\\kre8r\\\\|D:/kre8r\" \"C:/Users/18054/kre8r/src/db.js\")"
+      "Bash(grep -n \"D:\\\\\\\\kre8r\\\\|D:/kre8r\" \"C:/Users/18054/kre8r/src/db.js\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(ls C:/Users/18054/AppData/Local/Temp/*.png)",
+      "Bash(sed -i \"s|<link rel=''''icon'''' type=''''image/svg+xml'''' href=''''/images/kre8r-icon.svg''''>|<link rel=''''icon'''' type=''''image/png'''' href=''''/images/kre8r-icon.png''''>|g\" public/*.html)",
+      "Bash(grep -l \"kre8r-icon.png\" public/*.html)",
+      "Bash(whisper --help)",
+      "Bash(pip show:*)",
+      "Bash(python -c \"import torch; print\\(''''CUDA available:'''', torch.cuda.is_available\\(\\)\\); print\\(''''CUDA version:'''', torch.version.cuda\\); print\\(''''Device:'''', torch.cuda.get_device_name\\(0\\) if torch.cuda.is_available\\(\\) else ''''N/A''''\\)\")",
+      "Bash(nvidia-smi)",
+      "Bash(python -c \"import torch; print\\(''CUDA available:'', torch.cuda.is_available\\(\\)\\); print\\(''CUDA version:'', torch.version.cuda\\); print\\(''GPU:'', torch.cuda.get_device_name\\(0\\) if torch.cuda.is_available\\(\\) else ''N/A''\\); print\\(''PyTorch:'', torch.__version__\\)\")",
+      "Bash(python -c \"import torch; print\\(''PyTorch:'', torch.__version__\\); print\\(''CUDA available:'', torch.cuda.is_available\\(\\)\\); print\\(''CUDA version:'', torch.version.cuda\\); print\\(''GPU:'', torch.cuda.get_device_name\\(0\\) if torch.cuda.is_available\\(\\) else ''N/A''\\)\")",
+      "Bash(python -c \"import whisper; m = whisper.load_model\\(''base'', device=''cuda''\\); print\\(''Whisper loaded on:'', next\\(m.parameters\\(\\)\\).device\\)\")"
     ]
   }
 }
