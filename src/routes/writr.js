@@ -25,6 +25,7 @@ const { iterateScript }              = require('../writr/iterate');
 const { readConfig, writeConfig }    = require('../pipr/beat-tracker');
 const { listProfiles }               = require('../writr/voice-analyzer');
 const { callClaude }                 = require('../writr/claude');
+const vault                          = require('../utils/project-vault');
 
 // ─────────────────────────────────────────────
 // FORMAT CONVERSION PROMPTS (bullets + hybrid)
@@ -570,6 +571,16 @@ router.post('/generate', async (req, res) => {
 
     db.updateProjectWritr(projectId, { active_script_id: fullId });
 
+    // Vault: save script generation
+    try {
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      vault.saveVaultData(projectId, `writr/script-${ts}-full.txt`, scriptText);
+      if (bulletsScript) vault.saveVaultData(projectId, `writr/script-${ts}-bullets.txt`, bulletsScript);
+      if (hybridScript)  vault.saveVaultData(projectId, `writr/script-${ts}-hybrid.txt`, hybridScript);
+    } catch (vaultErr) {
+      console.warn('[writr/generate] vault save failed (non-fatal):', vaultErr.message);
+    }
+
     // Send final completion event
     write({
       stage:           'complete',
@@ -665,6 +676,14 @@ router.post('/iterate', async (req, res) => {
       session_id:        existing.session_id      || null
     });
 
+    // Vault: save iteration
+    try {
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      vault.saveVaultData(projectId, `writr/iteration-${newIterCount}-${ts}.txt`, result.script);
+    } catch (vaultErr) {
+      console.warn('[writr/iterate] vault save failed (non-fatal):', vaultErr.message);
+    }
+
     write({
       stage:           'complete',
       script_id:       newScriptId,
@@ -716,6 +735,17 @@ router.post('/:project_id/approve', (req, res) => {
 
     // approveWritrScript: marks approved, sets active_script_id, syncs to scripts table
     db.approveWritrScript(projectId, scriptId);
+
+    // Vault: save approved script
+    try {
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const scriptText = script.generated_script || script.shooting_script || '';
+      if (scriptText) {
+        vault.saveVaultData(projectId, `writr/APPROVED-${ts}.txt`, scriptText);
+      }
+    } catch (vaultErr) {
+      console.warn('[writr/approve] vault save failed (non-fatal):', vaultErr.message);
+    }
 
     console.log(`[WritΩr] Script ${scriptId} approved for project ${projectId} — synced to SelectsΩr`);
 

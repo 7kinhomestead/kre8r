@@ -368,6 +368,68 @@
   .bulk-btn.ghost:hover   { color: var(--text); background: rgba(255,255,255,0.08); }
   .bulk-bar-spacer  { margin-left: auto; }
 
+  /* ─── VAULT MODAL ─── */
+  #vault-modal {
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(6px);
+    display: none; align-items: flex-start; justify-content: center; padding: 40px 20px;
+    overflow-y: auto;
+  }
+  #vault-modal.open { display: flex; }
+  .vault-dialog {
+    background: #141714; border: 1px solid var(--border-bright);
+    border-radius: 12px; width: 100%; max-width: 680px;
+    animation: fadeUp 0.18s ease;
+    flex-shrink: 0; align-self: flex-start;
+  }
+  .vault-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+  }
+  .vault-title { font-family: var(--font-head); font-size: 18px; letter-spacing: 1.5px; color: var(--teal); flex: 1; }
+  .vault-close {
+    background: none; border: none; color: var(--text-dimmer); font-size: 20px;
+    cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;
+    transition: all 0.12s;
+  }
+  .vault-close:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+  .vault-empty { padding: 40px 24px; text-align: center; color: var(--text-dimmer); font-size: 13px; }
+  .vault-section { padding: 16px 24px 8px; }
+  .vault-section-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-dimmer); margin-bottom: 8px;
+  }
+  .vault-file-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+  .vault-file {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    border-radius: 6px; font-size: 12px; cursor: pointer;
+    background: none; border: none; text-align: left; color: var(--text-dim);
+    font-family: var(--font-body); transition: all 0.1s; width: 100%;
+  }
+  .vault-file:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .vault-file-icon { font-size: 14px; flex-shrink: 0; }
+  .vault-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vault-file-size { color: var(--text-dimmer); flex-shrink: 0; }
+  .vault-file-date { color: var(--text-faint); font-size: 11px; flex-shrink: 0; }
+  .vault-file-dl {
+    color: var(--text-dimmer); font-size: 12px; padding: 2px 6px;
+    border-radius: 4px; transition: all 0.1s; flex-shrink: 0;
+  }
+  .vault-file:hover .vault-file-dl { color: var(--teal); }
+  .vault-preview {
+    margin: 0 24px 20px; padding: 14px 16px;
+    background: var(--bg-card-2); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 12px; color: var(--text-dim);
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 300px; overflow-y: auto; line-height: 1.65;
+    display: none;
+  }
+  .vault-preview.open { display: block; }
+  .vault-preview-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--teal); margin-bottom: 10px;
+  }
+
   /* ─── SYSTEM STATUS BAR ─── */
   .status-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -530,6 +592,19 @@
 </div>
 
 <div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Vault modal -->
+<div id="vault-modal" onclick="if(event.target===this)closeVault()">
+  <div class="vault-dialog">
+    <div class="vault-header">
+      <div class="vault-title">📁 DATA VAULT</div>
+      <div id="vault-project-name" style="font-size:12px;color:var(--text-dim);flex:1;padding-left:8px;"></div>
+      <button class="vault-close" onclick="closeVault()">✕</button>
+    </div>
+    <div id="vault-body"></div>
+    <div id="vault-preview" class="vault-preview"><div class="vault-preview-label" id="vault-preview-label"></div><div id="vault-preview-content"></div></div>
+  </div>
+</div>
 
 <!-- Confirmation modal -->
 <div id="confirm-modal" onclick="if(event.target===this)closeConfirm()">
@@ -884,6 +959,8 @@ function buildProjectCard(p, i) {
         <div class="pc-menu" id="pc-menu-${p.id}">
           <button class="pc-menu-item" onclick="window.location='/pipr.html?project_id=${p.id}'">⚙ Settings</button>
           <div class="pc-menu-sep"></div>
+          <button class="pc-menu-item" onclick="openVault(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">📁 Data Vault</button>
+          <div class="pc-menu-sep"></div>
           <button class="pc-menu-item" onclick="confirmArchive(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">📦 Archive</button>
           <div class="pc-menu-sep"></div>
           <button class="pc-menu-item danger" onclick="confirmDelete(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">🗑 Delete</button>
@@ -1146,8 +1223,143 @@ function runConfirm() {
 
 // Esc to dismiss
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeConfirm();
+  if (e.key === 'Escape') { closeConfirm(); closeVault(); }
 });
+
+// ─────────────────────────────────────────────
+// VAULT MODAL
+// ─────────────────────────────────────────────
+
+const _vaultSections = {
+  'id8r':           { label: 'Id8Ωr Research', icon: '🧠' },
+  'writr':          { label: 'WritΩr Scripts', icon: '✍' },
+  'config-history': { label: 'PipΩr Config History', icon: '⚙' },
+};
+
+function _vaultIcon(filename) {
+  if (filename === 'VAULT-README.txt') return '📋';
+  if (filename.startsWith('APPROVED')) return '✅';
+  if (filename.endsWith('.txt')) return '📄';
+  if (filename.endsWith('.json')) return '{}';
+  return '📄';
+}
+
+function _fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function _fmtDate(iso) {
+  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+  catch (_) { return iso.slice(0, 10); }
+}
+
+async function openVault(projectId, projectTitle) {
+  document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+  document.getElementById('vault-project-name').textContent = projectTitle || '';
+  document.getElementById('vault-body').innerHTML = '<div class="vault-empty">Loading…</div>';
+  document.getElementById('vault-preview').classList.remove('open');
+  document.getElementById('vault-modal').classList.add('open');
+
+  try {
+    const r = await fetch(`/api/project-vault/${projectId}/files`);
+    const data = await r.json();
+    renderVaultFiles(projectId, data.files || []);
+  } catch (err) {
+    document.getElementById('vault-body').innerHTML = `<div class="vault-empty">Failed to load vault: ${err.message}</div>`;
+  }
+}
+
+function closeVault() {
+  document.getElementById('vault-modal').classList.remove('open');
+  document.getElementById('vault-preview').classList.remove('open');
+}
+
+function renderVaultFiles(projectId, files) {
+  if (!files.length) {
+    document.getElementById('vault-body').innerHTML = '<div class="vault-empty">No files yet — vault fills up as you use Id8Ωr, WritΩr, and PipΩr.</div>';
+    return;
+  }
+
+  // Separate VAULT-README from the rest, then group by top-level folder
+  const readme = files.find(f => f.path === 'VAULT-README.txt');
+  const rest   = files.filter(f => f.path !== 'VAULT-README.txt');
+
+  const groups = {};
+  for (const f of rest) {
+    const parts = f.path.split('/');
+    const group = parts.length > 1 ? parts[0] : '_root';
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(f);
+  }
+
+  let html = '';
+
+  if (readme) {
+    html += `<div class="vault-section">
+      <div class="vault-section-title">📋 PROJECT OVERVIEW</div>
+      <div class="vault-file-list">
+        ${_vaultFileRow(projectId, readme)}
+      </div>
+    </div>`;
+  }
+
+  const sectionOrder = ['id8r', 'writr', 'config-history'];
+  const otherGroups  = Object.keys(groups).filter(g => !sectionOrder.includes(g) && g !== '_root');
+  const allGroups    = [...sectionOrder.filter(g => groups[g]), ...otherGroups, ...(groups['_root'] ? ['_root'] : [])];
+
+  for (const group of allGroups) {
+    if (!groups[group]) continue;
+    const meta  = _vaultSections[group] || { label: group, icon: '📁' };
+    const label = group === '_root' ? 'Other Files' : `${meta.icon} ${meta.label.toUpperCase()}`;
+    html += `<div class="vault-section">
+      <div class="vault-section-title">${label}</div>
+      <div class="vault-file-list">
+        ${groups[group].map(f => _vaultFileRow(projectId, f)).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('vault-body').innerHTML = html;
+}
+
+function _vaultFileRow(projectId, f) {
+  const icon  = _vaultIcon(f.name);
+  const safe  = f.path.replace(/'/g, "\\'");
+  const safeName = f.name.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return `<button class="vault-file" onclick="previewVaultFile(${projectId},'${safe}')">
+    <span class="vault-file-icon">${icon}</span>
+    <span class="vault-file-name">${safeName}</span>
+    <span class="vault-file-size">${_fmtSize(f.size)}</span>
+    <span class="vault-file-date">${_fmtDate(f.modified)}</span>
+    <a class="vault-file-dl" href="/api/project-vault/${projectId}/file?path=${encodeURIComponent(f.path)}&download=1"
+       onclick="event.stopPropagation()" download="${safeName}" title="Download">⬇</a>
+  </button>`;
+}
+
+async function previewVaultFile(projectId, filePath) {
+  const preview = document.getElementById('vault-preview');
+  const label   = document.getElementById('vault-preview-label');
+  const content = document.getElementById('vault-preview-content');
+
+  label.textContent   = filePath;
+  content.textContent = 'Loading…';
+  preview.classList.add('open');
+
+  try {
+    const r    = await fetch(`/api/project-vault/${projectId}/file?path=${encodeURIComponent(filePath)}`);
+    const ct   = r.headers.get('content-type') || '';
+    if (ct.includes('json')) {
+      const data = await r.json();
+      content.textContent = JSON.stringify(data, null, 2);
+    } else {
+      content.textContent = await r.text();
+    }
+  } catch (err) {
+    content.textContent = `Error: ${err.message}`;
+  }
+}
 
 // ─────────────────────────────────────────────
 // ARCHIVE

@@ -21,6 +21,7 @@ const crypto  = require('crypto');
 const path    = require('path');
 const db      = require('../db');
 const { getCreatorContext } = require('../utils/creator-context');
+const vault   = require('../utils/project-vault');
 
 
 // ─── Session Expired Response ──────────────────────────────────────────────────
@@ -490,6 +491,14 @@ router.post('/research', async (req, res) => {
       session.researchSummary = `YouTube: ${results.youtube.slice(0, 300)}\n\nData: ${results.data.slice(0, 300)}\n\nVault: ${results.vault.slice(0, 200)}`;
     }
 
+    // Save raw research to session vault (no project_id yet — saved again at send-pipeline)
+    session._researchVaultData = {
+      savedAt:         new Date().toISOString(),
+      chosenConcept:   session.chosenConcept || null,
+      researchResults: session.researchResults || results,
+      researchSummary: session.researchSummary || null,
+    };
+
     send({ stage: 'done', message: 'Research complete.' });
     res.end();
   } catch (e) {
@@ -554,6 +563,7 @@ Return ONLY valid JSON:
     );
 
     session.packageData = result;
+    session._packageVaultData = { savedAt: new Date().toISOString(), packageData: result };
     res.json(result);
   } catch (e) {
     console.error('[id8r/package]', e);
@@ -609,6 +619,7 @@ Return ONLY valid JSON in this exact shape:
     );
 
     session.briefData = result;
+    session._briefVaultData = { savedAt: new Date().toISOString(), briefData: result };
     res.json(result);
   } catch (e) {
     console.error('[id8r/brief]', e);
@@ -651,6 +662,63 @@ router.post('/send-pipeline', async (req, res) => {
       packageData:     session.packageData      || null,
       briefData:       session.briefData        || null,
     });
+
+    // ── Vault: save all Id8Ωr session data now that we have a project_id ─────
+    try {
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+      if (session._researchVaultData) {
+        vault.saveVaultData(project.id, 'id8r/research.json', session._researchVaultData);
+      }
+      if (session._packageVaultData) {
+        vault.saveVaultData(project.id, 'id8r/packages.json', session._packageVaultData);
+      }
+      if (session._briefVaultData) {
+        vault.saveVaultData(project.id, 'id8r/brief.json', session._briefVaultData);
+      }
+
+      // Full conversation log
+      const conversationLog = (session.messages || [])
+        .map(m => `[${m.role.toUpperCase()}]\n${m.content}`)
+        .join('\n\n---\n\n');
+      vault.saveVaultData(project.id, 'id8r/conversation.txt', conversationLog);
+
+      // VAULT-README — human-readable summary of what's in the vault
+      const brief = session.briefData || {};
+      const pb    = brief.pipeline_brief || {};
+      const chosen = session.chosenConcept;
+      const readme = [
+        `VAULT-README — Project ${project.id}: ${title}`,
+        `Created: ${new Date().toISOString()}`,
+        '',
+        '═══ ID8ΩR SESSION ═══════════════════════════════',
+        chosen ? `Chosen concept: ${chosen.headline} (${chosen.angle})` : '',
+        chosen ? `Why this angle: ${chosen.why || ''}` : '',
+        '',
+        brief.elevator_pitch ? `Elevator pitch: ${brief.elevator_pitch}` : '',
+        brief.audience_insight ? `Audience insight: ${brief.audience_insight}` : '',
+        '',
+        pb.title ? `Title: ${pb.title}` : '',
+        pb.high_concept ? `High concept: ${pb.high_concept}` : '',
+        pb.story_structure ? `Story structure: ${pb.story_structure}` : '',
+        pb.content_angle ? `Content angle: ${pb.content_angle}` : '',
+        pb.concept_note ? `\nProduction notes: ${pb.concept_note}` : '',
+        '',
+        session.researchSummary ? `═══ RESEARCH SUMMARY ════════════════════════════\n${session.researchSummary}` : '',
+        '',
+        '═══ VAULT FILES ═════════════════════════════════',
+        'id8r/research.json      — raw research data (YouTube, data, vault phases)',
+        'id8r/packages.json      — title/thumbnail/hook options',
+        'id8r/brief.json         — full Vision Brief',
+        'id8r/conversation.txt   — full Id8Ωr conversation log',
+        'writr/                  — script iterations (added when WritΩr runs)',
+        'config-history/         — PipΩr config snapshots (added on every save)',
+      ].filter(l => l !== undefined).join('\n');
+
+      vault.saveVaultData(project.id, 'VAULT-README.txt', readme);
+    } catch (vaultErr) {
+      console.warn('[id8r/send-pipeline] vault save failed (non-fatal):', vaultErr.message);
+    }
 
     const dest = destination || 'pipr';
     const redirectUrl = dest === 'writr'

@@ -21,6 +21,7 @@ const db              = require('../db');
 const { buildBeatMap, getBeats } = require('../pipr/beats');
 const { readConfig, writeConfig, updateBeatCoverage } = require('../pipr/beat-tracker');
 const { minePatterns } = require('../pipr/config-miner');
+const vault           = require('../utils/project-vault');
 
 const router = express.Router();
 
@@ -161,6 +162,7 @@ router.post('/create', (req, res) => {
     // Generate and write project-config.json
     const config = buildConfig(projectId, req.body);
     writeConfig(projectId, config);
+    try { vault.backupVault(projectId); } catch (_) {}
 
     res.json({ ok: true, project_id: projectId, config });
   } catch (err) {
@@ -273,6 +275,7 @@ router.patch('/:project_id', (req, res) => {
     const config = readConfig(projectId) || {};
     Object.assign(config, req.body, { project_id: projectId });
     writeConfig(projectId, config);
+    try { vault.backupVault(projectId); } catch (_) {}
 
     // Sync allowed fields to DB
     const dbFields = {};

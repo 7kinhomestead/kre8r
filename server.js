@@ -131,6 +131,7 @@ const mirrRouter = require('./src/routes/mirrr');
 app.use('/api/mirrr',        mirrRouter);          // MirrΩr (new canonical)
 app.use('/api/analytr',      mirrRouter);           // legacy alias — keep so old bookmarks don't 404
 app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
+app.use('/api/project-vault', require('./src/routes/project-vault'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
