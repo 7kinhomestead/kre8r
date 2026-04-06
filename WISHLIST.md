@@ -1,6 +1,108 @@
 # Kre8Ωr Wish List
 Features to build when the core system is solid.
 
+---
+
+## 🧭 NorthΩr — The Creative Strategy Engine ⬅ TOP PRIORITY
+*'The ship stays off the rocks, so long as someone yells.'*
+
+**What it is:**
+The tool that ties the entire Kre8Ωr suite together into a coherent content business strategy. Not a creative tool — a strategic compass. It reads all the data, sets the course, and yells when you're heading for the rocks.
+
+**Inputs (reads from every tool):**
+- **MirrΩr:** channel performance data, audience profile, content DNA, coaching insights, what's working/not working
+- **Show/Episodic system:** Rock Rich season arc, episode schedule, what's been made, what's planned
+- **Pipeline:** projects in progress, completed, stalled
+- **MailΩr/AutomatΩr:** broadcast history, open rates, what emails went out
+- **AudiencΩr:** community growth, tier distribution, conversion rates
+- **Creator soul:** content angles, publishing cadence, platform handles
+- **Calendar:** publish dates, gaps, consistency score
+
+**The Strategy Output — a monthly content plan:**
+```
+APRIL 2026 — YOUR CONTENT STRATEGY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT TO MAKE THIS MONTH:
+• 3 Rock Rich episodes (episodic arc — Season 1)
+• 4 Financial Rebellion videos (your highest performing cluster)
+• 2 Permission Structure videos (converts to Rock Rich signups)
+• 2 YouTube Shorts (repurposed from long form)
+
+WHAT TO SEND:
+• 9 email broadcasts (one per long-form video)
+• 36 social captions across platforms
+• 3 Rock Rich community posts
+
+WHY THIS MIX:
+• Financial Rebellion averages 38k views (4.5x your average)
+• Rock Rich episodes drive 82% of community signups
+• You haven't posted in the Permission Structure lane in 6 weeks
+  — your audience is asking for it in comments
+
+YOUR PUBLISHING SCHEDULE:
+Week 1: Rock Rich Ep 4 (Mon) + Financial Rebellion (Thu)
+Week 2: Permission Structure (Mon) + Rock Rich Ep 5 (Thu)
+Week 3: Financial Rebellion (Mon) + Financial Rebellion (Thu)
+Week 4: Rock Rich Ep 6 (Mon) + Permission Structure (Thu)
+```
+
+**The Yelling Function (alerts):**
+NorthΩr watches the pipeline and fires alerts when:
+- 'You haven't published in 9 days — your algorithm momentum is dropping'
+- 'Rock Rich Episode 4 has been in WritΩr for 3 weeks — what's the blocker?'
+- 'Your Financial Rebellion cluster is running dry — only 1 video in the pipeline'
+- 'You promised 3 Rock Rich episodes this month — you've made 1 with 8 days left'
+- 'Your email list hasn't heard from you in 2 weeks — open rates will drop'
+- 'Your best performing content angle (Permission Structure) has zero videos in pipeline'
+
+**The Course Correction:**
+When NorthΩr yells — one click → Id8Ωr opens with the right brief pre-loaded:
+*'You need a Financial Rebellion video. Here are 3 concepts based on your current audience data →'*
+
+**The Rock Rich Specific Use Case:**
+Jason has a show (Rock Rich) with a season arc. NorthΩr knows:
+- The season arc (12 episodes planned)
+- What's been made (4 episodes)
+- The episodic context (what's been established, what needs to happen next)
+- The audience transformation progress (where viewers are in the journey)
+- The Rock Rich community growth rate
+- Which episodes drove the most signups
+
+It then tells Jason:
+*'Episode 5 should address the spouse objection — your comments show 31 people asked about getting their partner on board this month. This is the episode that converts fence-sitters into Greenhouse members.'*
+
+**The Creator Accountability Layer:**
+At the start of each month — NorthΩr runs a planning session:
+- 'Last month you planned 9 videos. You made 6. Here's what didn't happen and why it matters.'
+- 'This month, given your current pipeline and energy, I recommend 7 videos. Here's the plan.'
+
+The creator sets their own goals. NorthΩr holds them to it. Not a boss. A navigator.
+
+**The Commercial Angle:**
+Every serious business has a strategy layer. Every serious creator is running a business. No tool exists that does this specifically for creators. NorthΩr is the feature that justifies the price point. A creator without NorthΩr is sailing without a compass.
+
+**Technical Architecture:**
+- `public/northr.html` — Strategy dashboard
+- `src/routes/northr.js` — Strategy engine
+- Reads from: MirrΩr API, projects DB, shows DB, posts/analytics tables, emails table
+- Monthly strategy generation via Claude (SSE)
+- Alert system: PM2 cron checks daily, fires alerts if thresholds crossed
+- Alert delivery: in-app notification badge on nav + optional email
+- One-click → Id8Ωr with pre-loaded brief for the recommended content
+
+**Nav placement:** Top of nav — above Pre/Prod/Post/Dist. Not a phase tool — a compass for all phases. Icon: 🧭 Tagline: *'Your creative compass. It yells when you need it.'*
+
+**Build order:**
+1. Basic strategy dashboard (reads existing data, generates monthly plan)
+2. Alert system (daily checks, threshold alerts)
+3. Episodic integration (Rock Rich season awareness)
+4. One-click → Id8Ωr brief
+5. Monthly accountability report
+6. Goal setting and tracking
+
+---
+
 ## ShootDay — AI Shot Verification
 Real-time shot list verification using Claude Vision during filming.
 
