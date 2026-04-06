@@ -17,7 +17,7 @@ const path = require('path');
 const fs   = require('fs');
 const db   = require('../db');
 
-const PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
+const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH || path.join(__dirname, '..', '..', 'creator-profile.json');
 
 // ─────────────────────────────────────────────
 // HELPERS

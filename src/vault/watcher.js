@@ -18,7 +18,7 @@ const path      = require('path');
 const fs        = require('fs');
 const { ingestFile } = require('./intake');
 
-const PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
+const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH || path.join(__dirname, '..', '..', 'creator-profile.json');
 const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv']);
 
 // How long (ms) a file must be stable (no size change) before we ingest it.

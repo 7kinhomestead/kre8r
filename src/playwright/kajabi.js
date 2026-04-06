@@ -15,10 +15,19 @@ const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 
-const creatorProfile = require(path.join(__dirname, '../../creator-profile.json'));
-const KAJABI_SITE_ID = (creatorProfile.kajabi || {}).site_id || '';
+const { loadProfile } = require('../utils/creator-context');
 const KAJABI_BASE    = 'https://app.kajabi.com/admin';
-const KAJABI_SITE    = `${KAJABI_BASE}/sites/${KAJABI_SITE_ID}`;
+
+// Lazily resolved so missing creator-profile on first launch doesn't crash the server.
+function getKajabiSite() {
+  try {
+    const profile = loadProfile();
+    const siteId  = (profile.kajabi || {}).site_id || '';
+    return `${KAJABI_BASE}/sites/${siteId}`;
+  } catch (_) {
+    return `${KAJABI_BASE}/sites/`;
+  }
+}
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 
@@ -58,7 +67,7 @@ async function sendBroadcast(page, { subject, body, segment, scheduleAt, dryRun 
 
   // ── Step 1: Navigate to Email Campaigns list ──────────────────────────────
   try {
-    await nav(page, `${KAJABI_SITE}/email_campaigns`);
+    await nav(page, `${getKajabiSite()}/email_campaigns`);
   } catch (e) {
     const screenshot = await screenshotOnFail(page, 'broadcast-step1-nav');
     return { ok: false, error: `Step 1 (navigate to email campaigns): ${e.message}`, screenshot };

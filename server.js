@@ -212,8 +212,9 @@ async function start() {
       : '\x1b[33m⚠ ANTHROPIC_API_KEY not set — add to .env to enable generation\x1b[0m';
 
     console.log('');
-    const _cp      = require('./creator-profile.json');
-    const _brand   = (_cp?.creator?.brand || _cp?.instance || 'INSTANCE').toUpperCase();
+    const _profilePath = process.env.CREATOR_PROFILE_PATH || require('path').join(__dirname, 'creator-profile.json');
+    let _brand = 'INSTANCE';
+    try { _brand = (JSON.parse(require('fs').readFileSync(_profilePath, 'utf8'))?.creator?.brand || 'INSTANCE').toUpperCase(); } catch (_) {}
     const _banner  = `KRE8\u03a9R \u2014 ${_brand}`;
     const _pad     = Math.max(0, Math.floor((42 - _banner.length) / 2));
     const _bannerL = ' '.repeat(_pad) + _banner + ' '.repeat(Math.max(0, 42 - _pad - _banner.length));

@@ -22,7 +22,6 @@ const path    = require('path');
 const db      = require('../db');
 const { getCreatorContext } = require('../utils/creator-context');
 
-const creatorProfile = require(path.join(__dirname, '../../creator-profile.json'));
 
 // ─── Session Expired Response ──────────────────────────────────────────────────
 const SESSION_EXPIRED = {
@@ -222,17 +221,13 @@ router.post('/concepts', async (req, res) => {
       .map(m => `${m.role === 'user' ? creatorName : 'Id8r'}: ${m.content}`)
       .join('\n');
 
-    const angles = Object.values(creatorProfile.content_angles || {});
-    const anglesText = angles
-      .map(a => `- ${a.label}: ${a.description}`)
-      .join('\n');
+    const { contentAnglesText: anglesText } = getCreatorContext();
 
     // Read fresh creator-profile for dynamic content_intelligence (may have been updated by AnalΩzr)
     let intelligenceBlock = '';
     try {
-      const _fs  = require('fs');
-      const _pth = require('path');
-      const cp   = JSON.parse(_fs.readFileSync(_pth.join(__dirname, '../../creator-profile.json'), 'utf8'));
+      const { loadProfile } = require('../utils/creator-context');
+      const cp = loadProfile();
       const ci   = cp.content_intelligence;
       if (ci && Array.isArray(ci.insights) && ci.insights.length) {
         const top3 = ci.insights.slice(0, 3);

@@ -82,7 +82,8 @@ router.get('/collaborators', (req, res) => {
     const rootPath = path.join(__dirname, '..', '..');
     const primary  = (() => {
       try {
-        const p = JSON.parse(fs.readFileSync(path.join(rootPath, 'creator-profile.json'), 'utf8'));
+        const profilePath = process.env.CREATOR_PROFILE_PATH || path.join(rootPath, 'creator-profile.json');
+        const p = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
         return [{
           slug:    'primary',
           name:    p.creator?.name || 'Creator',

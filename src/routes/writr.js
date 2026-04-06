@@ -377,7 +377,8 @@ router.post('/generate', async (req, res) => {
   try {
     const _fs   = require('fs');
     const _path = require('path');
-    const cp    = JSON.parse(_fs.readFileSync(_path.join(__dirname, '../../creator-profile.json'), 'utf8'));
+    const _profilePath = process.env.CREATOR_PROFILE_PATH || _path.join(__dirname, '../../creator-profile.json');
+    const cp    = JSON.parse(_fs.readFileSync(_profilePath, 'utf8'));
     const ci    = cp.content_intelligence;
     if (ci && Array.isArray(ci.insights) && ci.insights.length) {
       const top3 = ci.insights.slice(0, 3);
@@ -397,7 +398,8 @@ router.post('/generate', async (req, res) => {
       const _fs      = require('fs');
       const _path    = require('path');
       const rootPath = _path.join(__dirname, '..', '..');
-      const primary  = JSON.parse(_fs.readFileSync(_path.join(rootPath, 'creator-profile.json'), 'utf8'));
+      const _primaryProfilePath = process.env.CREATOR_PROFILE_PATH || _path.join(rootPath, 'creator-profile.json');
+      const primary  = JSON.parse(_fs.readFileSync(_primaryProfilePath, 'utf8'));
       const primaryName = primary.creator?.name || 'Creator';
       const primaryFirst = primaryName.split(' ')[0].toUpperCase();
 
@@ -530,7 +532,7 @@ router.post('/generate', async (req, res) => {
         : (what_happened || input_text || '');
 
     const brand = readConfig(projectId)?.brand ||
-      (() => { try { return JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'creator-profile.json'), 'utf8')).creator?.brand; } catch (_) { return null; } })() ||
+      (() => { try { return require('../utils/creator-context').getCreatorContext().brand; } catch (_) { return null; } })() ||
       '7 Kin Homestead';
 
     // ── EMIT FULL TAB IMMEDIATELY ──────────────────────────────────────────

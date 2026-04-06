@@ -599,9 +599,8 @@ async function triggerBrawProxyExport(projectId, brawPath) {
   const project = db.getProject(projectId);
   if (!project) return;
   // Use the same logic as the export-proxies route
-  const profile = JSON.parse(fs.readFileSync(
-    path.join(__dirname, '../../creator-profile.json'), 'utf8'
-  ));
+  const profilePath = process.env.CREATOR_PROFILE_PATH || path.join(__dirname, '../../creator-profile.json');
+  const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
   const intakeFolder = profile?.vault?.intake_folder;
   if (!intakeFolder) return;
   const { runScript } = require('../routes/davinci');

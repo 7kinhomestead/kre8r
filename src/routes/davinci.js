@@ -187,7 +187,8 @@ router.post('/export-proxies', async (req, res) => {
     // override — log a warning when it's used so it's never silent.
     let intakeFolder = null;
     try {
-      const profile = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'creator-profile.json'), 'utf8'));
+      const profilePath = process.env.CREATOR_PROFILE_PATH || path.join(__dirname, '..', '..', 'creator-profile.json');
+      const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
       intakeFolder = profile?.vault?.intake_folder || null;
     } catch (e) {
       console.warn('[DaVinci] Could not read creator-profile.json:', e.message);
