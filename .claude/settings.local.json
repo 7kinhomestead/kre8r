@@ -483,7 +483,24 @@
       "Bash(cp database/kre8r-merged.db \"C:/Users/18054/AppData/Roaming/kre8r/kre8r.db\")",
       "Bash(cp database/kre8r-merged.db database/kre8r.db)",
       "Bash(/tmp/audit_summary.txt:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(tasklist /FI \"PID eq 33804\")",
+      "Bash(tasklist)",
+      "Bash(ls -la C:/Users/18054/kre8r/database/*.db)",
+      "Bash(DB_PATH=\"C:/Users/18054/AppData/Roaming/kre8r/kre8r.db\" node -e \":*)",
+      "Bash(taskkill //F //PID 26308)",
+      "Bash(ls -la \"C:/Users/18054/AppData/Roaming/kre8r/kre8r.db\"*)",
+      "Bash(curl -s \"http://localhost:3000/api/projects?source=youtube_import\")",
+      "Bash(find C:/Users/18054 -name *.db -newer C:/Users/18054/kre8r/database/kre8r-template.db)",
+      "Bash(curl -s http://localhost:3000/api/pipr/1)",
+      "Bash(ls -la C:/Users/18054/AppData/Roaming/kre8r/kre8r.db*)",
+      "Bash(ls -la C:/Users/18054/kre8r/database/kre8r.db*)",
+      "Bash(curl -s -X POST http://localhost:3000/api/projects -H \"Content-Type: application/json\" -d \"{\"\"title\"\":\"\"TEST PROJECT DEBUG\"\",\"\"topic\"\":\"\"debug\"\"}\")",
+      "Bash(grep -v node_modules find C:/Users/18054 -name kre8r.db)",
+      "Bash(curl -sv http://localhost:3000/api/projects)",
+      "Bash(curl -s -X POST http://localhost:3000/api/projects -H 'Content-Type: application/json' -d {title:PROBE3})",
+      "Bash(find C:/Users/18054 -name *.db -newer C:/Users/18054/AppData/Roaming/kre8r/kre8r.db)",
+      "Bash(find C:/Users/18054/kre8r -name *.db)"
     ]
   }
 }
