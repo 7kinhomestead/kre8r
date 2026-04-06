@@ -1,3 +1,54 @@
+# Kre8Ωr Session Log — 2026-04-05 (Session 20 — Marketing Kit + Collaborator Soul System)
+
+## What Was Built — Session 20
+
+---
+
+### Marketing Kit — 3 public pages + beta API
+
+Built the full Kre8Ωr public marketing presence:
+
+- **`public/landing.html`** — Full marketing landing page. Particle canvas hero, pipeline diagram, live MirrΩr constellation mockup (canvas animation, 40 dots, 4 cluster labels), 4 HTML UI mockups (WritΩr, Id8Ωr, MirrΩr coaching, Pipeline), 17 tool cards grid, philosophy + Sine Resistentia etymology, beta application form → `/api/beta/apply`.
+- **`public/media-kit.html`** — Print-optimized media kit. Brand story (Jaffa/Stargate etymology), problem/solution, 4-phase product overview, 7 Kin case study with full channel stats, brand assets (swatches, typography, wordmark, voice guidelines), print CSS.
+- **`public/beta-invite.html`** — Minimal personal beta invitation. What you get / what we need, credentials block with `[USERNAME_PLACEHOLDER]` / `[PASSWORD_PLACEHOLDER]`, getting started guide (Soul BuildΩr → Id8Ωr → pipeline).
+- **`src/routes/beta.js`** — `POST /api/beta/apply` (public), `GET /api/beta/applications` (admin), `PATCH /api/beta/applications/:id` (status update).
+- **`src/db.js`** — `beta_applications` table migration (id, name, channel_url, platform, upload_frequency, why_text, status DEFAULT 'pending', created_at) + `insertBetaApplication`, `getAllBetaApplications`, `updateBetaApplicationStatus` helpers.
+
+**Express routing fix:** Public routes declared FIRST in `server.js` — before `express.static` and any future auth middleware. Both `/landing` and `/landing.html` variants registered (same for media-kit and beta-invite). `/api/beta` also mounted at top.
+
+**Production nginx fix:** `chmod 755` on `/home/kre8r` directories and `chmod 644` on the three HTML files. Landing, media-kit, and beta-invite now publicly accessible on kre8r.app without basic auth.
+
+---
+
+### Collaborator Soul System (committed earlier in session)
+
+- **Soul BuildΩr** — 3-screen collaborator wizard (Who / Voice / Generate), export soul as `.kre8r`, import collaborator soul, update mode with list of all collaborator profiles.
+- **PipΩr** — "WHO'S IN THIS VIDEO?" checkbox section on screen 1, loads all available creator profiles.
+- **WritΩr** — Loads collaborator souls when project has them, injects multi-voice context with `[JASON]`/`[CARI]` speaker labels per beat.
+- **DirectΩr** — `[J]` teal / `[C]` amber speaker badges on shot cards.
+- **ShootDay** — Same speaker badges on beat cards.
+- **DB** — `projects.collaborators` column (JSON array of slugs) + `getProjectCollaborators` / `updateProjectCollaborators` helpers.
+
+---
+
+### Other Fixes (same session)
+
+- **Pipeline dashboard** — YouTube import filter: `getKre8rProjects()` excludes `source = 'youtube_import'`.
+- **MirrΩr rebrand** — AnalΩzr → MirrΩr throughout nav, routes, and UI.
+- **Production Runbook V2** — Dark theme rewrite matching `7-Kin-Content-OS-Architecture.docx`: `1a1a1a` bg, `00C4B4` teal, `0a2e2b` deep teal panels, Arial, cover with "KRE8**Ω**R" at 88pt.
+
+---
+
+## Commits This Session
+- `2f58176` — pipeline dashboard fix, MirrΩr rebrand, runbook V2 script
+- `4354471` — WISHLIST.md: Beta Feedback System entry
+- `2f6aba8` — Collaborator soul system (8 files, 931 insertions)
+- `173695f` — Runbook V2 dark theme + soul system commit (combined push)
+- `b583fe4` — Marketing kit: landing, media-kit, beta-invite, beta API, DB migration
+- `36c1e1a` — Fix: public routes before static/auth middleware, .html variants added
+
+---
+
 # Kre8Ωr Session Log — 2026-04-04 (Session 19 — PipΩr Id8Ωr Brief Enrichment + Bug Fixes)
 
 ## What Was Built — Session 19
