@@ -1632,6 +1632,87 @@ async function psDoDelete() {
   } catch { showToast('Delete failed'); }
 }
 
+// ─────────────────────────────────────────────
+// EDIT STRUCTURE MODE  (?edit_structure=<pid>)
+// Strips PipΩr down to just the structure picker,
+// patches the project, then redirects back to WritΩr.
+// ─────────────────────────────────────────────
+(async function checkEditStructureMode() {
+  const editPid = new URLSearchParams(window.location.search).get('edit_structure');
+  if (!editPid) return;
+  const pid = parseInt(editPid, 10);
+  if (!pid) return;
+
+  // Hide step indicator — not relevant in edit mode
+  const stepEl = document.querySelector('.step-indicator');
+  if (stepEl) stepEl.style.display = 'none';
+
+  // Patch screen-2 copy
+  const s2 = document.getElementById('screen-2');
+  if (!s2) return;
+  const titleEl = s2.querySelector('.screen-title');
+  const subEl   = s2.querySelector('.screen-sub');
+  if (titleEl) titleEl.textContent = 'CHANGE STRUCTURE';
+  if (subEl)   subEl.textContent   = 'Pick a different structure. Your beat map will be rebuilt — coverage data is preserved.';
+
+  // Show screen-2 immediately, hide all others
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  s2.classList.add('active');
+
+  // Replace wizard-nav with Cancel + Save
+  const nav = s2.querySelector('.wizard-nav');
+  if (nav) {
+    nav.innerHTML = `
+      <button class="btn btn-ghost" onclick="window.location.href='/writr.html?project_id=${pid}'">← Cancel</button>
+      <button class="btn btn-primary" id="saveStructureBtn" onclick="saveEditedStructure(${pid})">Save &amp; Return to Writ&#x3a9;r →</button>
+    `;
+  }
+
+  // Load project config and pre-select current structure
+  try {
+    const r = await fetch(`/api/pipr/${pid}`);
+    if (r.ok) {
+      const d = await r.json();
+      if (d.config?.story_structure) {
+        selectStructure(d.config.story_structure);
+      }
+    }
+  } catch (_) {}
+})();
+
+async function saveEditedStructure(pid) {
+  if (!form.story_structure) {
+    showToast('Pick a structure first.', true);
+    return;
+  }
+  const btn      = document.getElementById('saveStructureBtn');
+  const btnOrig  = 'Save & Return to Writ\u03a9r \u2192';
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving\u2026'; }
+
+  try {
+    // Build beats client-side using the same templates PipΩr uses
+    const beats = getClientBeats(form.story_structure);
+
+    const res = await fetch(`/api/pipr/${pid}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        story_structure: form.story_structure,
+        beats,
+        setup_depth: form.setup_depth || 'standard',
+      }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Save failed');
+
+    window.location.href = `/writr.html?project_id=${pid}`;
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = btnOrig; }
+    showToast(err.message || 'Save failed — try again.', true);
+  }
+}
+
 // ── INIT ──
 updateStepIndicator(0);
 </script>

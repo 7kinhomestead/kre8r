@@ -437,6 +437,9 @@
     <div class="panel" id="beatMapPanel">
       <div class="panel-head">
         <div class="panel-title">BEAT MAP</div>
+        <div class="panel-head-right">
+          <button class="btn btn-ghost" id="changeStructureBtn" style="display:none;font-size:11px;padding:4px 12px" onclick="openEditStructure()">↺ Change Structure</button>
+        </div>
       </div>
       <div class="panel-body">
 
@@ -717,6 +720,8 @@ async function loadProjects() {
 async function onProjectChange(pid) {
   currentProjectId  = pid;
   currentEntryPoint = null;
+  const changeBtn = document.getElementById('changeStructureBtn');
+  if (changeBtn) changeBtn.style.display = pid ? '' : 'none';
   currentScript     = null;
   currentBeatMap    = [];
   draftNumber       = 0;
@@ -2108,6 +2113,14 @@ async function onRenameProfile(id) {
 
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────
+// EDIT STRUCTURE — navigate to PipΩr structure picker
+// ─────────────────────────────────────────────
+function openEditStructure() {
+  if (!currentProjectId) return;
+  window.location.href = `/pipr.html?edit_structure=${currentProjectId}`;
 }
 
 // ─────────────────────────────────────────────
