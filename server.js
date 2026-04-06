@@ -9,6 +9,24 @@
 require('dotenv').config({ override: true });
 
 // ─────────────────────────────────────────────
+// ELECTRON MODE — redirect DB + profile paths
+// ─────────────────────────────────────────────
+// When running inside Electron, main.js sets ELECTRON=true and passes
+// DB_PATH + CREATOR_PROFILE_PATH pointing to the user's AppData folder.
+// This block is a safety net if those vars weren't set by main.js.
+if (process.env.ELECTRON === 'true') {
+  const _os   = require('os');
+  const _path = require('path');
+  const _kre8rHome = _path.join(_os.homedir(), '.kre8r');
+  if (!process.env.DB_PATH) {
+    process.env.DB_PATH = _path.join(_kre8rHome, 'kre8r.db');
+  }
+  if (!process.env.CREATOR_PROFILE_PATH) {
+    process.env.CREATOR_PROFILE_PATH = _path.join(_kre8rHome, 'creator-profile.json');
+  }
+}
+
+// ─────────────────────────────────────────────
 // PROCESS-LEVEL ERROR HANDLERS — must be first
 // ─────────────────────────────────────────────
 process.on('unhandledRejection', (reason, promise) => {

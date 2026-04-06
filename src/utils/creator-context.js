@@ -11,7 +11,9 @@
 const fs   = require('fs');
 const path = require('path');
 
-const PROFILE_PATH = path.join(__dirname, '../../creator-profile.json');
+// In Electron mode CREATOR_PROFILE_PATH env var points to AppData; otherwise repo root.
+const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH
+  || path.join(__dirname, '../../creator-profile.json');
 
 /**
  * Load and return the full creator profile object.

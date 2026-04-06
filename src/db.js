@@ -8,7 +8,9 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH    = path.join(__dirname, '..', 'database', 'kre8r.db');
+// In Electron mode, DB_PATH env var points to the user's AppData directory.
+// In server/PM2 mode, fall back to the local database/ folder.
+const DB_PATH     = process.env.DB_PATH    || path.join(__dirname, '..', 'database', 'kre8r.db');
 const SCHEMA_PATH = path.join(__dirname, '..', 'database', 'schema.sql');
 
 let db;

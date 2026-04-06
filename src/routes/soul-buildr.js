@@ -23,7 +23,9 @@ const { execSync } = require('child_process');
 const multer       = require('multer');
 const { callClaude } = require('../utils/claude');
 
-const PROFILE_PATH = path.join(__dirname, '../../creator-profile.json');
+// In Electron mode CREATOR_PROFILE_PATH env var points to AppData.
+const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH
+  || path.join(__dirname, '../../creator-profile.json');
 const ROOT_PATH    = path.join(__dirname, '../../');
 
 // ─── Multer: voice clip uploads ───────────────────────────────────────────────
