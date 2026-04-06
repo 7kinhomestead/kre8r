@@ -144,9 +144,14 @@ app.get('/api/creator-profile', (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
+  let instance = 'kre8r';
+  try {
+    const _p = process.env.CREATOR_PROFILE_PATH || require('path').join(__dirname, 'creator-profile.json');
+    instance = JSON.parse(require('fs').readFileSync(_p, 'utf8')).instance || 'kre8r';
+  } catch (_) { /* no profile yet — fresh install */ }
   res.json({
     status: 'ok',
-    instance: require('./creator-profile.json').instance,
+    instance,
     version: '1.0',
     anthropic_configured: !!process.env.ANTHROPIC_API_KEY
   });
