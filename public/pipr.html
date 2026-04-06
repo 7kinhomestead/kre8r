@@ -1706,7 +1706,7 @@ async function saveEditedStructure(pid) {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Save failed');
 
-    window.location.href = `/writr.html?project_id=${pid}`;
+    window.location.href = `/writr.html?project_id=${pid}&reset_beats=1`;
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = btnOrig; }
     showToast(err.message || 'Save failed — try again.', true);

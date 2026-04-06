@@ -629,6 +629,8 @@ let isGenerating      = false;
 let isRevising        = false;
 let voiceLibrary      = [];    // array of voice profile objects from /api/voice-library/profiles
 let vlAnalyzeJobId    = null;  // active voice analyze job id
+// Set true when returning from PipΩr structure change — forces config.beats over stale script beat_map
+const _resetBeats     = new URLSearchParams(window.location.search).has('reset_beats');
 // Full original values for truncated pre-fill fields
 const _prefillFull    = {};
 
@@ -770,7 +772,11 @@ async function onProjectChange(pid) {
     // If existing script, render it and restore sibling tabs
     if (data.active_script) {
       const s = data.active_script;
-      const beatMap = s.beat_map_json || s.beat_map || [];
+      const scriptBeatMap = s.beat_map_json || s.beat_map || [];
+      // If returning from a structure change, prefer the fresh config.beats so the
+      // new structure is displayed instead of the stale script beat map.
+      const configBeats = (data.config?.beats || []).filter(b => b && b.name);
+      const beatMap = (_resetBeats && configBeats.length) ? configBeats : scriptBeatMap;
       currentScript = { ...s, content: s.generated_script || s.content || '', beat_map: beatMap };
       const mode    = s.mode || 'full';
       currentScripts[mode] = { ...currentScript, mode };
@@ -782,6 +788,9 @@ async function onProjectChange(pid) {
       loadDraftsHistory(pid);
       // Load sibling tabs in background (non-blocking)
       if (s.session_id) loadSiblingTabs(s.session_id, beatMap);
+    } else if (data.config?.beats?.length) {
+      // No script yet — show the planned beat map from PipΩr config
+      renderBeatMap(data.config.beats);
     }
   } catch(e) {
     console.error('Failed to load project config:', e);
