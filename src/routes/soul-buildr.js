@@ -8,6 +8,7 @@
  * GET  /api/soul-buildr/collaborator/:slug         — read one collaborator profile
  * POST /api/soul-buildr/collaborator/generate      — SSE: generate collaborator profile (3-screen wizard)
  * POST /api/soul-buildr/collaborator/import        — save uploaded .kre8r JSON as collaborator profile
+ * POST /api/soul-buildr/primary/import             — overwrite creator-profile.json from .kre8r file
  * GET  /api/soul-buildr/export                     — download primary soul as .kre8r
  * GET  /api/soul-buildr/collaborator/:slug/export  — download collaborator soul as .kre8r
  */
@@ -402,6 +403,28 @@ router.get('/export', (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="creator-soul-${name}.kre8r"`);
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify(profile, null, 2));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /primary/import — overwrite creator-profile.json with an uploaded .kre8r file
+router.post('/primary/import', (req, res) => {
+  try {
+    const profile = req.body;
+    if (!profile || typeof profile !== 'object') {
+      return res.status(400).json({ error: 'Invalid profile JSON' });
+    }
+    // Back up current profile before overwriting
+    if (fs.existsSync(PROFILE_PATH)) {
+      const backupPath = PROFILE_PATH.replace(/\.json$/, '-backup-before-import.json');
+      fs.copyFileSync(PROFILE_PATH, backupPath);
+    }
+    if (!profile.meta) profile.meta = {};
+    profile.meta.imported_at = new Date().toISOString();
+    profile.type = 'primary';
+    fs.writeFileSync(PROFILE_PATH, JSON.stringify(profile, null, 2), 'utf8');
+    const name = profile.creator?.name || 'Unknown';
+    const brand = profile.creator?.brand || name;
+    res.json({ ok: true, name, brand });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

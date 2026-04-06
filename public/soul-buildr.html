@@ -1645,6 +1645,9 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
     <button class="btn-ghost-sm" onclick="document.getElementById('importSoulInput').click()">Import Collaborator Soul 📥</button>
     <input type="file" id="importSoulInput" accept=".kre8r,.json" style="display:none;"
       onchange="importCollabSoul(event)">
+    <button class="btn-ghost-sm" style="color:var(--amber);border-color:var(--amber);opacity:0.7;" onclick="document.getElementById('importPrimarySoulInput').click()">Import Primary Soul 📥</button>
+    <input type="file" id="importPrimarySoulInput" accept=".kre8r,.json" style="display:none;"
+      onchange="importPrimarySoul(event)">
   </div>
 </div>
 
@@ -2636,6 +2639,34 @@ async function importCollabSoul(event) {
     loadCollaboratorsUpdate();
   } catch (err) {
     alert('Import failed: ' + err.message);
+  }
+  event.target.value = '';
+}
+
+async function importPrimarySoul(event) {
+  var file = event.target.files && event.target.files[0];
+  if (!file) return;
+  var confirmed = confirm(
+    '⚠️ REPLACE PRIMARY SOUL\n\n' +
+    'This will overwrite creator-profile.json — your current soul configuration — ' +
+    'with the imported file. A backup will be saved automatically.\n\n' +
+    'Are you sure you want to replace your primary soul?'
+  );
+  if (!confirmed) { event.target.value = ''; return; }
+  try {
+    var text = await file.text();
+    var profile = JSON.parse(text);
+    var res = await fetch('/api/soul-buildr/primary/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile)
+    });
+    var d = await res.json();
+    if (!d.ok) throw new Error(d.error || 'Import failed');
+    alert('✓ Primary soul replaced: ' + (d.brand || d.name) + '\n\nReloading to apply new soul...');
+    window.location.reload();
+  } catch (err) {
+    alert('Primary soul import failed: ' + err.message);
   }
   event.target.value = '';
 }
