@@ -36,6 +36,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ─────────────────────────────────────────────
+// PUBLIC MARKETING PAGES — no auth, declared FIRST
+// Must stay above express.static and any future auth middleware so
+// nginx basic-auth passthrough (auth_basic off) can be matched by route.
+// ─────────────────────────────────────────────
+app.use('/api/beta', require('./src/routes/beta'));
+
+app.get('/landing',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
+app.get('/landing.html',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
+app.get('/media-kit',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
+app.get('/media-kit.html',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
+app.get('/beta-invite',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
+app.get('/beta-invite.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
+
+// ─────────────────────────────────────────────
 // STATIC FILES
 // ─────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
@@ -66,17 +80,6 @@ const mirrRouter = require('./src/routes/mirrr');
 app.use('/api/mirrr',        mirrRouter);          // MirrΩr (new canonical)
 app.use('/api/analytr',      mirrRouter);           // legacy alias — keep so old bookmarks don't 404
 app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
-app.use('/api/beta',         require('./src/routes/beta'));
-
-// ─────────────────────────────────────────────
-// PUBLIC MARKETING PAGES — no auth required
-// These three routes must be explicitly declared BEFORE any future auth
-// middleware so they remain publicly accessible on kre8r.app.
-// On production (DigitalOcean), add to nginx: location ~ ^/(landing|media-kit|beta-invite) { auth_basic off; }
-// ─────────────────────────────────────────────
-app.get('/landing',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
-app.get('/media-kit',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
-app.get('/beta-invite',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
