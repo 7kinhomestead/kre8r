@@ -873,6 +873,37 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 .cv-slider-wrap { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
 .cv-slider-label { font-size: 11px; color: var(--text-dimmer); min-width: 52px; }
 .cv-slider { flex: 1; accent-color: var(--teal); }
+
+/* ─── FIELD HELP TEXT ────────────────────────────────────────────────────────── */
+.field-help {
+  font-size: 11px; color: var(--text-dimmer); line-height: 1.5;
+  margin-top: 5px; padding-left: 2px;
+}
+.field-help em { color: var(--teal-dim); font-style: normal; }
+
+/* ─── ANALYSIS PROGRESS BAR ──────────────────────────────────────────────────── */
+.cv-progress-bar-wrap {
+  background: var(--bg-card-2); border-radius: 20px;
+  height: 5px; overflow: hidden; margin: 14px 0 6px;
+}
+.cv-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal-dim), var(--teal));
+  border-radius: 20px; width: 0%;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cv-progress-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--text-dimmer); margin-bottom: 10px;
+}
+.cv-progress-status { color: var(--teal-dim); font-weight: 500; }
+.cv-timing-note {
+  font-size: 11px; color: var(--text-dimmer);
+  background: var(--bg-card-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 12px;
+  margin-top: 10px; line-height: 1.5;
+}
+.cv-timing-note strong { color: var(--amber); }
 </style>
 </head>
 <body>
@@ -1305,50 +1336,56 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       <span class="cp-dot" id="cdot-3"></span>
     </div>
 
-    <!-- ── Screen C1: Who Are They? ──────────────────────────────────────────── -->
+    <!-- ── Screen C1: Who Are You? ───────────────────────────────────────────── -->
     <div class="collab-screen" id="cscreen-0">
       <div class="wz-screen-number">COLLABORATOR SOUL — 1 OF 4</div>
-      <div class="wz-screen-title">WHO ARE THEY?</div>
-      <div class="wz-screen-sub">Identity and role — enough for Kre8Ωr to know who's speaking.</div>
+      <div class="wz-screen-title">WHO ARE <em>YOU?</em></div>
+      <div class="wz-screen-sub">Tell Kre8Ωr who you are so it always knows when you're speaking.</div>
 
       <div class="field-group">
-        <label class="field-label" for="c-name">Full Name</label>
+        <label class="field-label" for="c-name">Your name</label>
         <input class="field-input" id="c-name" type="text" placeholder="Cari Rutland" autocomplete="off">
+        <div class="field-help">The name that appears in scripts — e.g. <em>[CARI]</em> — and on beat cards.</div>
       </div>
       <div class="field-group">
-        <label class="field-label" for="c-role">Role in videos</label>
+        <label class="field-label" for="c-role">Your role in videos</label>
         <select class="field-input" id="c-role">
-          <option value="">Select role...</option>
-          <option value="Co-Host">Co-Host</option>
-          <option value="Reactor">Reactor</option>
-          <option value="Expert">Expert</option>
-          <option value="Cam Op / Director">Cam Op / Director</option>
-          <option value="Guest">Guest</option>
+          <option value="">Select your role...</option>
+          <option value="Co-Host">Co-Host — you share presenting duties equally</option>
+          <option value="Reactor">Reactor — you respond to what's happening</option>
+          <option value="Expert">Expert — you bring specialist knowledge</option>
+          <option value="Cam Op / Director">Cam Op / Director — you're behind the camera, occasionally on it</option>
+          <option value="Guest">Guest — you appear in specific episodes</option>
         </select>
+        <div class="field-help">This tells Kre8Ωr how to write your beats — whether you're leading, reacting, or directing.</div>
       </div>
       <div class="field-group">
-        <label class="field-label" for="c-relationship">Relationship dynamic</label>
+        <label class="field-label" for="c-relationship">Your dynamic with the primary creator</label>
         <input class="field-input" id="c-relationship" type="text"
-          placeholder="e.g. The deadpan counterpoint to Jason's energy">
+          placeholder="e.g. The calm one who grounds the chaos">
+        <div class="field-help">How your energy plays against theirs on camera. This makes scripted dialogue feel natural instead of written. One sentence is enough — <em>"The deadpan counterpoint to Jason's chaos"</em> tells Claude everything.</div>
       </div>
       <div class="field-group">
-        <label class="field-label" for="c-beats">Parts of videos they typically own</label>
+        <label class="field-label" for="c-beats">What parts of videos do you typically own?</label>
         <input class="field-input" id="c-beats" type="text"
-          placeholder="e.g. Behind-camera direction, emotional reactions, practical demos">
+          placeholder="e.g. Safety checks, emotional check-ins, the practical how-to breakdown">
+        <div class="field-help">The sections that naturally fall to you. WritΩr uses this to assign beats correctly — so your lines land in the right place in the script, not Jason's.</div>
       </div>
       <div class="field-row">
         <div class="field-group">
-          <label class="field-label" for="c-badge-letter">Badge</label>
+          <label class="field-label" for="c-badge-letter">Your badge</label>
           <input class="field-input" id="c-badge-letter" type="text" maxlength="2"
             placeholder="C" style="text-align:center;font-weight:700;font-size:18px;">
+          <div class="field-help">1-2 initials. Shows up in script beat cards.</div>
         </div>
         <div class="field-group">
-          <label class="field-label" for="c-badge-color">Color</label>
+          <label class="field-label" for="c-badge-color">Badge color</label>
           <select class="field-input" id="c-badge-color">
             <option value="amber">Amber</option>
             <option value="green">Green</option>
             <option value="teal">Teal</option>
           </select>
+          <div class="field-help">Distinct from the primary creator's color.</div>
         </div>
       </div>
       <div class="wizard-nav">
@@ -1443,11 +1480,23 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         </div>
       </div>
 
-      <!-- Analysis progress strip (shown during SSE) -->
+      <!-- Analysis progress (shown during SSE) -->
       <div class="cv-analysis-wrap" id="cvAnalysisWrap" style="display:none;">
-        <div class="cv-analysis-step" id="cva-transcribe">Transcribing clips...</div>
+        <div class="cv-progress-bar-wrap">
+          <div class="cv-progress-bar" id="cvProgressBar"></div>
+        </div>
+        <div class="cv-progress-meta">
+          <span class="cv-progress-status" id="cvProgressStatus">Starting...</span>
+          <span id="cvProgressTimer">0s</span>
+        </div>
+        <div class="cv-analysis-step" id="cva-transcribe">Transcribing clips with Whisper...</div>
         <div class="cv-analysis-step" id="cva-analyze">Analyzing voice patterns...</div>
-        <div class="cv-analysis-step" id="cva-claude">Building voice profile...</div>
+        <div class="cv-analysis-step" id="cva-claude">Building voice profile with Claude...</div>
+        <div class="cv-timing-note" id="cvTimingNote">
+          <strong>⏱ Heads up:</strong> Whisper transcription runs locally and takes roughly
+          <strong>1 minute per minute of video</strong>. A 5-minute clip = ~5 minutes.
+          The progress bar will advance when each clip finishes. It's running — not frozen.
+        </div>
       </div>
 
       <div class="gen-error" id="cvAnalysisError" style="display:none;margin-top:12px;"></div>
@@ -2034,10 +2083,12 @@ document.getElementById('audience_age_max').addEventListener('input', function()
 });
 
 // ─── COLLABORATOR WIZARD v2 STATE ──────────────────────────────────────────
-var collabScreen      = 0;
-var collabVoiceTab    = 'upload';
-var collabFiles       = [];      // Array of File objects
-var collabVoiceProfile = null;  // Analyzed voice profile from /analyze-voice
+var collabScreen       = 0;
+var collabVoiceTab     = 'upload';
+var collabFiles        = [];      // Array of File objects
+var collabVoiceProfile = null;   // Analyzed voice profile from /analyze-voice
+var cvTimerInterval    = null;   // Elapsed time ticker
+var cvTimerStart       = null;   // Date.now() when analysis started
 
 // ─── TAB SWITCHING ──────────────────────────────────────────────────────────
 function setCollabVoiceTab(tab, btn) {
@@ -2105,6 +2156,7 @@ function renderCollabFileList() {
 // ─── NAVIGATION ─────────────────────────────────────────────────────────────
 function startCollabWizard() {
   // Reset all state
+  stopCvTimer();
   collabFiles        = [];
   collabVoiceProfile = null;
   collabVoiceTab     = 'upload';
@@ -2144,6 +2196,9 @@ function startCollabWizard() {
     var el = document.getElementById(id);
     if (el) el.className = 'cv-analysis-step';
   });
+  setCvProgress(0, '');
+  var timerEl = document.getElementById('cvProgressTimer');
+  if (timerEl) timerEl.textContent = '0s';
   var errEl = document.getElementById('cvAnalysisError');
   if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
   var btn = document.getElementById('cvAnalyzeBtn');
@@ -2208,6 +2263,26 @@ function collabBack(fromScreen) {
   goCollabScreen(fromScreen - 1);
 }
 
+// ─── ANALYSIS TIMER HELPERS ─────────────────────────────────────────────────
+function startCvTimer() {
+  cvTimerStart = Date.now();
+  var timerEl = document.getElementById('cvProgressTimer');
+  cvTimerInterval = setInterval(function() {
+    if (!timerEl) return;
+    var s = Math.floor((Date.now() - cvTimerStart) / 1000);
+    timerEl.textContent = s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+  }, 1000);
+}
+function stopCvTimer() {
+  if (cvTimerInterval) { clearInterval(cvTimerInterval); cvTimerInterval = null; }
+}
+function setCvProgress(pct, statusText) {
+  var bar    = document.getElementById('cvProgressBar');
+  var status = document.getElementById('cvProgressStatus');
+  if (bar)    bar.style.width = pct + '%';
+  if (status) status.textContent = statusText || '';
+}
+
 // ─── VOICE ANALYSIS (SSE) ───────────────────────────────────────────────────
 async function runCollabVoiceAnalysis() {
   var name = (document.getElementById('c-name').value || '').trim();
@@ -2224,29 +2299,47 @@ async function runCollabVoiceAnalysis() {
       .map(function(el) { return el.value; });
     if (!descriptors.length) { alert('Please select at least one voice descriptor.'); return; }
   } else {
-    // upload — can have 0 files if user just wants Claude to guess from name/role
-    // but at least 1 file required for a proper upload
     if (collabFiles.length === 0) { alert('Please add at least one clip, or switch to Paste Transcript or Describe Voice.'); return; }
   }
 
-  // UI: show analysis progress, disable button
-  var btn     = document.getElementById('cvAnalyzeBtn');
-  var errEl   = document.getElementById('cvAnalysisError');
-  var wrapEl  = document.getElementById('cvAnalysisWrap');
+  // UI: show analysis progress, disable button, start timer
+  var btn    = document.getElementById('cvAnalyzeBtn');
+  var errEl  = document.getElementById('cvAnalysisError');
+  var wrapEl = document.getElementById('cvAnalysisWrap');
+  var noteEl = document.getElementById('cvTimingNote');
   if (btn)   { btn.disabled = true; btn.textContent = 'Analyzing...'; }
   if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
   if (wrapEl) wrapEl.style.display = '';
+  // Only show timing note for uploads (paste/describe are fast)
+  if (noteEl) noteEl.style.display = (collabVoiceTab === 'upload' && collabFiles.length > 0) ? '' : 'none';
+
+  setCvProgress(5, 'Starting...');
+  startCvTimer();
 
   var stepIds = ['cva-transcribe', 'cva-analyze', 'cva-claude'];
-  function setAStep(activeId) {
+  // Per-step progress targets: transcribe = 0–70%, analyze = 70–85%, claude = 85–100%
+  var stepProgress = { 'cva-transcribe': 0, 'cva-analyze': 70, 'cva-claude': 85 };
+  var clipsDone    = 0;
+  var totalClips   = collabFiles.length || 1;
+
+  function setAStep(activeId, clipN, clipTotal) {
     stepIds.forEach(function(id) {
       var el = document.getElementById(id);
       if (!el) return;
-      if (id === activeId)           el.className = 'cv-analysis-step active';
-      else if (stepIds.indexOf(id) < stepIds.indexOf(activeId))
-                                     el.className = 'cv-analysis-step done';
-      else                           el.className = 'cv-analysis-step';
+      if (id === activeId)                              el.className = 'cv-analysis-step active';
+      else if (stepIds.indexOf(id) < stepIds.indexOf(activeId)) el.className = 'cv-analysis-step done';
+      else                                              el.className = 'cv-analysis-step';
     });
+    // Update progress bar
+    if (activeId === 'cva-transcribe') {
+      var done = typeof clipN === 'number' ? clipN - 1 : 0;
+      var pct  = 5 + (done / totalClips) * 65;
+      setCvProgress(pct, clipN ? 'Transcribing clip ' + clipN + ' of ' + clipTotal + '...' : 'Transcribing...');
+    } else if (activeId === 'cva-analyze') {
+      setCvProgress(72, 'Analyzing voice patterns...');
+    } else if (activeId === 'cva-claude') {
+      setCvProgress(88, 'Building voice profile with Claude...');
+    }
   }
   setAStep('cva-transcribe');
 
@@ -2283,32 +2376,33 @@ async function runCollabVoiceAnalysis() {
         try { msg = JSON.parse(line.slice(5).trim()); } catch (_) { continue; }
 
         if (msg.type === 'status') {
-          // Map backend step to UI step
           if (msg.step === 'transcribe' || (msg.message && msg.message.includes('Transcrib'))) {
-            setAStep('cva-transcribe');
+            setAStep('cva-transcribe', msg.clip, msg.total);
           } else if (msg.step === 'analyze' || (msg.message && msg.message.includes('voice pattern'))) {
             setAStep('cva-analyze');
           } else if (msg.step === 'claude' || (msg.message && msg.message.includes('Building'))) {
             setAStep('cva-claude');
           }
         } else if (msg.type === 'done') {
-          // Mark all done
+          stopCvTimer();
+          setCvProgress(100, 'Done ✓');
           stepIds.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.className = 'cv-analysis-step done';
           });
           collabVoiceProfile = msg.profile;
-          // Advance to preview screen
           setTimeout(function() {
             renderCollabVoiceProfile(msg.profile);
             goCollabScreen(2);
-          }, 500);
+          }, 600);
         } else if (msg.type === 'error') {
           throw new Error(msg.message);
         }
       }
     }
   } catch (err) {
+    stopCvTimer();
+    setCvProgress(0, '');
     if (errEl) { errEl.style.display = ''; errEl.textContent = '✕ ' + err.message; }
     if (btn)   { btn.disabled = false; btn.textContent = 'Analyze Voice →'; }
   }
