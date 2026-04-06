@@ -51,19 +51,32 @@ router.get('/status', (req, res) => {
       return res.json({ exists: false, last_updated: null, creator_name: null,
         has_voice_samples: false, has_audience: false, has_content_angles: false });
     }
+    // voice_words: handle both wizard schema (tone_descriptors) and hand-built schema (traits / summary)
+    const v = profile.voice || {};
+    let voiceWords = null;
+    if (v.tone_descriptors?.length)         voiceWords = v.tone_descriptors.slice(0, 3).join(', ');
+    else if (v.voice_in_3_words?.length)    voiceWords = v.voice_in_3_words.slice(0, 3).join(', ');
+    else if (v.traits?.length)              voiceWords = v.traits.slice(0, 3).map(t => t.split(/[—–]/)[0].trim()).join(', ');
+    else if (v.summary)                     voiceWords = v.summary.split('.')[0].trim().slice(0, 60);
+
+    // avatar_name: wizard schema vs hand-built (may not exist)
+    const avatarName = profile.audience?.avatar_name
+      || profile.audience?.avatar
+      || null;
+
     res.json({
       exists:             true,
-      last_updated:       profile.meta?.created_at || null,
+      last_updated:       profile.meta?.created_at || profile.meta?.updated_at || null,
       creator_name:       profile.creator?.name   || null,
-      channel_name:       profile.creator?.channel || null,
-      voice_words:        profile.voice?.tone_descriptors?.slice(0,3).join(', ') || null,
-      avatar_name:        profile.audience?.avatar_name || null,
+      channel_name:       profile.creator?.channel || profile.creator?.brand || null,
+      voice_words:        voiceWords,
+      avatar_name:        avatarName,
       content_angles:     Array.isArray(profile.content_angles)
         ? profile.content_angles.map(a => a.name || a)
         : Object.values(profile.content_angles || {}).map(a => a.label || a.name || '').filter(Boolean),
-      has_voice_samples:  !!(profile.voice?.writing_style),
-      has_audience:       !!(profile.audience?.avatar_name),
-      has_content_angles: !!(profile.content_angles?.length),
+      has_voice_samples:  !!(v.writing_style || v.writing_guidelines || v.summary),
+      has_audience:       !!(avatarName || profile.audience?.situation),
+      has_content_angles: !!(profile.content_angles && Object.keys(profile.content_angles).length),
       content_intelligence: profile.content_intelligence || null,
     });
   } catch (err) {
