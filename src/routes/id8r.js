@@ -22,6 +22,7 @@ const path    = require('path');
 const db      = require('../db');
 const { getCreatorContext } = require('../utils/creator-context');
 const vault   = require('../utils/project-vault');
+const { addId8rContext } = require('../utils/project-context-builder');
 
 
 // ─── Session Expired Response ──────────────────────────────────────────────────
@@ -664,6 +665,19 @@ router.post('/send-pipeline', async (req, res) => {
       packageData:     session.packageData      || null,
       briefData:       session.briefData        || null,
     });
+
+    // Build project-context.json — single source of truth for the pipeline
+    try {
+      addId8rContext(project.id, {
+        chosenConcept:   session.chosenConcept   || null,
+        researchSummary: session.researchSummary  || null,
+        packageData:     session.packageData      || null,
+        briefData:       session.briefData        || null,
+        collaborators:   session.collaborators    || null,
+      });
+    } catch (ctxErr) {
+      console.warn('[id8r/send-pipeline] context build failed (non-fatal):', ctxErr.message);
+    }
 
     // ── Vault: save all Id8Ωr session data now that we have a project_id ─────
     try {

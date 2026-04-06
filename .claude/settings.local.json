@@ -481,7 +481,9 @@
       "Bash(taskkill //F //IM electron.exe //T)",
       "Bash(dir creator-profile*.json /s)",
       "Bash(cp database/kre8r-merged.db \"C:/Users/18054/AppData/Roaming/kre8r/kre8r.db\")",
-      "Bash(cp database/kre8r-merged.db database/kre8r.db)"
+      "Bash(cp database/kre8r-merged.db database/kre8r.db)",
+      "Bash(/tmp/audit_summary.txt:*)",
+      "Read(//tmp/**)"
     ]
   }
 }

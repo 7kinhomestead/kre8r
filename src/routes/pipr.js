@@ -22,6 +22,7 @@ const { buildBeatMap, getBeats } = require('../pipr/beats');
 const { readConfig, writeConfig, updateBeatCoverage } = require('../pipr/beat-tracker');
 const { minePatterns } = require('../pipr/config-miner');
 const vault           = require('../utils/project-vault');
+const { addPiprContext } = require('../utils/project-context-builder');
 
 const router = express.Router();
 
@@ -164,6 +165,19 @@ router.post('/create', (req, res) => {
     writeConfig(projectId, config);
     try { vault.backupVault(projectId); } catch (_) {}
 
+    // Add PipΩr stage to project-context.json
+    try {
+      addPiprContext(projectId, {
+        story_structure: config.story_structure,
+        beats:           config.beats,
+        target_duration: config.estimated_duration_minutes,
+        setup_depth:     config.setup_depth,
+        entry_point:     config.entry_point,
+      });
+    } catch (ctxErr) {
+      console.warn('[pipr/create] context build failed (non-fatal):', ctxErr.message);
+    }
+
     res.json({ ok: true, project_id: projectId, config });
   } catch (err) {
     console.error('[pipr] create error:', err.message);
@@ -289,6 +303,19 @@ router.patch('/:project_id', (req, res) => {
     // Update collaborators if provided
     if (req.body.collaborators && Array.isArray(req.body.collaborators)) {
       db.updateProjectCollaborators(projectId, req.body.collaborators);
+    }
+
+    // Update project-context.json with latest PipΩr state
+    try {
+      addPiprContext(projectId, {
+        story_structure: config.story_structure,
+        beats:           config.beats,
+        target_duration: config.estimated_duration_minutes,
+        setup_depth:     config.setup_depth,
+        entry_point:     config.entry_point,
+      });
+    } catch (ctxErr) {
+      console.warn('[pipr/patch] context build failed (non-fatal):', ctxErr.message);
     }
 
     res.json({ ok: true, config });

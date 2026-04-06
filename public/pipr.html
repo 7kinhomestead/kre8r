@@ -197,6 +197,25 @@
   .validation-banner{background:var(--amber-glow);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--amber);margin-bottom:20px;display:none;}
   .validation-banner.visible{display:block;}
 
+  /* ── ID8ΩR ARRIVAL SUMMARY CARD ── */
+  .id8r-summary-card{background:var(--teal-glow);border:1px solid rgba(62,207,178,0.35);border-radius:var(--radius);padding:22px 24px;margin-bottom:32px;}
+  .id8r-summary-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin-bottom:12px;}
+  .id8r-summary-title{font-family:var(--font-head);font-size:clamp(22px,5vw,34px);letter-spacing:2px;color:var(--text);line-height:1.1;margin-bottom:10px;}
+  .id8r-summary-concept{font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;}
+  .id8r-summary-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .id8r-ep-pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid rgba(62,207,178,0.4);color:var(--teal);background:rgba(62,207,178,0.1);}
+  .id8r-edit-link{font-size:12px;color:var(--text-dimmer);text-decoration:underline;cursor:pointer;margin-left:auto;}
+  .id8r-edit-link:hover{color:var(--text-dim);}
+  .id8r-advance-bar{margin-top:16px;display:flex;align-items:center;gap:12px;}
+  .id8r-advance-progress{flex:1;height:3px;background:rgba(62,207,178,0.15);border-radius:2px;overflow:hidden;}
+  .id8r-advance-fill{height:100%;background:var(--teal);width:0%;transition:width 1s linear;border-radius:2px;}
+
+  /* ── BRIEF READONLY (Screen 3, Id8Ωr mode) ── */
+  .brief-readonly-notice{background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+  .brief-readonly-label{font-size:11px;font-weight:700;letter-spacing:0.8px;color:var(--teal);text-transform:uppercase;}
+  .brief-edit-toggle{font-size:12px;font-weight:600;padding:4px 12px;border-radius:4px;background:none;border:1px solid rgba(62,207,178,0.4);color:var(--teal);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .brief-edit-toggle:hover{background:rgba(62,207,178,0.1);}
+
   /* ── PROJECT SETTINGS MODE ── */
   #project-settings { display: none; max-width: 560px; padding: 48px 0 80px; }
   #project-settings.active { display: block; }
@@ -314,14 +333,32 @@
 
   <!-- SCREEN 1: PROJECT BASICS -->
   <div class="screen" id="screen-1">
-    <div class="screen-title">PROJECT BASICS</div>
-    <div class="screen-sub">Name it. Define it. Two sentences max.</div>
 
-    <div id="valid-banner-1" class="validation-banner"></div>
-    <div id="id8r-arrival-banner" class="pipr-notice" style="display:none">
-      <span class="pipr-notice-icon">✨</span>
-      <span class="pipr-notice-text">Arrived from Id8Ωr — concept and entry point pre-loaded</span>
+    <!-- Id8Ωr arrival summary card (replaces form when fromId8r) -->
+    <div id="id8r-summary-card" class="id8r-summary-card" style="display:none">
+      <div class="id8r-summary-badge">✨ From Id8Ωr</div>
+      <div class="id8r-summary-title" id="id8r-sum-title"></div>
+      <div class="id8r-summary-concept" id="id8r-sum-concept"></div>
+      <div class="id8r-summary-meta">
+        <div class="id8r-ep-pill" id="id8r-sum-ep"></div>
+        <span class="id8r-edit-link" onclick="expandId8rForm()">Edit details ↓</span>
+      </div>
+      <div class="id8r-advance-bar">
+        <div class="id8r-advance-progress"><div class="id8r-advance-fill" id="id8r-advance-fill"></div></div>
+        <button class="btn btn-primary" style="padding:7px 18px;font-size:13px" onclick="goToScreen(2)">Continue →</button>
+      </div>
     </div>
+
+    <!-- Normal form (hidden for Id8Ωr arrivals until "Edit details" clicked) -->
+    <div id="screen-1-form">
+      <div class="screen-title">PROJECT BASICS</div>
+      <div class="screen-sub">Name it. Define it. Two sentences max.</div>
+
+      <div id="valid-banner-1" class="validation-banner"></div>
+      <div id="id8r-arrival-banner" class="pipr-notice" style="display:none">
+        <span class="pipr-notice-icon">✨</span>
+        <span class="pipr-notice-text">Arrived from Id8Ωr — concept and entry point pre-loaded</span>
+      </div>
 
     <div class="field-group">
       <label class="field-label" for="f-title">Project Title</label>
@@ -373,6 +410,7 @@
       <button class="btn btn-ghost" onclick="goBack()">← Back</button>
       <button class="btn btn-primary" onclick="goNext()">Continue →</button>
     </div>
+    </div><!-- /screen-1-form -->
   </div>
 
   <!-- SCREEN 2: STORY STRUCTURE -->
@@ -573,6 +611,12 @@
 
     <div id="valid-banner-3" class="validation-banner"></div>
 
+    <!-- Id8Ωr brief readonly notice (shown only for Id8Ωr arrivals) -->
+    <div id="brief-readonly-notice" class="brief-readonly-notice" style="display:none">
+      <span class="brief-readonly-label">✨ Id8Ωr Brief — review before generating beats</span>
+      <button class="brief-edit-toggle" id="brief-edit-toggle" onclick="toggleBriefEdit()">Edit Brief</button>
+    </div>
+
     <!-- script_first variant -->
     <div id="s3-script-first" style="display:none;">
       <div class="field-group">
@@ -757,6 +801,7 @@ const form = {
 
 let currentStep = 0;
 const TOTAL_STEPS = 5;
+let isFromId8r = false;
 
 // ── COLLABORATORS ──
 var availableCreators     = [];
@@ -823,6 +868,45 @@ function updateStepIndicator(step) {
   }
 }
 
+// ── ID8ΩR 4-DOT INDICATOR ──
+function setId8rIndicatorMode() {
+  const el = document.getElementById('stepIndicator');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="step-dot active" id="i8dot-0"><div class="step-dot-circle">1</div><div class="step-dot-label">Structure</div></div>
+    <div class="step-connector" id="i8conn-0"></div>
+    <div class="step-dot" id="i8dot-1"><div class="step-dot-circle">2</div><div class="step-dot-label">Depth</div></div>
+    <div class="step-connector" id="i8conn-1"></div>
+    <div class="step-dot" id="i8dot-2"><div class="step-dot-circle">3</div><div class="step-dot-label">Brief</div></div>
+    <div class="step-connector" id="i8conn-2"></div>
+    <div class="step-dot" id="i8dot-3"><div class="step-dot-circle">4</div><div class="step-dot-label">Beat Map</div></div>
+  `;
+}
+
+function updateId8rIndicator(screenIdx) {
+  // screen 2 → dot 0 (Structure), screen 3 → dot 2 (Brief), screen 4 → dot 3 (Beat Map)
+  // dot 1 (Depth) auto-marks done at screen 3+
+  const dotIdx = screenIdx <= 2 ? 0 : screenIdx === 3 ? 2 : 3;
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('i8dot-' + i);
+    if (!dot) continue;
+    dot.classList.remove('active', 'done');
+    if (i < dotIdx) dot.classList.add('done');
+    else if (i === dotIdx) dot.classList.add('active');
+  }
+  for (let i = 0; i < 3; i++) {
+    const conn = document.getElementById('i8conn-' + i);
+    if (conn) conn.classList.toggle('done', i < dotIdx);
+  }
+  // Depth dot: mark done as soon as structure is chosen (still on screen 2)
+  if (screenIdx === 2 && form.story_structure) {
+    const d1 = document.getElementById('i8dot-1');
+    if (d1) { d1.classList.remove('active'); d1.classList.add('done'); }
+    const c0 = document.getElementById('i8conn-0');
+    if (c0) c0.classList.add('done');
+  }
+}
+
 // ── SCREEN NAVIGATION ──
 function showScreen(idx) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -835,8 +919,29 @@ function showScreen(idx) {
     screen.style.animation = '';
   }
   currentStep = idx;
-  updateStepIndicator(idx);
+  if (isFromId8r) updateId8rIndicator(idx); else updateStepIndicator(idx);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── ID8ΩR FORM HELPERS ──
+function expandId8rForm() {
+  document.getElementById('id8r-summary-card').style.display = 'none';
+  document.getElementById('screen-1-form').style.display = 'block';
+  document.getElementById('id8r-arrival-banner').style.display = 'flex';
+}
+
+function toggleBriefEdit() {
+  const ids = ['f-script','f-what-happened','f-hybrid-concept','f-hybrid-footage'];
+  const first = document.getElementById('f-script');
+  const nowReadOnly = first ? first.readOnly : true;
+  ids.forEach(id => {
+    const ta = document.getElementById(id);
+    if (!ta) return;
+    ta.readOnly = !nowReadOnly;
+    ta.style.opacity = nowReadOnly ? '1' : '0.75';
+  });
+  const toggle = document.getElementById('brief-edit-toggle');
+  if (toggle) toggle.textContent = nowReadOnly ? 'Lock Brief' : 'Edit Brief';
 }
 
 // ── SCREEN 0: ENTRY ──
@@ -875,6 +980,7 @@ function selectStructure(val) {
   }
 
   clearBanner('valid-banner-2');
+  if (isFromId8r) updateId8rIndicator(2); // refresh so Depth dot marks done
 }
 
 function selectDepth(val) {
@@ -892,10 +998,28 @@ function renderScreen3() {
     shoot_first: 'WHAT HAPPENED',
     hybrid: 'CONCEPT + FOOTAGE'
   };
-  document.getElementById('s3-title').textContent = titleMap[ep] || 'YOUR CONTENT';
+
+  if (isFromId8r) {
+    document.getElementById('s3-title').textContent = 'YOUR ID8ΩR BRIEF';
+    document.getElementById('s3-sub').textContent = 'Review before generating beats. Hit "Edit Brief" to make changes.';
+  } else {
+    document.getElementById('s3-title').textContent = titleMap[ep] || 'YOUR CONTENT';
+  }
+
   document.getElementById('s3-script-first').style.display = ep === 'script_first' ? 'block' : 'none';
   document.getElementById('s3-shoot-first').style.display = ep === 'shoot_first' ? 'block' : 'none';
   document.getElementById('s3-hybrid').style.display = ep === 'hybrid' ? 'block' : 'none';
+
+  // Id8Ωr: show readonly notice, set textareas readonly
+  const notice = document.getElementById('brief-readonly-notice');
+  if (notice) notice.style.display = isFromId8r ? 'flex' : 'none';
+  const briefIds = ['f-script','f-what-happened','f-hybrid-concept','f-hybrid-footage'];
+  briefIds.forEach(id => {
+    const ta = document.getElementById(id);
+    if (!ta) return;
+    ta.readOnly = isFromId8r;
+    ta.style.opacity = isFromId8r ? '0.75' : '1';
+  });
 }
 
 // ── CUSTOM SELECT HANDLER ──
@@ -1119,6 +1243,7 @@ function validateScreen(step) {
     return !!form.entry_point;
   }
   if (step === 1) {
+    if (isFromId8r) return true; // summary card shown — data already populated
     const title = document.getElementById('f-title').value.trim();
     const concept = document.getElementById('f-high-concept').value.trim();
     if (!title || !concept) {
@@ -1284,7 +1409,7 @@ async function createProject() {
 
     const result = await res.json();
     if (!result.ok) throw new Error(result.error || 'Create failed');
-    window.location.href = '/?project=' + (result.project_id || '');
+    window.location.href = `/writr.html?project_id=${result.project_id || ''}`;
   } catch (err) {
     if (btn) {
       btn.disabled = false;
@@ -1402,12 +1527,36 @@ let _psCb = null;
       }
 
       if (p.entry_point) {
-        // Entry point known — auto-select card, advance to screen 1, show arrival banner
-        selectEntry(p.entry_point); // marks card + sets form.entry_point + goToScreen(1) after 300ms
+        // Set entry point in form state and mark card selected
+        form.entry_point = p.entry_point;
+        const ecard = document.getElementById('ecard-' + p.entry_point);
+        if (ecard) ecard.classList.add('selected');
+
+        // Populate summary card
+        const epLabels = { script_first: '✍ Script First', shoot_first: '🎬 Shoot First', hybrid: '🔀 Hybrid', vault_first: '📹 Vault First' };
+        const sumTitle   = document.getElementById('id8r-sum-title');
+        const sumConcept = document.getElementById('id8r-sum-concept');
+        const sumEp      = document.getElementById('id8r-sum-ep');
+        if (sumTitle)   sumTitle.textContent   = form.title;
+        if (sumConcept) sumConcept.textContent = form.high_concept || '';
+        if (sumEp)      sumEp.textContent      = epLabels[p.entry_point] || p.entry_point;
+
+        // Show summary card, hide form
+        const summaryCard = document.getElementById('id8r-summary-card');
+        const formDiv     = document.getElementById('screen-1-form');
+        if (summaryCard) summaryCard.style.display = 'block';
+        if (formDiv)     formDiv.style.display     = 'none';
+
+        isFromId8r = true;
+        setId8rIndicatorMode();
+        goToScreen(1);
+
+        // Animate progress bar then auto-advance to screen 2
         setTimeout(() => {
-          const banner = document.getElementById('id8r-arrival-banner');
-          if (banner) banner.style.display = 'flex';
-        }, 350); // just after selectEntry's goToScreen fires
+          const fill = document.getElementById('id8r-advance-fill');
+          if (fill) fill.style.width = '100%';
+        }, 50);
+        setTimeout(() => goToScreen(2), 1100);
       } else {
         // Entry point unknown — stay on screen 0 so creator can choose manually
         showToast('Project loaded from Id8Ωr — choose your entry point to continue');

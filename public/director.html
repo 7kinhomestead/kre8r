@@ -1056,7 +1056,15 @@ document.getElementById('project-select').addEventListener('change', function() 
   onProjectChange(this.value);
 });
 
-loadProjects();
+(async function init() {
+  await loadProjects();
+  const urlPid = new URLSearchParams(window.location.search).get('project_id');
+  if (urlPid) {
+    const sel = document.getElementById('project-select');
+    sel.value = urlPid;
+    if (sel.value) onProjectChange(urlPid);
+  }
+})();
 initNav();
 </script>
 <script src="/js/bug-reporter.js"></script>

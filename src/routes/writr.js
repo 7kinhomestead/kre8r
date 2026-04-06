@@ -26,6 +26,7 @@ const { readConfig, writeConfig }    = require('../pipr/beat-tracker');
 const { listProfiles }               = require('../writr/voice-analyzer');
 const { callClaude }                 = require('../writr/claude');
 const vault                          = require('../utils/project-vault');
+const { addSoulContext, buildWritrPromptContext } = require('../utils/project-context-builder');
 
 // ─────────────────────────────────────────────
 // FORMAT CONVERSION PROMPTS (bullets + hybrid)
@@ -352,93 +353,97 @@ router.post('/generate', async (req, res) => {
   const project = db.getProject(projectId);
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  // Build Id8Ωr research context block if available — injected into script generation prompts
+  // ── Load soul profiles and build context string from project-context.json ──
   let id8rBlock = '';
-  if (project.id8r_data) {
+  try {
+    const _fs      = require('fs');
+    const _path    = require('path');
+    const rootPath = _path.join(__dirname, '..', '..');
+    const _primaryProfilePath = process.env.CREATOR_PROFILE_PATH || _path.join(rootPath, 'creator-profile.json');
+
+    // Load primary soul
+    const loadedSouls = [];
     try {
-      const d = JSON.parse(project.id8r_data);
-      const lines = ['## CONTENT INTELLIGENCE FROM ID8ΩR RESEARCH'];
-      if (d.chosenConcept?.headline) lines.push(`Chosen Concept: ${d.chosenConcept.headline}`);
-      if (d.chosenConcept?.why)      lines.push(`Why this angle: ${d.chosenConcept.why}`);
-      if (d.chosenConcept?.hook)     lines.push(`Opening hook: ${d.chosenConcept.hook}`);
-      if (d.researchSummary)         lines.push(`Research findings: ${d.researchSummary.slice(0, 600)}`);
-      const titles = d.packageData?.titles;
-      if (Array.isArray(titles) && titles[0]) lines.push(`Selected title: ${titles[0]}`);
-      else if (typeof titles === 'string')     lines.push(`Selected title: ${titles}`);
-      if (d.briefData?.elevator_pitch)         lines.push(`Vision brief: ${d.briefData.elevator_pitch}`);
-      const tp = d.briefData?.talking_points;
-      if (Array.isArray(tp) && tp.length)      lines.push(`Talking points:\n${tp.map(p => `- ${p}`).join('\n')}`);
-      const angle = d.briefData?.pipeline_brief?.content_angle || project.content_type;
-      if (angle) lines.push(`Content angle: ${angle}`);
-      id8rBlock = lines.join('\n');
+      loadedSouls.push(JSON.parse(_fs.readFileSync(_primaryProfilePath, 'utf8')));
     } catch (_) {}
-  }
 
-  // Append cross-channel intelligence from AnalΩzr if creator soul has it
-  try {
-    const _fs   = require('fs');
-    const _path = require('path');
-    const _profilePath = process.env.CREATOR_PROFILE_PATH || _path.join(__dirname, '../../creator-profile.json');
-    const cp    = JSON.parse(_fs.readFileSync(_profilePath, 'utf8'));
-    const ci    = cp.content_intelligence;
-    if (ci && Array.isArray(ci.insights) && ci.insights.length) {
-      const top3 = ci.insights.slice(0, 3);
-      id8rBlock += '\n\n## CONTENT INTELLIGENCE FROM YOUR DIGITAL BRAIN\n'
-        + top3.map((ins, i) =>
-            (i + 1) + '. [' + ((ins.type || 'insight').toUpperCase()) + '] '
-            + (ins.title || '') + ': ' + (ins.insight || '')
-          ).join('\n');
-    }
-  } catch (_) {}
-
-  // ── MULTI-VOICE: load collaborator souls if project has them ──────────────
-  try {
+    // Load collaborator souls if project has them
     const collaborators = db.getProjectCollaborators(projectId);
     const collabSlugs   = (collaborators || []).filter(s => s !== 'primary');
-    if (collabSlugs.length > 0) {
-      const _fs      = require('fs');
-      const _path    = require('path');
-      const rootPath = _path.join(__dirname, '..', '..');
-      const _primaryProfilePath = process.env.CREATOR_PROFILE_PATH || _path.join(rootPath, 'creator-profile.json');
-      const primary  = JSON.parse(_fs.readFileSync(_primaryProfilePath, 'utf8'));
-      const primaryName = primary.creator?.name || 'Creator';
-      const primaryFirst = primaryName.split(' ')[0].toUpperCase();
-
-      const collabProfiles = collabSlugs
-        .map(slug => {
-          try {
-            return JSON.parse(_fs.readFileSync(_path.join(rootPath, `creator-profile-${slug}.json`), 'utf8'));
-          } catch (_) { return null; }
-        })
-        .filter(Boolean);
-
-      if (collabProfiles.length > 0) {
-        let multiVoice = '\n\n## MULTI-CREATOR PRODUCTION\n';
-        multiVoice += 'This video features multiple creators. Write each section in the correct speaker\'s voice.\n\n';
-        multiVoice += `PRIMARY — ${primaryName} [${primaryFirst}]:\n`;
-        multiVoice += (primary.voice?.writing_style || 'Direct, warm, conversational.') + '\n\n';
-
-        const collabFirstNames = [];
-        for (const cp of collabProfiles) {
-          const cName  = cp.creator?.name || 'Collaborator';
-          const cRole  = cp.creator?.role || 'Co-presenter';
-          const cFirst = cName.split(' ')[0].toUpperCase();
-          const cBadge = cp.badge?.letter || cFirst;
-          collabFirstNames.push(cFirst);
-          multiVoice += `COLLABORATOR — ${cName} [${cBadge}]:\n`;
-          multiVoice += `Role: ${cRole}\n`;
-          multiVoice += (cp.voice?.writing_style || 'Natural, authentic voice.') + '\n\n';
-        }
-
-        multiVoice += 'SPEAKER LABELING RULES:\n';
-        multiVoice += `- Begin EVERY beat section with a speaker label on its own line: [${primaryFirst}] or [${collabFirstNames.join('] or [')}]\n`;
-        multiVoice += '- Write each creator\'s lines in THEIR voice — do not homogenize\n';
-        multiVoice += '- Both creators may appear in the same beat — label each speaking block separately\n';
-        multiVoice += '- Labels must be in square brackets, all caps, first name only, no punctuation after';
-
-        id8rBlock += multiVoice;
-      }
+    for (const slug of collabSlugs) {
+      try {
+        loadedSouls.push(JSON.parse(_fs.readFileSync(_path.join(rootPath, `creator-profile-${slug}.json`), 'utf8')));
+      } catch (_) {}
     }
+
+    // Write soul profiles into project-context.json
+    if (loadedSouls.length) addSoulContext(projectId, loadedSouls);
+
+    // Build full context string — primary source of truth
+    const contextString = buildWritrPromptContext(projectId);
+    console.log('[WritΩr] Context tokens estimate:', Math.round(contextString.length / 4));
+    if (contextString) id8rBlock = contextString;
+
+    // Multi-voice speaker labeling (appended if collaborators present)
+    if (collabSlugs.length > 0 && loadedSouls.length > 1) {
+      const primary      = loadedSouls[0];
+      const primaryName  = primary.creator?.name || 'Creator';
+      const primaryFirst = primaryName.split(' ')[0].toUpperCase();
+      let multiVoice = '\n\n## MULTI-CREATOR PRODUCTION\n';
+      multiVoice += 'This video features multiple creators. Write each section in the correct speaker\'s voice.\n\n';
+      multiVoice += `PRIMARY — ${primaryName} [${primaryFirst}]:\n`;
+      multiVoice += (primary.voice?.writing_style || 'Direct, warm, conversational.') + '\n\n';
+      const collabFirstNames = [];
+      for (const cp of loadedSouls.slice(1)) {
+        const cName  = cp.creator?.name || 'Collaborator';
+        const cRole  = cp.creator?.role || 'Co-presenter';
+        const cFirst = cName.split(' ')[0].toUpperCase();
+        const cBadge = cp.badge?.letter || cFirst;
+        collabFirstNames.push(cFirst);
+        multiVoice += `COLLABORATOR — ${cName} [${cBadge}]:\n`;
+        multiVoice += `Role: ${cRole}\n`;
+        multiVoice += (cp.voice?.writing_style || 'Natural, authentic voice.') + '\n\n';
+      }
+      multiVoice += 'SPEAKER LABELING RULES:\n';
+      multiVoice += `- Begin EVERY beat section with a speaker label on its own line: [${primaryFirst}] or [${collabFirstNames.join('] or [')}]\n`;
+      multiVoice += '- Write each creator\'s lines in THEIR voice — do not homogenize\n';
+      multiVoice += '- Both creators may appear in the same beat — label each speaking block separately\n';
+      multiVoice += '- Labels must be in square brackets, all caps, first name only, no punctuation after';
+      id8rBlock += multiVoice;
+    }
+
+    // Fallback: if no project-context.json yet, build from raw id8r_data
+    if (!id8rBlock && project.id8r_data) {
+      try {
+        const d = JSON.parse(project.id8r_data);
+        const lines = ['## CONTENT INTELLIGENCE FROM ID8ΩR RESEARCH'];
+        if (d.chosenConcept?.headline) lines.push(`Chosen Concept: ${d.chosenConcept.headline}`);
+        if (d.chosenConcept?.why)      lines.push(`Why this angle: ${d.chosenConcept.why}`);
+        if (d.chosenConcept?.hook)     lines.push(`Opening hook: ${d.chosenConcept.hook}`);
+        if (d.researchSummary)         lines.push(`Research findings: ${d.researchSummary.slice(0, 600)}`);
+        const titles = d.packageData?.titles;
+        if (Array.isArray(titles) && titles[0]) lines.push(`Selected title: ${titles[0]}`);
+        if (d.briefData?.elevator_pitch)         lines.push(`Vision brief: ${d.briefData.elevator_pitch}`);
+        const tp = d.briefData?.talking_points;
+        if (Array.isArray(tp) && tp.length)      lines.push(`Talking points:\n${tp.map(p => `- ${p}`).join('\n')}`);
+        id8rBlock = lines.join('\n');
+      } catch (_) {}
+    }
+
+    // Append cross-channel intelligence from AnalΩzr if available
+    try {
+      const cp = JSON.parse(_fs.readFileSync(_primaryProfilePath, 'utf8'));
+      const ci = cp.content_intelligence;
+      if (ci && Array.isArray(ci.insights) && ci.insights.length) {
+        const top3 = ci.insights.slice(0, 3);
+        id8rBlock += '\n\n## CONTENT INTELLIGENCE FROM YOUR DIGITAL BRAIN\n'
+          + top3.map((ins, i) =>
+              (i + 1) + '. [' + ((ins.type || 'insight').toUpperCase()) + '] '
+              + (ins.title || '') + ': ' + (ins.insight || '')
+            ).join('\n');
+      }
+    } catch (_) {}
+
   } catch (_) {}
 
   // Switch to SSE stream — client reads this response body directly

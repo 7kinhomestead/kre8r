@@ -388,6 +388,19 @@ async function init() {
   await checkSunoKey();
   await loadProjects();
   await checkPlaywrightStatus();
+  // Auto-select project from URL param
+  const urlPid = new URLSearchParams(window.location.search).get('project_id');
+  if (urlPid) {
+    projectSelect.value = urlPid;
+    if (projectSelect.value) {
+      projectId = urlPid;
+      generateBtn.disabled = false;
+      reanalyzeBtn.disabled = false;
+      clearBtn.disabled = false;
+      updateSunoPlaywrightBtn();
+      loadTracks();
+    }
+  }
 }
 
 // ─── PLAYWRIGHT STATUS ────────────────────────

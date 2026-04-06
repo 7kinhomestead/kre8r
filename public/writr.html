@@ -540,6 +540,7 @@
           <button class="btn btn-green" id="approveBtn">✓ Approve Script</button>
           <button class="btn btn-ghost" id="exportBtn">⬇ Export .txt</button>
           <button class="btn btn-ghost" id="teleprompterBtn" style="display:none" onclick="openTeleprompter()">📺 TeleprΩmpter</button>
+          <button class="btn btn-ghost" id="directorBtn" style="display:none" onclick="openDirector()">🎬 DirectΩr →</button>
         </div>
 
         <!-- Previous drafts -->
@@ -1229,7 +1230,11 @@ async function onApprove() {
     // Show TeleprΩmpter button now that script is approved
     document.getElementById('teleprompterBtn').style.display = '';
 
-    showToast('Script approved! Open in TeleprΩmpter or continue to EditΩr.', 'success');
+    // Show DirectΩr button
+    const dirBtn = document.getElementById('directorBtn');
+    if (dirBtn) dirBtn.style.display = '';
+
+    showToast('Script approved! Ready for DirectΩr or TeleprΩmpter.', 'success');
     loadDraftsHistory(currentProjectId);
 
     // NPS prompt — fire once per project after approval
@@ -1243,6 +1248,11 @@ async function onApprove() {
 function openTeleprompter() {
   if (!currentProjectId) return;
   window.open(`/teleprompter.html?project_id=${currentProjectId}`, '_blank');
+}
+
+function openDirector() {
+  if (!currentProjectId) return;
+  window.location.href = `/director.html?project_id=${currentProjectId}`;
 }
 
 // ─────────────────────────────────────────────
