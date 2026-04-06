@@ -326,6 +326,12 @@
             </span>
           </div>
 
+          <!-- ID8ΩR BRIEF NOTICE (shown when brief auto-loaded from Id8Ωr session) -->
+          <div class="pipr-notice" id="id8rNotice" style="display:none;border-color:rgba(62,207,178,0.4);background:rgba(62,207,178,0.08)">
+            <span class="pipr-notice-icon">✨</span>
+            <span class="pipr-notice-text">Brief loaded from Id8Ωr — ready to generate.</span>
+          </div>
+
           <!-- SCRIPT FIRST -->
           <div id="inputScriptFirst" style="display:none">
             <div class="field-group">
@@ -630,8 +636,19 @@ async function init() {
   await loadProjects();
   await loadVoiceLibrary();
 
+  // Auto-select project if ?project_id= param present
+  const urlParams    = new URLSearchParams(window.location.search);
+  const urlProjectId = parseInt(urlParams.get('project_id'), 10);
+  if (urlProjectId) {
+    const sel = document.getElementById('projectSelect');
+    if (sel) {
+      sel.value = String(urlProjectId);
+      if (sel.value) onProjectChange(urlProjectId);
+    }
+  }
+
   // Pre-fill voice analyzer if launched from ReviewΩr with ?voice_file=...
-  const voiceFileParam = new URLSearchParams(window.location.search).get('voice_file');
+  const voiceFileParam = urlParams.get('voice_file');
   if (voiceFileParam) {
     const fp = document.getElementById('vlFilePath');
     if (fp) fp.value = decodeURIComponent(voiceFileParam);
@@ -722,6 +739,28 @@ async function onProjectChange(pid) {
       prefillInputs(currentEntryPoint, data.config, data.active_script || null);
     }
 
+    // If Id8Ωr brief exists and no text was pre-filled, inject it directly
+    if (data.project && data.project.id8r_data) {
+      try {
+        const id8rData = typeof data.project.id8r_data === 'string'
+          ? JSON.parse(data.project.id8r_data)
+          : data.project.id8r_data;
+        const briefText = buildId8rBriefText(id8rData);
+        if (briefText) {
+          const ep = currentEntryPoint;
+          const taId = ep === 'script_first' ? 'scriptFirstText'
+                     : ep === 'shoot_first'  ? 'shootFirstText'
+                                             : 'hybridConceptText';
+          const ta = document.getElementById(taId);
+          if (ta && !ta.value) {
+            ta.value = briefText;
+            _prefillFull[taId] = briefText;
+            document.getElementById('id8rNotice').style.display = 'flex';
+          }
+        }
+      } catch (_) {}
+    }
+
     // If existing script, render it and restore sibling tabs
     if (data.active_script) {
       const s = data.active_script;
@@ -747,6 +786,42 @@ async function onProjectChange(pid) {
 }
 
 const PREFILL_TRUNCATE = 500;
+
+// Build a rich brief string from stored Id8Ωr session data
+function buildId8rBriefText(d) {
+  if (!d) return '';
+  const lines = [];
+  const brief = d.briefData || {};
+  const pb    = brief.pipeline_brief || {};
+  const pkg   = d.packageData || {};
+
+  if (brief.elevator_pitch)   lines.push('ELEVATOR PITCH\n' + brief.elevator_pitch);
+  if (brief.audience_insight) lines.push('AUDIENCE INSIGHT\n' + brief.audience_insight);
+
+  if (pb.high_concept)  lines.push('HIGH CONCEPT\n' + pb.high_concept);
+  if (pb.concept_note)  lines.push('PRODUCTION NOTES\n' + pb.concept_note);
+
+  if (Array.isArray(brief.talking_points) && brief.talking_points.length) {
+    lines.push('TALKING POINTS\n' + brief.talking_points.map(p => '• ' + p).join('\n'));
+  }
+  if (Array.isArray(brief.what_not_to_do) && brief.what_not_to_do.length) {
+    lines.push('WHAT NOT TO DO\n' + brief.what_not_to_do.map(p => '• ' + p).join('\n'));
+  }
+  if (brief.story_angle) lines.push('STORY ANGLE\n' + brief.story_angle);
+
+  // Titles
+  if (Array.isArray(pkg.titles) && pkg.titles.length) {
+    lines.push('TITLE OPTIONS\n' + pkg.titles.map((t, i) => `${i+1}. ${t.text || t}`).join('\n'));
+  }
+  // Hooks
+  if (Array.isArray(pkg.hooks) && pkg.hooks.length) {
+    lines.push('HOOK OPTIONS\n' + pkg.hooks.map((h, i) => `${i+1}. ${h.text || h}`).join('\n'));
+  }
+
+  if (d.researchSummary) lines.push('RESEARCH SUMMARY\n' + d.researchSummary);
+
+  return lines.join('\n\n');
+}
 
 function prefillField(taId, toggleId, fullText) {
   if (!fullText?.trim()) return false;

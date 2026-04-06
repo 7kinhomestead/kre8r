@@ -357,6 +357,52 @@
         <button class="mode-btn" data-mode="deep_dive">Start →</button>
       </div>
 
+      <div class="mode-card" data-mode="vault_first">
+        <div class="mode-icon">📹</div>
+        <div class="mode-title">BUILD FROM FOOTAGE</div>
+        <div class="mode-sub">I shot something — help me find the story in it</div>
+        <button class="mode-btn" data-mode="vault_first">Start →</button>
+      </div>
+
+      <div class="mode-card" data-mode="merge" id="mode-card-merge">
+        <div class="mode-icon">⟁</div>
+        <div class="mode-title">MERGE TWO PROJECTS</div>
+        <div class="mode-sub">Combine two existing projects into one stronger concept</div>
+        <button class="mode-btn" data-mode="merge">Select Projects →</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─────────────────── SCREEN MERGE: Project Merge ─────────────────── -->
+  <div id="screen-merge" class="screen">
+    <div style="max-width:560px;margin:0 auto;padding:32px 16px 48px">
+      <div style="font-family:var(--font-head);font-size:clamp(28px,6vw,44px);letter-spacing:3px;margin-bottom:8px">MERGE TWO PROJECTS</div>
+      <div style="color:var(--text-dim);font-size:14px;margin-bottom:32px">Select two projects to find the story within the story.</div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:28px">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dimmer);margin-bottom:6px">Project A</div>
+          <select id="merge-project-a" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;outline:none">
+            <option value="">— select a project —</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dimmer);margin-bottom:6px">Project B</div>
+          <select id="merge-project-b" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;outline:none">
+            <option value="">— select a project —</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="merge-error" style="color:var(--red);font-size:13px;margin-bottom:12px;display:none"></div>
+
+      <button class="btn" id="merge-go-btn" disabled style="width:100%">
+        <div class="spinner-lg" id="merge-spinner" style="display:none"></div>
+        <span id="merge-btn-label">Find The Story Within The Story →</span>
+      </button>
+
+      <button style="margin-top:16px;width:100%;background:none;border:none;color:var(--text-dimmer);font-size:13px;cursor:pointer;padding:8px" onclick="showScreen('mode')">← Back</button>
     </div>
   </div>
 
@@ -547,9 +593,11 @@
   let selectedHook   = null;
 
   const MODE_LABELS = {
-    shape_it  : 'SHAPE IT',
-    find_it   : 'FIND IT',
-    deep_dive : 'DEEP DIVE',
+    shape_it    : 'SHAPE IT',
+    find_it     : 'FIND IT',
+    deep_dive   : 'DEEP DIVE',
+    vault_first : 'BUILD FROM FOOTAGE',
+    merge       : 'MERGE TWO PROJECTS',
   };
 
   // ── Screen navigation ──────────────────────────────────────────
@@ -562,8 +610,81 @@
   document.querySelectorAll('.mode-card[data-mode]').forEach(el => {
     el.addEventListener('click', () => {
       const mode = el.dataset.mode;
-      if (mode) startSession(mode);
+      if (!mode) return;
+      if (mode === 'merge') { loadMergeProjects(); showScreen('merge'); }
+      else startSession(mode);
     });
+  });
+
+  // ── Merge screen ───────────────────────────────────────────────
+  async function loadMergeProjects() {
+    try {
+      const res = await fetch('/api/projects?source=kre8r');
+      if (!res.ok) return;
+      const projects = await res.json();
+      const selA = document.getElementById('merge-project-a');
+      const selB = document.getElementById('merge-project-b');
+      [selA, selB].forEach(sel => {
+        // clear all but placeholder
+        while (sel.options.length > 1) sel.remove(1);
+        projects.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.title || `Project ${p.id}`;
+          sel.appendChild(opt);
+        });
+      });
+    } catch (_) {}
+  }
+
+  function updateMergeBtn() {
+    const a = document.getElementById('merge-project-a').value;
+    const b = document.getElementById('merge-project-b').value;
+    document.getElementById('merge-go-btn').disabled = !(a && b && a !== b);
+  }
+  document.getElementById('merge-project-a').addEventListener('change', updateMergeBtn);
+  document.getElementById('merge-project-b').addEventListener('change', updateMergeBtn);
+
+  document.getElementById('merge-go-btn').addEventListener('click', async () => {
+    const idA = parseInt(document.getElementById('merge-project-a').value, 10);
+    const idB = parseInt(document.getElementById('merge-project-b').value, 10);
+    const errEl  = document.getElementById('merge-error');
+    const spinner = document.getElementById('merge-spinner');
+    const btnLabel = document.getElementById('merge-btn-label');
+    errEl.style.display = 'none';
+    spinner.style.display = 'block';
+    btnLabel.textContent = 'Finding the story…';
+    document.getElementById('merge-go-btn').disabled = true;
+
+    try {
+      const res  = await fetch('/api/id8r/merge', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ project_id_a: idA, project_id_b: idB }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Merge failed');
+
+      sessionId    = data.session_id;
+      currentMode  = 'merge';
+      conceptsData = data.concepts || [];
+      sessionStorage.setItem('id8r_session_id', sessionId);
+      sessionStorage.setItem('id8r_mode_label', 'MERGE TWO PROJECTS');
+      if (conceptsData.length) sessionStorage.setItem('id8r_concepts', JSON.stringify(conceptsData));
+
+      document.getElementById('chat-mode-display').textContent = 'MERGE TWO PROJECTS';
+      showScreen('concepts');
+      document.getElementById('concepts-generating').style.display = 'none';
+      document.getElementById('concepts-loaded').style.display     = 'block';
+      renderConceptCards(conceptsData);
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+      document.getElementById('merge-go-btn').disabled = false;
+    } finally {
+      spinner.style.display = 'none';
+      btnLabel.textContent = 'Find The Story Within The Story →';
+    }
   });
 
   // ── Session persistence ────────────────────────────────────────

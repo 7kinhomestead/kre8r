@@ -56,6 +56,8 @@ function buildSystemPrompts() {
     find_it: `You are Id8Ωr, a creative collaborator for ${creatorName}, a ${niche} content creator at ${identity}. ${creatorName} needs a video idea. Ask about: what's been on their mind lately, what the audience has been asking, what they know better than anyone else, and what they've been avoiding making. Ask no more than 2-3 questions at a time. When you have a strong enough seed to work with, say RESEARCH_READY.`,
 
     deep_dive: `You are Id8Ωr, a creative collaborator for ${creatorName}, a ${niche} content creator at ${identity}. ${creatorName} has a topic but needs depth. Ask what they already know about it, what they're unsure about, and what specific claim or insight they want to be able to make confidently on camera. Ask no more than 2-3 questions at a time. When you understand the knowledge gap, say RESEARCH_READY.`,
+
+    vault_first: `You are Id8Ωr, a creative collaborator for ${creatorName}, a ${niche} content creator at ${identity}. ${creatorName} has footage already shot and needs help finding the story in it. Your job is to ask targeted questions that reveal the narrative — what happened, what moments surprised them, what felt real vs. planned, what went wrong, what the emotional core is, and what they couldn't have scripted. Ask no more than 2-3 questions at a time. The footage drives the story, not the plan. When you understand what they captured and why it matters, say RESEARCH_READY.`,
   };
 }
 
@@ -728,6 +730,125 @@ router.post('/send-pipeline', async (req, res) => {
     res.json({ ok: true, project_id: project.id, redirect_url: redirectUrl });
   } catch (e) {
     console.error('[id8r/send-pipeline]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── POST /api/id8r/merge ──────────────────────────────────────────────────────
+// Generate merge concepts from two existing projects without a conversation
+
+router.post('/merge', async (req, res) => {
+  try {
+    const { project_id_a, project_id_b } = req.body;
+    if (!project_id_a || !project_id_b) {
+      return res.status(400).json({ error: 'project_id_a and project_id_b are required' });
+    }
+
+    const projA = db.getProject(parseInt(project_id_a, 10));
+    const projB = db.getProject(parseInt(project_id_b, 10));
+    if (!projA || !projB) return res.status(404).json({ error: 'One or both projects not found' });
+
+    const { brand, creatorName, followerSummary, niche } = getCreatorContext();
+    const { contentAnglesText: anglesText } = getCreatorContext();
+
+    // Build context strings for each project
+    function projectSummary(p) {
+      let s = `Title: ${p.title || 'Untitled'}`;
+      if (p.high_concept) s += `\nHigh concept: ${p.high_concept}`;
+      if (p.id8r_data) {
+        try {
+          const d = JSON.parse(p.id8r_data);
+          if (d.briefData?.elevator_pitch) s += `\nPitch: ${d.briefData.elevator_pitch}`;
+          if (d.briefData?.story_angle)    s += `\nStory angle: ${d.briefData.story_angle}`;
+          if (d.researchSummary)           s += `\nResearch: ${d.researchSummary.slice(0, 400)}`;
+        } catch (_) {}
+      }
+      return s;
+    }
+
+    const sessionId    = crypto.randomBytes(8).toString('hex');
+    SYSTEM_PROMPTS = buildSystemPrompts();
+    const systemPrompt = SYSTEM_PROMPTS.shape_it; // merge sessions continue as shape_it
+
+    const mergePrompt = `You are Id8Ωr, a creative strategist for ${brand} (${followerSummary}, ${niche} content). Two existing projects are being merged. Find the stronger story that lives at their intersection.
+
+PROJECT A:
+${projectSummary(projA)}
+
+PROJECT B:
+${projectSummary(projB)}
+
+CONTENT ANGLES AVAILABLE:
+${anglesText}
+
+Generate exactly 3 concept directions that combine, contrast, or synthesize these two projects into one stronger video concept. Each should feel genuinely different.
+
+RULES:
+- Concept 3 MUST be a novel angle you invent — something NOT on the angles list.
+- Each concept must have a clear POV on why merging these two projects creates something better than either alone.
+- Match the creator's voice: straight-talking, funny, real numbers, never corporate.
+
+Return ONLY valid JSON:
+{
+  "concepts": [
+    {
+      "id": 1,
+      "angle": "Label from the angles list",
+      "headline": "one punchy sentence — the merged video in a nutshell",
+      "why": "why this combination works for this audience specifically",
+      "hook": "the first 1-2 sentences of the video, in the creator's voice",
+      "is_novel": false
+    },
+    {
+      "id": 2,
+      "angle": "Label from the angles list",
+      "headline": "...",
+      "why": "...",
+      "hook": "...",
+      "is_novel": false
+    },
+    {
+      "id": 3,
+      "angle": "Your invented angle name",
+      "headline": "...",
+      "why": "...",
+      "hook": "...",
+      "is_novel": true
+    }
+  ]
+}`;
+
+    const result = await callClaudeJSON(
+      mergePrompt,
+      [{ role: 'user', content: `Merge these two projects into 3 concept directions.` }],
+      1200,
+      sessionId
+    );
+
+    const concepts = result.concepts || [];
+
+    // Seed a real session so the rest of the flow (research → package → brief) works normally
+    const firstMessage = `I've found 3 ways to merge "${projA.title}" and "${projB.title}" into something stronger. Pick one to go deep on.`;
+    sessions.set(sessionId, {
+      mode          : 'merge',
+      systemPrompt,
+      messages      : [
+        { role: 'user',      content: `Merge projects: "${projA.title}" and "${projB.title}"` },
+        { role: 'assistant', content: firstMessage },
+      ],
+      concepts,
+      chosenConcept   : null,
+      researchResults : null,
+      researchSummary : null,
+      packageData     : null,
+      briefData       : null,
+      sourceProjects  : [parseInt(project_id_a, 10), parseInt(project_id_b, 10)],
+      createdAt       : Date.now(),
+    });
+
+    res.json({ ok: true, session_id: sessionId, concepts });
+  } catch (e) {
+    console.error('[id8r/merge]', e);
     res.status(500).json({ error: e.message });
   }
 });

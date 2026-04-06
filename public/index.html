@@ -959,6 +959,10 @@ function buildProjectCard(p, i) {
         <div class="pc-menu" id="pc-menu-${p.id}">
           <button class="pc-menu-item" onclick="window.location='/pipr.html?project_id=${p.id}'">⚙ Settings</button>
           <div class="pc-menu-sep"></div>
+          <button class="pc-menu-item" onclick="window.location='/writr.html?project_id=${p.id}'">✍ WritΩr</button>
+          <button class="pc-menu-item" onclick="window.location='/director.html?project_id=${p.id}'">🎬 DirectΩr</button>
+          <button class="pc-menu-item" onclick="window.location='/composor.html?project_id=${p.id}'">🎵 ComposΩr</button>
+          <div class="pc-menu-sep"></div>
           <button class="pc-menu-item" onclick="openVault(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">📁 Data Vault</button>
           <div class="pc-menu-sep"></div>
           <button class="pc-menu-item" onclick="confirmArchive(${p.id},${JSON.stringify(p.title).replace(/"/g,'&quot;')})">📦 Archive</button>
