@@ -34,8 +34,8 @@ const voiceUpload = multer({
   dest: os.tmpdir(),
   limits: { files: 6, fileSize: 500 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    // Accept all common audio/video formats including .mp3
-    cb(null, /\.(mp4|mov|m4a|mp3|wav|webm|ogg|aac|flac)$/i.test(file.originalname));
+    // Accept audio/video formats for voice analysis, plus .kre8r/.json for soul imports
+    cb(null, /\.(mp4|mov|m4a|mp3|wav|webm|ogg|aac|flac|kre8r|json)$/i.test(file.originalname));
   },
 });
 
@@ -407,9 +407,17 @@ router.get('/export', (req, res) => {
 });
 
 // POST /primary/import — overwrite creator-profile.json with an uploaded .kre8r file
-router.post('/primary/import', (req, res) => {
+// Accepts application/json or text/plain (for .kre8r files which have no registered MIME type)
+router.post('/primary/import', express.text({ type: '*/*', limit: '10mb' }), (req, res) => {
   try {
-    const profile = req.body;
+    let profile = req.body;
+    // express.text() gives us a string; express.json() gives an object.
+    // Handle both so .kre8r files (unknown MIME) always parse correctly.
+    if (typeof profile === 'string') {
+      try { profile = JSON.parse(profile); } catch (_) {
+        return res.status(400).json({ error: 'Invalid JSON in .kre8r file' });
+      }
+    }
     if (!profile || typeof profile !== 'object') {
       return res.status(400).json({ error: 'Invalid profile JSON' });
     }
@@ -429,9 +437,14 @@ router.post('/primary/import', (req, res) => {
 });
 
 // POST /collaborator/import — accept JSON body, save as creator-profile-{slug}.json
-router.post('/collaborator/import', (req, res) => {
+router.post('/collaborator/import', express.text({ type: '*/*', limit: '10mb' }), (req, res) => {
   try {
-    const profile = req.body;
+    let profile = req.body;
+    if (typeof profile === 'string') {
+      try { profile = JSON.parse(profile); } catch (_) {
+        return res.status(400).json({ error: 'Invalid JSON in .kre8r file' });
+      }
+    }
     if (!profile || typeof profile !== 'object') {
       return res.status(400).json({ error: 'Invalid profile JSON' });
     }
