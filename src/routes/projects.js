@@ -31,6 +31,41 @@ router.post('/', (req, res) => {
   }
 });
 
+// PATCH /api/projects/bulk-archive — must come before /:id routes
+router.patch('/bulk-archive', (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'ids must be a non-empty array' });
+    const safeIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+    db.bulkArchiveProjects(safeIds);
+    res.json({ ok: true, archived: safeIds.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/projects/bulk-delete — must come before /:id routes
+router.delete('/bulk-delete', (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'ids must be a non-empty array' });
+    const safeIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+    // Clean up filesystem config dirs
+    safeIds.forEach(id => {
+      const configDir = require('path').join(__dirname, '../../database/projects', String(id));
+      if (require('fs').existsSync(configDir)) {
+        try { require('fs').rmSync(configDir, { recursive: true, force: true }); } catch (_) {}
+      }
+    });
+    db.bulkDeleteProjects(safeIds);
+    res.json({ ok: true, deleted: safeIds.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/projects/archived — must come before /:id to avoid id='archived'
 router.get('/archived', (req, res) => {
   try {

@@ -336,6 +336,38 @@
   }
   .pc-restore-btn:hover { background: rgba(62,207,178,0.18); }
 
+  /* ─── BULK SELECTION ─── */
+  .pc-checkbox-wrap {
+    position: absolute; top: 10px; left: 10px; z-index: 2;
+    opacity: 0; transition: opacity 0.12s; pointer-events: none;
+  }
+  .project-card:hover .pc-checkbox-wrap,
+  .pc-checkbox-wrap.checked { opacity: 1; pointer-events: auto; }
+  .pc-checkbox {
+    width: 16px; height: 16px; cursor: pointer; accent-color: var(--teal);
+  }
+  .project-card { position: relative; }
+  .project-card.selected { border-color: var(--teal) !important; background: rgba(20,184,166,0.06); }
+  .bulk-bar {
+    display: none; align-items: center; gap: 10px;
+    background: var(--bg-card); border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm); padding: 10px 16px; margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .bulk-bar.visible { display: flex; }
+  .bulk-bar-count { color: var(--teal); font-weight: 600; margin-right: 4px; }
+  .bulk-btn {
+    padding: 6px 13px; border-radius: 6px; font-family: var(--font-body);
+    font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid; transition: all 0.12s;
+  }
+  .bulk-btn.archive { background: rgba(180,130,20,0.12); border-color: rgba(200,150,40,0.4); color: var(--amber); }
+  .bulk-btn.archive:hover { background: rgba(180,130,20,0.25); }
+  .bulk-btn.delete  { background: rgba(200,40,40,0.12); border-color: rgba(220,60,60,0.4); color: #f87171; }
+  .bulk-btn.delete:hover  { background: rgba(200,40,40,0.25); }
+  .bulk-btn.ghost   { background: rgba(255,255,255,0.04); border-color: var(--border-bright); color: var(--text-dim); }
+  .bulk-btn.ghost:hover   { color: var(--text); background: rgba(255,255,255,0.08); }
+  .bulk-bar-spacer  { margin-left: auto; }
+
   /* ─── SYSTEM STATUS BAR ─── */
   .status-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -453,6 +485,16 @@
         <div class="kanban-col-header complete">Complete <span class="kanban-count green" id="kb-count-complete">0</span></div>
         <div class="projects-grid" id="kb-col-complete"></div>
       </div>
+    </div>
+
+    <!-- Bulk actions bar — shown when any checkbox is checked -->
+    <div class="bulk-bar" id="bulk-bar">
+      <span><span class="bulk-bar-count" id="bulk-count">0</span> selected</span>
+      <button class="bulk-btn archive" onclick="bulkArchiveSelected()">Archive Selected</button>
+      <button class="bulk-btn delete"  onclick="bulkDeleteSelected()">Delete Selected</button>
+      <span class="bulk-bar-spacer"></span>
+      <button class="bulk-btn ghost"   onclick="selectAllProjects()">Select All</button>
+      <button class="bulk-btn ghost"   onclick="clearSelection()">Clear</button>
     </div>
 
     <div class="projects-grid" id="projects-grid">
@@ -811,7 +853,11 @@ function buildProjectCard(p, i) {
   const dotCls = attn ? 'amber' : 'green';
   const dotLabel = stage.label;
 
-  return `<div class="project-card${attn ? ' needs-attn' : ''}" style="animation-delay:${i * 0.05}s">
+  return `<div class="project-card${attn ? ' needs-attn' : ''}" id="pcard-${p.id}" style="animation-delay:${i * 0.05}s">
+    <div class="pc-checkbox-wrap" id="pcbwrap-${p.id}">
+      <input type="checkbox" class="pc-checkbox" id="pcb-${p.id}"
+             onchange="toggleProjectSelect(${p.id}, this.checked)" onclick="event.stopPropagation()">
+    </div>
     <div class="pc-left">
       <div class="pc-title-row">
         <span class="pc-title">${esc(p.title)}</span>
@@ -942,6 +988,120 @@ function showToast(msg, type = '') {
 // ─────────────────────────────────────────────
 // PROJECT CARD MENU
 // ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// BULK SELECTION
+// ─────────────────────────────────────────────
+
+var _selectedIds = new Set();
+
+function toggleProjectSelect(id, checked) {
+  if (checked) {
+    _selectedIds.add(id);
+  } else {
+    _selectedIds.delete(id);
+  }
+  const card = document.getElementById('pcard-' + id);
+  const wrap = document.getElementById('pcbwrap-' + id);
+  if (card)  card.classList.toggle('selected', checked);
+  if (wrap)  wrap.classList.toggle('checked', checked);
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar   = document.getElementById('bulk-bar');
+  const count = document.getElementById('bulk-count');
+  if (_selectedIds.size > 0) {
+    bar.classList.add('visible');
+    count.textContent = _selectedIds.size;
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+function selectAllProjects() {
+  document.querySelectorAll('.pc-checkbox').forEach(cb => {
+    const id = parseInt(cb.id.replace('pcb-', ''));
+    cb.checked = true;
+    _selectedIds.add(id);
+    const card = document.getElementById('pcard-' + id);
+    const wrap = document.getElementById('pcbwrap-' + id);
+    if (card) card.classList.add('selected');
+    if (wrap) wrap.classList.add('checked');
+  });
+  updateBulkBar();
+}
+
+function clearSelection() {
+  _selectedIds.clear();
+  document.querySelectorAll('.pc-checkbox').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('.project-card.selected').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.pc-checkbox-wrap.checked').forEach(w => w.classList.remove('checked'));
+  updateBulkBar();
+}
+
+async function bulkArchiveSelected() {
+  if (_selectedIds.size === 0) return;
+  const ids = Array.from(_selectedIds);
+  const n   = ids.length;
+  try {
+    const r = await fetch('/api/projects/bulk-archive', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'Archive failed');
+    clearSelection();
+    showToast(n + ' project' + (n > 1 ? 's' : '') + ' archived', 'amber');
+    await loadDashboard();
+    loadArchivedCount();
+  } catch (err) {
+    showToast('Archive failed: ' + err.message, 'amber');
+  }
+}
+
+async function bulkDeleteSelected() {
+  if (_selectedIds.size === 0) return;
+  const ids = Array.from(_selectedIds);
+  const n   = ids.length;
+  showConfirm({
+    title:   'Delete ' + n + ' Project' + (n > 1 ? 's' : '') + '?',
+    msg:     'This permanently deletes ' + n + ' project' + (n > 1 ? 's' : '') + ' and all associated data. This cannot be undone.',
+    okLabel: 'Delete ' + n,
+    okClass: 'delete',
+    onConfirm: async () => {
+      try {
+        const r = await fetch('/api/projects/bulk-delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids })
+        });
+        if (!r.ok) throw new Error((await r.json()).error || 'Delete failed');
+        clearSelection();
+        showToast(n + ' project' + (n > 1 ? 's' : '') + ' deleted');
+        await loadDashboard();
+        loadArchivedCount();
+      } catch (err) {
+        showToast('Delete failed: ' + err.message, 'amber');
+      }
+    }
+  });
+}
+
+function loadArchivedCount() {
+  fetch('/api/projects/archived').then(r => r.json()).then(data => {
+    const toggle = document.getElementById('archived-toggle');
+    const badge  = document.getElementById('archived-count');
+    if (data.length > 0) {
+      toggle.classList.add('visible');
+      badge.textContent = '(' + data.length + ')';
+    } else {
+      toggle.classList.remove('visible');
+      document.getElementById('archived-section').classList.remove('open');
+      toggle.classList.remove('open');
+    }
+  }).catch(() => {});
+}
 
 function togglePcMenu(id, e) {
   e.stopPropagation();

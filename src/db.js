@@ -1490,6 +1490,18 @@ function archiveProject(id) {
   _run(`UPDATE projects SET status = 'archived' WHERE id = ?`, [id]);
 }
 
+function bulkArchiveProjects(ids) {
+  if (!ids || ids.length === 0) return;
+  const placeholders = ids.map(() => '?').join(',');
+  _run(`UPDATE projects SET status = 'archived' WHERE id IN (${placeholders})`, ids);
+}
+
+function bulkDeleteProjects(ids) {
+  if (!ids || ids.length === 0) return;
+  const placeholders = ids.map(() => '?').join(',');
+  _run(`DELETE FROM projects WHERE id IN (${placeholders})`, ids);
+}
+
 function unarchiveProject(id) {
   _run(`UPDATE projects SET status = 'active' WHERE id = ?`, [id]);
 }
@@ -1841,6 +1853,8 @@ module.exports = {
   getEmails,
   approveAllEmails,
   archiveProject,
+  bulkArchiveProjects,
+  bulkDeleteProjects,
   unarchiveProject,
   deleteProject,
   getArchivedProjects,
