@@ -918,6 +918,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
   <p class="manifesto-sub">The next 15 minutes will teach Kre8Ωr everything it needs to work in your voice, for your audience, toward your goals.</p>
   <div class="manifesto-stars">✦ ✦ ✦</div>
   <button class="btn-primary" onclick="startWizard()">Build My Soul →</button>
+  <div style="margin-top:16px;">
+    <button class="btn-ghost-sm" onclick="document.getElementById('importSoulFirstRun').click()" style="font-size:13px;">Already have a soul? Import it 📥</button>
+    <input type="file" id="importSoulFirstRun" accept=".kre8r,.json" style="display:none;" onchange="importPrimarySoul(event)">
+  </div>
 </div>
 
 <!-- ─── WIZARD SHELL ──────────────────────────────────────────────────────────── -->
@@ -2665,12 +2669,13 @@ async function importCollabSoul(event) {
 async function importPrimarySoul(event) {
   var file = event.target.files && event.target.files[0];
   if (!file) return;
-  var confirmed = confirm(
-    '⚠️ REPLACE PRIMARY SOUL\n\n' +
-    'This will overwrite creator-profile.json — your current soul configuration — ' +
-    'with the imported file. A backup will be saved automatically.\n\n' +
-    'Are you sure you want to replace your primary soul?'
-  );
+  // Different wording for first-run (screen0 visible) vs update mode
+  var isFirstRun = document.getElementById('screen0') &&
+                   document.getElementById('screen0').style.display !== 'none';
+  var confirmMsg = isFirstRun
+    ? 'Import this soul file as your primary creator profile?\n\nThis will set up Kre8Ωr with the imported voice, audience, and content configuration.'
+    : '⚠️ REPLACE PRIMARY SOUL\n\nThis will overwrite your current creator-profile.json with the imported file. A backup will be saved automatically.\n\nAre you sure you want to replace your primary soul?';
+  var confirmed = confirm(confirmMsg);
   if (!confirmed) { event.target.value = ''; return; }
   try {
     var text = await file.text();
