@@ -1155,6 +1155,10 @@ async function onApprove() {
 
     showToast('Script approved! Open in TeleprΩmpter or continue to EditΩr.', 'success');
     loadDraftsHistory(currentProjectId);
+
+    // NPS prompt — fire once per project after approval
+    localStorage.setItem('kre8r_writr_approved', currentProjectId);
+    if (window.kre8rShowNPS) window.kre8rShowNPS(currentProjectId);
   } catch(e) {
     showToast('Approve failed — ' + e.message, 'error');
   }
