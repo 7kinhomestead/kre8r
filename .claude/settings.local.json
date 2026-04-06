@@ -446,7 +446,13 @@
       "Bash(find C:/Users/18054 -name *.docx)",
       "Bash(find C:/Users/18054/kre8r -name *.pdf -o -name generate*.js -o -name build*.js)",
       "Bash(python scripts/office/unpack.py docs/7-Kin-Content-OS-Architecture.docx /tmp/arch-unpacked/)",
-      "Bash(python scripts/office/unpack.py Kre8r-Production-Runbook.docx /tmp/runbook-v1-unpacked/)"
+      "Bash(python scripts/office/unpack.py Kre8r-Production-Runbook.docx /tmp/runbook-v1-unpacked/)",
+      "Bash(grep -n bug-reporter C:/Users/18054/kre8r/public/*.html)",
+      "Bash(grep -rn \"C:/Users/18054\\\\|C:\\\\\\\\Users\\\\\\\\18054\\\\|C:\\\\Users\\\\18054\" C:/Users/18054/kre8r --include=\"*.js\" --include=\"*.py\" --include=\"*.json\" --include=\"*.md\" -l)",
+      "Bash(ls C:/Users/18054/kre8r/*.config.js C:/Users/18054/kre8r/ecosystem*)",
+      "Bash(grep -c 'await db\\\\.' C:/Users/18054/kre8r/src/routes/*.js)",
+      "Bash(grep -n \"D:\\\\\\\\kre8r\\\\|D:/kre8r\" \"C:/Users/18054/kre8r/server.js\")",
+      "Bash(grep -n \"D:\\\\\\\\kre8r\\\\|D:/kre8r\" \"C:/Users/18054/kre8r/src/db.js\")"
     ]
   }
 }
