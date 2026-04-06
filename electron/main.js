@@ -90,15 +90,28 @@ function startServer() {
       console.log('[Server] exited with code', code);
     });
 
-    // Poll health endpoint — resolves as soon as server responds
+    // Poll health endpoint every 300ms — resolves as soon as server responds
+    let resolved = false;
     const poll = setInterval(() => {
       http.get(`http://localhost:${PORT}/api/health`, (res) => {
-        if (res.statusCode === 200) {
+        if (res.statusCode === 200 && !resolved) {
+          resolved = true;
           clearInterval(poll);
+          console.log('[Electron] Server ready — loading main window');
           resolve();
         }
-      }).on('error', () => { /* still starting */ });
-    }, 500);
+      }).on('error', () => { /* server not ready yet, keep polling */ });
+    }, 300);
+
+    // Safety timeout — open the window after 15s even if health check never responds
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        clearInterval(poll);
+        console.warn('[Electron] Server ready timeout (15s) — loading window anyway');
+        resolve();
+      }
+    }, 15000);
   });
 }
 
