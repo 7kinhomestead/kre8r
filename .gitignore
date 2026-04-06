@@ -16,9 +16,26 @@ public/images/kre8r-icon-128.png
 public/images/kre8r-icon-64.png
 public/images/kre8r-icon-32.png
 public/images/kre8r-icon-16.png
+
+# ── Databases (NEVER commit user data) ───────────────────────────────────────
+# kre8r-template.db IS committed — it ships with the installer (schema only, no data)
 database/kre8r.db
 database/kre8r.db-shm
 database/kre8r.db-wal
+database/kre8r-backup*.db
+database/backups/
+
+# ── Creator souls (NEVER bundle Jason's data in the installer) ────────────────
+creator-profile.json
+creator-profile-*.json
+
+# ── User-specific config and content ─────────────────────────────────────────
+project-configs/
+public/music/
+backups/
+logs/
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
 *.log
 public/thumbnails/
 public/clips/

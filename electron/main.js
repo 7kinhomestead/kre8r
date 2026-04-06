@@ -28,13 +28,34 @@ function startServer() {
   return new Promise((resolve) => {
     const serverPath = path.join(__dirname, '../server.js');
 
-    // ── First-run: copy creator-profile.json to userData if missing ──────────
-    const profileDest = path.join(app.getPath('userData'), 'creator-profile.json');
+    // ── First-run setup ───────────────────────────────────────────────────────
+    const userData = app.getPath('userData');
+    fs.mkdirSync(userData, { recursive: true });
+
+    // DB: if no kre8r.db in AppData, seed from the schema-only template that
+    // ships with the app. Users get the right schema with zero data.
+    const dbDest      = path.join(userData, 'kre8r.db');
+    const dbTemplate  = path.join(__dirname, '../database/kre8r-template.db');
+    if (!fs.existsSync(dbDest)) {
+      if (fs.existsSync(dbTemplate)) {
+        fs.copyFileSync(dbTemplate, dbDest);
+        console.log('[Electron] Seeded fresh database from template →', dbDest);
+      } else {
+        // Template missing — server will create schema from scratch via migrations
+        console.warn('[Electron] kre8r-template.db not found; server will initialise schema');
+      }
+    }
+
+    // Creator profile: if no profile in AppData, this is a fresh install.
+    // Do NOT auto-copy Jason's profile — new users must run Soul BuildΩr.
+    // (Dev exception: if running from the repo and no profile exists, copy it
+    //  so local development still works without completing the wizard.)
+    const profileDest = path.join(userData, 'creator-profile.json');
     const profileSrc  = path.join(__dirname, '../creator-profile.json');
-    if (!fs.existsSync(profileDest) && fs.existsSync(profileSrc)) {
-      fs.mkdirSync(app.getPath('userData'), { recursive: true });
+    const isDev       = !app.isPackaged;
+    if (!fs.existsSync(profileDest) && isDev && fs.existsSync(profileSrc)) {
       fs.copyFileSync(profileSrc, profileDest);
-      console.log('[Electron] Copied creator-profile.json →', profileDest);
+      console.log('[Electron] Dev mode: copied creator-profile.json →', profileDest);
     }
 
     // Spawn server with system Node.js (not Electron's bundled node)

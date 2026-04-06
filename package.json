@@ -11,7 +11,8 @@
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
     "dist": "electron-builder --win --mac",
-    "generate-icons": "node scripts/generate-icons.js"
+    "generate-icons": "node scripts/generate-icons.js",
+    "build-template-db": "node scripts/build-template-db.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
@@ -44,13 +45,27 @@
       "electron/**/*",
       "public/**/*",
       "src/**/*",
+      "scripts/**/*",
       "database/schema.sql",
+      "database/kre8r-template.db",
       "server.js",
       "package.json",
-      "creator-profile.json",
       "!node_modules",
-      "!*.db",
-      "!backups/**"
+      "!database/kre8r.db",
+      "!database/kre8r.db-shm",
+      "!database/kre8r.db-wal",
+      "!database/kre8r-backup*.db",
+      "!database/backups/**",
+      "!creator-profile.json",
+      "!creator-profile-*.json",
+      "!project-configs/**",
+      "!public/music/**",
+      "!public/thumbnails/**",
+      "!public/clips/**",
+      "!backups/**",
+      "!logs/**",
+      "!.env",
+      "!uploads/**"
     ],
     "extraResources": [],
     "win": {
