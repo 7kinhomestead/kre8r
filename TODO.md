@@ -2,7 +2,108 @@
 
 ---
 
-## ⚡ HIGH PRIORITY — Electron AppData DB Auto-Backup
+## ⚡ Task 1 — Rebuild Content Universe + Save Secrets to Soul
+
+After the force resync prune and view-count fixes, the DNA cache was cleared. The Content Universe constellation and Secrets analysis need to be rebuilt with the clean data, and insights saved to `creator-profile.json`.
+
+**Steps:**
+1. Open MirrΩr → Content Universe section → click **Refresh / Rebuild**
+2. Confirm constellation renders with ~198 nodes (not 260+) and no live stream nodes
+3. Click **Discover Secrets** → confirm live reposts are gone from the analysis
+4. Click **Save Insights to My Soul →** → confirm no error, check `creator-profile.json` has `content_intelligence` block updated
+5. Run `fetch('/api/mirrr/debug-views').then(r=>r.json()).then(console.log)` in Electron DevTools → confirm `grand_total_all_platforms` matches YouTube Studio roughly
+
+---
+
+## ⚡ Task 2 — Deploy Session 22 fixes to DigitalOcean
+
+All session-22 changes are on master but haven't been deployed to kre8r.app.
+
+```bash
+bash /home/kre8r/kre8r/deploy/deploy.sh
+# or manually:
+cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
+sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
+```
+
+Verify after deploy: `https://kre8r.app/mirrr.html` loads and channel health shows correct view count.
+
+---
+
+## ⚡ Task 3 — Electron AppData DB Auto-Backup
+
+Every session risks data loss if the AppData DB gets corrupted or Windows has a bad shutdown. Add a 5-minute rolling backup in `electron/main.js`:
+
+```js
+// After startServer() resolves, inside app.whenReady():
+setInterval(() => {
+  try {
+    fs.copyFileSync(
+      path.join(app.getPath('userData'), 'kre8r.db'),
+      path.join(__dirname, '../database/kre8r-electron-backup.db')
+    );
+  } catch (err) {
+    console.warn('[Electron] DB backup failed:', err.message);
+  }
+}, 300_000); // every 5 minutes
+```
+
+Add to `.gitignore`:
+```
+database/kre8r-electron-backup.db
+```
+
+---
+
+## Carry-forward (still valid)
+
+### NorthΩr — Run first real strategy generation
+- Open `/northr.html` → set monthly goals (target videos, emails)
+- Click **Generate Strategy** → confirm SSE stream completes and report renders
+- Click **Check Alerts** → see if any thresholds are triggered
+
+### Fix `davinci.js` → `runScript()` Python detection
+`runScript()` hardcodes `spawn('python', ...)` — fails where binary is `py` or `python3`.
+Add `detectPython()` pattern (already in `editor.js` and `composor.js`).
+
+### TeleprΩmpter 3-device live test
+1. Start display on laptop → Load Script → Start → note 4-digit session code
+2. Phone 1 (Control): `http://{ip}:3000/teleprompter.html?mode=control&session=XXXX`
+3. Phone 2 (Voice): `http://{ip}:3000/teleprompter.html?mode=voice&session=XXXX`
+
+### Id8Ωr — Remove debug log
+`console.log('[mindmap] messages chars...')` in `/mindmap` handler — remove once flow confirmed stable.
+
+---
+
+## PM2 Quick Reference
+
+```
+pm2 status              # check kre8r is running
+pm2 logs kre8r          # live server logs
+pm2 restart kre8r       # after pulling code changes
+pm2 save                # save process list after any pm2 changes
+```
+
+## Redeploy (after pushing new code)
+
+```
+bash /home/kre8r/kre8r/deploy/deploy.sh
+```
+
+---
+
+## Technical Debt
+
+**Diagnostic endpoint** — `/api/mirrr/debug-views` should be removed or auth-gated before public launch.
+
+**Archived project analytics** — 260 archived `kre8r` duplicate projects still have analytics rows in DB. They're filtered from all queries now but take up space. A `DELETE FROM analytics WHERE project_id IN (SELECT id FROM projects WHERE status = 'archived')` cleanup could be run once as a migration.
+
+---
+
+## ARCHIVE — Previous session tasks
+
+### ⚡ HIGH PRIORITY — Electron AppData DB Auto-Backup
 
 In `electron/main.js`, after the server starts and the ready poll resolves, add a 5-minute interval that copies the live AppData DB to the project folder. Survives power outages and AppData corruption.
 

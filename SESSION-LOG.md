@@ -1,3 +1,83 @@
+# Kre8Ωr Session Log — 2026-04-06 (Session 22 — NorthΩr Fixes, Force Resync + Prune, Double Views)
+
+## What Was Built — Session 22
+
+---
+
+### Force YouTube Resync with Prune — Complete
+
+**Problem:** User unlisted live reposts on coach's advice. Channel data still showed them.
+
+**`src/routes/mirrr.js` — `/youtube-import-channel`:**
+- Added `forceResync = req.body?.force === true` bypass on the "already imported" guard
+- After import loop: prune step archives any `youtube_import` projects whose `youtube_video_id` is no longer in the current public channel fetch
+- Uses `db.bulkArchiveProjects()` on pruned IDs
+- Invalidates `channel_dna_clusters`, `channel_dna_secrets`, `channel_dna_secrets_video_count` KV cache after any prune
+
+**`public/mirrr.html`:**
+- Added **🔄 Force Resync (Prune Unlisted)** amber button in the YouTube Sync section
+- `importChannel(force = false)` — refactored to accept force flag, sends `{ force: true }` in body
+- `forceResyncChannel()` wrapper calls `importChannel(true)`
+- Both buttons disable each other during operation, re-enable on completion
+
+---
+
+### Double View Count — Diagnosed and Fixed
+
+**Root cause (found via `/api/mirrr/debug-views` diagnostic):** Same video existed as two separate projects — one `source: 'youtube_import'` (active) and one `source: 'kre8r'` (archived). Each had its own post and analytics row. `getGlobalChannelHealth()` summed ALL analytics with no status filter → exactly 2× real views.
+
+**`src/db.js` — `getGlobalChannelHealth()`:**
+- All 6 queries now JOIN through `posts → projects` and filter `WHERE pr.status != 'archived'`
+- Fixes: total_views, avg_views, best_video, topAngle, longformAvg, formatCounts
+
+**`src/routes/mirrr.js` — DNA graph builder:**
+- `ytProjects` filter now excludes archived: `p.youtube_video_id && p.status !== 'archived'`
+- Archived/pruned videos no longer appear in Content Universe or Secrets analysis
+
+---
+
+### MirrΩr — `videoCount is not defined` Bug Fix
+
+**`src/routes/mirrr.js` — `PATCH /save-secrets-to-soul`:**
+- Line 1392: `videoCount` → `longformCount` (variable was named correctly above, typo in response line only)
+
+---
+
+### Dedup Migration — One-time Cleanup
+
+**`src/db.js` — `runMigrations()`:**
+- Added one-time migration that finds projects with >1 YouTube post per project
+- Keeps the post with highest view count, deletes duplicates + their analytics rows
+- After cleanup: busts `channel_dna_clusters`, `channel_dna_secrets`, `channel_dna_secrets_video_count` cache so views recalculate from clean data
+- Non-fatal (wrapped in try/catch) — won't crash server if it errors
+
+---
+
+### Diagnostic Endpoint (permanent utility)
+
+**`GET /api/mirrr/debug-views`** — Returns:
+- `grand_total_all_platforms` / `youtube_only_total`
+- `by_platform` breakdown (platform, row count, total views)
+- `duplicate_posts` — any projects with >1 YouTube post
+- `duplicate_analytics_rows` — any post_id with >1 views row
+- `top_5_videos` — by views, with source/status/analytics_row count
+
+**`src/db.js` — `_debugViews()`** — exported and wired to route.
+
+---
+
+### Commits This Session
+
+| Hash | Message |
+|------|---------|
+| `b7384c4` | feat: force resync YouTube channel with prune for unlisted/private videos |
+| `b25dd32` | fix: deduplicate YouTube post/analytics rows causing double view counts |
+| `3c54a0d` | fix: three MirrΩr bugs — videoCount typo, stale DNA cache, archived in Secrets |
+| `c8eec10` | debug: add /api/mirrr/debug-views diagnostic endpoint |
+| `a98223d` | fix: exclude archived projects from all channel health view count queries |
+
+---
+
 # Kre8Ωr Session Log — 2026-04-05 (Session 21 — Engine vs Soul Audit + better-sqlite3 Migration)
 
 ## What Was Built — Session 21
