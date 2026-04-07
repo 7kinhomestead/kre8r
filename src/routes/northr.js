@@ -159,4 +159,27 @@ router.get('/goals/current', (req, res) => {
   }
 });
 
+// ─── GET /recent-projects — native projects for "mark published" UI ───────────
+router.get('/recent-projects', (req, res) => {
+  try {
+    const projects = db.getKre8rProjects().filter(p => p.status !== 'archived').slice(0, 30);
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /projects/:id/mark-published ────────────────────────────────────────
+router.post('/projects/:id/mark-published', (req, res) => {
+  try {
+    const id          = parseInt(req.params.id, 10);
+    const { published_at } = req.body;
+    db.markProjectPublished(id, published_at || null);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[northr/mark-published]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

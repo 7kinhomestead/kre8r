@@ -656,6 +656,12 @@ function updateProjectStage(projectId, stage) {
   _run(`UPDATE pipeline_state SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE project_id = ?`, [stage, projectId]);
 }
 
+function markProjectPublished(projectId, publishedAt) {
+  const date = publishedAt || new Date().toISOString();
+  _run(`UPDATE projects SET status = 'published', published_at = ? WHERE id = ?`, [date, projectId]);
+  _run(`UPDATE pipeline_state SET updated_at = CURRENT_TIMESTAMP WHERE project_id = ?`, [projectId]);
+}
+
 function updateProjectMeta(projectId, { youtube_url, youtube_video_id, topic }) {
   _run(
     `UPDATE projects SET
@@ -2228,22 +2234,40 @@ function getPublishingStats(days = 30) {
   const now = new Date();
   const cutoff = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
 
-  // Last published project
+  // ── Unified publish date query ─────────────────────────────────────────────
+  // Three sources (unioned), best date wins:
+  //   1. Explicitly marked published (status='published', published_at set)
+  //   2. YouTube-imported videos from MirrΩr (source='youtube_import', have real YouTube dates)
+  //   3. Gate C approved native projects (gate_c_approved=1, use gate_c_approved_at as proxy)
+  const PUBLISH_UNION = `
+    SELECT published_at AS pub_date FROM projects
+      WHERE status = 'published' AND published_at IS NOT NULL
+    UNION ALL
+    SELECT published_at AS pub_date FROM projects
+      WHERE source = 'youtube_import' AND published_at IS NOT NULL
+    UNION ALL
+    SELECT ps.gate_c_approved_at AS pub_date
+      FROM projects p
+      JOIN pipeline_state ps ON ps.project_id = p.id
+      WHERE ps.gate_c_approved = 1 AND ps.gate_c_approved_at IS NOT NULL
+        AND p.source != 'youtube_import'
+  `;
+
   const lastPublished = _get(
-    `SELECT published_at FROM projects WHERE status = 'published' AND published_at IS NOT NULL ORDER BY published_at DESC`
+    `SELECT pub_date FROM (${PUBLISH_UNION}) ORDER BY pub_date DESC`
   );
   let daysSinceLastPublish = 999;
   let lastPublishDate = null;
-  if (lastPublished?.published_at) {
-    lastPublishDate = lastPublished.published_at;
-    const diff = now - new Date(lastPublished.published_at);
+  if (lastPublished?.pub_date) {
+    lastPublishDate = lastPublished.pub_date;
+    const diff = now - new Date(lastPublished.pub_date);
     daysSinceLastPublish = Math.floor(diff / (1000 * 60 * 60 * 24));
   }
 
   // Videos published this calendar month
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const videosThisMonth = _get(
-    `SELECT COUNT(*) as count FROM projects WHERE status = 'published' AND published_at >= ?`,
+    `SELECT COUNT(*) as count FROM (${PUBLISH_UNION}) WHERE pub_date >= ?`,
     [thisMonthStart]
   )?.count || 0;
 
@@ -2251,13 +2275,13 @@ function getPublishingStats(days = 30) {
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
   const lastMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const videosLastMonth = _get(
-    `SELECT COUNT(*) as count FROM projects WHERE status = 'published' AND published_at >= ? AND published_at < ?`,
+    `SELECT COUNT(*) as count FROM (${PUBLISH_UNION}) WHERE pub_date >= ? AND pub_date < ?`,
     [lastMonthStart, lastMonthEnd]
   )?.count || 0;
 
   // Total published in window
   const videosInWindow = _get(
-    `SELECT COUNT(*) as count FROM projects WHERE status = 'published' AND published_at >= ?`,
+    `SELECT COUNT(*) as count FROM (${PUBLISH_UNION}) WHERE pub_date >= ?`,
     [cutoff]
   )?.count || 0;
 
@@ -2361,6 +2385,7 @@ module.exports = {
   getAllProjectsBySource,
   setProjectSource,
   updateProjectStage,
+  markProjectPublished,
   updateProjectMeta,
   savePackages,
   getPackages,

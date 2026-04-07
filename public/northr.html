@@ -592,6 +592,17 @@
     </div>
   </div>
 
+  <!-- ── SECTION 6: Mark Published ── -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">✅ MARK AS PUBLISHED</div>
+      <span style="font-size:12px;color:var(--text-dimmer)">Stamp a publish date so NorthΩr can track your cadence</span>
+    </div>
+    <div id="mark-published-list">
+      <div class="empty-state">Loading projects…</div>
+    </div>
+  </div>
+
 </div><!-- /page -->
 
 <div class="toast" id="toast"></div>
@@ -623,6 +634,8 @@ async function loadDashboard() {
     if (data.report?.content) {
       renderStrategy(data.report.content);
     }
+
+    loadMarkPublished();
   } catch (e) {
     console.error('[NorthΩr] Dashboard load failed:', e);
     toast('Failed to load dashboard: ' + e.message, 'error');
@@ -934,6 +947,65 @@ function renderCalendar(stats) {
 function esc(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Mark Published ─────────────────────────────────────────────────────────────
+async function loadMarkPublished() {
+  const el = document.getElementById('mark-published-list');
+  try {
+    const res      = await fetch('/api/northr/recent-projects');
+    const projects = await res.json();
+    if (!projects.length) {
+      el.innerHTML = `<div class="empty-state">No active projects found</div>`;
+      return;
+    }
+    // Show unpublished first, then already-published dimmed
+    const unpublished = projects.filter(p => p.status !== 'published');
+    const published   = projects.filter(p => p.status === 'published');
+    const rows = [...unpublished, ...published].map(p => {
+      const isDone  = p.status === 'published';
+      const dateVal = isDone && p.published_at ? p.published_at.slice(0, 10) : '';
+      return `
+        <div class="alert-card${isDone ? ' is-read' : ''}" id="mp-row-${p.id}" style="align-items:center;padding:12px 16px;">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title || 'Untitled')}</div>
+            <div style="font-size:11px;color:var(--text-dimmer);margin-top:2px">Stage: ${esc(p.current_stage || '—')}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <input type="date" id="mp-date-${p.id}" value="${dateVal}"
+              style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:12px;padding:5px 8px;outline:none;width:140px"
+              ${isDone ? '' : ''}>
+            ${isDone
+              ? `<span style="font-size:12px;color:var(--teal);font-weight:600">✓ Published</span>`
+              : `<button class="btn btn-teal" style="padding:6px 12px;font-size:12px" onclick="markPublished(${p.id})">Mark Published</button>`
+            }
+          </div>
+        </div>`;
+    }).join('');
+    el.innerHTML = rows || `<div class="empty-state">No projects found</div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state" style="color:var(--red)">Failed to load: ${esc(e.message)}</div>`;
+  }
+}
+
+async function markPublished(projectId) {
+  const dateInput = document.getElementById(`mp-date-${projectId}`);
+  const dateVal   = dateInput?.value || null;
+  try {
+    const res  = await fetch(`/api/northr/projects/${projectId}/mark-published`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ published_at: dateVal ? new Date(dateVal).toISOString() : null }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    toast('Marked as published!', 'success');
+    // Refresh stats and this list
+    await loadDashboard();
+    await loadMarkPublished();
+  } catch (e) {
+    toast('Failed: ' + e.message, 'error');
+  }
 }
 
 function toast(msg, type = 'success') {
