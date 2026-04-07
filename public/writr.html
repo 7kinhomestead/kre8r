@@ -277,7 +277,7 @@
   .toast.success{border-color:var(--green-border);color:var(--green);}
   .toast.visible{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  /* ── WRITΩR'S RΩΩM ── */
+  /* ── WRITΩR'S ROOM ── */
   .room-panel{position:fixed;top:54px;right:0;width:430px;height:calc(100vh - 54px);background:var(--bg-card);border-left:2px solid rgba(167,139,250,0.3);display:flex;flex-direction:column;z-index:200;transform:translateX(100%);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);box-shadow:-12px 0 40px rgba(0,0,0,0.5);}
   .room-panel.open{transform:translateX(0);}
   .room-header{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(167,139,250,0.04);}
@@ -603,11 +603,11 @@
 
   </div><!-- /three-panels -->
 
-  <!-- ── WRITΩR'S RΩΩM ── -->
+  <!-- ── WRITΩR'S ROOM ── -->
   <div class="room-panel" id="roomPanel">
     <div class="room-header">
       <div>
-        <div class="room-title">WRIT<em>Ω</em>R'S R<em>Ω</em><em>Ω</em>M</div>
+        <div class="room-title">WRIT<em>Ω</em>R'S ROOM</div>
         <div class="room-context-badge" id="roomContextBadge">No project loaded</div>
       </div>
       <button class="room-close" onclick="closeRoom()" title="Close Room">✕</button>
@@ -615,7 +615,7 @@
     <div class="room-messages" id="roomMessages">
       <div class="room-empty" id="roomEmpty">
         <div class="room-empty-icon">🎬</div>
-        <div class="room-empty-title">THE R<em>Ω</em><em>Ω</em>M</div>
+        <div class="room-empty-title">THE ROOM</div>
         <div class="room-empty-sub">Your creative director has full context on this project — the brief, the beats, the current draft. Ask what's not working. Think out loud. Find the story.</div>
       </div>
     </div>
@@ -2200,7 +2200,7 @@ function escHtml(str) {
 }
 
 // ─────────────────────────────────────────────
-// WRITΩR'S RΩΩM
+// WRITΩR'S ROOM
 // ─────────────────────────────────────────────
 
 let roomHistory = [];
@@ -2251,7 +2251,7 @@ function renderRoomMessages() {
     empty.className = 'room-empty';
     empty.innerHTML = `
       <div class="room-empty-icon">🎬</div>
-      <div class="room-empty-title">THE R<em>Ω</em><em>Ω</em>M</div>
+      <div class="room-empty-title">THE ROOM</div>
       <div class="room-empty-sub">Your creative director has full context on this project — the brief, the beats, the current draft. Ask what's not working. Think out loud. Find the story.</div>`;
     container.appendChild(empty);
     return;
@@ -2289,6 +2289,17 @@ function renderRoomMessages() {
 function applyRoomToRevision(content) {
   const input = document.getElementById('reviseInput');
   if (!input) return;
+
+  // If script is approved, unlock revision controls so the Room prompt can be used.
+  // Revising an approved script creates a new draft — the approved version stays on record.
+  const reviseControls = document.getElementById('reviseControls');
+  const regenRow       = document.getElementById('regenApprovedRow');
+  const wasLocked      = reviseControls && reviseControls.style.display === 'none';
+  if (wasLocked) {
+    reviseControls.style.display = 'block';
+    if (regenRow) regenRow.style.display = 'none';
+  }
+
   // Use REVISION: block if present, otherwise the full response
   const match = content.match(/REVISION[:\s]+(.+?)(?:\n\n|\n(?=[A-Z])|$)/s);
   input.value = match ? match[1].trim() : content;
@@ -2296,7 +2307,12 @@ function applyRoomToRevision(content) {
   closeRoom();
   const bar = document.getElementById('iterationBar');
   if (bar) bar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  showToast('Revision prompt ready — review and hit Revise →', 'success');
+  showToast(
+    wasLocked
+      ? 'Script unlocked for revision — approved draft stays on record. Hit Revise →'
+      : 'Revision prompt ready — review and hit Revise →',
+    'success'
+  );
 }
 
 async function sendRoomMessage() {
