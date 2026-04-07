@@ -29,6 +29,7 @@
         label: 'Pre',
         items: [
           { label: 'Soul BuildΩr', href: '/soul-buildr.html', soul: true },
+          { label: 'Show\u03a9r',  href: '/shows.html' },
           { label: 'Id8Ωr',   href: '/id8r.html' },
           { label: 'PipΩr',   href: '/pipr.html' },
           { label: 'WritΩr',  href: '/writr.html' },

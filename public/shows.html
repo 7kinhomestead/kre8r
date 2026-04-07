@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel='icon' type='image/png' href='/images/kre8r-icon.png'>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Show\u03a9r \u2014 Kre8\u03a9r</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/global.css">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10); --amber-border:rgba(240,185,66,0.25);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10); --red-border:rgba(224,92,92,0.25);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10); --green-border:rgba(92,186,138,0.25);
+    --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10); --purple-border:rgba(167,139,250,0.25);
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+  .main{max-width:1100px;margin:0 auto;padding:32px 16px 100px;}
+
+  /* ── Page header ── */
+  .page-header{margin-bottom:32px;animation:fadeUp 0.4s ease both;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .page-title-wrap{}
+  .page-title{font-family:var(--font-head);font-size:clamp(36px,8vw,56px);letter-spacing:3px;line-height:1;color:var(--text);}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:13px;margin-top:6px;}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;border:none;text-decoration:none;letter-spacing:0.3px;}
+  .btn-teal{background:var(--teal);color:#0e0f0e;}
+  .btn-teal:hover{background:var(--teal-dim);}
+  .btn-ghost{background:var(--bg-card);color:var(--text-dim);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--border-bright);color:var(--text);}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* ── Views ── */
+  .view{display:none;}
+  .view.active{display:block;animation:fadeUp 0.35s ease both;}
+
+  /* ── Shows grid ── */
+  .shows-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+  @media(max-width:680px){.shows-grid{grid-template-columns:1fr;}}
+
+  .show-card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:22px 20px 18px;cursor:pointer;transition:all 0.2s;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .show-card:hover{border-color:var(--teal);background:var(--bg-card-2);transform:translateY(-2px);}
+  .show-card-name{font-family:var(--font-head);font-size:22px;letter-spacing:1.5px;color:var(--text);line-height:1.1;}
+  .show-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .show-card-desc{font-size:13px;color:var(--text-dim);line-height:1.5;}
+
+  .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
+  .badge-teal{background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);color:var(--teal);}
+  .badge-amber{background:var(--amber-glow);border:1px solid var(--amber-border);color:var(--amber);}
+  .badge-purple{background:var(--purple-glow);border:1px solid var(--purple-border);color:var(--purple);}
+  .badge-dim{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text-dimmer);}
+  .badge-green{background:var(--green-glow);border:1px solid var(--green-border);color:var(--green);}
+
+  .show-progress{display:flex;align-items:center;gap:8px;margin-top:4px;}
+  .progress-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--teal);border-radius:2px;transition:width 0.4s;}
+  .progress-label{font-size:11px;color:var(--text-dimmer);white-space:nowrap;}
+
+  /* ── Empty state ── */
+  .empty-state{
+    border:2px dashed var(--border);border-radius:var(--radius);
+    padding:64px 32px;text-align:center;
+  }
+  .empty-icon{font-size:48px;margin-bottom:16px;}
+  .empty-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;margin-bottom:8px;}
+  .empty-desc{color:var(--text-dim);font-size:14px;max-width:400px;margin:0 auto 24px;line-height:1.7;}
+
+  /* ── Show detail ── */
+  .detail-layout{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;}
+  @media(max-width:900px){.detail-layout{grid-template-columns:1fr;}}
+
+  .back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);font-size:13px;cursor:pointer;background:none;border:none;padding:0;margin-bottom:20px;transition:color 0.15s;}
+  .back-btn:hover{color:var(--text);}
+
+  .detail-name{font-family:var(--font-head);font-size:clamp(32px,6vw,52px);letter-spacing:3px;line-height:1;margin-bottom:8px;}
+  .detail-badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+
+  .callout-card{background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px;}
+  .callout-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin-bottom:6px;}
+  .callout-text{font-size:14px;color:var(--text);line-height:1.55;}
+
+  /* ── Arc stepper ── */
+  .arc-stepper{display:flex;align-items:center;gap:0;margin-bottom:24px;overflow-x:auto;padding-bottom:4px;}
+  .arc-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;}
+  .arc-step-dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--border-bright);background:transparent;flex-shrink:0;transition:all 0.2s;}
+  .arc-step.active .arc-step-dot{border-color:var(--teal);background:var(--teal);}
+  .arc-step.past .arc-step-dot{border-color:var(--teal-dim);background:var(--teal-dim);opacity:0.6;}
+  .arc-step-label{font-size:10px;color:var(--text-dimmer);font-weight:600;letter-spacing:0.4px;text-transform:uppercase;text-align:center;}
+  .arc-step.active .arc-step-label{color:var(--teal);}
+  .arc-connector{flex:1;height:2px;background:var(--border);min-width:12px;}
+  .arc-connector.past{background:var(--teal-dim);opacity:0.5;}
+
+  /* ── Episode list ── */
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .section-title{font-family:var(--font-head);font-size:16px;letter-spacing:2px;color:var(--text-dim);}
+
+  .episode-list{display:flex;flex-direction:column;gap:8px;}
+  .ep-card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:14px 16px;display:flex;align-items:center;gap:12px;transition:border-color 0.15s;
+  }
+  .ep-card:hover{border-color:var(--border-bright);}
+  .ep-card.clickable{cursor:pointer;}
+  .ep-card.clickable:hover{border-color:var(--teal);}
+  .ep-badge{font-family:var(--font-head);font-size:13px;letter-spacing:1px;color:var(--teal);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);border-radius:4px;padding:3px 8px;white-space:nowrap;flex-shrink:0;}
+  .ep-title{flex:1;font-size:14px;color:var(--text);font-weight:500;}
+  .ep-title.planned{color:var(--text-dim);font-style:italic;}
+
+  .ep-add-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    background:transparent;border:1px dashed var(--border-bright);border-radius:var(--radius-sm);
+    padding:12px 16px;color:var(--text-dimmer);font-size:13px;cursor:pointer;
+    transition:all 0.15s;font-family:var(--font-body);width:100%;margin-top:8px;
+  }
+  .ep-add-btn:hover{border-color:var(--teal);color:var(--teal);}
+
+  /* ── Context panel ── */
+  .context-panel{display:flex;flex-direction:column;gap:16px;}
+  .context-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+  .context-card-title{font-family:var(--font-head);font-size:13px;letter-spacing:2px;color:var(--text-dimmer);margin-bottom:12px;}
+  .context-list{display:flex;flex-direction:column;gap:6px;}
+  .context-item{font-size:12px;color:var(--text-dim);line-height:1.5;padding-left:12px;border-left:2px solid var(--border-bright);}
+  .context-empty{font-size:12px;color:var(--text-dimmer);font-style:italic;}
+
+  .brief-card{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:12px;}
+  .brief-text{font-size:13px;color:var(--text);line-height:1.6;}
+
+  /* ── Modal ── */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;
+    display:none;align-items:center;justify-content:center;padding:16px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius);
+    width:100%;max-width:640px;max-height:90vh;overflow-y:auto;
+    animation:fadeUp 0.25s ease both;
+  }
+  .modal-header{
+    padding:20px 24px 16px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .modal-title{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);}
+  .modal-close{background:none;border:none;color:var(--text-dimmer);font-size:20px;cursor:pointer;padding:4px;transition:color 0.15s;}
+  .modal-close:hover{color:var(--text);}
+  .modal-body{padding:24px;}
+  .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+
+  /* Step indicator */
+  .step-indicator{display:flex;gap:6px;margin-bottom:24px;}
+  .step-dot{width:8px;height:8px;border-radius:50%;background:var(--border-bright);transition:all 0.2s;}
+  .step-dot.active{background:var(--teal);width:24px;border-radius:4px;}
+
+  /* Wizard screens */
+  .wizard-screen{display:none;}
+  .wizard-screen.active{display:block;}
+
+  .field{margin-bottom:18px;}
+  .field-label{display:block;font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:6px;}
+  .field-input,.field-textarea,.field-select{
+    width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius-sm);padding:10px 12px;font-family:var(--font-body);font-size:14px;
+    transition:border-color 0.15s;
+  }
+  .field-input:focus,.field-textarea:focus,.field-select:focus{outline:none;border-color:var(--teal);}
+  .field-input::placeholder,.field-textarea::placeholder{color:var(--text-dimmer);}
+  .field-textarea{resize:vertical;min-height:80px;line-height:1.55;}
+  .field-select option{background:var(--bg-card);}
+
+  /* Type cards */
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+  .type-card{
+    background:var(--bg);border:2px solid var(--border);border-radius:var(--radius-sm);
+    padding:16px;cursor:pointer;transition:all 0.15s;text-align:center;
+  }
+  .type-card:hover{border-color:var(--border-bright);}
+  .type-card.selected{border-color:var(--teal);background:var(--teal-glow);}
+  .type-card-icon{font-size:24px;margin-bottom:8px;}
+  .type-card-title{font-family:var(--font-head);font-size:16px;letter-spacing:1px;margin-bottom:4px;}
+  .type-card-desc{font-size:12px;color:var(--text-dim);line-height:1.4;}
+
+  /* Episode preview */
+  .ep-preview-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;}
+  .ep-preview-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .ep-preview-badge{font-family:var(--font-head);font-size:11px;letter-spacing:0.8px;color:var(--teal);background:var(--teal-glow);border-radius:3px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
+  .ep-preview-role{font-size:11px;color:var(--text-dimmer);flex-shrink:0;width:100px;}
+  .ep-preview-input{flex:1;background:transparent;border:none;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;}
+  .ep-preview-input::placeholder{color:var(--text-dimmer);}
+
+  /* Range slider */
+  .range-wrap{margin-bottom:18px;}
+  .range-slider{width:100%;accent-color:var(--teal);}
+  .range-hint{font-size:12px;color:var(--text-dim);margin-top:6px;text-align:center;}
+
+  /* Launch summary */
+  .launch-summary{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;}
+  .launch-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);}
+  .launch-row:last-child{border-bottom:none;}
+  .launch-key{font-size:12px;color:var(--text-dimmer);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+  .launch-val{font-size:13px;color:var(--text);text-align:right;max-width:65%;}
+
+  /* Toast */
+  .toast{
+    position:fixed;bottom:24px;right:24px;z-index:2000;
+    background:var(--bg-card-2);border:1px solid var(--border-bright);
+    border-radius:var(--radius-sm);padding:12px 18px;font-size:13px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    animation:toastIn 0.25s ease;display:none;
+  }
+  .toast.visible{display:block;}
+  .toast.success{border-color:rgba(92,186,138,0.4);color:var(--green);}
+  .toast.error{border-color:var(--red-border);color:var(--red);}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border-bright);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;}
+</style>
+</head>
+<body>
+<div id="kre8r-nav"></div>
+
+<div class="main">
+
+  <!-- ─── Shows List View ─── -->
+  <div id="view-list" class="view active">
+    <div class="page-header">
+      <div class="page-title-wrap">
+        <div class="page-title">SHOW<em>&Omega;</em>R</div>
+        <div class="page-sub">THE SERIES ENGINE &mdash; Build shows that bring viewers back</div>
+      </div>
+      <button class="btn btn-teal" onclick="openWizard()">+ New Show</button>
+    </div>
+
+    <div id="shows-loading" style="text-align:center;padding:40px;color:var(--text-dim);">
+      <span class="spinner"></span> Loading shows&hellip;
+    </div>
+    <div id="shows-empty" class="empty-state" style="display:none;">
+      <div class="empty-icon">📺</div>
+      <div class="empty-title">No Shows Yet</div>
+      <div class="empty-desc">ShowΩr turns individual videos into a series with a season arc, planted seeds, and viewers who come back every time.</div>
+      <button class="btn btn-teal" onclick="openWizard()">Create Your First Show</button>
+    </div>
+    <div id="shows-grid" class="shows-grid"></div>
+  </div>
+
+  <!-- ─── Show Detail View ─── -->
+  <div id="view-detail" class="view">
+    <button class="back-btn" onclick="showList()">&#8592; All Shows</button>
+    <div id="detail-name" class="detail-name"></div>
+    <div id="detail-badges" class="detail-badges"></div>
+
+    <div id="detail-central-q" class="callout-card" style="display:none;">
+      <div class="callout-label">Central Question</div>
+      <div id="detail-central-q-text" class="callout-text"></div>
+    </div>
+
+    <!-- Arc stepper -->
+    <div class="arc-stepper" id="arc-stepper"></div>
+
+    <div id="detail-season-arc" style="color:var(--text-dim);font-size:13px;line-height:1.6;margin-bottom:20px;display:none;"></div>
+
+    <div class="detail-layout">
+      <div>
+        <div class="section-header">
+          <div class="section-title">EPISODE MAP</div>
+        </div>
+        <div id="episode-list" class="episode-list"></div>
+        <button class="ep-add-btn" id="plan-next-btn" onclick="planNextEpisode()">
+          + Plan Next Episode
+        </button>
+      </div>
+
+      <div class="context-panel">
+        <div class="context-card">
+          <div class="context-card-title">WHAT'S BEEN ESTABLISHED</div>
+          <div id="ctx-established" class="context-list"></div>
+        </div>
+        <div class="context-card">
+          <div class="context-card-title">SEEDS PLANTED</div>
+          <div id="ctx-seeds" class="context-list"></div>
+        </div>
+        <div class="context-card">
+          <div class="context-card-title">NEXT EPISODE MUST&hellip;</div>
+          <div id="ctx-brief-wrap">
+            <button class="btn btn-ghost" style="width:100%;justify-content:center;" id="brief-btn" onclick="generateBrief()">
+              Generate Brief
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .main -->
+
+<!-- ─── New Show Wizard Modal ─── -->
+<div class="modal-overlay" id="wizard-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="wizard-title">NEW SHOW</div>
+      <button class="modal-close" onclick="closeWizard()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="step-indicator" id="step-indicator">
+        <div class="step-dot active" id="step-dot-0"></div>
+        <div class="step-dot" id="step-dot-1"></div>
+        <div class="step-dot" id="step-dot-2"></div>
+        <div class="step-dot" id="step-dot-3"></div>
+      </div>
+
+      <!-- Screen 1: The Show -->
+      <div class="wizard-screen active" id="wscreen-0">
+        <div class="field">
+          <label class="field-label">Show Name</label>
+          <input class="field-input" id="w-name" type="text" placeholder="e.g. Rock Rich Season 1">
+        </div>
+        <div class="field">
+          <label class="field-label">Type</label>
+          <div class="type-grid">
+            <div class="type-card selected" id="type-serialized" onclick="selectType('serialized')">
+              <div class="type-card-icon">&#128250;</div>
+              <div class="type-card-title">SERIALIZED</div>
+              <div class="type-card-desc">Going somewhere. Every episode advances toward a season finale.</div>
+            </div>
+            <div class="type-card" id="type-episodic" onclick="selectType('episodic')">
+              <div class="type-card-icon">&#9654;</div>
+              <div class="type-card-title">EPISODIC</div>
+              <div class="type-card-desc">Ongoing world. Episodes stand alone in a recurring format.</div>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Description (optional)</label>
+          <textarea class="field-textarea" id="w-desc" placeholder="What is this show about? Who is it for?"></textarea>
+        </div>
+      </div>
+
+      <!-- Screen 2: Season Arc -->
+      <div class="wizard-screen" id="wscreen-1">
+        <div id="serialized-arc-fields">
+          <div class="field">
+            <label class="field-label">What is the central question your season answers?</label>
+            <textarea class="field-textarea" id="w-central-q" style="min-height:70px;" placeholder="e.g. Can a broke family build financial freedom through homesteading?"></textarea>
+          </div>
+          <div class="field">
+            <label class="field-label">What is the answer by the finale?</label>
+            <textarea class="field-textarea" id="w-finale-answer" style="min-height:60px;" placeholder="e.g. Yes &mdash; but not in the way they expected."></textarea>
+          </div>
+          <div class="field">
+            <label class="field-label">What transformation does the audience go through?</label>
+            <textarea class="field-textarea" id="w-transformation" style="min-height:60px;" placeholder="e.g. From skeptical to believers that doing a lot with a little is real."></textarea>
+          </div>
+        </div>
+        <div id="episodic-arc-fields" style="display:none;">
+          <div class="field">
+            <label class="field-label">What is the recurring format?</label>
+            <textarea class="field-textarea" id="w-season-arc" style="min-height:80px;" placeholder="e.g. Today Jason sets out to do something on the homestead and the land fights back."></textarea>
+          </div>
+        </div>
+        <div class="range-wrap">
+          <label class="field-label">Target Episodes</label>
+          <input type="range" class="range-slider" id="w-target-eps" min="3" max="22" value="12" oninput="updateEpsLabel(this.value)">
+          <div class="range-hint" id="eps-label">12 episodes &mdash; Standard Season</div>
+        </div>
+      </div>
+
+      <!-- Screen 3: Episode Map Preview -->
+      <div class="wizard-screen" id="wscreen-2">
+        <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">Your episode map preview. Optionally name each episode now &mdash; or leave blank and name them as you make them.</p>
+        <div id="ep-preview-list" class="ep-preview-list"></div>
+      </div>
+
+      <!-- Screen 4: Launch -->
+      <div class="wizard-screen" id="wscreen-3">
+        <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">Your show is ready to build. This creates the show and launches Id8&Omega;r in episodic mode for Episode 1.</p>
+        <div class="launch-summary" id="launch-summary"></div>
+        <div id="wizard-error" style="color:var(--red);font-size:13px;margin-bottom:12px;display:none;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="wizard-back-btn" onclick="wizardBack()" style="display:none;">&#8592; Back</button>
+      <button class="btn btn-ghost" onclick="closeWizard()" id="wizard-cancel-btn">Cancel</button>
+      <button class="btn btn-teal" id="wizard-next-btn" onclick="wizardNext()">Next &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="/js/nav.js"></script>
+<script>initNav();</script>
+<script src="/js/bug-reporter.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const ARC_POSITIONS = ['pilot','escalation','midpoint','endgame','finale'];
+  const ARC_LABELS    = { pilot:'Pilot', escalation:'Escalation', midpoint:'Midpoint', endgame:'Endgame', finale:'Finale' };
+
+  let currentShowId = null;
+  let showData      = null;
+  let wizardStep    = 0;
+  let wizardType    = 'serialized';
+  let epNames       = [];
+
+  // ── View switching ──
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function showList() { showView('list'); loadShows(); }
+
+  // ── Load shows ──
+  async function loadShows() {
+    document.getElementById('shows-loading').style.display = 'block';
+    document.getElementById('shows-empty').style.display   = 'none';
+    document.getElementById('shows-grid').innerHTML        = '';
+    try {
+      const res   = await fetch('/api/shows');
+      const shows = await res.json();
+      document.getElementById('shows-loading').style.display = 'none';
+      if (!shows.length) { document.getElementById('shows-empty').style.display = 'block'; return; }
+      const grid = document.getElementById('shows-grid');
+      shows.forEach(s => grid.appendChild(buildShowCard(s)));
+    } catch (e) {
+      document.getElementById('shows-loading').innerHTML = '<span style="color:var(--red)">Failed to load shows</span>';
+    }
+  }
+
+  function buildShowCard(show) {
+    const div = document.createElement('div');
+    div.className = 'show-card';
+    div.onclick = () => openShow(show.id);
+
+    const completed = show.completed_episodes || 0;
+    const total     = show.target_episodes || 12;
+    const pct       = Math.min(100, Math.round((completed / total) * 100));
+    const arcBadge  = arcBadgeHtml(show.arc_position);
+    const typeBadge = show.show_type === 'serialized'
+      ? '<span class="badge badge-purple">Serialized</span>'
+      : '<span class="badge badge-amber">Episodic</span>';
+
+    div.innerHTML = `
+      <div class="show-card-name">${esc(show.name)}</div>
+      <div class="show-card-meta">${arcBadge}${typeBadge}</div>
+      ${show.description ? `<div class="show-card-desc">${esc(show.description)}</div>` : ''}
+      <div class="show-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="progress-label">${completed}/${total} episodes</div>
+      </div>
+    `;
+    return div;
+  }
+
+  function arcBadgeHtml(pos) {
+    const label = ARC_LABELS[pos] || pos || 'Pilot';
+    return `<span class="badge badge-teal">${esc(label)}</span>`;
+  }
+
+  // ── Show detail ──
+  async function openShow(id) {
+    currentShowId = id;
+    showView('detail');
+    try {
+      const [showRes, ctxRes] = await Promise.all([
+        fetch(`/api/shows/${id}`),
+        fetch(`/api/shows/${id}/context`),
+      ]);
+      showData     = await showRes.json();
+      const ctx    = await ctxRes.json();
+      renderDetail(showData, ctx);
+    } catch (e) {
+      toast('Failed to load show', 'error');
+    }
+  }
+
+  function renderDetail(show, ctx) {
+    document.getElementById('detail-name').textContent = show.name;
+
+    const badges = document.getElementById('detail-badges');
+    badges.innerHTML = arcBadgeHtml(ctx.arc_position)
+      + (show.show_type === 'serialized'
+          ? '<span class="badge badge-purple">Serialized</span>'
+          : '<span class="badge badge-amber">Episodic</span>')
+      + `<span class="badge badge-dim">Season ${show.season || 1}</span>`;
+
+    // Central question
+    const cqEl = document.getElementById('detail-central-q');
+    if (show.central_question) {
+      cqEl.style.display = 'block';
+      document.getElementById('detail-central-q-text').textContent = show.central_question;
+    } else {
+      cqEl.style.display = 'none';
+    }
+
+    // Season arc text
+    const arcEl = document.getElementById('detail-season-arc');
+    if (show.season_arc) { arcEl.style.display = 'block'; arcEl.textContent = show.season_arc; }
+    else arcEl.style.display = 'none';
+
+    // Arc stepper
+    renderArcStepper(ctx.arc_position);
+
+    // Episodes
+    renderEpisodeList(show.episodes || [], show);
+
+    // Context panel
+    renderContextPanel(ctx);
+
+    // Reset brief
+    document.getElementById('ctx-brief-wrap').innerHTML = `
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;" id="brief-btn" onclick="generateBrief()">
+        Generate Brief
+      </button>`;
+  }
+
+  function renderArcStepper(current) {
+    const wrap = document.getElementById('arc-stepper');
+    wrap.innerHTML = '';
+    const currentIdx = ARC_POSITIONS.indexOf(current);
+    ARC_POSITIONS.forEach((pos, i) => {
+      const step = document.createElement('div');
+      step.className = 'arc-step' + (i === currentIdx ? ' active' : (i < currentIdx ? ' past' : ''));
+      step.innerHTML = `<div class="arc-step-dot"></div><div class="arc-step-label">${ARC_LABELS[pos]}</div>`;
+      wrap.appendChild(step);
+      if (i < ARC_POSITIONS.length - 1) {
+        const conn = document.createElement('div');
+        conn.className = 'arc-connector' + (i < currentIdx ? ' past' : '');
+        wrap.appendChild(conn);
+      }
+    });
+  }
+
+  function renderEpisodeList(episodes, show) {
+    const list  = document.getElementById('episode-list');
+    list.innerHTML = '';
+    const target = show.target_episodes || 12;
+    for (let n = 1; n <= target; n++) {
+      const ep  = episodes.find(e => e.episode_number === n);
+      const div = document.createElement('div');
+      const clickable = ep?.project_id;
+      div.className = 'ep-card' + (clickable ? ' clickable' : '');
+      if (clickable) div.onclick = () => window.location.href = '/index.html?project_id=' + ep.project_id;
+
+      const badge  = `S${show.season || 1}E${n}`;
+      const status = ep ? ep.status : 'planned';
+      const title  = ep?.title || null;
+      const statusBadge = status === 'complete'
+        ? '<span class="badge badge-teal" style="font-size:10px">Complete</span>'
+        : status === 'in_progress'
+          ? '<span class="badge badge-amber" style="font-size:10px">In Progress</span>'
+          : '<span class="badge badge-dim" style="font-size:10px">Planned</span>';
+
+      div.innerHTML = `
+        <span class="ep-badge">${badge}</span>
+        <span class="ep-title ${!title ? 'planned' : ''}">${esc(title || `Episode ${n} — Planned`)}</span>
+        ${statusBadge}
+      `;
+      list.appendChild(div);
+    }
+  }
+
+  function renderContextPanel(ctx) {
+    // What's been established
+    const estEl = document.getElementById('ctx-established');
+    if (ctx.threads && ctx.threads.length) {
+      estEl.innerHTML = ctx.threads.map(t =>
+        `<div class="context-item"><strong>Ep${t.episode}:</strong> ${esc(t.established)}</div>`
+      ).join('');
+    } else {
+      estEl.innerHTML = '<div class="context-empty">Nothing established yet — complete some episodes.</div>';
+    }
+
+    // Seeds planted
+    const seedsEl = document.getElementById('ctx-seeds');
+    if (ctx.seeds_unresolved && ctx.seeds_unresolved.length) {
+      seedsEl.innerHTML = ctx.seeds_unresolved.map(s =>
+        `<div class="context-item">${esc(s)}</div>`
+      ).join('');
+    } else {
+      seedsEl.innerHTML = '<div class="context-empty">No seeds yet.</div>';
+    }
+  }
+
+  async function generateBrief() {
+    const btn = document.getElementById('brief-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating&hellip;'; }
+    try {
+      const res  = await fetch(`/api/shows/${currentShowId}/next-episode-brief`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      const wrap = document.getElementById('ctx-brief-wrap');
+      wrap.innerHTML = `
+        <div style="font-size:11px;color:var(--text-dimmer);margin-bottom:8px;">Episode ${data.episode_number} &mdash; ${esc(data.arc_position)}</div>
+        <div class="brief-card"><div class="brief-text">${esc(data.brief)}</div></div>
+        ${data.standalone_story ? `<div style="margin-top:10px;font-size:11px;color:var(--text-dimmer);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Standalone Story</div><div style="font-size:12px;color:var(--text-dim);margin-top:4px;">${esc(data.standalone_story)}</div>` : ''}
+        ${data.arc_advancement ? `<div style="margin-top:10px;font-size:11px;color:var(--text-dimmer);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Arc Advancement</div><div style="font-size:12px;color:var(--text-dim);margin-top:4px;">${esc(data.arc_advancement)}</div>` : ''}
+        <button class="btn btn-ghost" style="margin-top:12px;width:100%;justify-content:center;" onclick="generateBrief()">Regenerate</button>
+      `;
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Generate Brief'; }
+      toast('Failed to generate brief: ' + e.message, 'error');
+    }
+  }
+
+  function planNextEpisode() {
+    if (!currentShowId) return;
+    window.location.href = `/id8r.html?mode=episodic&show_id=${currentShowId}`;
+  }
+
+  // ── Wizard ──
+  function openWizard() {
+    wizardStep = 0;
+    wizardType = 'serialized';
+    epNames    = [];
+    document.getElementById('w-name').value          = '';
+    document.getElementById('w-desc').value          = '';
+    document.getElementById('w-central-q').value     = '';
+    document.getElementById('w-finale-answer').value = '';
+    document.getElementById('w-transformation').value= '';
+    document.getElementById('w-target-eps').value    = '12';
+    document.getElementById('w-season-arc').value    = '';
+    updateEpsLabel(12);
+    selectType('serialized');
+    renderWizardStep();
+    document.getElementById('wizard-overlay').classList.add('open');
+  }
+
+  function closeWizard() {
+    document.getElementById('wizard-overlay').classList.remove('open');
+  }
+
+  function selectType(type) {
+    wizardType = type;
+    document.getElementById('type-serialized').classList.toggle('selected', type === 'serialized');
+    document.getElementById('type-episodic').classList.toggle('selected', type === 'episodic');
+  }
+
+  window.updateEpsLabel = function(val) {
+    val = parseInt(val);
+    let hint = '';
+    if (val <= 6) hint = 'Miniseries';
+    else if (val <= 13) hint = 'Standard Season';
+    else hint = 'Broadcast Season';
+    document.getElementById('eps-label').textContent = `${val} episodes — ${hint}`;
+  };
+
+  function getEpStructureRole(n, total) {
+    if (n === 1) return 'Pilot';
+    if (n === total) return 'Finale';
+    const midpoint = Math.ceil(total / 2);
+    if (n === midpoint) return 'Midpoint';
+    if (n < midpoint) return 'Escalation';
+    return 'Endgame';
+  }
+
+  function buildEpPreview() {
+    const total = parseInt(document.getElementById('w-target-eps').value) || 12;
+    const list  = document.getElementById('ep-preview-list');
+    list.innerHTML = '';
+    epNames = [];
+    for (let n = 1; n <= total; n++) {
+      const role = getEpStructureRole(n, total);
+      const item = document.createElement('div');
+      item.className = 'ep-preview-item';
+      item.innerHTML = `
+        <span class="ep-preview-badge">E${n}</span>
+        <span class="ep-preview-role">${role}</span>
+        <input class="ep-preview-input" placeholder="Episode ${n} title (optional)" data-ep="${n}">
+      `;
+      list.appendChild(item);
+      epNames.push('');
+    }
+    // Sync names array on input
+    list.querySelectorAll('.ep-preview-input').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const i = parseInt(inp.dataset.ep) - 1;
+        if (!isNaN(i)) epNames[i] = inp.value;
+      });
+    });
+  }
+
+  function buildLaunchSummary() {
+    const name  = document.getElementById('w-name').value.trim() || 'Untitled Show';
+    const type  = wizardType === 'serialized' ? 'Serialized' : 'Episodic';
+    const total = parseInt(document.getElementById('w-target-eps').value) || 12;
+    const cq    = document.getElementById('w-central-q').value.trim();
+    const rows  = [
+      { key: 'Show', val: name },
+      { key: 'Type', val: type },
+      { key: 'Episodes', val: total },
+    ];
+    if (cq) rows.push({ key: 'Central Question', val: cq.length > 80 ? cq.slice(0, 80) + '…' : cq });
+    document.getElementById('launch-summary').innerHTML = rows.map(r =>
+      `<div class="launch-row"><span class="launch-key">${r.key}</span><span class="launch-val">${esc(String(r.val))}</span></div>`
+    ).join('');
+    document.getElementById('wizard-next-btn').textContent = 'Create Show + Plan Pilot \u2192';
+  }
+
+  function renderWizardStep() {
+    document.querySelectorAll('.wizard-screen').forEach((s, i) => {
+      s.classList.toggle('active', i === wizardStep);
+    });
+    document.querySelectorAll('.step-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === wizardStep);
+    });
+    document.getElementById('wizard-back-btn').style.display = wizardStep > 0 ? 'inline-flex' : 'none';
+    document.getElementById('wizard-cancel-btn').style.display = wizardStep === 0 ? 'inline-flex' : 'none';
+
+    const isLast = wizardStep === 3;
+    if (!isLast) document.getElementById('wizard-next-btn').textContent = 'Next \u2192';
+
+    if (wizardStep === 1) {
+      document.getElementById('serialized-arc-fields').style.display = wizardType === 'serialized' ? 'block' : 'none';
+      document.getElementById('episodic-arc-fields').style.display   = wizardType === 'episodic' ? 'block' : 'none';
+    }
+    if (wizardStep === 2) buildEpPreview();
+    if (wizardStep === 3) buildLaunchSummary();
+  }
+
+  window.wizardNext = async function() {
+    if (wizardStep === 0) {
+      const name = document.getElementById('w-name').value.trim();
+      if (!name) { toast('Enter a show name', 'error'); return; }
+      wizardStep = 1;
+      renderWizardStep();
+    } else if (wizardStep === 1) {
+      wizardStep = 2;
+      renderWizardStep();
+    } else if (wizardStep === 2) {
+      wizardStep = 3;
+      renderWizardStep();
+    } else {
+      // Create the show
+      await createShow();
+    }
+  };
+
+  window.wizardBack = function() {
+    if (wizardStep > 0) { wizardStep--; renderWizardStep(); }
+  };
+
+  async function createShow() {
+    const btn = document.getElementById('wizard-next-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Creating&hellip;';
+    document.getElementById('wizard-error').style.display = 'none';
+
+    try {
+      const payload = {
+        name:                   document.getElementById('w-name').value.trim(),
+        description:            document.getElementById('w-desc').value.trim() || null,
+        show_type:              wizardType,
+        central_question:       document.getElementById('w-central-q').value.trim() || null,
+        finale_answer:          document.getElementById('w-finale-answer').value.trim() || null,
+        audience_transformation:document.getElementById('w-transformation').value.trim() || null,
+        season_arc:             document.getElementById('w-season-arc').value.trim() || null,
+        target_episodes:        parseInt(document.getElementById('w-target-eps').value) || 12,
+        arc_position:           'pilot',
+      };
+
+      const res  = await fetch('/api/shows', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create show');
+
+      closeWizard();
+      toast('Show created!', 'success');
+      // Redirect to Id8r in episodic mode for Episode 1
+      window.location.href = `/id8r.html?mode=episodic&show_id=${data.show_id}&episode=1`;
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Create Show + Plan Pilot \u2192';
+      const errEl = document.getElementById('wizard-error');
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  }
+
+  window.openWizard = openWizard;
+  window.closeWizard = closeWizard;
+  window.openShow = openShow;
+  window.showList = showList;
+  window.generateBrief = generateBrief;
+  window.planNextEpisode = planNextEpisode;
+  window.selectType = selectType;
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast visible ' + type;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.classList.remove('visible'); }, 3000);
+  }
+
+  // Close modal on overlay click
+  document.getElementById('wizard-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeWizard();
+  });
+
+  // Init
+  loadShows();
+})();
+</script>
+</body>
+</html>

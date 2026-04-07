@@ -457,6 +457,15 @@ router.post('/generate', async (req, res) => {
     // Persist voice selection to project config
     if (voice_primary) saveVoiceSelectionToConfig(projectId, voice_primary, voice_secondary, voice_blend);
 
+    // Build season context if this project belongs to a show
+    let seasonContext = null;
+    if (project.show_id) {
+      try {
+        seasonContext = db.buildSeasonContext(project.show_id);
+        if (seasonContext) write({ stage: 'analyzing', message: `Series context loaded — Season ${seasonContext.show.season}, Episode ${seasonContext.next_episode_number}…` });
+      } catch (_) {}
+    }
+
     write({ stage: 'analyzing', message: `Starting ${ep.replace(/_/g, ' ')} analysis…` });
 
     let result;
@@ -470,6 +479,7 @@ router.post('/generate', async (req, res) => {
         inputText: input_text || '',
         voiceProfiles,
         id8rBlock,
+        seasonContext,
         emit
       });
     } else if (ep === 'shoot_first') {
@@ -479,6 +489,7 @@ router.post('/generate', async (req, res) => {
         footageRows:  footage,
         voiceProfiles,
         id8rBlock,
+        seasonContext,
         emit
       });
     } else if (ep === 'vault_first') {
@@ -514,6 +525,7 @@ router.post('/generate', async (req, res) => {
         footageRows:  vaultClips,
         voiceProfiles,
         id8rBlock,
+        seasonContext,
         emit
       });
     } else {
@@ -525,7 +537,28 @@ router.post('/generate', async (req, res) => {
         footageRows:  footage,
         voiceProfiles,
         id8rBlock,
+        seasonContext,
         emit
+      });
+    }
+
+    // Async side-effect: if this is an episodic project, auto-generate episode summary after completion
+    if (seasonContext && project.show_id) {
+      setImmediate(async () => {
+        try {
+          const epRow = db.getShowEpisodes(project.show_id)
+            .find(e => e.project_id === projectId);
+          if (epRow && !epRow.episode_summary) {
+            const summaryPrompt = `Summarize this episode briefly for a show bible (2-3 sentences, past tense).
+Show: ${seasonContext.show.name}
+Episode ${epRow.episode_number}: ${epRow.title || '(untitled)'}
+Arc advancement: ${epRow.arc_advancement || '(none recorded)'}
+What was established: ${epRow.what_was_established || '(none)'}
+Return ONLY valid JSON: {"summary":"string"}`;
+            const r = await require('../utils/claude').callClaude(summaryPrompt, 512);
+            if (r.summary) db.updateShowEpisode(epRow.id, { episode_summary: r.summary });
+          }
+        } catch (_) {}
       });
     }
 

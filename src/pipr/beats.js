@@ -143,6 +143,7 @@ function getBeats(structure) {
     case 'virality_pyramid':    return VIRALITY_PYRAMID;
     case 'permission_structure':return PERMISSION_STRUCTURE;
     case 'dual_timeline':       return DUAL_TIMELINE;
+    case 'episode_arc':         return EPISODE_ARC;
     default:                    return [];
   }
 }
@@ -163,10 +164,20 @@ function buildBeatMap(structure, estimatedDurationMinutes = null) {
   }));
 }
 
+const EPISODE_ARC = [
+  { index:1, name:"Cold Open",        target_pct:0,  emotional_function:"Hook new AND returning viewers in 30 seconds. New viewers get curious. Returning viewers get the payoff of anticipation.", reality_note:"What moment drops the viewer into the action? What makes a new viewer stay and a returning viewer feel rewarded?" },
+  { index:2, name:"Episode Promise",  target_pct:8,  emotional_function:"State clearly what THIS episode delivers. Set the expectation explicitly.", reality_note:"What does this specific episode give the viewer? Say it directly — what problem gets solved, what story gets told?" },
+  { index:3, name:"Standalone Story", target_pct:20, emotional_function:"The self-contained conflict and resolution that works for any viewer, first episode or not.", reality_note:"What is the episode-level story? Someone with no context should be able to follow and enjoy this." },
+  { index:4, name:"Arc Advancement",  target_pct:65, emotional_function:"One clear step forward in the season story. The returning viewer gets their reward here.", reality_note:"How does this episode move the season forward? What changes in the bigger story?" },
+  { index:5, name:"Character Moment", target_pct:78, emotional_function:"Who these people are, not just what happened. The emotional truth that makes viewers care.", reality_note:"What moment reveals character? Not plot — the human moment that makes the audience feel something." },
+  { index:6, name:"The Seed",         target_pct:90, emotional_function:"Plant the question that makes the next episode unmissable. End with a reason to come back.", reality_note:"What are you teasing for next time? What question, tension, or promise makes someone immediately want the next episode?" }
+];
+
 module.exports = {
   SAVE_THE_CAT, STORY_CIRCLE, VSL_ARC, FREE_FORM,
   CONFESSION_ARC, BEFORE_AFTER_BRIDGE, MYTH_BUSTER, DOCUMENTARY_ARC,
   TUTORIAL_WITH_STAKES, EXPLAINER_PYRAMID, HEROS_GAUNTLET,
   VIRALITY_PYRAMID, PERMISSION_STRUCTURE, DUAL_TIMELINE,
+  EPISODE_ARC,
   getBeats, buildBeatMap
 };

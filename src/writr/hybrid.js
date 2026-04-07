@@ -193,13 +193,35 @@ function repairReconcileJSON(raw) {
 // PROMPT 1 — BEAT RECONCILIATION ONLY (no script)
 // ─────────────────────────────────────────────
 
-function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles, id8rBlock }) {
+function buildSeasonBlock(seasonContext) {
+  if (!seasonContext) return '';
+  const { show, episodes, seeds_unresolved, arc_position, next_episode_number, current_episode } = seasonContext;
+  const lines = [
+    `## SERIES CONTEXT — ${show.name}`,
+    `Season ${show.season || 1}, Episode ${next_episode_number} of ${show.target_episodes}`,
+    `Arc Position: ${arc_position}`,
+    show.central_question ? `Central Question: ${show.central_question}` : null,
+  ].filter(Boolean);
+  if (episodes.length) {
+    lines.push('\nWHAT HAS BEEN ESTABLISHED:');
+    episodes.forEach(e => { if (e.what_was_established) lines.push(`• Ep${e.episode_number}: ${e.what_was_established}`); });
+  }
+  if (seeds_unresolved.length) {
+    lines.push('\nSEEDS TO WATER THIS EPISODE:');
+    seeds_unresolved.forEach(s => lines.push(`• ${s}`));
+  }
+  if (current_episode?.arc_advancement) lines.push(`\nThis episode advances the arc by: ${current_episode.arc_advancement}`);
+  return lines.join('\n');
+}
+
+function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles, id8rBlock, seasonContext }) {
   const voiceSummary = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText  = beatMapToText(config?.beats);
   const structure    = config?.story_structure || 'free_form';
   const contentType  = config?.content_type    || 'unknown';
   const highConcept  = config?.high_concept    || '(not set)';
   const brand        = profile?.creator?.brand || '7 Kin Homestead';
+  const seasonBlock  = buildSeasonBlock(seasonContext);
 
   const transcriptSection = transcriptBlock
     ? `## FOOTAGE TRANSCRIPTS\n${transcriptBlock}`
@@ -216,7 +238,7 @@ ${voiceSummary}
 Content type: ${contentType}
 Story structure: ${structure}
 High concept: ${highConcept}
-${id8rBlock ? '\n' + id8rBlock + '\n' : ''}
+${id8rBlock ? '\n' + id8rBlock + '\n' : ''}${seasonBlock ? '\n' + seasonBlock + '\n' : ''}
 ## BEAT MAP (${structure})
 ${beatMapText}
 
@@ -422,7 +444,7 @@ Do NOT repeat any content from Part A.`;
  * @param {object[]} opts.footageRows    — footage records with .transcript
  * @param {Function} [opts.emit]         — SSE progress callback
  */
-async function generateHybrid({ projectId, concept, whatCaptured, footageRows, voiceProfiles, id8rBlock, emit }) {
+async function generateHybrid({ projectId, concept, whatCaptured, footageRows, voiceProfiles, id8rBlock, seasonContext, emit }) {
   emit?.({ stage: 'analyzing', message: 'Loading project config and transcripts…' });
 
   const config  = loadProjectConfig(projectId);
@@ -434,7 +456,7 @@ async function generateHybrid({ projectId, concept, whatCaptured, footageRows, v
   emit?.({ stage: 'beat_mapping', message: 'Call 1 — Reconciling plan vs. reality…' });
 
   const reconcilePrompt = buildReconcilePrompt({
-    concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles, id8rBlock
+    concept, whatCaptured, transcriptBlock, config, profile, voiceProfiles, id8rBlock, seasonContext
   });
 
   // Use raw:true so we get the full response text for repair if JSON is truncated

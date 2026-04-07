@@ -428,6 +428,66 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_token_tool    ON token_usage(tool)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_token_session ON token_usage(session_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_token_created ON token_usage(created_at)');
+
+  // ShowΩr: shows + show_episodes + show_notifications tables
+  db.exec(`CREATE TABLE IF NOT EXISTS shows (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                    TEXT    NOT NULL,
+    description             TEXT,
+    show_type               TEXT    NOT NULL DEFAULT 'serialized',
+    season                  INTEGER NOT NULL DEFAULT 1,
+    season_arc              TEXT,
+    central_question        TEXT,
+    finale_answer           TEXT,
+    audience_transformation TEXT,
+    target_episodes         INTEGER NOT NULL DEFAULT 12,
+    arc_position            TEXT    NOT NULL DEFAULT 'pilot',
+    status                  TEXT    NOT NULL DEFAULT 'active',
+    creator_id              TEXT    NOT NULL DEFAULT 'primary',
+    created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_shows_creator ON shows(creator_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_shows_status  ON shows(status)');
+
+  db.exec(`CREATE TABLE IF NOT EXISTS show_episodes (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    show_id                  INTEGER REFERENCES shows(id) ON DELETE CASCADE,
+    project_id               INTEGER REFERENCES projects(id),
+    episode_number           INTEGER,
+    season                   INTEGER NOT NULL DEFAULT 1,
+    title                    TEXT,
+    what_was_established     TEXT,
+    seeds_planted            TEXT,
+    arc_advancement          TEXT,
+    character_moments        TEXT,
+    central_question_status  TEXT    NOT NULL DEFAULT 'introduced',
+    episode_summary          TEXT,
+    status                   TEXT    NOT NULL DEFAULT 'planned',
+    created_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_show_eps_show    ON show_episodes(show_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_show_eps_project ON show_episodes(project_id)');
+
+  db.exec(`CREATE TABLE IF NOT EXISTS show_notifications (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    show_id    INTEGER REFERENCES shows(id),
+    type       TEXT,
+    message    TEXT,
+    read       INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_show_notif_show ON show_notifications(show_id)');
+
+  // ShowΩr: add show_id and episode_number to projects table
+  const projectsColsShow = db.pragma('table_info(projects)').map(r => r.name);
+  if (!projectsColsShow.includes('show_id')) {
+    db.exec('ALTER TABLE projects ADD COLUMN show_id INTEGER');
+    console.log('[DB] Migration: added projects.show_id');
+  }
+  if (!projectsColsShow.includes('episode_number')) {
+    db.exec('ALTER TABLE projects ADD COLUMN episode_number INTEGER');
+    console.log('[DB] Migration: added projects.episode_number');
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -1831,6 +1891,175 @@ function resetShootTakes(projectId) {
   _run(`DELETE FROM shoot_takes WHERE project_id = ?`, [projectId]);
 }
 
+// ─────────────────────────────────────────────
+// SHOW HELPERS
+// ─────────────────────────────────────────────
+
+function createShow(data) {
+  const result = _run(
+    `INSERT INTO shows
+       (name, description, show_type, season, season_arc, central_question,
+        finale_answer, audience_transformation, target_episodes, arc_position, creator_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      data.name || 'Untitled Show',
+      data.description || null,
+      data.show_type || 'serialized',
+      data.season || 1,
+      data.season_arc || null,
+      data.central_question || null,
+      data.finale_answer || null,
+      data.audience_transformation || null,
+      data.target_episodes || 12,
+      data.arc_position || 'pilot',
+      data.creator_id || 'primary',
+    ]
+  );
+  return getShow(result.lastInsertRowid);
+}
+
+function getShow(id) {
+  return _get(`SELECT * FROM shows WHERE id = ?`, [id]);
+}
+
+function getAllShows() {
+  return _all(`
+    SELECT s.*,
+      (SELECT COUNT(*) FROM show_episodes WHERE show_id = s.id) AS total_episodes,
+      (SELECT COUNT(*) FROM show_episodes WHERE show_id = s.id AND status = 'complete') AS completed_episodes
+    FROM shows s
+    WHERE s.status != 'archived'
+    ORDER BY s.created_at DESC
+  `);
+}
+
+function updateShow(id, data) {
+  const allowed = [
+    'name', 'description', 'show_type', 'season', 'season_arc',
+    'central_question', 'finale_answer', 'audience_transformation',
+    'target_episodes', 'arc_position', 'status',
+  ];
+  const fields = Object.keys(data).filter(k => allowed.includes(k));
+  if (!fields.length) return;
+  const sets = fields.map(f => `${f} = ?`).join(', ');
+  const vals = fields.map(f => data[f]);
+  _run(`UPDATE shows SET ${sets} WHERE id = ?`, [...vals, id]);
+}
+
+function createShowEpisode(data) {
+  const episodeNumber = data.episode_number || getNextEpisodeNumber(data.show_id);
+  const result = _run(
+    `INSERT INTO show_episodes
+       (show_id, project_id, episode_number, season, title, what_was_established,
+        seeds_planted, arc_advancement, character_moments, central_question_status, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      data.show_id,
+      data.project_id || null,
+      episodeNumber,
+      data.season || 1,
+      data.title || null,
+      data.what_was_established || null,
+      data.seeds_planted || null,
+      data.arc_advancement || null,
+      data.character_moments || null,
+      data.central_question_status || 'introduced',
+      data.status || 'planned',
+    ]
+  );
+  // Link project back to show if project_id provided
+  if (data.project_id) {
+    try {
+      _run(`UPDATE projects SET show_id = ?, episode_number = ? WHERE id = ?`,
+        [data.show_id, episodeNumber, data.project_id]);
+    } catch (_) {}
+  }
+  return getShowEpisode(result.lastInsertRowid);
+}
+
+function getShowEpisodes(showId) {
+  return _all(`
+    SELECT se.*, p.title AS project_title, p.status AS project_status
+    FROM show_episodes se
+    LEFT JOIN projects p ON p.id = se.project_id
+    WHERE se.show_id = ?
+    ORDER BY se.season ASC, se.episode_number ASC
+  `, [showId]);
+}
+
+function getShowEpisode(id) {
+  return _get(`SELECT * FROM show_episodes WHERE id = ?`, [id]);
+}
+
+function updateShowEpisode(id, data) {
+  const allowed = [
+    'title', 'what_was_established', 'seeds_planted', 'arc_advancement',
+    'character_moments', 'central_question_status', 'episode_summary', 'status',
+    'project_id', 'episode_number',
+  ];
+  const fields = Object.keys(data).filter(k => allowed.includes(k));
+  if (!fields.length) return;
+  const sets = fields.map(f => `${f} = ?`).join(', ');
+  const vals = fields.map(f => data[f]);
+  _run(`UPDATE show_episodes SET ${sets} WHERE id = ?`, [...vals, id]);
+}
+
+function getNextEpisodeNumber(showId) {
+  const row = _get(
+    `SELECT COALESCE(MAX(episode_number), 0) + 1 AS next FROM show_episodes WHERE show_id = ?`,
+    [showId]
+  );
+  return row ? row.next : 1;
+}
+
+function buildSeasonContext(showId) {
+  const show = getShow(showId);
+  if (!show) return null;
+
+  const episodes = getShowEpisodes(showId);
+  const completed = episodes.filter(e => e.status === 'complete');
+
+  // Gather all seeds_planted from non-archived episodes as an array
+  const seeds_unresolved = [];
+  episodes.forEach(e => {
+    if (!e.seeds_planted) return;
+    let parsed;
+    try { parsed = JSON.parse(e.seeds_planted); } catch (_) { parsed = null; }
+    if (Array.isArray(parsed)) {
+      parsed.forEach(s => seeds_unresolved.push(s));
+    } else if (typeof e.seeds_planted === 'string' && e.seeds_planted.trim()) {
+      seeds_unresolved.push(e.seeds_planted.trim());
+    }
+  });
+
+  // Build narrative threads from established facts
+  const threads = completed
+    .filter(e => e.what_was_established)
+    .map(e => ({ episode: e.episode_number, established: e.what_was_established }));
+
+  const next_episode_number = getNextEpisodeNumber(showId);
+
+  // Determine arc position based on progress
+  const completedCount = completed.length;
+  const totalTarget = show.target_episodes || 12;
+  let arc_position = show.arc_position || 'pilot';
+  if (completedCount === 0) arc_position = 'pilot';
+  else if (completedCount < Math.floor(totalTarget * 0.25)) arc_position = 'escalation';
+  else if (completedCount < Math.floor(totalTarget * 0.55)) arc_position = 'midpoint';
+  else if (completedCount < Math.floor(totalTarget * 0.85)) arc_position = 'endgame';
+  else arc_position = 'finale';
+
+  return {
+    show,
+    episodes: completed,
+    seeds_unresolved,
+    threads,
+    arc_position,
+    next_episode_number,
+    current_episode: episodes.find(e => e.status === 'in_progress') || null,
+  };
+}
+
 module.exports = {
   initDb,
   createProject,
@@ -1960,5 +2189,16 @@ module.exports = {
   getNpsAverage,
   // Funnel + Stats
   getBetaFunnel,
-  getBetaStats
+  getBetaStats,
+  // ShowΩr
+  createShow,
+  getShow,
+  getAllShows,
+  updateShow,
+  createShowEpisode,
+  getShowEpisodes,
+  getShowEpisode,
+  updateShowEpisode,
+  getNextEpisodeNumber,
+  buildSeasonContext,
 };

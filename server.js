@@ -109,6 +109,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API ROUTES
 // ─────────────────────────────────────────────
 app.use('/api/projects', require('./src/routes/projects'));
+app.use('/api/shows',   require('./src/routes/shows'));
 app.use('/api/generate', require('./src/routes/generate'));
 app.use('/api/vault',      require('./src/routes/vault'));
 app.use('/api/cutor',      require('./src/routes/cutor'));

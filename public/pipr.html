@@ -569,6 +569,16 @@
           <div class="structure-card-retention">Non-linear structure creates a puzzle — viewers stay to assemble the full picture.</div>
         </details>
       </div>
+      <div class="structure-card" id="scard-episode_arc" onclick="selectStructure('episode_arc')">
+        <div class="structure-card-top"><div class="structure-card-icon">📺</div><div class="structure-card-badge">SERIES</div></div>
+        <div class="structure-card-title">EPISODE ARC</div>
+        <div class="structure-card-desc">Built for series. Every episode stands alone while advancing the season story.</div>
+        <div class="structure-card-meta"><span>Best for:</span> YouTube series, Rock Rich episodes, any recurring format</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">Viewers in an ongoing story return at 3x the rate. The Seed beat creates the loop that brings them back.</div>
+        </details>
+      </div>
     </div>
 
     <div id="structure-beat-preview" style="display:none;" class="structure-beat-preview">
@@ -1142,6 +1152,14 @@ const BEAT_TEMPLATES = {
     {index:4, name:"Earlier Flashback, More Context",             target_pct:50, emotional_function:"Another layer of past — emotional backstory.", reality_note:"More context from the past."},
     {index:5, name:"Present Resolution",                          target_pct:72, emotional_function:"The present timeline resolves.", reality_note:"What happens in the present?"},
     {index:6, name:"Full Circle Moment",                          target_pct:90, emotional_function:"Past and present unify into understanding.", reality_note:"The moment where it all connects."}
+  ],
+  episode_arc: [
+    {index:1, name:"Cold Open",        target_pct:0,  emotional_function:"Hook new AND returning viewers in 30 seconds.", reality_note:"What moment drops the viewer into the action?"},
+    {index:2, name:"Episode Promise",  target_pct:8,  emotional_function:"State what THIS episode delivers specifically.", reality_note:"What does this episode give the viewer?"},
+    {index:3, name:"Standalone Story", target_pct:20, emotional_function:"Self-contained conflict and resolution.", reality_note:"What is the episode-level story anyone can follow?"},
+    {index:4, name:"Arc Advancement",  target_pct:65, emotional_function:"One step forward in the season story.", reality_note:"How does this episode move the season forward?"},
+    {index:5, name:"Character Moment", target_pct:78, emotional_function:"Who these people are, not just what happened.", reality_note:"What moment reveals character?"},
+    {index:6, name:"The Seed",         target_pct:90, emotional_function:"The question that makes the next episode unmissable.", reality_note:"What are you teasing for next time?"}
   ]
 };
 

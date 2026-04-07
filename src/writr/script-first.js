@@ -48,7 +48,28 @@ function beatMapToText(beats) {
   ).join('\n');
 }
 
-function buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock }) {
+function buildSeasonBlock(seasonContext) {
+  if (!seasonContext) return '';
+  const { show, episodes, seeds_unresolved, arc_position, next_episode_number, current_episode } = seasonContext;
+  const lines = [
+    `## SERIES CONTEXT — ${show.name}`,
+    `Season ${show.season || 1}, Episode ${next_episode_number} of ${show.target_episodes}`,
+    `Arc Position: ${arc_position}`,
+    show.central_question ? `Central Question: ${show.central_question}` : null,
+  ].filter(Boolean);
+  if (episodes.length) {
+    lines.push('\nWHAT HAS BEEN ESTABLISHED:');
+    episodes.forEach(e => { if (e.what_was_established) lines.push(`• Ep${e.episode_number}: ${e.what_was_established}`); });
+  }
+  if (seeds_unresolved.length) {
+    lines.push('\nSEEDS TO WATER THIS EPISODE:');
+    seeds_unresolved.forEach(s => lines.push(`• ${s}`));
+  }
+  if (current_episode?.arc_advancement) lines.push(`\nThis episode advances the arc by: ${current_episode.arc_advancement}`);
+  return lines.join('\n');
+}
+
+function buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock, seasonContext }) {
   const voiceSummary     = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText      = beatMapToText(config?.beats);
   const structure        = config?.story_structure || 'free_form';
@@ -57,6 +78,7 @@ function buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock }) {
   const durationMins     = config?.estimated_duration_minutes || '(not set)';
   const brand            = profile?.creator?.brand || '7 Kin Homestead';
   const mission          = profile?.creator?.mission || '';
+  const seasonBlock      = buildSeasonBlock(seasonContext);
 
   return `You are WritΩr — a script development assistant for ${brand}, a homesteading and
 off-grid living creator. Your job is to develop authentic, beat-mapped scripts from
@@ -74,7 +96,7 @@ Content type: ${contentType}
 Story structure: ${structure}
 High concept: ${highConcept}
 Estimated duration: ${durationMins} minutes
-${id8rBlock ? '\n' + id8rBlock + '\n' : ''}
+${id8rBlock ? '\n' + id8rBlock + '\n' : ''}${seasonBlock ? '\n' + seasonBlock + '\n' : ''}
 ## BEAT MAP (${structure})
 ${beatMapText}
 
@@ -133,7 +155,7 @@ Return ONLY valid JSON — no markdown, no preamble:
  * @param {Function} [opts.emit]     — SSE progress callback
  * @returns {{ beat_map, missing_beats, outline, script, hook_variations }}
  */
-async function generateScriptFirst({ projectId, inputText, voiceProfiles, id8rBlock, emit }) {
+async function generateScriptFirst({ projectId, inputText, voiceProfiles, id8rBlock, seasonContext, emit }) {
   emit?.({ stage: 'analyzing', message: 'Reading project config and creator profile…' });
 
   const config  = loadProjectConfig(projectId);
@@ -143,7 +165,7 @@ async function generateScriptFirst({ projectId, inputText, voiceProfiles, id8rBl
 
   emit?.({ stage: 'beat_mapping', message: `Mapping content to ${config?.story_structure || 'beat'} structure…` });
 
-  const prompt = buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock });
+  const prompt = buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock, seasonContext });
 
   emit?.({ stage: 'writing', message: 'Writing beat-mapped script draft…' });
 

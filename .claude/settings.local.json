@@ -500,7 +500,8 @@
       "Bash(curl -sv http://localhost:3000/api/projects)",
       "Bash(curl -s -X POST http://localhost:3000/api/projects -H 'Content-Type: application/json' -d {title:PROBE3})",
       "Bash(find C:/Users/18054 -name *.db -newer C:/Users/18054/AppData/Roaming/kre8r/kre8r.db)",
-      "Bash(find C:/Users/18054/kre8r -name *.db)"
+      "Bash(find C:/Users/18054/kre8r -name *.db)",
+      "Bash(node -e \"require\\(''''./scripts/backup.js''''\\)\")"
     ]
   }
 }
