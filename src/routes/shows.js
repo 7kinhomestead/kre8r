@@ -51,15 +51,40 @@ async function fetchYouTubeVideoData(url) {
   const s = item.snippet;
   const st = item.statistics;
   return {
-    video_id:     videoId,
-    title:        s.title,
-    description:  s.description,
-    published_at: s.publishedAt,
-    thumbnail:    s.thumbnails?.maxres?.url || s.thumbnails?.high?.url || s.thumbnails?.default?.url,
-    view_count:   parseInt(st?.viewCount || 0, 10),
-    like_count:   parseInt(st?.likeCount || 0, 10),
-    channel:      s.channelTitle,
+    video_id:      videoId,
+    title:         s.title,
+    description:   s.description,
+    published_at:  s.publishedAt,
+    thumbnail:     s.thumbnails?.maxres?.url || s.thumbnails?.high?.url || s.thumbnails?.default?.url,
+    view_count:    parseInt(st?.viewCount    || 0, 10),
+    like_count:    parseInt(st?.likeCount    || 0, 10),
+    comment_count: parseInt(st?.commentCount || 0, 10),
+    channel:       s.channelTitle,
   };
+}
+
+async function fetchYouTubeComments(videoId) {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) return [];
+  const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${encodeURIComponent(videoId)}&order=relevance&maxResults=50&key=${apiKey}`;
+  try {
+    const json = await httpsGet(url);
+    if (!json.items?.length) return [];
+    return json.items
+      .map(item => {
+        const c = item.snippet.topLevelComment.snippet;
+        return {
+          text:    c.textDisplay || '',
+          likes:   parseInt(c.likeCount || 0, 10),
+          replies: parseInt(item.snippet.totalReplyCount || 0, 10),
+        };
+      })
+      .sort((a, b) => b.likes - a.likes)
+      .slice(0, 30);
+  } catch (e) {
+    console.warn('[shows/comments] fetch failed (non-fatal):', e.message);
+    return [];
+  }
 }
 
 // ── Static routes FIRST — must come before /:id to avoid Express swallowing them ──
@@ -90,10 +115,14 @@ router.post('/import-episode', async (req, res) => {
     const context = db.buildSeasonContext(parseInt(show_id, 10));
     const epNum   = episode_number || context.next_episode_number;
 
-    let ytData = null;
+    let ytData    = null;
+    let ytComments = [];
     if (youtube_url) {
       try { ytData = await fetchYouTubeVideoData(youtube_url); }
       catch (e) { console.warn('[shows/import] YouTube fetch failed (non-fatal):', e.message); }
+      if (ytData?.video_id) {
+        ytComments = await fetchYouTubeComments(ytData.video_id);
+      }
     }
 
     const prevSummary = context.episodes.length
@@ -103,6 +132,10 @@ router.post('/import-episode', async (req, res) => {
     const seedsBlock = context.seeds_unresolved.length
       ? context.seeds_unresolved.map(s => `• ${s}`).join('\n')
       : '(None planted yet)';
+
+    const commentsBlock = ytComments.length
+      ? ytComments.slice(0, 25).map((c, i) => `${i + 1}. [${c.likes}👍 ${c.replies ? c.replies + ' replies' : ''}] ${c.text.replace(/<[^>]+>/g, '').slice(0, 250)}`).join('\n')
+      : '(Comments not available — disabled or video has none)';
 
     const prompt = `You are analyzing a YouTube episode for "${show.name}", a ${show.show_type} series.
 
@@ -121,11 +154,14 @@ ${seedsBlock}
 EPISODE DATA:
 ${ytData ? `Title: ${ytData.title}
 Published: ${ytData.published_at}
-Views: ${ytData.view_count?.toLocaleString()}
+Views: ${ytData.view_count?.toLocaleString()}  |  Likes: ${ytData.like_count?.toLocaleString()}  |  Comments: ${ytData.comment_count?.toLocaleString()}
 Description: ${ytData.description?.slice(0, 600)}` : '(no YouTube data — working from transcript only)'}
 
 FULL TRANSCRIPT:
-${(transcript || '').slice(0, 14000)}
+${(transcript || '').slice(0, 12000)}
+
+TOP AUDIENCE COMMENTS (sorted by most liked):
+${commentsBlock}
 
 Analyze this episode carefully. Extract and return ONLY valid JSON with no extra text:
 {
@@ -136,15 +172,22 @@ Analyze this episode carefully. Extract and return ONLY valid JSON with no extra
   "episode_summary": "2-3 sentences — concrete summary of what happened in past tense, third person, show-bible style",
   "central_question_status": "introduced|deepened|complicated|answered",
   "themes": ["string — recurring themes touched in this episode"],
-  "what_next_episode_should_address": "1-2 sentences — the specific story threads and seeds that the next episode should pick up based on what was planted here"
+  "what_next_episode_should_address": "1-2 sentences — the specific story threads and seeds that the next episode should pick up based on what was planted here",
+  "audience_signals": {
+    "what_landed": "What the audience responded to most emotionally based on the top comments — be specific",
+    "recurring_questions": ["Each distinct question or confusion the audience keeps expressing in comments"],
+    "what_they_want_next": "1-2 sentences — what the comment section is asking to see next, in their own terms",
+    "emotional_pulse": "1 sentence — the overall emotional tone of the comment section (excited, divided, nostalgic, etc.)"
+  }
 }`;
 
-    const result = await callClaude(prompt, 3000);
+    const result = await callClaude(prompt, 3500);
 
     res.json({
       ok:             true,
       episode_number: epNum,
       youtube:        ytData,
+      comments_count: ytComments.length,
       extracted: {
         title:                            ytData?.title || null,
         what_was_established:             result.what_was_established             || '',
@@ -155,6 +198,7 @@ Analyze this episode carefully. Extract and return ONLY valid JSON with no extra
         central_question_status:          result.central_question_status          || 'deepened',
         themes:                           result.themes                           || [],
         what_next_episode_should_address: result.what_next_episode_should_address || '',
+        audience_signals:                 result.audience_signals                 || null,
       },
     });
   } catch (err) {

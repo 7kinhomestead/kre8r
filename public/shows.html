@@ -582,6 +582,13 @@
           <div class="field-hint">Id8&Omega;r and Writ&Omega;r will use this to brief the next episode</div>
         </div>
 
+        <!-- Audience Signals — shown only when comments were available -->
+        <div class="field" id="rev-audience-block" style="display:none;">
+          <label class="field-label">&#128172; Audience Signals <span style="font-size:11px;color:var(--text-dimmer);font-weight:400;text-transform:none;">(from YouTube comments)</span></label>
+          <div id="rev-audience-signals" style="background:var(--bg-deep);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.65;color:var(--text-dim);"></div>
+          <div class="field-hint">Claude&rsquo;s read of the comment section &mdash; what landed, what they want next</div>
+        </div>
+
         <div id="imp-save-error" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none;"></div>
 
         <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -1019,6 +1026,8 @@
     document.getElementById('imp-save-btn').disabled = false;
     document.getElementById('imp-save-btn').innerHTML = 'Save Episode &#10003;';
     document.getElementById('imp-save-error').style.display = 'none';
+    document.getElementById('rev-audience-block').style.display = 'none';
+    document.getElementById('rev-audience-signals').innerHTML = '';
 
     // Auto-suggest episode number
     fetch(`/api/shows/${currentShowId}/context`)
@@ -1074,7 +1083,7 @@
     document.getElementById('imp-yt-preview').style.display = 'flex';
     document.getElementById('imp-yt-title').textContent = data.title || '(no title)';
     document.getElementById('imp-yt-views').textContent = data.view_count
-      ? data.view_count.toLocaleString() + ' views' : '';
+      ? data.view_count.toLocaleString() + ' views | ' + (data.like_count?.toLocaleString() || 0) + ' likes | ' + (data.comment_count?.toLocaleString() || 0) + ' comments' : '';
     document.getElementById('imp-yt-published').textContent = data.published_at
       ? new Date(data.published_at).toLocaleDateString() : '';
     document.getElementById('imp-yt-channel').textContent = data.channel || '';
@@ -1193,6 +1202,26 @@
     document.getElementById('rev-next').value      = ex.what_next_episode_should_address || '';
 
     selectCqStatus(ex.central_question_status || 'deepened');
+
+    // Audience signals
+    const signals = ex.audience_signals;
+    const audBlock = document.getElementById('rev-audience-block');
+    const audEl    = document.getElementById('rev-audience-signals');
+    if (signals) {
+      audBlock.style.display = '';
+      const questions = Array.isArray(signals.recurring_questions) && signals.recurring_questions.length
+        ? `<div style="margin-top:10px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dimmer);margin-bottom:6px">Recurring Questions</div><ul style="margin:0;padding-left:18px">${signals.recurring_questions.map(q => `<li style="margin-bottom:4px">${esc(q)}</li>`).join('')}</ul></div>`
+        : '';
+      audEl.innerHTML = [
+        signals.emotional_pulse ? `<div style="font-style:italic;margin-bottom:10px;color:var(--teal)">${esc(signals.emotional_pulse)}</div>` : '',
+        signals.what_landed     ? `<div><strong style="color:var(--text)">What landed:</strong> ${esc(signals.what_landed)}</div>` : '',
+        questions,
+        signals.what_they_want_next ? `<div style="margin-top:10px"><strong style="color:var(--text)">They want next:</strong> ${esc(signals.what_they_want_next)}</div>` : '',
+      ].filter(Boolean).join('');
+    } else {
+      audBlock.style.display = 'none';
+      audEl.innerHTML = '';
+    }
   }
 
   window.selectCqStatus = function(val) {
@@ -1232,6 +1261,8 @@
         episode_summary:                  document.getElementById('rev-summary').value.trim() || null,
         what_next_episode_should_address: document.getElementById('rev-next').value.trim() || null,
         central_question_status:          impCqStatus,
+        audience_signals:                 impExtracted?.audience_signals
+          ? JSON.stringify(impExtracted.audience_signals) : null,
         youtube_url:                      impYtData?.video_id
           ? `https://youtube.com/watch?v=${impYtData.video_id}` : null,
         status: 'complete',

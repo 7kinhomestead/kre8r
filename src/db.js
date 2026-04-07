@@ -503,6 +503,10 @@ function runMigrations() {
     db.exec('ALTER TABLE show_episodes ADD COLUMN themes TEXT');
     console.log('[DB] Migration: added show_episodes.themes');
   }
+  if (!showEpCols.includes('audience_signals')) {
+    db.exec('ALTER TABLE show_episodes ADD COLUMN audience_signals TEXT');
+    console.log('[DB] Migration: added show_episodes.audience_signals');
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -1967,8 +1971,8 @@ function createShowEpisode(data) {
     `INSERT INTO show_episodes
        (show_id, project_id, episode_number, season, title, what_was_established,
         seeds_planted, arc_advancement, character_moments, central_question_status,
-        episode_summary, what_next_episode_should_address, youtube_url, themes, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        episode_summary, what_next_episode_should_address, youtube_url, themes, audience_signals, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.show_id,
       data.project_id || null,
@@ -1984,6 +1988,7 @@ function createShowEpisode(data) {
       data.what_next_episode_should_address || null,
       data.youtube_url || null,
       Array.isArray(data.themes) ? JSON.stringify(data.themes) : (data.themes || null),
+      data.audience_signals ? JSON.stringify(data.audience_signals) : null,
       data.status || 'planned',
     ]
   );
@@ -2016,7 +2021,7 @@ function updateShowEpisode(id, data) {
     'title', 'what_was_established', 'seeds_planted', 'arc_advancement',
     'character_moments', 'central_question_status', 'episode_summary', 'status',
     'project_id', 'episode_number', 'what_next_episode_should_address',
-    'youtube_url', 'themes',
+    'youtube_url', 'themes', 'audience_signals',
   ];
   const fields = Object.keys(data).filter(k => allowed.includes(k));
   if (!fields.length) return;
