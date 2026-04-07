@@ -392,16 +392,20 @@ router.post('/youtube-import-channel', async (req, res) => {
       res.end(); return;
     }
 
-    // Guard: block re-import if channel already imported
+    // Guard: block re-import if channel already imported — unless force=true
+    const forceResync = req.body?.force === true || req.query?.force === 'true';
     const importedCount = db.countImportedProjects();
-    if (importedCount > 20) {
+    if (importedCount > 20 && !forceResync) {
       send({
         type:    'error',
         reason:  'already_imported',
         count:   importedCount,
-        message: `Channel already imported (${importedCount} videos). Use Sync YouTube Data to update stats on existing videos.`,
+        message: `Channel already imported (${importedCount} videos). Use Sync YouTube Data to update stats, or force a resync to prune unlisted videos.`,
       });
       res.end(); return;
+    }
+    if (forceResync) {
+      send({ type: 'status', message: `Force resync — will import new videos and archive any that are now unlisted/private…` });
     }
 
     // Handle from env or creator-profile.json — no @ prefix (YouTube forHandle param doesn't need it)
@@ -611,12 +615,26 @@ router.post('/youtube-import-channel', async (req, res) => {
       }
     }
 
+    // ── Prune step: archive youtube_import projects no longer on the channel ──
+    let pruned = 0;
+    if (forceResync) {
+      const currentIds  = new Set(allVideoIds);
+      const allImported = db.getAllProjects().filter(p => p.source === 'youtube_import' && p.youtube_video_id);
+      const toArchive   = allImported.filter(p => !currentIds.has(p.youtube_video_id));
+      if (toArchive.length > 0) {
+        db.bulkArchiveProjects(toArchive.map(p => p.id));
+        pruned = toArchive.length;
+        send({ type: 'status', message: `Pruned ${pruned} unlisted/private video${pruned !== 1 ? 's' : ''} from your channel data.` });
+      }
+    }
+
     send({
       type: 'done',
-      message: `Import complete — ${imported} imported, ${skipped} already existed, ${failed} failed.`,
+      message: `Import complete — ${imported} imported, ${skipped} already existed, ${failed} failed${pruned > 0 ? `, ${pruned} pruned` : ''}.`,
       imported,
       skipped,
       failed,
+      pruned,
       total: allVideoIds.length,
     });
     res.end();

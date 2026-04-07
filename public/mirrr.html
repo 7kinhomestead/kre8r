@@ -554,6 +554,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
           <div class="sync-spinner" style="border-color:rgba(62,207,178,0.2);border-top-color:var(--teal);"></div>
           📺 Import Entire YouTube Channel
         </button>
+        <button class="sync-btn" id="forceResyncBtn" onclick="forceResyncChannel()" style="color:#f59e0b;border-color:rgba(245,158,11,0.4);" title="Re-fetches your full channel and archives any videos that are now unlisted or private">
+          <div class="sync-spinner" style="border-color:rgba(245,158,11,0.2);border-top-color:#f59e0b;"></div>
+          🔄 Force Resync (Prune Unlisted)
+        </button>
         <div class="sync-last" id="syncLast">Never synced</div>
       </div>
       <div class="sync-log" id="syncLog"></div>
@@ -1158,14 +1162,18 @@ async function linkAllAndSync() {
 }
 
 // ─── YouTube Channel Import ───────────────────────────────────────────────────
-async function importChannel() {
-  const btn    = document.getElementById('importBtn');
-  const log    = document.getElementById('importLog');
-  const syncBtn = document.getElementById('syncBtn');
+async function importChannel(force = false) {
+  const btn          = document.getElementById(force ? 'forceResyncBtn' : 'importBtn');
+  const importBtn    = document.getElementById('importBtn');
+  const forceBtn     = document.getElementById('forceResyncBtn');
+  const log          = document.getElementById('importLog');
+  const syncBtn      = document.getElementById('syncBtn');
 
   btn.classList.add('loading');
-  btn.disabled  = true;
-  syncBtn.disabled = true;
+  btn.disabled       = true;
+  importBtn.disabled = true;
+  forceBtn.disabled  = true;
+  syncBtn.disabled   = true;
   log.innerHTML = '';
   log.classList.add('visible');
 
@@ -1178,7 +1186,11 @@ async function importChannel() {
   }
 
   try {
-    const res    = await fetch('/api/mirrr/youtube-import-channel', { method: 'POST' });
+    const res    = await fetch('/api/mirrr/youtube-import-channel', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ force }),
+    });
     const reader = res.body.getReader();
     const dec    = new TextDecoder();
     let buf = '';
@@ -1212,8 +1224,13 @@ async function importChannel() {
   }
 
   btn.classList.remove('loading');
-  btn.disabled  = false;
-  syncBtn.disabled = false;
+  importBtn.disabled = false;
+  forceBtn.disabled  = false;
+  syncBtn.disabled   = false;
+}
+
+async function forceResyncChannel() {
+  return importChannel(true);
 }
 
 // ─── Section 5: Thumbnail A/B Tester ─────────────────────────────────────────
