@@ -898,4 +898,50 @@ Return ONLY valid JSON:
   }
 });
 
+// ─── POST /rescue-session ─────────────────────────────────────────────────────
+// Emergency endpoint: creates a project from sessionStorage data when the
+// in-memory session is dead (API credits ran out, app restart, etc.)
+// Accepts: { title, chosenConcept, concepts, chatHtml, sessionId }
+router.post('/rescue-session', (req, res) => {
+  try {
+    const { title, chosenConcept, concepts, chatHtml, sessionId } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'title is required' });
+    }
+
+    const chosen = typeof chosenConcept === 'string' ? JSON.parse(chosenConcept) : chosenConcept;
+    const allConcepts = typeof concepts === 'string' ? JSON.parse(concepts) : (concepts || []);
+
+    const topic = chosen?.why || chosen?.angle || null;
+    const project = db.createProject(title.trim(), topic, null, null);
+
+    db.updateProjectPipr(project.id, {
+      high_concept: chosen?.headline || title.trim(),
+      content_type: chosen?.angle   || null,
+    });
+
+    db.updateProjectId8r(project.id, {
+      chosenConcept:   chosen  || null,
+      researchSummary: null,   // was mid-research when session died
+      packageData:     null,
+      briefData:       {
+        rescued:      true,
+        rescued_at:   new Date().toISOString(),
+        original_session_id: sessionId || null,
+        all_concepts:        allConcepts,
+        chosen_concept:      chosen || null,
+        chat_html:           chatHtml || null,
+        note: 'Session rescued from sessionStorage after API interruption. Research and package not yet generated.',
+      },
+    });
+
+    console.log(`[id8r/rescue-session] Rescued project ${project.id}: "${title.trim()}"`);
+    res.json({ ok: true, project_id: project.id, title: title.trim() });
+  } catch (err) {
+    console.error('[id8r/rescue-session]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
