@@ -68,7 +68,12 @@ let SYSTEM_PROMPTS = null;
 
 // ─── Claude API Helper ─────────────────────────────────────────────────────────
 
-async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null, _sessionId = null) {
+const RETRYABLE_STATUSES = new Set([429, 529]);
+const RETRYABLE_CODES    = new Set(['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'UND_ERR_CONNECT_TIMEOUT']);
+const BACKOFF_DELAYS     = [2000, 4000, 8000, 16000];
+
+// onRetry(attempt, delayMs, reason) — optional; SSE callers pass send() wrapper
+async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null, _sessionId = null, onRetry = null) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
   const { default: fetch } = await import('node-fetch');
@@ -82,63 +87,74 @@ async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null,
 
   if (tools) body.tools = tools;
 
-  const delays = [2000, 4000, 8000];
   let lastErr;
 
-  for (let attempt = 0; attempt <= delays.length; attempt++) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method  : 'POST',
-      headers : {
-        'Content-Type'      : 'application/json',
-        'x-api-key'         : apiKey,
-        'anthropic-version' : '2023-06-01',
-      },
-      body: JSON.stringify(body),
-    });
+  for (let attempt = 0; attempt <= BACKOFF_DELAYS.length; attempt++) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method  : 'POST',
+        headers : {
+          'Content-Type'      : 'application/json',
+          'x-api-key'         : apiKey,
+          'anthropic-version' : '2023-06-01',
+        },
+        body: JSON.stringify(body),
+      });
 
-    // Retry on overload (529) or rate limit (429) with backoff
-    if (response.status === 529 || response.status === 429) {
-      const err = await response.json().catch(() => ({}));
-      lastErr = new Error(err?.error?.message || `Claude API ${response.status}`);
-      if (attempt < delays.length) {
-        console.warn(`[id8r] Claude overloaded — retry ${attempt + 1} in ${delays[attempt] / 1000}s`);
-        await new Promise(r => setTimeout(r, delays[attempt]));
+      if (RETRYABLE_STATUSES.has(response.status)) {
+        const delay = BACKOFF_DELAYS[attempt];
+        const err   = await response.json().catch(() => ({}));
+        lastErr     = new Error(err?.error?.message || `Claude API ${response.status}`);
+        if (delay === undefined) throw lastErr;
+        const reason = response.status === 429 ? 'rate limited' : 'overloaded';
+        console.warn(`[id8r] Claude ${reason} — retry ${attempt + 1} in ${delay / 1000}s`);
+        if (typeof onRetry === 'function') onRetry(attempt + 1, delay, reason);
+        await new Promise(r => setTimeout(r, delay));
         continue;
       }
-      throw lastErr;
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Claude API ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // ── Token tracking ──────────────────────────────────────
+      try {
+        const usage  = data.usage || {};
+        const input  = usage.input_tokens  || 0;
+        const output = usage.output_tokens || 0;
+        const cost   = (input * 0.000003) + (output * 0.000015);
+        db.logTokenUsage({ tool: 'id8r', session_id: _sessionId, input_tokens: input, output_tokens: output, estimated_cost: cost });
+      } catch (_) { /* non-fatal */ }
+
+      return data;
+
+    } catch (err) {
+      if (RETRYABLE_CODES.has(err.code)) {
+        const delay = BACKOFF_DELAYS[attempt];
+        if (delay === undefined) throw err;
+        console.warn(`[id8r] network error ${err.code} — retry ${attempt + 1} in ${delay / 1000}s`);
+        if (typeof onRetry === 'function') onRetry(attempt + 1, delay, `network error`);
+        await new Promise(r => setTimeout(r, delay));
+        lastErr = err;
+        continue;
+      }
+      throw err;
     }
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `Claude API ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // ── Token tracking ──────────────────────────────────────
-    try {
-      const usage = data.usage || {};
-      const input  = usage.input_tokens  || 0;
-      const output = usage.output_tokens || 0;
-      // claude-sonnet-4-6: $3/M input, $15/M output
-      const cost = (input * 0.000003) + (output * 0.000015);
-      db.logTokenUsage({ tool: 'id8r', session_id: _sessionId, input_tokens: input, output_tokens: output, estimated_cost: cost });
-    } catch (_) { /* non-fatal — never break the response */ }
-
-    return data;
   }
 
-  // Should never reach here — loop always returns or throws
-  throw lastErr || new Error('Claude API: unexpected exit');
+  throw lastErr || new Error('Claude API: all retries exhausted');
 }
 
-async function callClaudeText(systemPrompt, messages, maxTokens = 512, sessionId = null) {
-  const data = await callClaude(systemPrompt, messages, maxTokens, null, sessionId);
+async function callClaudeText(systemPrompt, messages, maxTokens = 512, sessionId = null, onRetry = null) {
+  const data = await callClaude(systemPrompt, messages, maxTokens, null, sessionId, onRetry);
   return data.content[0].text.trim();
 }
 
-async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024, sessionId = null) {
-  const raw = await callClaudeText(systemPrompt, messages, maxTokens, sessionId);
+async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024, sessionId = null, onRetry = null) {
+  const raw = await callClaudeText(systemPrompt, messages, maxTokens, sessionId, onRetry);
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
   try { return JSON.parse(cleaned); } catch {
     throw new Error(`Claude returned malformed JSON. First 300 chars: ${cleaned.slice(0, 300)}`);
@@ -391,6 +407,11 @@ router.post('/research', async (req, res) => {
       return res.end();
     }
 
+    const onRetry = (attempt, delayMs, reason) => send({
+      stage:   'retrying',
+      message: `Claude is ${reason} — retrying in ${Math.round(delayMs / 1000)}s… (attempt ${attempt} of ${BACKOFF_DELAYS.length})`,
+    });
+
     const { brand: _brand, creatorName: _cn, followerSummary: _fs, niche: _niche } = getCreatorContext();
 
     const conversationText = getRecentMessages(session.messages)
@@ -421,7 +442,8 @@ router.post('/research', async (req, res) => {
         }],
         1024,
         [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
-        session_id
+        session_id,
+        onRetry
       );
       const fullText = data.content
         .map(block => {
@@ -453,7 +475,8 @@ router.post('/research', async (req, res) => {
         }],
         1024,
         [{ type: 'web_search_20260209', name: 'web_search' }],
-        session_id
+        session_id,
+        onRetry
       );
       const fullText = data.content
         .map(block => {
@@ -518,7 +541,8 @@ router.post('/research', async (req, res) => {
           content: `Summarize these research results into bullet points under 400 words:\n\nYouTube: ${results.youtube.slice(0, 2000)}\n\nData: ${results.data.slice(0, 2000)}\n\nVault: ${results.vault.slice(0, 500)}`,
         }],
         600,
-        session_id
+        session_id,
+        onRetry
       );
     } catch (e) {
       console.error('[id8r] summarization failed:', e.message);
