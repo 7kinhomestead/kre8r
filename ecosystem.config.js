@@ -41,6 +41,20 @@ module.exports = {
       error_file:    'logs/backup-error.log',
       out_file:      'logs/backup-out.log',
       merge_logs:    true
+    },
+
+    // ─── NorthΩr daily alert check at 9am ────────────────────
+    {
+      name:          'northr-daily',
+      script:        'scripts/northr-check.js',
+      cwd:           __dirname,
+      cron_restart:  '0 9 * * *',   // 9:00am daily
+      autorestart:   false,
+      watch:         false,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file:    'logs/northr-error.log',
+      out_file:      'logs/northr-out.log',
+      merge_logs:    true
     }
   ]
 };

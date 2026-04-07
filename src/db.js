@@ -507,6 +507,45 @@ function runMigrations() {
     db.exec('ALTER TABLE show_episodes ADD COLUMN audience_signals TEXT');
     console.log('[DB] Migration: added show_episodes.audience_signals');
   }
+
+  // NorthΩr — strategy and accountability engine
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS content_goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      month TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      target_videos INTEGER DEFAULT 0,
+      target_emails INTEGER DEFAULT 0,
+      target_social_posts INTEGER DEFAULT 0,
+      target_episodes INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(month, year)
+    );
+
+    CREATE TABLE IF NOT EXISTS northr_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      severity TEXT DEFAULT 'warning',
+      title TEXT,
+      message TEXT,
+      action_url TEXT,
+      action_label TEXT,
+      read INTEGER DEFAULT 0,
+      dismissed INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS strategy_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      month TEXT,
+      year INTEGER,
+      report_type TEXT DEFAULT 'monthly',
+      content TEXT,
+      data_snapshot TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -2093,6 +2132,226 @@ function buildSeasonContext(showId) {
   };
 }
 
+// ─────────────────────────────────────────────
+// NORTHΩR HELPERS
+// ─────────────────────────────────────────────
+
+function createGoal(data) {
+  const { month, year, target_videos = 0, target_emails = 0, target_social_posts = 0, target_episodes = 0, notes = null } = data;
+  try {
+    const result = _run(
+      `INSERT INTO content_goals (month, year, target_videos, target_emails, target_social_posts, target_episodes, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(month, year) DO UPDATE SET
+         target_videos = excluded.target_videos,
+         target_emails = excluded.target_emails,
+         target_social_posts = excluded.target_social_posts,
+         target_episodes = excluded.target_episodes,
+         notes = excluded.notes`,
+      [month, year, target_videos, target_emails, target_social_posts, target_episodes, notes]
+    );
+    return getGoal(month, year);
+  } catch (e) {
+    // Fallback for SQLite versions without ON CONFLICT DO UPDATE
+    const existing = getGoal(month, year);
+    if (existing) {
+      updateGoal(existing.id, data);
+      return getGoal(month, year);
+    }
+    _run(
+      `INSERT INTO content_goals (month, year, target_videos, target_emails, target_social_posts, target_episodes, notes) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [month, year, target_videos, target_emails, target_social_posts, target_episodes, notes]
+    );
+    return getGoal(month, year);
+  }
+}
+
+function getGoal(month, year) {
+  return _get(`SELECT * FROM content_goals WHERE month = ? AND year = ?`, [month, year]);
+}
+
+function updateGoal(id, data) {
+  const allowed = ['target_videos', 'target_emails', 'target_social_posts', 'target_episodes', 'notes'];
+  const fields = Object.keys(data).filter(k => allowed.includes(k));
+  if (!fields.length) return;
+  const sets = fields.map(f => `${f} = ?`).join(', ');
+  const vals = fields.map(f => data[f]);
+  _run(`UPDATE content_goals SET ${sets} WHERE id = ?`, [...vals, id]);
+}
+
+function createAlert(data) {
+  const { type, severity = 'warning', title, message, action_url, action_label } = data;
+  const result = _run(
+    `INSERT INTO northr_alerts (type, severity, title, message, action_url, action_label) VALUES (?, ?, ?, ?, ?, ?)`,
+    [type, severity, title || null, message || null, action_url || null, action_label || null]
+  );
+  return _get(`SELECT * FROM northr_alerts WHERE id = ?`, [result.lastInsertRowid]);
+}
+
+function getUnreadAlerts() {
+  return _all(`SELECT * FROM northr_alerts WHERE read = 0 AND dismissed = 0 ORDER BY created_at DESC`);
+}
+
+function getAllAlerts() {
+  return _all(`SELECT * FROM northr_alerts WHERE dismissed = 0 ORDER BY created_at DESC LIMIT 50`);
+}
+
+function getAlertByType(type) {
+  return _get(`SELECT * FROM northr_alerts WHERE type = ? AND dismissed = 0 ORDER BY created_at DESC`, [type]);
+}
+
+function markAlertRead(id) {
+  _run(`UPDATE northr_alerts SET read = 1 WHERE id = ?`, [id]);
+}
+
+function dismissAlert(id) {
+  _run(`UPDATE northr_alerts SET dismissed = 1, read = 1 WHERE id = ?`, [id]);
+}
+
+function createStrategyReport(data) {
+  const { month, year, report_type = 'monthly', content, data_snapshot } = data;
+  const result = _run(
+    `INSERT INTO strategy_reports (month, year, report_type, content, data_snapshot) VALUES (?, ?, ?, ?, ?)`,
+    [month, year, report_type, content || null, data_snapshot || null]
+  );
+  return _get(`SELECT * FROM strategy_reports WHERE id = ?`, [result.lastInsertRowid]);
+}
+
+function getLatestReport(month, year) {
+  if (month && year) {
+    return _get(`SELECT * FROM strategy_reports WHERE month = ? AND year = ? ORDER BY created_at DESC`, [month, year]);
+  }
+  return _get(`SELECT * FROM strategy_reports ORDER BY created_at DESC`);
+}
+
+function getPublishingStats(days = 30) {
+  const now = new Date();
+  const cutoff = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+
+  // Last published project
+  const lastPublished = _get(
+    `SELECT published_at FROM projects WHERE status = 'published' AND published_at IS NOT NULL ORDER BY published_at DESC`
+  );
+  let daysSinceLastPublish = 999;
+  let lastPublishDate = null;
+  if (lastPublished?.published_at) {
+    lastPublishDate = lastPublished.published_at;
+    const diff = now - new Date(lastPublished.published_at);
+    daysSinceLastPublish = Math.floor(diff / (1000 * 60 * 60 * 24));
+  }
+
+  // Videos published this calendar month
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const videosThisMonth = _get(
+    `SELECT COUNT(*) as count FROM projects WHERE status = 'published' AND published_at >= ?`,
+    [thisMonthStart]
+  )?.count || 0;
+
+  // Videos published last calendar month
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const lastMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const videosLastMonth = _get(
+    `SELECT COUNT(*) as count FROM projects WHERE status = 'published' AND published_at >= ? AND published_at < ?`,
+    [lastMonthStart, lastMonthEnd]
+  )?.count || 0;
+
+  // Total published in window
+  const videosInWindow = _get(
+    `SELECT COUNT(*) as count FROM projects WHERE status = 'published' AND published_at >= ?`,
+    [cutoff]
+  )?.count || 0;
+
+  // Last email sent (use most recent approved email as proxy)
+  const lastEmail = _get(
+    `SELECT created_at FROM emails WHERE approved = 1 ORDER BY created_at DESC`
+  );
+  let daysSinceLastEmail = 999;
+  if (lastEmail?.created_at) {
+    const diff = now - new Date(lastEmail.created_at);
+    daysSinceLastEmail = Math.floor(diff / (1000 * 60 * 60 * 24));
+  }
+
+  return {
+    days_since_last_publish: daysSinceLastPublish,
+    last_publish_date: lastPublishDate,
+    videos_this_month: videosThisMonth,
+    videos_last_month: videosLastMonth,
+    videos_in_window: videosInWindow,
+    days_since_last_email: daysSinceLastEmail,
+  };
+}
+
+function getPipelineHealth() {
+  const allActive = _all(
+    `SELECT p.id, p.title, p.current_stage, p.created_at, p.status, ps.updated_at, ps.stage_status
+     FROM projects p
+     LEFT JOIN pipeline_state ps ON ps.project_id = p.id
+     WHERE p.status NOT IN ('published', 'archived') AND p.source != 'youtube_import'
+     ORDER BY p.created_at DESC`
+  );
+
+  // Stage categorization
+  const STAGE_MAP = {
+    pre:  s => s && (s.startsWith('M0') || s === 'idea' || s === 'pending'),
+    prod: s => s && s.startsWith('M1'),
+    post: s => s && (s === 'M2' || s.startsWith('M2.')),
+    dist: s => s && (s.startsWith('M3') || s.startsWith('M4') || s === 'M5'),
+  };
+
+  const STAGE_LABELS = {
+    pre:  { name: 'Pre-production', url: 'id8r.html' },
+    prod: { name: 'Production',     url: 'shootday.html' },
+    post: { name: 'Post',           url: 'editor.html' },
+    dist: { name: 'Distribution',   url: 'm1-approval-dashboard.html' },
+  };
+
+  const now = Date.now();
+  const STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  let in_pre_production = 0;
+  let in_production = 0;
+  let in_post = 0;
+  let in_distribution = 0;
+  const stalled = [];
+
+  for (const p of allActive) {
+    const stage = p.current_stage || 'M0.1';
+    if (STAGE_MAP.pre(stage))  in_pre_production++;
+    else if (STAGE_MAP.prod(stage)) in_production++;
+    else if (STAGE_MAP.post(stage)) in_post++;
+    else if (STAGE_MAP.dist(stage)) in_distribution++;
+
+    // Stalled: no update in 7+ days
+    const lastUpdate = p.updated_at || p.created_at;
+    const msSinceUpdate = now - new Date(lastUpdate).getTime();
+    if (msSinceUpdate > STALE_MS) {
+      let stageKey = 'pre';
+      if (STAGE_MAP.prod(stage)) stageKey = 'prod';
+      else if (STAGE_MAP.post(stage)) stageKey = 'post';
+      else if (STAGE_MAP.dist(stage)) stageKey = 'dist';
+      const stageInfo = STAGE_LABELS[stageKey];
+      stalled.push({
+        id:           p.id,
+        title:        p.title || `Project ${p.id}`,
+        stage:        stage,
+        stage_name:   stageInfo.name,
+        stage_url:    stageInfo.url,
+        days_stalled: Math.floor(msSinceUpdate / (1000 * 60 * 60 * 24)),
+        stalled_since: new Date(lastUpdate).toISOString().slice(0, 10),
+      });
+    }
+  }
+
+  return {
+    in_pre_production,
+    in_production,
+    in_post,
+    in_distribution,
+    total_active: allActive.length,
+    stalled,
+  };
+}
+
 module.exports = {
   initDb,
   createProject,
@@ -2234,4 +2493,18 @@ module.exports = {
   updateShowEpisode,
   getNextEpisodeNumber,
   buildSeasonContext,
+  // NorthΩr
+  createGoal,
+  getGoal,
+  updateGoal,
+  createAlert,
+  getUnreadAlerts,
+  getAllAlerts,
+  getAlertByType,
+  markAlertRead,
+  dismissAlert,
+  createStrategyReport,
+  getLatestReport,
+  getPublishingStats,
+  getPipelineHealth,
 };

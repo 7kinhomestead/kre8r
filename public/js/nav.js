@@ -22,6 +22,8 @@
   // ─────────────────────────────────────────────
   // NAV STRUCTURE
   // ─────────────────────────────────────────────
+  const NORTHR_LINK = { href: '/northr.html', label: '🧭 NorthΩr' };
+
   const NAV = {
     categories: [
       {
@@ -259,6 +261,41 @@
   opacity: 0.7;
 }
 
+/* NorthΩr top-level link */
+.kn-northr-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body, 'DM Sans', sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim, #8a9487);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm, 6px);
+  transition: all 0.15s;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  position: relative;
+}
+.kn-northr-link:hover { background: var(--bg-card-2, #1c1f1b); color: var(--text, #e8ebe6); }
+.kn-northr-link.is-active { background: var(--teal-glow, rgba(62,207,178,0.10)); color: var(--teal, #3ecfb2); }
+.kn-alert-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 10px;
+  background: #e05252;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
 /* Soon badge */
 .kn-soon-badge {
   font-size: 9px;
@@ -492,12 +529,17 @@
       </div>`;
     }).join('');
 
+    const northrActive = getActivePage() === NORTHR_LINK.href.toLowerCase();
     const navHTML = `
       <nav class="kn-nav" role="navigation" aria-label="Kre8Ωr main navigation">
         <a href="/" class="kn-logo" aria-label="Kre8Ωr home">
           KRE<span class="kn-logo-omega">8Ω</span>R
         </a>
         <div class="kn-menu" role="menubar" aria-label="Navigation categories">
+          <a href="${NORTHR_LINK.href}" class="kn-northr-link${northrActive ? ' is-active' : ''}" id="kn-northr-btn" aria-label="NorthΩr strategy dashboard">
+            ${escHtml(NORTHR_LINK.label)}
+            <span class="kn-alert-badge" id="kn-alert-badge" style="display:none"></span>
+          </a>
           ${categoryHTML}
         </div>
         <button class="kn-hamburger" aria-label="Open navigation menu" aria-expanded="false" aria-controls="kn-mobile-overlay">
@@ -684,6 +726,15 @@
         document.querySelectorAll('[data-soul-badge]').forEach(function(el) {
           el.style.display = 'none';
         });
+      }
+    }).catch(function() {});
+
+    // NorthΩr alert badge — show count on every page if unread alerts exist
+    fetch('/api/northr/alerts').then(function(r) { return r.json(); }).then(function(d) {
+      var badge = document.getElementById('kn-alert-badge');
+      if (badge && d.unread_count > 0) {
+        badge.textContent = d.unread_count;
+        badge.style.display = 'inline-flex';
       }
     }).catch(function() {});
   };
