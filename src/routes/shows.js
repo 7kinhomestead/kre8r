@@ -62,6 +62,109 @@ async function fetchYouTubeVideoData(url) {
   };
 }
 
+// ── Static routes FIRST — must come before /:id to avoid Express swallowing them ──
+
+// GET /api/shows/youtube-meta?url=... — fetch YouTube video metadata (server-side to protect API key)
+router.get('/youtube-meta', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'url required' });
+    const data = await fetchYouTubeVideoData(url);
+    res.json({ ok: true, ...data });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/shows/import-episode — analyze existing episode via Claude; does NOT save to DB (client reviews first)
+// Body: { show_id, episode_number, youtube_url?, transcript }
+router.post('/import-episode', async (req, res) => {
+  try {
+    const { show_id, episode_number, youtube_url, transcript } = req.body;
+    if (!show_id)   return res.status(400).json({ error: 'show_id required' });
+    if (!transcript && !youtube_url) return res.status(400).json({ error: 'transcript or youtube_url required' });
+
+    const show    = db.getShow(parseInt(show_id, 10));
+    if (!show) return res.status(404).json({ error: 'Show not found' });
+
+    const context = db.buildSeasonContext(parseInt(show_id, 10));
+    const epNum   = episode_number || context.next_episode_number;
+
+    let ytData = null;
+    if (youtube_url) {
+      try { ytData = await fetchYouTubeVideoData(youtube_url); }
+      catch (e) { console.warn('[shows/import] YouTube fetch failed (non-fatal):', e.message); }
+    }
+
+    const prevSummary = context.episodes.length
+      ? context.episodes.map(e => `Ep${e.episode_number}: ${e.what_was_established || e.episode_summary || '(no summary)'}`).join('\n')
+      : '(No completed episodes yet — this is the pilot)';
+
+    const seedsBlock = context.seeds_unresolved.length
+      ? context.seeds_unresolved.map(s => `• ${s}`).join('\n')
+      : '(None planted yet)';
+
+    const prompt = `You are analyzing a YouTube episode for "${show.name}", a ${show.show_type} series.
+
+SHOW CONTEXT:
+Season ${show.season}, Episode ${epNum} of ${show.target_episodes}
+Season Arc: ${show.season_arc || '(not defined)'}
+Central Question: ${show.central_question || '(not defined)'}
+Arc Position: ${context.arc_position}
+
+WHAT WAS PREVIOUSLY ESTABLISHED:
+${prevSummary}
+
+SEEDS PREVIOUSLY PLANTED (unresolved):
+${seedsBlock}
+
+EPISODE DATA:
+${ytData ? `Title: ${ytData.title}
+Published: ${ytData.published_at}
+Views: ${ytData.view_count?.toLocaleString()}
+Description: ${ytData.description?.slice(0, 600)}` : '(no YouTube data — working from transcript only)'}
+
+FULL TRANSCRIPT:
+${(transcript || '').slice(0, 14000)}
+
+Analyze this episode carefully. Extract and return ONLY valid JSON with no extra text:
+{
+  "what_was_established": "1-2 sentences describing the key facts/situations established in this episode that carry forward",
+  "seeds_planted": ["string — each unresolved thread planted for future payoff"],
+  "arc_advancement": "1 sentence — how this episode moved the season arc forward",
+  "character_moments": ["string — key character-revealing moments"],
+  "episode_summary": "2-3 sentences — concrete summary of what happened in past tense, third person, show-bible style",
+  "central_question_status": "introduced|deepened|complicated|answered",
+  "themes": ["string — recurring themes touched in this episode"],
+  "what_next_episode_should_address": "1-2 sentences — the specific story threads and seeds that the next episode should pick up based on what was planted here"
+}`;
+
+    const result = await callClaude(prompt, 3000);
+
+    res.json({
+      ok:             true,
+      episode_number: epNum,
+      youtube:        ytData,
+      extracted: {
+        title:                            ytData?.title || null,
+        what_was_established:             result.what_was_established             || '',
+        seeds_planted:                    result.seeds_planted                    || [],
+        arc_advancement:                  result.arc_advancement                  || '',
+        character_moments:                result.character_moments                || [],
+        episode_summary:                  result.episode_summary                  || '',
+        central_question_status:          result.central_question_status          || 'deepened',
+        themes:                           result.themes                           || [],
+        what_next_episode_should_address: result.what_next_episode_should_address || '',
+      },
+    });
+  } catch (err) {
+    console.error('[shows/import-episode]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Dynamic /:id routes below ──
+
 // GET /api/shows — list all active shows with episode counts
 router.get('/', (req, res) => {
   try {
@@ -75,9 +178,12 @@ router.get('/', (req, res) => {
 // POST /api/shows — create a new show
 router.post('/', (req, res) => {
   try {
+    console.log('[shows/create] body:', JSON.stringify(req.body, null, 2));
     const show = db.createShow(req.body);
+    console.log('[shows/create] created show id:', show.id);
     res.json({ ok: true, show_id: show.id, show });
   } catch (err) {
+    console.error('[shows/create] ERROR:', err.message, err.stack);
     res.status(500).json({ error: err.message });
   }
 });
@@ -243,107 +349,6 @@ Return ONLY valid JSON:
       arc_position,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/shows/youtube-meta?url=... — fetch YouTube video metadata (server-side to protect API key)
-router.get('/youtube-meta', async (req, res) => {
-  try {
-    const { url } = req.query;
-    if (!url) return res.status(400).json({ error: 'url required' });
-    const data = await fetchYouTubeVideoData(url);
-    res.json({ ok: true, ...data });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// POST /api/shows/import-episode — analyze existing episode via Claude; does NOT save to DB (client reviews first)
-// Body: { show_id, episode_number, youtube_url?, transcript }
-router.post('/import-episode', async (req, res) => {
-  try {
-    const { show_id, episode_number, youtube_url, transcript } = req.body;
-    if (!show_id)   return res.status(400).json({ error: 'show_id required' });
-    if (!transcript && !youtube_url) return res.status(400).json({ error: 'transcript or youtube_url required' });
-
-    const show    = db.getShow(parseInt(show_id, 10));
-    if (!show) return res.status(404).json({ error: 'Show not found' });
-
-    const context = db.buildSeasonContext(parseInt(show_id, 10));
-    const epNum   = episode_number || context.next_episode_number;
-
-    // Fetch YouTube metadata if URL provided
-    let ytData = null;
-    if (youtube_url) {
-      try { ytData = await fetchYouTubeVideoData(youtube_url); }
-      catch (e) { console.warn('[shows/import] YouTube fetch failed (non-fatal):', e.message); }
-    }
-
-    // Build previous episodes summary
-    const prevSummary = context.episodes.length
-      ? context.episodes.map(e => `Ep${e.episode_number}: ${e.what_was_established || e.episode_summary || '(no summary)'}`).join('\n')
-      : '(No completed episodes yet — this is the pilot)';
-
-    const seedsBlock = context.seeds_unresolved.length
-      ? context.seeds_unresolved.map(s => `• ${s}`).join('\n')
-      : '(None planted yet)';
-
-    const prompt = `You are analyzing a YouTube episode for "${show.name}", a ${show.show_type} series.
-
-SHOW CONTEXT:
-Season ${show.season}, Episode ${epNum} of ${show.target_episodes}
-Season Arc: ${show.season_arc || '(not defined)'}
-Central Question: ${show.central_question || '(not defined)'}
-Arc Position: ${context.arc_position}
-
-WHAT WAS PREVIOUSLY ESTABLISHED:
-${prevSummary}
-
-SEEDS PREVIOUSLY PLANTED (unresolved):
-${seedsBlock}
-
-EPISODE DATA:
-${ytData ? `Title: ${ytData.title}
-Published: ${ytData.published_at}
-Views: ${ytData.view_count?.toLocaleString()}
-Description: ${ytData.description?.slice(0, 600)}` : '(no YouTube data — working from transcript only)'}
-
-FULL TRANSCRIPT:
-${(transcript || '').slice(0, 14000)}
-
-Analyze this episode carefully. Extract and return ONLY valid JSON with no extra text:
-{
-  "what_was_established": "1-2 sentences describing the key facts/situations established in this episode that carry forward",
-  "seeds_planted": ["string — each unresolved thread planted for future payoff"],
-  "arc_advancement": "1 sentence — how this episode moved the season arc forward",
-  "character_moments": ["string — key character-revealing moments"],
-  "episode_summary": "2-3 sentences — concrete summary of what happened in past tense, third person, show-bible style",
-  "central_question_status": "introduced|deepened|complicated|answered",
-  "themes": ["string — recurring themes touched in this episode"],
-  "what_next_episode_should_address": "1-2 sentences — the specific story threads and seeds that the next episode should pick up based on what was planted here"
-}`;
-
-    const result = await callClaude(prompt, 3000);
-
-    res.json({
-      ok:            true,
-      episode_number: epNum,
-      youtube:       ytData,
-      extracted:     {
-        title:                          ytData?.title || null,
-        what_was_established:           result.what_was_established           || '',
-        seeds_planted:                  result.seeds_planted                  || [],
-        arc_advancement:                result.arc_advancement                || '',
-        character_moments:              result.character_moments              || [],
-        episode_summary:                result.episode_summary                || '',
-        central_question_status:        result.central_question_status        || 'deepened',
-        themes:                         result.themes                         || [],
-        what_next_episode_should_address: result.what_next_episode_should_address || '',
-      },
-    });
-  } catch (err) {
-    console.error('[shows/import-episode]', err);
     res.status(500).json({ error: err.message });
   }
 });

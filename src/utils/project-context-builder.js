@@ -1,16 +1,22 @@
 // Builds the complete project context file at every pipeline stage
 // Lives at: database/projects/{id}/vault/project-context.json
 
-const { saveVaultData, getVaultData } = require('./project-vault');
+const path = require('path');
+const { saveVaultData, getVaultData, getVaultPath } = require('./project-vault');
 
 function loadContext(projectId) {
-  return getVaultData(projectId, 'project-context.json') || {};
+  const vaultPath = getVaultPath(projectId, 'project-context.json');
+  console.log('[Context] Looking for vault at:', vaultPath);
+  const data = getVaultData(projectId, 'project-context.json');
+  console.log('[Context] Found:', data ? 'YES' : 'NO (will use empty context)');
+  return data || {};
 }
 
 function saveContext(projectId, updates) {
   const existing = loadContext(projectId);
   const merged = { ...existing, ...updates, last_updated: new Date().toISOString() };
-  saveVaultData(projectId, 'project-context.json', merged);
+  const savedPath = saveVaultData(projectId, 'project-context.json', merged);
+  console.log('[Context] Saved context to:', savedPath);
   return merged;
 }
 
