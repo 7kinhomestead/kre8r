@@ -24,9 +24,10 @@ const { generateHybrid }             = require('../writr/hybrid');
 const { iterateScript }              = require('../writr/iterate');
 const { readConfig, writeConfig }    = require('../pipr/beat-tracker');
 const { listProfiles }               = require('../writr/voice-analyzer');
-const { callClaude }                 = require('../writr/claude');
+const { callClaude, REALITY_RULE }   = require('../writr/claude');
 const vault                          = require('../utils/project-vault');
 const { addSoulContext, buildWritrPromptContext } = require('../utils/project-context-builder');
+const { callClaudeMessages }         = require('../utils/claude');
 
 // ─────────────────────────────────────────────
 // FORMAT CONVERSION PROMPTS (bullets + hybrid)
@@ -796,6 +797,81 @@ router.post('/:project_id/approve', (req, res) => {
   } catch (err) {
     console.error('[WritΩr] approve error:', err.message);
     res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/writr/:project_id/room
+// WritΩr's RoΩm — creative director chat with full project context
+// Body: { message, history: [{role, content}] }
+// Returns: { ok, response }
+// ─────────────────────────────────────────────
+
+function buildRoomSystemPrompt(project, projectContext, currentScript) {
+  const title = project.title || 'this video';
+
+  let prompt = `You are the creative director for "${title}". You have complete context on this project: the original concept, why it was chosen, the story structure, the beat map, and the current script draft.
+
+Your job is to help work through creative obstacles during script revision. Think out loud. Ask the right questions. Challenge weak story logic. Find what's emotionally true and what isn't landing. Suggest structural moves when the story feels stuck.
+
+Be direct and specific — not cheerleader-y. If something isn't working, say exactly what and why. If you see a solution, name it clearly. Keep responses focused and conversational, not lecture-length.
+
+When you have a specific revision the creator can apply directly to the script, put it on its own line starting with REVISION: so they can use it as a prompt.
+
+${REALITY_RULE}`;
+
+  if (projectContext) {
+    prompt += `\n\n${projectContext}`;
+  }
+
+  if (currentScript) {
+    const truncated = currentScript.length > 4000
+      ? currentScript.slice(0, 4000) + '\n[...script continues...]'
+      : currentScript;
+    prompt += `\n\nCURRENT SCRIPT DRAFT:\n${truncated}`;
+  }
+
+  return prompt;
+}
+
+router.post('/:project_id/room', async (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  const { message, history = [] } = req.body;
+  if (!message?.trim()) return res.status(400).json({ error: 'message required' });
+
+  try {
+    const project = db.getProject(projectId);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const projectContext = buildWritrPromptContext(projectId);
+
+    let currentScript = '';
+    try {
+      const scripts = db.getWritrScriptsByProject(projectId);
+      if (scripts && scripts.length) {
+        const active = project.active_script_id
+          ? scripts.find(s => s.id === project.active_script_id) || scripts[0]
+          : scripts[0];
+        currentScript = active?.generated_script || '';
+      }
+    } catch (_) {}
+
+    const systemPrompt = buildRoomSystemPrompt(project, projectContext, currentScript);
+
+    // Build messages: last 12 history turns + new message
+    const messages = [
+      ...history.slice(-12).map(h => ({ role: h.role, content: String(h.content) })),
+      { role: 'user', content: message.trim() }
+    ];
+
+    const response = await callClaudeMessages(systemPrompt, messages, 2048);
+    res.json({ ok: true, response });
+
+  } catch (err) {
+    console.error('[WritΩr] Room error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

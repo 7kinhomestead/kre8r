@@ -276,6 +276,49 @@
   .toast.error{border-color:var(--red-border);color:var(--red);}
   .toast.success{border-color:var(--green-border);color:var(--green);}
   .toast.visible{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ── WRITΩR'S RΩΩM ── */
+  .room-panel{position:fixed;top:54px;right:0;width:430px;height:calc(100vh - 54px);background:var(--bg-card);border-left:2px solid rgba(167,139,250,0.3);display:flex;flex-direction:column;z-index:200;transform:translateX(100%);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);box-shadow:-12px 0 40px rgba(0,0,0,0.5);}
+  .room-panel.open{transform:translateX(0);}
+  .room-header{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(167,139,250,0.04);}
+  .room-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text);line-height:1;}
+  .room-title em{font-style:normal;color:var(--purple);}
+  .room-context-badge{font-size:10px;color:var(--text-dimmer);margin-top:4px;letter-spacing:0.3px;}
+  .room-close{background:none;border:none;color:var(--text-dimmer);font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;transition:color 0.15s;flex-shrink:0;margin-top:2px;}
+  .room-close:hover{color:var(--text);}
+  .room-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+  .room-msg{display:flex;flex-direction:column;gap:5px;}
+  .room-msg-role{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;}
+  .room-msg.user .room-msg-role{color:var(--teal);}
+  .room-msg.assistant .room-msg-role{color:var(--purple);}
+  .room-msg-body{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word;}
+  .room-msg.user .room-msg-body{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;}
+  .room-apply-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;margin-top:4px;background:none;border:1px solid rgba(167,139,250,0.3);border-radius:var(--radius-sm);color:var(--purple);font-family:var(--font-body);font-size:11px;font-weight:600;padding:5px 11px;cursor:pointer;transition:all 0.15s;}
+  .room-apply-btn:hover{background:var(--purple-glow);border-color:var(--purple);}
+  .room-thinking{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text-dimmer);font-style:italic;padding:4px 0;}
+  .room-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0;}
+  @keyframes roomPulse{0%,100%{opacity:0.25}50%{opacity:1}}
+  .room-dot{animation:roomPulse 1.4s infinite;}
+  .room-dot:nth-child(2){animation-delay:0.2s;}
+  .room-dot:nth-child(3){animation-delay:0.4s;}
+  .room-input-area{padding:14px 16px 16px;border-top:1px solid var(--border);flex-shrink:0;}
+  .room-input{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:10px 13px;outline:none;resize:none;line-height:1.55;width:100%;transition:border-color 0.15s;}
+  .room-input:focus{border-color:rgba(167,139,250,0.5);}
+  .room-input::placeholder{color:var(--text-dimmer);}
+  .room-input-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;}
+  .room-send-btn{background:var(--purple);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:12px;font-weight:700;padding:8px 18px;cursor:pointer;transition:all 0.15s;white-space:nowrap;letter-spacing:0.3px;}
+  .room-send-btn:hover:not(:disabled){filter:brightness(1.12);}
+  .room-send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .room-hint{font-size:10px;color:var(--text-dimmer);}
+  .room-clear{background:none;border:none;color:var(--text-dimmer);font-size:11px;cursor:pointer;padding:0;transition:color 0.15s;}
+  .room-clear:hover{color:var(--red);}
+  .room-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:32px 24px;color:var(--text-dimmer);}
+  .room-empty-icon{font-size:44px;margin-bottom:18px;opacity:0.3;}
+  .room-empty-title{font-family:var(--font-head);font-size:20px;letter-spacing:2px;color:var(--text-dim);margin-bottom:10px;}
+  .room-empty-title em{font-style:normal;color:var(--purple);}
+  .room-empty-sub{font-size:12px;line-height:1.7;max-width:270px;}
+  .btn-room{background:var(--purple-glow);border:1px solid rgba(167,139,250,0.3)!important;color:var(--purple)!important;}
+  .btn-room:hover{background:rgba(167,139,250,0.18)!important;border-color:var(--purple)!important;}
 </style>
 </head>
 <body>
@@ -473,8 +516,8 @@
           <div class="panel-title">SCRIPT</div>
           <div class="draft-badge" id="draftBadge" style="display:none">Draft 1</div>
         </div>
-        <div class="panel-head-right" id="scriptHeadActions" style="display:none">
-          <!-- shown after draft exists -->
+        <div class="panel-head-right">
+          <button class="btn btn-ghost btn-room btn-sm" id="roomBtn" onclick="toggleRoom()" style="display:none">🎬 Room</button>
         </div>
       </div>
       <div class="panel-body">
@@ -559,6 +602,31 @@
     </div><!-- /panel 3 -->
 
   </div><!-- /three-panels -->
+
+  <!-- ── WRITΩR'S RΩΩM ── -->
+  <div class="room-panel" id="roomPanel">
+    <div class="room-header">
+      <div>
+        <div class="room-title">WRIT<em>Ω</em>R'S R<em>Ω</em><em>Ω</em>M</div>
+        <div class="room-context-badge" id="roomContextBadge">No project loaded</div>
+      </div>
+      <button class="room-close" onclick="closeRoom()" title="Close Room">✕</button>
+    </div>
+    <div class="room-messages" id="roomMessages">
+      <div class="room-empty" id="roomEmpty">
+        <div class="room-empty-icon">🎬</div>
+        <div class="room-empty-title">THE R<em>Ω</em><em>Ω</em>M</div>
+        <div class="room-empty-sub">Your creative director has full context on this project — the brief, the beats, the current draft. Ask what's not working. Think out loud. Find the story.</div>
+      </div>
+    </div>
+    <div class="room-input-area">
+      <textarea class="room-input" id="roomInput" rows="3" placeholder="What's not working? Where are you stuck?&#10;&#10;Ctrl+Enter to send"></textarea>
+      <div class="room-input-row">
+        <button class="room-clear" onclick="clearRoom()">Clear conversation</button>
+        <button class="room-send-btn" id="roomSendBtn" onclick="sendRoomMessage()" disabled>Send →</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── VOICE LIBRARY PANEL ── -->
   <div class="voice-library-section" id="voiceLibrarySection">
@@ -727,6 +795,13 @@ async function onProjectChange(pid) {
   currentScript     = null;
   currentBeatMap    = [];
   draftNumber       = 0;
+
+  // Room: show button when project is loaded, reset state
+  document.getElementById('roomBtn').style.display = pid ? '' : 'none';
+  if (pid !== currentProjectId) {
+    roomHistory = [];
+    if (roomOpen) { renderRoomMessages(); document.getElementById('roomContextBadge').textContent = 'Loading…'; }
+  }
 
   resetInputArea();
   resetBeatMap();
@@ -2125,12 +2200,175 @@ function escHtml(str) {
 }
 
 // ─────────────────────────────────────────────
+// WRITΩR'S RΩΩM
+// ─────────────────────────────────────────────
+
+let roomHistory = [];
+let roomOpen    = false;
+
+function toggleRoom() {
+  roomOpen ? closeRoom() : openRoom();
+}
+
+function openRoom() {
+  roomOpen = true;
+  document.getElementById('roomPanel').classList.add('open');
+  document.getElementById('roomBtn').textContent = '✕ Room';
+
+  if (currentProjectId) {
+    // Restore persisted conversation for this project
+    try {
+      const saved = localStorage.getItem(`room_${currentProjectId}`);
+      if (saved) roomHistory = JSON.parse(saved);
+    } catch(_) { roomHistory = []; }
+    document.getElementById('roomContextBadge').textContent = 'Full project context loaded';
+    document.getElementById('roomSendBtn').disabled = false;
+    renderRoomMessages();
+  }
+
+  setTimeout(() => document.getElementById('roomInput').focus(), 320);
+}
+
+function closeRoom() {
+  roomOpen = false;
+  document.getElementById('roomPanel').classList.remove('open');
+  document.getElementById('roomBtn').textContent = '🎬 Room';
+}
+
+function clearRoom() {
+  if (roomHistory.length && !confirm('Clear this conversation?')) return;
+  roomHistory = [];
+  if (currentProjectId) localStorage.removeItem(`room_${currentProjectId}`);
+  renderRoomMessages();
+}
+
+function renderRoomMessages() {
+  const container = document.getElementById('roomMessages');
+  container.innerHTML = '';
+
+  if (!roomHistory.length) {
+    const empty = document.createElement('div');
+    empty.className = 'room-empty';
+    empty.innerHTML = `
+      <div class="room-empty-icon">🎬</div>
+      <div class="room-empty-title">THE R<em>Ω</em><em>Ω</em>M</div>
+      <div class="room-empty-sub">Your creative director has full context on this project — the brief, the beats, the current draft. Ask what's not working. Think out loud. Find the story.</div>`;
+    container.appendChild(empty);
+    return;
+  }
+
+  roomHistory.forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `room-msg ${msg.role}`;
+
+    const roleEl = document.createElement('div');
+    roleEl.className = 'room-msg-role';
+    roleEl.textContent = msg.role === 'user' ? 'You' : 'Creative Director';
+
+    const body = document.createElement('div');
+    body.className = 'room-msg-body';
+    body.textContent = msg.content;
+
+    div.appendChild(roleEl);
+    div.appendChild(body);
+
+    if (msg.role === 'assistant') {
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'room-apply-btn';
+      applyBtn.textContent = '→ Use as Revision Prompt';
+      applyBtn.onclick = () => applyRoomToRevision(msg.content);
+      div.appendChild(applyBtn);
+    }
+
+    container.appendChild(div);
+  });
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function applyRoomToRevision(content) {
+  const input = document.getElementById('reviseInput');
+  if (!input) return;
+  // Use REVISION: block if present, otherwise the full response
+  const match = content.match(/REVISION[:\s]+(.+?)(?:\n\n|\n(?=[A-Z])|$)/s);
+  input.value = match ? match[1].trim() : content;
+  input.focus();
+  closeRoom();
+  const bar = document.getElementById('iterationBar');
+  if (bar) bar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showToast('Revision prompt ready — review and hit Revise →', 'success');
+}
+
+async function sendRoomMessage() {
+  const input   = document.getElementById('roomInput');
+  const message = input.value.trim();
+  if (!message || !currentProjectId) return;
+
+  const sendBtn = document.getElementById('roomSendBtn');
+  sendBtn.disabled = true;
+  input.value = '';
+
+  // Snapshot history before this message for the API call
+  const historySnapshot = [...roomHistory];
+
+  roomHistory.push({ role: 'user', content: message });
+  renderRoomMessages();
+
+  // Thinking indicator
+  const container = document.getElementById('roomMessages');
+  const thinking  = document.createElement('div');
+  thinking.className = 'room-thinking';
+  thinking.id = 'roomThinking';
+  thinking.innerHTML = '<span class="room-dot"></span><span class="room-dot"></span><span class="room-dot"></span>';
+  container.appendChild(thinking);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const res = await fetch(`/api/writr/${currentProjectId}/room`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ message, history: historySnapshot })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Room request failed');
+
+    roomHistory.push({ role: 'assistant', content: data.response });
+    localStorage.setItem(`room_${currentProjectId}`, JSON.stringify(roomHistory));
+
+  } catch (err) {
+    roomHistory.push({ role: 'assistant', content: `Something went wrong: ${err.message}` });
+    showToast(err.message, 'error');
+  } finally {
+    const t = document.getElementById('roomThinking');
+    if (t) t.remove();
+    sendBtn.disabled = false;
+    renderRoomMessages();
+    input.focus();
+  }
+}
+
+// ─────────────────────────────────────────────
 // EDIT STRUCTURE — navigate to PipΩr structure picker
 // ─────────────────────────────────────────────
 function openEditStructure() {
   if (!currentProjectId) return;
   window.location.href = `/pipr.html?edit_structure=${currentProjectId}`;
 }
+
+// ─────────────────────────────────────────────
+// ROOM KEYBOARD SHORTCUT — Ctrl/Cmd+Enter to send
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const roomInput = document.getElementById('roomInput');
+  if (roomInput) {
+    roomInput.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        sendRoomMessage();
+      }
+    });
+  }
+});
 
 // ─────────────────────────────────────────────
 // BOOT

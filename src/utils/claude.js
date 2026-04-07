@@ -135,4 +135,75 @@ async function callClaude(prompt, maxTokens = 8192, options = {}) {
   throw lastError || new Error('Claude API call failed after all retries');
 }
 
-module.exports = { callClaude, repairJSON };
+/**
+ * callClaudeMessages(system, messages, maxTokens, options)
+ *
+ * Multi-turn version of callClaude. Takes a system prompt and a messages array
+ * [{role:'user'|'assistant', content:'...'}]. Returns raw text (no JSON parsing).
+ * Uses the same retry/backoff logic as callClaude.
+ *
+ * Used by WritΩr's RoΩm and any other multi-turn chat feature.
+ */
+async function callClaudeMessages(system, messages, maxTokens = 2048, options = {}) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
+
+  const { onRetry } = options;
+  const { default: fetch } = await import('node-fetch');
+
+  let lastError;
+
+  for (let attempt = 0; attempt <= BACKOFF.length; attempt++) {
+    try {
+      const body = { model: MODEL, max_tokens: maxTokens, messages };
+      if (system) body.system = system;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method  : 'POST',
+        headers : {
+          'Content-Type'      : 'application/json',
+          'x-api-key'         : apiKey,
+          'anthropic-version' : ANTHROPIC_VERSION,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (RETRYABLE_STATUSES.has(response.status)) {
+        const delay = BACKOFF[attempt];
+        if (delay === undefined) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err?.error?.message || `Claude API error ${response.status} — all retries exhausted`);
+        }
+        const reason = response.status === 429 ? 'rate limited' : 'overloaded';
+        console.warn(`[claude] ${reason} (attempt ${attempt + 1}/${BACKOFF.length + 1}) — retrying in ${delay / 1000}s`);
+        if (typeof onRetry === 'function') onRetry(attempt + 1, delay, reason);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Claude API error ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.content[0].text.trim();
+
+    } catch (err) {
+      if (RETRYABLE_CODES.has(err.code)) {
+        const delay = BACKOFF[attempt];
+        if (delay === undefined) throw err;
+        console.warn(`[claude] network error ${err.code} (attempt ${attempt + 1}/${BACKOFF.length + 1}) — retrying in ${delay / 1000}s`);
+        if (typeof onRetry === 'function') onRetry(attempt + 1, delay, `network error (${err.code})`);
+        await new Promise(r => setTimeout(r, delay));
+        lastError = err;
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError || new Error('Claude API call failed after all retries');
+}
+
+module.exports = { callClaude, callClaudeMessages, repairJSON };

@@ -7,11 +7,28 @@ for 7 Kin Homestead — an off-grid homesteading creator with 725k TikTok, 54k Y
 Claude Code. No prior coding experience.
 
 The system eliminates the administrative layer between having an idea and that idea
-reaching an audience. Every feature must reduce decisions for the creator, never add them.
+reaching an audience. Every feature must protect the creator's creative thread and
+reduce decisions, never add them.
 
 ## Prime Directive
+**Never lose creative state. Never break the creative thread without a recovery path.**
+
+A creator's momentum, context, and direction are the most valuable things in the
+system. Code, data, and features exist to protect them. When anything fails — API
+call, crash, network drop, wrong button — the creator should be able to pick up
+exactly where they were, with everything intact.
+
+Ask of every feature and every failure mode: *if this goes wrong right now, what
+does the creator lose, and how do they get it back?* If the answer is "they lose
+everything and start over" — redesign it.
+
+## Secondary Directive
 Does this feature reduce the number of decisions the creator has to make, or does it
 add one? If it adds one — redesign it.
+
+Decision count matters, but it is downstream of the Prime Directive. A feature that
+adds zero decisions but silently destroys creative state on failure violates the
+Prime Directive. Protect the thread first. Minimize decisions second.
 
 ## The Engine vs Soul Principle
 Engine (pipeline logic) is always separate from Soul (creator-profile.json).

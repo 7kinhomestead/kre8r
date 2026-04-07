@@ -503,6 +503,55 @@ A 45-minute Id8Ωr research session or a long WritΩr generation run represents 
 
 ---
 
+## ⚡ HIGH PRIORITY — Within-Tool Phase Checkpoints (Save & Spawn Points)
+
+**The problem:**
+Right now save points only exist *between* tools — Id8Ωr hands off to PipΩr, PipΩr to WritΩr, etc. But within a tool, intermediate steps live only in sessionStorage and in-memory server sessions. If anything fails mid-tool (API credits, crash, accidental close), the user loses everything back to the start of that tool — not the start of the last *step*.
+
+This is a Prime Directive violation. Forcing a creator to redo 2 hours of emotional creative work because the save point was at the wrong granularity is exactly the kind of decision the system should be eliminating.
+
+**The principle:**
+Every time a user completes a meaningful step inside a tool, that state is persisted to the DB immediately. Phase completion = checkpoint. If something fails, the tool reopens to the last completed checkpoint, not the blank start state.
+
+**Id8Ωr checkpoints (example):**
+- ✅ Concept entered / conversation complete → save `chosen_concept` to DB
+- ✅ Research Phase 1 complete → save partial research to DB
+- ✅ Research Phase 2 complete → save to DB
+- ✅ Research Phase 3 complete → save to DB
+- ✅ Package generated (titles, thumbnails, hooks) → save `packageData` to DB
+- ✅ User picks titles/thumbnails/hooks → save selections to DB
+
+**WritΩr checkpoints:**
+- Beat map loaded / structure confirmed → save
+- Voice profile selected → save
+- Each script section generated → save incrementally
+
+**How it works:**
+- Each tool queries its project's DB record on load — if a checkpoint exists, offer to resume from it
+- "Resume from last checkpoint" banner: *"You were halfway through research. Pick up where you left off?"*
+- SSE streams write partial results to DB as each phase completes, not just at the end
+- Checkpoint data stored in the existing `id8r_data`, `writr_data`, etc. JSON columns — no new tables needed
+
+**Related:** See "Session Auto-Save + Crash Recovery" above for the 60s autosave approach. Phase checkpoints are the complement — structured saves at meaningful boundaries, not just time-based saves of in-flight state. Both are needed.
+
+**Why it matters:**
+A creator doing emotional, story-driven ideation work is building toward a specific creative direction. When that work is lost, you don't just lose time — you lose the *thread*. They either redo it and get something different, or they give up. Either outcome is a product failure.
+
+---
+
+## WritΩr's RoΩm — Creative Director Chat (V2 Vision)
+
+**What it is:**
+A full redesign of WritΩr where the script emerges from conversation rather than structured generation. You open WritΩr and land in a chat with a creative director who has read the entire brief, knows the beat map, and has the current script in front of them. The script panel on the right is the living output of the thinking. Generation, revision, and creative direction all happen through a single conversational interface. Beat cards and controls become context the AI uses — not UI you interact with directly.
+
+**V1 (built):** Room as a slide-in side panel within the current WritΩr.
+**V2 (this entry):** Room IS WritΩr. The conversation is the primary interface. The script is the output panel.
+
+**Why this is better:**
+Good scripts don't get written — they get thought into existence. The current WritΩr model (fill in structure → generate → revise) is backwards. Writers think first, write second. The Room makes thinking the primary act.
+
+---
+
 ## AnalΩzr — Playlist Generator
 From the Content DNA clusters and niche definition, suggest YouTube playlist structures that organize existing videos into intentional series.
 
