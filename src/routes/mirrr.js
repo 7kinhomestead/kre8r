@@ -609,6 +609,11 @@ router.post('/youtube-import-channel', async (req, res) => {
         db.bulkArchiveProjects(toArchive.map(p => p.id));
         pruned = toArchive.length;
         send({ type: 'status', message: `Pruned ${pruned} unlisted/private video${pruned !== 1 ? 's' : ''} from your channel data.` });
+        // Invalidate DNA cache so Content Universe + Secrets rebuild without archived videos
+        db.setKv('channel_dna_clusters', null);
+        db.setKv('channel_dna_secrets',  null);
+        db.setKv('channel_dna_secrets_video_count', 0);
+        send({ type: 'status', message: `Content Universe cache cleared — open MirrΩr to rebuild.` });
       }
     }
 
@@ -797,9 +802,9 @@ router.get('/content-dna/graph', async (req, res) => {
       }
     }
 
-    // Get all youtube projects with analytics
+    // Get all youtube projects with analytics — exclude archived (pruned/unlisted)
     const allProjects = db.getAllProjects();
-    const ytProjects  = allProjects.filter(p => p.youtube_video_id);
+    const ytProjects  = allProjects.filter(p => p.youtube_video_id && p.status !== 'archived');
 
     if (ytProjects.length === 0) {
       return res.json({ nodes: [], clusters: [], error: 'no_videos' });
@@ -1389,7 +1394,7 @@ router.patch('/save-secrets-to-soul', (req, res) => {
     };
 
     fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf8');
-    res.json({ ok: true, saved: secrets.length, next_update_at: videoCount + 10 });
+    res.json({ ok: true, saved: secrets.length, next_update_at: longformCount + 10 });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -591,6 +591,13 @@ function runMigrations() {
         `).run(row.project_id, keep.id);
       }
       console.log(`[DB] Dedup migration: cleaned duplicate YouTube posts`);
+      // Bust the DNA/Secrets cache so MirrΩr rebuilds with corrected view counts
+      try {
+        db.prepare(`UPDATE kv_store SET value = NULL WHERE key IN (
+          'channel_dna_clusters','channel_dna_secrets','channel_dna_secrets_video_count'
+        )`).run();
+        console.log('[DB] Dedup migration: cleared DNA cache — views will recalculate on next open');
+      } catch (_) {}
     }
   } catch (err) {
     console.warn('[DB] Dedup migration error (non-fatal):', err.message);
