@@ -837,12 +837,13 @@
     const p = new URLSearchParams(window.location.search);
     if (p.get('mode') === 'episodic') {
       const showId = p.get('show_id');
-      loadEpisodicShows();
       showScreen('episodic');
+      // Highlight the Next Episode card so user knows what's being auto-loaded
       if (showId) {
-        document.getElementById('episodic-show-selector').style.display = 'block';
         document.getElementById('episodic-next-ep-card').style.borderColor = 'var(--teal)';
       }
+      // loadEpisodicShows handles the rest: shows selector, selects show, loads brief
+      loadEpisodicShows();
     }
   })();
 

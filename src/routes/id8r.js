@@ -138,15 +138,26 @@ function getRecentMessages(messages, maxExchanges = 6) {
 
 router.post('/start', async (req, res) => {
   try {
-    const { mode } = req.body;
+    const { mode, season_context } = req.body;
     // Rebuild prompts fresh on each session start so creator-profile.json changes are live
     SYSTEM_PROMPTS = buildSystemPrompts();
-    if (!mode || !SYSTEM_PROMPTS[mode]) {
-      return res.status(400).json({ error: 'mode is required: shape_it | find_it | deep_dive' });
+
+    let systemPrompt;
+    if (mode === 'episodic') {
+      const { creatorName, niche } = getCreatorContext();
+      systemPrompt = `You are Id8Ωr, the series engine for ${creatorName}, a ${niche} creator. You generate episode concepts for ongoing shows — ideas that advance the season arc AND stand alone for new viewers.
+
+${season_context || '(No season context provided)'}
+
+Your job: Ask 1-2 targeted questions to sharpen the episode angle before generating concepts. Focus on: what real thing happened this week on the homestead that could anchor the episode, what the creator is most fired up to film right now, and what would make THIS episode feel different from the last. When you have enough to work with, say RESEARCH_READY.`;
+    } else {
+      if (!mode || !SYSTEM_PROMPTS[mode]) {
+        return res.status(400).json({ error: 'mode is required: shape_it | find_it | deep_dive | episodic' });
+      }
+      systemPrompt = SYSTEM_PROMPTS[mode];
     }
 
-    const sessionId    = crypto.randomBytes(8).toString('hex');
-    const systemPrompt = SYSTEM_PROMPTS[mode];
+    const sessionId = crypto.randomBytes(8).toString('hex');
 
     const firstMessage = await callClaudeText(
       systemPrompt,
