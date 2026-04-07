@@ -488,6 +488,21 @@ function runMigrations() {
     db.exec('ALTER TABLE projects ADD COLUMN episode_number INTEGER');
     console.log('[DB] Migration: added projects.episode_number');
   }
+
+  // ShowΩr: add what_next_episode_should_address to show_episodes
+  const showEpCols = db.pragma('table_info(show_episodes)').map(r => r.name);
+  if (!showEpCols.includes('what_next_episode_should_address')) {
+    db.exec('ALTER TABLE show_episodes ADD COLUMN what_next_episode_should_address TEXT');
+    console.log('[DB] Migration: added show_episodes.what_next_episode_should_address');
+  }
+  if (!showEpCols.includes('youtube_url')) {
+    db.exec('ALTER TABLE show_episodes ADD COLUMN youtube_url TEXT');
+    console.log('[DB] Migration: added show_episodes.youtube_url');
+  }
+  if (!showEpCols.includes('themes')) {
+    db.exec('ALTER TABLE show_episodes ADD COLUMN themes TEXT');
+    console.log('[DB] Migration: added show_episodes.themes');
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -1951,8 +1966,9 @@ function createShowEpisode(data) {
   const result = _run(
     `INSERT INTO show_episodes
        (show_id, project_id, episode_number, season, title, what_was_established,
-        seeds_planted, arc_advancement, character_moments, central_question_status, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        seeds_planted, arc_advancement, character_moments, central_question_status,
+        episode_summary, what_next_episode_should_address, youtube_url, themes, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.show_id,
       data.project_id || null,
@@ -1960,10 +1976,14 @@ function createShowEpisode(data) {
       data.season || 1,
       data.title || null,
       data.what_was_established || null,
-      data.seeds_planted || null,
+      Array.isArray(data.seeds_planted) ? JSON.stringify(data.seeds_planted) : (data.seeds_planted || null),
       data.arc_advancement || null,
-      data.character_moments || null,
+      Array.isArray(data.character_moments) ? JSON.stringify(data.character_moments) : (data.character_moments || null),
       data.central_question_status || 'introduced',
+      data.episode_summary || null,
+      data.what_next_episode_should_address || null,
+      data.youtube_url || null,
+      Array.isArray(data.themes) ? JSON.stringify(data.themes) : (data.themes || null),
       data.status || 'planned',
     ]
   );
@@ -1995,7 +2015,8 @@ function updateShowEpisode(id, data) {
   const allowed = [
     'title', 'what_was_established', 'seeds_planted', 'arc_advancement',
     'character_moments', 'central_question_status', 'episode_summary', 'status',
-    'project_id', 'episode_number',
+    'project_id', 'episode_number', 'what_next_episode_should_address',
+    'youtube_url', 'themes',
   ];
   const fields = Object.keys(data).filter(k => allowed.includes(k));
   if (!fields.length) return;
@@ -2049,6 +2070,12 @@ function buildSeasonContext(showId) {
   else if (completedCount < Math.floor(totalTarget * 0.85)) arc_position = 'endgame';
   else arc_position = 'finale';
 
+  // Pull what_next_episode_should_address from the most recent completed episode
+  const mostRecentCompleted = completed.length
+    ? completed[completed.length - 1]
+    : null;
+  const what_next_should_address = mostRecentCompleted?.what_next_episode_should_address || null;
+
   return {
     show,
     episodes: completed,
@@ -2057,6 +2084,7 @@ function buildSeasonContext(showId) {
     arc_position,
     next_episode_number,
     current_episode: episodes.find(e => e.status === 'in_progress') || null,
+    what_next_should_address,
   };
 }
 

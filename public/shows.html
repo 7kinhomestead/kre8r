@@ -219,6 +219,60 @@
   .launch-key{font-size:12px;color:var(--text-dimmer);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
   .launch-val{font-size:13px;color:var(--text);text-align:right;max-width:65%;}
 
+  /* ── Import Episode Modal ── */
+  .import-modal{max-width:700px;}
+  .yt-preview-card{
+    display:flex;gap:14px;align-items:flex-start;
+    background:var(--bg);border:1px solid var(--border-bright);border-radius:var(--radius-sm);
+    padding:12px 14px;margin-bottom:18px;
+  }
+  .yt-thumb{width:120px;height:68px;border-radius:4px;object-fit:cover;flex-shrink:0;background:var(--bg-card-2);}
+  .yt-thumb-placeholder{width:120px;height:68px;border-radius:4px;background:var(--bg-card-2);display:flex;align-items:center;justify-content:center;color:var(--text-dimmer);font-size:22px;flex-shrink:0;}
+  .yt-meta{flex:1;min-width:0;}
+  .yt-title{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .yt-stats{font-size:11px;color:var(--text-dimmer);display:flex;gap:12px;flex-wrap:wrap;}
+
+  .upload-area{
+    border:2px dashed var(--border-bright);border-radius:var(--radius-sm);
+    padding:24px;text-align:center;cursor:pointer;transition:all 0.15s;
+    color:var(--text-dimmer);font-size:13px;
+  }
+  .upload-area:hover,.upload-area.drag-over{border-color:var(--teal);color:var(--teal);}
+  .upload-area-icon{font-size:28px;margin-bottom:8px;}
+  .upload-area-label{font-weight:600;margin-bottom:4px;}
+  .upload-area-hint{font-size:11px;opacity:0.7;}
+  .transcript-info{
+    background:var(--teal-glow);border:1px solid rgba(62,207,178,0.2);
+    border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;
+    display:flex;align-items:center;justify-content:space-between;margin-top:8px;
+  }
+  .transcript-info-name{color:var(--text);font-weight:600;}
+  .transcript-info-count{color:var(--text-dimmer);}
+
+  .review-divider{
+    display:flex;align-items:center;gap:10px;margin:20px 0 16px;
+  }
+  .review-divider-line{flex:1;height:1px;background:var(--border-bright);}
+  .review-divider-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);}
+
+  .field-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:560px){.field-row-2{grid-template-columns:1fr;}}
+  .field-hint{font-size:11px;color:var(--text-dimmer);margin-top:4px;}
+
+  .status-card{
+    background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:14px 16px;margin-bottom:14px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .status-card-icon{font-size:22px;flex-shrink:0;}
+  .status-card-text{font-size:13px;color:var(--text-dim);line-height:1.5;}
+
+  .cq-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;cursor:pointer;transition:all 0.15s;}
+  .cq-badge.active{border:1px solid var(--teal);background:var(--teal-glow);color:var(--teal);}
+  .cq-badge:not(.active){border:1px solid var(--border);background:transparent;color:var(--text-dimmer);}
+  .cq-badge:hover:not(.active){border-color:var(--border-bright);color:var(--text-dim);}
+  .cq-selector{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+
   /* Toast */
   .toast{
     position:fixed;bottom:24px;right:24px;z-index:2000;
@@ -281,6 +335,7 @@
       <div>
         <div class="section-header">
           <div class="section-title">EPISODE MAP</div>
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="openImportModal()">&#11015; Import Episode</button>
         </div>
         <div id="episode-list" class="episode-list"></div>
         <button class="ep-add-btn" id="plan-next-btn" onclick="planNextEpisode()">
@@ -399,6 +454,142 @@
       <button class="btn btn-ghost" id="wizard-back-btn" onclick="wizardBack()" style="display:none;">&#8592; Back</button>
       <button class="btn btn-ghost" onclick="closeWizard()" id="wizard-cancel-btn">Cancel</button>
       <button class="btn btn-teal" id="wizard-next-btn" onclick="wizardNext()">Next &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Import Existing Episode Modal ─── -->
+<div class="modal-overlay" id="import-overlay">
+  <div class="modal import-modal">
+    <div class="modal-header">
+      <div class="modal-title">IMPORT EXISTING EPISODE</div>
+      <button class="modal-close" onclick="closeImportModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" id="import-modal-body">
+
+      <!-- Field 1: YouTube URL -->
+      <div class="field">
+        <label class="field-label">YouTube URL <span style="color:var(--text-dimmer);font-weight:400;text-transform:none;">(optional — auto-fetches title, views, description)</span></label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input class="field-input" id="imp-yt-url" type="text" placeholder="https://youtube.com/watch?v=..." style="flex:1" oninput="impYtChanged()">
+          <button class="btn btn-ghost" id="imp-fetch-btn" onclick="fetchYouTubeMeta()" style="white-space:nowrap;padding:10px 14px">Fetch &#8594;</button>
+        </div>
+      </div>
+
+      <!-- YouTube preview card (hidden until fetched) -->
+      <div id="imp-yt-preview" style="display:none;" class="yt-preview-card">
+        <div id="imp-yt-thumb-wrap">
+          <div class="yt-thumb-placeholder">&#127910;</div>
+        </div>
+        <div class="yt-meta">
+          <div class="yt-title" id="imp-yt-title">—</div>
+          <div class="yt-stats">
+            <span id="imp-yt-views"></span>
+            <span id="imp-yt-published"></span>
+            <span id="imp-yt-channel"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Field 2: Episode Number -->
+      <div class="field">
+        <label class="field-label">Episode Number</label>
+        <input class="field-input" id="imp-ep-num" type="number" min="1" max="99" style="width:140px">
+        <div class="field-hint" id="imp-ep-hint">Auto-suggested based on existing episodes</div>
+      </div>
+
+      <!-- Field 3: Transcript Upload -->
+      <div class="field">
+        <label class="field-label">Upload DaVinci Transcript or Any Text File <span style="color:var(--text-dimmer);font-weight:400;text-transform:none;">(optional but recommended)</span></label>
+        <div class="upload-area" id="imp-upload-area" onclick="document.getElementById('imp-transcript-file').click()"
+             ondragover="impDragOver(event)" ondragleave="impDragLeave(event)" ondrop="impDrop(event)">
+          <input type="file" id="imp-transcript-file" accept=".txt,.srt,.vtt,.csv" style="display:none" onchange="handleTranscriptUpload(this.files[0])">
+          <div class="upload-area-icon">&#128196;</div>
+          <div class="upload-area-label">Click to upload or drag &amp; drop</div>
+          <div class="upload-area-hint">.txt &nbsp;·&nbsp; .srt &nbsp;·&nbsp; .vtt &nbsp;·&nbsp; .csv &nbsp;(DaVinci export formats)</div>
+        </div>
+        <div class="transcript-info" id="imp-transcript-info" style="display:none;">
+          <span class="transcript-info-name" id="imp-transcript-name"></span>
+          <span class="transcript-info-count" id="imp-transcript-count"></span>
+        </div>
+      </div>
+
+      <!-- Field 4: Analyze button -->
+      <button class="btn btn-teal" id="imp-analyze-btn" onclick="analyzeEpisode()" style="width:100%;justify-content:center;padding:13px;">
+        Analyze Episode &#8594;
+      </button>
+
+      <!-- Field 5: Review extracted data (hidden until analyzed) -->
+      <div id="imp-review" style="display:none;">
+        <div class="review-divider">
+          <div class="review-divider-line"></div>
+          <div class="review-divider-label">Claude&rsquo;s Analysis &mdash; Review &amp; Edit</div>
+          <div class="review-divider-line"></div>
+        </div>
+
+        <div class="status-card" id="imp-status-card">
+          <div class="status-card-icon">&#127909;</div>
+          <div class="status-card-text" id="imp-status-text">Analyzing&hellip;</div>
+        </div>
+
+        <!-- Episode title (from YouTube or manual) -->
+        <div class="field">
+          <label class="field-label">Episode Title</label>
+          <input class="field-input" id="rev-title" type="text" placeholder="Enter episode title">
+        </div>
+
+        <!-- Central question status -->
+        <div class="field">
+          <label class="field-label">Central Question Status</label>
+          <div class="cq-selector" id="rev-cq-selector">
+            <span class="cq-badge" data-val="introduced" onclick="selectCqStatus('introduced')">Introduced</span>
+            <span class="cq-badge" data-val="deepened"   onclick="selectCqStatus('deepened')">Deepened</span>
+            <span class="cq-badge" data-val="complicated" onclick="selectCqStatus('complicated')">Complicated</span>
+            <span class="cq-badge" data-val="answered"   onclick="selectCqStatus('answered')">Answered</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">What Was Established</label>
+          <textarea class="field-textarea" id="rev-established" rows="3" placeholder="Key facts and situations established in this episode that carry forward&hellip;"></textarea>
+          <div class="field-hint">This feeds the season context for future episodes</div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Arc Advancement</label>
+          <textarea class="field-textarea" id="rev-arc" rows="2" placeholder="How this episode moved the season arc forward&hellip;"></textarea>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Seeds Planted <span style="color:var(--text-dimmer);font-weight:400;text-transform:none;">(one per line)</span></label>
+          <textarea class="field-textarea" id="rev-seeds" rows="4" placeholder="Unresolved threads, teased storylines, questions left open&hellip;"></textarea>
+          <div class="field-hint">Each line becomes a trackable seed in the season context</div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Character Moments <span style="color:var(--text-dimmer);font-weight:400;text-transform:none;">(one per line)</span></label>
+          <textarea class="field-textarea" id="rev-character" rows="3" placeholder="Moments that revealed character&hellip;"></textarea>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Episode Summary</label>
+          <textarea class="field-textarea" id="rev-summary" rows="3" placeholder="2-3 sentence show-bible summary&hellip;"></textarea>
+        </div>
+
+        <div class="field">
+          <label class="field-label">What Next Episode Should Address</label>
+          <textarea class="field-textarea" id="rev-next" rows="2" placeholder="Story threads the next episode should pick up&hellip;"></textarea>
+          <div class="field-hint">Id8&Omega;r and Writ&Omega;r will use this to brief the next episode</div>
+        </div>
+
+        <div id="imp-save-error" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none;"></div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn btn-ghost" onclick="resetImportReview()">&#8592; Re-analyze</button>
+          <button class="btn btn-teal" id="imp-save-btn" onclick="saveImportedEpisode()">Save Episode &#10003;</button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -796,6 +987,281 @@
       errEl.style.display = 'block';
     }
   }
+
+  // ────────────────────────────────────────────────────
+  // IMPORT EXISTING EPISODE
+  // ────────────────────────────────────────────────────
+
+  let impTranscriptText  = '';
+  let impTranscriptName  = '';
+  let impYtData          = null;
+  let impExtracted       = null;
+  let impCqStatus        = 'deepened';
+
+  function openImportModal() {
+    if (!currentShowId) { toast('Open a show first', 'error'); return; }
+    // Reset state
+    impTranscriptText = '';
+    impTranscriptName = '';
+    impYtData         = null;
+    impExtracted      = null;
+    impCqStatus       = 'deepened';
+    document.getElementById('imp-yt-url').value       = '';
+    document.getElementById('imp-yt-preview').style.display = 'none';
+    document.getElementById('imp-ep-num').value       = '';
+    document.getElementById('imp-transcript-info').style.display = 'none';
+    document.getElementById('imp-transcript-file').value = '';
+    document.getElementById('imp-upload-area').classList.remove('drag-over');
+    document.getElementById('imp-review').style.display = 'none';
+    document.getElementById('imp-analyze-btn').style.display = 'block';
+    document.getElementById('imp-analyze-btn').disabled = false;
+    document.getElementById('imp-analyze-btn').innerHTML = 'Analyze Episode &#8594;';
+    document.getElementById('imp-save-error').style.display = 'none';
+
+    // Auto-suggest episode number
+    fetch(`/api/shows/${currentShowId}/context`)
+      .then(r => r.json())
+      .then(ctx => {
+        const el = document.getElementById('imp-ep-num');
+        if (!el.value) {
+          el.value = ctx.next_episode_number || 1;
+          document.getElementById('imp-ep-hint').textContent =
+            `Next available: Episode ${ctx.next_episode_number || 1}`;
+        }
+      })
+      .catch(() => {});
+
+    document.getElementById('import-overlay').classList.add('open');
+  }
+
+  function closeImportModal() {
+    document.getElementById('import-overlay').classList.remove('open');
+  }
+
+  window.impYtChanged = function() {
+    // Clear preview if URL cleared
+    const url = document.getElementById('imp-yt-url').value.trim();
+    if (!url) {
+      document.getElementById('imp-yt-preview').style.display = 'none';
+      impYtData = null;
+    }
+  };
+
+  window.fetchYouTubeMeta = async function() {
+    const url = document.getElementById('imp-yt-url').value.trim();
+    if (!url) { toast('Paste a YouTube URL first', 'error'); return; }
+    const btn = document.getElementById('imp-fetch-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      const res  = await fetch('/api/shows/youtube-meta?url=' + encodeURIComponent(url));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Fetch failed');
+      impYtData = data;
+      renderYtPreview(data);
+      toast('Video found: ' + (data.title || '').slice(0, 50));
+    } catch (e) {
+      toast('YouTube fetch failed: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Fetch &#8594;';
+    }
+  };
+
+  function renderYtPreview(data) {
+    document.getElementById('imp-yt-preview').style.display = 'flex';
+    document.getElementById('imp-yt-title').textContent = data.title || '(no title)';
+    document.getElementById('imp-yt-views').textContent = data.view_count
+      ? data.view_count.toLocaleString() + ' views' : '';
+    document.getElementById('imp-yt-published').textContent = data.published_at
+      ? new Date(data.published_at).toLocaleDateString() : '';
+    document.getElementById('imp-yt-channel').textContent = data.channel || '';
+    const thumbWrap = document.getElementById('imp-yt-thumb-wrap');
+    if (data.thumbnail) {
+      thumbWrap.innerHTML = `<img class="yt-thumb" src="${esc(data.thumbnail)}" alt="thumbnail">`;
+    } else {
+      thumbWrap.innerHTML = '<div class="yt-thumb-placeholder">&#127910;</div>';
+    }
+  }
+
+  window.handleTranscriptUpload = function(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      impTranscriptText = e.target.result || '';
+      impTranscriptName = file.name;
+      const chars = impTranscriptText.length;
+      const words = impTranscriptText.trim().split(/\s+/).length;
+      document.getElementById('imp-transcript-info').style.display = 'flex';
+      document.getElementById('imp-transcript-name').textContent   = file.name;
+      document.getElementById('imp-transcript-count').textContent  =
+        `${chars.toLocaleString()} chars · ~${words.toLocaleString()} words`;
+      document.getElementById('imp-upload-area').style.borderColor = 'var(--teal)';
+    };
+    reader.readAsText(file);
+  };
+
+  // Drag-and-drop for upload area
+  window.impDragOver = function(e) {
+    e.preventDefault();
+    document.getElementById('imp-upload-area').classList.add('drag-over');
+  };
+  window.impDragLeave = function() {
+    document.getElementById('imp-upload-area').classList.remove('drag-over');
+  };
+  window.impDrop = function(e) {
+    e.preventDefault();
+    document.getElementById('imp-upload-area').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleTranscriptUpload(file);
+  };
+
+  window.analyzeEpisode = async function() {
+    if (!currentShowId) { toast('No show selected', 'error'); return; }
+    if (!impTranscriptText && !document.getElementById('imp-yt-url').value.trim()) {
+      toast('Add a YouTube URL or upload a transcript (or both)', 'error');
+      return;
+    }
+    const epNum = parseInt(document.getElementById('imp-ep-num').value) || 1;
+    const btn   = document.getElementById('imp-analyze-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Analyzing with Claude&hellip; (10-20s)';
+
+    document.getElementById('imp-review').style.display = 'block';
+    document.getElementById('imp-status-card').style.display = 'flex';
+    document.getElementById('imp-status-text').textContent = 'Claude is reading the transcript and extracting season intelligence…';
+    // hide save section until done
+    document.querySelectorAll('#imp-review .field, #imp-review .review-divider, #imp-review div[style*="flex-end"]').forEach(el => {
+      el.style.display = 'none';
+    });
+
+    try {
+      const ytUrl = document.getElementById('imp-yt-url').value.trim() || null;
+      const res   = await fetch('/api/shows/import-episode', {
+        method:  'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          show_id:        currentShowId,
+          episode_number: epNum,
+          youtube_url:    ytUrl,
+          transcript:     impTranscriptText || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+
+      impExtracted = data.extracted;
+      if (data.youtube) impYtData = data.youtube;
+
+      // Show review fields
+      document.getElementById('imp-status-card').style.display = 'none';
+      document.querySelectorAll('#imp-review .field, #imp-review .review-divider, #imp-review div[style*="flex-end"]').forEach(el => {
+        el.style.display = '';
+      });
+
+      populateReviewFields(data);
+      btn.style.display = 'none'; // hide analyze btn
+      toast('Analysis complete — review and save');
+    } catch (e) {
+      btn.disabled = false;
+      btn.innerHTML = 'Analyze Episode &#8594;';
+      document.getElementById('imp-status-text').textContent = '⚠ ' + e.message;
+      toast('Analysis failed: ' + e.message, 'error');
+    }
+  };
+
+  function populateReviewFields(data) {
+    const ex = data.extracted || {};
+    // YouTube title → episode title fallback
+    const title = ex.title || (data.youtube ? data.youtube.title : '') || '';
+    document.getElementById('rev-title').value       = title;
+    document.getElementById('rev-established').value = ex.what_was_established || '';
+    document.getElementById('rev-arc').value         = ex.arc_advancement || '';
+
+    const seeds = Array.isArray(ex.seeds_planted)
+      ? ex.seeds_planted.join('\n')
+      : (ex.seeds_planted || '');
+    document.getElementById('rev-seeds').value = seeds;
+
+    const chars = Array.isArray(ex.character_moments)
+      ? ex.character_moments.join('\n')
+      : (ex.character_moments || '');
+    document.getElementById('rev-character').value = chars;
+    document.getElementById('rev-summary').value   = ex.episode_summary || '';
+    document.getElementById('rev-next').value      = ex.what_next_episode_should_address || '';
+
+    selectCqStatus(ex.central_question_status || 'deepened');
+  }
+
+  window.selectCqStatus = function(val) {
+    impCqStatus = val;
+    document.querySelectorAll('.cq-badge').forEach(b => {
+      b.classList.toggle('active', b.dataset.val === val);
+    });
+  };
+
+  window.resetImportReview = function() {
+    document.getElementById('imp-review').style.display = 'none';
+    document.getElementById('imp-analyze-btn').style.display = 'block';
+    document.getElementById('imp-analyze-btn').disabled = false;
+    document.getElementById('imp-analyze-btn').innerHTML = 'Analyze Episode &#8594;';
+  };
+
+  window.saveImportedEpisode = async function() {
+    const btn   = document.getElementById('imp-save-btn');
+    const errEl = document.getElementById('imp-save-error');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving&hellip;';
+
+    try {
+      const seedsRaw = document.getElementById('rev-seeds').value.trim();
+      const seeds    = seedsRaw ? seedsRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+      const charRaw  = document.getElementById('rev-character').value.trim();
+      const chars    = charRaw ? charRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+      const payload = {
+        episode_number:                   parseInt(document.getElementById('imp-ep-num').value) || 1,
+        title:                            document.getElementById('rev-title').value.trim() || null,
+        what_was_established:             document.getElementById('rev-established').value.trim() || null,
+        arc_advancement:                  document.getElementById('rev-arc').value.trim() || null,
+        seeds_planted:                    seeds,
+        character_moments:                chars,
+        episode_summary:                  document.getElementById('rev-summary').value.trim() || null,
+        what_next_episode_should_address: document.getElementById('rev-next').value.trim() || null,
+        central_question_status:          impCqStatus,
+        youtube_url:                      impYtData?.video_id
+          ? `https://youtube.com/watch?v=${impYtData.video_id}` : null,
+        status: 'complete',
+      };
+
+      const res  = await fetch(`/api/shows/${currentShowId}/episodes`, {
+        method:  'POST',
+        headers: {'Content-Type':'application/json'},
+        body:    JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+
+      closeImportModal();
+      toast('Episode imported!', 'success');
+      // Refresh the show detail
+      await openShow(currentShowId);
+    } catch (e) {
+      btn.disabled = false;
+      btn.innerHTML = 'Save Episode &#10003;';
+      errEl.textContent  = e.message;
+      errEl.style.display = 'block';
+    }
+  };
+
+  window.openImportModal  = openImportModal;
+  window.closeImportModal = closeImportModal;
+
+  // Close import modal on overlay click
+  document.getElementById('import-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeImportModal();
+  });
 
   window.openWizard = openWizard;
   window.closeWizard = closeWizard;
