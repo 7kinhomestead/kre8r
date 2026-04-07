@@ -477,6 +477,32 @@ On app load, each tool checks for an unclean shutdown:
 ### Why it matters
 A 45-minute Id8Ωr research session or a long WritΩr generation run represents real time invested. One crash erasing that is a trust-destroying experience for beta users. Auto-save + recovery is table stakes for any tool that runs long AI operations.
 
+## ⚡ HIGH PRIORITY — Claude API Retry / Resilience at Every Call Site
+
+**Problem:** When a Claude API call fails (529 overloaded, network blip, timeout), most tools just freeze or surface a generic error. The user has to restart the entire step — which regenerates from scratch and produces *different* output than what was building toward. This destroys creative continuity. A half-built script idea, a research phase mid-flight, a selects pass that was almost done — all gone, replaced with something that diverges from the creative direction already established.
+
+**What's needed:** A shared retry wrapper built into `src/utils/claude.js` that:
+- Retries on 529 (overloaded) and 429 (rate limit) with exponential backoff — delays: [2s, 4s, 8s, 16s], max 4 attempts
+- Retries on network errors (ECONNRESET, ETIMEDOUT) up to 3 attempts
+- Does NOT retry on 400 (bad request) or 401 (auth) — those are real errors, fail immediately
+- Logs each retry attempt so the user sees "Claude is busy, retrying in Xs…" instead of silence
+- SSE endpoints emit `{ type: 'retry', attempt: N, delay_ms: X, message: 'Claude is busy — retrying in Xs…' }` so the UI shows a non-scary status instead of going dead
+
+**Affected call sites (non-exhaustive):**
+- `src/routes/id8r.js` — concept generation, research phases, package generation (partial retry exists on /start only)
+- `src/routes/generate.js` — script, captions, email generation
+- `src/routes/mirrr.js` — DNA clustering, niche analysis, Secrets discovery, coaching report
+- `src/routes/analytr.js` — coaching report, thumbnail A/B
+- `src/routes/shows.js` — episode analysis (YouTube comments + insights)
+- `src/routes/northr.js` — monthly strategy generation
+- `src/editor/selects-new.js` — SelectsΩr clip classification and selection decisions
+- `src/vault/intake.js` — footage tagging at ingest
+- `src/vault/cutor.js` — CutΩr scene analysis
+
+**Why this is HIGH PRIORITY:** Every Claude call in this system is a creative step, not a data fetch. A failed API call doesn't just cause inconvenience — it breaks the thread of creative momentum. The user was building toward something specific. A retry preserves that. A hard fail destroys it.
+
+---
+
 ## AnalΩzr — Playlist Generator
 From the Content DNA clusters and niche definition, suggest YouTube playlist structures that organize existing videos into intentional series.
 
