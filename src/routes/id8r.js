@@ -82,34 +82,54 @@ async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null,
 
   if (tools) body.tools = tools;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method  : 'POST',
-    headers : {
-      'Content-Type'      : 'application/json',
-      'x-api-key'         : apiKey,
-      'anthropic-version' : '2023-06-01',
-    },
-    body: JSON.stringify(body),
-  });
+  const delays = [2000, 4000, 8000];
+  let lastErr;
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Claude API ${response.status}`);
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method  : 'POST',
+      headers : {
+        'Content-Type'      : 'application/json',
+        'x-api-key'         : apiKey,
+        'anthropic-version' : '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    });
+
+    // Retry on overload (529) or rate limit (429) with backoff
+    if (response.status === 529 || response.status === 429) {
+      const err = await response.json().catch(() => ({}));
+      lastErr = new Error(err?.error?.message || `Claude API ${response.status}`);
+      if (attempt < delays.length) {
+        console.warn(`[id8r] Claude overloaded — retry ${attempt + 1} in ${delays[attempt] / 1000}s`);
+        await new Promise(r => setTimeout(r, delays[attempt]));
+        continue;
+      }
+      throw lastErr;
+    }
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Claude API ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // ── Token tracking ──────────────────────────────────────
+    try {
+      const usage = data.usage || {};
+      const input  = usage.input_tokens  || 0;
+      const output = usage.output_tokens || 0;
+      // claude-sonnet-4-6: $3/M input, $15/M output
+      const cost = (input * 0.000003) + (output * 0.000015);
+      db.logTokenUsage({ tool: 'id8r', session_id: _sessionId, input_tokens: input, output_tokens: output, estimated_cost: cost });
+    } catch (_) { /* non-fatal — never break the response */ }
+
+    return data;
   }
 
-  const data = await response.json();
-
-  // ── Token tracking ──────────────────────────────────────
-  try {
-    const usage = data.usage || {};
-    const input  = usage.input_tokens  || 0;
-    const output = usage.output_tokens || 0;
-    // claude-sonnet-4-6: $3/M input, $15/M output
-    const cost = (input * 0.000003) + (output * 0.000015);
-    db.logTokenUsage({ tool: 'id8r', session_id: _sessionId, input_tokens: input, output_tokens: output, estimated_cost: cost });
-  } catch (_) { /* non-fatal — never break the response */ }
-
-  return data;
+  // Should never reach here — loop always returns or throws
+  throw lastErr || new Error('Claude API: unexpected exit');
 }
 
 async function callClaudeText(systemPrompt, messages, maxTokens = 512, sessionId = null) {
