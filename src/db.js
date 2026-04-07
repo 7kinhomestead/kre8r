@@ -546,6 +546,55 @@ function runMigrations() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // ── One-time dedup: remove duplicate YouTube posts caused by pre-upsert-guard
+  //    imports. For each project that has more than one YouTube post, keep the one
+  //    with the highest view count (or the latest id if no views) and delete the rest
+  //    along with their analytics rows.
+  try {
+    const dupProjects = db.prepare(`
+      SELECT project_id, COUNT(*) as cnt
+      FROM posts
+      WHERE platform = 'youtube'
+      GROUP BY project_id
+      HAVING cnt > 1
+    `).all();
+
+    if (dupProjects.length > 0) {
+      console.log(`[DB] Dedup migration: found ${dupProjects.length} projects with duplicate YouTube posts`);
+      for (const row of dupProjects) {
+        // Keep the post with the most views; tie-break on highest id (most recent insert)
+        const keep = db.prepare(`
+          SELECT po.id
+          FROM posts po
+          LEFT JOIN analytics a ON a.post_id = po.id AND a.metric_name = 'views'
+          WHERE po.project_id = ? AND po.platform = 'youtube'
+          ORDER BY COALESCE(a.metric_value, 0) DESC, po.id DESC
+          LIMIT 1
+        `).get(row.project_id);
+
+        if (!keep) continue;
+
+        // Delete analytics rows for all OTHER posts on this project+platform
+        db.prepare(`
+          DELETE FROM analytics
+          WHERE post_id IN (
+            SELECT id FROM posts
+            WHERE project_id = ? AND platform = 'youtube' AND id != ?
+          )
+        `).run(row.project_id, keep.id);
+
+        // Delete the duplicate posts themselves
+        db.prepare(`
+          DELETE FROM posts
+          WHERE project_id = ? AND platform = 'youtube' AND id != ?
+        `).run(row.project_id, keep.id);
+      }
+      console.log(`[DB] Dedup migration: cleaned duplicate YouTube posts`);
+    }
+  } catch (err) {
+    console.warn('[DB] Dedup migration error (non-fatal):', err.message);
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
