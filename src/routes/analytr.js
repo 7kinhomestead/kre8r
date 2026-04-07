@@ -343,12 +343,14 @@ router.post('/youtube-sync', async (req, res) => {
       }
     }
 
+    const syncedAt = new Date().toISOString();
+    db.setKv('mirrr_last_sync', syncedAt);
     send({
       type: 'done',
       message: `Sync complete. ${synced} updated, ${failed} failed.`,
       synced,
       failed,
-      synced_at: new Date().toISOString(),
+      synced_at: syncedAt,
     });
     res.end();
 
@@ -562,22 +564,36 @@ router.post('/youtube-import-channel', async (req, res) => {
         const desc    = meta.description ? meta.description.substring(0, 500) : null;
         const durInfo = allDurations[videoId] || {};
 
-        // Create project (mark as youtube_import so it stays out of production tool dropdowns)
-        const project = db.createProject(meta.title, desc, ytUrl, videoId);
-        db.setProjectSource(project.id, 'youtube_import');
+        // Check for existing project by youtube_video_id (prevents doubles on reimport)
+        let project = db.getAllProjects().find(p => p.youtube_video_id === videoId);
+        if (!project) {
+          project = db.createProject(meta.title, desc, ytUrl, videoId);
+          db.setProjectSource(project.id, 'youtube_import');
+        }
 
-        // Create YouTube post record (with format classification)
-        const postId = db.savePost({
-          project_id:      project.id,
-          platform:        'youtube',
-          url:             ytUrl,
-          content:         meta.title,
-          status:          'posted',
-          posted_at:       meta.publishedAt || new Date().toISOString(),
-          thumbnail_url:   meta.thumbnailUrl || null,
-          format:          durInfo.format   || null,
-          duration_seconds: durInfo.seconds  || null,
-        });
+        // Find or create YouTube post record (upsert — never double-insert)
+        const existingPosts = db.getPostsByProject(project.id);
+        let existingYtPost  = existingPosts.find(p => p.platform === 'youtube');
+        let postId;
+        if (existingYtPost) {
+          postId = existingYtPost.id;
+          // Backfill format if missing
+          if (!existingYtPost.format && durInfo.format) {
+            db.updatePostFormat(postId, durInfo.format, durInfo.seconds || null);
+          }
+        } else {
+          postId = db.savePost({
+            project_id:      project.id,
+            platform:        'youtube',
+            url:             ytUrl,
+            content:         meta.title,
+            status:          'posted',
+            posted_at:       meta.publishedAt || new Date().toISOString(),
+            thumbnail_url:   meta.thumbnailUrl || null,
+            format:          durInfo.format   || null,
+            duration_seconds: durInfo.seconds  || null,
+          });
+        }
 
         // Save metrics
         if (stats.viewCount !== undefined) {

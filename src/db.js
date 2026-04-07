@@ -2231,77 +2231,46 @@ function getLatestReport(month, year) {
 }
 
 function getPublishingStats(days = 30) {
-  const now = new Date();
-  const cutoff = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+  // ── Read from posts table — the single source of truth for published content ──
+  // Excludes youtube_import archive (historical bulk import — not current cadence).
+  // Uses posted_at which is set at actual publish time by the sync and post routes.
+  const lastPost = _get(`
+    SELECT
+      MAX(po.posted_at) AS last_publish,
+      COUNT(*)          AS total_posts,
+      COUNT(CASE WHEN po.posted_at > datetime('now', '-30 days') THEN 1 END) AS posts_this_month,
+      COUNT(CASE WHEN po.posted_at > datetime('now', '-60 days')
+        AND po.posted_at <= datetime('now', '-30 days') THEN 1 END) AS posts_last_month
+    FROM posts po
+    JOIN projects pr ON pr.id = po.project_id
+    WHERE po.status = 'posted'
+      AND po.posted_at IS NOT NULL
+      AND (pr.source IS NULL OR pr.source != 'youtube_import')
+  `);
 
-  // ── Unified publish date query ─────────────────────────────────────────────
-  // Three sources (unioned), best date wins:
-  //   1. Explicitly marked published (status='published', published_at set)
-  //   2. YouTube-imported videos from MirrΩr (source='youtube_import', have real YouTube dates)
-  //   3. Gate C approved native projects (gate_c_approved=1, use gate_c_approved_at as proxy)
-  const PUBLISH_UNION = `
-    SELECT published_at AS pub_date FROM projects
-      WHERE status = 'published' AND published_at IS NOT NULL
-    UNION ALL
-    SELECT published_at AS pub_date FROM projects
-      WHERE source = 'youtube_import' AND published_at IS NOT NULL
-    UNION ALL
-    SELECT ps.gate_c_approved_at AS pub_date
-      FROM projects p
-      JOIN pipeline_state ps ON ps.project_id = p.id
-      WHERE ps.gate_c_approved = 1 AND ps.gate_c_approved_at IS NOT NULL
-        AND p.source != 'youtube_import'
-  `;
-
-  const lastPublished = _get(
-    `SELECT pub_date FROM (${PUBLISH_UNION}) ORDER BY pub_date DESC`
-  );
-  let daysSinceLastPublish = 999;
-  let lastPublishDate = null;
-  if (lastPublished?.pub_date) {
-    lastPublishDate = lastPublished.pub_date;
-    const diff = now - new Date(lastPublished.pub_date);
-    daysSinceLastPublish = Math.floor(diff / (1000 * 60 * 60 * 24));
-  }
-
-  // Videos published this calendar month
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const videosThisMonth = _get(
-    `SELECT COUNT(*) as count FROM (${PUBLISH_UNION}) WHERE pub_date >= ?`,
-    [thisMonthStart]
-  )?.count || 0;
-
-  // Videos published last calendar month
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-  const lastMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const videosLastMonth = _get(
-    `SELECT COUNT(*) as count FROM (${PUBLISH_UNION}) WHERE pub_date >= ? AND pub_date < ?`,
-    [lastMonthStart, lastMonthEnd]
-  )?.count || 0;
-
-  // Total published in window
-  const videosInWindow = _get(
-    `SELECT COUNT(*) as count FROM (${PUBLISH_UNION}) WHERE pub_date >= ?`,
-    [cutoff]
-  )?.count || 0;
+  const daysSinceLastPublish = lastPost?.last_publish
+    ? Math.floor((Date.now() - new Date(lastPost.last_publish).getTime()) / 86400000)
+    : 999;
 
   // Last email sent (use most recent approved email as proxy)
   const lastEmail = _get(
     `SELECT created_at FROM emails WHERE approved = 1 ORDER BY created_at DESC`
   );
-  let daysSinceLastEmail = 999;
-  if (lastEmail?.created_at) {
-    const diff = now - new Date(lastEmail.created_at);
-    daysSinceLastEmail = Math.floor(diff / (1000 * 60 * 60 * 24));
-  }
+  const daysSinceLastEmail = lastEmail?.created_at
+    ? Math.floor((Date.now() - new Date(lastEmail.created_at).getTime()) / 86400000)
+    : 999;
+
+  // Last MirrΩr sync timestamp (written by analytr sync route)
+  const lastSync = _get(`SELECT value, updated_at FROM kv_store WHERE key = 'mirrr_last_sync'`);
 
   return {
+    last_publish_date:       lastPost?.last_publish || null,
     days_since_last_publish: daysSinceLastPublish,
-    last_publish_date: lastPublishDate,
-    videos_this_month: videosThisMonth,
-    videos_last_month: videosLastMonth,
-    videos_in_window: videosInWindow,
-    days_since_last_email: daysSinceLastEmail,
+    videos_this_month:       lastPost?.posts_this_month || 0,
+    videos_last_month:       lastPost?.posts_last_month || 0,
+    total_posts:             lastPost?.total_posts || 0,
+    days_since_last_email:   daysSinceLastEmail,
+    mirrr_last_sync:         lastSync?.updated_at || null,
   };
 }
 

@@ -32,18 +32,22 @@ function startServer() {
     const userData = app.getPath('userData');
     fs.mkdirSync(userData, { recursive: true });
 
-    // DB: if no kre8r.db in AppData, seed from the schema-only template that
-    // ships with the app. Users get the right schema with zero data.
-    const dbDest      = path.join(userData, 'kre8r.db');
-    const dbTemplate  = path.join(__dirname, '../database/kre8r-template.db');
+    // DB: only copy template on a genuine fresh install (no DB in AppData).
+    // NEVER overwrite an existing DB — that would wipe all user data.
+    const dbDest     = path.join(userData, 'kre8r.db');
+    const dbTemplate = path.join(__dirname, '../database/kre8r-template.db');
     if (!fs.existsSync(dbDest)) {
+      // Fresh install — seed from template if available, otherwise let
+      // the server create the schema from scratch via migrations.
       if (fs.existsSync(dbTemplate)) {
         fs.copyFileSync(dbTemplate, dbDest);
-        console.log('[Electron] Seeded fresh database from template →', dbDest);
+        console.log('[Electron] Fresh install — seeded DB from template →', dbDest);
       } else {
-        // Template missing — server will create schema from scratch via migrations
-        console.warn('[Electron] kre8r-template.db not found; server will initialise schema');
+        console.warn('[Electron] Fresh install — no template found; server will initialise schema');
       }
+    } else {
+      // Existing DB — use it as-is. All data is preserved.
+      console.log('[Electron] Existing DB found — preserving user data →', dbDest);
     }
 
     // Creator profile: if no profile in AppData, this is a fresh install.
