@@ -2401,6 +2401,63 @@ function getPipelineHealth() {
   };
 }
 
+function _debugViews() {
+  // Total views by platform
+  const byPlatform = db.prepare(`
+    SELECT a.platform, COUNT(*) as rows, SUM(a.metric_value) as total_views
+    FROM analytics a
+    WHERE a.metric_name = 'views'
+    GROUP BY a.platform
+    ORDER BY total_views DESC
+  `).all();
+
+  // Posts per project (find any with >1 YouTube post)
+  const dupPosts = db.prepare(`
+    SELECT project_id, COUNT(*) as post_count
+    FROM posts WHERE platform = 'youtube'
+    GROUP BY project_id HAVING post_count > 1
+  `).all();
+
+  // Analytics rows per post (find any with >1 views row for same post)
+  const dupAnalytics = db.prepare(`
+    SELECT post_id, COUNT(*) as row_count
+    FROM analytics WHERE metric_name = 'views'
+    GROUP BY post_id HAVING row_count > 1
+  `).all();
+
+  // Top 5 projects by view count (to spot outliers)
+  const top5 = db.prepare(`
+    SELECT pr.title, pr.source, pr.status, po.platform,
+           SUM(a.metric_value) as views, COUNT(a.id) as analytics_rows
+    FROM analytics a
+    JOIN posts po ON po.id = a.post_id
+    JOIN projects pr ON pr.id = po.project_id
+    WHERE a.metric_name = 'views'
+    GROUP BY pr.id, po.platform
+    ORDER BY views DESC LIMIT 5
+  `).all();
+
+  // Grand total
+  const grandTotal = db.prepare(
+    `SELECT SUM(metric_value) as n FROM analytics WHERE metric_name = 'views'`
+  ).get();
+
+  const ytOnly = db.prepare(
+    `SELECT SUM(a.metric_value) as n FROM analytics a
+     JOIN posts po ON po.id = a.post_id
+     WHERE a.metric_name = 'views' AND po.platform = 'youtube'`
+  ).get();
+
+  return {
+    grand_total_all_platforms: grandTotal?.n || 0,
+    youtube_only_total:        ytOnly?.n || 0,
+    by_platform:               byPlatform,
+    duplicate_posts:           dupPosts,
+    duplicate_analytics_rows:  dupAnalytics,
+    top_5_videos:              top5,
+  };
+}
+
 module.exports = {
   initDb,
   createProject,
@@ -2543,6 +2600,8 @@ module.exports = {
   updateShowEpisode,
   getNextEpisodeNumber,
   buildSeasonContext,
+  // Diagnostics
+  _debugViews,
   // NorthΩr
   createGoal,
   getGoal,

@@ -72,6 +72,16 @@ router.get('/channel-health', (req, res) => {
   }
 });
 
+// ─── Debug: views breakdown (temporary diagnostic) ───────────────────────────
+router.get('/debug-views', (req, res) => {
+  try {
+    const d = db._debugViews();
+    res.json(d);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Last N Videos with Analytics ────────────────────────────────────────────
 
 router.get('/videos', (req, res) => {
