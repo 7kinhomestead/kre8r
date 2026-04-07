@@ -1309,14 +1309,22 @@ function getAnalyticsSummary(projectId) {
 // ─────────────────────────────────────────────
 
 function getGlobalChannelHealth() {
+  // All queries exclude archived projects — archived kre8r duplicates must not inflate totals
   const totalViews = _get(
-    `SELECT COALESCE(SUM(metric_value),0) as n FROM analytics WHERE metric_name = 'views'`
+    `SELECT COALESCE(SUM(a.metric_value),0) as n
+     FROM analytics a
+     JOIN posts po ON po.id = a.post_id
+     JOIN projects pr ON pr.id = po.project_id
+     WHERE a.metric_name = 'views' AND pr.status != 'archived'`
   );
   const avgViews = _get(
     `SELECT COALESCE(AVG(v),0) as n FROM (
-       SELECT SUM(metric_value) as v FROM analytics
-       WHERE metric_name = 'views'
-       GROUP BY project_id
+       SELECT SUM(a.metric_value) as v
+       FROM analytics a
+       JOIN posts po ON po.id = a.post_id
+       JOIN projects pr ON pr.id = po.project_id
+       WHERE a.metric_name = 'views' AND pr.status != 'archived'
+       GROUP BY a.project_id
      )`
   );
   const bestVideo = _get(
@@ -1324,7 +1332,7 @@ function getGlobalChannelHealth() {
      FROM analytics a
      JOIN posts po ON po.id = a.post_id
      JOIN projects pr ON pr.id = po.project_id
-     WHERE a.metric_name = 'views'
+     WHERE a.metric_name = 'views' AND pr.status != 'archived'
      ORDER BY a.metric_value DESC LIMIT 1`
   );
   const totalVideos = _get(
@@ -1335,21 +1343,25 @@ function getGlobalChannelHealth() {
      FROM projects pr
      JOIN posts po ON po.project_id = pr.id
      JOIN analytics a ON a.post_id = po.id
-     WHERE a.metric_name = 'views' AND a.metric_value > 0 AND pr.topic IS NOT NULL
+     WHERE a.metric_name = 'views' AND a.metric_value > 0
+       AND pr.topic IS NOT NULL AND pr.status != 'archived'
      GROUP BY pr.topic ORDER BY SUM(a.metric_value) DESC LIMIT 1`
   );
   const longformAvg = _get(
     `SELECT COALESCE(AVG(a.metric_value), 0) as n
      FROM analytics a
      JOIN posts po ON po.id = a.post_id
+     JOIN projects pr ON pr.id = po.project_id
      WHERE a.metric_name = 'views'
        AND po.platform = 'youtube'
-       AND po.format IN ('longform', 'standard')`
+       AND po.format IN ('longform', 'standard')
+       AND pr.status != 'archived'`
   );
   const formatCounts = _all(
     `SELECT COALESCE(po.format, 'longform') as fmt, COUNT(DISTINCT po.project_id) as n
      FROM posts po
-     WHERE po.platform = 'youtube'
+     JOIN projects pr ON pr.id = po.project_id
+     WHERE po.platform = 'youtube' AND pr.status != 'archived'
      GROUP BY COALESCE(po.format, 'longform')`
   );
   const fmtBreakdown = { longform: 0, standard: 0, micro: 0, short: 0, live: 0 };
