@@ -4,7 +4,7 @@
 <link rel='icon' type='image/png' href='/images/kre8r-icon.png'>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kre8Ωr — EditΩr</title>
+<title>Kre8Ωr — AssemblΩr</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
@@ -119,6 +119,10 @@
   .badge-winner{background:var(--green-glow);color:var(--green);border:1px solid var(--green-border);}
   .badge-fire{background:var(--red-glow);color:var(--red);border:1px solid var(--red-border);}
   .badge-takes{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+  .badge-clean{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(91,156,246,0.3);}
+  .badge-strong{background:var(--green-glow);color:var(--green);border:1px solid var(--green-border);}
+  .badge-fumbled{background:var(--red-glow);color:var(--red);border:1px solid var(--red-border);}
+  .badge-ok{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
   .section-expand{background:none;border:none;color:var(--text-dimmer);font-size:16px;cursor:pointer;transition:transform 0.2s;}
   .section-expand.open{transform:rotate(180deg);}
   .section-body{padding:0 14px 14px;border-top:1px solid var(--border);display:none;}
@@ -126,11 +130,17 @@
   .section-detail-label{font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 5px;}
   .section-detail-text{font-size:13px;color:var(--text-dim);line-height:1.7;}
   .takes-list{display:flex;flex-direction:column;gap:6px;}
-  .take-item{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-size:12px;color:var(--text-dim);}
-  .take-item.is-winner{border-color:var(--green-border);background:var(--green-glow);}
-  .take-winner-tag{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;margin-left:6px;}
+  .take-item{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-size:12px;color:var(--text-dim);cursor:pointer;transition:border-color 0.15s,background 0.15s;}
+  .take-item:hover:not(.is-winner){border-color:var(--teal-dim);background:var(--teal-glow);}
+  .take-item.is-winner{border-color:var(--green-border);background:var(--green-glow);cursor:default;}
+  .take-item .take-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .take-winner-tag{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;}
+  .take-swap-hint{font-size:10px;color:var(--text-dimmer);margin-left:auto;}
   .fire-box{background:rgba(224,92,92,0.06);border:1px solid var(--red-border);border-radius:var(--radius-sm);padding:10px 12px;margin-top:12px;font-size:13px;color:var(--text-dim);line-height:1.6;}
   .fire-box strong{color:var(--red);}
+  /* ── MISSING BEATS BANNER ── */
+  .missing-banner{background:rgba(240,185,66,0.07);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:10px 14px;margin:0 0 12px;font-size:12px;color:var(--amber);line-height:1.6;display:none;}
+  .missing-banner.visible{display:block;}
 
   /* ── BROLL PANEL ── */
   .broll-section{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;}
@@ -166,8 +176,8 @@
 
   <!-- PAGE HEADER -->
   <div class="page-header">
-    <div class="page-title">EDIT<em>Ω</em>R</div>
-    <div class="page-sub">Transcript → selects mapping. Claude picks your best takes. One click to DaVinci.</div>
+    <div class="page-title">ASSEMBL<em>Ω</em>R</div>
+    <div class="page-sub">Transcript → beat map → best takes. Claude picks the winner from every retake. One click to DaVinci.</div>
   </div>
 
   <!-- PROJECT SELECTOR -->
@@ -180,9 +190,9 @@
     </div>
     <button class="btn btn-primary" id="buildSelectsBtn" disabled>
       <span class="spinner" id="buildSpinner" style="display:none"></span>
-      Build Selects
+      Run AssemblΩr
     </button>
-    <button class="btn btn-ghost" id="davinciBtn" disabled title="Push selects to DaVinci 02_SELECTS timeline">
+    <button class="btn btn-ghost" id="davinciBtn" disabled title="Push assembly to DaVinci 02_SELECTS timeline">
       <span class="spinner" id="davinciSpinner" style="display:none"></span>
       Push to DaVinci
     </button>
@@ -191,7 +201,7 @@
 
   <!-- SELECTS PROGRESS -->
   <div class="progress-wrap" id="selectsProgress">
-    <div class="progress-title">BUILDING SELECTS</div>
+    <div class="progress-title">ASSEMBLING</div>
     <div class="progress-bar-outer"><div class="progress-bar-inner" id="selectsBar"></div></div>
     <div class="progress-log" id="selectsLog"></div>
   </div>
@@ -212,43 +222,44 @@
     </div>
     <div class="status-pill">
       <div class="status-dot dot-teal"></div>
-      <span class="label">Sections:</span>
+      <span class="label">Beats:</span>
       <span class="val" id="sectionsCount">0</span>
     </div>
     <div class="status-pill">
       <div class="status-dot dot-amber"></div>
-      <span class="label">Gold Nuggets:</span>
+      <span class="label">Gold Moments:</span>
       <span class="val" id="goldCount">0</span>
     </div>
     <div class="status-pill">
       <div class="status-dot dot-dim"></div>
-      <span class="label">Fire Notes:</span>
+      <span class="label">Missing Beats:</span>
       <span class="val" id="fireCount">0</span>
     </div>
   </div>
 
   <!-- OVERALL NOTES -->
   <div class="notes-panel" id="overallNotes" style="display:none">
-    <strong>CLAUDE'S ASSESSMENT</strong><br>
+    <strong>ASSEMBLY NOTE</strong><br>
     <span id="overallNotesText"></span>
   </div>
 
   <!-- TWO-PANEL GRID -->
   <div class="panels">
 
-    <!-- PANEL: SELECTS BUILDER -->
+    <!-- PANEL: ASSEMBLY VIEWER -->
     <div class="panel" id="selectsPanel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">SELECTS<em>Ω</em>R</div>
-          <div class="panel-sub">Script sections → best takes</div>
+          <div class="panel-title">ASSEMBL<em>Ω</em>R</div>
+          <div class="panel-sub">Beat map → best takes. Tap any take to swap it in.</div>
         </div>
       </div>
       <div class="panel-body">
+        <div class="missing-banner" id="missingBanner"></div>
         <div class="empty-state" id="selectsEmpty">
           <div class="empty-icon">🎬</div>
-          <div class="empty-title">NO SELECTS YET</div>
-          <div class="empty-sub">Select a project with talking-head clips and click "Build Selects" to run Whisper + Claude analysis.</div>
+          <div class="empty-title">NO ASSEMBLY YET</div>
+          <div class="empty-sub">Select a project with talking-head footage and click "Run AssemblΩr". Claude will transcribe every clip, map each segment to your beat map, and pick the best take from every retake.</div>
         </div>
         <div class="sections-list" id="sectionsList" style="display:none"></div>
       </div>
@@ -277,7 +288,7 @@
           <div class="progress-log" id="brollLog"></div>
         </div>
 
-        <div class="broll-none" id="brollEmpty">Select a project and build selects to see b-roll suggestions.</div>
+        <div class="broll-none" id="brollEmpty">Select a project and run AssemblΩr to see b-roll suggestions.</div>
         <div id="brollSections" style="display:none"></div>
       </div>
     </div>
@@ -287,10 +298,10 @@
   <!-- ADVANCE BANNER -->
   <div class="advance-banner" id="advanceBanner">
     <div class="advance-text">
-      <div class="advance-title">SELECTS READY</div>
-      <div class="advance-sub">Timeline built. Head to ReviewΩr to review CutΩr clips, or open DaVinci to start cutting.</div>
+      <div class="advance-title">ASSEMBLY READY</div>
+      <div class="advance-sub">Beat map assembled. Push to DaVinci when you're happy with the takes, or open DaVinci directly.</div>
     </div>
-    <a href="/reviewr.html" class="btn btn-primary" id="goReviewrBtn">Go to ReviewΩr →</a>
+    <a href="/reviewr.html" class="btn btn-primary" id="goReviewrBtn">Open ReviewΩr →</a>
   </div>
 
 </div><!-- /main -->
@@ -372,6 +383,7 @@ async function onProjectChange(projectId) {
   document.getElementById('statusBar').style.display = 'none';
   document.getElementById('overallNotes').style.display = 'none';
   document.getElementById('advanceBanner').classList.remove('visible');
+  document.getElementById('missingBanner').classList.remove('visible');
 
   // Show/hide footage guard
   let footageGuard = document.getElementById('footageGuard');
@@ -418,6 +430,7 @@ async function onBuildSelects() {
   showProgress('selectsProgress', true);
   clearSections();
   clearBroll();
+  document.getElementById('missingBanner').classList.remove('visible');
 
   try {
     const r = await fetch(`/api/editor/selects/build/${currentProjectId}`, { method: 'POST' });
@@ -425,19 +438,36 @@ async function onBuildSelects() {
 
     await streamJob(job_id, '/api/editor/selects/status/', 'selectsProgress', 'selectsBar', 'selectsLog', {
       onStage: (ev) => {
-        if (ev.stage === 'transcribing') appendLog('selectsLog', `Transcribing ${ev.file}…`, 'dim');
-        if (ev.stage === 'transcribed')  appendLog('selectsLog', `Transcribed: ${ev.segments} segments`, 'ok');
-        if (ev.stage === 'transcript_skipped') appendLog('selectsLog', `Skipped: ${ev.file} (${ev.reason})`, 'warn');
-        if (ev.stage === 'chunks_planned')   appendLog('selectsLog', `Claude: ${ev.total_clips} clip(s) → ${ev.total_chunks} chunk(s)`, 'dim');
-        if (ev.stage === 'analyzing_chunk')  appendLog('selectsLog', ev.message, 'dim');
-        if (ev.stage === 'chunk_done')       appendLog('selectsLog', ev.message, 'ok');
-        if (ev.stage === 'merging')          appendLog('selectsLog', ev.message, 'dim');
-        if (ev.stage === 'merge_done')       appendLog('selectsLog', ev.message, 'ok');
-        if (ev.stage === 'saved')         appendLog('selectsLog', `Saved ${ev.sections} sections to DB`, 'ok');
-        if (ev.stage === 'whisper')       { if (ev.line) appendLog('selectsLog', ev.line, 'dim'); }
+        const type = ev.event || ev.stage;
+        const msg  = ev.message || '';
+
+        if (type === 'status')            appendLog('selectsLog', msg, 'dim');
+        if (type === 'warning')           appendLog('selectsLog', `⚠ ${msg}`, 'warn');
+        if (type === 'transcribing')      appendLog('selectsLog', `Transcribing: ${msg}`, 'dim');
+        if (type === 'transcribed')       appendLog('selectsLog', `✓ ${msg}`, 'ok');
+        if (type === 'transcribe_progress') { if (msg) appendLog('selectsLog', msg, 'dim'); }
+        if (type === 'mapping')           appendLog('selectsLog', `Mapping beats: ${msg}`, 'dim');
+        if (type === 'beat_mapped')       appendLog('selectsLog', `✓ Beat "${ev.beat}" — ${ev.takes} take(s), winner: ${ev.winner_quality}`, 'ok');
+        if (type === 'missing_beats') {
+          appendLog('selectsLog', `⚠ Missing from footage: ${(ev.beats || []).join(', ')}`, 'warn');
+          const banner = document.getElementById('missingBanner');
+          banner.textContent = `⚠ Missing beats (no footage found): ${(ev.beats || []).join(', ')}`;
+          banner.classList.add('visible');
+        }
+        // Legacy SelectsΩr events (freeform fallback path)
+        if (type === 'chunks_planned')   appendLog('selectsLog', `Claude: ${ev.total_clips} clip(s) → ${ev.total_chunks} chunk(s)`, 'dim');
+        if (type === 'analyzing_chunk')  appendLog('selectsLog', msg, 'dim');
+        if (type === 'chunk_done')       appendLog('selectsLog', msg, 'ok');
+        if (type === 'merging')          appendLog('selectsLog', msg, 'dim');
+        if (type === 'merge_done')       appendLog('selectsLog', msg, 'ok');
+        if (type === 'saved')            appendLog('selectsLog', `Saved ${ev.sections} sections to DB`, 'ok');
+        if (type === 'whisper')          { if (ev.line) appendLog('selectsLog', ev.line, 'dim'); }
       },
       onDone: async (result) => {
-        appendLog('selectsLog', `Done — ${result.sections} sections, ${result.gold_nuggets} gold nuggets`, 'ok');
+        const beatStr   = result.beat_count != null ? `${result.beat_count} beat(s)` : `${result.sections || result.sections_count || 0} section(s)`;
+        const goldStr   = result.gold_count ? `, ${result.gold_count} gold moment(s)` : '';
+        const missStr   = result.missing_beats?.length ? `, ${result.missing_beats.length} missing` : '';
+        appendLog('selectsLog', `Done — ${beatStr}${goldStr}${missStr}`, 'ok');
         // Reload selects
         const r2 = await fetch(`/api/editor/selects/${currentProjectId}`);
         const data = await r2.json();
@@ -471,7 +501,7 @@ function renderSelects(data) {
   // Status pills
   const stateVal  = document.getElementById('stateVal');
   const stateDot  = document.getElementById('stateDot');
-  const state     = data.editor_state || 'selects_ready';
+  const state     = data.editor_state || 'assembly_ready';
   stateVal.textContent = state.replace(/_/g, ' ');
   stateDot.className  = 'status-dot ' + (state === 'broll_imported' ? 'dot-green' : 'dot-teal');
   document.getElementById('sectionsCount').textContent = data.total || 0;
@@ -482,8 +512,6 @@ function renderSelects(data) {
   // Enable DaVinci button
   document.getElementById('davinciBtn').disabled = false;
 
-  // Overall notes (stored in result after build — not in selects endpoint)
-  // We'll skip for now; show if available from build result
   document.getElementById('overallNotes').style.display = 'none';
 
   // Sections list
@@ -512,8 +540,12 @@ function renderSelects(data) {
 function buildSectionCard(sec) {
   const card = document.createElement('div');
   card.className = 'section-card' + (sec.gold_nugget ? ' is-gold' : '');
+  card.dataset.sectionId    = sec.id;
+  card.dataset.sectionIndex = sec.section_index;
 
-  const takesCount = (sec.takes || []).length;
+  const takes      = sec.takes || [];
+  const winnerTake = takes.find(t => t.footage_id === sec.winner_footage_id) || takes[0];
+  const winnerQ    = winnerTake?.quality || '';
 
   card.innerHTML = `
     <div class="section-head" onclick="toggleSection(this)">
@@ -521,17 +553,17 @@ function buildSectionCard(sec) {
       <div class="section-info">
         <div class="section-label">${esc(sec.script_section)}</div>
         <div class="section-meta">
-          ${takesCount > 0 ? `<span class="badge badge-takes">${takesCount} take${takesCount !== 1 ? 's' : ''}</span>` : ''}
-          ${sec.winner_footage_id ? `<span class="badge badge-winner">winner set</span>` : ''}
-          ${sec.gold_nugget ? `<span class="badge badge-gold">gold nugget</span>` : ''}
-          ${sec.fire_suggestion ? `<span class="badge badge-fire">fire note</span>` : ''}
+          ${takes.length > 0 ? `<span class="badge badge-takes">${takes.length} take${takes.length !== 1 ? 's' : ''}</span>` : ''}
+          ${winnerQ ? `<span class="badge badge-${winnerQ}">${winnerQ}</span>` : ''}
+          ${sec.gold_nugget ? `<span class="badge badge-gold">gold</span>` : ''}
+          ${takes.length > 1 ? `<span class="badge badge-fire">tap to swap</span>` : ''}
         </div>
       </div>
       <button class="section-expand" tabindex="-1">▾</button>
     </div>
     <div class="section-body">
       ${buildTakesHTML(sec)}
-      ${sec.fire_suggestion ? `<div class="fire-box"><strong>FIRE:</strong> ${esc(sec.fire_suggestion)}</div>` : ''}
+      ${sec.fire_suggestion ? `<div class="fire-box"><strong>NOTE:</strong> ${esc(sec.fire_suggestion)}</div>` : ''}
     </div>
   `;
   return card;
@@ -539,21 +571,69 @@ function buildSectionCard(sec) {
 
 function buildTakesHTML(sec) {
   const takes = sec.takes || [];
-  if (takes.length === 0) return '<div class="section-detail-label">TAKES</div><div class="section-detail-text" style="color:var(--red)">No takes found for this section.</div>';
+  if (takes.length === 0) return '<div class="section-detail-label">TAKES</div><div class="section-detail-text" style="color:var(--red)">No takes found for this beat.</div>';
 
-  const html = takes.map(t => {
+  const projectId    = currentProjectId;
+  const sectionIndex = sec.section_index;
+
+  const html = takes.map((t, idx) => {
     const isWinner = t.footage_id === sec.winner_footage_id;
     const ts = (t.start != null && t.end != null)
-      ? ` — ${fmtTs(t.start)} → ${fmtTs(t.end)}`
+      ? `${fmtTs(t.start)} → ${fmtTs(t.end)} (${((t.end - t.start)).toFixed(1)}s)`
       : '';
-    return `<div class="take-item${isWinner ? ' is-winner' : ''}">
-      <strong>${esc(t.filename || `footage #${t.footage_id}`)}</strong>${ts}
-      ${isWinner ? '<span class="take-winner-tag">WINNER</span>' : ''}
-      ${t.transcript_excerpt ? `<br><span style="font-size:11px;opacity:0.7">"${esc(t.transcript_excerpt)}"</span>` : ''}
+    const qualityBadge = t.quality ? `<span class="badge badge-${t.quality}" style="font-size:9px">${t.quality}</span>` : '';
+    const note = t.note ? `<div style="font-size:11px;color:var(--text-dimmer);margin-top:3px">${esc(t.note)}</div>` : '';
+
+    return `<div class="take-item${isWinner ? ' is-winner' : ''}" ${!isWinner ? `onclick="swapTake(${projectId}, ${sectionIndex}, ${idx}, this)"` : ''}>
+      <div class="take-row">
+        ${qualityBadge}
+        <span style="color:var(--text)">${ts || `footage #${t.footage_id}`}</span>
+        ${isWinner ? '<span class="take-winner-tag">✓ SELECTED</span>' : '<span class="take-swap-hint">tap to use</span>'}
+      </div>
+      ${note}
     </div>`;
   }).join('');
 
   return `<div class="section-detail-label">TAKES</div><div class="takes-list">${html}</div>`;
+}
+
+// ─────────────────────────────────────────────
+// SWAP TAKE
+// ─────────────────────────────────────────────
+
+async function swapTake(projectId, sectionIndex, takeIndex, el) {
+  try {
+    const r = await fetch(`/api/editor/selects/${projectId}/${sectionIndex}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ take_index: takeIndex })
+    });
+    const data = await r.json();
+    if (!data.ok) { console.error('Swap failed:', data); return; }
+
+    // Update winner in currentSelects and re-render that card
+    const sec = currentSelects?.sections?.find(s => s.section_index === sectionIndex);
+    if (sec) {
+      sec.winner_footage_id = data.chosen.footage_id;
+      // Rebuild that card
+      const list = document.getElementById('sectionsList');
+      const cards = list.querySelectorAll('.section-card');
+      for (const card of cards) {
+        if (parseInt(card.dataset.sectionIndex) === sectionIndex) {
+          const wasOpen = card.querySelector('.section-body')?.classList.contains('open');
+          const newCard = buildSectionCard(sec);
+          card.replaceWith(newCard);
+          if (wasOpen) {
+            newCard.querySelector('.section-body')?.classList.add('open');
+            newCard.querySelector('.section-expand')?.classList.add('open');
+          }
+          break;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Swap take failed:', e);
+  }
 }
 
 function toggleSection(head) {
@@ -630,6 +710,7 @@ async function onClearSelects() {
     clearBroll();
     document.getElementById('davinciBtn').disabled = true;
     document.getElementById('importBrollBtn').disabled = true;
+    document.getElementById('missingBanner').classList.remove('visible');
     hideProgress('selectsProgress');
     hideProgress('davinciProgress');
   } catch (e) {
@@ -794,7 +875,7 @@ function streamJob(jobId, basePath, progressId, barId, logId, { onStage, onDone,
         return;
       }
 
-      pct = Math.min(pct + 8, 90);
+      pct = Math.min(pct + 6, 90);
       setBar(barId, pct);
       onStage(ev);
     };

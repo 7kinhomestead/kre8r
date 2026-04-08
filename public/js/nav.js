@@ -51,7 +51,7 @@
         label: 'Post',
         items: [
           { label: 'VaultΩr',  href: '/vault.html' },
-          { label: 'EditΩr',   href: '/editor.html' },
+          { label: 'AssemblΩr', href: '/editor.html' },
           { label: 'ReviewΩr', href: '/reviewr.html' },
           { label: 'ComposΩr', href: '/composor.html' },
         ]
