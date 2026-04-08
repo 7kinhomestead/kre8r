@@ -113,6 +113,18 @@
   .upload-log .err{color:var(--red);}
   @media(max-width:600px){.upload-drop-zone{padding:22px 12px;}}
 
+  /* ── STORAGE METER ── */
+  .drive-meter{display:flex;flex-direction:column;gap:5px;}
+  .drive-meter-label{display:flex;justify-content:space-between;align-items:center;font-size:12px;}
+  .drive-meter-path{color:var(--text-dim);font-family:monospace;}
+  .drive-meter-stats{color:var(--text-dimmer);font-size:11px;}
+  .drive-meter-bar-outer{background:var(--bg-card-2);border-radius:4px;height:8px;overflow:hidden;border:1px solid var(--border);}
+  .drive-meter-bar-inner{height:100%;border-radius:4px;transition:width 0.4s ease;}
+  .drive-meter-bar-inner.safe{background:var(--green);}
+  .drive-meter-bar-inner.warn{background:var(--amber);}
+  .drive-meter-bar-inner.danger{background:var(--red);}
+  .drive-meter-bar-inner.offline{background:var(--text-dimmer);}
+
   /* ── LIBRARY CONTROLS ── */
   .library-controls{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
   .view-toggle{display:flex;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
@@ -403,6 +415,49 @@
     </div>
   </div>
 
+  <!-- ── STORAGE METER + ARCHIVE ── -->
+  <div class="section" id="archiveSection">
+    <div class="section-header">
+      <div class="section-title">ARCHIVE TO D:</div>
+      <div class="section-sub">Copy BRAW source files from camera SSD → big drive. Size-verified. DB updated. DaVinci relink report generated.</div>
+    </div>
+    <div class="intake-panel">
+
+      <!-- Storage meters -->
+      <div id="storageMeterWrap" style="margin-bottom:18px;">
+        <div id="storageMeters" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:12px;color:var(--text-dimmer)">Loading drive status…</div>
+        </div>
+      </div>
+
+      <!-- Archive controls -->
+      <div class="intake-row">
+        <div>
+          <label>Project</label>
+          <select class="project-select" id="archiveProjectSelect">
+            <option value="">— select project —</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="archiveBtn" onclick="startArchive()" disabled>Archive BRAW → D:</button>
+        <button class="btn btn-ghost" id="refreshStorageBtn" onclick="loadStorageStats()" style="padding:9px 12px" title="Refresh drive status">↺</button>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-wrap" id="archiveProgress">
+        <div class="progress-bar-outer"><div class="progress-bar-inner" id="archiveBar"></div></div>
+        <div class="progress-log" id="archiveLog"></div>
+      </div>
+
+      <!-- Relink report -->
+      <div id="relinkReport" style="display:none;margin-top:14px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">DAVINCI RELINK PATHS</div>
+        <div id="relinkList" style="background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:11px;font-family:monospace;color:var(--text-dim);max-height:160px;overflow-y:auto;line-height:1.8;"></div>
+        <div style="font-size:11px;color:var(--text-dimmer);margin-top:6px;">In DaVinci: Media Pool → right-click media → Relink to new paths above. Then you can safely free space on H:\ manually.</div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- DaVinci Projects panel -->
   <div class="section" id="davinciSection" style="display:none">
     <div class="section-header">
@@ -636,6 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProjects();
   loadFootage();
   loadDavinciProjects();
+  loadStorageStats();
 
   document.getElementById('searchInput').addEventListener('input', (e) => {
     clearTimeout(searchDebounce);
@@ -745,7 +801,7 @@ let allProjects = [];
 async function loadProjects() {
   try {
     allProjects = await fetch('/api/projects').then(r => r.json());
-    const targets = [document.getElementById('projectSelect'), document.getElementById('uploadProjectSelect'), document.getElementById('modalProjectLink'), document.getElementById('bulkProjectSelect')];
+    const targets = [document.getElementById('projectSelect'), document.getElementById('uploadProjectSelect'), document.getElementById('modalProjectLink'), document.getElementById('bulkProjectSelect'), document.getElementById('archiveProjectSelect')];
     for (const sel of targets) {
       if (!sel) continue;
       // Keep first option (— None — / — Unassigned —), clear the rest
@@ -968,6 +1024,152 @@ function renderCard(f) {
     </div>
   </div>`;
 }
+
+// ── STORAGE METER ──────────────────────────────────────────────────────────
+
+function fmtBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const units = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+}
+
+async function loadStorageStats() {
+  const wrap = document.getElementById('storageMeters');
+  try {
+    const data = await fetch('/api/vault/storage').then(r => r.json());
+    if (!data.ok || !data.drives || data.drives.length === 0) {
+      wrap.innerHTML = '<div style="font-size:12px;color:var(--text-dimmer)">No drives configured in creator-profile.json</div>';
+      return;
+    }
+    wrap.innerHTML = data.drives.map(d => {
+      if (!d.ok) {
+        return `<div class="drive-meter">
+          <div class="drive-meter-label">
+            <span class="drive-meter-path">${d.path}</span>
+            <span class="drive-meter-stats" style="color:var(--red)">⚠ Not accessible</span>
+          </div>
+          <div class="drive-meter-bar-outer"><div class="drive-meter-bar-inner offline" style="width:100%"></div></div>
+        </div>`;
+      }
+      const pct   = d.used_pct || 0;
+      const cls   = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : 'safe';
+      const color = pct >= 90 ? 'var(--red)' : pct >= 70 ? 'var(--amber)' : 'var(--green)';
+      return `<div class="drive-meter">
+        <div class="drive-meter-label">
+          <span class="drive-meter-path">${d.path}</span>
+          <span class="drive-meter-stats">${fmtBytes(d.used)} used / ${fmtBytes(d.total)} total &nbsp;·&nbsp; <span style="color:${color}">${pct}% full</span> &nbsp;·&nbsp; ${fmtBytes(d.free)} free</span>
+        </div>
+        <div class="drive-meter-bar-outer"><div class="drive-meter-bar-inner ${cls}" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    wrap.innerHTML = `<div style="font-size:12px;color:var(--red)">Failed to load drive status: ${e.message}</div>`;
+  }
+}
+
+// ── ARCHIVE TO D: ──────────────────────────────────────────────────────────
+
+async function startArchive() {
+  const projectId = parseInt(document.getElementById('archiveProjectSelect').value);
+  if (!projectId) { alert('Select a project to archive.'); return; }
+
+  document.getElementById('archiveBtn').disabled = true;
+  document.getElementById('relinkReport').style.display = 'none';
+
+  const progressWrap = document.getElementById('archiveProgress');
+  const bar          = document.getElementById('archiveBar');
+  const log          = document.getElementById('archiveLog');
+
+  progressWrap.classList.add('visible');
+  log.innerHTML = '';
+  bar.style.width = '5%';
+
+  function appendLog(msg, cls) {
+    const line = document.createElement('div');
+    if (cls) line.className = cls;
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  try {
+    // POST with ReadableStream to read SSE from a POST endpoint
+    const response = await fetch(`/api/vault/archive/${projectId}`, { method: 'POST' });
+    if (!response.ok || !response.body) {
+      appendLog(`Server error: ${response.status}`, 'err');
+      document.getElementById('archiveBtn').disabled = false;
+      return;
+    }
+
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let pct    = 5;
+
+    const handleEvent = (ev) => {
+      const type = ev.type;
+      if (type === 'status')  appendLog(ev.message, '');
+      if (type === 'warning') appendLog(`⚠ ${ev.file ? ev.file + ': ' : ''}${ev.message}`, 'err');
+      if (type === 'skipped') appendLog(`↳ Skipped: ${ev.file} — ${ev.message}`, '');
+      if (type === 'copying') {
+        appendLog(`Copying: ${ev.file}…`, '');
+        pct = Math.min(pct + 10, 85);
+        bar.style.width = pct + '%';
+      }
+      if (type === 'copied')  appendLog(`✓ Copied & verified: ${ev.file}`, 'ok');
+      if (type === 'error')   appendLog(`✗ ${ev.file ? ev.file + ': ' : ''}${ev.message}`, 'err');
+      if (type === 'done') {
+        bar.style.width = '100%';
+        appendLog(ev.message, ev.errors > 0 ? 'err' : 'ok');
+        if (ev.relink && ev.relink.length > 0) {
+          const relinkDiv  = document.getElementById('relinkReport');
+          const relinkList = document.getElementById('relinkList');
+          relinkList.innerHTML = ev.relink
+            .map(r => `<div><span style="color:var(--text-dimmer)">${r.old_path}</span> → <span style="color:var(--teal)">${r.new_path}</span></div>`)
+            .join('');
+          relinkDiv.style.display = 'block';
+        }
+        document.getElementById('archiveBtn').disabled = false;
+        loadStorageStats();
+      }
+    };
+
+    // Read stream chunks
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete last line
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try { handleEvent(JSON.parse(line.slice(6))); } catch(_) {}
+        }
+      }
+    }
+    // Handle any remaining buffer
+    if (buffer.startsWith('data: ')) {
+      try { handleEvent(JSON.parse(buffer.slice(6))); } catch(_) {}
+    }
+    document.getElementById('archiveBtn').disabled = false;
+
+  } catch(e) {
+    appendLog(`Request failed: ${e.message}`, 'err');
+    document.getElementById('archiveBtn').disabled = false;
+  }
+}
+
+// Archive select enable/disable on change
+document.addEventListener('DOMContentLoaded', () => {
+  const archiveSel = document.getElementById('archiveProjectSelect');
+  const archiveBtn = document.getElementById('archiveBtn');
+  if (archiveSel && archiveBtn) {
+    archiveSel.addEventListener('change', () => {
+      archiveBtn.disabled = !archiveSel.value;
+    });
+  }
+});
 
 // ── DAVINCI PROJECTS PANEL ─────────────────────────────────────────────────
 async function loadDavinciProjects() {
