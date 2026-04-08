@@ -178,7 +178,33 @@ router.post('/create', (req, res) => {
       console.warn('[pipr/create] context build failed (non-fatal):', ctxErr.message);
     }
 
-    res.json({ ok: true, project_id: projectId, config });
+    // ── Create shoot folder on camera SSD ────────────────────────────────────
+    // Automatically create H:\[ProjectTitle]\ (or first configured camera_ssd_path)
+    // so the folder name is guaranteed to match the DB exactly — no typos.
+    let shootFolder = null;
+    try {
+      const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH
+        || path.join(__dirname, '..', '..', 'creator-profile.json');
+      const profile = JSON.parse(fs.readFileSync(PROFILE_PATH, 'utf8'));
+      const cameraRoot = profile?.vault?.camera_ssd_paths?.[0];
+      if (cameraRoot) {
+        // Sanitize title: strip Windows-illegal chars, collapse spaces to underscores
+        const safeName = title.trim()
+          .replace(/[<>:"/\\|?*]/g, '')
+          .replace(/\s+/g, '_')
+          .slice(0, 60);
+        // Build path and normalise to forward-slashes for cross-tool consistency
+        shootFolder = (cameraRoot.replace(/\\/g, '/').replace(/\/$/, '') + '/' + safeName);
+        fs.mkdirSync(shootFolder.replace(/\//g, path.sep), { recursive: true });
+        db.updateProjectPipr(projectId, { shoot_folder: shootFolder });
+        console.log(`[PipΩr] Shoot folder created: ${shootFolder}`);
+      }
+    } catch (folderErr) {
+      // Non-fatal — H:\ may not be plugged in right now. Creator can create later.
+      console.warn('[PipΩr] Could not create shoot folder (non-fatal):', folderErr.message);
+    }
+
+    res.json({ ok: true, project_id: projectId, config, shoot_folder: shootFolder });
   } catch (err) {
     console.error('[pipr] create error:', err.message);
     res.status(500).json({ ok: false, error: err.message });

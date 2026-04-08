@@ -21,7 +21,8 @@ const crypto           = require('crypto');
 const { spawn }        = require('child_process');
 const path             = require('path');
 
-const { buildSelects }        = require('../editor/selects-new');
+const { buildSelects }        = require('../editor/selects-new');  // legacy freeform fallback
+const { buildAssembly }       = require('../editor/assemblr');      // AssemblΩr smart engine
 const { getBrollSuggestions, importBroll } = require('../editor/broll-bridge');
 const db = require('../db');
 
@@ -104,7 +105,9 @@ router.post('/selects/build/:project_id', (req, res) => {
 
   (async () => {
     try {
-      const result = await buildSelects(
+      // Use AssemblΩr smart engine (transcript + beat map).
+      // Falls back to freeform chronological dump if no beat map exists.
+      const result = await buildAssembly(
         projectId,
         (p) => pushEvent(job, p)
       );
@@ -168,6 +171,40 @@ router.delete('/selects/:project_id', (req, res) => {
   db.updateProjectEditorState(projectId, null);
 
   res.json({ ok: true, project_id: projectId });
+});
+
+// ─────────────────────────────────────────────
+// SELECTS — SWAP TAKE (Review UI)
+// PATCH /api/editor/selects/:project_id/:section_index
+// Body: { take_index: number }  — which take from the 'takes' array to use
+// ─────────────────────────────────────────────
+
+router.patch('/selects/:project_id/:section_index', (req, res) => {
+  const projectId    = parseInt(req.params.project_id,    10);
+  const sectionIndex = parseInt(req.params.section_index, 10);
+  const takeIndex    = parseInt(req.body.take_index,       10);
+
+  if (isNaN(projectId) || isNaN(sectionIndex) || isNaN(takeIndex)) {
+    return res.status(400).json({ error: 'project_id, section_index, and take_index are required integers' });
+  }
+
+  const sections = db.getSelectsByProject(projectId);
+  const section  = sections.find(s => s.section_index === sectionIndex);
+  if (!section) return res.status(404).json({ error: `Section ${sectionIndex} not found` });
+
+  const takes = section.takes || [];
+  if (takeIndex < 0 || takeIndex >= takes.length) {
+    return res.status(400).json({ error: `take_index ${takeIndex} out of range (${takes.length} takes)` });
+  }
+
+  const chosen = takes[takeIndex];
+  // Update the select row — winner_footage_id + selected_takes
+  db.updateSelectTake(section.id, {
+    winner_footage_id: chosen.footage_id,
+    selected_takes: JSON.stringify([chosen]),
+  });
+
+  res.json({ ok: true, section_index: sectionIndex, chosen });
 });
 
 // ─────────────────────────────────────────────

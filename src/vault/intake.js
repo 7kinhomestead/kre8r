@@ -340,6 +340,84 @@ async function classifyWithVision(thumbs) {
 }
 
 // ─────────────────────────────────────────────
+// BRAW STUB HELPERS — Proxy Generator Lite support
+// ─────────────────────────────────────────────
+
+/**
+ * Recursively search `dir` for a file named `filename` (case-insensitive).
+ * Searches up to `maxDepth` levels deep. Returns the full path or null.
+ */
+function findFileRecursive(dir, filename, maxDepth = 4, currentDepth = 0) {
+  if (currentDepth > maxDepth) return null;
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isFile() && entry.name.toLowerCase() === filename.toLowerCase()) {
+        return path.join(dir, entry.name);
+      }
+      if (entry.isDirectory() && currentDepth < maxDepth) {
+        const found = findFileRecursive(path.join(dir, entry.name), filename, maxDepth, currentDepth + 1);
+        if (found) return found;
+      }
+    }
+  } catch (_) {
+    // Drive not ready / no read permission — skip silently
+  }
+  return null;
+}
+
+/**
+ * When a Proxy Generator Lite proxy arrives (e.g. A001.mp4) but no BRAW record
+ * exists yet, search configured camera SSD paths for the matching BRAW file.
+ * If found, create a minimal stub record (same as the BRAW fast path) and
+ * return the full DB record so processProxyUpdate can update it.
+ */
+async function findOrCreateBrawStub(baseNameNoExt, projectId) {
+  const profile      = getCreatorContext();
+  const cameraPaths  = profile?.vault?.camera_ssd_paths || [];
+  const targetBraw   = baseNameNoExt + '.braw';
+
+  for (const cameraRoot of cameraPaths) {
+    const found = findFileRecursive(cameraRoot, targetBraw, 4);
+    if (!found) continue;
+
+    // Auto-assign to project based on shoot_folder if no project was specified
+    const autoProject = db.findProjectByShootPath?.(found);
+    const resolvedProjectId = autoProject?.id || projectId;
+    if (autoProject && !projectId) {
+      console.log(`[VaultΩr] Auto-assigned BRAW stub to project ${autoProject.id} ("${autoProject.title}") via shoot_folder`);
+    }
+
+    const stat = fs.statSync(found);
+    db.insertFootage({
+      project_id:         resolvedProjectId,
+      file_path:          found,
+      original_filename:  targetBraw,
+      shot_type:          'b-roll',
+      subcategory:        null,
+      description:        'BRAW source — discovered via Proxy Generator Lite proxy',
+      quality_flag:       'review',
+      orientation:        null,
+      duration:           null,
+      resolution:         null,
+      codec:              'BRAW',
+      file_size:          stat.size,
+      creation_timestamp: stat.birthtime?.toISOString() || stat.mtime?.toISOString() || null,
+      thumbnail_path:     null,
+      organized_path:     null,
+      used_in:            '[]',
+      braw_source_path:   found,
+      is_proxy:           false
+    });
+
+    // Re-fetch the full record so processProxyUpdate has all fields (id, etc.)
+    return db.findBrawByBasename?.(targetBraw) || null;
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────
 // SINGLE FILE PROCESSOR
 // ─────────────────────────────────────────────
 
@@ -358,9 +436,15 @@ async function processFile(filePath, options = {}) {
   // Write a minimal record immediately; proxy export via DaVinci generates
   // the actual working file. The proxy will update this record on ingest.
   if (BRAW_EXTENSIONS.has(ext)) {
+    // Auto-assign to a project if this BRAW lives inside a known shoot_folder
+    const autoProject = db.findProjectByShootPath?.(filePath);
+    const resolvedProjectId = autoProject?.id || projectId;
+    if (autoProject && !projectId) {
+      console.log(`[VaultΩr] Auto-assigned BRAW to project ${autoProject.id} ("${autoProject.title}") via shoot_folder`);
+    }
     const stat = fs.statSync(filePath);
     const id = db.insertFootage({
-      project_id:         projectId,
+      project_id:         resolvedProjectId,
       file_path:          filePath,
       original_filename,
       shot_type:          'b-roll',
@@ -398,6 +482,30 @@ async function processFile(filePath, options = {}) {
       return await processProxyUpdate(filePath, brawRecord, { projectId, onProgress });
     }
     // No matching BRAW found — ingest as a regular clip record
+  }
+
+  // ── Proxy Generator Lite detection: plain-named proxy (no _proxy suffix) ───
+  // Blackmagic Proxy Generator Lite outputs A001.mp4 directly from A001.braw.
+  // The BRAW stays on the camera SSD (H:\); only the proxy hits the intake folder.
+  // Detect by checking if a BRAW record exists with the same base name.
+  // If not, search configured camera_ssd_paths and create a stub record.
+  if (['.mp4', '.mov'].includes(ext)) {
+    const baseNameNoExt = path.basename(original_filename, ext);
+    const brawBasename  = baseNameNoExt + '.braw';
+    let brawRecord      = db.findBrawByBasename?.(brawBasename) || null;
+
+    if (!brawRecord) {
+      brawRecord = await findOrCreateBrawStub(baseNameNoExt, projectId);
+      if (brawRecord) {
+        console.log(`[VaultΩr] BRAW stub created for Proxy Generator Lite proxy: ${brawBasename} (found on camera SSD)`);
+      }
+    }
+
+    if (brawRecord) {
+      console.log(`[VaultΩr] Proxy Generator Lite proxy detected: ${original_filename} → ${brawBasename}`);
+      return await processProxyUpdate(filePath, brawRecord, { projectId, onProgress });
+    }
+    // No BRAW match found — fall through to standard pipeline (it's a regular clip)
   }
 
   // ── Standard pipeline: ffprobe → thumbnails → Vision → insert ─────────────
@@ -503,7 +611,8 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
     }
   }
 
-  // Update the original BRAW record (not the proxy path) with all the good data
+  // Update the original BRAW record with full metadata from the proxy.
+  // Also store proxy_path so transcription (Whisper) always has a decodable file.
   db.updateFootage(brawRecord.id, {
     shot_type:          normalizeShotType(classification.shot_type) || brawRecord.shot_type,
     subcategory:        classification.subcategory  || null,
@@ -515,7 +624,8 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
     codec:              meta.codec,
     file_size:          brawRecord.file_size,        // keep original BRAW size
     creation_timestamp: meta.creation_timestamp || brawRecord.creation_timestamp,
-    thumbnail_path:     thumbs?.displayUrl || null
+    thumbnail_path:     thumbs?.displayUrl || null,
+    proxy_path:         proxyPath                    // ← transcription uses this
   });
 
   onProgress?.({ stage: 'saved', file: original_filename, id: brawRecord.id, proxy_update: true });

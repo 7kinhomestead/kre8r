@@ -602,6 +602,28 @@ function runMigrations() {
   } catch (err) {
     console.warn('[DB] Dedup migration error (non-fatal):', err.message);
   }
+
+  // AssemblΩr / Shoot Folder — project-level camera SSD folder + archive tracking
+  const projectsColsAssemblr = db.pragma('table_info(projects)').map(r => r.name);
+  if (!projectsColsAssemblr.includes('shoot_folder')) {
+    db.exec('ALTER TABLE projects ADD COLUMN shoot_folder TEXT');
+    console.log('[DB] Migration: added projects.shoot_folder');
+  }
+  if (!projectsColsAssemblr.includes('archive_state')) {
+    db.exec("ALTER TABLE projects ADD COLUMN archive_state TEXT");
+    console.log('[DB] Migration: added projects.archive_state');
+  }
+  if (!projectsColsAssemblr.includes('archived_at')) {
+    db.exec('ALTER TABLE projects ADD COLUMN archived_at DATETIME');
+    console.log('[DB] Migration: added projects.archived_at');
+  }
+
+  // AssemblΩr — proxy_path on footage so transcription always has a working file
+  const footageColsAssemblr = db.pragma('table_info(footage)').map(r => r.name);
+  if (!footageColsAssemblr.includes('proxy_path')) {
+    db.exec('ALTER TABLE footage ADD COLUMN proxy_path TEXT');
+    console.log('[DB] Migration: added footage.proxy_path');
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -904,7 +926,8 @@ function updateFootage(id, fields) {
     'shot_type', 'subcategory', 'description', 'quality_flag',
     'organized_path', 'thumbnail_path', 'project_id', 'used_in', 'transcript_path',
     'orientation', 'braw_source_path', 'is_proxy', 'resolution', 'codec',
-    'duration', 'file_size', 'creation_timestamp', 'transcript', 'off_script_gold'
+    'duration', 'file_size', 'creation_timestamp', 'transcript', 'off_script_gold',
+    'proxy_path'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return;
@@ -1064,6 +1087,27 @@ function findBrawByBasename(brawBasename) {
        AND (braw_source_path = ? OR braw_source_path LIKE ? OR braw_source_path LIKE ?)`,
     [brawBasename, `%/${brawBasename}`, `%\\${brawBasename}`]
   );
+}
+
+/**
+ * findProjectByShootPath(filePath)
+ *
+ * Given any file path (e.g. H:\WaterSystem\A001.braw), check whether it lives
+ * inside any project's configured shoot_folder. Returns the matching project
+ * record or null. Used by VaultΩr intake for auto project-assignment.
+ */
+function findProjectByShootPath(filePath) {
+  if (!filePath) return null;
+  const projects = _all(`SELECT id, shoot_folder FROM projects WHERE shoot_folder IS NOT NULL AND shoot_folder != ''`);
+  // Normalize separators for comparison
+  const normalizedFile = filePath.replace(/\\/g, '/').toLowerCase();
+  for (const p of projects) {
+    const folder = p.shoot_folder.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
+    if (normalizedFile.startsWith(folder + '/') || normalizedFile === folder) {
+      return _get('SELECT * FROM projects WHERE id = ?', [p.id]);
+    }
+  }
+  return null;
 }
 
 function getAllProjectsWithDavinci() {
@@ -1530,6 +1574,14 @@ function deleteSelectsByProject(projectId) {
   _run(`DELETE FROM selects WHERE project_id = ?`, [projectId]);
 }
 
+/** Update the selected take on a single selects row (used by AssemblΩr review UI). */
+function updateSelectTake(selectId, { winner_footage_id, selected_takes }) {
+  _run(
+    `UPDATE selects SET winner_footage_id = ?, selected_takes = ? WHERE id = ?`,
+    [winner_footage_id || null, selected_takes || '[]', selectId]
+  );
+}
+
 function updateProjectEditorState(projectId, state) {
   _run(`UPDATE projects SET editor_state = ? WHERE id = ?`, [state, projectId]);
 }
@@ -1545,7 +1597,8 @@ function updateProjectId8r(projectId, data) {
 function updateProjectPipr(projectId, fields) {
   const allowed = [
     'setup_depth', 'entry_point', 'story_structure', 'content_type',
-    'high_concept', 'estimated_duration_minutes', 'pipr_complete'
+    'high_concept', 'estimated_duration_minutes', 'pipr_complete',
+    'shoot_folder', 'archive_state', 'archived_at'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (!updates.length) return;
@@ -2519,6 +2572,7 @@ module.exports = {
   getAllDistribution,
   getFootageByBrawPath,
   findBrawByBasename,
+  findProjectByShootPath,
   // DaVinci
   DAVINCI_STATES,
   DAVINCI_TRANSITIONS,
@@ -2565,6 +2619,7 @@ module.exports = {
   insertSelect,
   getSelectsByProject,
   deleteSelectsByProject,
+  updateSelectTake,
   updateProjectEditorState,
   // Id8Ωr
   updateProjectId8r,

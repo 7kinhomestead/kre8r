@@ -460,4 +460,167 @@ async function searchFootage(query) {
   return db.searchFootageByWhere(whereClause);
 }
 
+// ─────────────────────────────────────────────
+// GET /api/vault/storage
+// Reports disk usage on all configured camera SSD paths.
+// ─────────────────────────────────────────────
+router.get('/storage', async (req, res) => {
+  try {
+    const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH
+      || path.join(__dirname, '..', '..', 'creator-profile.json');
+    const profile = JSON.parse(fs.readFileSync(PROFILE_PATH, 'utf8'));
+    const cameraPaths = profile?.vault?.camera_ssd_paths || [];
+    const footageRoot = profile?.vault?.footage_root || null;
+
+    const results = [];
+    for (const drivePath of [...cameraPaths, footageRoot].filter(Boolean)) {
+      try {
+        const stat = await fs.promises.statfs(drivePath.replace(/\//g, path.sep));
+        const total     = stat.blocks  * stat.bsize;
+        const free      = stat.bfree   * stat.bsize;
+        const used      = total - free;
+        const usedPct   = total > 0 ? Math.round((used / total) * 100) : 0;
+        results.push({ path: drivePath, total, used, free, used_pct: usedPct, ok: true });
+      } catch (e) {
+        results.push({ path: drivePath, ok: false, error: 'Drive not accessible' });
+      }
+    }
+    res.json({ ok: true, drives: results });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/archive/:project_id
+// Copies all BRAW source files for a project from camera SSD → footage_root,
+// updates braw_source_path in DB, and returns a DaVinci relink report.
+// Uses SSE so the client can show per-file progress on large shoots.
+// ─────────────────────────────────────────────
+router.post('/archive/:project_id', async (req, res) => {
+  const projectId = parseInt(req.params.project_id);
+  if (isNaN(projectId)) return res.status(400).json({ ok: false, error: 'invalid project_id' });
+
+  // SSE headers
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const emit = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  try {
+    const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH
+      || path.join(__dirname, '..', '..', 'creator-profile.json');
+    const profile     = JSON.parse(fs.readFileSync(PROFILE_PATH, 'utf8'));
+    const footageRoot = profile?.vault?.footage_root;
+    if (!footageRoot) {
+      emit({ type: 'error', message: 'vault.footage_root not set in creator-profile.json' });
+      return res.end();
+    }
+
+    const project = db.getProject(projectId);
+    if (!project) {
+      emit({ type: 'error', message: `Project ${projectId} not found` });
+      return res.end();
+    }
+
+    // Build destination folder: footage_root/[SafeProjectTitle]/
+    const safeName = (project.title || `project_${projectId}`)
+      .replace(/[<>:"/\\|?*]/g, '')
+      .replace(/\s+/g, '_')
+      .slice(0, 60);
+    const destFolder = path.join(footageRoot.replace(/\//g, path.sep), safeName);
+    fs.mkdirSync(destFolder, { recursive: true });
+
+    emit({ type: 'status', message: `Archiving to ${destFolder}` });
+
+    // Find all footage records that have BRAW source paths for this project
+    const allFootage = db.getAllFootage({ project_id: projectId });
+    const brawClips  = allFootage.filter(f => f.braw_source_path);
+
+    if (brawClips.length === 0) {
+      emit({ type: 'done', message: 'No BRAW source files found for this project — nothing to archive.', relink: [] });
+      return res.end();
+    }
+
+    emit({ type: 'status', message: `Found ${brawClips.length} BRAW source file(s) to archive` });
+
+    const relinkReport = [];
+    let copied = 0;
+    let errors  = 0;
+
+    for (const clip of brawClips) {
+      const srcPath = clip.braw_source_path.replace(/\//g, path.sep);
+      const destPath = path.join(destFolder, path.basename(srcPath));
+
+      // Skip if src doesn't exist (drive not plugged in)
+      if (!fs.existsSync(srcPath)) {
+        emit({ type: 'warning', file: path.basename(srcPath), message: 'Source file not found — skipped (H:\\ not plugged in?)' });
+        errors++;
+        continue;
+      }
+
+      // Skip if already archived to this exact destination
+      if (srcPath.toLowerCase() === destPath.toLowerCase()) {
+        emit({ type: 'skipped', file: path.basename(srcPath), message: 'Already at destination' });
+        relinkReport.push({ old_path: srcPath, new_path: destPath });
+        copied++;
+        continue;
+      }
+
+      emit({ type: 'copying', file: path.basename(srcPath), dest: destPath });
+
+      try {
+        await fs.promises.copyFile(srcPath, destPath);
+
+        // Verify: size must match
+        const srcStat  = fs.statSync(srcPath);
+        const destStat = fs.statSync(destPath);
+        if (srcStat.size !== destStat.size) {
+          throw new Error(`Size mismatch after copy: ${srcStat.size} → ${destStat.size}`);
+        }
+
+        // Update DB — braw_source_path now points to the archive location
+        const newPathNorm = destPath.replace(/\\/g, '/');
+        db.updateFootage(clip.id, { braw_source_path: newPathNorm });
+
+        relinkReport.push({ old_path: srcPath, new_path: destPath });
+        copied++;
+        emit({ type: 'copied', file: path.basename(srcPath), verified: true });
+
+      } catch (copyErr) {
+        errors++;
+        emit({ type: 'error', file: path.basename(srcPath), message: copyErr.message });
+      }
+    }
+
+    // Mark project as archived in DB
+    if (errors === 0) {
+      db.updateProjectPipr(projectId, {
+        archive_state: 'archived',
+        archived_at:   new Date().toISOString()
+      });
+    } else {
+      db.updateProjectPipr(projectId, { archive_state: 'partial' });
+    }
+
+    emit({
+      type:     'done',
+      copied,
+      errors,
+      dest:     destFolder,
+      relink:   relinkReport,
+      message:  errors === 0
+        ? `✓ ${copied} file(s) archived and verified. Update DaVinci media paths to: ${destFolder}`
+        : `⚠ ${copied} copied, ${errors} failed. Re-run archive when H:\\ is available.`
+    });
+
+  } catch (err) {
+    emit({ type: 'error', message: err.message });
+  }
+
+  res.end();
+});
+
 module.exports = router;
