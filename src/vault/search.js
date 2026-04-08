@@ -30,6 +30,7 @@ Columns:
   shot_type        TEXT     — one of: dialogue, talking-head, b-roll, action, completed-video, unusable, unclassified
   subcategory      TEXT     — one of: wide, medium, close-up, detail (b-roll only; NULL for others)
   description      TEXT     — 1-2 sentence content description from Claude Vision
+  subjects         TEXT     — JSON array of specific searchable topics (e.g. '["goat","water tank","kids"]')
   duration         REAL     — clip length in seconds
   resolution       TEXT     — e.g. "3840x2160", "1920x1080"
   codec            TEXT     — e.g. "h264", "hevc", "prores"
@@ -45,7 +46,7 @@ Your task: translate the user's natural language query into a SQLite WHERE claus
 
 Rules:
   - Return ONLY the WHERE clause body — no SELECT, no WHERE keyword, no semicolons
-  - Use LIKE with % wildcards for text searches on description, original_filename
+  - Use LIKE with % wildcards for text searches on description, original_filename, subjects
   - Use exact equality for shot_type, subcategory, quality_flag (they have fixed vocabularies)
   - Use CAST(duration AS INTEGER) for integer duration comparisons
   - Multiple conditions: use AND / OR with parentheses for clarity
@@ -70,7 +71,7 @@ Examples:
   Response: shot_type = 'talking-head' AND quality_flag = 'review'
 
   Query: "anything with chickens or goats"
-  Response: description LIKE '%chicken%' OR description LIKE '%goat%'
+  Response: (description LIKE '%chicken%' OR subjects LIKE '%chicken%') OR (description LIKE '%goat%' OR subjects LIKE '%goat%')
 
   Query: "short b-roll clips under 10 seconds, hero or usable"
   Response: shot_type = 'b-roll' AND duration < 10 AND quality_flag IN ('hero', 'usable')

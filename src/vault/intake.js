@@ -274,7 +274,8 @@ function getVisionPrompt() {
   "description": "1-2 sentences describing what is visible across the three frames — specific and search-useful",
   "quality_flag": "one of: hero, usable, review, discard",
   "quality_reason": "one sentence explaining the flag",
-  "orientation": "one of: horizontal, vertical, square"
+  "orientation": "one of: horizontal, vertical, square",
+  "subjects": ["array of specific searchable topics visible in the clip — animals, plants, structures, tools, people, locations, activities, objects. Be specific: 'goat' not 'animal', 'raised garden bed' not 'garden', 'fence post' not 'fence'. Include 3-8 tags."]
 }
 Be specific in descriptions. 'Person talking in front of trees' is not useful. 'Creator in grey shirt speaking to camera, outdoor background with forest visible, good lighting' is useful.`;
 }
@@ -557,6 +558,7 @@ async function processFile(filePath, options = {}) {
     description:        classification.description  || null,
     quality_flag:       classification.quality_flag || null,
     orientation:        classification.orientation  || null,
+    subjects:           Array.isArray(classification.subjects) ? JSON.stringify(classification.subjects) : null,
     duration:           meta.duration,
     resolution:         meta.resolution,
     codec:              meta.codec,
@@ -619,6 +621,7 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
     description:        classification.description  || brawRecord.description,
     quality_flag:       classification.quality_flag || brawRecord.quality_flag,
     orientation:        classification.orientation  || null,
+    subjects:           Array.isArray(classification.subjects) ? JSON.stringify(classification.subjects) : null,
     duration:           meta.duration,
     resolution:         meta.resolution,
     codec:              meta.codec,
@@ -811,6 +814,7 @@ async function reclassifyById(footageId) {
     description:  classification.description  || null,
     quality_flag: classification.quality_flag || null,
     orientation:  classification.orientation  || null,
+    subjects:     Array.isArray(classification.subjects) ? JSON.stringify(classification.subjects) : null,
   });
 
   return { id: footageId, ...classification };

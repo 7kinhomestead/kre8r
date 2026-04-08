@@ -369,7 +369,7 @@
       <div class="intake-row">
         <div style="flex:1;min-width:200px;">
           <label>Folder path</label>
-          <input class="intake-input" id="folderPathInput" type="text" placeholder="C:/Users/18054/Videos/intake" />
+          <input class="intake-input" id="folderPathInput" type="text" placeholder="Loading current watch folder…" />
         </div>
         <div>
           <label>Link to project (optional)</label>
@@ -474,7 +474,11 @@
   <div class="section">
     <div class="section-header">
       <div class="section-title">FOOTAGE LIBRARY</div>
-      <div class="section-sub" id="footageCount">Loading…</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="section-sub" id="footageCount">Loading…</div>
+        <button class="btn btn-ghost" id="backfillBtn" onclick="backfillSubjects()" style="font-size:11px;padding:5px 10px;" title="Tag all clips with searchable subjects using Claude Vision">⟳ Tag Subjects</button>
+        <span id="backfillStatus" style="font-size:11px;color:var(--text-dimmer);display:none;"></span>
+      </div>
     </div>
 
     <!-- Library controls -->
@@ -692,6 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadFootage();
   loadDavinciProjects();
   loadStorageStats();
+  prefillWatcherPath();
 
   document.getElementById('searchInput').addEventListener('input', (e) => {
     clearTimeout(searchDebounce);
@@ -750,6 +755,20 @@ function applyViewToggleUI() {
   document.getElementById('btnGrid').classList.toggle('active', viewMode === 'grid');
   document.getElementById('btnFolder').classList.toggle('active', viewMode === 'folder');
   document.getElementById('footageGrid').className = viewMode === 'grid' ? 'footage-grid' : 'footage-folder';
+}
+
+// ── WATCHER PATH PREFILL ────────────────────────────────────────────────────
+async function prefillWatcherPath() {
+  try {
+    const w = await fetch('/api/vault/watcher').then(r => r.json());
+    const input = document.getElementById('folderPathInput');
+    if (w.path) {
+      input.value       = w.path;
+      input.placeholder = w.path;
+    } else {
+      input.placeholder = 'Enter folder path to ingest…';
+    }
+  } catch(_) {}
 }
 
 // ── STATUS ─────────────────────────────────────────────────────────────────
@@ -1017,6 +1036,14 @@ function renderCard(f) {
           ${qualityTag2(f.quality_flag)}
           ${dur ? `<span class="footage-dur">${dur}</span>` : ''}
         </div>
+        ${(() => {
+          try {
+            const subs = f.subjects ? JSON.parse(f.subjects) : [];
+            return subs.length > 0
+              ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;">${subs.slice(0,5).map(s => `<span style="font-size:10px;padding:2px 6px;border-radius:8px;background:var(--bg-card-2);color:var(--text-dimmer);border:1px solid var(--border);">${escHtml(s)}</span>`).join('')}</div>`
+              : '';
+          } catch(_) { return ''; }
+        })()}
         <div class="dist-dots">${dotHtml}</div>
         ${voiceBtnHtml}
         ${(f.braw_source_path && f.codec === 'BRAW') ? '<span class="braw-badge">PROXY NEEDED</span>' : ''}
@@ -1065,6 +1092,63 @@ async function loadStorageStats() {
     }).join('');
   } catch(e) {
     wrap.innerHTML = `<div style="font-size:12px;color:var(--red)">Failed to load drive status: ${e.message}</div>`;
+  }
+}
+
+// ── BACKFILL SUBJECTS ───────────────────────────────────────────────────────
+
+async function backfillSubjects() {
+  const btn    = document.getElementById('backfillBtn');
+  const status = document.getElementById('backfillStatus');
+  btn.disabled = true;
+  status.style.display = 'inline';
+  status.textContent   = 'Starting…';
+
+  try {
+    const response = await fetch('/api/vault/reclassify-subjects', { method: 'POST' });
+    if (!response.ok || !response.body) {
+      status.textContent = `Error: ${response.status}`;
+      btn.disabled = false;
+      return;
+    }
+
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let   buffer  = '';
+
+    const handleEvent = (ev) => {
+      if (ev.stage === 'start') {
+        status.textContent = ev.total === 0 ? 'All clips already tagged ✓' : `Tagging 0 / ${ev.total}…`;
+      } else if (ev.stage === 'tagging') {
+        status.textContent = `Tagging ${ev.index} / ${ev.total}…`;
+      } else if (ev.stage === 'tagged') {
+        status.textContent = `Tagged ${ev.index} / ${ev.total}`;
+      } else if (ev.stage === 'done') {
+        status.textContent = `Done — ${ev.ok} tagged, ${ev.errors} errors`;
+        btn.disabled = false;
+        loadFootage(); // refresh grid so subject tags show on cards
+      } else if (ev.stage === 'error' && ev.error && !ev.file) {
+        status.textContent = `Failed: ${ev.error}`;
+        btn.disabled = false;
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try { handleEvent(JSON.parse(line.slice(6))); } catch(_) {}
+        }
+      }
+    }
+    btn.disabled = false;
+  } catch(e) {
+    status.textContent = `Failed: ${e.message}`;
+    btn.disabled = false;
   }
 }
 

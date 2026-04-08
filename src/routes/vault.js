@@ -316,6 +316,51 @@ router.post('/reclassify-missing', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// POST /api/vault/reclassify-subjects
+// Backfill subjects tags on all footage that has thumbnails but no subjects yet.
+// Streams SSE progress so the UI can show a live counter.
+// ─────────────────────────────────────────────
+router.post('/reclassify-subjects', async (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  try {
+    // Find footage without subjects that has thumbnails to work from
+    const needsTag = db.getAllFootage().filter(f => !f.subjects && f.thumbnail_path);
+    send({ stage: 'start', total: needsTag.length });
+
+    if (needsTag.length === 0) {
+      send({ stage: 'done', ok: 0, skipped: 0, errors: 0 });
+      return res.end();
+    }
+
+    let ok = 0, errors = 0;
+    for (let i = 0; i < needsTag.length; i++) {
+      const f = needsTag[i];
+      send({ stage: 'tagging', index: i + 1, total: needsTag.length, file: f.original_filename });
+      try {
+        await reclassifyById(f.id);
+        ok++;
+        send({ stage: 'tagged', index: i + 1, total: needsTag.length, file: f.original_filename });
+      } catch (e) {
+        errors++;
+        send({ stage: 'error', index: i + 1, total: needsTag.length, file: f.original_filename, error: e.message });
+      }
+    }
+
+    send({ stage: 'done', ok, errors, total: needsTag.length });
+    res.end();
+  } catch (e) {
+    send({ stage: 'error', error: e.message });
+    res.end();
+  }
+});
+
+// ─────────────────────────────────────────────
 // GET /api/vault/distribution — all distribution records (bulk load)
 // ─────────────────────────────────────────────
 router.get('/distribution', (req, res) => {

@@ -640,6 +640,13 @@ function runMigrations() {
     db.exec('ALTER TABLE footage ADD COLUMN proxy_path TEXT');
     console.log('[DB] Migration: added footage.proxy_path');
   }
+
+  // VaultΩr semantic search — subjects array from Claude Vision
+  const footageColsSub = db.pragma('table_info(footage)').map(r => r.name);
+  if (!footageColsSub.includes('subjects')) {
+    db.exec('ALTER TABLE footage ADD COLUMN subjects TEXT');
+    console.log('[DB] Migration: added footage.subjects');
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -910,8 +917,8 @@ function insertFootage(record) {
        (project_id, file_path, original_filename, shot_type, subcategory, description,
         duration, resolution, codec, file_size, creation_timestamp,
         thumbnail_path, quality_flag, organized_path, used_in, transcript_path,
-        orientation, braw_source_path, is_proxy)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        orientation, braw_source_path, is_proxy, subjects)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.project_id         || null,
       record.file_path,
@@ -931,7 +938,8 @@ function insertFootage(record) {
       record.transcript_path    || null,
       record.orientation        || null,
       record.braw_source_path   || null,
-      record.is_proxy           ? 1 : 0
+      record.is_proxy           ? 1 : 0,
+      record.subjects           || null
     ]
   );
   return result.lastInsertRowid;
@@ -943,7 +951,7 @@ function updateFootage(id, fields) {
     'organized_path', 'thumbnail_path', 'project_id', 'used_in', 'transcript_path',
     'orientation', 'braw_source_path', 'is_proxy', 'resolution', 'codec',
     'duration', 'file_size', 'creation_timestamp', 'transcript', 'off_script_gold',
-    'proxy_path'
+    'proxy_path', 'subjects'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return;
