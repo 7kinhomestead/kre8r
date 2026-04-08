@@ -357,6 +357,22 @@ function runMigrations() {
     console.log('[DB] Migration: added projects.source');
   }
 
+  // One-time fix: YouTube-imported projects that got source='kre8r' due to the DEFAULT
+  // on the ALTER TABLE migration. Any project with a youtube_video_id that has never
+  // been through PipΩr setup (pipr_complete=0/null) is definitively a YouTube import.
+  {
+    const fixed = db.prepare(`
+      UPDATE projects
+      SET source = 'youtube_import'
+      WHERE youtube_video_id IS NOT NULL
+        AND source = 'kre8r'
+        AND (pipr_complete IS NULL OR pipr_complete = 0)
+    `).run();
+    if (fixed.changes > 0) {
+      console.log(`[DB] Migration: re-stamped ${fixed.changes} YouTube-import projects with source='youtube_import'`);
+    }
+  }
+
   // AnalΩzr: kv_store — generic key/value cache (channel DNA clusters, profiles, etc.)
   db.exec(`CREATE TABLE IF NOT EXISTS kv_store (
     key        TEXT PRIMARY KEY,
