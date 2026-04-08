@@ -349,7 +349,12 @@ router.post('/reclassify-subjects', async (req, res) => {
       } catch (e) {
         errors++;
         send({ stage: 'error', index: i + 1, total: needsTag.length, file: f.original_filename, error: e.message });
+        // On API error, back off for 5 seconds before continuing
+        await new Promise(r => setTimeout(r, 5000));
       }
+      // Gentle pacing: extra 300ms between every clip beyond the vision queue's own delay.
+      // Keeps bulk backfill from saturating the API on large libraries (500+ clips).
+      await new Promise(r => setTimeout(r, 300));
     }
 
     send({ stage: 'done', ok, errors, total: needsTag.length });

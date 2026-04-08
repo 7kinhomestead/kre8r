@@ -460,6 +460,13 @@ router.post('/research', async (req, res) => {
       results.youtube = `Error: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 1, label: phase1Label, data: results.youtube });
+    // Checkpoint: phase 1 done — survives server restart
+    try {
+      db.setCheckpoint(session_id, 'id8r', {
+        phase: 1, chosenConcept: session.chosenConcept || null,
+        phase1: results.youtube, phase2: null, phase3: null,
+      });
+    } catch (_) {}
     send({ stage: 'phase_wait', phase: 1, duration: 120, message: 'Reviewing findings...' });
     await new Promise(r => setTimeout(r, 120000));
 
@@ -493,6 +500,13 @@ router.post('/research', async (req, res) => {
       results.data = `Error: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 2, label: phase2Label, data: results.data });
+    // Checkpoint: phase 2 done
+    try {
+      db.setCheckpoint(session_id, 'id8r', {
+        phase: 2, chosenConcept: session.chosenConcept || null,
+        phase1: results.youtube, phase2: results.data, phase3: null,
+      });
+    } catch (_) {}
     send({ stage: 'phase_wait', phase: 2, duration: 120, message: 'Reviewing findings...' });
     await new Promise(r => setTimeout(r, 120000));
 
@@ -525,6 +539,13 @@ router.post('/research', async (req, res) => {
       results.vault = `VaultΩr check failed: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 3, label: phase3Label, data: results.vault });
+    // Checkpoint: all 3 phases done — full research in DB
+    try {
+      db.setCheckpoint(session_id, 'id8r', {
+        phase: 3, chosenConcept: session.chosenConcept || null,
+        phase1: results.youtube, phase2: results.data, phase3: results.vault,
+      });
+    } catch (_) {}
     send({ stage: 'phase_wait', phase: 3, duration: 120, message: 'Reviewing findings...' });
     await new Promise(r => setTimeout(r, 120000));
 
@@ -796,9 +817,25 @@ router.post('/send-pipeline', async (req, res) => {
       ? `/writr.html?project_id=${project.id}`
       : `/pipr.html?load_project=${project.id}`;
 
+    // Clean up checkpoint now that the project is saved to DB
+    try { db.deleteCheckpoint(session_id); } catch (_) {}
+
     res.json({ ok: true, project_id: project.id, redirect_url: redirectUrl });
   } catch (e) {
     console.error('[id8r/send-pipeline]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── GET /api/id8r/checkpoint/:sessionId ──────────────────────────────────────
+
+router.get('/checkpoint/:sessionId', (req, res) => {
+  try {
+    const cp = db.getCheckpoint(req.params.sessionId);
+    if (!cp) return res.json({ found: false });
+    res.json({ found: true, tool: cp.tool, data: cp.data, updated_at: cp.updated_at });
+  } catch (e) {
+    console.error('[id8r/checkpoint]', e);
     res.status(500).json({ error: e.message });
   }
 });

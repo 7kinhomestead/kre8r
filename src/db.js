@@ -647,6 +647,14 @@ function runMigrations() {
     db.exec('ALTER TABLE footage ADD COLUMN subjects TEXT');
     console.log('[DB] Migration: added footage.subjects');
   }
+
+  // Id8Ωr phase checkpoints — crash-safe creative state between research phases
+  db.exec(`CREATE TABLE IF NOT EXISTS session_checkpoints (
+    session_id  TEXT    PRIMARY KEY,
+    tool        TEXT    NOT NULL,
+    data        TEXT    NOT NULL,
+    updated_at  INTEGER NOT NULL
+  )`);
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -1616,6 +1624,35 @@ function updateProjectEditorState(projectId, state) {
 
 function updateProjectId8r(projectId, data) {
   _run(`UPDATE projects SET id8r_data = ? WHERE id = ?`, [JSON.stringify(data), projectId]);
+}
+
+// ─────────────────────────────────────────────
+// SESSION CHECKPOINTS — crash-safe phase state
+// ─────────────────────────────────────────────
+
+/** Upsert a checkpoint for any tool session. data must be a plain object. */
+function setCheckpoint(sessionId, tool, data) {
+  db.prepare(`
+    INSERT INTO session_checkpoints (session_id, tool, data, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(session_id) DO UPDATE SET
+      tool       = excluded.tool,
+      data       = excluded.data,
+      updated_at = excluded.updated_at
+  `).run(sessionId, tool, JSON.stringify(data), Date.now());
+}
+
+/** Retrieve a checkpoint by session ID. Returns parsed data or null. */
+function getCheckpoint(sessionId) {
+  const row = db.prepare(`SELECT * FROM session_checkpoints WHERE session_id = ?`).get(sessionId);
+  if (!row) return null;
+  try { row.data = JSON.parse(row.data); } catch (_) {}
+  return row;
+}
+
+/** Delete a checkpoint once the session completes successfully. */
+function deleteCheckpoint(sessionId) {
+  db.prepare(`DELETE FROM session_checkpoints WHERE session_id = ?`).run(sessionId);
 }
 
 function updateProjectPipr(projectId, fields) {
@@ -2647,6 +2684,10 @@ module.exports = {
   updateProjectEditorState,
   // Id8Ωr
   updateProjectId8r,
+  // Session Checkpoints
+  setCheckpoint,
+  getCheckpoint,
+  deleteCheckpoint,
   // PipΩr
   updateProjectPipr,
   updateProjectWritr,

@@ -8,38 +8,12 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { getCreatorContext, getCommunityBlock } = require('../utils/creator-context');
+const { callClaudeMessages } = require('../utils/claude');
 
-const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
-const ANTHROPIC_VERSION = '2023-06-01';
-
+// callClaudeMessages from shared util has full retry/backoff logic (429, 529, ECONNRESET).
+// Thin wrapper so call sites stay identical to the old local signature.
 async function callClaude(systemPrompt, userPrompt, maxTokens = 4000) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set in environment');
-
-  const { default: fetch } = await import('node-fetch');
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_VERSION
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
-    })
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.error?.message || `Anthropic API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.content[0].text;
+  return callClaudeMessages(systemPrompt, [{ role: 'user', content: userPrompt }], maxTokens);
 }
 
 function parseJson(text) {

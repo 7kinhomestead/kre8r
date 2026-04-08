@@ -1,4 +1,54 @@
-# Kre8Ωr Session Log — 2026-04-08 (Session 23 — VaultΩr Semantic Search + Subjects Tagging)
+# Kre8Ωr Session Log — 2026-04-08 (Session 24 — Claude Retry Feedback + Id8Ωr Phase Checkpoints)
+
+## What Was Built — Session 24
+
+---
+
+### Feature 1: Claude API Retry Wrapper — generate.js
+
+**Problem:** `src/routes/generate.js` had a local `callClaude` with zero retry logic.
+A single 429 or network blip would crash PackageΩr, CaptionΩr, or MailΩr with no recovery.
+
+**Fix:**
+- Removed the 29-line local `callClaude` in `generate.js`
+- Added `const { callClaudeMessages } = require('../utils/claude')` — shared util already has
+  full exponential backoff on 429, 529, ECONNRESET, ETIMEDOUT
+- Thin wrapper keeps all three call sites identical: `callClaude(system, user, tokens)`
+- These routes are regular JSON (not SSE), so silent retry is the right behavior
+
+**Files:** `src/routes/generate.js`
+
+---
+
+### Feature 2: Id8Ωr Phase Checkpoints — crash-safe research state
+
+**Problem:** Id8Ωr research takes 6+ minutes (3 phases × 120s waits). A server restart
+mid-research wipes everything — creator loses YouTube research, data phase, vault check.
+
+**Solution:** Checkpoint after every phase_result. Recovery banner on next page load.
+
+**`src/db.js`:**
+- New table: `session_checkpoints (session_id PK, tool, data JSON, updated_at INTEGER)`
+- `setCheckpoint(sessionId, tool, data)` — upsert via ON CONFLICT
+- `getCheckpoint(sessionId)` — returns parsed data or null
+- `deleteCheckpoint(sessionId)` — called on successful send-pipeline
+- All three exported
+
+**`src/routes/id8r.js`:**
+- After each `send({ stage: 'phase_result', phase: N })`: `db.setCheckpoint(session_id, 'id8r', { phase: N, chosenConcept, phase1, phase2, phase3 })`
+- After successful send-pipeline: `db.deleteCheckpoint(session_id)`
+- New endpoint: `GET /api/id8r/checkpoint/:sessionId` — returns `{ found, tool, data, updated_at }`
+
+**`public/id8r.html`:**
+- `onResearchEvent`: handles `ev.stage === 'retrying'` — shows fixed-position toast:
+  "Claude is busy — retrying in Xs… (attempt N)" with auto-fade after retry delay
+- On load: async `checkForCheckpoint()` — queries `/api/id8r/checkpoint/:id`,
+  shows recovery banner with phase summary + age ("saved 12m ago")
+- "Show saved research" button: rebuilds research feed cards from checkpoint data,
+  marks `researchComplete = true` + enables Continue button if all 3 phases present
+- Dismiss button: closes banner, checkpoint stays in DB for next load
+
+---
 
 ## What Was Built — Session 23
 
