@@ -180,6 +180,21 @@ app.whenReady().then(async () => {
   await startServer();
   createMainWindow();
 
+  // ── Rolling DB backup every 5 minutes ────────────────────────────────────
+  // Guards against AppData corruption and bad shutdowns.
+  // Backup lives in the project /database folder (gitignored).
+  const dbSrc    = path.join(app.getPath('userData'), 'kre8r.db');
+  const dbBackup = path.join(__dirname, '../database/kre8r-electron-backup.db');
+  setInterval(() => {
+    try {
+      if (fs.existsSync(dbSrc)) {
+        fs.copyFileSync(dbSrc, dbBackup);
+      }
+    } catch (err) {
+      console.warn('[Electron] DB backup failed (non-fatal):', err.message);
+    }
+  }, 300_000); // every 5 minutes
+
   // macOS: re-create window when dock icon clicked with no windows open
   app.on('activate', () => {
     if (!mainWindow) createMainWindow();
