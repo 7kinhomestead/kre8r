@@ -655,6 +655,24 @@ function runMigrations() {
     data        TEXT    NOT NULL,
     updated_at  INTEGER NOT NULL
   )`);
+
+  // Background jobs — long-running ops that survive browser navigation
+  db.exec(`CREATE TABLE IF NOT EXISTS background_jobs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    type        TEXT    NOT NULL,
+    status      TEXT    NOT NULL DEFAULT 'pending',
+    progress    INTEGER NOT NULL DEFAULT 0,
+    total       INTEGER NOT NULL DEFAULT 0,
+    ok          INTEGER NOT NULL DEFAULT 0,
+    errors      INTEGER NOT NULL DEFAULT 0,
+    result      TEXT,
+    error       TEXT,
+    meta        TEXT,
+    started_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    finished_at DATETIME
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_bgjobs_type   ON background_jobs(type)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_bgjobs_status ON background_jobs(status)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -1653,6 +1671,59 @@ function getCheckpoint(sessionId) {
 /** Delete a checkpoint once the session completes successfully. */
 function deleteCheckpoint(sessionId) {
   db.prepare(`DELETE FROM session_checkpoints WHERE session_id = ?`).run(sessionId);
+}
+
+// ─────────────────────────────────────────────
+// BACKGROUND JOBS
+// ─────────────────────────────────────────────
+
+function createJob(type, meta = {}) {
+  const result = db.prepare(
+    `INSERT INTO background_jobs (type, status, meta) VALUES (?, 'pending', ?)`
+  ).run(type, JSON.stringify(meta));
+  return getJob(result.lastInsertRowid);
+}
+
+function getJob(id) {
+  const row = db.prepare(`SELECT * FROM background_jobs WHERE id = ?`).get(id);
+  if (!row) return null;
+  try { if (row.meta) row.meta = JSON.parse(row.meta); } catch (_) {}
+  try { if (row.result) row.result = JSON.parse(row.result); } catch (_) {}
+  return row;
+}
+
+function getActiveJobByType(type) {
+  const row = db.prepare(
+    `SELECT * FROM background_jobs WHERE type = ? AND status IN ('pending','running') ORDER BY id DESC LIMIT 1`
+  ).get(type);
+  if (!row) return null;
+  try { if (row.meta) row.meta = JSON.parse(row.meta); } catch (_) {}
+  return row;
+}
+
+function updateJobProgress(id, { progress, total, ok, errors }) {
+  db.prepare(`
+    UPDATE background_jobs
+    SET status = 'running', progress = ?, total = ?, ok = ?, errors = ?
+    WHERE id = ?
+  `).run(progress ?? 0, total ?? 0, ok ?? 0, errors ?? 0, id);
+}
+
+function finishJob(id, { ok, errors, total, result } = {}) {
+  db.prepare(`
+    UPDATE background_jobs
+    SET status = 'done', ok = ?, errors = ?, total = ?,
+        result = ?, finished_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(ok ?? 0, errors ?? 0, total ?? 0, result ? JSON.stringify(result) : null, id);
+}
+
+function failJob(id, errorMsg) {
+  db.prepare(`
+    UPDATE background_jobs
+    SET status = 'error', error = ?, finished_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(errorMsg, id);
 }
 
 function updateProjectPipr(projectId, fields) {
@@ -2688,6 +2759,13 @@ module.exports = {
   setCheckpoint,
   getCheckpoint,
   deleteCheckpoint,
+  // Background Jobs
+  createJob,
+  getJob,
+  getActiveJobByType,
+  updateJobProgress,
+  finishJob,
+  failJob,
   // PipΩr
   updateProjectPipr,
   updateProjectWritr,

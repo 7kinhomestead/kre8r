@@ -316,53 +316,127 @@ router.post('/reclassify-missing', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// POST /api/vault/reclassify-subjects
-// Backfill subjects tags on all footage that has thumbnails but no subjects yet.
-// Streams SSE progress so the UI can show a live counter.
+// BACKGROUND JOB RUNNER — reclassify-subjects
+// Runs detached from any HTTP connection so navigating away doesn't kill it.
 // ─────────────────────────────────────────────
-router.post('/reclassify-subjects', async (req, res) => {
+async function runReclassifySubjectsJob(jobId) {
+  try {
+    const needsTag = db.getAllFootage().filter(f => !f.subjects && f.thumbnail_path);
+    const total = needsTag.length;
+
+    if (total === 0) {
+      db.finishJob(jobId, { ok: 0, errors: 0, total: 0 });
+      return;
+    }
+
+    let ok = 0, errors = 0;
+    for (let i = 0; i < total; i++) {
+      const f = needsTag[i];
+      // Write current clip name into meta so the stream knows what's active
+      db.updateJobProgress(jobId, { progress: i, total, ok, errors });
+      try {
+        await reclassifyById(f.id);
+        ok++;
+      } catch (e) {
+        errors++;
+        console.error(`[reclassify-subjects job ${jobId}] clip ${f.id} failed:`, e.message);
+        await new Promise(r => setTimeout(r, 5000)); // back off 5s on API error
+      }
+      db.updateJobProgress(jobId, { progress: i + 1, total, ok, errors });
+      await new Promise(r => setTimeout(r, 300)); // 300ms pacing between clips
+    }
+
+    db.finishJob(jobId, { ok, errors, total });
+  } catch (e) {
+    console.error(`[reclassify-subjects job ${jobId}] fatal:`, e.message);
+    db.failJob(jobId, e.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+// POST /api/vault/reclassify-subjects
+// Starts a background job. Returns { job_id } immediately.
+// If a job is already running, returns that job's id instead of starting a new one.
+// ─────────────────────────────────────────────
+router.post('/reclassify-subjects', (req, res) => {
+  try {
+    // Don't double-start if one is already running
+    const existing = db.getActiveJobByType('reclassify-subjects');
+    if (existing) return res.json({ job_id: existing.id, resumed: true });
+
+    const job = db.createJob('reclassify-subjects');
+    // Fire and forget — NOT awaited, runs independently of this HTTP request
+    runReclassifySubjectsJob(job.id);
+    res.json({ job_id: job.id, resumed: false });
+  } catch (e) {
+    console.error('[vault/reclassify-subjects]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/vault/jobs/:id — current job state (for polling)
+// ─────────────────────────────────────────────
+router.get('/jobs/:id', (req, res) => {
+  try {
+    const job = db.getJob(parseInt(req.params.id));
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/vault/jobs/active/:type — check for a running job of a given type
+// ─────────────────────────────────────────────
+router.get('/jobs/active/:type', (req, res) => {
+  try {
+    const job = db.getActiveJobByType(req.params.type);
+    res.json(job || null);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/vault/jobs/:id/stream — SSE progress stream (reconnectable)
+// Client connects here to watch a job live. Can disconnect and reconnect freely.
+// Polls DB every 1.5s and emits progress events until the job is done or errored.
+// ─────────────────────────────────────────────
+router.get('/jobs/:id/stream', (req, res) => {
   res.setHeader('Content-Type',  'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection',    'keep-alive');
   res.flushHeaders();
 
-  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const jobId = parseInt(req.params.id);
+  const send  = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
 
-  try {
-    // Find footage without subjects that has thumbnails to work from
-    const needsTag = db.getAllFootage().filter(f => !f.subjects && f.thumbnail_path);
-    send({ stage: 'start', total: needsTag.length });
+  const poll = setInterval(async () => {
+    try {
+      const job = db.getJob(jobId);
+      if (!job) { clearInterval(poll); send({ stage: 'error', error: 'Job not found' }); res.end(); return; }
 
-    if (needsTag.length === 0) {
-      send({ stage: 'done', ok: 0, skipped: 0, errors: 0 });
-      return res.end();
-    }
-
-    let ok = 0, errors = 0;
-    for (let i = 0; i < needsTag.length; i++) {
-      const f = needsTag[i];
-      send({ stage: 'tagging', index: i + 1, total: needsTag.length, file: f.original_filename });
-      try {
-        await reclassifyById(f.id);
-        ok++;
-        send({ stage: 'tagged', index: i + 1, total: needsTag.length, file: f.original_filename });
-      } catch (e) {
-        errors++;
-        send({ stage: 'error', index: i + 1, total: needsTag.length, file: f.original_filename, error: e.message });
-        // On API error, back off for 5 seconds before continuing
-        await new Promise(r => setTimeout(r, 5000));
+      if (job.status === 'running' || job.status === 'pending') {
+        send({ stage: 'progress', progress: job.progress, total: job.total, ok: job.ok, errors: job.errors });
+      } else if (job.status === 'done') {
+        clearInterval(poll);
+        send({ stage: 'done', ok: job.ok, errors: job.errors, total: job.total });
+        res.end();
+      } else if (job.status === 'error') {
+        clearInterval(poll);
+        send({ stage: 'error', error: job.error });
+        res.end();
       }
-      // Gentle pacing: extra 300ms between every clip beyond the vision queue's own delay.
-      // Keeps bulk backfill from saturating the API on large libraries (500+ clips).
-      await new Promise(r => setTimeout(r, 300));
+    } catch (e) {
+      clearInterval(poll);
+      send({ stage: 'error', error: e.message });
+      res.end();
     }
+  }, 1500);
 
-    send({ stage: 'done', ok, errors, total: needsTag.length });
-    res.end();
-  } catch (e) {
-    send({ stage: 'error', error: e.message });
-    res.end();
-  }
+  req.on('close', () => clearInterval(poll));
 });
 
 // ─────────────────────────────────────────────

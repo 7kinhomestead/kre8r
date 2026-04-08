@@ -1095,62 +1095,88 @@ async function loadStorageStats() {
   }
 }
 
-// ── BACKFILL SUBJECTS ───────────────────────────────────────────────────────
+// ── BACKFILL SUBJECTS — background job system ───────────────────────────────
+// The job runs on the server regardless of whether this tab is open.
+// Navigate away and come back — it reconnects and shows current progress.
 
-async function backfillSubjects() {
+let _subjectsJobId   = null;
+let _subjectsEventSrc = null;
+
+function _stopSubjectsStream() {
+  if (_subjectsEventSrc) { _subjectsEventSrc.close(); _subjectsEventSrc = null; }
+}
+
+function _connectSubjectsStream(jobId) {
+  _subjectsJobId = jobId;
+  _stopSubjectsStream();
+
   const btn    = document.getElementById('backfillBtn');
   const status = document.getElementById('backfillStatus');
   btn.disabled = true;
   status.style.display = 'inline';
+
+  const es = new EventSource('/api/vault/jobs/' + jobId + '/stream');
+  _subjectsEventSrc = es;
+
+  es.onmessage = (e) => {
+    try {
+      const ev = JSON.parse(e.data);
+      if (ev.stage === 'progress') {
+        const pct = ev.total > 0 ? Math.round((ev.progress / ev.total) * 100) : 0;
+        status.textContent = `Tagging ${ev.progress} / ${ev.total} — ${pct}%  (${ev.ok} done, ${ev.errors} errors)`;
+      } else if (ev.stage === 'done') {
+        status.textContent = `Done ✓ — ${ev.ok} tagged, ${ev.errors} errors`;
+        btn.disabled = false;
+        _subjectsJobId = null;
+        _stopSubjectsStream();
+        loadFootage(); // refresh grid so subject tags show
+      } else if (ev.stage === 'error') {
+        status.textContent = `Error: ${ev.error}`;
+        btn.disabled = false;
+        _subjectsJobId = null;
+        _stopSubjectsStream();
+      }
+    } catch (_) {}
+  };
+
+  es.onerror = () => {
+    // EventSource auto-reconnects on disconnect — this is fine.
+    // Only clear if the job finished (handled in onmessage above).
+  };
+}
+
+async function backfillSubjects() {
+  const status = document.getElementById('backfillStatus');
+  status.style.display = 'inline';
   status.textContent   = 'Starting…';
 
   try {
-    const response = await fetch('/api/vault/reclassify-subjects', { method: 'POST' });
-    if (!response.ok || !response.body) {
-      status.textContent = `Error: ${response.status}`;
-      btn.disabled = false;
-      return;
-    }
-
-    const reader  = response.body.getReader();
-    const decoder = new TextDecoder();
-    let   buffer  = '';
-
-    const handleEvent = (ev) => {
-      if (ev.stage === 'start') {
-        status.textContent = ev.total === 0 ? 'All clips already tagged ✓' : `Tagging 0 / ${ev.total}…`;
-      } else if (ev.stage === 'tagging') {
-        status.textContent = `Tagging ${ev.index} / ${ev.total}…`;
-      } else if (ev.stage === 'tagged') {
-        status.textContent = `Tagged ${ev.index} / ${ev.total}`;
-      } else if (ev.stage === 'done') {
-        status.textContent = `Done — ${ev.ok} tagged, ${ev.errors} errors`;
-        btn.disabled = false;
-        loadFootage(); // refresh grid so subject tags show on cards
-      } else if (ev.stage === 'error' && ev.error && !ev.file) {
-        status.textContent = `Failed: ${ev.error}`;
-        btn.disabled = false;
-      }
-    };
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try { handleEvent(JSON.parse(line.slice(6))); } catch(_) {}
-        }
-      }
-    }
-    btn.disabled = false;
+    const res  = await fetch('/api/vault/reclassify-subjects', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) { status.textContent = `Error: ${data.error}`; return; }
+    if (data.resumed) status.textContent = 'Reconnecting to running job…';
+    _connectSubjectsStream(data.job_id);
   } catch(e) {
     status.textContent = `Failed: ${e.message}`;
-    btn.disabled = false;
   }
 }
+
+// On load: check if a subjects tagging job is already running and auto-reconnect
+(async function checkActiveSubjectsJob() {
+  try {
+    const res = await fetch('/api/vault/jobs/active/reclassify-subjects');
+    if (!res.ok) return;
+    const job = await res.json();
+    if (!job) return;
+    // Job is running — reconnect automatically
+    const status = document.getElementById('backfillStatus');
+    if (status) {
+      status.style.display = 'inline';
+      status.textContent   = 'Job in progress — reconnecting…';
+    }
+    _connectSubjectsStream(job.id);
+  } catch (_) {}
+})();
 
 // ── ARCHIVE TO D: ──────────────────────────────────────────────────────────
 
