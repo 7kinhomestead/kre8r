@@ -140,7 +140,6 @@ A migration to better-sqlite3 is planned before commercialization.
 - 6 analyzed voice profiles from real videos in WritΩr voice library
 - Partner: Cari — camera operator and director. Cari profile planned for Rock Rich Shows.
 - Kids: 5. House: 700 sq ft. Shoots outdoors only.
-- Jiu jitsu contact: Charlie — potential technical co-founder, meeting Saturday.
 
 ## Content Angles (creator-profile.json)
 - `financial` — Real numbers, cost breakdowns, ROI math
@@ -234,7 +233,6 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 - Domain: kre8r.app (purchased)
 - GitHub: github.com/7kinhomestead/kre8r (private, master branch)
 - Target: use it publicly → document publicly → find operator partner
-- Charlie meeting Saturday — potential technical co-founder
 - Founding 50 developer member also interested
 - Read OPUS_REVIEW.md for senior architecture assessment
 
