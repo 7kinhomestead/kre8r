@@ -6,7 +6,7 @@
 
 'use strict';
 
-const { app, BrowserWindow, shell, protocol, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, protocol, ipcMain, Menu, MenuItem } = require('electron');
 const path   = require('path');
 const fs     = require('fs');
 const { spawn } = require('child_process');
@@ -147,6 +147,7 @@ function createMainWindow() {
     webPreferences: {
       nodeIntegration:  false,
       contextIsolation: true,
+      spellcheck:       true,
       preload:          path.join(__dirname, 'preload.js'),
     },
   });
@@ -160,6 +161,47 @@ function createMainWindow() {
     }
     mainWindow.show();
     mainWindow.focus();
+  });
+
+  // ── Right-click context menu (spell check + copy/paste) ─────────────────
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    const menu = new Menu();
+
+    // Spell-check suggestions
+    for (const suggestion of params.dictionarySuggestions) {
+      menu.append(new MenuItem({
+        label: suggestion,
+        click: () => mainWindow.webContents.replaceMisspelling(suggestion)
+      }));
+    }
+    if (params.misspelledWord) {
+      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({
+        label: 'Add to Dictionary',
+        click: () => mainWindow.webContents.session
+          .addWordToSpellCheckerDictionary(params.misspelledWord)
+      }));
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+
+    // Editable field: full edit menu
+    if (params.isEditable) {
+      if (params.misspelledWord && menu.items.length === 0)
+        menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({ role: 'undo' }));
+      menu.append(new MenuItem({ role: 'redo' }));
+      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({ role: 'cut' }));
+      menu.append(new MenuItem({ role: 'copy' }));
+      menu.append(new MenuItem({ role: 'paste' }));
+      menu.append(new MenuItem({ role: 'pasteAndMatchStyle' }));
+      menu.append(new MenuItem({ role: 'selectAll' }));
+    } else if (params.selectionText) {
+      // Read-only selected text: copy only
+      menu.append(new MenuItem({ role: 'copy' }));
+    }
+
+    if (menu.items.length > 0) menu.popup();
   });
 
   // Open external URLs in the system browser, not inside Electron
