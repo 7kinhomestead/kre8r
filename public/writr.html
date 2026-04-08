@@ -788,6 +788,7 @@ async function loadProjects() {
 // ─────────────────────────────────────────────
 
 async function onProjectChange(pid) {
+  const prevProjectId = currentProjectId;  // capture before overwrite
   currentProjectId  = pid;
   currentEntryPoint = null;
   const changeBtn = document.getElementById('changeStructureBtn');
@@ -796,11 +797,20 @@ async function onProjectChange(pid) {
   currentBeatMap    = [];
   draftNumber       = 0;
 
-  // Room: show button when project is loaded, reset state
+  // Room: show button when project is loaded; reload history if project changed
   document.getElementById('roomBtn').style.display = pid ? '' : 'none';
-  if (pid !== currentProjectId) {
+  if (pid !== prevProjectId) {
     roomHistory = [];
-    if (roomOpen) { renderRoomMessages(); document.getElementById('roomContextBadge').textContent = 'Loading…'; }
+    if (pid) {
+      try {
+        const saved = localStorage.getItem(`room_${pid}`);
+        if (saved) roomHistory = JSON.parse(saved);
+      } catch(_) { roomHistory = []; }
+    }
+    if (roomOpen) {
+      renderRoomMessages();
+      document.getElementById('roomContextBadge').textContent = pid ? 'Full project context loaded' : 'No project loaded';
+    }
   }
 
   resetInputArea();
@@ -2328,6 +2338,8 @@ async function sendRoomMessage() {
   const historySnapshot = [...roomHistory];
 
   roomHistory.push({ role: 'user', content: message });
+  // Save immediately — protect user message even if response fails or page reloads
+  localStorage.setItem(`room_${currentProjectId}`, JSON.stringify(roomHistory));
   renderRoomMessages();
 
   // Thinking indicator
@@ -2353,6 +2365,7 @@ async function sendRoomMessage() {
 
   } catch (err) {
     roomHistory.push({ role: 'assistant', content: `Something went wrong: ${err.message}` });
+    localStorage.setItem(`room_${currentProjectId}`, JSON.stringify(roomHistory));
     showToast(err.message, 'error');
   } finally {
     const t = document.getElementById('roomThinking');
