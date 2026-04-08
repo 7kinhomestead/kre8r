@@ -134,6 +134,7 @@ app.use('/api/analytr',      mirrRouter);           // legacy alias — keep so 
 app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
 app.use('/api/project-vault', require('./src/routes/project-vault'));
 app.use('/api/northr',        require('./src/routes/northr'));
+app.use('/api/lab',           require('./src/routes/lab'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

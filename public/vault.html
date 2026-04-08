@@ -305,6 +305,18 @@
   .toast.green{border-left:3px solid var(--green);color:var(--green);}
   .toast.amber{border-left:3px solid var(--amber);color:var(--amber);}
   .toast.red{border-left:3px solid var(--red);color:var(--red);}
+
+  /* ── DUPLICATES ── */
+  .dupe-group { background: #161916; border: 1px solid #2a2e28; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .dupe-group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .dupe-filename { font-size: 13px; font-weight: 600; color: #e8ebe6; word-break: break-all; }
+  .dupe-count-badge { background: rgba(224,82,82,0.15); border: 1px solid rgba(224,82,82,0.3); color: #e05252; border-radius: 20px; font-size: 11px; font-weight: 700; padding: 2px 8px; }
+  .dupe-clip-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid #1c1f1b; font-size: 12px; color: #8a9487; gap: 8px; }
+  .dupe-clip-keep { color: #3ecfb2; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 8px; border: 1px solid rgba(62,207,178,0.3); border-radius: 20px; }
+  .dupe-archive-btn { background: none; border: 1px solid #2a2e28; border-radius: 6px; color: #8a9487; font-size: 11px; padding: 4px 10px; cursor: pointer; transition: all 0.15s; }
+  .dupe-archive-btn:hover { border-color: #e05252; color: #e05252; }
+  .dupe-archive-group-btn { background: none; border: 1px solid rgba(224,82,82,0.4); border-radius: 6px; color: #e05252; font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer; transition: all 0.15s; }
+  .dupe-archive-group-btn:hover { background: rgba(224,82,82,0.1); }
 </style>
 </head>
 <body>
@@ -478,8 +490,12 @@
         <div class="section-sub" id="footageCount">Loading…</div>
         <button class="btn btn-ghost" id="backfillBtn" onclick="backfillSubjects()" style="font-size:11px;padding:5px 10px;" title="Tag all clips with searchable subjects using Claude Vision">⟳ Tag Subjects</button>
         <span id="backfillStatus" style="font-size:11px;color:var(--text-dimmer);display:none;"></span>
+        <button class="btn btn-ghost" id="findDupesBtn" onclick="findDuplicates()" style="font-size:11px;padding:5px 10px;" title="Find duplicate clips in the vault by filename">🔍 Find Duplicates</button>
       </div>
     </div>
+
+    <!-- Duplicate results area -->
+    <div id="dupesResults" style="display:none;margin-bottom:16px;"></div>
 
     <!-- Library controls -->
     <div class="library-controls">
@@ -1944,6 +1960,98 @@ function showToast(msg, type = 'green') {
   el.className = `toast ${type}`; el.textContent = msg;
   document.getElementById('toastWrap').appendChild(el);
   setTimeout(() => el.remove(), 3500);
+}
+
+// ── FIND DUPLICATES ──────────────────────────────────────────────────────────
+
+async function findDuplicates() {
+  const btn = document.getElementById('findDupesBtn');
+  const results = document.getElementById('dupesResults');
+  btn.disabled = true;
+  btn.textContent = 'Scanning…';
+  results.style.display = 'block';
+  results.innerHTML = '<div style="color:#8a9487;font-size:13px;padding:12px 0">Scanning vault for duplicates…</div>';
+
+  try {
+    const res = await fetch('/api/vault/duplicates');
+    const data = await res.json();
+
+    if (!data.groups || data.groups.length === 0) {
+      results.innerHTML = '<div style="color:#3ecfb2;font-size:13px;padding:12px 0">✓ No duplicates found — vault is clean.</div>';
+      btn.disabled = false;
+      btn.textContent = '🔍 Find Duplicates';
+      return;
+    }
+
+    results.innerHTML = `<div style="color:#8a9487;font-size:12px;margin-bottom:12px">${data.total_groups} duplicate group${data.total_groups !== 1 ? 's' : ''} — ${data.total_dupes} extra clip${data.total_dupes !== 1 ? 's' : ''} that can be archived</div>`;
+
+    data.groups.forEach(group => {
+      const div = document.createElement('div');
+      div.className = 'dupe-group';
+
+      const dupeIds = group.clips.slice(1).map(c => c.id);
+
+      div.innerHTML = `
+        <div class="dupe-group-header">
+          <span class="dupe-filename">${group.filename}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="dupe-count-badge">${group.count} copies</span>
+            <button class="dupe-archive-group-btn" onclick="archiveDupeGroup([${dupeIds.join(',')}], this.closest('.dupe-group'))">Archive ${dupeIds.length} duplicate${dupeIds.length !== 1 ? 's' : ''}</button>
+          </div>
+        </div>
+        ${group.clips.map((clip, i) => `
+          <div class="dupe-clip-row" id="dupe-clip-${clip.id}">
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${clip.file_path || clip.original_filename}</span>
+            <span style="flex-shrink:0">${clip.shot_type || 'unclassified'}</span>
+            <span style="flex-shrink:0">${clip.duration ? Math.round(clip.duration) + 's' : '—'}</span>
+            ${i === 0
+              ? '<span class="dupe-clip-keep">KEEP</span>'
+              : `<button class="dupe-archive-btn" onclick="archiveSingleClip(${clip.id}, this)">Archive</button>`
+            }
+          </div>`).join('')}
+      `;
+      results.appendChild(div);
+    });
+
+  } catch(e) {
+    results.innerHTML = `<div style="color:#e05252;font-size:13px;padding:12px 0">Error: ${e.message}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 Find Duplicates';
+}
+
+async function archiveSingleClip(id, btn) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    await fetch(`/api/vault/footage/${id}/archive`, { method: 'POST' });
+    const row = document.getElementById('dupe-clip-' + id);
+    if (row) { row.style.opacity = '0.4'; row.style.textDecoration = 'line-through'; }
+    btn.textContent = 'Archived';
+  } catch(e) {
+    btn.textContent = 'Error';
+    btn.disabled = false;
+  }
+}
+
+async function archiveDupeGroup(ids, groupEl) {
+  const btn = groupEl.querySelector('.dupe-archive-group-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Archiving…'; }
+  try {
+    await fetch('/api/vault/footage/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    });
+    ids.forEach(id => {
+      const row = document.getElementById('dupe-clip-' + id);
+      if (row) { row.style.opacity = '0.4'; row.style.textDecoration = 'line-through'; }
+    });
+    if (btn) btn.textContent = `Archived ${ids.length}`;
+  } catch(e) {
+    if (btn) { btn.textContent = 'Error'; btn.disabled = false; }
+  }
 }
 </script>
 <script src="/js/nav.js"></script>

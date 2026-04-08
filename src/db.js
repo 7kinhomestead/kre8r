@@ -1021,6 +1021,50 @@ function footageFilePathExists(filePath) {
 }
 
 // ─────────────────────────────────────────────
+// DUPLICATE FOOTAGE DETECTION (VaultΩr)
+// ─────────────────────────────────────────────
+
+/** Find groups of footage with identical original_filename. Returns array of groups. */
+function findDuplicateFootage() {
+  const dupes = _all(`
+    SELECT original_filename, COUNT(*) as count
+    FROM footage
+    WHERE original_filename IS NOT NULL
+      AND (quality_flag IS NULL OR quality_flag != 'archived')
+    GROUP BY original_filename
+    HAVING COUNT(*) > 1
+    ORDER BY COUNT(*) DESC
+  `);
+  if (!dupes.length) return [];
+
+  return dupes.map(d => {
+    const clips = _all(
+      `SELECT id, file_path, original_filename, shot_type, quality_flag,
+              description, duration, file_size, thumbnail_path, ingested_at,
+              resolution, subjects
+       FROM footage
+       WHERE original_filename = ?
+         AND (quality_flag IS NULL OR quality_flag != 'archived')
+       ORDER BY ingested_at ASC`,
+      [d.original_filename]
+    );
+    return { filename: d.original_filename, count: d.count, clips };
+  });
+}
+
+/** Soft-archive a footage record by setting quality_flag = 'archived'. */
+function archiveFootage(id) {
+  _run(`UPDATE footage SET quality_flag = 'archived' WHERE id = ?`, [id]);
+}
+
+/** Bulk archive multiple footage records. */
+function bulkArchiveFootage(ids) {
+  if (!ids || !ids.length) return;
+  const placeholders = ids.map(() => '?').join(',');
+  _run(`UPDATE footage SET quality_flag = 'archived' WHERE id IN (${placeholders})`, ids);
+}
+
+// ─────────────────────────────────────────────
 // DISTRIBUTION HELPERS (VaultΩr)
 // ─────────────────────────────────────────────
 
@@ -2698,6 +2742,9 @@ module.exports = {
   searchFootageByWhere,
   getFootageStats,
   footageFilePathExists,
+  findDuplicateFootage,
+  archiveFootage,
+  bulkArchiveFootage,
   upsertDistribution,
   deleteDistribution,
   getDistributionByFootage,

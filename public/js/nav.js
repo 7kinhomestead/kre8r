@@ -23,6 +23,7 @@
   // NAV STRUCTURE
   // ─────────────────────────────────────────────
   const NORTHR_LINK = { href: '/northr.html', label: '🧭 NorthΩr' };
+  const LAB_LINK    = { href: '/lab.html',    label: '🧪 Lab' };
 
   const NAV = {
     categories: [
@@ -530,6 +531,7 @@
     }).join('');
 
     const northrActive = getActivePage() === NORTHR_LINK.href.toLowerCase();
+    const labActive    = getActivePage() === LAB_LINK.href.toLowerCase();
     const navHTML = `
       <nav class="kn-nav" role="navigation" aria-label="Kre8Ωr main navigation">
         <a href="/" class="kn-logo" aria-label="Kre8Ωr home">
@@ -539,6 +541,9 @@
           <a href="${NORTHR_LINK.href}" class="kn-northr-link${northrActive ? ' is-active' : ''}" id="kn-northr-btn" aria-label="NorthΩr strategy dashboard">
             ${escHtml(NORTHR_LINK.label)}
             <span class="kn-alert-badge" id="kn-alert-badge" style="display:none"></span>
+          </a>
+          <a href="${LAB_LINK.href}" class="kn-northr-link${labActive ? ' is-active' : ''}" aria-label="Lab — creative director chat">
+            ${escHtml(LAB_LINK.label)}
           </a>
           ${categoryHTML}
           <button class="kn-tour-btn" onclick="window.kre8rTour && window.kre8rTour.start()" title="Pipeline tour — how Kre8r works" aria-label="Start pipeline tour">?</button>

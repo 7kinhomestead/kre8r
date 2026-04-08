@@ -747,4 +747,66 @@ router.post('/archive/:project_id', async (req, res) => {
   res.end();
 });
 
+// ─────────────────────────────────────────────
+// GET /api/vault/duplicates
+// Returns groups of footage with identical filenames so the UI can show them.
+// Flags BRAW proxy pairs (same filename, different paths — these are expected and
+// should not be archived; they're the source + proxy relationship).
+// ─────────────────────────────────────────────
+router.get('/duplicates', (req, res) => {
+  try {
+    const allGroups = db.findDuplicateFootage();
+
+    // Annotate each group: is this a BRAW proxy pair or a true accidental duplicate?
+    const groups = allGroups.map(g => {
+      const isBrawPair = g.clips.length === 2 &&
+        g.clips.every(c => (c.original_filename || '').toLowerCase().endsWith('.braw')) &&
+        g.clips[0].file_path !== g.clips[1].file_path;
+
+      return { ...g, is_braw_pair: isBrawPair };
+    });
+
+    // Separate true dupes from BRAW pairs for summary counts
+    const trueDupeGroups = groups.filter(g => !g.is_braw_pair);
+    const brawPairGroups = groups.filter(g => g.is_braw_pair);
+
+    res.json({
+      groups,
+      total_groups:      trueDupeGroups.length,
+      total_dupes:       trueDupeGroups.reduce((s, g) => s + g.count - 1, 0),
+      braw_pairs:        brawPairGroups.length,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/footage/bulk-archive
+// Body: { ids: [1, 2, 3] }
+// Soft-archives footage by setting quality_flag = 'archived'. Non-destructive.
+// ─────────────────────────────────────────────
+router.post('/footage/bulk-archive', (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids array required' });
+    db.bulkArchiveFootage(ids.map(Number));
+    res.json({ ok: true, archived: ids.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/footage/:id/archive — archive a single clip
+// ─────────────────────────────────────────────
+router.post('/footage/:id/archive', (req, res) => {
+  try {
+    db.archiveFootage(parseInt(req.params.id));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
