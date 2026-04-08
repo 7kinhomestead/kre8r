@@ -6,7 +6,7 @@
 
 'use strict';
 
-const { app, BrowserWindow, shell, protocol, ipcMain, Menu, MenuItem } = require('electron');
+const { app, BrowserWindow, shell, protocol, ipcMain, Menu, MenuItem, dialog } = require('electron');
 const path   = require('path');
 const fs     = require('fs');
 const { spawn } = require('child_process');
@@ -251,6 +251,16 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   if (serverProcess) serverProcess.kill();
+});
+
+// ─── Native folder picker — used by Soul BuildΩr setup wizard ────────────────
+ipcMain.handle('pick-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: 'Choose Folder'
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  return result.filePaths[0];
 });
 
 // ─── kre8r:// OAuth protocol handler ─────────────────────────────────────────

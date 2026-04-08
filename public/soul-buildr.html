@@ -167,6 +167,14 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 
 /* ─── FORM ELEMENTS ──────────────────────────────────────────────────────────── */
 .wz-field { margin-bottom: 20px; }
+.wz-hint { font-size: 12px; color: var(--text-dimmer); line-height: 1.5; margin-top: 6px; }
+.wz-hint strong { color: var(--text-dim); font-weight: 600; }
+.wz-braw-note { background: rgba(62,207,178,0.06); border: 1px solid rgba(62,207,178,0.2); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 12px; font-size: 13px; color: var(--text-dim); line-height: 1.6; display: none; }
+.wz-braw-note strong { color: var(--teal); }
+.wz-folder-row { display: flex; gap: 8px; align-items: center; }
+.wz-folder-row .wz-input { flex: 1; }
+.wz-browse-btn { flex-shrink: 0; background: var(--bg-card-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-dim); font-family: var(--font-body); font-size: 13px; font-weight: 600; padding: 11px 14px; cursor: pointer; transition: all 0.15s; white-space: nowrap; display: none; }
+.wz-browse-btn:hover { border-color: var(--teal-dim); color: var(--teal); }
 .wz-label {
   display: block;
   font-size: 12px;
@@ -1166,9 +1174,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       <div class="wz-screen-head">
         <div class="wz-screen-number">05 / 05</div>
         <div class="wz-screen-title">YOUR <em>SETUP</em></div>
-        <div class="wz-screen-sub">Where you live on the internet. Where your files live on your machine.</div>
+        <div class="wz-screen-sub">Where you post. What camera you shoot with. Where your files live. One-time config — Kre8r handles the rest automatically.</div>
       </div>
 
+      <!-- SOCIAL HANDLES -->
       <div class="wz-field-row">
         <div class="wz-field">
           <label class="wz-label">YouTube Handle</label>
@@ -1194,6 +1203,38 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         <input class="wz-input" id="facebook" type="text" placeholder="Your Page Name">
       </div>
 
+      <!-- CAMERA TYPE -->
+      <div class="wz-field">
+        <label class="wz-label">What camera do you shoot with? <span>*</span></label>
+        <select class="wz-select" id="camera_type" onchange="onCameraChange()">
+          <option value="">— select your camera —</option>
+          <option value="blackmagic_braw">Blackmagic (shoots .braw files)</option>
+          <option value="sony">Sony (MP4 / XAVC)</option>
+          <option value="canon">Canon (MP4 / C-Log)</option>
+          <option value="iphone">iPhone</option>
+          <option value="gopro">GoPro</option>
+          <option value="other_mp4">Other (shoots MP4 / MOV)</option>
+        </select>
+        <p class="wz-hint">This tells Kre8r how to handle your footage files.</p>
+        <div class="wz-braw-note" id="brawNote">
+          <strong>📋 One extra step for Blackmagic:</strong> Your camera shoots in a format called BRAW that nothing else can read directly. Before Kre8r can analyze your footage, DaVinci Resolve needs to create a "proxy" — a smaller, normal video file. It's a one-time setup:<br><br>
+          1. Open DaVinci Resolve → Preferences → set your Proxy save location to the folder you'll enter below<br>
+          2. Enable <strong>Proxy Generator</strong> in DaVinci → it will automatically create proxies every time you import new footage<br>
+          3. Kre8r watches that same folder and picks them up automatically — you won't have to do anything after that
+        </div>
+      </div>
+
+      <!-- FOOTAGE WATCH FOLDER -->
+      <div class="wz-field">
+        <label class="wz-label">Footage Watch Folder <span>*</span></label>
+        <div class="wz-folder-row">
+          <input class="wz-input" id="footage_path" type="text" placeholder="e.g. D:\kre8r\intake or /Users/you/Videos/intake">
+          <button class="wz-browse-btn" id="browseFolderBtn" onclick="browseFolder('footage_path')" type="button">📁 Browse…</button>
+        </div>
+        <p class="wz-hint"><strong>This is the folder Kre8r watches automatically.</strong> Any video file dropped here gets analyzed, classified, and added to your footage library — no buttons to press. If you're on Blackmagic, point this at the folder where DaVinci saves your proxies.</p>
+      </div>
+
+      <!-- EDITOR + COMMUNITY -->
       <div class="wz-field-row">
         <div class="wz-field">
           <label class="wz-label">Primary Editor</label>
@@ -1206,8 +1247,14 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
           </select>
         </div>
         <div class="wz-field">
-          <label class="wz-label">Footage Folder Path</label>
-          <input class="wz-input" id="footage_path" type="text" value="D:\kre8r\intake">
+          <label class="wz-label">Publishing Cadence</label>
+          <select class="wz-select" id="cadence">
+            <option value="Daily">Daily</option>
+            <option value="2-3x per week">2–3× per week</option>
+            <option value="Weekly" selected>Weekly</option>
+            <option value="Bi-weekly">Bi-weekly</option>
+            <option value="Monthly">Monthly</option>
+          </select>
         </div>
       </div>
 
@@ -1222,6 +1269,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
             <option value="Mighty Networks">Mighty Networks</option>
             <option value="Other">Other</option>
           </select>
+          <p class="wz-hint">Where your paid community lives. Kre8r can tag and email your members automatically.</p>
         </div>
         <div class="wz-field">
           <label class="wz-label">Email Platform</label>
@@ -1239,17 +1287,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       <div class="wz-field" id="communityUrlField" style="display:none;">
         <label class="wz-label">Community URL</label>
         <input class="wz-input" id="community_url" type="text" placeholder="https://...">
-      </div>
-
-      <div class="wz-field">
-        <label class="wz-label">Publishing Cadence</label>
-        <select class="wz-select" id="cadence">
-          <option value="Daily">Daily</option>
-          <option value="2-3x per week">2–3× per week</option>
-          <option value="Weekly" selected>Weekly</option>
-          <option value="Bi-weekly">Bi-weekly</option>
-          <option value="Monthly">Monthly</option>
-        </select>
       </div>
     </div>
 
@@ -2043,6 +2080,30 @@ function toggleCommunityUrl() {
   var val = document.getElementById('community_platform').value;
   document.getElementById('communityUrlField').style.display = val !== 'None' ? 'block' : 'none';
 }
+
+function onCameraChange() {
+  var val = document.getElementById('camera_type').value;
+  var note = document.getElementById('brawNote');
+  if (note) note.style.display = val === 'blackmagic_braw' ? 'block' : 'none';
+}
+
+async function browseFolder(inputId) {
+  if (window.kre8rElectron && window.kre8rElectron.pickFolder) {
+    var folder = await window.kre8rElectron.pickFolder();
+    if (folder) {
+      var input = document.getElementById(inputId);
+      if (input) input.value = folder;
+    }
+  }
+}
+
+// Show folder browse button only in Electron
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.kre8rElectron && window.kre8rElectron.isElectron) {
+    var btns = document.querySelectorAll('.wz-browse-btn');
+    btns.forEach(function(btn) { btn.style.display = 'inline-block'; });
+  }
+});
 
 function addPillar() {
   var input = document.getElementById('pillarInput');

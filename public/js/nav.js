@@ -541,6 +541,7 @@
             <span class="kn-alert-badge" id="kn-alert-badge" style="display:none"></span>
           </a>
           ${categoryHTML}
+          <button class="kn-tour-btn" onclick="window.kre8rTour && window.kre8rTour.start()" title="Pipeline tour — how Kre8r works" aria-label="Start pipeline tour">?</button>
         </div>
         <button class="kn-hamburger" aria-label="Open navigation menu" aria-expanded="false" aria-controls="kn-mobile-overlay">
           ☰
@@ -737,6 +738,14 @@
         badge.style.display = 'inline-flex';
       }
     }).catch(function() {});
+
+    // Load tour.js once (idempotent — tour.js guards against double-inject)
+    if (!document.getElementById('kre8r-tour-js')) {
+      var tourScript = document.createElement('script');
+      tourScript.id  = 'kre8r-tour-js';
+      tourScript.src = '/js/tour.js';
+      document.body.appendChild(tourScript);
+    }
   };
 
 })();
