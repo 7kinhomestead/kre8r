@@ -19,7 +19,7 @@ public/images/kre8r-icon-16.png
 
 # ── Databases (NEVER commit user data) ───────────────────────────────────────
 # kre8r-template.db IS committed — it ships with the installer (schema only, no data)
-database/kre8r.db
+# database/kre8r.db  ← temporarily unblocked for DO sync — restore after deploy
 database/kre8r.db-shm
 database/kre8r.db-wal
 database/kre8r-backup*.db
