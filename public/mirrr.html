@@ -961,15 +961,24 @@ function handleCoachEvent(ev, status, errEl, card, btn) {
   }
 }
 
-// ─── Section 4: YouTube Sync ──────────────────────────────────────────────────
-async function syncYouTube() {
+// ─── Section 4: YouTube Sync — background job system ─────────────────────────
+// Starts a background job on the server. Navigate away freely — it keeps running.
+// Returns immediately with job_id. EventSource polls progress until done.
+
+let _syncEventSource = null;
+
+function _stopSyncStream() {
+  if (_syncEventSource) { _syncEventSource.close(); _syncEventSource = null; }
+}
+
+function _connectSyncStream(jobId) {
+  _stopSyncStream();
   const btn  = document.getElementById('syncBtn');
   const log  = document.getElementById('syncLog');
   const last = document.getElementById('syncLast');
 
   btn.classList.add('loading');
   btn.disabled = true;
-  log.innerHTML = '';
   log.classList.add('visible');
 
   function appendLog(msg, cls) {
@@ -980,44 +989,99 @@ async function syncYouTube() {
     log.scrollTop = log.scrollHeight;
   }
 
-  try {
-    const res = await fetch('/api/mirrr/youtube-sync', { method: 'POST' });
-    const reader = res.body.getReader();
-    const dec    = new TextDecoder();
-    let buf = '';
+  const es = new EventSource('/api/mirrr/jobs/' + jobId + '/stream');
+  _syncEventSource = es;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      const lines = buf.split('\n');
-      buf = lines.pop();
-      for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
-        try {
-          const ev = JSON.parse(line.slice(5).trim());
-          if (ev.type === 'error')    appendLog('✗ ' + ev.message, 'log-err');
-          else if (ev.type === 'warn')    appendLog(ev.message, 'log-warn');
-          else if (ev.type === 'status')  appendLog(ev.message, 'log-info');
-          else if (ev.type === 'progress') appendLog(ev.message, 'log-info');
-          else if (ev.type === 'synced')  appendLog(ev.message, 'log-ok');
-          else if (ev.type === 'done') {
-            appendLog(ev.message, 'log-done');
-            lastSyncedAt = ev.synced_at;
-            last.textContent = 'Last synced: ' + fmtDate(ev.synced_at);
-            // Reload stats after sync
-            await loadChannelHealth();
-            await loadVideos();
-          }
-        } catch {}
+  es.onmessage = async (e) => {
+    try {
+      const ev = JSON.parse(e.data);
+      if (ev.type === 'progress') {
+        // Update last log line in-place so the log doesn't fill up
+        let existing = log.querySelector('.log-progress');
+        if (!existing) { existing = document.createElement('div'); existing.className = 'log-info log-progress'; log.appendChild(existing); }
+        existing.textContent = ev.message;
+        log.scrollTop = log.scrollHeight;
+      } else if (ev.type === 'done') {
+        appendLog('✓ ' + ev.message, 'log-done');
+        if (ev.synced_at) {
+          lastSyncedAt = ev.synced_at;
+          last.textContent = 'Last synced: ' + fmtDate(ev.synced_at);
+        }
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        _stopSyncStream();
+        await loadChannelHealth();
+        await loadVideos();
+      } else if (ev.type === 'error') {
+        appendLog('✗ ' + ev.message, 'log-err');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        _stopSyncStream();
       }
-    }
-  } catch (err) {
-    appendLog('Error: ' + err.message, 'log-err');
-  }
+    } catch (_) {}
+  };
+}
 
-  btn.classList.remove('loading');
-  btn.disabled = false;
+async function syncYouTube() {
+  const log = document.getElementById('syncLog');
+  log.innerHTML = '';
+  try {
+    const res  = await fetch('/api/mirrr/youtube-sync', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to start sync');
+    if (data.resumed) {
+      const line = document.createElement('div');
+      line.className = 'log-info';
+      line.textContent = 'Reconnecting to running sync…';
+      log.appendChild(line);
+    }
+    _connectSyncStream(data.job_id);
+  } catch (err) {
+    const line = document.createElement('div');
+    line.className = 'log-err';
+    line.textContent = 'Error: ' + err.message;
+    log.appendChild(line);
+    log.classList.add('visible');
+  }
+}
+
+// Check on load if a sync job is already running — auto-reconnect if so
+async function checkActiveSyncJob() {
+  try {
+    const res = await fetch('/api/mirrr/jobs/active/youtube-sync');
+    if (!res.ok) return;
+    const job = await res.json();
+    if (!job) return;
+    _connectSyncStream(job.id);
+  } catch (_) {}
+}
+
+// Auto-display cached niche analysis + secrets on load so nothing has to be re-run
+async function loadCachedResults() {
+  try {
+    const res  = await fetch('/api/mirrr/cached-results');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (data.has_profile && data.profile) {
+      _dnaResult = data.profile;
+      renderDnaResult(data.profile);
+      // Swap button text to indicate this is cached
+      const btn = document.getElementById('dnaGenerateBtn');
+      if (btn) btn.textContent = 'Regenerate →';
+    }
+
+    if (data.has_secrets && data.secrets) {
+      renderSecrets(data.secrets);
+      const btn = document.getElementById('secretsBtn');
+      if (btn) btn.textContent = 'Rediscover Secrets →';
+    }
+
+    if (data.last_sync) {
+      const last = document.getElementById('syncLast');
+      if (last) last.textContent = 'Last synced: ' + fmtDate(data.last_sync);
+    }
+  } catch (_) {}
 }
 
 // ─── YouTube Link Section ─────────────────────────────────────────────────────
@@ -1397,6 +1461,10 @@ function renderAbResults(data) {
   await loadYtLinkRows();
   checkImportStatus();
   loadConstellationGraph(false);
+  // Auto-load cached niche/secrets results so returning to MirrΩr shows data instantly
+  loadCachedResults();
+  // Auto-reconnect to any running sync job
+  checkActiveSyncJob();
 })();
 
 // ─── Content DNA ──────────────────────────────────────────────────────────────

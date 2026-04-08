@@ -206,43 +206,27 @@ Respond in exactly this JSON structure (no markdown, no commentary, just JSON):
   }
 });
 
-// ─── YouTube Sync (SSE) ───────────────────────────────────────────────────────
+// ─── YouTube Sync — background job runner ────────────────────────────────────
+// Runs detached from any HTTP connection. Writes progress to background_jobs table.
+// Client connects to /jobs/:id/stream to watch progress.
 
-router.post('/youtube-sync', async (req, res) => {
-  res.setHeader('Content-Type',  'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection',    'keep-alive');
-  res.flushHeaders();
-
-  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
-
+async function runYoutubeSyncJob(jobId) {
   try {
     const apiKey = process.env.YOUTUBE_API_KEY;
-
-    if (!apiKey) {
-      send({ type: 'error', message: 'YOUTUBE_API_KEY not set in .env. Add your YouTube Data API v3 key to enable sync.' });
-      res.end();
-      return;
-    }
+    if (!apiKey) { db.failJob(jobId, 'YOUTUBE_API_KEY not set in .env'); return; }
 
     const projects = db.getAllProjects();
     const withYT   = projects.filter(p => p.youtube_video_id);
-
-    if (withYT.length === 0) {
-      send({ type: 'error', message: 'No projects have a YouTube video ID set. Edit a project in PipΩr to add the YouTube URL.' });
-      res.end();
-      return;
-    }
-
-    send({ type: 'status', message: `Found ${withYT.length} project(s) with YouTube IDs. Syncing...` });
+    if (withYT.length === 0) { db.failJob(jobId, 'No projects with YouTube IDs found'); return; }
 
     const { default: fetch } = await import('node-fetch');
+    const total = withYT.length;
+    let synced = 0, failed = 0;
 
-    // ── Backfill: classify format for posts that don't have it yet ───────────
-    const formatMap     = db.getYouTubeFormats(); // { projectId: {format, duration_seconds} }
-    const needsFormat   = withYT.filter(p => !formatMap[p.id]?.format);
+    // Backfill: classify format for posts that don't have it yet
+    const formatMap   = db.getYouTubeFormats();
+    const needsFormat = withYT.filter(p => !formatMap[p.id]?.format);
     if (needsFormat.length > 0) {
-      send({ type: 'status', message: `Classifying format for ${needsFormat.length} video${needsFormat.length !== 1 ? 's' : ''}...` });
       const fmtIds = needsFormat.map(p => p.youtube_video_id);
       for (let i = 0; i < fmtIds.length; i += 50) {
         const batch    = fmtIds.slice(i, i + 50);
@@ -251,9 +235,9 @@ router.post('/youtube-sync', async (req, res) => {
         if (batchRes.ok) {
           const batchData = await batchRes.json();
           for (const item of batchData.items || []) {
-            const p      = needsFormat.find(x => x.youtube_video_id === item.id);
+            const p   = needsFormat.find(x => x.youtube_video_id === item.id);
             if (!p) continue;
-            const iso    = item.contentDetails?.duration || null;
+            const iso = item.contentDetails?.duration || null;
             const posts  = db.getPostsByProject(p.id);
             const ytPost = posts.find(x => x.platform === 'youtube');
             if (ytPost) db.updatePostFormat(ytPost.id, classifyFormat(iso), parseDurationSeconds(iso));
@@ -261,101 +245,147 @@ router.post('/youtube-sync', async (req, res) => {
         }
         if (i + 50 < fmtIds.length) await new Promise(r => setTimeout(r, 200));
       }
-      send({ type: 'status', message: `Format classification complete. Syncing stats...` });
     }
 
-    let synced = 0, failed = 0;
-
-    for (const project of withYT) {
+    for (let i = 0; i < total; i++) {
+      const project = withYT[i];
+      db.updateJobProgress(jobId, { progress: i, total, ok: synced, errors: failed });
       try {
-        send({ type: 'progress', message: `Fetching stats for "${project.title}"...` });
-
-        const ytUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${encodeURIComponent(project.youtube_video_id)}&key=${apiKey}`;
+        const ytUrl  = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${encodeURIComponent(project.youtube_video_id)}&key=${apiKey}`;
         const ytRes  = await fetch(ytUrl);
-
-        if (!ytRes.ok) {
-          const err = await ytRes.json().catch(() => ({}));
-          throw new Error(err?.error?.message || `HTTP ${ytRes.status}`);
-        }
-
+        if (!ytRes.ok) { const e = await ytRes.json().catch(()=>({})); throw new Error(e?.error?.message || `HTTP ${ytRes.status}`); }
         const ytData = await ytRes.json();
         const item   = ytData.items?.[0];
+        if (!item) { failed++; continue; }
 
-        if (!item) {
-          send({ type: 'warn', message: `"${project.title}" — video not found on YouTube (ID: ${project.youtube_video_id})` });
-          failed++;
-          continue;
-        }
-
-        const stats = item.statistics;
-
-        // Find or create a YouTube post record for this project
-        const posts = db.getPostsByProject(project.id);
-        let ytPost  = posts.find(p => p.platform === 'youtube');
-
+        const posts   = db.getPostsByProject(project.id);
+        let   ytPost  = posts.find(p => p.platform === 'youtube');
         const durIso  = item.contentDetails?.duration || null;
         const durFmt  = classifyFormat(durIso);
         const durSecs = parseDurationSeconds(durIso);
 
         if (!ytPost) {
-          const ytUrl2 = `https://www.youtube.com/watch?v=${project.youtube_video_id}`;
-          const postId = db.savePost({
-            project_id:      project.id,
-            platform:        'youtube',
-            url:             ytUrl2,
-            content:         project.title,
-            status:          'posted',
-            posted_at:       item.snippet?.publishedAt || new Date().toISOString(),
-            format:          durFmt,
-            duration_seconds: durSecs,
-          });
+          const postId = db.savePost({ project_id: project.id, platform: 'youtube',
+            url: `https://www.youtube.com/watch?v=${project.youtube_video_id}`,
+            content: project.title, status: 'posted',
+            posted_at: item.snippet?.publishedAt || new Date().toISOString(),
+            format: durFmt, duration_seconds: durSecs });
           ytPost = { id: postId };
         } else if (!ytPost.format && durFmt) {
           db.updatePostFormat(ytPost.id, durFmt, durSecs);
         }
 
-        // Upsert metrics
         const metricsMap = {
-          views:         parseInt(stats.viewCount)    || 0,
-          likes:         parseInt(stats.likeCount)    || 0,
-          comment_count: parseInt(stats.commentCount) || 0,
+          views:         parseInt(item.statistics.viewCount)    || 0,
+          likes:         parseInt(item.statistics.likeCount)    || 0,
+          comment_count: parseInt(item.statistics.commentCount) || 0,
         };
-
         for (const [name, value] of Object.entries(metricsMap)) {
           db.upsertMetric(ytPost.id, project.id, 'youtube', name, value);
         }
-
-        send({
-          type: 'synced',
-          message: `✓ "${project.title}" — ${Number(metricsMap.views).toLocaleString()} views, ${metricsMap.likes} likes, ${metricsMap.comment_count} comments`,
-          project_id: project.id,
-          metrics: metricsMap,
-        });
-
         synced++;
-
-        // Avoid hammering the API
-        await new Promise(r => setTimeout(r, 300));
-
       } catch (err) {
-        send({ type: 'warn', message: `✗ "${project.title}" — ${err.message}` });
+        console.error(`[youtube-sync job ${jobId}] "${project.title}":`, err.message);
         failed++;
       }
+      db.updateJobProgress(jobId, { progress: i + 1, total, ok: synced, errors: failed });
+      await new Promise(r => setTimeout(r, 300)); // gentle API pacing
     }
 
-    send({
-      type: 'done',
-      message: `Sync complete. ${synced} updated, ${failed} failed.`,
-      synced,
-      failed,
-      synced_at: new Date().toISOString(),
-    });
-    res.end();
-
+    const syncedAt = new Date().toISOString();
+    db.setKv('mirrr_last_sync', syncedAt);
+    db.finishJob(jobId, { ok: synced, errors: failed, total, result: { synced_at: syncedAt } });
   } catch (err) {
-    send({ type: 'error', message: err.message });
-    res.end();
+    console.error(`[youtube-sync job ${jobId}] fatal:`, err.message);
+    db.failJob(jobId, err.message);
   }
+}
+
+// ─── POST /api/mirrr/youtube-sync ────────────────────────────────────────────
+// Starts a background sync job. Returns { job_id } immediately.
+// If already running, returns the existing job (no duplicate).
+
+router.post('/youtube-sync', (req, res) => {
+  try {
+    const existing = db.getActiveJobByType('youtube-sync');
+    if (existing) return res.json({ job_id: existing.id, resumed: true });
+    const job = db.createJob('youtube-sync');
+    runYoutubeSyncJob(job.id); // fire and forget
+    res.json({ job_id: job.id, resumed: false });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /api/mirrr/jobs/active/:type ────────────────────────────────────────
+router.get('/jobs/active/:type', (req, res) => {
+  try {
+    res.json(db.getActiveJobByType(req.params.type) || null);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── GET /api/mirrr/jobs/:id ──────────────────────────────────────────────────
+router.get('/jobs/:id', (req, res) => {
+  try {
+    const job = db.getJob(parseInt(req.params.id));
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── GET /api/mirrr/jobs/:id/stream ──────────────────────────────────────────
+// Reconnectable SSE stream for any MirrΩr background job.
+
+router.get('/jobs/:id/stream', (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const jobId = parseInt(req.params.id);
+  const send  = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
+
+  const poll = setInterval(async () => {
+    try {
+      const job = db.getJob(jobId);
+      if (!job) { clearInterval(poll); send({ type: 'error', message: 'Job not found' }); res.end(); return; }
+      if (job.status === 'running' || job.status === 'pending') {
+        send({ type: 'progress', progress: job.progress, total: job.total, ok: job.ok, errors: job.errors,
+               message: `Syncing… ${job.progress} / ${job.total} (${job.ok} updated, ${job.errors} failed)` });
+      } else if (job.status === 'done') {
+        clearInterval(poll);
+        const result = job.result || {};
+        send({ type: 'done', synced: job.ok, failed: job.errors, synced_at: result.synced_at,
+               message: `Sync complete. ${job.ok} updated, ${job.errors} failed.` });
+        res.end();
+      } else if (job.status === 'error') {
+        clearInterval(poll);
+        send({ type: 'error', message: job.error });
+        res.end();
+      }
+    } catch (e) { clearInterval(poll); send({ type: 'error', message: e.message }); res.end(); }
+  }, 1500);
+
+  req.on('close', () => clearInterval(poll));
+});
+
+// ─── GET /api/mirrr/cached-results ───────────────────────────────────────────
+// Returns whatever DNA analysis + secrets results are already in kv_store.
+// Used by the frontend on load to auto-display without re-running analysis.
+
+router.get('/cached-results', (req, res) => {
+  try {
+    const profile  = db.getKv('channel_dna_profile');
+    const secrets  = db.getKv('channel_dna_secrets');
+    const lastSync = db.getKv('mirrr_last_sync');
+    res.json({
+      has_profile:  !!profile,
+      has_secrets:  !!secrets,
+      profile:      profile  || null,
+      secrets:      secrets  || null,
+      last_sync:    lastSync || null,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── Import Status ────────────────────────────────────────────────────────────
