@@ -292,14 +292,14 @@ function createTeleprompterWS(httpServer) {
       const count = getCount(sess);
       broadcastToAll(sess, { type: 'count_update', count });
 
-      // Clean up empty sessions after 2 minutes
+      // Clean up empty sessions after 30 minutes (allows page refresh without losing session)
       if (sess.displays.size === 0 && sess.controls.size === 0) {
         setTimeout(() => {
           const s = sessions.get(myCode);
           if (s && s.displays.size === 0 && s.controls.size === 0) {
             sessions.delete(myCode);
           }
-        }, 120_000);
+        }, 1_800_000);
       }
     });
 

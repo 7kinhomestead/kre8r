@@ -981,17 +981,26 @@ async function init() {
 // ═══════════════════════════════════════════════════════════════
 
 async function loadNetworkInfo() {
-  try {
-    const r = await fetch('/api/teleprompter/network-info');
-    if (r.ok) { const d = await r.json(); if (d.ok) networkInfo = d; }
-  } catch (_) {}
+  const hostname = window.location.hostname;
+  // Named domain (kre8r.app etc.) — always use the current URL as base, never LAN IP
+  const isNamedDomain = hostname !== 'localhost' && !/^\d+\.\d+\.\d+\.\d+$/.test(hostname);
 
-  ip   = networkInfo.ip   || window.location.hostname;
-  port = networkInfo.port || window.location.port || 3000;
-  base = `http://${ip}:${port}`;
-
-  if (!networkInfo.ip) {
-    document.getElementById('tp-offline-note').textContent = 'Could not detect local IP — check network connection.';
+  if (isNamedDomain) {
+    ip   = hostname;
+    port = window.location.port || '';
+    base = `${window.location.protocol}//${window.location.host}`;
+  } else {
+    // Local server — ask it for the LAN IP so QR codes point to the right address
+    try {
+      const r = await fetch('/api/teleprompter/network-info');
+      if (r.ok) { const d = await r.json(); if (d.ok) networkInfo = d; }
+    } catch (_) {}
+    ip   = networkInfo.ip   || hostname;
+    port = networkInfo.port || window.location.port || 3000;
+    base = `http://${ip}:${port}`;
+    if (!networkInfo.ip) {
+      document.getElementById('tp-offline-note').textContent = 'Could not detect local IP — check network connection.';
+    }
   }
 
   // QR shows base URL; updated to session-specific URL after WS connects
@@ -1458,35 +1467,43 @@ function showCtrl() {
 
 function connectDisplayWS() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
-  catch (_) { return; }
+  let _reconnDelay = 1000;
 
-  wsConn.onopen = () => {
-    const code      = P_SESS && P_SESS.length === 4 ? P_SESS : null;
-    const title     = loadedScript?.projectName || null;
-    const projectId = loadedScript?.projectId   || null;
-    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, title, projectId }));
-  };
+  function _connect() {
+    if (currentMode !== 'display') return; // stopped navigating away
+    try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+    catch (_) { return; }
 
-  wsConn.onmessage = (e) => {
-    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+    wsConn.onopen = () => {
+      // Priority: URL param → stored session code → new session
+      const stored  = localStorage.getItem('tp_session_code');
+      const code    = (P_SESS && P_SESS.length === 4) ? P_SESS : (stored || null);
+      const title     = loadedScript?.projectName || null;
+      const projectId = loadedScript?.projectId   || null;
+      wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, title, projectId }));
+    };
 
-    if (msg.type === 'registered') {
-      wsSession = msg.session;
-      document.getElementById('tp-session-code').textContent = wsSession;
-      document.getElementById('tp-session-badge').classList.add('visible');
-      // Show project title above the code if available
-      const titleEl = document.getElementById('tp-session-title');
-      const title   = loadedScript?.projectName || msg.title || null;
-      if (title && title !== 'Untitled') {
-        titleEl.textContent = title;
-        titleEl.style.display = '';
+    wsConn.onmessage = (e) => {
+      let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+
+      if (msg.type === 'registered') {
+        wsSession = msg.session;
+        localStorage.setItem('tp_session_code', wsSession); // persist for refresh
+        _reconnDelay = 1000; // reset backoff on success
+        document.getElementById('tp-session-code').textContent = wsSession;
+        document.getElementById('tp-session-badge').classList.add('visible');
+        // Show project title above the code if available
+        const titleEl = document.getElementById('tp-session-title');
+        const title   = loadedScript?.projectName || msg.title || null;
+        if (title && title !== 'Untitled') {
+          titleEl.textContent = title;
+          titleEl.style.display = '';
+        }
+        updateQRForSession(wsSession);
+        updateCountBadge(msg.count);
+        if (stateTimer) clearInterval(stateTimer);
+        stateTimer = setInterval(sendDisplayState, 250);
       }
-      updateQRForSession(wsSession);
-      updateCountBadge(msg.count);
-      if (stateTimer) clearInterval(stateTimer);
-      stateTimer = setInterval(sendDisplayState, 250);
-    }
 
     if (msg.type === 'count_update') {
       updateCountBadge(msg.count);
@@ -1522,11 +1539,18 @@ function connectDisplayWS() {
     }
   };
 
-  wsConn.onerror = () => {};
-  wsConn.onclose = () => {
-    const el = document.getElementById('tp-peer-status');
-    if (el) { el.textContent = 'Remote disconnected'; el.classList.remove('connected'); }
-  };
+    wsConn.onerror = () => {};
+    wsConn.onclose = () => {
+      const el = document.getElementById('tp-peer-status');
+      if (el) { el.textContent = 'Reconnecting…'; el.classList.remove('connected'); }
+      if (currentMode === 'display') {
+        setTimeout(_connect, _reconnDelay);
+        _reconnDelay = Math.min(_reconnDelay * 2, 15000);
+      }
+    };
+  }
+
+  _connect();
 }
 
 function sendDisplayState() {
@@ -1552,8 +1576,10 @@ function showRemoteScreen(prefillCode) {
   currentMode = 'remote';
   document.getElementById('tp-selector').style.display = 'none';
   document.getElementById('tp-remote').classList.add('active');
-  if (prefillCode) {
-    document.getElementById('tp-rem-code').value = prefillCode;
+  // URL param → localStorage fallback so refresh reconnects automatically
+  const code = prefillCode || localStorage.getItem('tp_control_session_code');
+  if (code) {
+    document.getElementById('tp-rem-code').value = code;
     connectRemote();
   }
 }
@@ -1614,12 +1640,16 @@ function updateCountBadge(count) {
 
 async function connectSecondaryDisplayWS(code) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
-  catch (_) { return; }
+  let _reconnDelay = 1000;
 
-  wsConn.onopen = () => {
-    wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, projectId: loadedScript?.projectId || null }));
-  };
+  function _connect() {
+    if (currentMode !== 'display') return;
+    try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+    catch (_) { return; }
+
+    wsConn.onopen = () => {
+      wsConn.send(JSON.stringify({ type: 'register', role: 'display', session: code, projectId: loadedScript?.projectId || null }));
+    };
 
   wsConn.onmessage = async (e) => {
     let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
@@ -1719,8 +1749,16 @@ async function connectSecondaryDisplayWS(code) {
   wsConn.onerror = () => {};
   wsConn.onclose = () => {
     const el = document.getElementById('tp-peer-status');
-    if (el) { el.textContent = 'Disconnected'; el.classList.remove('connected'); }
+    if (el) { el.textContent = 'Reconnecting…'; el.classList.remove('connected'); }
+    if (currentMode === 'display') {
+      setTimeout(_connect, _reconnDelay);
+      _reconnDelay = Math.min(_reconnDelay * 2, 15000);
+    }
   };
+
+  } // end _connect
+
+  _connect();
 }
 
 function connectRemote() {
@@ -1733,39 +1771,51 @@ function connectRemote() {
     err.classList.add('on'); return;
   }
 
-  if (remoteWS && remoteWS.readyState === WebSocket.OPEN) remoteWS.close();
+  localStorage.setItem('tp_control_session_code', code); // persist for refresh
+  let _reconnDelay = 1000;
 
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  try { remoteWS = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
-  catch (_) { return; }
+  function _connect() {
+    if (currentMode !== 'remote') return;
+    if (remoteWS && remoteWS.readyState === WebSocket.OPEN) remoteWS.close();
 
-  remoteWS.onopen = () => {
-    remoteWS.send(JSON.stringify({ type: 'register', role: 'control', session: code }));
-  };
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    try { remoteWS = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+    catch (_) { return; }
 
-  remoteWS.onmessage = (e) => {
-    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
-    if (msg.type === 'error') {
-      err.textContent = msg.message; err.classList.add('on');
-      setRemStatus(false); return;
-    }
-    if (msg.type === 'registered') {
-      setRemStatus(true);
-      if (msg.state) applyRemState(msg.state);
-      // Load script and switch to reading view
-      const pid   = msg.projectId;
-      const title = msg.title || null;
-      showRemConnected(pid, title);
-    }
-    if (msg.type === 'peer_connected') {
-      setRemStatus(true);
-    }
-    if (msg.type === 'peer_disconnected' && msg.role === 'display') setRemStatus(false);
-    if (msg.type === 'state') applyRemState(msg);
-  };
+    remoteWS.onopen = () => {
+      remoteWS.send(JSON.stringify({ type: 'register', role: 'control', session: code }));
+    };
 
-  remoteWS.onerror = () => setRemStatus(false);
-  remoteWS.onclose = () => setRemStatus(false);
+    remoteWS.onmessage = (e) => {
+      let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+      if (msg.type === 'error') {
+        err.textContent = msg.message; err.classList.add('on');
+        setRemStatus(false); return;
+      }
+      if (msg.type === 'registered') {
+        _reconnDelay = 1000; // reset backoff
+        setRemStatus(true);
+        if (msg.state) applyRemState(msg.state);
+        const pid   = msg.projectId;
+        const title = msg.title || null;
+        showRemConnected(pid, title);
+      }
+      if (msg.type === 'peer_connected') { setRemStatus(true); }
+      if (msg.type === 'peer_disconnected' && msg.role === 'display') setRemStatus(false);
+      if (msg.type === 'state') applyRemState(msg);
+    };
+
+    remoteWS.onerror = () => setRemStatus(false);
+    remoteWS.onclose = () => {
+      setRemStatus(false);
+      if (currentMode === 'remote') {
+        setTimeout(_connect, _reconnDelay);
+        _reconnDelay = Math.min(_reconnDelay * 2, 15000);
+      }
+    };
+  }
+
+  _connect();
 }
 
 function applyRemState(s) {
@@ -2181,10 +2231,13 @@ let vdManualPause    = false;  // true when Jason presses his own pause button
 let vdSpeedMult      = 1.0;    // speed multiplier slider (0.5–2.0)
 let vdWakeLock       = null;
 
-function showVoiceDevice(code) {
+function showVoiceDevice(codeFromUrl) {
   currentMode = 'voice';
   document.getElementById('tp-selector').style.display = 'none';
   document.getElementById('tp-voice-device').classList.add('active');
+
+  // URL param → localStorage so refresh still works
+  const code = codeFromUrl || localStorage.getItem('tp_voice_session_code');
 
   if (code) {
     document.getElementById('tp-vd-join').style.display = 'none';
@@ -2218,44 +2271,58 @@ function vdJoinSession() {
 
 function connectVoiceDeviceWS(code) {
   if (!code) return;
+  localStorage.setItem('tp_voice_session_code', code); // persist for refresh
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  try { vdWS = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
-  catch (_) { return; }
+  let _reconnDelay = 1000;
 
-  vdWS.onopen = () => {
-    vdWS.send(JSON.stringify({ type: 'register', role: 'control', session: code }));
-  };
+  function _connect() {
+    if (currentMode !== 'voice') return;
+    try { vdWS = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+    catch (_) { return; }
 
-  vdWS.onmessage = (e) => {
-    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
-    if (msg.type === 'registered') {
-      vdConnected = true;
-      document.getElementById('tp-vd-conn-dot').classList.add('ok');
-      document.getElementById('tp-vd-session-txt').textContent = `Connected · Session ${code}`;
-      document.getElementById('tp-vd-status').textContent = 'STARTING MIC…';
-      if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
-      startVoiceDevice();
-    }
-    if (msg.type === 'state') {
-      if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
-    }
-    if (msg.type === 'error') {
-      document.getElementById('tp-vd-status').textContent = 'SESSION NOT FOUND';
-      document.getElementById('tp-vd-status').classList.add('paused');
-    }
-    if (msg.type === 'peer_disconnected' && msg.role === 'display') {
+    vdWS.onopen = () => {
+      vdWS.send(JSON.stringify({ type: 'register', role: 'control', session: code }));
+    };
+
+    vdWS.onmessage = (e) => {
+      let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+      if (msg.type === 'registered') {
+        _reconnDelay = 1000; // reset backoff
+        vdConnected = true;
+        document.getElementById('tp-vd-conn-dot').classList.add('ok');
+        document.getElementById('tp-vd-session-txt').textContent = `Connected · Session ${code}`;
+        document.getElementById('tp-vd-status').textContent = 'STARTING MIC…';
+        if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
+        startVoiceDevice();
+      }
+      if (msg.type === 'state') {
+        if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
+      }
+      if (msg.type === 'error') {
+        document.getElementById('tp-vd-status').textContent = 'SESSION NOT FOUND';
+        document.getElementById('tp-vd-status').classList.add('paused');
+      }
+      if (msg.type === 'peer_disconnected' && msg.role === 'display') {
+        document.getElementById('tp-vd-conn-dot').classList.remove('ok');
+        document.getElementById('tp-vd-session-txt').textContent = 'Display disconnected';
+      }
+    };
+
+    vdWS.onerror = () => {
+      document.getElementById('tp-vd-session-txt').textContent = 'Connection error — retrying…';
+    };
+    vdWS.onclose = () => {
+      vdConnected = false;
       document.getElementById('tp-vd-conn-dot').classList.remove('ok');
-      document.getElementById('tp-vd-session-txt').textContent = 'Display disconnected';
-    }
-  };
+      if (currentMode === 'voice') {
+        document.getElementById('tp-vd-session-txt').textContent = `Reconnecting…`;
+        setTimeout(_connect, _reconnDelay);
+        _reconnDelay = Math.min(_reconnDelay * 2, 15000);
+      }
+    };
+  }
 
-  vdWS.onerror = () => {
-    document.getElementById('tp-vd-session-txt').textContent = 'Connection error';
-  };
-  vdWS.onclose = () => {
-    vdConnected = false;
-    document.getElementById('tp-vd-conn-dot').classList.remove('ok');
-  };
+  _connect();
 }
 
 function vdSend(action, value) {
