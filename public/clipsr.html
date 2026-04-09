@@ -947,20 +947,11 @@
           </div>`
         : '';
 
-      const approvedCount = clips.filter(c => c.status === 'approved').length;
-      const davinciBtn = approvedCount > 0
-        ? `<button class="btn btn-primary btn-sm" onclick="sendToDavinci(${footage.id}, '${escAttr(footage.filename)}')" id="davinciBtn">
-             🎬 Send ${approvedCount} to DaVinci
-           </button>`
-        : `<button class="btn btn-ghost btn-sm" disabled title="Approve at least one clip first">
-             🎬 Send to DaVinci
-           </button>`;
-
       const clipsHeader = `
         <div class="clips-header">
           <div class="clips-header-title">Clip Candidates</div>
           <div class="clips-count">${clips.length} clips · ranked by strength</div>
-          <div id="davinci-btn-wrap">${davinciBtn}</div>
+          <div id="davinci-btn-wrap" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${buildActionButtons(clips, footage)}</div>
         </div>`;
 
       const clipsHtml = clips.map(clip => renderClipCard(clip)).join('');
@@ -1134,22 +1125,46 @@
     }
 
     // ─────────────────────────────────────────────
-    // Update DaVinci button to reflect current approved count
-    // Called after every approve/skip so the button stays live
+    // Build the full action button group for the clips header
+    // ─────────────────────────────────────────────
+    function buildActionButtons(clips, footage) {
+      const approved  = clips.filter(c => c.status === 'approved').length;
+      const candidate = clips.filter(c => c.status === 'candidate').length;
+
+      const approveAllBtn = candidate > 0
+        ? `<button class="btn btn-outline btn-sm" onclick="approveAll()">✓ Approve All</button>`
+        : '';
+
+      const davinciBtn = approved > 0
+        ? `<button class="btn btn-primary btn-sm" onclick="sendToDavinci(${footage.id}, '${escAttr(footage.filename)}')" id="davinciBtn">🎬 Send ${approved} to DaVinci</button>`
+        : `<button class="btn btn-ghost btn-sm" disabled id="davinciBtn" title="Approve at least one clip first">🎬 Send to DaVinci</button>`;
+
+      const pid     = footage.project_id;
+      const nextUrl = pid ? `/m2-package-generator.html?project_id=${pid}` : '/m2-package-generator.html';
+      const nextBtn = `<a href="${nextUrl}" class="btn btn-sm" style="background:var(--teal);color:#000;font-weight:700;text-decoration:none;padding:6px 14px;border-radius:6px">→ Continue to PackageΩr</a>`;
+
+      return approveAllBtn + davinciBtn + nextBtn;
+    }
+
+    // ─────────────────────────────────────────────
+    // Update action buttons to reflect current approved count
+    // Called after every approve/skip so buttons stay live
     // ─────────────────────────────────────────────
     function updateDavinciBtn() {
       const btnWrap = document.getElementById('davinci-btn-wrap');
       if (!btnWrap || !currentFootage) return;
-      const approvedCount = currentClips.filter(c => c.status === 'approved').length;
-      if (approvedCount > 0) {
-        btnWrap.innerHTML = `<button class="btn btn-primary btn-sm" onclick="sendToDavinci(${currentFootage.id}, '${escAttr(currentFootage.filename)}')" id="davinciBtn">
-          🎬 Send ${approvedCount} to DaVinci
-        </button>`;
-      } else {
-        btnWrap.innerHTML = `<button class="btn btn-ghost btn-sm" disabled title="Approve at least one clip first">
-          🎬 Send to DaVinci
-        </button>`;
-      }
+      btnWrap.innerHTML = buildActionButtons(currentClips, currentFootage);
+    }
+
+    // ─────────────────────────────────────────────
+    // Approve all candidate clips at once
+    // ─────────────────────────────────────────────
+    async function approveAll() {
+      const candidates = currentClips.filter(c => c.status === 'candidate');
+      if (!candidates.length) return;
+      showToast(`Approving ${candidates.length} clips…`, 'blue');
+      await Promise.all(candidates.map(clip => updateStatus(clip.id, 'approved')));
+      showToast(`✓ All ${candidates.length} clips approved`, 'green');
     }
 
     // ─────────────────────────────────────────────

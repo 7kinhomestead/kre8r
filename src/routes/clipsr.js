@@ -56,7 +56,8 @@ function failJob(job, error) {
 // ─────────────────────────────────────────────
 router.get('/footage', (req, res) => {
   try {
-    const all = db.getAllFootage({ shot_type: 'completed-video' });
+    const all       = db.getAllFootage({ shot_type: 'completed-video' });
+    const clipCounts = db.getViralClipCounts();
     // Return key fields only
     const footage = (all || []).map(f => ({
       id:             f.id,
@@ -66,9 +67,10 @@ router.get('/footage', (req, res) => {
       thumbnail_path: f.thumbnail_path,
       quality_flag:   f.quality_flag,
       has_transcript: !!(f.transcript || f.transcript_path),
-      clip_count:     0, // filled by client from /clips if needed
+      clip_count:     clipCounts[f.id] || 0,
       ingested_at:    f.ingested_at,
-      description:    f.description
+      description:    f.description,
+      project_id:     f.project_id || null
     }));
     res.json({ ok: true, footage });
   } catch (err) {
@@ -162,6 +164,7 @@ router.post('/analyze', async (req, res) => {
       for (const clip of result.clips) {
         const id = db.insertViralClip({
           footage_id:   footage.id,
+          project_id:   footage.project_id || null,
           rank:         clip.rank || 1,
           start_time:   clip.start,
           end_time:     clip.end,
@@ -230,6 +233,7 @@ router.put('/clips/:clip_id', (req, res) => {
     // When a clip is approved, store its why_it_works in the rolling pattern
     // library so NorthΩr, Id8Ωr, and WritΩr can learn from what works.
     if (req.body.status === 'approved') {
+      db.checkpoint(); // force WAL flush on approval — approved clips must survive restarts
       try {
         const clip = db.getViralClipById ? db.getViralClipById(id) : null;
         const whyItWorks = clip?.why_it_works || req.body.why_it_works;

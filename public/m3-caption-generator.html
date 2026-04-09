@@ -329,12 +329,11 @@
 
     <!-- SEND BAR -->
     <div class="send-bar" id="send-bar">
-      <div class="send-bar-title">✓ READY FOR GATE B</div>
-      <div class="send-bar-sub">All captions generated and saved. Approve them in Gate B on the dashboard, or send to M4 to start the email sequence.</div>
+      <div class="send-bar-title">✓ CAPTIONS READY</div>
+      <div class="send-bar-sub">All captions generated and saved. Continue to MailΩr to write the email sequence, blog post, and community post.</div>
       <div class="send-bar-actions">
-        <button class="btn btn-primary" onclick="copyAllForGateB()">📋 Copy Everything for Gate B</button>
-        <a href="m1-approval-dashboard.html" id="go-gates" class="btn btn-ghost">→ M1 Gates Dashboard</a>
-        <a href="m4-email-generator.html" id="go-m4-bar" class="btn btn-ghost">→ M4 Email Generator</a>
+        <button class="btn btn-primary" onclick="copyAllForGateB()">📋 Copy All Captions</button>
+        <a href="mailor.html" id="go-m4-bar" class="btn btn-ghost">→ Continue to MailΩr</a>
         <button class="btn btn-ghost" onclick="generate()">↻ Regenerate</button>
       </div>
     </div>
@@ -370,9 +369,11 @@ window.addEventListener('DOMContentLoaded', () => {
   if (pid) {
     currentProjectId = parseInt(pid);
     loadProjectContext(currentProjectId);
+    loadApprovedClips(currentProjectId);
+  } else {
+    addClip();
+    addClip();
   }
-  addClip();
-  addClip();
 });
 
 async function loadProjectContext(id) {
@@ -396,10 +397,8 @@ async function loadProjectContext(id) {
       document.getElementById('package-title').value = selected_package.title;
     }
 
-    // Update nav M4 link with project_id
-    document.getElementById('nav-m4').href = `m4-email-generator.html?project_id=${id}`;
-    document.getElementById('go-m4-bar').href = `m4-email-generator.html?project_id=${id}`;
-    document.getElementById('go-gates').href = `m1-approval-dashboard.html?project_id=${id}`;
+    // Update handoff link with project_id
+    document.getElementById('go-m4-bar').href = `mailor.html?project_id=${id}`;
 
     if (selected_package) {
       document.getElementById('project-bar').style.borderColor = 'var(--teal)';
@@ -407,6 +406,83 @@ async function loadProjectContext(id) {
   } catch(e) {
     console.error('loadProjectContext:', e);
   }
+}
+
+// ─────────────────────────────────────────────
+// AUTO-LOAD APPROVED CLIPS FROM CLIPSOR
+// ─────────────────────────────────────────────
+async function loadApprovedClips(projectId) {
+  try {
+    // First try project-linked clips
+    let res = await fetch(`/api/mirrr/viral-clips/project/${projectId}`);
+    let data = await res.json();
+    let isRecent = false;
+
+    // Fall back to most recently approved clips (footage not linked to project)
+    if (!data.ok || !data.clips || data.clips.length === 0) {
+      res = await fetch('/api/mirrr/viral-clips/recent?limit=10');
+      data = await res.json();
+      isRecent = true;
+    }
+
+    if (!data.ok || !data.clips || data.clips.length === 0) {
+      // Still nothing — blank inputs
+      addClip();
+      addClip();
+      return;
+    }
+
+    const container = document.getElementById('clips-container');
+    container.innerHTML = '';
+    clipCount = 0;
+
+    // Banner
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(62,207,178,0.08);border:1px solid var(--teal);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--teal);';
+    banner.textContent = isRecent
+      ? `✓ ${data.clips.length} recently approved clip${data.clips.length > 1 ? 's' : ''} loaded from ClipsΩr — remove any that don't apply to this video`
+      : `✓ ${data.clips.length} approved clip${data.clips.length > 1 ? 's' : ''} loaded from ClipsΩr`;
+    container.appendChild(banner);
+
+    data.clips.forEach(clip => {
+      clipCount++;
+      const div = document.createElement('div');
+      div.className = 'clip-input-card';
+      div.id = `clip-input-${clipCount}`;
+      div.style.borderColor = 'var(--teal-dim)';
+
+      const rankLabel = clip.rank === 1 ? ' — 🥇 TOP CLIP' : ` — Rank #${clip.rank}`;
+      const tsValue = (clip.start_s != null && clip.end_s != null)
+        ? `${formatTs(clip.start_s)} – ${formatTs(clip.end_s)}`
+        : '';
+      const descValue = clip.hook
+        ? `${clip.hook}${clip.why_it_works ? '\n\nWhy it works: ' + clip.why_it_works : ''}`
+        : '';
+
+      div.innerHTML = `
+        <div class="clip-num">
+          CLIP <span>0${clipCount}</span>
+          <span style="color:var(--teal);font-size:11px;font-family:var(--font-body);font-weight:600;letter-spacing:0.5px;">${rankLabel}</span>
+          <button class="remove-clip" onclick="removeClip(${clipCount})" title="Remove clip">✕</button>
+        </div>
+        <div class="clip-field-row">
+          <input type="text" class="timestamp-input" id="ts-${clipCount}" value="${tsValue}" placeholder="0:00 – 0:00">
+          <textarea class="clip-desc-input" id="desc-${clipCount}" rows="3">${descValue}</textarea>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } catch(e) {
+    console.error('loadApprovedClips:', e);
+    addClip();
+    addClip();
+  }
+}
+
+function formatTs(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
 // ─────────────────────────────────────────────
@@ -498,8 +574,7 @@ async function generate() {
       const url = new URL(window.location.href);
       url.searchParams.set('project_id', currentProjectId);
       window.history.replaceState({}, '', url.toString());
-      document.getElementById('nav-m4').href = `m4-email-generator.html?project_id=${currentProjectId}`;
-      document.getElementById('go-m4-bar').href = `m4-email-generator.html?project_id=${currentProjectId}`;
+      document.getElementById('go-m4-bar').href = `mailor.html?project_id=${currentProjectId}`;
     }
 
     generatedResults = data.clips || [];

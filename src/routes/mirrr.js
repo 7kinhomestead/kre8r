@@ -1597,6 +1597,30 @@ router.get('/evaluations', (req, res) => {
   }
 });
 
+// ─── GET /viral-clips/project/:id — approved viral clips for a project ────────
+// Used by CaptionΩr and any downstream tool to auto-load creator-approved clips.
+router.get('/viral-clips/project/:id', (req, res) => {
+  try {
+    const clips = db.getApprovedViralClipsByProject(parseInt(req.params.id));
+    res.json({ ok: true, clips });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /viral-clips/recent — most recently approved clips ───────────────────
+// Fallback for CaptionΩr when footage isn't linked to a project.
+// Returns up to 20 most recently approved clips across all footage.
+router.get('/viral-clips/recent', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    const clips = db.getRecentApprovedClips(limit);
+    res.json({ ok: true, clips });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── GET /niche — channel niche definition for universe label ─────────────────
 router.get('/niche', (req, res) => {
   try {

@@ -584,6 +584,7 @@ router.post('/upload', (req, res) => {
       });
 
       if (result.ok) {
+        db.checkpoint(); // force WAL flush so record survives a crash
         send({ stage: 'done', file: origName, footage_id: result.footage_id ?? null });
       } else {
         // Clean up failed upload
@@ -597,6 +598,50 @@ router.post('/upload', (req, res) => {
 
     res.end();
   });
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/ingest-path
+// Ingest a local file by absolute path — used when the file already exists
+// on disk (external edit, re-ingest after record loss, uploads folder recovery).
+// Body: { file_path, project_id (optional), shot_type (optional override) }
+// ─────────────────────────────────────────────
+router.post('/ingest-path', async (req, res) => {
+  const { file_path, project_id, shot_type } = req.body;
+  if (!file_path) return res.status(400).json({ error: 'file_path required' });
+  if (!fs.existsSync(file_path)) return res.status(400).json({ error: `File not found: ${file_path}` });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => {
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch (_) {}
+  };
+
+  try {
+    send({ stage: 'ingesting', file: path.basename(file_path) });
+    const result = await ingestFile(file_path, {
+      projectId: project_id ? parseInt(project_id) : null,
+      originalFilename: path.basename(file_path),
+      onProgress: send
+    });
+
+    if (result.ok) {
+      // Override shot_type if caller specified one
+      if (shot_type && result.id) {
+        db.updateFootage(result.id, { shot_type });
+        result.shot_type = shot_type;
+      }
+      send({ stage: 'done', footage_id: result.id, shot_type: result.shot_type });
+    } else {
+      send({ stage: 'error', error: result.error || 'Ingest failed' });
+    }
+  } catch (e) {
+    send({ stage: 'error', error: e.message });
+  }
+  res.end();
 });
 
 // ─────────────────────────────────────────────

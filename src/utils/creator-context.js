@@ -128,6 +128,32 @@ function getVoiceBlock() {
   return lines.join('\n');
 }
 
+/**
+ * Returns a structured social links object and a preformatted prompt block.
+ * All URLs come from creator-profile.json — never hardcoded.
+ *
+ * plaintext: for YouTube descriptions and plain email CTAs
+ * html: for blog posts — actual <a href> links
+ */
+function getSocialLinksBlock() {
+  const profile   = loadProfile();
+  const platforms = profile?.platforms || {};
+  const community = profile?.community || {};
+
+  const links = [];
+  if (platforms.youtube?.url)   links.push({ label: 'YouTube',   url: platforms.youtube.url,   handle: platforms.youtube.channel || platforms.youtube.handle || '' });
+  if (platforms.tiktok?.url)    links.push({ label: 'TikTok',    url: platforms.tiktok.url,    handle: platforms.tiktok.handle || '' });
+  if (platforms.instagram?.url) links.push({ label: 'Instagram', url: platforms.instagram.url, handle: platforms.instagram.handle || '' });
+  if (platforms.facebook?.url)  links.push({ label: 'Facebook',  url: platforms.facebook.url,  handle: platforms.facebook.page || '' });
+  if (platforms.lemon8?.url)    links.push({ label: 'Lemon8',    url: platforms.lemon8.url,    handle: platforms.lemon8.handle || '' });
+  if (community.url)            links.push({ label: community.name || 'Community', url: community.url, handle: '' });
+
+  const plaintext = links.map(l => `${l.label}: ${l.url}`).join('\n');
+  const html      = links.map(l => `<a href="${l.url}">${l.label}${l.handle ? ' (' + l.handle + ')' : ''}</a>`).join(' | ');
+
+  return { links, plaintext, html };
+}
+
 // ─── Internal helpers ──────────────────────────────────────────────────────────
 
 function fmtFollowers(n) {
@@ -143,4 +169,5 @@ module.exports = {
   getCreatorOneLiner,
   getCommunityBlock,
   getVoiceBlock,
+  getSocialLinksBlock,
 };

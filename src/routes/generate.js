@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { getCreatorContext, getCommunityBlock } = require('../utils/creator-context');
+const { getCreatorContext, getCommunityBlock, getSocialLinksBlock } = require('../utils/creator-context');
 const { callClaudeMessages } = require('../utils/claude');
 
 // callClaudeMessages from shared util has full retry/backoff logic (429, 529, ECONNRESET).
@@ -62,6 +62,8 @@ router.post('/packages', async (req, res) => {
     const activeAngles = (angles || ['financial', 'system', 'rockrich'])
       .map(a => angleDescriptions[a]).filter(Boolean).join('\n\n');
 
+    const { plaintext: socialLinksPlain } = getSocialLinksBlock();
+
     const systemPrompt = `You are the content strategist for ${brand} — ${followerSummary}, and a paid Kajabi community called ${communityName}.
 
 CREATOR VOICE:
@@ -76,6 +78,9 @@ ${activeAngles}
 PRIMARY GOAL FOR THIS VIDEO:
 ${goalMap[goal] || goalMap.grow}
 
+SOCIAL LINKS (use these exact URLs in youtube_description — never make up links):
+${socialLinksPlain}
+
 OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
 {
   "packages": [
@@ -85,7 +90,7 @@ OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
       "hook": "TikTok/short-form hook — the first line that stops the scroll",
       "rationale": "2-3 sentences on why this angle works for this content and audience",
       "thumbnail_concept": "Detailed thumbnail description — what's in frame, text overlay, creator expression",
-      "youtube_description": "150-220 word YouTube description with natural keyword placement, CTA to ${communityName} community"
+      "youtube_description": "150-220 word YouTube description with natural keyword placement, real social links from the SOCIAL LINKS block above, CTA to ${communityName} community"
     }
   ]
 }
@@ -263,7 +268,7 @@ OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
 
     userPrompt += `\nCLIPS:\n${clipLines}\n\nWrite all 5 platform captions for each clip. JSON only.`;
 
-    const rawText = await callClaude(systemPrompt, userPrompt, 5000);
+    const rawText = await callClaude(systemPrompt, userPrompt, 8192);
     const parsed = parseJson(rawText);
 
     // Save to DB if project_id provided

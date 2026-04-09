@@ -13,6 +13,7 @@ const fs      = require('fs');
 const path    = require('path');
 const db      = require('../db');
 const { buildVoiceSummaryFromProfiles } = require('../writr/voice-analyzer');
+const { getSocialLinksBlock } = require('../utils/creator-context');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,10 +49,20 @@ async function callClaude(systemPrompt, userPrompt, maxTokens = 4000) {
     throw new Error(err?.error?.message || `Claude API ${response.status}`);
   }
   const data    = await response.json();
+  if (data.stop_reason === 'max_tokens') {
+    throw new Error(`Response too long for token budget (${maxTokens}). Try unchecking Blog Post or Community Post and generating separately.`);
+  }
   const raw     = data.content[0].text.trim();
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-  try { return JSON.parse(cleaned); } catch {
-    throw new Error(`Claude returned malformed JSON. First 300 chars: ${cleaned.slice(0,300)}`);
+  try { return JSON.parse(cleaned); } catch(e) {
+    // Claude sometimes emits unescaped newlines or straight quotes inside JSON string values.
+    // jsonrepair handles the full class of these issues robustly.
+    try {
+      const { jsonrepair } = require('jsonrepair');
+      return JSON.parse(jsonrepair(cleaned));
+    } catch(e2) {
+      throw new Error(`Claude returned malformed JSON. First 300 chars: ${cleaned.slice(0,300)}`);
+    }
   }
 }
 
@@ -178,42 +189,94 @@ RULES:
 
     let userPrompt = `Write an A/B broadcast email pair for this situation:\n\nPrompt: ${prompt}\nSegment: ${segment || 'everyone'}\nGoal: ${goal || 'not specified'}\n`;
 
-    // Inject project context if available — gives MailΩr the actual video/script context
+    // ── Social links (always injected — never ask Jason for his own links) ───────
+    const { plaintext: socialLinksPlain, html: socialLinksHtml } = getSocialLinksBlock();
+    const socialBlock = `\nSOCIAL LINKS (use these exact URLs — never make up links):\n${socialLinksPlain}\n`;
+
+    // ── Build shared project context block (reused across email, blog, community) ──
+    let projectContextBlock = '';
+    let viralClipsBlock = '';
+    let transcriptBlock = '';
+    let researchBlock = '';
+    let citationsBlock = '';
+    let citationsHtml = '';
+    let packageBlock = '';
+
     if (project_id) {
-      const proj   = db.getProject(parseInt(project_id));
-      const script = db.getApprovedWritrScript(parseInt(project_id));
+      const pid = parseInt(project_id);
+      const proj   = db.getProject(pid);
+      const script = db.getApprovedWritrScript(pid);
+
       if (proj || script) {
-        userPrompt += `\nPROJECT CONTEXT:\n`;
-        if (proj?.title)         userPrompt += `Title: ${proj.title}\n`;
-        if (proj?.content_angle) userPrompt += `Content Angle: ${proj.content_angle}\n`;
-        if (proj?.high_concept)  userPrompt += `High Concept: ${proj.high_concept}\n`;
+        projectContextBlock += `\nPROJECT CONTEXT:\n`;
+        if (proj?.title)         projectContextBlock += `Title: ${proj.title}\n`;
+        if (proj?.content_angle) projectContextBlock += `Content Angle: ${proj.content_angle}\n`;
+        if (proj?.high_concept)  projectContextBlock += `High Concept: ${proj.high_concept}\n`;
         const scriptText = script?.generated_script || script?.full_script || '';
-        if (scriptText)          userPrompt += `Script (first 500 chars): ${scriptText.slice(0, 500)}\n`;
+        if (scriptText)          projectContextBlock += `Script (first 500 chars): ${scriptText.slice(0, 500)}\n`;
       }
 
-      // ClipsΩr approved viral clips — these hooks are the proven scroll-stoppers.
-      // Use the #1 ranked hook as the anchor for email subject line A/B testing.
-      const viralClips = db.getApprovedViralClipsByProject(parseInt(project_id));
+      // Id8Ωr research — the "why this matters" argument, research findings, concept rationale
+      if (proj?.id8r_data) {
+        try {
+          const id8r = typeof proj.id8r_data === 'string' ? JSON.parse(proj.id8r_data) : proj.id8r_data;
+          researchBlock += `\nPRE-PRODUCTION RESEARCH (use this to validate the argument — the "why this matters"):\n`;
+          if (id8r.chosenConcept?.title)       researchBlock += `Chosen Concept: ${id8r.chosenConcept.title}\n`;
+          if (id8r.chosenConcept?.hook)        researchBlock += `Original Hook: ${id8r.chosenConcept.hook}\n`;
+          if (id8r.researchSummary)            researchBlock += `Research Findings: ${String(id8r.researchSummary).slice(0, 800)}\n`;
+          if (id8r.briefData?.visionStatement) researchBlock += `Vision: ${id8r.briefData.visionStatement}\n`;
+
+          // Citations — credible sources for blog backlinks and argument validation
+          if (Array.isArray(id8r.citations) && id8r.citations.length > 0) {
+            citationsBlock = `\nCREDIBLE SOURCES TO CITE:\n`;
+            id8r.citations.forEach((c, i) => {
+              citationsBlock += `[${i + 1}] ${c.title} — ${c.key_stat || ''}\n    URL: ${c.url}\n`;
+            });
+            // HTML version for blog post backlinks
+            citationsHtml = id8r.citations.map((c, i) =>
+              `<li><a href="${c.url}" target="_blank" rel="noopener">${c.title}</a>${c.key_stat ? ' — ' + c.key_stat : ''}</li>`
+            ).join('\n');
+          }
+        } catch(e) { /* bad JSON, skip */ }
+      }
+
+      // Selected package from PackageΩr
+      const pkg = db.getSelectedPackage(pid) || (db.getPackages(pid) || [])[0];
+      if (pkg) {
+        packageBlock += `\nPACKAGEΩR — SELECTED CONTENT ANGLE:\n`;
+        packageBlock += `Package Title: ${pkg.title}\n`;
+        if (pkg.hook)      packageBlock += `Hook: ${pkg.hook}\n`;
+        if (pkg.rationale) packageBlock += `Rationale: ${String(pkg.rationale).slice(0, 300)}\n`;
+      }
+
+      // ClipsΩr approved viral clips
+      const viralClips = db.getApprovedViralClipsByProject(pid);
       if (viralClips.length > 0) {
-        userPrompt += `\nCLIPSΩR APPROVED HOOKS (strongest moments from the video — lead with these):\n`;
+        viralClipsBlock += `\nCLIPSΩR APPROVED HOOKS (strongest moments the creator approved — lead with these):\n`;
         viralClips.slice(0, 3).forEach((clip, i) => {
-          userPrompt += `[Clip ${i + 1}${clip.clip_type === 'gold' ? ' — GOLD' : ''}] Hook: "${clip.hook}"\n`;
-          if (clip.why_it_works) userPrompt += `  Why it works: ${clip.why_it_works.slice(0, 200)}\n`;
-          if (clip.caption)      userPrompt += `  Caption: ${clip.caption.slice(0, 150)}\n`;
+          viralClipsBlock += `[Clip ${i + 1}${clip.clip_type === 'gold' ? ' — GOLD' : ''}] Hook: "${clip.hook}"\n`;
+          if (clip.why_it_works) viralClipsBlock += `  Why it works: ${clip.why_it_works.slice(0, 200)}\n`;
+          if (clip.caption)      viralClipsBlock += `  Caption: ${clip.caption.slice(0, 150)}\n`;
         });
-        userPrompt += `\nThe #1 hook above should heavily influence at least one of the email subject lines. These hooks were approved by the creator — they represent what he believes is genuinely shareable.\n`;
       }
 
       // Transcript from completed-video footage
-      const footage = db.getCompletedFootageByProject(parseInt(project_id));
+      const footage = db.getCompletedFootageByProject(pid);
       if (footage?.transcript) {
-        userPrompt += `\nVIDEO TRANSCRIPT (first 1000 chars for context):\n${footage.transcript.slice(0, 1000)}\n`;
+        transcriptBlock = `\nVIDEO TRANSCRIPT (first 1000 chars):\n${footage.transcript.slice(0, 1000)}\n`;
       }
     }
 
-    userPrompt += `\nReturn JSON only:\n{\n  "segment": "${segment || 'everyone'}",\n  "version_a": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  },\n  "version_b": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  }\n}`;
+    // ── Email prompt ──────────────────────────────────────────────────────────
+    userPrompt += projectContextBlock + researchBlock + citationsBlock + packageBlock + viralClipsBlock + transcriptBlock + socialBlock;
+    if (viralClipsBlock) {
+      userPrompt += `\nThe #1 hook above should heavily influence at least one email subject line.\n`;
+    }
+    userPrompt += `\nInclude real social links from the SOCIAL LINKS block in the email CTA — use the actual URLs, never placeholder text.\n`;
 
-    const result = await callClaude(systemPrompt, userPrompt, 3000);
+    userPrompt += `\nKeep each email body under 350 words — punchy, one job, done.\nReturn JSON only:\n{\n  "segment": "${segment || 'everyone'}",\n  "version_a": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  },\n  "version_b": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  }\n}`;
+
+    const result = await callClaude(systemPrompt, userPrompt, 8192);
 
     const response = { ok: true };
 
@@ -222,32 +285,48 @@ RULES:
     }
 
     if (gen_blog) {
+      const blogCitationsSection = citationsHtml
+        ? `\n\nAt the end of the blog post, include a Sources section:\n<h3>Sources</h3>\n<ul>\n${citationsHtml}\n</ul>\nAlso weave 1-2 of these citations naturally into the body as inline <a href> links where they support the argument.`
+        : '';
       const blogPrompt = `Write a blog post based on this prompt: ${prompt}
 Segment: ${segment || 'everyone'}
 Goal: ${goal || 'not specified'}
-
-Write a complete blog post in the creator's voice. Plain text only. Include a title, 3-5 paragraphs, and a clear call to action at the end.
+${projectContextBlock}${researchBlock}${citationsBlock}${packageBlock}${viralClipsBlock}${transcriptBlock}${socialBlock}
+BLOG POST RULES:
+- Use the pre-production research to validate the argument — cite what the research found, not just what the video says
+- The research is the "why this matters" foundation; the video is proof of the concept in action
+- Structure: strong opening hook → context/research validation → creator's real experience → CTA
+- Write in the creator's voice — conversational, real numbers, no corporate language
+- 600–900 words. Include a title.
+- End CTA should link to the YouTube video (if URL available) and the ROCK RICH community using real URLs from the SOCIAL LINKS block
+- Include social follow links naturally at the end (TikTok, Instagram, YouTube, Lemon8)${blogCitationsSection}
 
 Return JSON only:
 {
   "title": "blog post title",
-  "body": "full blog post body"
+  "body": "full blog post as HTML with <p>, <h2>, <ul>/<li> tags, real hyperlinks for all social and citation URLs"
 }`;
-      response.blog_post = await callClaude(systemPrompt, blogPrompt, 2000);
+      response.blog_post = await callClaude(systemPrompt, blogPrompt, 6000);
     }
 
     if (gen_community) {
       const communityPrompt = `Write a Kajabi community post based on this prompt: ${prompt}
 Segment: ${segment || 'everyone'}
 Goal: ${goal || 'not specified'}
-
-Short, punchy community post. Feels like a real person posting, not a broadcast. 2-4 paragraphs max. End with a question or call to action that invites replies.
+${projectContextBlock}${researchBlock}${citationsBlock}${packageBlock}${viralClipsBlock}${socialBlock}
+COMMUNITY POST RULES:
+- This is a community post to paying members — it should feel personal, not like a broadcast
+- Use the research findings and concept rationale as validation for why this topic matters to them specifically
+- Reference the video naturally ("I just dropped a video on this — here's what I found")
+- 2–4 short paragraphs. End with a genuine question or call to action that invites replies.
+- If there's a ClipsΩr hook above, open with a version of that energy
+- If linking to the video, use the real YouTube URL from the SOCIAL LINKS block
 
 Return JSON only:
 {
-  "body": "full community post"
+  "body": "full community post as plain text"
 }`;
-      response.community_post = await callClaude(systemPrompt, communityPrompt, 1000);
+      response.community_post = await callClaude(systemPrompt, communityPrompt, 2500);
     }
 
     if (project_id) {

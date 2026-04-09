@@ -386,13 +386,31 @@ async function loadProject(id) {
     document.getElementById('go-m3').href = `m3-caption-generator.html?project_id=${id}`;
     document.getElementById('go-m4').href = `m4-email-generator.html?project_id=${id}`;
 
-    // Load CutΩr approved clips
-    if (cutsRes.ok) {
-      const cutsData = await cutsRes.json();
-      const approved = (cutsData.social || [])
-        .filter(c => c.approved)
+    // Load ClipsΩr viral clips first (preferred for completed-video workflow)
+    // Fall back to CutΩr selects if no viral clips exist
+    try {
+      const viralRes  = await fetch(`/api/mirrr/viral-clips/project/${id}`);
+      const viralData = viralRes.ok ? await viralRes.json() : {};
+      const approvedViral = (viralData.clips || [])
+        .filter(c => c.status === 'approved')
         .sort((a, b) => (a.rank || 99) - (b.rank || 99));
-      renderCutorPanel(approved);
+
+      if (approvedViral.length > 0) {
+        renderClipsrPanel(approvedViral);
+      } else if (cutsRes.ok) {
+        const cutsData = await cutsRes.json();
+        const approved = (cutsData.social || [])
+          .filter(c => c.approved)
+          .sort((a, b) => (a.rank || 99) - (b.rank || 99));
+        renderCutorPanel(approved);
+      } else {
+        renderCutorPanel([]);
+      }
+    } catch(_) {
+      if (cutsRes.ok) {
+        const cutsData = await cutsRes.json();
+        renderCutorPanel((cutsData.social || []).filter(c => c.approved));
+      }
     }
   } catch(e) { console.error('loadProject:', e); }
 }
@@ -402,6 +420,35 @@ function fmtTs(s) {
   const m = Math.floor(s / 60);
   const sec = (s % 60).toFixed(1).padStart(4, '0');
   return `${String(m).padStart(2, '0')}:${sec}`;
+}
+
+function renderClipsrPanel(clips) {
+  const panel = document.getElementById('cutor-panel');
+  const list  = document.getElementById('cutor-clips');
+  const count = document.getElementById('cutor-clip-count');
+  count.textContent = `${clips.length} APPROVED CLIP${clips.length !== 1 ? 'S' : ''}`;
+  // Retitle to ClipsΩr
+  const title = panel.querySelector('.cutor-panel-title');
+  if (title) title.childNodes[0].textContent = 'CLIPSΩR OUTPUT ';
+  list.innerHTML = '';
+  clips.forEach((clip, i) => {
+    const start = clip.start_time ?? clip.start ?? 0;
+    const end   = clip.end_time   ?? clip.end   ?? 0;
+    const ts    = `${fmtTs(start)} → ${fmtTs(end)}`;
+    const rankClass = clip.rank === 1 ? 'r1' : '';
+    const div = document.createElement('div');
+    div.className = 'cutor-clip';
+    div.innerHTML = `
+      <div class="cutor-clip-rank ${rankClass}">#${clip.rank ?? i + 1}</div>
+      <div class="cutor-clip-info">
+        <div class="cutor-clip-desc">${escHtml(clip.hook || 'Clip ' + (i + 1))}</div>
+        <span class="cutor-clip-ts">${ts}</span>
+        ${clip.why_it_works ? `<div class="cutor-clip-reasoning">${escHtml(clip.why_it_works)}</div>` : ''}
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  panel.classList.add('show');
 }
 
 function renderCutorPanel(clips) {

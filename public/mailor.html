@@ -339,9 +339,10 @@
           <div class="results-heading">A/B PAIR READY</div>
           <div class="results-meta" id="bc-results-meta"></div>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-regen" onclick="generateBroadcast()">↻ Regenerate</button>
           <button class="btn btn-primary" onclick="copyBothVersions()">📋 Copy Both</button>
+          <a id="go-mirrr" href="/mirrr.html" class="btn btn-sm" style="background:var(--teal,#14b8a6);color:#000;font-weight:700;text-decoration:none;padding:6px 14px;border-radius:6px;white-space:nowrap;">→ Continue to MirrΩr</a>
         </div>
       </div>
       <div class="ab-pair" id="bc-pair-container"></div>
@@ -577,6 +578,8 @@ async function loadProjectContext(id) {
     if (selected_package?.title) {
       document.getElementById('seq-package-title').value = selected_package.title;
     }
+    // Wire handoff link with project_id
+    document.getElementById('go-mirrr').href = `/mirrr.html?project_id=${id}`;
   } catch(e) { /* non-fatal */ }
 }
 

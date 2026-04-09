@@ -2,52 +2,69 @@
 
 ---
 
-## ⚡ Task 1 — Deploy to DigitalOcean
+## ⚡ Task 1 — ClipsΩr UI Polish (inline editing)
 
-All local changes are committed and ready to deploy. Run on the DO server:
+User caught "Rockridge" instead of "Rock Rich" in clip hooks/captions with no way to fix them in-app.
+Add inline editing to ClipsΩr clip cards so the creator can correct hook text, captions, and hashtags
+without re-running analysis.
+
+**What to build:**
+- Click-to-edit on hook text, why_it_works, caption, and hashtags fields
+- Save button per card (or auto-save on blur) → `PATCH /api/mirrr/viral-clips/:id`
+- DB: ensure `viral_clips` UPDATE path accepts hook/caption/hashtags/why_it_works fields
+- Visual cue: field turns editable (light border + cursor change) on click, reverts to display on save
+
+---
+
+## ⚡ Task 2 — MirrΩr: First Real Evaluation Run
+
+The entire compounding intelligence loop activates here. This is the payoff of Session 25.
+
+**Steps:**
+1. Run YouTube sync → confirm video performance data is in DB (views/likes for published videos)
+2. Open NorthΩr → click **🪞 Evaluate Last Month**
+3. Confirm evaluation card renders: accuracy score (0–10), what worked / what missed, weight badges
+4. Confirm calibration flows upstream: open Id8Ωr → run a concept → check that mirrrBlock appears in server logs
+5. Open WritΩr → generate a script → confirm MIRRΩR CALIBRATION section is in the prompt context
+
+---
+
+## ⚡ Task 3 — Deploy to DigitalOcean
+
+Push all 5 Session 25 commits to live server at kre8r.app.
 
 ```bash
 cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
 sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
 ```
 
-Verify after deploy:
-- `https://kre8r.app/vault.html` → Archive to D: section visible
-- `https://kre8r.app/editor.html` → Page says AssemblΩr
-- `https://kre8r.app/mirrr.html` → /debug-views route returns 404 (removed)
+**Verify after deploy:**
+- `/northr.html` → 3-MONTH TRAJECTORY section visible, Evaluate Last Month button present
+- `/pipr.html` → structure cards show live performance badges (or empty state if no data yet)
+- `/mirrr.html` → ClipsΩr approved clips section renders on Rock Rich Community Launch project
 
 ---
 
-## ⚡ Task 2 — MirrΩr: Rebuild Content Universe + Save Secrets to Soul
+## ⚡ Task 4 — Tool Purpose Docs + Flow Audit
 
-DNA cache was cleared after a force resync/prune. Needs rebuild with clean data.
+**After the full project test run (Id8Ωr → PipΩr → WritΩr → VaultΩr → EditΩr → ClipsΩr → GateΩr → PackageΩr → CaptionΩr → MailΩr → MirrΩr → NorthΩr) is complete:**
 
-**Steps:**
-1. Open MirrΩr → Content Universe section → click **Refresh / Rebuild**
-2. Confirm constellation renders correctly (no live stream nodes)
-3. Click **Discover Secrets** → confirm no live repost artifacts
-4. Click **Save Insights to My Soul →** → confirm `creator-profile.json` updates
+**Step 1: Flow chart**
+Draw the complete process loop from Id8Ωr → MirrΩr → back to Id8Ωr showing all branch points.
+Identify wild branches — paths that exist in the code or UI but aren't part of the intended loop — flag them for pruning.
 
----
+**Step 2: Per-tool docs**
+One document per tool, stored in `kre8r/tool-purpose-docs/`, numbered so they display in pipeline order.
 
-## ⚡ Task 3 — NorthΩr: First real strategy run
+Each doc covers:
+- **Inputs** — what data / files / context it receives and from where
+- **What the tool does** — its purpose, and an honest assessment of whether it achieves that purpose
+- **Data generated & preserved** — what it writes to the DB, what fields, how it persists across restarts
+- **How it changes state** — what is different in the system after the tool runs
+- **Valuable Final Product (VFP)** — the one thing the creator holds in their hand when done
+- **Handoff** — exactly what it passes to the next tool (data shape, field names, how it flows)
 
-- Open `/northr.html` → set monthly goals (target videos, emails)
-- Click **Generate Strategy** → confirm SSE stream completes and report renders
-- Click **Check Alerts** → see if any thresholds are triggered
-
----
-
-## ⚡ Task 4 — Beta prep: test AssemblΩr end-to-end + TeleprΩmpter
-
-### AssemblΩr — needs real footage test
-Run AssemblΩr on a current project with talking-head BRAW proxies ingested.
-Expected flow: VaultΩr ingest → proxy_path set → AssemblΩr transcribes → beat map → sections.
-
-### TeleprΩmpter 3-device live test
-1. Start display on laptop → Load Script → Start → note 4-digit session code
-2. Phone 1 (Control): `http://{ip}:3000/teleprompter.html?mode=control&session=XXXX`
-3. Phone 2 (Voice): `http://{ip}:3000/teleprompter.html?mode=voice&session=XXXX`
+**Naming convention:** `01-id8r.md`, `02-pipr.md`, `03-writr.md`, etc.
 
 ---
 
@@ -70,20 +87,12 @@ pm2 save                # save process list after any pm2 changes
 
 ---
 
-## ✅ DONE THIS SESSION
+## ✅ DONE THIS SESSION (Session 25 — 2026-04-09)
 
-- AssemblΩr engine (src/editor/assemblr.js) — Claude semantic beat mapping,
-  chronological sort, last-take-wins, 2s lead-in / 3s tail, gold moments
-- AssemblΩr UI (public/editor.html) — renamed, beat cards, take-swap on click,
-  missing beats banner, quality badges (clean/strong/fumbled/ok)
-- nav.js: EditΩr → AssemblΩr
-- Shoot folder auto-creation in PipΩr create route (H:\[ProjectTitle]\)
-- VaultΩr intake: Proxy Generator Lite support (plain MP4 proxy naming)
-- proxy_path stored on footage records — fixes BRAW transcription bug in Whisper
-- Archive pipeline: POST /api/vault/archive/:project_id SSE + GET /api/vault/storage
-- Archive UI in vault.html: storage meters with color thresholds, project selector,
-  progress log, DaVinci relink report panel
-- Electron DB rolling backup every 5 min (electron/main.js)
-- MirrΩr /debug-views endpoint removed (was exposing analytics unauthenticated)
-- davinci.js detectPython() — confirmed already implemented correctly
-- Id8Ωr debug log — confirmed already removed
+- MirrΩr self-evaluation system — strategy holds up a mirror to itself
+- MirrΩr calibration wired into Id8Ωr (concept angle bias) and WritΩr (script context)
+- Story structure performance loop — PipΩr gets live performance badges, NorthΩr gets structure hints
+- NorthΩr 3-month growth trajectory — back-engineer a path from here to X in 3 months
+- Distribution readiness: ClipsΩr approved clips wired into PackageΩr and MailΩr
+- DaVinci audio fix: removed mediaType:1 (was video-only)
+- DaVinci end-time buffer: +1.5s after last phoneme so sentences land before the cut

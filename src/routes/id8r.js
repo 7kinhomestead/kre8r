@@ -541,8 +541,29 @@ router.post('/research', async (req, res) => {
         .filter(Boolean)
         .join('\n\n');
       results.data = fullText || 'No data results found.';
+
+      // Extract credible citations from search results for downstream blog/content use
+      try {
+        const citationRaw = await callClaudeText(
+          'You are a citation extractor. Return JSON only — no preamble.',
+          [{
+            role: 'user',
+            content: `From the research text below, extract 3–5 of the most credible and citable sources — government data, academic studies, reputable news outlets, industry reports. Prefer sources with actual statistics or findings that support the argument.\n\nResearch:\n${fullText.slice(0, 3000)}\n\nReturn JSON array only:\n[\n  { "title": "Source name / article title", "url": "https://...", "key_stat": "The specific fact or stat that makes this useful", "credibility": "why this source is credible" }\n]`,
+          }],
+          800,
+          session_id,
+          onRetry
+        );
+        try {
+          const parsed = JSON.parse(citationRaw.replace(/```json|```/g, '').trim());
+          session.citations = Array.isArray(parsed) ? parsed : [];
+        } catch { session.citations = []; }
+      } catch (e) {
+        session.citations = [];
+      }
     } catch (e) {
       results.data = `Error: ${e.message}`;
+      session.citations = [];
     }
     send({ stage: 'phase_result', phase: 2, label: phase2Label, data: results.data });
     // Checkpoint: phase 2 done
@@ -785,6 +806,7 @@ router.post('/send-pipeline', async (req, res) => {
       researchSummary: session.researchSummary  || null,
       packageData:     session.packageData      || null,
       briefData:       session.briefData        || null,
+      citations:       session.citations        || [],
     });
 
     // Build project-context.json — single source of truth for the pipeline
@@ -794,6 +816,7 @@ router.post('/send-pipeline', async (req, res) => {
         researchSummary: session.researchSummary  || null,
         packageData:     session.packageData      || null,
         briefData:       session.briefData        || null,
+        citations:       session.citations        || [],
         collaborators:   session.collaborators    || null,
       });
     } catch (ctxErr) {

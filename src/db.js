@@ -29,6 +29,7 @@ function initDb() {
   // WAL mode: concurrent reads, no full-file rewrite on every write
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  db.pragma('synchronous = NORMAL'); // safe with WAL, faster than FULL
 
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
   db.exec(schema);
@@ -2820,16 +2821,42 @@ function getViralClipsByFootage(footageId) {
   return _all(`SELECT * FROM viral_clips WHERE footage_id = ? ORDER BY rank ASC`, [footageId]);
 }
 
+// Returns { footage_id: count } for all footage that has clips — single query, no N+1
+function getViralClipCounts() {
+  const rows = _all(`SELECT vc.footage_id, COUNT(*) as count FROM viral_clips vc LEFT JOIN footage f ON f.id = vc.footage_id WHERE vc.status != 'skipped' AND (f.quality_flag IS NULL OR f.quality_flag != 'archived') GROUP BY vc.footage_id`);
+  const map = {};
+  rows.forEach(r => { map[r.footage_id] = r.count; });
+  return map;
+}
+
 // Returns approved viral clips for a project — used by PackageΩr and MailΩr
 // to inject the strongest moments + reasoning into downstream generation prompts.
+// Checks both vc.project_id (direct) AND footage.project_id (for clips saved
+// before the project_id fix — ensures existing approved clips are found).
 function getApprovedViralClipsByProject(projectId) {
   return _all(
     `SELECT vc.*, f.transcript
      FROM viral_clips vc
      LEFT JOIN footage f ON f.id = vc.footage_id
-     WHERE vc.project_id = ? AND vc.status = 'approved'
+     WHERE vc.status = 'approved'
+       AND (vc.project_id = ? OR f.project_id = ?)
+       AND (f.quality_flag IS NULL OR f.quality_flag != 'archived')
      ORDER BY vc.rank ASC`,
-    [projectId]
+    [projectId, projectId]
+  );
+}
+
+// Returns N most recently approved clips across all footage.
+// Used as fallback when footage isn't linked to a project.
+function getRecentApprovedClips(limit = 20) {
+  return _all(
+    `SELECT vc.*, f.transcript, f.original_filename, f.project_id as footage_project_id
+     FROM viral_clips vc
+     LEFT JOIN footage f ON f.id = vc.footage_id
+     WHERE vc.status = 'approved'
+     ORDER BY vc.updated_at DESC
+     LIMIT ?`,
+    [limit]
   );
 }
 
@@ -2838,7 +2865,7 @@ function getCompletedFootageByProject(projectId) {
   return _get(
     `SELECT * FROM footage
      WHERE project_id = ? AND shot_type = 'completed-video'
-     ORDER BY created_at DESC LIMIT 1`,
+     ORDER BY id DESC LIMIT 1`,
     [projectId]
   );
 }
@@ -2918,8 +2945,15 @@ function _debugViews() {
   };
 }
 
+// Force WAL checkpoint — call after critical writes (uploads, approvals) to
+// ensure data survives a crash before the automatic checkpoint interval.
+function checkpoint() {
+  try { db.pragma('wal_checkpoint(PASSIVE)'); } catch (_) {}
+}
+
 module.exports = {
   initDb,
+  checkpoint,
   createProject,
   getProject,
   getAllProjects,
@@ -3084,7 +3118,9 @@ module.exports = {
   insertViralClip,
   getViralClipById,
   getViralClipsByFootage,
+  getViralClipCounts,
   getApprovedViralClipsByProject,
+  getRecentApprovedClips,
   getCompletedFootageByProject,
   updateViralClip,
   deleteViralClipsByFootage,
