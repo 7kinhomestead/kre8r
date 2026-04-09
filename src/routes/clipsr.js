@@ -19,6 +19,7 @@ const fs              = require('fs');
 const db                  = require('../db');
 const { transcribeFile }  = require('../vault/transcribe');
 const { analyzeForClips } = require('../vault/clipsr');
+const { runScript }       = require('./davinci');
 
 function uuid() { return crypto.randomUUID(); }
 
@@ -227,6 +228,69 @@ router.put('/clips/:clip_id', (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/clipsr/send-to-davinci
+// Body: { footage_id, project_name? }
+// Gets approved clips for a footage item, creates a Resolve project
+// with one 9:16 vertical timeline per clip (in/out pre-set).
+// Creator applies Smart Reframe per clip in Resolve (~5s each).
+// ─────────────────────────────────────────────
+router.post('/send-to-davinci', async (req, res) => {
+  const { footage_id, project_name } = req.body;
+  if (!footage_id) return res.status(400).json({ error: 'footage_id required' });
+
+  try {
+    const footage = db.getFootageById(parseInt(footage_id, 10));
+    if (!footage) return res.status(404).json({ error: 'Footage not found' });
+
+    // Get approved clips — fall back to all candidates if none approved yet
+    let clips = db.getViralClipsByFootage(parseInt(footage_id, 10))
+      .filter(c => c.status === 'approved');
+
+    if (!clips.length) {
+      return res.status(400).json({
+        error: 'No approved clips found. Approve at least one clip in ClipsΩr first.'
+      });
+    }
+
+    // Resolve source path — prefer proxy_path if original is BRAW
+    const sourcePath = footage.proxy_path || footage.file_path;
+    if (!sourcePath || !fs.existsSync(sourcePath)) {
+      return res.status(400).json({
+        error: `Source file not found: ${sourcePath}. Make sure the video file is accessible.`
+      });
+    }
+
+    // Detect frame rate from footage metadata (stored as "1920x1080" etc — fps separate)
+    // Default to 29.97; footage table doesn't store fps directly so we approximate
+    const fps = 29.97;
+
+    const clipsPayload = clips.map(c => ({
+      rank:      c.rank,
+      start:     c.start_time,
+      end:       c.end_time,
+      hook:      c.hook      || '',
+      caption:   c.caption   || '',
+      clip_type: c.clip_type || 'social',
+    }));
+
+    const resolvedProjectName = project_name
+      || (footage.original_filename || 'SocialClips').replace(/\.[^.]+$/, '');
+
+    const result = await runScript('create-social-clips.py', [
+      '--project_name', resolvedProjectName,
+      '--source_path',  sourcePath,
+      '--clips_json',   JSON.stringify(clipsPayload),
+      '--fps',          String(fps),
+    ], 120_000); // 2 min timeout
+
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 

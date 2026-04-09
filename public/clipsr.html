@@ -945,10 +945,20 @@
           </div>`
         : '';
 
+      const approvedCount = clips.filter(c => c.status === 'approved').length;
+      const davinciBtn = approvedCount > 0
+        ? `<button class="btn btn-primary btn-sm" onclick="sendToDavinci(${footage.id}, '${escAttr(footage.filename)}')" id="davinciBtn">
+             🎬 Send ${approvedCount} to DaVinci
+           </button>`
+        : `<button class="btn btn-ghost btn-sm" disabled title="Approve at least one clip first">
+             🎬 Send to DaVinci
+           </button>`;
+
       const clipsHeader = `
         <div class="clips-header">
           <div class="clips-header-title">Clip Candidates</div>
           <div class="clips-count">${clips.length} clips · ranked by strength</div>
+          ${davinciBtn}
         </div>`;
 
       const clipsHtml = clips.map(clip => renderClipCard(clip)).join('');
@@ -1116,6 +1126,45 @@
         showToast(status === 'approved' ? 'Clip approved!' : status === 'skipped' ? 'Clip skipped' : 'Status updated', 'green');
       } catch (e) {
         showToast('Network error: ' + e.message, 'red');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Send to DaVinci — creates vertical 9:16 timelines
+    // ─────────────────────────────────────────────
+    async function sendToDavinci(footageId, filename) {
+      const btn = document.getElementById('davinciBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Creating in Resolve…'; }
+      showToast('Sending to DaVinci Resolve — make sure Resolve is open…', 'blue');
+
+      const projectName = filename.replace(/\.[^.]+$/, '');
+
+      try {
+        const r = await fetch('/api/clipsr/send-to-davinci', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ footage_id: footageId, project_name: projectName })
+        });
+        const data = await r.json();
+
+        if (!data.ok) {
+          showToast('DaVinci error: ' + (data.error || 'unknown'), 'red');
+          if (btn) { btn.disabled = false; btn.textContent = '🎬 Send to DaVinci'; }
+          return;
+        }
+
+        const n = data.timeline_count || 0;
+        showToast(`✓ ${n} vertical timeline${n !== 1 ? 's' : ''} created in Resolve — "${data.project_name}"`, 'green');
+
+        if (data.reframe_note) {
+          setTimeout(() => showToast('💡 ' + data.reframe_note, 'blue'), 1800);
+        }
+
+        if (btn) { btn.disabled = false; btn.textContent = `✓ ${n} timelines in Resolve`; }
+
+      } catch (e) {
+        showToast('Network error: ' + e.message, 'red');
+        if (btn) { btn.disabled = false; btn.textContent = '🎬 Send to DaVinci'; }
       }
     }
 
