@@ -9,6 +9,10 @@
  * GET  /api/writr/iterate/status/:job_id    — SSE stream for iterate job
  * POST /api/writr/:project_id/approve       — approve script + sync to SelectsΩr
  * GET  /api/writr/:project_id/scripts       — all script iterations for a project
+ * GET  /api/writr/:project_id/room/session  — load persisted room conversation
+ * POST /api/writr/:project_id/room/session  — save room conversation to DB
+ * DELETE /api/writr/:project_id/room/session — clear room conversation from DB
+ * POST /api/writr/:project_id/room/approve  — approve script draft from room session
  */
 
 'use strict';
@@ -871,6 +875,87 @@ router.post('/:project_id/room', async (req, res) => {
 
   } catch (err) {
     console.error('[WritΩr] Room error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// Room Session Persistence — GET / POST / DELETE
+// ─────────────────────────────────────────────
+
+router.get('/:project_id/room/session', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  try {
+    const session = db.getRoomSession(projectId);
+    res.json({ ok: true, messages: session?.messages || [] });
+  } catch (err) {
+    console.error('[WritΩr] Room session GET error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:project_id/room/session', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  const { messages } = req.body;
+  if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages array required' });
+  try {
+    db.upsertRoomSession(projectId, messages);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[WritΩr] Room session POST error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:project_id/room/session', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  try {
+    db.clearRoomSession(projectId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[WritΩr] Room session DELETE error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/writr/:project_id/room/approve
+// Approve a script draft directly from the Room — creates a new writr_scripts
+// record from the provided text and marks it approved. No full generate cycle needed.
+// Body: { script_text }
+// ─────────────────────────────────────────────
+
+router.post('/:project_id/room/approve', async (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  const { script_text } = req.body;
+  if (!script_text?.trim()) return res.status(400).json({ error: 'script_text required' });
+
+  try {
+    const project = db.getProject(projectId);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    // Create a new script record from the room-revised text
+    const scriptId = db.insertWritrScript({
+      project_id:       projectId,
+      generated_script: script_text.trim(),
+      entry_point:      'room_revision',
+      input_type:       'room_revision',
+      iteration_count:  0,
+      approved:         0,
+      mode:             'full'
+    });
+
+    // Approve it (handles un-approving old, setting active_script_id, syncing to selects)
+    db.approveWritrScript(projectId, scriptId);
+
+    res.json({ ok: true, script_id: scriptId });
+  } catch (err) {
+    console.error('[WritΩr] Room approve error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

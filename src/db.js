@@ -673,6 +673,17 @@ function runMigrations() {
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_bgjobs_type   ON background_jobs(type)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_bgjobs_status ON background_jobs(status)');
+
+  // WritΩr Room — server-side session persistence (prevents loss of beat revision work)
+  db.exec(`CREATE TABLE IF NOT EXISTS writr_room_sessions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id  INTEGER NOT NULL UNIQUE,
+    messages    TEXT    NOT NULL DEFAULT '[]',
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_room_sessions_project ON writr_room_sessions(project_id)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -2642,6 +2653,40 @@ function getPipelineHealth() {
   };
 }
 
+// ─────────────────────────────────────────────
+// WritΩr Room Session — server-side persistence
+// ─────────────────────────────────────────────
+
+function getRoomSession(projectId) {
+  const row = _get(`SELECT * FROM writr_room_sessions WHERE project_id = ?`, [projectId]);
+  if (!row) return null;
+  try {
+    return { ...row, messages: JSON.parse(row.messages) };
+  } catch (_) {
+    return { ...row, messages: [] };
+  }
+}
+
+function upsertRoomSession(projectId, messages) {
+  const json = JSON.stringify(messages || []);
+  const existing = _get(`SELECT id FROM writr_room_sessions WHERE project_id = ?`, [projectId]);
+  if (existing) {
+    _run(
+      `UPDATE writr_room_sessions SET messages = ?, updated_at = CURRENT_TIMESTAMP WHERE project_id = ?`,
+      [json, projectId]
+    );
+  } else {
+    _run(
+      `INSERT INTO writr_room_sessions (project_id, messages) VALUES (?, ?)`,
+      [projectId, json]
+    );
+  }
+}
+
+function clearRoomSession(projectId) {
+  _run(`DELETE FROM writr_room_sessions WHERE project_id = ?`, [projectId]);
+}
+
 function _debugViews() {
   // Total views by platform
   const byPlatform = db.prepare(`
@@ -2857,6 +2902,10 @@ module.exports = {
   updateShowEpisode,
   getNextEpisodeNumber,
   buildSeasonContext,
+  // WritΩr Room Sessions
+  getRoomSession,
+  upsertRoomSession,
+  clearRoomSession,
   // Diagnostics
   _debugViews,
   // NorthΩr

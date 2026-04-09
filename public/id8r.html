@@ -820,9 +820,9 @@
       if (!res.ok) throw new Error(data.error || 'Failed to start session');
 
       sessionId = data.session_id;
-      sessionStorage.setItem('id8r_session_id', sessionId);
-      sessionStorage.setItem('id8r_mode_label', 'EPISODIC');
-      sessionStorage.setItem('id8r_episodic_context', JSON.stringify(ctx));
+      localStorage.setItem('id8r_session_id', sessionId);
+      localStorage.setItem('id8r_mode_label', 'EPISODIC');
+      localStorage.setItem('id8r_episodic_context', JSON.stringify(ctx));
       placeholder.remove();
       appendMessage('assistant', data.message);
       saveSession();
@@ -899,9 +899,9 @@
       sessionId    = data.session_id;
       currentMode  = 'merge';
       conceptsData = data.concepts || [];
-      sessionStorage.setItem('id8r_session_id', sessionId);
-      sessionStorage.setItem('id8r_mode_label', 'MERGE TWO PROJECTS');
-      if (conceptsData.length) sessionStorage.setItem('id8r_concepts', JSON.stringify(conceptsData));
+      localStorage.setItem('id8r_session_id', sessionId);
+      localStorage.setItem('id8r_mode_label', 'MERGE TWO PROJECTS');
+      if (conceptsData.length) localStorage.setItem('id8r_concepts', JSON.stringify(conceptsData));
 
       document.getElementById('chat-mode-display').textContent = 'MERGE TWO PROJECTS';
       showScreen('concepts');
@@ -921,25 +921,25 @@
   // ── Session persistence ────────────────────────────────────────
   function saveSession() {
     if (!sessionId) return;
-    sessionStorage.setItem('id8r_session_id',  sessionId);
-    sessionStorage.setItem('id8r_chat_html',   document.getElementById('chat-messages').innerHTML);
-    sessionStorage.setItem('id8r_mode_label',  document.getElementById('chat-mode-display').textContent);
-    if (conceptsData)  sessionStorage.setItem('id8r_concepts',       JSON.stringify(conceptsData));
-    if (chosenConcept) sessionStorage.setItem('id8r_chosen_concept', JSON.stringify(chosenConcept));
+    localStorage.setItem('id8r_session_id',  sessionId);
+    localStorage.setItem('id8r_chat_html',   document.getElementById('chat-messages').innerHTML);
+    localStorage.setItem('id8r_mode_label',  document.getElementById('chat-mode-display').textContent);
+    if (conceptsData)  localStorage.setItem('id8r_concepts',       JSON.stringify(conceptsData));
+    if (chosenConcept) localStorage.setItem('id8r_chosen_concept', JSON.stringify(chosenConcept));
   }
 
   function clearSession() {
     ['id8r_session_id','id8r_chat_html','id8r_mode_label','id8r_concepts','id8r_chosen_concept']
-      .forEach(k => sessionStorage.removeItem(k));
+      .forEach(k => localStorage.removeItem(k));
   }
 
   // Restore session on load
   (function restoreSession() {
-    const savedId    = sessionStorage.getItem('id8r_session_id');
-    const savedHtml  = sessionStorage.getItem('id8r_chat_html');
-    const savedLabel = sessionStorage.getItem('id8r_mode_label');
-    const savedConcepts = sessionStorage.getItem('id8r_concepts');
-    const savedChosen   = sessionStorage.getItem('id8r_chosen_concept');
+    const savedId    = localStorage.getItem('id8r_session_id');
+    const savedHtml  = localStorage.getItem('id8r_chat_html');
+    const savedLabel = localStorage.getItem('id8r_mode_label');
+    const savedConcepts = localStorage.getItem('id8r_concepts');
+    const savedChosen   = localStorage.getItem('id8r_chosen_concept');
     if (!savedId) return;
     sessionId = savedId;
     document.getElementById('chat-mode-display').textContent = savedLabel || 'SESSION';
@@ -954,7 +954,7 @@
   // ── Checkpoint recovery banner ────────────────────────────────
   // If the server was restarted mid-research, we can offer to show what was saved.
   (async function checkForCheckpoint() {
-    const savedId = sessionStorage.getItem('id8r_session_id');
+    const savedId = localStorage.getItem('id8r_session_id');
     if (!savedId) return;
     try {
       const res = await fetch('/api/id8r/checkpoint/' + savedId);
@@ -1076,8 +1076,8 @@
       if (!res.ok) throw new Error(data.error || 'Failed to start session');
 
       sessionId = data.session_id;
-      sessionStorage.setItem('id8r_session_id', sessionId);
-      sessionStorage.setItem('id8r_mode_label', MODE_LABELS[mode] || mode);
+      localStorage.setItem('id8r_session_id', sessionId);
+      localStorage.setItem('id8r_mode_label', MODE_LABELS[mode] || mode);
       placeholder.remove();
       appendMessage('assistant', data.message);
       saveSession();

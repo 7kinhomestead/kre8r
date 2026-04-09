@@ -312,6 +312,10 @@
   .room-hint{font-size:10px;color:var(--text-dimmer);}
   .room-clear{background:none;border:none;color:var(--text-dimmer);font-size:11px;cursor:pointer;padding:0;transition:color 0.15s;}
   .room-clear:hover{color:var(--red);}
+  .room-approve-btn{background:rgba(20,184,166,0.12);border:1px solid rgba(20,184,166,0.35);border-radius:var(--radius-sm);color:var(--teal);font-family:var(--font-body);font-size:11px;font-weight:700;padding:6px 14px;cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;white-space:nowrap;}
+  .room-approve-btn:hover{background:rgba(20,184,166,0.22);border-color:var(--teal);}
+  .room-approve-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .room-save-indicator{font-size:9px;color:var(--text-dimmer);letter-spacing:0.3px;}
   .room-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:32px 24px;color:var(--text-dimmer);}
   .room-empty-icon{font-size:44px;margin-bottom:18px;opacity:0.3;}
   .room-empty-title{font-family:var(--font-head);font-size:20px;letter-spacing:2px;color:var(--text-dim);margin-bottom:10px;}
@@ -622,8 +626,14 @@
     <div class="room-input-area">
       <textarea class="room-input" id="roomInput" rows="3" placeholder="What's not working? Where are you stuck?&#10;&#10;Ctrl+Enter to send"></textarea>
       <div class="room-input-row">
-        <button class="room-clear" onclick="clearRoom()">Clear conversation</button>
-        <button class="room-send-btn" id="roomSendBtn" onclick="sendRoomMessage()" disabled>Send →</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="room-clear" onclick="clearRoom()">Clear</button>
+          <span class="room-save-indicator" id="roomSaveIndicator"></span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="room-approve-btn" id="roomApproveBtn" onclick="approveFromRoom()" style="display:none" title="Save latest script from this session as the approved draft">✓ Lock Script</button>
+          <button class="room-send-btn" id="roomSendBtn" onclick="sendRoomMessage()" disabled>Send →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -802,10 +812,34 @@ async function onProjectChange(pid) {
   if (pid !== prevProjectId) {
     roomHistory = [];
     if (pid) {
-      try {
-        const saved = localStorage.getItem(`room_${pid}`);
-        if (saved) roomHistory = JSON.parse(saved);
-      } catch(_) { roomHistory = []; }
+      // Load from server (fire-and-forget; render after load)
+      fetch(`/api/writr/${pid}/room/session`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.ok && d.messages?.length) {
+            roomHistory = d.messages;
+          } else {
+            // Fallback to localStorage
+            try {
+              const saved = localStorage.getItem(`room_${pid}`);
+              if (saved) {
+                roomHistory = JSON.parse(saved);
+                if (roomHistory.length) saveRoomToServer(pid, roomHistory);
+              }
+            } catch(_) {}
+          }
+          if (roomOpen) {
+            renderRoomMessages();
+            updateRoomApproveBtn();
+          }
+        })
+        .catch(() => {
+          try {
+            const saved = localStorage.getItem(`room_${pid}`);
+            if (saved) roomHistory = JSON.parse(saved);
+          } catch(_) {}
+          if (roomOpen) { renderRoomMessages(); updateRoomApproveBtn(); }
+        });
     }
     if (roomOpen) {
       renderRoomMessages();
@@ -2220,19 +2254,41 @@ function toggleRoom() {
   roomOpen ? closeRoom() : openRoom();
 }
 
-function openRoom() {
+async function openRoom() {
   roomOpen = true;
   document.getElementById('roomPanel').classList.add('open');
   document.getElementById('roomBtn').textContent = '✕ Room';
 
   if (currentProjectId) {
-    // Restore persisted conversation for this project
+    // Load from server first — this is the source of truth
+    // Fall back to localStorage if server load fails
+    let loaded = false;
     try {
-      const saved = localStorage.getItem(`room_${currentProjectId}`);
-      if (saved) roomHistory = JSON.parse(saved);
-    } catch(_) { roomHistory = []; }
+      const r = await fetch(`/api/writr/${currentProjectId}/room/session`);
+      if (r.ok) {
+        const d = await r.json();
+        if (d.ok && d.messages?.length) {
+          roomHistory = d.messages;
+          loaded = true;
+        }
+      }
+    } catch(_) {}
+
+    if (!loaded) {
+      // Fallback: localStorage (older sessions before server persistence)
+      try {
+        const saved = localStorage.getItem(`room_${currentProjectId}`);
+        if (saved) {
+          roomHistory = JSON.parse(saved);
+          // Migrate to server now that we have the data
+          if (roomHistory.length) saveRoomToServer(currentProjectId, roomHistory);
+        }
+      } catch(_) { roomHistory = []; }
+    }
+
     document.getElementById('roomContextBadge').textContent = 'Full project context loaded';
     document.getElementById('roomSendBtn').disabled = false;
+    updateRoomApproveBtn();
     renderRoomMessages();
   }
 
@@ -2245,11 +2301,94 @@ function closeRoom() {
   document.getElementById('roomBtn').textContent = '🎬 Room';
 }
 
-function clearRoom() {
-  if (roomHistory.length && !confirm('Clear this conversation?')) return;
+async function clearRoom() {
+  if (roomHistory.length && !confirm('Clear this conversation? This cannot be undone.')) return;
   roomHistory = [];
-  if (currentProjectId) localStorage.removeItem(`room_${currentProjectId}`);
+  if (currentProjectId) {
+    localStorage.removeItem(`room_${currentProjectId}`);
+    // Also clear from server
+    try { await fetch(`/api/writr/${currentProjectId}/room/session`, { method: 'DELETE' }); } catch(_) {}
+  }
+  updateRoomApproveBtn();
   renderRoomMessages();
+}
+
+// Save room conversation to server — fire-and-forget, never blocks the UI
+function saveRoomToServer(projectId, messages) {
+  fetch(`/api/writr/${projectId}/room/session`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ messages })
+  }).then(r => {
+    if (r.ok) {
+      const el = document.getElementById('roomSaveIndicator');
+      if (el) { el.textContent = '● saved'; setTimeout(() => { el.textContent = ''; }, 2000); }
+    }
+  }).catch(() => {});
+}
+
+// Show/hide the Lock Script button based on whether there's content worth approving
+function updateRoomApproveBtn() {
+  const btn = document.getElementById('roomApproveBtn');
+  if (!btn) return;
+  // Show if there are assistant messages (something was generated to approve)
+  const hasContent = roomHistory.some(m => m.role === 'assistant');
+  btn.style.display = (hasContent && currentProjectId) ? '' : 'none';
+}
+
+// Find the best script to approve from the room conversation:
+// Priority: the largest user message (likely a paste of the full revised script)
+// falling back to the largest assistant message
+function extractScriptFromRoom() {
+  if (!roomHistory.length) return null;
+
+  // Look for user messages that look like a full script (contain multiple beats)
+  const userMsgs = roomHistory
+    .filter(m => m.role === 'user' && m.content.includes('BEAT'))
+    .sort((a, b) => b.content.length - a.content.length);
+
+  if (userMsgs.length) return userMsgs[0].content;
+
+  // Fall back to longest assistant message with BEAT markers
+  const assistantMsgs = roomHistory
+    .filter(m => m.role === 'assistant' && m.content.includes('BEAT'))
+    .sort((a, b) => b.content.length - a.content.length);
+
+  if (assistantMsgs.length) return assistantMsgs[0].content;
+
+  // Last resort: longest message overall
+  return [...roomHistory].sort((a, b) => b.content.length - a.content.length)[0]?.content || null;
+}
+
+async function approveFromRoom() {
+  const scriptText = extractScriptFromRoom();
+  if (!scriptText) {
+    showToast('No script found in this conversation to approve', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('roomApproveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const r = await fetch(`/api/writr/${currentProjectId}/room/approve`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ script_text: scriptText })
+    });
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Approve failed');
+
+    showToast('Script locked in as approved draft ✓', 'success');
+    btn.textContent = '✓ Locked';
+    // Reload scripts panel so the new approved draft appears
+    if (typeof loadProject === 'function') loadProject(currentProjectId);
+  } catch (err) {
+    showToast('Could not lock script: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '✓ Lock Script';
+  }
 }
 
 function renderRoomMessages() {
@@ -2338,8 +2477,9 @@ async function sendRoomMessage() {
   const historySnapshot = [...roomHistory];
 
   roomHistory.push({ role: 'user', content: message });
-  // Save immediately — protect user message even if response fails or page reloads
+  // Save immediately to both localStorage AND server — protect user message even if response fails
   localStorage.setItem(`room_${currentProjectId}`, JSON.stringify(roomHistory));
+  saveRoomToServer(currentProjectId, roomHistory);
   renderRoomMessages();
 
   // Thinking indicator
@@ -2362,16 +2502,19 @@ async function sendRoomMessage() {
 
     roomHistory.push({ role: 'assistant', content: data.response });
     localStorage.setItem(`room_${currentProjectId}`, JSON.stringify(roomHistory));
+    saveRoomToServer(currentProjectId, roomHistory);
 
   } catch (err) {
     roomHistory.push({ role: 'assistant', content: `Something went wrong: ${err.message}` });
     localStorage.setItem(`room_${currentProjectId}`, JSON.stringify(roomHistory));
+    saveRoomToServer(currentProjectId, roomHistory);
     showToast(err.message, 'error');
   } finally {
     const t = document.getElementById('roomThinking');
     if (t) t.remove();
     sendBtn.disabled = false;
     renderRoomMessages();
+    updateRoomApproveBtn();
     input.focus();
   }
 }
