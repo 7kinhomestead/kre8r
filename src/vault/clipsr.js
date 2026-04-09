@@ -71,7 +71,9 @@ Return ONLY valid JSON — no markdown, no code fences, no explanation:
 
 clip_type options: "gold" (best clip, shareworthy), "social" (strong clip), "retention" (good but requires context)
 platform_fit: score 1-10 for each platform
-rank 1 = strongest clip overall`;
+rank 1 = strongest clip overall
+
+IMPORTANT: The creator's community is called "Rock Rich" — Whisper sometimes transcribes it as "Rockridge". Always write "Rock Rich" in hooks, captions, and all output.`;
 }
 
 async function analyzeForClips({ transcript, footageMeta, onProgress }) {

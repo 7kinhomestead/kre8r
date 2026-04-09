@@ -650,7 +650,8 @@
     // ─────────────────────────────────────────────
     let allFootage  = [];
     let selectedId  = null;
-    let currentClips = [];
+    let currentClips   = [];
+    let currentFootage = null;
 
     // ─────────────────────────────────────────────
     // Toast
@@ -919,6 +920,7 @@
     // Render clips view
     // ─────────────────────────────────────────────
     function renderClipsView(footage, clips, overallAssessment) {
+      currentFootage = footage; // keep ref so updateDavinciBtn can access it
       const main = document.getElementById('main-area');
 
       const videoCard = `
@@ -958,7 +960,7 @@
         <div class="clips-header">
           <div class="clips-header-title">Clip Candidates</div>
           <div class="clips-count">${clips.length} clips · ranked by strength</div>
-          ${davinciBtn}
+          <div id="davinci-btn-wrap">${davinciBtn}</div>
         </div>`;
 
       const clipsHtml = clips.map(clip => renderClipCard(clip)).join('');
@@ -1123,9 +1125,30 @@
             card.replaceWith(newCard.firstElementChild);
           }
         }
+        // Refresh the DaVinci button count whenever approval state changes
+        updateDavinciBtn();
         showToast(status === 'approved' ? 'Clip approved!' : status === 'skipped' ? 'Clip skipped' : 'Status updated', 'green');
       } catch (e) {
         showToast('Network error: ' + e.message, 'red');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Update DaVinci button to reflect current approved count
+    // Called after every approve/skip so the button stays live
+    // ─────────────────────────────────────────────
+    function updateDavinciBtn() {
+      const btnWrap = document.getElementById('davinci-btn-wrap');
+      if (!btnWrap || !currentFootage) return;
+      const approvedCount = currentClips.filter(c => c.status === 'approved').length;
+      if (approvedCount > 0) {
+        btnWrap.innerHTML = `<button class="btn btn-primary btn-sm" onclick="sendToDavinci(${currentFootage.id}, '${escAttr(currentFootage.filename)}')" id="davinciBtn">
+          🎬 Send ${approvedCount} to DaVinci
+        </button>`;
+      } else {
+        btnWrap.innerHTML = `<button class="btn btn-ghost btn-sm" disabled title="Approve at least one clip first">
+          🎬 Send to DaVinci
+        </button>`;
       }
     }
 

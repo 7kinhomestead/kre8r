@@ -278,13 +278,27 @@ async function transcribeFile(filePath, options = {}) {
     const finalPath = renameToSlug(filePath, parsed);
 
     // Write final normalised JSON
+    // Post-process: fix known Whisper mishearings for this creator
+    // "Rockridge" is always "Rock Rich" (community name, not a place)
+    const fixTranscriptText = (t) => t
+      .replace(/\bRockridge\b/g, 'Rock Rich')
+      .replace(/\brock ridge\b/gi, 'Rock Rich')
+      .replace(/\brock-ridge\b/gi, 'Rock Rich');
+
+    const fixedText     = fixTranscriptText(parsed.text);
+    const fixedSegments = parsed.segments.map(seg => ({
+      ...seg,
+      text:  fixTranscriptText(seg.text),
+      words: (seg.words || []).map(w => ({ ...w, word: fixTranscriptText(w.word) }))
+    }));
+
     transcript = {
       footage_id: footageId,
       file_path:  filePath,
       language:   parsed.language,
-      text:       parsed.text,
+      text:       fixedText,
       duration:   parsed.duration,
-      segments:   parsed.segments
+      segments:   fixedSegments
     };
     fs.writeFileSync(finalPath, JSON.stringify(transcript, null, 2));
 
