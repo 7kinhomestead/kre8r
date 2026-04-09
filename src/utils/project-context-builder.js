@@ -191,6 +191,32 @@ function buildWritrPromptContext(projectId) {
     }
   } catch (_) {}
 
+  // MirrΩr calibration data — which angles actually outperformed vs underperformed
+  // Informs WritΩr: lean into UP-weighted angles, challenge DOWN-weighted ones to justify their place
+  try {
+    const db = getDb();
+    const evals = db.getRecentEvaluations(2);
+    if (evals.length) {
+      const evalLines = evals.map(r => {
+        try {
+          const ev = JSON.parse(r.evaluation);
+          const ups   = (ev.recommendation_accuracy || []).filter(a => a.weight_adjustment === 'UP');
+          const downs = (ev.recommendation_accuracy || []).filter(a => a.weight_adjustment === 'DOWN');
+          const parts = [`${r.month}/${r.year} — Score ${ev.overall_accuracy_score}/10: ${ev.one_line}`];
+          if (ups.length)   parts.push(`  Angles that overperformed → ${ups.map(a => a.recommendation).join(', ')}`);
+          if (downs.length) parts.push(`  Angles that underperformed → ${downs.map(a => a.recommendation).join(', ')}`);
+          if (ev.calibration_notes) parts.push(`  Calibration: ${ev.calibration_notes.slice(0, 200)}`);
+          return parts.join('\n');
+        } catch { return null; }
+      }).filter(Boolean);
+      if (evalLines.length) {
+        lines.push('\n## MIRRΩR CALIBRATION (strategy accuracy vs real results)');
+        lines.push('Use this to calibrate which content angles and structures to lean into vs be skeptical of.');
+        lines.push(evalLines.join('\n\n'));
+      }
+    }
+  } catch (_) {}
+
   return lines.join('\n');
 }
 

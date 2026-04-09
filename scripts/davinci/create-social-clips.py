@@ -180,11 +180,12 @@ def run(args):
         project.SetCurrentTimeline(timeline)
 
         # Append clip with in/out points
+        # NOTE: omitting mediaType gives both video + audio (the default).
+        #       mediaType=1 = video only, mediaType=2 = audio only — do NOT set it.
         append_result = media_pool.AppendToTimeline([{
             "mediaPoolItem": source_item,
             "startFrame":    start_frame,
             "endFrame":      end_frame,
-            "mediaType":     1,   # 1 = video + audio
         }])
 
         if not append_result:

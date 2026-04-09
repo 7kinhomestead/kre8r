@@ -310,6 +310,33 @@ router.post('/concepts', async (req, res) => {
       }
     } catch (_) {}
 
+    // MirrΩr calibration — what angles actually performed vs what was expected
+    let mirrrBlock = '';
+    try {
+      const _db = require('../db');
+      const evals = _db.getRecentEvaluations(2);
+      if (evals.length) {
+        const lines = evals.map(r => {
+          try {
+            const ev = JSON.parse(r.evaluation);
+            const ups   = (ev.recommendation_accuracy || []).filter(a => a.weight_adjustment === 'UP').map(a => a.recommendation);
+            const downs = (ev.recommendation_accuracy || []).filter(a => a.weight_adjustment === 'DOWN').map(a => a.recommendation);
+            return [
+              `${r.month}/${r.year} (score ${ev.overall_accuracy_score}/10): ${ev.one_line}`,
+              ups.length   ? `  ↑ What overperformed: ${ups.join(', ')}` : '',
+              downs.length ? `  ↓ What underperformed: ${downs.join(', ')}` : '',
+              ev.calibration_notes ? `  Note: ${ev.calibration_notes.slice(0, 200)}` : '',
+            ].filter(Boolean).join('\n');
+          } catch { return null; }
+        }).filter(Boolean);
+        if (lines.length) {
+          mirrrBlock = `\n\nMIRRΩR CALIBRATION (what has actually worked vs missed — use to weight concept angles):\n`
+            + lines.join('\n\n')
+            + '\nBias concepts toward angles that are trending UP in MirrΩr data. Treat DOWN-weighted angles with extra scrutiny — they need a fresh angle to earn their place.';
+        }
+      }
+    } catch (_) {}
+
     const result = await callClaudeJSON(
       `You are Id8Ωr, a creative strategist for ${brand} (${followerSummary}, ${niche} content). Based on the conversation below, generate exactly 3 concept directions for the next video.
 
@@ -320,7 +347,7 @@ RULES:
 - Be specific to what was discussed, not generic. Match the creator's real voice: straight-talking, funny, real numbers, never corporate.
 
 CONTENT ANGLES:
-${anglesText}${intelligenceBlock}${clipsrBlock}
+${anglesText}${intelligenceBlock}${clipsrBlock}${mirrrBlock}
 
 Return ONLY valid JSON in this exact shape:
 {
