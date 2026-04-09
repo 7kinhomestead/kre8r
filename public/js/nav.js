@@ -54,6 +54,7 @@
           { label: 'VaultΩr',  href: '/vault.html' },
           { label: 'AssemblΩr', href: '/editor.html' },
           { label: 'ReviewΩr', href: '/reviewr.html' },
+          { label: 'ClipsΩr',  href: '/clipsr.html' },
           { label: 'ComposΩr', href: '/composor.html' },
         ]
       },

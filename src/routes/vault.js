@@ -163,10 +163,35 @@ router.patch('/footage/bulk-assign', (req, res) => {
 
 // ─────────────────────────────────────────────
 // PATCH /api/vault/footage/:id — update fields
+// If shot_type → completed-video and footage is linked to a project,
+// auto-propagate: mark project editor_state = picture_lock, advance
+// pipeline stage to distribution-ready, and note the completed video.
 // ─────────────────────────────────────────────
 router.patch('/footage/:id', (req, res) => {
   try {
-    db.updateFootage(parseInt(req.params.id), req.body);
+    const footageId = parseInt(req.params.id);
+    db.updateFootage(footageId, req.body);
+
+    // ── Auto-signal: completed-video tagged ──────────────────────────────
+    if (req.body.shot_type === 'completed-video') {
+      const clip = db.getFootageById(footageId);
+      const projectId = clip?.project_id;
+      if (projectId) {
+        const project = db.getProject(projectId);
+        if (project) {
+          // Mark editor done — picture lock
+          db.updateProjectEditorState(projectId, 'picture_lock');
+          // Advance pipeline to distribution stage if not already past it
+          const distStages = ['M1','M2','M3','M4','M5'];
+          const alreadyInDist = distStages.some(s => (project.current_stage || '').startsWith(s));
+          if (!alreadyInDist) {
+            db.updateProjectStage(projectId, 'M1');
+          }
+          console.log(`[VaultΩr] Auto-signal: footage ${footageId} tagged completed-video → project ${projectId} advanced to distribution (picture_lock)`);
+        }
+      }
+    }
+
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });

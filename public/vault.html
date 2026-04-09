@@ -1619,11 +1619,19 @@ async function saveClipEdits() {
       method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
     });
     if (res.ok) {
+      const wasCompleted = body.shot_type === 'completed-video' && currentClip.shot_type !== 'completed-video';
       Object.assign(currentClip, body);
       const idx = allFootage.findIndex(f => f.id === currentClip.id);
       if (idx >= 0) Object.assign(allFootage[idx], body);
       renderView(applyFilters(allFootage));
-      showToast('Changes saved', 'green');
+      if (wasCompleted && currentClip.project_id) {
+        const proj = allProjects.find(p => p.id === currentClip.project_id);
+        const projName = proj ? `"${proj.title}"` : 'the project';
+        showToast(`✓ Completed video detected — ${projName} advanced to distribution`, 'green');
+        setTimeout(() => showToast('Next: ClipsΩr → GateΩr → PackageΩr', 'green'), 1800);
+      } else {
+        showToast('Changes saved', 'green');
+      }
       closeModal();
     } else {
       const err = await res.json().catch(() => ({}));
