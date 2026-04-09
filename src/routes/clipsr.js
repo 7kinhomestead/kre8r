@@ -15,6 +15,7 @@ const router       = express.Router();
 const EventEmitter = require('events');
 const crypto       = require('crypto');
 
+const fs              = require('fs');
 const db                  = require('../db');
 const { transcribeFile }  = require('../vault/transcribe');
 const { analyzeForClips } = require('../vault/clipsr');
@@ -111,11 +112,20 @@ router.post('/analyze', async (req, res) => {
 
       if (existing && !force_retranscribe) {
         pushEvent(job, { stage: 'transcribe_skipped', message: 'Using existing transcript' });
-        // Load from stored text or path
+        // Prefer in-DB text, fall back to reading the JSON file from disk
         if (footage.transcript) {
           try { transcript = JSON.parse(footage.transcript); } catch (_) {
-            transcript = { segments: [{ start: 0, end: footage.duration || 0, text: footage.transcript }], text: footage.transcript };
+            // Plain text stored — wrap in minimal structure
+            transcript = { text: footage.transcript, segments: [{ start: 0, end: footage.duration || 0, text: footage.transcript }] };
           }
+        } else if (footage.transcript_path && fs.existsSync(footage.transcript_path)) {
+          try {
+            transcript = JSON.parse(fs.readFileSync(footage.transcript_path, 'utf8'));
+            // Also backfill the text column so future runs skip the file read
+            if (transcript.text && footage.id) {
+              db.updateFootage(footage.id, { transcript: transcript.text });
+            }
+          } catch (_) {}
         }
       }
 

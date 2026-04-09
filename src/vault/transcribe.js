@@ -291,8 +291,13 @@ async function transcribeFile(filePath, options = {}) {
     onProgress?.({ stage: 'transcribed', segments: transcript.segments.length, duration: transcript.duration });
 
     // Update DB if footageId provided
+    // transcript_path = full JSON on disk (for CutΩr / ClipsΩr word-level timing)
+    // transcript      = plain text (for semantic search, WritΩr, ComposΩr, downstream tools)
     if (footageId) {
-      db.updateFootage(footageId, { transcript_path: finalPath });
+      db.updateFootage(footageId, {
+        transcript_path: finalPath,
+        transcript:      transcript.text
+      });
     }
 
     return { ok: true, transcript_path: finalPath, ...transcript };
