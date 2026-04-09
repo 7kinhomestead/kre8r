@@ -225,6 +225,38 @@ router.put('/clips/:clip_id', (req, res) => {
   if (!id) return res.status(400).json({ error: 'Invalid clip_id' });
   try {
     db.updateViralClip(id, req.body);
+
+    // ── Content pattern accumulation ─────────────────────────────────────
+    // When a clip is approved, store its why_it_works in the rolling pattern
+    // library so NorthΩr, Id8Ωr, and WritΩr can learn from what works.
+    if (req.body.status === 'approved') {
+      try {
+        const clip = db.getViralClipById ? db.getViralClipById(id) : null;
+        const whyItWorks = clip?.why_it_works || req.body.why_it_works;
+        const hook       = clip?.hook         || req.body.hook || '';
+        const clipType   = clip?.clip_type    || req.body.clip_type || 'social';
+
+        if (whyItWorks) {
+          const stored   = db.getKv('clipsr_content_patterns');
+          const patterns = stored ? JSON.parse(stored) : { entries: [] };
+
+          patterns.entries.unshift({
+            hook,
+            clip_type:    clipType,
+            why_it_works: whyItWorks,
+            approved_at:  new Date().toISOString(),
+          });
+
+          // Rolling window — keep the 20 most recent approved clips
+          patterns.entries = patterns.entries.slice(0, 20);
+          db.setKv('clipsr_content_patterns', JSON.stringify(patterns));
+          console.log(`[ClipsΩr] Pattern stored — ${patterns.entries.length} total`);
+        }
+      } catch (patternErr) {
+        console.warn('[ClipsΩr] Pattern accumulation failed:', patternErr.message);
+      }
+    }
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

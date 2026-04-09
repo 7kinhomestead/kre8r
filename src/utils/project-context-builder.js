@@ -173,6 +173,24 @@ function buildWritrPromptContext(projectId) {
     } catch (_) {}
   }
 
+  // ClipsΩr content patterns — what has actually worked in Jason's real clips
+  try {
+    const db = getDb();
+    const stored = db.getKv('clipsr_content_patterns');
+    if (stored) {
+      const patterns = JSON.parse(stored);
+      const recent = (patterns.entries || []).slice(0, 5);
+      if (recent.length) {
+        lines.push('\n## WHAT HAS ACTUALLY WORKED (from approved ClipsΩr clips)');
+        lines.push('These are moments from real finished videos that Claude identified as highly shareable, and the creator approved. Write toward these structures.');
+        recent.forEach((e, i) => {
+          lines.push(`\n[${i + 1}] Hook: "${e.hook}"`);
+          lines.push(`Why it worked: ${e.why_it_works}`);
+        });
+      }
+    }
+  } catch (_) {}
+
   return lines.join('\n');
 }
 

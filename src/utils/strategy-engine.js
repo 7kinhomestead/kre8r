@@ -156,9 +156,16 @@ async function generateMonthlyStrategy(month, year) {
   const shows           = db.getAllShows ? db.getAllShows() : [];
   const goals           = db.getGoal(month, year);
 
+  // Load ClipsΩr content patterns — what's actually resonated with this audience
+  let clipsrPatterns = null;
+  try {
+    const stored = db.getKv('clipsr_content_patterns');
+    if (stored) clipsrPatterns = JSON.parse(stored);
+  } catch (_) {}
+
   const prompt = buildStrategyPrompt({
     creatorName, niche, followerSummary, contentAnglesText, profile,
-    pipelineData, publishingStats, shows, goals, month, year,
+    pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns,
   });
 
   // callClaude in src/utils/claude.js already strips fences and parses JSON
@@ -179,7 +186,7 @@ async function generateMonthlyStrategy(month, year) {
   return strategy;
 }
 
-function buildStrategyPrompt({ creatorName, niche, followerSummary, contentAnglesText, profile, pipelineData, publishingStats, shows, goals, month, year }) {
+function buildStrategyPrompt({ creatorName, niche, followerSummary, contentAnglesText, profile, pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns }) {
   const publishing = profile?.publishing || {};
   const cadence    = publishing.cadence || 'weekly';
 
@@ -220,7 +227,14 @@ ${showsBlock}
 
 THIS MONTH'S GOALS:
 ${goalsBlock}
-
+${(() => {
+  if (!clipsrPatterns?.entries?.length) return '';
+  const recent = clipsrPatterns.entries.slice(0, 4);
+  return `
+WHAT HAS ACTUALLY WORKED (from approved viral clips — real audience resonance data):
+${recent.map((e, i) => `${i + 1}. "${e.hook}" — ${e.why_it_works.slice(0, 200)}...`).join('\n')}
+Use this to ground strategy recommendations in proven patterns, not theory. Recommend content that builds on these structures.`;
+})()}
 Generate a complete strategy. Return ONLY valid JSON — no markdown, no extra text:
 {
   "top_priority": "The single most important content move to make first this month — be specific about topic/format",

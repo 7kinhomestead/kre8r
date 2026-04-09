@@ -2746,6 +2746,10 @@ function deleteViralClipsByFootage(footageId) {
   _run(`DELETE FROM viral_clips WHERE footage_id = ?`, [footageId]);
 }
 
+function getViralClipById(id) {
+  return db.prepare(`SELECT * FROM viral_clips WHERE id = ?`).get(id) || null;
+}
+
 function _debugViews() {
   // Total views by platform
   const byPlatform = db.prepare(`
@@ -2967,6 +2971,7 @@ module.exports = {
   clearRoomSession,
   // ClipsΩr
   insertViralClip,
+  getViralClipById,
   getViralClipsByFootage,
   updateViralClip,
   deleteViralClipsByFootage,

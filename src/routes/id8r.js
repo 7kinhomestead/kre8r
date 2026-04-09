@@ -292,6 +292,24 @@ router.post('/concepts', async (req, res) => {
       }
     } catch (_) {}
 
+    // ClipsΩr pattern library — real clips the creator approved, with reasoning
+    let clipsrBlock = '';
+    try {
+      const _db = require('../db');
+      const stored = _db.getKv('clipsr_content_patterns');
+      if (stored) {
+        const patterns = JSON.parse(stored);
+        const recent = (patterns.entries || []).slice(0, 4);
+        if (recent.length) {
+          clipsrBlock = `\n\nPROVEN CLIP MOMENTS (approved by creator — these structures resonate with this audience):\n`
+            + recent.map((e, i) =>
+                `${i + 1}. Hook: "${e.hook}" — ${e.why_it_works.slice(0, 180)}...`
+              ).join('\n')
+            + '\nWhen generating concepts, build toward moments like these — emotional-to-practical pivots, specific dollar amounts, relatable specificity that lands viscerally.';
+        }
+      }
+    } catch (_) {}
+
     const result = await callClaudeJSON(
       `You are Id8Ωr, a creative strategist for ${brand} (${followerSummary}, ${niche} content). Based on the conversation below, generate exactly 3 concept directions for the next video.
 
@@ -302,7 +320,7 @@ RULES:
 - Be specific to what was discussed, not generic. Match the creator's real voice: straight-talking, funny, real numbers, never corporate.
 
 CONTENT ANGLES:
-${anglesText}${intelligenceBlock}
+${anglesText}${intelligenceBlock}${clipsrBlock}
 
 Return ONLY valid JSON in this exact shape:
 {
