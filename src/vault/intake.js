@@ -275,9 +275,9 @@ function getVisionPrompt() {
   "quality_flag": "one of: hero, usable, review, discard",
   "quality_reason": "one sentence explaining the flag",
   "orientation": "one of: horizontal, vertical, square",
-  "subjects": ["array of specific searchable topics visible in the clip — animals, plants, structures, tools, people, locations, activities, objects. Be specific: 'goat' not 'animal', 'raised garden bed' not 'garden', 'fence post' not 'fence'. Include 3-8 tags."]
+  "subjects": ["array of searchable topics for this clip — mix of VISUAL subjects (what is seen: animals, plants, structures, tools, objects, locations) AND CONCEPTUAL topics (what is being done or discussed: 'cost breakdown', 'solar installation', 'water system', 'community building', 'homestead challenge', 'food preservation'). For talking-head clips, lean heavily on the conceptual topics you can infer from context. Be specific: 'goat' not 'animal', 'raised garden bed' not 'garden', 'off-grid water system' not 'plumbing'. Include 4-10 tags covering both what is seen and what is likely being discussed."]
 }
-Be specific in descriptions. 'Person talking in front of trees' is not useful. 'Creator in grey shirt speaking to camera, outdoor background with forest visible, good lighting' is useful.`;
+Be specific in descriptions. 'Person talking in front of trees' is not useful. 'Creator in grey shirt speaking to camera, outdoor background with forest visible, good lighting' is useful. For talking-head clips, note the topic being discussed if you can infer it from context clues (props, setting, on-screen text, expressions).`;
 }
 
 const SHOT_TYPE_ALIASES = {

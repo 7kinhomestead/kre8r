@@ -30,7 +30,8 @@ Columns:
   shot_type        TEXT     — one of: dialogue, talking-head, b-roll, action, completed-video, unusable, unclassified
   subcategory      TEXT     — one of: wide, medium, close-up, detail (b-roll only; NULL for others)
   description      TEXT     — 1-2 sentence content description from Claude Vision
-  subjects         TEXT     — JSON array of specific searchable topics (e.g. '["goat","water tank","kids"]')
+  subjects         TEXT     — JSON array of searchable topics (visual + conceptual, e.g. '["goat","water tank","off-grid water system","cost breakdown"]')
+  transcript       TEXT     — full spoken word transcript from Whisper (NULL if not yet transcribed)
   duration         REAL     — clip length in seconds
   resolution       TEXT     — e.g. "3840x2160", "1920x1080"
   codec            TEXT     — e.g. "h264", "hevc", "prores"
@@ -46,7 +47,8 @@ Your task: translate the user's natural language query into a SQLite WHERE claus
 
 Rules:
   - Return ONLY the WHERE clause body — no SELECT, no WHERE keyword, no semicolons
-  - Use LIKE with % wildcards for text searches on description, original_filename, subjects
+  - Use LIKE with % wildcards for text searches on description, original_filename, subjects, transcript
+  - Search transcript for spoken words: transcript LIKE '%money%' (works for talking-head clips that have been transcribed)
   - Use exact equality for shot_type, subcategory, quality_flag (they have fixed vocabularies)
   - Use CAST(duration AS INTEGER) for integer duration comparisons
   - Multiple conditions: use AND / OR with parentheses for clarity
@@ -75,6 +77,15 @@ Examples:
 
   Query: "short b-roll clips under 10 seconds, hero or usable"
   Response: shot_type = 'b-roll' AND duration < 10 AND quality_flag IN ('hero', 'usable')
+
+  Query: "clips about money or finances"
+  Response: (subjects LIKE '%money%' OR subjects LIKE '%financ%' OR subjects LIKE '%cost%' OR subjects LIKE '%budget%' OR description LIKE '%money%' OR description LIKE '%financ%' OR (transcript IS NOT NULL AND (transcript LIKE '%money%' OR transcript LIKE '%financ%')))
+
+  Query: "solar installation footage"
+  Response: (subjects LIKE '%solar%' OR description LIKE '%solar%' OR (transcript IS NOT NULL AND transcript LIKE '%solar%'))
+
+  Query: "clips where Jason talks about the community"
+  Response: shot_type = 'talking-head' AND (subjects LIKE '%community%' OR description LIKE '%community%' OR (transcript IS NOT NULL AND transcript LIKE '%community%'))
 `.trim();
 
 // ─────────────────────────────────────────────
