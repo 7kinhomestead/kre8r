@@ -16,6 +16,7 @@ const fs      = require('fs');
 const path    = require('path');
 const db      = require('../db');
 const { getCreatorContext } = require('../utils/creator-context');
+const { callClaude }        = require('../utils/claude');
 
 // ─── Video format helpers ──────────────────────────────────────────────────────
 
@@ -1425,6 +1426,152 @@ router.patch('/save-secrets-to-soul', (req, res) => {
 
     fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf8');
     res.json({ ok: true, saved: secrets.length, next_update_at: longformCount + 10 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /api/mirrr/evaluate-strategy ───────────────────────────────────────
+// Takes a past month's strategy, compares recommendations vs actual YouTube
+// performance, asks Claude to evaluate, stores calibrated results.
+// Body: { month: "03", year: 2026 }   (defaults to last month if omitted)
+
+router.post('/evaluate-strategy', async (req, res) => {
+  const now       = new Date();
+  // Default: evaluate last month
+  const lastMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+  const lastYear  = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const evalMonth = String(req.body?.month || lastMonth).padStart(2, '0');
+  const evalYear  = parseInt(req.body?.year  || lastYear, 10);
+
+  try {
+    // ── 1. Get the strategy report for that month ─────────────────────────────
+    const report = db.getLatestReport(evalMonth, evalYear);
+    if (!report) {
+      return res.status(404).json({ error: `No strategy report found for ${evalMonth}/${evalYear}. Generate a strategy for that month first.` });
+    }
+
+    let strategyContent;
+    try { strategyContent = JSON.parse(report.content); }
+    catch { strategyContent = report.content; }
+
+    // ── 2. Get videos actually published in that month ───────────────────────
+    const videos = db.getVideosByMonth(evalMonth, evalYear);
+    const monthName = new Date(evalYear, parseInt(evalMonth) - 1, 1)
+      .toLocaleString('default', { month: 'long' });
+
+    // ── 3. Get past evaluations for context ──────────────────────────────────
+    const pastEvals = db.getRecentEvaluations(2);
+
+    // ── 4. Build the evaluation prompt ──────────────────────────────────────
+    const { creatorName, brand } = getCreatorContext();
+
+    const videoBlock = videos.length > 0
+      ? videos.map(v => `- "${v.title}": ${Number(v.views).toLocaleString()} views, ${Number(v.likes).toLocaleString()} likes, ${Number(v.comments).toLocaleString()} comments${v.angle ? ` [angle: ${v.angle}]` : ''}`).join('\n')
+      : '(No YouTube performance data found for this period — YouTube sync may not have run yet)';
+
+    const strategyBlock = typeof strategyContent === 'object'
+      ? [
+          strategyContent.top_priority ? `TOP PRIORITY: ${strategyContent.top_priority}` : '',
+          strategyContent.why_this_mix ? `STRATEGIC LOGIC: ${strategyContent.why_this_mix}` : '',
+          Array.isArray(strategyContent.recommended_mix)
+            ? `RECOMMENDED MIX:\n${strategyContent.recommended_mix.map(m => `  - ${m.count}x ${m.type}: ${m.reason}`).join('\n')}`
+            : '',
+          strategyContent.avoid_this_month ? `AVOID: ${strategyContent.avoid_this_month}` : '',
+        ].filter(Boolean).join('\n\n')
+      : String(strategyContent || '(strategy not parsed)');
+
+    const pastEvalBlock = pastEvals.length > 0
+      ? '\n\nPAST EVALUATIONS FOR CALIBRATION:\n' + pastEvals.map(e => {
+          try {
+            const ev = JSON.parse(e.evaluation);
+            return `- ${e.month}/${e.year}: Score ${ev.overall_accuracy_score}/10 — ${ev.one_line}`;
+          } catch { return `- ${e.month}/${e.year}: (parse error)`; }
+        }).join('\n')
+      : '';
+
+    const prompt = `You are MirrΩr, a self-correcting strategy evaluator for ${creatorName} at ${brand}.
+
+Your job: evaluate how accurate last month's strategy was, so future strategies can be better calibrated. Be honest and specific. This is the system learning from evidence, not a feel-good recap.
+
+## ${monthName.toUpperCase()} ${evalYear} — WHAT WAS RECOMMENDED
+
+${strategyBlock}
+
+## WHAT ACTUALLY HAPPENED (YouTube performance data)
+
+${videoBlock}
+
+${pastEvalBlock}
+
+## YOUR TASK
+
+Evaluate the strategy's accuracy against actual results. Did the recommendations reflect what actually worked? Were the angles called correctly? What should be weighted differently going forward?
+
+Return ONLY valid JSON — no markdown, no code fences, no explanation:
+
+{
+  "month": "${evalMonth}",
+  "year": ${evalYear},
+  "videos_published_count": ${videos.length},
+  "total_views_this_month": ${videos.reduce((sum, v) => sum + (Number(v.views) || 0), 0)},
+  "avg_views_per_video": ${videos.length > 0 ? Math.round(videos.reduce((sum, v) => sum + (Number(v.views) || 0), 0) / videos.length) : 0},
+  "recommendation_accuracy": [
+    {
+      "recommendation": "what was recommended",
+      "followed": true,
+      "result": "what happened — with actual view numbers where available",
+      "weight_adjustment": "UP | DOWN | NEUTRAL",
+      "reason": "why this should be weighted differently"
+    }
+  ],
+  "overall_accuracy_score": 7,
+  "what_worked": "One paragraph — what the strategy got right",
+  "what_missed": "One paragraph — where the strategy was wrong or incomplete",
+  "calibration_notes": "One paragraph — specific instructions for how to weight future recommendations differently based on this evidence",
+  "one_line": "Terse summary — score/10 and most important insight (e.g. '7/10 — financial angle delivered 2x avg views; lifestyle recommendation ignored')"
+}`;
+
+    // ── 5. Ask Claude ────────────────────────────────────────────────────────
+    let evaluation;
+    try {
+      evaluation = await callClaude(prompt, 2048);
+    } catch (err) {
+      return res.status(500).json({ error: `Claude API error: ${err.message}` });
+    }
+
+    if (!evaluation || typeof evaluation !== 'object') {
+      return res.status(500).json({ error: 'Claude returned unexpected format', raw: String(evaluation).slice(0, 200) });
+    }
+
+    // ── 6. Store evaluation back on the strategy report ──────────────────────
+    db.saveStrategyEvaluation(report.id, evaluation);
+
+    // Also cache in kv_store for quick access from NorthΩr / strategy prompts
+    const cacheKey = `strategy_eval_${evalYear}_${evalMonth}`;
+    db.setKv(cacheKey, JSON.stringify(evaluation));
+
+    res.json({ ok: true, report_id: report.id, evaluation });
+
+  } catch (err) {
+    console.error('[mirrr/evaluate-strategy]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /api/mirrr/evaluations ──────────────────────────────────────────────
+// Returns the N most recent strategy evaluations (for NorthΩr display)
+
+router.get('/evaluations', (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 6, 12);
+    const rows  = db.getRecentEvaluations(limit);
+    const evals = rows.map(r => {
+      let ev = null;
+      try { ev = JSON.parse(r.evaluation); } catch { ev = null; }
+      return { report_id: r.id, month: r.month, year: r.year, evaluated_at: r.evaluated_at, evaluation: ev };
+    });
+    res.json({ evaluations: evals });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

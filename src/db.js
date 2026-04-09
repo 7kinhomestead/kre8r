@@ -706,6 +706,17 @@ function runMigrations() {
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_viral_clips_footage ON viral_clips(footage_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_viral_clips_status  ON viral_clips(status)');
+
+  // MirrΩr self-evaluation — strategy_reports gets evaluation columns
+  const stratCols = db.pragma('table_info(strategy_reports)').map(r => r.name);
+  if (!stratCols.includes('evaluation')) {
+    db.exec('ALTER TABLE strategy_reports ADD COLUMN evaluation TEXT');
+    console.log('[DB] Migration: added strategy_reports.evaluation');
+  }
+  if (!stratCols.includes('evaluated_at')) {
+    db.exec('ALTER TABLE strategy_reports ADD COLUMN evaluated_at DATETIME');
+    console.log('[DB] Migration: added strategy_reports.evaluated_at');
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -2560,6 +2571,56 @@ function getLatestReport(month, year) {
   return _get(`SELECT * FROM strategy_reports ORDER BY created_at DESC`);
 }
 
+function saveStrategyEvaluation(id, evaluationJson) {
+  _run(
+    `UPDATE strategy_reports SET evaluation = ?, evaluated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [JSON.stringify(evaluationJson), id]
+  );
+}
+
+// Returns the N most recent strategy reports that have been evaluated (have evaluation column set)
+function getRecentEvaluations(limit = 3) {
+  return _all(
+    `SELECT id, month, year, content, evaluation, evaluated_at
+     FROM strategy_reports
+     WHERE evaluation IS NOT NULL
+     ORDER BY evaluated_at DESC
+     LIMIT ?`,
+    [limit]
+  );
+}
+
+// Returns videos published in a given month+year window with their view counts
+function getVideosByMonth(month, year) {
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  // End of that month: use start of next month
+  const nextMonth = parseInt(month) === 12 ? 1 : parseInt(month) + 1;
+  const nextYear  = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
+  const endDate   = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+  return _all(
+    `SELECT pr.id, pr.title, pr.topic, pr.angle,
+            po.posted_at, po.url, po.format,
+            COALESCE((
+              SELECT SUM(a.metric_value) FROM analytics a
+              WHERE a.post_id = po.id AND a.metric_name = 'views'
+            ), 0) as views,
+            COALESCE((
+              SELECT SUM(a.metric_value) FROM analytics a
+              WHERE a.post_id = po.id AND a.metric_name = 'likes'
+            ), 0) as likes,
+            COALESCE((
+              SELECT SUM(a.metric_value) FROM analytics a
+              WHERE a.post_id = po.id AND a.metric_name = 'comment_count'
+            ), 0) as comments
+     FROM projects pr
+     JOIN posts po ON po.project_id = pr.id AND po.platform = 'youtube'
+     WHERE po.posted_at >= ? AND po.posted_at < ?
+       AND pr.source != 'youtube_import'
+     ORDER BY po.posted_at ASC`,
+    [startDate, endDate]
+  );
+}
+
 function getPublishingStats(days = 30) {
   // ── Read from posts table — the single source of truth for published content ──
   // Excludes youtube_import archive (historical bulk import — not current cadence).
@@ -2989,6 +3050,9 @@ module.exports = {
   dismissAlert,
   createStrategyReport,
   getLatestReport,
+  saveStrategyEvaluation,
+  getRecentEvaluations,
+  getVideosByMonth,
   getPublishingStats,
   getPipelineHealth,
 };

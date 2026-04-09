@@ -163,9 +163,16 @@ async function generateMonthlyStrategy(month, year) {
     if (stored) clipsrPatterns = JSON.parse(stored);
   } catch (_) {}
 
+  // Load MirrΩr self-evaluations — calibrate strategy based on what was actually accurate
+  let pastEvaluations = [];
+  try {
+    pastEvaluations = db.getRecentEvaluations(3);
+  } catch (_) {}
+
   const prompt = buildStrategyPrompt({
     creatorName, niche, followerSummary, contentAnglesText, profile,
     pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns,
+    pastEvaluations,
   });
 
   // callClaude in src/utils/claude.js already strips fences and parses JSON
@@ -186,7 +193,7 @@ async function generateMonthlyStrategy(month, year) {
   return strategy;
 }
 
-function buildStrategyPrompt({ creatorName, niche, followerSummary, contentAnglesText, profile, pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns }) {
+function buildStrategyPrompt({ creatorName, niche, followerSummary, contentAnglesText, profile, pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns, pastEvaluations }) {
   const publishing = profile?.publishing || {};
   const cadence    = publishing.cadence || 'weekly';
 
@@ -234,6 +241,27 @@ ${(() => {
 WHAT HAS ACTUALLY WORKED (from approved viral clips — real audience resonance data):
 ${recent.map((e, i) => `${i + 1}. "${e.hook}" — ${e.why_it_works.slice(0, 200)}...`).join('\n')}
 Use this to ground strategy recommendations in proven patterns, not theory. Recommend content that builds on these structures.`;
+})()}
+${(() => {
+  if (!pastEvaluations?.length) return '';
+  const lines = pastEvaluations.map(r => {
+    try {
+      const ev = JSON.parse(r.evaluation);
+      const adjLines = (ev.recommendation_accuracy || [])
+        .filter(a => a.weight_adjustment && a.weight_adjustment !== 'NEUTRAL')
+        .map(a => `    • ${a.recommendation}: weight ${a.weight_adjustment} — ${a.reason}`)
+        .join('\n');
+      return [
+        `${r.month}/${r.year} — Score ${ev.overall_accuracy_score}/10 — ${ev.one_line}`,
+        ev.calibration_notes ? `  Calibration: ${ev.calibration_notes}` : '',
+        adjLines ? `  Weight adjustments:\n${adjLines}` : ''
+      ].filter(Boolean).join('\n');
+    } catch { return `${r.month}/${r.year}: (evaluation data unavailable)`; }
+  }).join('\n\n');
+  return `
+MIRR Ωr SELF-EVALUATION — PAST STRATEGY ACCURACY (use to calibrate this month's recommendations):
+${lines}
+IMPORTANT: Weight your recommendations based on this evidence. What worked → double down. What missed → reduce or cut. This is the system learning from its own track record.`;
 })()}
 Generate a complete strategy. Return ONLY valid JSON — no markdown, no extra text:
 {
