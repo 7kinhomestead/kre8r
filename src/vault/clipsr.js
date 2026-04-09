@@ -79,24 +79,16 @@ async function analyzeForClips({ transcript, footageMeta, onProgress }) {
 
   const prompt = buildClipsPrompt({ transcript, footageMeta });
 
-  let raw;
+  // callClaude already parses the JSON response — analysis is a plain object
+  let analysis;
   try {
-    raw = await callClaude(prompt, 4096);
+    analysis = await callClaude(prompt, 4096);
   } catch (err) {
     return { ok: false, error: `Claude API error: ${err.message}` };
   }
 
-  // Parse JSON
-  let analysis;
-  try {
-    const match = raw.match(/\{[\s\S]*\}/);
-    analysis = JSON.parse(match ? match[0] : raw);
-  } catch (_) {
-    return { ok: false, error: 'Claude returned unparseable JSON', raw: raw.slice(0, 500) };
-  }
-
-  if (!Array.isArray(analysis.clips)) {
-    return { ok: false, error: 'No clips array in response', raw: raw.slice(0, 500) };
+  if (!analysis || !Array.isArray(analysis.clips)) {
+    return { ok: false, error: 'No clips array in Claude response', raw: JSON.stringify(analysis).slice(0, 500) };
   }
 
   return {
