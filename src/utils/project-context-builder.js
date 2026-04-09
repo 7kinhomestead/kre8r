@@ -4,6 +4,12 @@
 const path = require('path');
 const { saveVaultData, getVaultData, getVaultPath } = require('./project-vault');
 
+let _db;
+function getDb() {
+  if (!_db) _db = require('../db');
+  return _db;
+}
+
 function loadContext(projectId) {
   const vaultPath = getVaultPath(projectId, 'project-context.json');
   console.log('[Context] Looking for vault at:', vaultPath);
@@ -136,6 +142,35 @@ function buildWritrPromptContext(projectId) {
         lines.push(`Sentence patterns:\n${soul.sentence_patterns.slice(0, 3).map(p => `- ${p}`).join('\n')}`);
       }
     }
+  }
+
+  // Rock Rich Format Profile injection
+  if (ctx.story_structure === 'rock_rich') {
+    try {
+      const db = getDb();
+      const stored = db.getKv('format_profile_rock_rich');
+      if (stored) {
+        const profile = JSON.parse(stored);
+        lines.push('\n## ROCK RICH FORMAT PROFILE');
+        lines.push(`Show: ${profile.show_name} — ${profile.tagline}`);
+        lines.push(`Narrative spine: ${profile.narrative_spine}`);
+        lines.push(`Tone: ${profile.tone}`);
+        if (profile.opening_rule) lines.push(`Opening rule: ${profile.opening_rule}`);
+        if (profile.tension_mechanism) lines.push(`Tension mechanism: ${profile.tension_mechanism}`);
+        if (profile.rock_rich_thesis) lines.push(`Rock Rich thesis: ${profile.rock_rich_thesis}`);
+        if (profile.what_it_never_is) lines.push(`What it NEVER is: ${profile.what_it_never_is}`);
+        if (Array.isArray(profile.hooks_that_work) && profile.hooks_that_work.length) {
+          lines.push(`Hooks that work:\n${profile.hooks_that_work.map(h => `- ${h}`).join('\n')}`);
+        }
+        if (profile.character_roles) {
+          const roles = profile.character_roles;
+          lines.push(`Character roles:\n- Jason: ${roles.jason}\n- Cari: ${roles.cari}\n- Environment: ${roles.environment}`);
+        }
+        if (Array.isArray(profile.episode_examples) && profile.episode_examples.length) {
+          lines.push(`Episode examples analyzed: ${profile.episode_examples.map(e => e.title).join(', ')}`);
+        }
+      }
+    } catch (_) {}
   }
 
   return lines.join('\n');

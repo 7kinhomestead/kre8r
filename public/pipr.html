@@ -428,6 +428,16 @@
     </div>
 
     <div class="structure-grid">
+      <div class="structure-card" id="scard-rock_rich" onclick="selectStructure('rock_rich')">
+        <div class="structure-card-top"><div class="structure-card-icon">⛏️</div></div>
+        <div class="structure-card-title">ROCK RICH EPISODE</div>
+        <div class="structure-card-desc">7 beats. Gold Rush meets How the Universe Works. The land always fights back.</div>
+        <div class="structure-card-meta"><span>Best for:</span> Rock Rich Series episodes, short doc format</div>
+        <details class="structure-card-details" onclick="event.stopPropagation()">
+          <summary>Retention mechanism</summary>
+          <div class="structure-card-retention">The environment as antagonist creates guaranteed tension. Viewers stay because they don't know if Jason wins — and Rock Rich doesn't always win.</div>
+        </details>
+      </div>
       <div class="structure-card" id="scard-save_the_cat" onclick="selectStructure('save_the_cat')">
         <div class="structure-card-top"><div class="structure-card-icon">🐱</div></div>
         <div class="structure-card-title">SAVE THE CAT</div>
@@ -1057,6 +1067,15 @@ const BEAT_TEMPLATES = {
     {index:13, name:"Break into Three",    target_pct:80, emotional_function:"The solution appears.", reality_note:"What changed? The insight or fix."},
     {index:14, name:"Finale",              target_pct:80, emotional_function:"Execute the solution. Everything comes together.", reality_note:"The resolution."},
     {index:15, name:"Final Image",         target_pct:99, emotional_function:"The world as it is now. Mirror of the Opening Image.", reality_note:"Where are you now vs. where you started?"}
+  ],
+  rock_rich: [
+    {index:1, name:"Cold Open",          target_pct:0,  emotional_function:"Drop in mid-action. The problem is already visible. No setup, no 'hey guys'. Discovery Channel style.", reality_note:"What is physically happening at the start? What's the visual moment of tension?"},
+    {index:2, name:"The Mission",        target_pct:8,  emotional_function:"State the goal for this episode clearly and simply. One sentence.", reality_note:"What are you trying to accomplish today? State it like you're telling a neighbor."},
+    {index:3, name:"Land Fights Back",   target_pct:22, emotional_function:"First obstacle. The environment, the weather, the land — something pushes back. It's never personal. It's just more powerful than any plan.", reality_note:"What was the first thing that didn't go as expected? What did reality throw at you?"},
+    {index:4, name:"Adapt & Escalate",   target_pct:40, emotional_function:"Resourcefulness as the superpower. Show the thinking, the improvisation, the trial and error. The problem may get bigger or weirder.", reality_note:"What did you try? What worked, what didn't? What made it stranger? Show the actual process."},
+    {index:5, name:"The Crisis",         target_pct:60, emotional_function:"Worst moment. Genuine uncertainty. Will this resolve at all? The viewer needs to wonder.", reality_note:"When did it feel most impossible? What was the exact moment of maximum doubt?"},
+    {index:6, name:"Resolution",         target_pct:78, emotional_function:"The actual outcome — win, partial win, or honest fail. All three are valid Rock Rich episodes. Honest result over clean ending.", reality_note:"What actually happened? Did it work? Partially? What's the real, unvarnished outcome?"},
+    {index:7, name:"Rock Rich Thesis",   target_pct:92, emotional_function:"Zoom out. What does this mean beyond this episode? The land as teacher. Resourcefulness as a way of life. The reason this show exists.", reality_note:"What did this experience prove about living this way? What would someone watching learn beyond the practical?"}
   ],
   story_circle: [
     {index:1, name:"You",    target_pct:0,  emotional_function:"Establish the hero in their comfort zone.", reality_note:"Who are you and what is normal right now?"},
