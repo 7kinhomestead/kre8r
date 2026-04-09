@@ -160,7 +160,10 @@ def run(args):
 
         tl_name     = safe_timeline_name(rank, clip_type, hook)
         start_frame = seconds_to_frames(start_s, fps)
-        end_frame   = seconds_to_frames(end_s, fps)
+        # Add 1.5s buffer: Whisper timestamps end at the last phoneme.
+        # Without buffer, DaVinci cuts on the final syllable. 1.5s gives
+        # the sentence room to land before the cut.
+        end_frame   = seconds_to_frames(end_s + 1.5, fps)
 
         print(f"[resolve] Creating timeline: {tl_name} [{start_frame}→{end_frame}]", file=sys.stderr)
 

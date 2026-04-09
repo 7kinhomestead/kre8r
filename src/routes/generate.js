@@ -121,12 +121,40 @@ Generate exactly 5 packages. Each must be a distinct angle — not variations of
       }
     }
 
+    // Inject ClipsΩr approved viral clips — the strongest moments Claude identified
+    // and the creator approved. Takes priority over CutΩr for completed-video workflow.
+    if (project_id) {
+      const viralClips = db.getApprovedViralClipsByProject(parseInt(project_id));
+      if (viralClips.length > 0) {
+        userPrompt += `\nCLIPSΩR ANALYSIS — CREATOR-APPROVED VIRAL MOMENTS:\n`;
+        userPrompt += `These are the exact moments the creator approved as the strongest clips for short-form distribution. Each hook was written to stop a scroll in the first 3 seconds. Build packages around these — they represent the real emotional and informational peaks of the video:\n\n`;
+        viralClips.forEach((clip, i) => {
+          userPrompt += `[CLIP ${i + 1} — Rank #${clip.rank} — ${(clip.clip_type || 'social').toUpperCase()}]\n`;
+          userPrompt += `Hook: "${clip.hook}"\n`;
+          if (clip.why_it_works) userPrompt += `Why it works: ${clip.why_it_works}\n`;
+          if (clip.caption)      userPrompt += `Approved caption: ${clip.caption}\n`;
+          if (clip.hashtags)     userPrompt += `Hashtags: ${clip.hashtags}\n`;
+          userPrompt += '\n';
+        });
+      }
+    }
+
     // Inject approved WritΩr script if available — gives PackageΩr the actual script content
     if (project_id) {
       const script = db.getApprovedWritrScript(parseInt(project_id));
       const scriptText = script?.generated_script || script?.full_script || '';
       if (scriptText) {
         userPrompt += `\nAPPROVED SCRIPT:\n${scriptText}\n`;
+      }
+    }
+
+    // Inject transcript from completed-video footage — best context for finished videos
+    // that went through ClipsΩr rather than the WritΩr scripted workflow
+    if (project_id) {
+      const footage = db.getCompletedFootageByProject(parseInt(project_id));
+      if (footage?.transcript) {
+        // First 2000 chars of transcript gives Claude the actual spoken content
+        userPrompt += `\nVIDEO TRANSCRIPT (first 2000 chars):\n${footage.transcript.slice(0, 2000)}\n`;
       }
     }
 

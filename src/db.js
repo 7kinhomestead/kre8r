@@ -2820,6 +2820,29 @@ function getViralClipsByFootage(footageId) {
   return _all(`SELECT * FROM viral_clips WHERE footage_id = ? ORDER BY rank ASC`, [footageId]);
 }
 
+// Returns approved viral clips for a project — used by PackageΩr and MailΩr
+// to inject the strongest moments + reasoning into downstream generation prompts.
+function getApprovedViralClipsByProject(projectId) {
+  return _all(
+    `SELECT vc.*, f.transcript
+     FROM viral_clips vc
+     LEFT JOIN footage f ON f.id = vc.footage_id
+     WHERE vc.project_id = ? AND vc.status = 'approved'
+     ORDER BY vc.rank ASC`,
+    [projectId]
+  );
+}
+
+// Returns the completed-video footage for a project (for transcript injection)
+function getCompletedFootageByProject(projectId) {
+  return _get(
+    `SELECT * FROM footage
+     WHERE project_id = ? AND shot_type = 'completed-video'
+     ORDER BY created_at DESC LIMIT 1`,
+    [projectId]
+  );
+}
+
 function updateViralClip(id, fields) {
   const allowed = ['hook', 'caption', 'hashtags', 'why_it_works', 'status', 'rank', 'platform_fit'];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
@@ -3061,6 +3084,8 @@ module.exports = {
   insertViralClip,
   getViralClipById,
   getViralClipsByFootage,
+  getApprovedViralClipsByProject,
+  getCompletedFootageByProject,
   updateViralClip,
   deleteViralClipsByFootage,
   // Diagnostics

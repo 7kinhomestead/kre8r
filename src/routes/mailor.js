@@ -190,6 +190,25 @@ RULES:
         const scriptText = script?.generated_script || script?.full_script || '';
         if (scriptText)          userPrompt += `Script (first 500 chars): ${scriptText.slice(0, 500)}\n`;
       }
+
+      // ClipsΩr approved viral clips — these hooks are the proven scroll-stoppers.
+      // Use the #1 ranked hook as the anchor for email subject line A/B testing.
+      const viralClips = db.getApprovedViralClipsByProject(parseInt(project_id));
+      if (viralClips.length > 0) {
+        userPrompt += `\nCLIPSΩR APPROVED HOOKS (strongest moments from the video — lead with these):\n`;
+        viralClips.slice(0, 3).forEach((clip, i) => {
+          userPrompt += `[Clip ${i + 1}${clip.clip_type === 'gold' ? ' — GOLD' : ''}] Hook: "${clip.hook}"\n`;
+          if (clip.why_it_works) userPrompt += `  Why it works: ${clip.why_it_works.slice(0, 200)}\n`;
+          if (clip.caption)      userPrompt += `  Caption: ${clip.caption.slice(0, 150)}\n`;
+        });
+        userPrompt += `\nThe #1 hook above should heavily influence at least one of the email subject lines. These hooks were approved by the creator — they represent what he believes is genuinely shareable.\n`;
+      }
+
+      // Transcript from completed-video footage
+      const footage = db.getCompletedFootageByProject(parseInt(project_id));
+      if (footage?.transcript) {
+        userPrompt += `\nVIDEO TRANSCRIPT (first 1000 chars for context):\n${footage.transcript.slice(0, 1000)}\n`;
+      }
     }
 
     userPrompt += `\nReturn JSON only:\n{\n  "segment": "${segment || 'everyone'}",\n  "version_a": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  },\n  "version_b": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  }\n}`;
