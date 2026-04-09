@@ -182,4 +182,155 @@ router.post('/projects/:id/mark-published', (req, res) => {
   }
 });
 
+// ─── POST /growth-plan — back-engineer a 3-month trajectory plan (SSE) ────────
+// Body: { targets: { yt_subscribers, avg_views_per_video, videos_per_month, monthly_revenue } }
+// Reads current state from DB, asks Claude to bridge the gap with month-by-month milestones.
+
+router.post('/growth-plan', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+  try {
+    const { targets = {} } = req.body;
+
+    send('status', { message: 'Reading your current state…' });
+
+    const { callClaude }    = require('../utils/claude');
+    const { getCreatorContext } = require('../utils/creator-context');
+
+    const { creatorName, brand, niche, followerSummary, contentAnglesText, profile } = getCreatorContext();
+    const health   = db.getGlobalChannelHealth();
+    const stats    = db.getPublishingStats(90);
+    const pipeline = db.getPipelineHealth();
+    const evals    = db.getRecentEvaluations(3);
+    const structPerf = db.getStructurePerformance();
+
+    // Eval summary for context
+    const evalSummary = evals.length
+      ? evals.map(e => {
+          try {
+            const ev = JSON.parse(e.evaluation);
+            return `${e.month}/${e.year}: ${ev.one_line}`;
+          } catch { return null; }
+        }).filter(Boolean).join(' | ')
+      : null;
+
+    const structSummary = structPerf.length
+      ? structPerf.slice(0, 3).map(s => `${s.story_structure}: avg ${Number(s.avg_views).toLocaleString()} views (${s.video_count} videos)`).join(', ')
+      : null;
+
+    // Publishing cadence from profile
+    const cadence = profile?.publishing?.cadence || 'weekly';
+
+    send('status', { message: 'Back-engineering your 3-month trajectory…' });
+
+    const prompt = `You are NorthΩr, the strategic growth engine for ${creatorName} at ${brand} — a ${niche} creator.
+
+## CURRENT STATE (right now)
+
+- Channel: ${followerSummary}
+- YouTube avg views per video (all-time): ${Math.round(health.avg_views || 0).toLocaleString()}
+- YouTube total views: ${Number(health.total_views || 0).toLocaleString()}
+- Best video: ${health.best_video ? `"${health.best_video.title}" — ${Number(health.best_video.views).toLocaleString()} views` : 'unknown'}
+- Publishing cadence: ${cadence} (goal)
+- Days since last publish: ${stats.days_since_last_publish === 999 ? 'unknown' : stats.days_since_last_publish}
+- Videos published last 90 days: ${stats.videos_last_month + stats.videos_this_month}
+- Pipeline: ${pipeline.in_pre_production} in pre-production, ${pipeline.in_production} in production, ${pipeline.in_post} in post
+${evalSummary ? `- MirrΩr recent evaluation: ${evalSummary}` : ''}
+${structSummary ? `- Top story structures by views: ${structSummary}` : ''}
+
+## 3-MONTH TARGETS (what the creator wants to achieve)
+
+${Object.keys(targets).length > 0
+  ? Object.entries(targets).map(([k, v]) => `- ${k}: ${v}`).join('\n')
+  : '(No specific targets set — infer ambitious but realistic targets based on current trajectory and industry benchmarks for a channel at this stage)'
+}
+
+## YOUR TASK
+
+Back-engineer a specific, actionable 3-month growth plan that bridges the gap between current state and targets. Be brutally specific — no generic advice. Every recommendation should reference the actual numbers above.
+
+The plan must be realistic given:
+- This is a solo creator (Jason) with a partner (Cari) who handles camera
+- Outdoor shoots only, no studio
+- Content angles: ${contentAnglesText.split('\n').slice(0,3).join(', ')}
+- The gap between targets and current state must be closed through content strategy, NOT just "post more"
+
+Return ONLY valid JSON:
+
+{
+  "targets_inferred": {
+    "yt_subscribers_in_3_months": 0,
+    "avg_views_per_video_in_3_months": 0,
+    "videos_per_month": 0,
+    "monthly_revenue_goal": "(if specified, else null)"
+  },
+  "gap_analysis": "2-3 sentences: what specifically needs to change to hit these targets. Be direct about whether targets are realistic.",
+  "non_negotiables": ["The 2-3 things that absolutely must happen every month regardless"],
+  "month_1": {
+    "theme": "One word or phrase that captures the month's strategic focus",
+    "target_videos": 0,
+    "target_avg_views": 0,
+    "key_actions": ["3-4 specific actions this month"],
+    "milestone": "What hitting the month-1 numbers unlocks for month 2",
+    "early_warning": "What to watch for that signals this month is off track"
+  },
+  "month_2": {
+    "theme": "",
+    "target_videos": 0,
+    "target_avg_views": 0,
+    "key_actions": [],
+    "milestone": "",
+    "early_warning": ""
+  },
+  "month_3": {
+    "theme": "",
+    "target_videos": 0,
+    "target_avg_views": 0,
+    "key_actions": [],
+    "milestone": "",
+    "early_warning": ""
+  },
+  "highest_leverage_move": "The single thing that, if done right in month 1, makes the rest of the plan much easier",
+  "biggest_risk": "The most likely reason this plan fails and how to prevent it",
+  "structure_recommendation": "Based on story structure performance data, which PipΩr structure should dominate this quarter and why"
+}`;
+
+    const plan = await callClaude(prompt, 3000);
+
+    if (!plan || plan.parse_error) {
+      send('error', { message: 'Could not parse growth plan. Try again.' });
+      res.end();
+      return;
+    }
+
+    // Cache it
+    db.setKv('growth_plan', JSON.stringify({ plan, generated_at: new Date().toISOString(), targets }));
+
+    send('complete', { plan });
+    res.end();
+
+  } catch (err) {
+    console.error('[northr/growth-plan]', err);
+    send('error', { message: err.message });
+    res.end();
+  }
+});
+
+// ─── GET /growth-plan — return cached plan ────────────────────────────────────
+router.get('/growth-plan', (req, res) => {
+  try {
+    const cached = db.getKv('growth_plan');
+    if (!cached) return res.json({ plan: null });
+    const { plan, generated_at, targets } = JSON.parse(cached);
+    res.json({ plan, generated_at, targets });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

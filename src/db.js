@@ -2571,6 +2571,33 @@ function getLatestReport(month, year) {
   return _get(`SELECT * FROM strategy_reports ORDER BY created_at DESC`);
 }
 
+// Returns avg/max/count views broken down by story_structure for all kre8r projects
+// with real YouTube performance data. PipΩr shows this as live performance badges.
+function getStructurePerformance() {
+  return _all(
+    `SELECT
+       pr.story_structure,
+       COUNT(DISTINCT pr.id)                      AS video_count,
+       ROUND(AVG(COALESCE(v.views, 0)))           AS avg_views,
+       MAX(COALESCE(v.views, 0))                  AS max_views,
+       SUM(COALESCE(v.views, 0))                  AS total_views
+     FROM projects pr
+     JOIN (
+       SELECT po.project_id, SUM(a.metric_value) AS views
+       FROM posts po
+       JOIN analytics a ON a.post_id = po.id
+       WHERE po.platform = 'youtube'
+         AND a.metric_name = 'views'
+       GROUP BY po.project_id
+     ) v ON v.project_id = pr.id
+     WHERE pr.story_structure IS NOT NULL
+       AND pr.source = 'kre8r'
+       AND pr.status != 'archived'
+     GROUP BY pr.story_structure
+     ORDER BY avg_views DESC`
+  );
+}
+
 function saveStrategyEvaluation(id, evaluationJson) {
   _run(
     `UPDATE strategy_reports SET evaluation = ?, evaluated_at = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -3050,6 +3077,7 @@ module.exports = {
   dismissAlert,
   createStrategyReport,
   getLatestReport,
+  getStructurePerformance,
   saveStrategyEvaluation,
   getRecentEvaluations,
   getVideosByMonth,

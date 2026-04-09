@@ -121,6 +121,9 @@
   .structure-card-details summary::after{content:'▸';font-size:9px;transition:transform 0.15s;}
   .structure-card-details[open] summary::after{transform:rotate(90deg);}
   .structure-card-retention{margin-top:6px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:5px;color:var(--text-dim);line-height:1.5;font-size:11px;}
+  .structure-perf-badge{margin-top:6px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;border-radius:20px;background:rgba(62,207,178,0.10);border:1px solid rgba(62,207,178,0.2);color:var(--teal);}
+  .structure-perf-badge.perf-top{background:rgba(62,207,178,0.18);border-color:rgba(62,207,178,0.5);}
+  .structure-perf-badge.perf-low{background:rgba(139,139,139,0.10);border-color:rgba(139,139,139,0.2);color:var(--text-dimmer);}
   /* Beat preview below grid */
   .structure-beat-preview{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px;}
   .structure-beat-preview-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
@@ -1752,6 +1755,40 @@ async function saveEditedStructure(pid) {
 
 // ── INIT ──
 updateStepIndicator(0);
+
+// ── Structure Performance Badges ─────────────────────────────────────────────
+// Fetches real YouTube avg views per story structure and injects a live
+// performance badge into each structure card. No data = no badge shown.
+(async function loadStructurePerformance() {
+  try {
+    const res  = await fetch('/api/pipr/structure-performance');
+    if (!res.ok) return;
+    const data = await res.json();
+    const perf = data.performance || {};
+
+    // Find the best avg_views so we can mark the top performer
+    const allAvgs = Object.values(perf).map(p => p.avg_views).filter(n => n > 0);
+    const topAvg  = allAvgs.length ? Math.max(...allAvgs) : 0;
+
+    for (const [structure, stats] of Object.entries(perf)) {
+      if (!stats.video_count || !stats.avg_views) continue;
+      const card = document.getElementById(`scard-${structure}`);
+      if (!card) continue;
+
+      const isTop = topAvg > 0 && stats.avg_views >= topAvg * 0.9;
+      const cls   = isTop ? 'structure-perf-badge perf-top' : stats.avg_views < topAvg * 0.5 ? 'structure-perf-badge perf-low' : 'structure-perf-badge';
+      const avgFmt = stats.avg_views >= 1000
+        ? (stats.avg_views / 1000).toFixed(1) + 'k'
+        : String(Math.round(stats.avg_views));
+
+      const badge = document.createElement('div');
+      badge.className = cls;
+      badge.innerHTML = `${isTop ? '⭐ ' : ''}avg ${avgFmt} views · ${stats.video_count} video${stats.video_count !== 1 ? 's' : ''}`;
+      badge.title = `${stats.video_count} video${stats.video_count !== 1 ? 's' : ''} using this structure · avg ${Number(stats.avg_views).toLocaleString()} views · best: ${Number(stats.max_views).toLocaleString()} views`;
+      card.appendChild(badge);
+    }
+  } catch (_) { /* non-fatal — badges are informational only */ }
+})();
 </script>
 <script src="/js/nav.js"></script>
 <script>initNav();</script>

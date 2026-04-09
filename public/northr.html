@@ -299,6 +299,172 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Growth Trajectory section ── */
+  .growth-target-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .growth-target-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    margin-bottom: 6px;
+  }
+  .growth-target-field input {
+    width: 100%;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 18px;
+    font-weight: 700;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .growth-target-field input:focus { border-color: var(--teal); }
+  .growth-target-field input::placeholder { color: var(--text-dimmer); font-weight: 400; }
+  .growth-month-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media(max-width: 640px) { .growth-month-grid { grid-template-columns: 1fr; } }
+  .growth-month-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .growth-month-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    margin-bottom: 6px;
+  }
+  .growth-month-theme {
+    font-family: var(--font-head);
+    font-size: 20px;
+    letter-spacing: 1px;
+    color: var(--teal);
+    margin-bottom: 10px;
+    line-height: 1.2;
+  }
+  .growth-month-targets {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .growth-month-target-item {
+    text-align: center;
+  }
+  .growth-month-target-num {
+    font-family: var(--font-head);
+    font-size: 22px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .growth-month-target-lbl {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    margin-top: 2px;
+  }
+  .growth-month-actions {
+    list-style: none;
+    margin-bottom: 10px;
+  }
+  .growth-month-actions li {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    gap: 6px;
+  }
+  .growth-month-actions li::before { content: '→'; color: var(--teal); flex-shrink: 0; }
+  .growth-month-milestone {
+    font-size: 11px;
+    color: var(--teal);
+    font-weight: 600;
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: var(--teal-glow);
+    border-radius: 4px;
+    line-height: 1.4;
+  }
+  .growth-month-warning {
+    font-size: 11px;
+    color: var(--amber);
+    margin-top: 6px;
+    padding: 5px 8px;
+    background: var(--amber-glow);
+    border-radius: 4px;
+    line-height: 1.4;
+  }
+  .growth-callout {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .growth-callout-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    margin-bottom: 6px;
+  }
+  .growth-callout-text {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .growth-callout.leverage { border-left: 3px solid var(--teal); }
+  .growth-callout.risk     { border-left: 3px solid var(--red); }
+  .growth-callout.structure { border-left: 3px solid var(--amber); }
+  .growth-non-neg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .growth-non-neg-item {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg-card-2);
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    padding: 5px 12px;
+  }
+  .gap-analysis {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    border-left: 2px solid var(--border-bright);
+    margin-bottom: 20px;
+  }
+
   /* ── MirrΩr self-evaluation section ── */
   .eval-card {
     background: var(--bg-card);
@@ -606,6 +772,42 @@
     </div>
   </div>
 
+  <!-- ── SECTION 2c: 3-Month Growth Trajectory ── -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">📈 3-MONTH TRAJECTORY</div>
+      <button class="btn btn-ghost" onclick="generateGrowthPlan()" id="growth-btn">Generate Plan →</button>
+    </div>
+
+    <!-- Target inputs -->
+    <div id="growth-targets-form" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:14px">WHERE DO YOU WANT TO BE IN 3 MONTHS?</div>
+      <div class="growth-target-grid">
+        <div class="growth-target-field">
+          <label>YouTube Subscribers</label>
+          <input type="text" id="gt-subs" placeholder="e.g. 65k">
+        </div>
+        <div class="growth-target-field">
+          <label>Avg Views / Video</label>
+          <input type="text" id="gt-views" placeholder="e.g. 50k">
+        </div>
+        <div class="growth-target-field">
+          <label>Videos / Month</label>
+          <input type="number" id="gt-vpm" placeholder="4" min="1" max="20">
+        </div>
+        <div class="growth-target-field">
+          <label>Monthly Revenue ($)</label>
+          <input type="text" id="gt-revenue" placeholder="optional">
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-dimmer);font-style:italic">Leave blank — Claude will infer realistic targets from your current trajectory.</div>
+    </div>
+
+    <div id="growth-plan-container">
+      <div class="empty-state">Set targets above (or leave blank) and hit Generate Plan. Claude back-engineers a month-by-month trajectory from where you are now to where you want to be.</div>
+    </div>
+  </div>
+
   <!-- ── SECTION 3: Monthly Goals ── -->
   <div class="section">
     <div class="section-head">
@@ -720,7 +922,7 @@
 let dashData = null;
 
 // ── Init ───────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => { loadDashboard(); loadEvaluations(); });
+document.addEventListener('DOMContentLoaded', () => { loadDashboard(); loadEvaluations(); loadGrowthPlan(); });
 
 async function loadDashboard() {
   try {
@@ -886,6 +1088,7 @@ function renderStrategy(s) {
       <div class="mix-count">${m.count}</div>
       <div class="mix-type">${esc(m.type)}</div>
       <div class="mix-reason">${esc(m.reason)}</div>
+      ${m.structure_hint ? `<div style="margin-top:6px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--teal);opacity:0.7">⚙ ${esc(m.structure_hint)}</div>` : ''}
     </div>`).join('');
 
   const weekHTML = (s.weekly_schedule || []).map(w => `
@@ -1118,6 +1321,138 @@ function toast(msg, type = 'success') {
   el.className = 'toast visible ' + type;
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('visible'), 3000);
+}
+
+// ── Growth Trajectory ─────────────────────────────────────────────────────────
+
+async function generateGrowthPlan() {
+  const btn       = document.getElementById('growth-btn');
+  const container = document.getElementById('growth-plan-container');
+  btn.disabled    = true;
+  btn.textContent = 'Planning…';
+
+  const targets = {};
+  const subs    = document.getElementById('gt-subs').value.trim();
+  const views   = document.getElementById('gt-views').value.trim();
+  const vpm     = document.getElementById('gt-vpm').value.trim();
+  const revenue = document.getElementById('gt-revenue').value.trim();
+  if (subs)    targets.yt_subscribers   = subs;
+  if (views)   targets.avg_views        = views;
+  if (vpm)     targets.videos_per_month = parseInt(vpm);
+  if (revenue) targets.monthly_revenue  = revenue;
+
+  container.innerHTML = `<div class="sse-status"><div class="spinner"></div><span id="growth-sse-msg">Back-engineering your trajectory…</span></div>`;
+
+  try {
+    const res = await fetch('/api/northr/growth-plan', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ targets }),
+    });
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let   buffer  = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        if (!part.trim()) continue;
+        const lines = part.split('\n');
+        let event = 'message', dataStr = '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) event = line.slice(7).trim();
+          if (line.startsWith('data: '))  dataStr = line.slice(6).trim();
+        }
+        if (!dataStr) continue;
+        const d = JSON.parse(dataStr);
+        if (event === 'status') {
+          const msgEl = document.getElementById('growth-sse-msg');
+          if (msgEl) msgEl.textContent = d.message;
+        } else if (event === 'complete') {
+          renderGrowthPlan(d.plan);
+          toast('3-month trajectory ready!', 'success');
+        } else if (event === 'error') {
+          container.innerHTML = `<div class="empty-state" style="color:var(--red)">⚠ ${esc(d.message)}</div>`;
+          toast('Generation failed', 'error');
+        }
+      }
+    }
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--red)">⚠ ${esc(e.message)}</div>`;
+    toast('Failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Regenerate →';
+  }
+}
+
+async function loadGrowthPlan() {
+  try {
+    const res  = await fetch('/api/northr/growth-plan');
+    const data = await res.json();
+    if (data.plan) {
+      renderGrowthPlan(data.plan);
+      // Restore target inputs
+      if (data.targets) {
+        if (data.targets.yt_subscribers)   document.getElementById('gt-subs').value    = data.targets.yt_subscribers;
+        if (data.targets.avg_views)        document.getElementById('gt-views').value   = data.targets.avg_views;
+        if (data.targets.videos_per_month) document.getElementById('gt-vpm').value     = data.targets.videos_per_month;
+        if (data.targets.monthly_revenue)  document.getElementById('gt-revenue').value = data.targets.monthly_revenue;
+      }
+      document.getElementById('growth-btn').textContent = 'Regenerate →';
+    }
+  } catch (_) {}
+}
+
+function renderGrowthPlan(p) {
+  const container = document.getElementById('growth-plan-container');
+  if (!p) { container.innerHTML = `<div class="empty-state">Plan data unavailable. Try regenerating.</div>`; return; }
+
+  const ti = p.targets_inferred || {};
+  const targetChips = [
+    ti.yt_subscribers_in_3_months   ? `${ti.yt_subscribers_in_3_months.toLocaleString()} YouTube subs` : null,
+    ti.avg_views_per_video_in_3_months ? `${ti.avg_views_per_video_in_3_months.toLocaleString()} avg views/video` : null,
+    ti.videos_per_month              ? `${ti.videos_per_month} videos/month` : null,
+    ti.monthly_revenue_goal && ti.monthly_revenue_goal !== 'null' ? `$${ti.monthly_revenue_goal}/month` : null,
+  ].filter(Boolean);
+
+  const monthHTML = ['month_1', 'month_2', 'month_3'].map((key, idx) => {
+    const m = p[key];
+    if (!m) return '';
+    const actions = (m.key_actions || []).map(a => `<li>${esc(a)}</li>`).join('');
+    return `
+      <div class="growth-month-card">
+        <div class="growth-month-label">Month ${idx + 1}</div>
+        <div class="growth-month-theme">${esc(m.theme || '')}</div>
+        <div class="growth-month-targets">
+          ${m.target_videos ? `<div class="growth-month-target-item"><div class="growth-month-target-num">${m.target_videos}</div><div class="growth-month-target-lbl">Videos</div></div>` : ''}
+          ${m.target_avg_views ? `<div class="growth-month-target-item"><div class="growth-month-target-num">${Number(m.target_avg_views).toLocaleString()}</div><div class="growth-month-target-lbl">Avg Views</div></div>` : ''}
+        </div>
+        ${actions ? `<ul class="growth-month-actions">${actions}</ul>` : ''}
+        ${m.milestone ? `<div class="growth-month-milestone">🎯 ${esc(m.milestone)}</div>` : ''}
+        ${m.early_warning ? `<div class="growth-month-warning">⚠ ${esc(m.early_warning)}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const nonNeg = (p.non_negotiables || []).map(n => `<div class="growth-non-neg-item">✓ ${esc(n)}</div>`).join('');
+
+  container.innerHTML = `
+    ${targetChips.length ? `
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);align-self:center">3-MONTH TARGETS →</div>
+        ${targetChips.map(t => `<div style="font-size:12px;font-weight:700;color:var(--teal);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.3);padding:4px 12px;border-radius:20px">${esc(t)}</div>`).join('')}
+      </div>` : ''}
+    ${p.gap_analysis ? `<div class="gap-analysis">${esc(p.gap_analysis)}</div>` : ''}
+    ${nonNeg ? `<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px">NON-NEGOTIABLES EVERY MONTH</div><div class="growth-non-neg">${nonNeg}</div>` : ''}
+    <div class="growth-month-grid">${monthHTML}</div>
+    ${p.highest_leverage_move ? `<div class="growth-callout leverage"><div class="growth-callout-label">🚀 Highest-Leverage Move (Month 1)</div><div class="growth-callout-text">${esc(p.highest_leverage_move)}</div></div>` : ''}
+    ${p.biggest_risk ? `<div class="growth-callout risk"><div class="growth-callout-label">🚨 Biggest Risk</div><div class="growth-callout-text">${esc(p.biggest_risk)}</div></div>` : ''}
+    ${p.structure_recommendation ? `<div class="growth-callout structure"><div class="growth-callout-label">⚙ PipΩr Structure Recommendation for This Quarter</div><div class="growth-callout-text">${esc(p.structure_recommendation)}</div></div>` : ''}
+  `;
 }
 
 // ── MirrΩr Self-Evaluation ─────────────────────────────────────────────────────

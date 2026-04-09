@@ -1463,12 +1463,23 @@ router.post('/evaluate-strategy', async (req, res) => {
     // ── 3. Get past evaluations for context ──────────────────────────────────
     const pastEvals = db.getRecentEvaluations(2);
 
+    // ── 3b. Get all-time structure performance for PipΩr calibration ─────────
+    const structurePerf = db.getStructurePerformance();
+
     // ── 4. Build the evaluation prompt ──────────────────────────────────────
     const { creatorName, brand } = getCreatorContext();
 
     const videoBlock = videos.length > 0
       ? videos.map(v => `- "${v.title}": ${Number(v.views).toLocaleString()} views, ${Number(v.likes).toLocaleString()} likes, ${Number(v.comments).toLocaleString()} comments${v.angle ? ` [angle: ${v.angle}]` : ''}`).join('\n')
       : '(No YouTube performance data found for this period — YouTube sync may not have run yet)';
+
+    const structureBlock = structurePerf.length > 0
+      ? '\n\n## ALL-TIME STORY STRUCTURE PERFORMANCE (across all kre8r videos)\n'
+        + structurePerf.map(s =>
+            `- ${s.story_structure}: ${s.video_count} video${s.video_count !== 1 ? 's' : ''} · avg ${Number(s.avg_views).toLocaleString()} views · best: ${Number(s.max_views).toLocaleString()} views`
+          ).join('\n')
+        + '\nInclude structure_performance in your evaluation JSON — which structures are outperforming others? Should PipΩr weight recommendations toward specific structures?'
+      : '';
 
     const strategyBlock = typeof strategyContent === 'object'
       ? [
@@ -1501,12 +1512,12 @@ ${strategyBlock}
 ## WHAT ACTUALLY HAPPENED (YouTube performance data)
 
 ${videoBlock}
-
+${structureBlock}
 ${pastEvalBlock}
 
 ## YOUR TASK
 
-Evaluate the strategy's accuracy against actual results. Did the recommendations reflect what actually worked? Were the angles called correctly? What should be weighted differently going forward?
+Evaluate the strategy's accuracy against actual results. Did the recommendations reflect what actually worked? Were the angles called correctly? Which story structures are outperforming others? What should be weighted differently going forward?
 
 Return ONLY valid JSON — no markdown, no code fences, no explanation:
 
@@ -1523,6 +1534,15 @@ Return ONLY valid JSON — no markdown, no code fences, no explanation:
       "result": "what happened — with actual view numbers where available",
       "weight_adjustment": "UP | DOWN | NEUTRAL",
       "reason": "why this should be weighted differently"
+    }
+  ],
+  "structure_performance": [
+    {
+      "structure": "save_the_cat",
+      "verdict": "top | strong | neutral | underperforming",
+      "avg_views": 45000,
+      "video_count": 3,
+      "pipr_recommendation": "One sentence — should PipΩr recommend this structure more, less, or for specific content types?"
     }
   ],
   "overall_accuracy_score": 7,

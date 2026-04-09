@@ -212,6 +212,31 @@ router.post('/create', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// GET /api/pipr/structure-performance
+// Returns avg views per structure for all kre8r projects with YouTube data.
+// PipΩr uses this to show live performance badges on structure cards.
+// ─────────────────────────────────────────────
+
+router.get('/structure-performance', (req, res) => {
+  try {
+    const rows = db.getStructurePerformance();
+    // Key by story_structure for easy O(1) lookup in the frontend
+    const byStructure = {};
+    for (const row of rows) {
+      byStructure[row.story_structure] = {
+        video_count: row.video_count,
+        avg_views:   row.avg_views,
+        max_views:   row.max_views,
+        total_views: row.total_views,
+      };
+    }
+    res.json({ ok: true, performance: byStructure, rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // GET /api/pipr/beats-preview?structure=save_the_cat
 // Returns beat template without creating a project
 // ─────────────────────────────────────────────

@@ -169,10 +169,16 @@ async function generateMonthlyStrategy(month, year) {
     pastEvaluations = db.getRecentEvaluations(3);
   } catch (_) {}
 
+  // Load structure performance data for PipΩr-aware strategy recommendations
+  let structurePerf = [];
+  try {
+    structurePerf = db.getStructurePerformance();
+  } catch (_) {}
+
   const prompt = buildStrategyPrompt({
     creatorName, niche, followerSummary, contentAnglesText, profile,
     pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns,
-    pastEvaluations,
+    pastEvaluations, structurePerf,
   });
 
   // callClaude in src/utils/claude.js already strips fences and parses JSON
@@ -193,7 +199,7 @@ async function generateMonthlyStrategy(month, year) {
   return strategy;
 }
 
-function buildStrategyPrompt({ creatorName, niche, followerSummary, contentAnglesText, profile, pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns, pastEvaluations }) {
+function buildStrategyPrompt({ creatorName, niche, followerSummary, contentAnglesText, profile, pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns, pastEvaluations, structurePerf }) {
   const publishing = profile?.publishing || {};
   const cadence    = publishing.cadence || 'weekly';
 
@@ -263,12 +269,22 @@ MIRR Ωr SELF-EVALUATION — PAST STRATEGY ACCURACY (use to calibrate this month
 ${lines}
 IMPORTANT: Weight your recommendations based on this evidence. What worked → double down. What missed → reduce or cut. This is the system learning from its own track record.`;
 })()}
+${(() => {
+  if (!structurePerf?.length) return '';
+  const lines = structurePerf
+    .map(s => `- ${s.story_structure}: ${s.video_count} video${s.video_count !== 1 ? 's' : ''} · avg ${Number(s.avg_views).toLocaleString()} views · best: ${Number(s.max_views).toLocaleString()} views`)
+    .join('\n');
+  return `
+STORY STRUCTURE PERFORMANCE (from real YouTube data — use to recommend the right PipΩr structure for each video type):
+${lines}
+When recommending content types in recommended_mix, add a structure_hint that tells the creator which PipΩr structure to use based on this evidence.`;
+})()}
 Generate a complete strategy. Return ONLY valid JSON — no markdown, no extra text:
 {
   "top_priority": "The single most important content move to make first this month — be specific about topic/format",
   "why_this_mix": "2-3 sentences explaining the strategic logic based on the actual data above",
   "recommended_mix": [
-    { "type": "content type (e.g. Rock Rich Episode, financial breakdown, how-to)", "count": 2, "reason": "data-driven reason specific to their situation" }
+    { "type": "content type (e.g. Rock Rich Episode, financial breakdown, how-to)", "count": 2, "reason": "data-driven reason specific to their situation", "structure_hint": "save_the_cat | story_circle | rock_rich | etc — which PipΩr structure fits this content type based on performance data" }
   ],
   "weekly_schedule": [
     { "week": 1, "focus": "what to make and why this week" },
