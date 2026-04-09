@@ -684,6 +684,28 @@ function runMigrations() {
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_room_sessions_project ON writr_room_sessions(project_id)');
+
+  // ClipsΩr — viral clip candidates extracted from completed videos
+  db.exec(`CREATE TABLE IF NOT EXISTS viral_clips (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id  INTEGER NOT NULL REFERENCES footage(id) ON DELETE CASCADE,
+    project_id  INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    rank        INTEGER NOT NULL DEFAULT 1,
+    start_time  REAL    NOT NULL,
+    end_time    REAL    NOT NULL,
+    duration    REAL,
+    hook        TEXT,
+    caption     TEXT,
+    hashtags    TEXT,
+    platform_fit TEXT,
+    why_it_works TEXT,
+    clip_type   TEXT    NOT NULL DEFAULT 'social',
+    status      TEXT    NOT NULL DEFAULT 'candidate',
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_viral_clips_footage ON viral_clips(footage_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_viral_clips_status  ON viral_clips(status)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -2687,6 +2709,43 @@ function clearRoomSession(projectId) {
   _run(`DELETE FROM writr_room_sessions WHERE project_id = ?`, [projectId]);
 }
 
+// ─────────────────────────────────────────────
+// ClipsΩr — viral clip DB functions
+// ─────────────────────────────────────────────
+
+function insertViralClip(data) {
+  const result = _run(
+    `INSERT INTO viral_clips (footage_id, project_id, rank, start_time, end_time, duration, hook, caption, hashtags, platform_fit, why_it_works, clip_type, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      data.footage_id, data.project_id || null, data.rank || 1,
+      data.start_time, data.end_time, data.duration || null,
+      data.hook || null, data.caption || null, data.hashtags || null,
+      data.platform_fit ? JSON.stringify(data.platform_fit) : null,
+      data.why_it_works || null, data.clip_type || 'social', data.status || 'candidate'
+    ]
+  );
+  return result.lastInsertRowid;
+}
+
+function getViralClipsByFootage(footageId) {
+  return _all(`SELECT * FROM viral_clips WHERE footage_id = ? ORDER BY rank ASC`, [footageId]);
+}
+
+function updateViralClip(id, fields) {
+  const allowed = ['hook', 'caption', 'hashtags', 'why_it_works', 'status', 'rank', 'platform_fit'];
+  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  if (!updates.length) return;
+  const sets = updates.map(k => `${k} = ?`);
+  const vals = updates.map(k => k === 'platform_fit' && typeof fields[k] === 'object' ? JSON.stringify(fields[k]) : fields[k]);
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  _run(`UPDATE viral_clips SET ${sets.join(', ')} WHERE id = ?`, [...vals, id]);
+}
+
+function deleteViralClipsByFootage(footageId) {
+  _run(`DELETE FROM viral_clips WHERE footage_id = ?`, [footageId]);
+}
+
 function _debugViews() {
   // Total views by platform
   const byPlatform = db.prepare(`
@@ -2906,6 +2965,11 @@ module.exports = {
   getRoomSession,
   upsertRoomSession,
   clearRoomSession,
+  // ClipsΩr
+  insertViralClip,
+  getViralClipsByFootage,
+  updateViralClip,
+  deleteViralClipsByFootage,
   // Diagnostics
   _debugViews,
   // NorthΩr

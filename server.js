@@ -121,6 +121,7 @@ app.use('/api/composor',   require('./src/routes/composor'));
 app.use('/api/pipr',          require('./src/routes/pipr'));
 app.use('/api/writr',         require('./src/routes/writr'));
 app.use('/api/format-profile', require('./src/routes/format-profile'));
+app.use('/api/clipsr',       require('./src/routes/clipsr'));
 const { router: teleprompterRouter, createTeleprompterWS } = require('./src/routes/teleprompter');
 app.use('/api/teleprompter',  teleprompterRouter);
 app.use('/api/shootday',      require('./src/routes/shootday'));

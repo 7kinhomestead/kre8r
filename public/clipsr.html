@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClipsΩr — Kre8Ωr</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0d0d;
+      --card:      #141414;
+      --card2:     #1a1a1a;
+      --border:    #2a2a2a;
+      --teal:      #14b8a6;
+      --teal-dim:  #0f9488;
+      --gold:      #f59e0b;
+      --silver:    #94a3b8;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --amber:     #f59e0b;
+      --text:      #e5e5e5;
+      --muted:     #666;
+      --font-h:    'Space Grotesk', sans-serif;
+      --font-b:    'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-b);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── NAV ─── */
+    #kre8r-nav { flex-shrink: 0; }
+
+    /* ─── HEADER ─── */
+    .page-header {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .page-title {
+      font-family: var(--font-h);
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
+    }
+    .page-title span { color: var(--teal); }
+    .page-subtitle {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: 4px;
+    }
+
+    /* ─── LAYOUT ─── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      height: calc(100vh - 130px);
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-h);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .sidebar-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .sidebar-list::-webkit-scrollbar { width: 4px; }
+    .sidebar-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .footage-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      margin-bottom: 4px;
+    }
+    .footage-item:hover { background: var(--card); border-color: var(--border); }
+    .footage-item.active {
+      background: var(--card2);
+      border-color: var(--teal);
+    }
+    .footage-thumb {
+      width: 64px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 5px;
+      background: #222;
+      flex-shrink: 0;
+    }
+    .footage-thumb-placeholder {
+      width: 64px;
+      height: 40px;
+      border-radius: 5px;
+      background: #1e1e1e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .footage-info { flex: 1; min-width: 0; }
+    .footage-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .footage-meta {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .footage-badges {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 2px 5px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    .badge-teal    { background: rgba(20,184,166,0.15); color: var(--teal); }
+    .badge-gold    { background: rgba(245,158,11,0.15); color: var(--gold); }
+    .badge-green   { background: rgba(34,197,94,0.15);  color: var(--green); }
+    .badge-silver  { background: rgba(148,163,184,0.15); color: var(--silver); }
+    .badge-red     { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .badge-muted   { background: #1e1e1e; color: var(--muted); }
+
+    /* ─── MAIN ─── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px;
+    }
+    .main::-webkit-scrollbar { width: 6px; }
+    .main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60%;
+      text-align: center;
+      gap: 12px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 3.5rem; opacity: 0.4; }
+    .empty-title { font-family: var(--font-h); font-size: 1.2rem; color: var(--text); opacity: 0.5; }
+    .empty-desc { font-size: 0.85rem; max-width: 340px; line-height: 1.5; }
+
+    /* ─── VIDEO INFO CARD ─── */
+    .video-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .video-card-thumb {
+      width: 140px;
+      height: 88px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #1e1e1e;
+      flex-shrink: 0;
+    }
+    .video-card-thumb-placeholder {
+      width: 140px;
+      height: 88px;
+      border-radius: 8px;
+      background: #1e1e1e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+    .video-card-info { flex: 1; }
+    .video-card-name {
+      font-family: var(--font-h);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .video-card-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .video-card-meta span { margin-right: 14px; }
+    .video-card-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      font-family: var(--font-b);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--teal); color: #000; }
+    .btn-primary:hover:not(:disabled) { background: var(--teal-dim); }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid transparent; }
+    .btn-ghost:hover:not(:disabled) { color: var(--text); background: var(--card); }
+    .btn-sm { font-size: 0.78rem; padding: 6px 14px; }
+    .btn-gold { background: var(--gold); color: #000; }
+    .btn-gold:hover:not(:disabled) { background: #d97706; }
+
+    /* ─── BIG ANALYZE BUTTON ─── */
+    .analyze-cta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 40px;
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      text-align: center;
+    }
+    .analyze-cta-title {
+      font-family: var(--font-h);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .analyze-cta-desc { color: var(--muted); font-size: 0.88rem; }
+    .btn-big {
+      font-size: 1.05rem;
+      padding: 14px 36px;
+      border-radius: 10px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    /* ─── PROGRESS ─── */
+    .progress-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+    }
+    .progress-title {
+      font-family: var(--font-h);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .progress-stage {
+      color: var(--teal);
+      font-size: 0.88rem;
+      margin-bottom: 20px;
+    }
+    .progress-bar-wrap {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--teal);
+      border-radius: 2px;
+      transition: width 0.5s;
+    }
+    .progress-log {
+      text-align: left;
+      background: #0a0a0a;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      max-height: 120px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+
+    /* ─── OVERALL ASSESSMENT ─── */
+    .assessment-card {
+      background: linear-gradient(135deg, rgba(20,184,166,0.07), rgba(20,184,166,0.02));
+      border: 1px solid rgba(20,184,166,0.25);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 24px;
+    }
+    .assessment-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .assessment-text {
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ─── CLIPS HEADER ─── */
+    .clips-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .clips-header-title {
+      font-family: var(--font-h);
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .clips-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ─── CLIP CARD ─── */
+    .clip-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      position: relative;
+    }
+    .clip-card.approved { border-color: var(--green); }
+    .clip-card.skipped  { opacity: 0.4; }
+
+    .clip-card-top {
+      padding: 16px 16px 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    /* Rank badge */
+    .rank-badge {
+      font-family: var(--font-h);
+      font-size: 0.7rem;
+      font-weight: 800;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      letter-spacing: 0;
+    }
+    .rank-1 { background: var(--gold);   color: #000; }
+    .rank-2 { background: var(--silver); color: #000; }
+    .rank-n { background: var(--teal);   color: #000; }
+
+    .clip-meta { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .clip-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* Clip type badge */
+    .clip-type-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .type-gold      { background: rgba(245,158,11,0.2);   color: var(--gold); }
+    .type-social    { background: rgba(20,184,166,0.2);   color: var(--teal); }
+    .type-retention { background: rgba(148,163,184,0.15); color: var(--silver); }
+
+    .timecode-pill {
+      font-size: 0.72rem;
+      background: #1e1e1e;
+      padding: 2px 8px;
+      border-radius: 20px;
+      color: var(--silver);
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    .approved-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      background: rgba(34,197,94,0.2);
+      color: var(--green);
+    }
+
+    /* Platform fit bars */
+    .platform-fit {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .platform-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .platform-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--muted);
+      width: 44px;
+      flex-shrink: 0;
+    }
+    .platform-bar-wrap {
+      flex: 1;
+      height: 5px;
+      background: #222;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .platform-bar { height: 100%; border-radius: 3px; background: var(--teal); }
+    .platform-score { font-size: 0.65rem; color: var(--muted); width: 28px; text-align: right; }
+
+    /* Clip sections */
+    .clip-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    .clip-section-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .hook-box {
+      background: rgba(20,184,166,0.08);
+      border: 1px solid rgba(20,184,166,0.2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .overlay-box {
+      background: #000;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .why-section details { border-radius: 8px; overflow: hidden; }
+    .why-section summary {
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 6px 0;
+    }
+    .why-section summary:hover { color: var(--text); }
+    .why-section summary::-webkit-details-marker { display: none; }
+    .why-section .why-chevron { font-size: 0.6rem; transition: transform 0.15s; }
+    .why-section details[open] .why-chevron { transform: rotate(90deg); }
+    .why-text {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.6;
+      padding: 6px 0;
+    }
+
+    /* Caption */
+    .caption-textarea {
+      width: 100%;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: var(--font-b);
+      font-size: 0.83rem;
+      color: var(--text);
+      line-height: 1.6;
+      resize: vertical;
+      min-height: 80px;
+    }
+    .caption-textarea:focus {
+      outline: none;
+      border-color: var(--teal);
+    }
+
+    .hashtag-pill {
+      font-size: 0.78rem;
+      color: var(--teal);
+      background: rgba(20,184,166,0.08);
+      border: 1px solid rgba(20,184,166,0.15);
+      border-radius: 6px;
+      padding: 6px 10px;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    /* Action row */
+    .clip-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 16px 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ─── TOAST ─── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.83rem;
+      color: var(--text);
+      animation: slideIn 0.2s ease;
+      pointer-events: all;
+    }
+    .toast.green { border-color: rgba(34,197,94,0.4); }
+    .toast.red   { border-color: rgba(239,68,68,0.4); }
+    .toast.amber { border-color: rgba(245,158,11,0.4); }
+    @keyframes slideIn {
+      from { transform: translateX(20px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    /* ─── DIVIDER ─── */
+    .section-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="kre8r-nav"></div>
+
+  <div class="page-header">
+    <div class="page-title">CLIPS<span>Ω</span>R</div>
+    <div class="page-subtitle">Drop in a finished video. Mine the clips worth posting.</div>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar: video selector -->
+    <aside class="sidebar">
+      <div class="sidebar-header">Completed Videos</div>
+      <div class="sidebar-list" id="sidebar-list">
+        <div class="empty-state" style="height: auto; padding: 32px 0;">
+          <div class="empty-icon">⏳</div>
+          <div class="empty-desc">Loading videos...</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main area -->
+    <main class="main" id="main-area">
+      <div class="empty-state">
+        <div class="empty-icon">🎬</div>
+        <div class="empty-title">Pick a Video</div>
+        <div class="empty-desc">Select a completed video from the sidebar to find your best clip moments for TikTok, Reels, and Shorts.</div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="/js/nav.js" defer></script>
+  <script>
+    window.addEventListener('load', () => initNav());
+  </script>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // State
+    // ─────────────────────────────────────────────
+    let allFootage  = [];
+    let selectedId  = null;
+    let currentClips = [];
+
+    // ─────────────────────────────────────────────
+    // Toast
+    // ─────────────────────────────────────────────
+    function showToast(msg, type = 'default') {
+      const tc = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      tc.appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }
+
+    // ─────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────
+    function escHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmtDuration(secs) {
+      if (!secs) return '--';
+      const m = Math.floor(secs / 60);
+      const s = Math.floor(secs % 60);
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    function fmtTimecode(start, end) {
+      return `${fmtDuration(start)} → ${fmtDuration(end)} · ${Math.round(end - start)}s`;
+    }
+
+    async function copyText(text, label) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast(`${label} copied!`, 'green');
+      } catch (_) {
+        showToast('Copy failed — select and copy manually', 'red');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Load footage list
+    // ─────────────────────────────────────────────
+    async function loadFootage() {
+      try {
+        const r = await fetch('/api/clipsr/footage');
+        const data = await r.json();
+        allFootage = data.footage || [];
+        renderSidebar();
+      } catch (e) {
+        document.getElementById('sidebar-list').innerHTML =
+          `<div class="empty-state" style="height:auto;padding:32px 0">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-desc">Failed to load footage: ${escHtml(e.message)}</div>
+          </div>`;
+      }
+    }
+
+    function renderSidebar() {
+      const el = document.getElementById('sidebar-list');
+      if (!allFootage.length) {
+        el.innerHTML = `<div class="empty-state" style="height:auto;padding:32px 0">
+          <div class="empty-icon">📭</div>
+          <div class="empty-desc">No completed videos found in VaultΩr yet. Mark footage as completed-video to see it here.</div>
+        </div>`;
+        return;
+      }
+      el.innerHTML = allFootage.map(f => {
+        const thumb = f.thumbnail_path
+          ? `<img class="footage-thumb" src="${escHtml(f.thumbnail_path)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'footage-thumb-placeholder\\'>🎬</div>'">`
+          : `<div class="footage-thumb-placeholder">🎬</div>`;
+        const txBadge = f.has_transcript ? `<span class="badge badge-teal">Transcribed</span>` : '';
+        const clipBadge = f.clip_count > 0 ? `<span class="badge badge-gold">${f.clip_count} clips</span>` : '';
+        const active = f.id === selectedId ? ' active' : '';
+        return `<div class="footage-item${active}" data-id="${f.id}" onclick="selectFootage(${f.id})">
+          ${thumb}
+          <div class="footage-info">
+            <div class="footage-name" title="${escHtml(f.filename)}">${escHtml(f.filename)}</div>
+            <div class="footage-meta">${fmtDuration(f.duration)}</div>
+            <div class="footage-badges">${txBadge}${clipBadge}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ─────────────────────────────────────────────
+    // Select a footage item
+    // ─────────────────────────────────────────────
+    async function selectFootage(id) {
+      selectedId = id;
+      renderSidebar();
+      const footage = allFootage.find(f => f.id === id);
+      if (!footage) return;
+
+      // Load any existing clips
+      showLoadingMain(footage);
+      try {
+        const r = await fetch(`/api/clipsr/${id}/clips`);
+        const data = await r.json();
+        currentClips = data.clips || [];
+        // Update clip_count in sidebar data
+        const fi = allFootage.find(f => f.id === id);
+        if (fi) fi.clip_count = currentClips.length;
+        renderSidebar();
+
+        if (currentClips.length > 0) {
+          renderClipsView(footage, currentClips, null);
+        } else {
+          renderAnalyzeCTA(footage);
+        }
+      } catch (e) {
+        renderAnalyzeCTA(footage);
+      }
+    }
+
+    function showLoadingMain(footage) {
+      const main = document.getElementById('main-area');
+      main.innerHTML = `<div class="video-card">
+        ${footage.thumbnail_path
+          ? `<img class="video-card-thumb" src="${escHtml(footage.thumbnail_path)}" alt="">`
+          : `<div class="video-card-thumb-placeholder">🎬</div>`}
+        <div class="video-card-info">
+          <div class="video-card-name">${escHtml(footage.filename)}</div>
+          <div class="video-card-meta">
+            <span>⏱ ${fmtDuration(footage.duration)}</span>
+            ${footage.has_transcript ? '<span>✅ Transcript ready</span>' : '<span>🎙 Will transcribe</span>'}
+          </div>
+        </div>
+      </div>
+      <div style="color:var(--muted);font-size:0.85rem;padding:20px 0;">Loading...</div>`;
+    }
+
+    // ─────────────────────────────────────────────
+    // Analyze CTA view
+    // ─────────────────────────────────────────────
+    function renderAnalyzeCTA(footage) {
+      const main = document.getElementById('main-area');
+      main.innerHTML = `
+        <div class="video-card">
+          ${footage.thumbnail_path
+            ? `<img class="video-card-thumb" src="${escHtml(footage.thumbnail_path)}" alt="">`
+            : `<div class="video-card-thumb-placeholder">🎬</div>`}
+          <div class="video-card-info">
+            <div class="video-card-name">${escHtml(footage.filename)}</div>
+            <div class="video-card-meta">
+              <span>⏱ ${fmtDuration(footage.duration)}</span>
+              ${footage.has_transcript ? '<span>✅ Transcript ready</span>' : '<span>🎙 Will transcribe first</span>'}
+            </div>
+          </div>
+        </div>
+        <div class="analyze-cta">
+          <div class="analyze-cta-title">🔍 Find Clip Gold</div>
+          <div class="analyze-cta-desc">Claude will analyze this video and surface the 3–6 moments most likely to pop on TikTok, Reels, and Shorts. Each clip comes with a caption, hook, and platform scores.</div>
+          <button class="btn btn-primary btn-big" onclick="startAnalysis(${footage.id}, false)">⛏ Find Clips</button>
+        </div>`;
+    }
+
+    // ─────────────────────────────────────────────
+    // Start analysis job
+    // ─────────────────────────────────────────────
+    async function startAnalysis(footageId, forceRetranscribe) {
+      const main = document.getElementById('main-area');
+      const footage = allFootage.find(f => f.id === footageId);
+
+      // Show progress UI
+      main.innerHTML = `
+        ${footage ? `<div class="video-card">
+          ${footage.thumbnail_path
+            ? `<img class="video-card-thumb" src="${escHtml(footage.thumbnail_path)}" alt="">`
+            : `<div class="video-card-thumb-placeholder">🎬</div>`}
+          <div class="video-card-info">
+            <div class="video-card-name">${escHtml(footage.filename)}</div>
+          </div>
+        </div>` : ''}
+        <div class="progress-card" id="progress-card">
+          <div class="progress-title">Mining for Gold</div>
+          <div class="progress-stage" id="progress-stage">Starting up...</div>
+          <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar" style="width:5%"></div></div>
+          <div class="progress-log" id="progress-log"></div>
+        </div>`;
+
+      // Post to start job
+      let jobId;
+      try {
+        const r = await fetch('/api/clipsr/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ footage_id: footageId, force_retranscribe: forceRetranscribe })
+        });
+        const data = await r.json();
+        if (!data.ok) { showToast('Failed to start: ' + (data.error || 'unknown'), 'red'); return; }
+        jobId = data.job_id;
+      } catch (e) {
+        showToast('Network error: ' + e.message, 'red');
+        return;
+      }
+
+      // Open SSE
+      const es = new EventSource(`/api/clipsr/status/${jobId}`);
+      let progress = 5;
+
+      const logEl    = document.getElementById('progress-log');
+      const stageEl  = document.getElementById('progress-stage');
+      const barEl    = document.getElementById('progress-bar');
+
+      function addLog(msg) {
+        if (!logEl) return;
+        logEl.innerHTML += `<div>${escHtml(msg)}</div>`;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      es.onmessage = (evt) => {
+        let data;
+        try { data = JSON.parse(evt.data); } catch (_) { return; }
+
+        if (data.stage === 'transcribing') {
+          stageEl && (stageEl.textContent = 'Transcribing audio...');
+          progress = 20;
+          addLog(data.message || 'Transcribing...');
+        } else if (data.stage === 'transcribe_skipped') {
+          stageEl && (stageEl.textContent = 'Transcript ready');
+          progress = 30;
+          addLog('Using existing transcript');
+        } else if (data.stage === 'transcribed') {
+          stageEl && (stageEl.textContent = `Transcribed — ${data.segments} segments`);
+          progress = 40;
+          addLog(`Transcription complete: ${data.segments} segments, ${fmtDuration(data.duration)}`);
+        } else if (data.stage === 'transcribe_progress') {
+          addLog(data.message || JSON.stringify(data));
+        } else if (data.stage === 'analyzing') {
+          stageEl && (stageEl.textContent = 'Claude is finding the gold...');
+          progress = 60;
+          addLog(data.message || 'Analyzing for clips...');
+        } else if (data.stage === 'done') {
+          es.close();
+          stageEl && (stageEl.textContent = `Found ${data.clip_count} clips!`);
+          barEl && (barEl.style.width = '100%');
+          addLog(`Done — ${data.clip_count} clips extracted`);
+          currentClips = data.clips || [];
+          // Update sidebar
+          const fi = allFootage.find(f => f.id === footageId);
+          if (fi) fi.clip_count = currentClips.length;
+          renderSidebar();
+          setTimeout(() => {
+            if (footage) renderClipsView(footage, currentClips, data.overall_assessment);
+          }, 400);
+          return;
+        } else if (data.stage === 'error') {
+          es.close();
+          stageEl && (stageEl.textContent = 'Error');
+          addLog('ERROR: ' + (data.error || 'unknown'));
+          showToast('Analysis failed: ' + (data.error || 'unknown'), 'red');
+          return;
+        }
+
+        if (barEl) barEl.style.width = progress + '%';
+      };
+
+      es.onerror = () => {
+        es.close();
+        showToast('Connection lost — check server logs', 'red');
+      };
+    }
+
+    // ─────────────────────────────────────────────
+    // Render clips view
+    // ─────────────────────────────────────────────
+    function renderClipsView(footage, clips, overallAssessment) {
+      const main = document.getElementById('main-area');
+
+      const videoCard = `
+        <div class="video-card">
+          ${footage.thumbnail_path
+            ? `<img class="video-card-thumb" src="${escHtml(footage.thumbnail_path)}" alt="">`
+            : `<div class="video-card-thumb-placeholder">🎬</div>`}
+          <div class="video-card-info">
+            <div class="video-card-name">${escHtml(footage.filename)}</div>
+            <div class="video-card-meta">
+              <span>⏱ ${fmtDuration(footage.duration)}</span>
+              <span>${clips.length} clips found</span>
+            </div>
+            <div class="video-card-actions">
+              <button class="btn btn-outline btn-sm" onclick="startAnalysis(${footage.id}, true)">🔄 Re-analyze</button>
+            </div>
+          </div>
+        </div>`;
+
+      const assessmentHtml = overallAssessment
+        ? `<div class="assessment-card">
+            <div class="assessment-label">📊 Overall Assessment</div>
+            <div class="assessment-text">${escHtml(overallAssessment)}</div>
+          </div>`
+        : '';
+
+      const clipsHeader = `
+        <div class="clips-header">
+          <div class="clips-header-title">Clip Candidates</div>
+          <div class="clips-count">${clips.length} clips · ranked by strength</div>
+        </div>`;
+
+      const clipsHtml = clips.map(clip => renderClipCard(clip)).join('');
+
+      main.innerHTML = videoCard + assessmentHtml + clipsHeader + clipsHtml;
+    }
+
+    function renderClipCard(clip) {
+      // Rank badge
+      let rankClass = 'rank-n';
+      let rankLabel = `#${clip.rank}`;
+      if (clip.rank === 1) { rankClass = 'rank-1'; rankLabel = '⭐'; }
+      if (clip.rank === 2) { rankClass = 'rank-2'; rankLabel = '#2'; }
+
+      // Clip type
+      const typeMap = { gold: 'type-gold', social: 'type-social', retention: 'type-retention' };
+      const typeClass = typeMap[clip.clip_type] || 'type-social';
+      const typeLabel = (clip.clip_type || 'social').toUpperCase();
+
+      // Timecode — clip from DB uses start_time/end_time; from SSE uses start/end
+      const start = clip.start_time !== undefined ? clip.start_time : (clip.start || 0);
+      const end   = clip.end_time   !== undefined ? clip.end_time   : (clip.end   || 0);
+      const dur   = clip.duration || (end - start);
+
+      // Platform fit — parse if string
+      let pf = clip.platform_fit;
+      if (typeof pf === 'string') { try { pf = JSON.parse(pf); } catch (_) { pf = {}; } }
+      pf = pf || {};
+
+      const platformBars = ['tiktok', 'reels', 'shorts'].map(p => {
+        const score = pf[p] || 0;
+        const pct = (score / 10) * 100;
+        return `<div class="platform-row">
+          <div class="platform-label">${p.charAt(0).toUpperCase() + p.slice(1)}</div>
+          <div class="platform-bar-wrap"><div class="platform-bar" style="width:${pct}%"></div></div>
+          <div class="platform-score">${score}/10</div>
+        </div>`;
+      }).join('');
+
+      // Status
+      const isApproved = clip.status === 'approved';
+      const isSkipped  = clip.status === 'skipped';
+      const approvedBadge = isApproved ? `<span class="approved-badge">✓ Approved</span>` : '';
+
+      // Why it works — open by default for rank 1
+      const whyOpen = clip.rank === 1 ? ' open' : '';
+      const hookOverlay = clip.hook_overlay ? `
+        <div>
+          <div class="clip-section-label">📱 Text Overlay</div>
+          <div class="overlay-box">${escHtml(clip.hook_overlay)}</div>
+        </div>` : '';
+
+      return `<div class="clip-card${isApproved ? ' approved' : ''}${isSkipped ? ' skipped' : ''}" id="clip-card-${clip.id}" data-clip-id="${clip.id}">
+        <div class="clip-card-top">
+          <div class="rank-badge ${rankClass}">${rankLabel}</div>
+          <div class="clip-meta">
+            <div class="clip-meta-row">
+              <span class="clip-type-badge ${typeClass}">${typeLabel}</span>
+              <span class="timecode-pill">${fmtTimecode(start, end)}</span>
+              ${approvedBadge}
+            </div>
+            <div class="platform-fit">${platformBars}</div>
+          </div>
+        </div>
+
+        <div class="clip-body">
+          <div>
+            <div class="clip-section-label">🪝 Hook</div>
+            <div class="hook-box">${escHtml(clip.hook || '')}</div>
+          </div>
+
+          ${hookOverlay}
+
+          <div class="why-section">
+            <details${whyOpen}>
+              <summary>
+                <span class="why-chevron">▶</span>
+                <span>Why It Works</span>
+              </summary>
+              <div class="why-text">${escHtml(clip.why_it_works || '')}</div>
+            </details>
+          </div>
+
+          <div>
+            <div class="clip-section-label">📝 Caption</div>
+            <textarea class="caption-textarea" id="caption-${clip.id}" rows="4" oninput="autoResize(this)">${escHtml(clip.caption || '')}</textarea>
+          </div>
+
+          <div>
+            <div class="clip-section-label"># Hashtags</div>
+            <div class="hashtag-pill">${escHtml(clip.hashtags || '')}</div>
+          </div>
+        </div>
+
+        <div class="clip-actions">
+          <button class="btn btn-outline btn-sm" onclick="copyCaption(${clip.id})">📋 Copy Caption</button>
+          <button class="btn btn-outline btn-sm" onclick="copyHook(${clip.id}, '${escAttr(clip.hook || '')}')">🪝 Copy Hook</button>
+          <button class="btn btn-outline btn-sm" onclick="copyHashtags(${clip.id}, '${escAttr(clip.hashtags || '')}')">🏷 Copy Hashtags</button>
+          <div style="flex:1"></div>
+          ${isApproved
+            ? `<button class="btn btn-ghost btn-sm" onclick="updateStatus(${clip.id}, 'candidate')">Undo Approve</button>`
+            : `<button class="btn btn-primary btn-sm" onclick="updateStatus(${clip.id}, 'approved')">✓ Approve</button>`}
+          ${isSkipped
+            ? `<button class="btn btn-ghost btn-sm" onclick="updateStatus(${clip.id}, 'candidate')">Undo Skip</button>`
+            : `<button class="btn btn-ghost btn-sm" onclick="updateStatus(${clip.id}, 'skipped')">✕ Skip</button>`}
+        </div>
+      </div>`;
+    }
+
+    function escAttr(s) {
+      return String(s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+
+    // ─────────────────────────────────────────────
+    // Copy actions
+    // ─────────────────────────────────────────────
+    function copyCaption(clipId) {
+      const el = document.getElementById(`caption-${clipId}`);
+      if (el) copyText(el.value, 'Caption');
+    }
+
+    function copyHook(clipId, hookText) {
+      copyText(hookText, 'Hook');
+    }
+
+    function copyHashtags(clipId, hashtagText) {
+      copyText(hashtagText, 'Hashtags');
+    }
+
+    // ─────────────────────────────────────────────
+    // Update clip status / save caption
+    // ─────────────────────────────────────────────
+    async function updateStatus(clipId, status) {
+      // Also save any caption edits
+      const captionEl = document.getElementById(`caption-${clipId}`);
+      const fields = { status };
+      if (captionEl) fields.caption = captionEl.value;
+
+      try {
+        const r = await fetch(`/api/clipsr/clips/${clipId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fields)
+        });
+        const data = await r.json();
+        if (!data.ok) { showToast('Update failed', 'red'); return; }
+
+        // Update local state and re-render card
+        const clip = currentClips.find(c => c.id === clipId);
+        if (clip) {
+          clip.status = status;
+          if (captionEl) clip.caption = captionEl.value;
+          const card = document.getElementById(`clip-card-${clipId}`);
+          if (card) {
+            const newCard = document.createElement('div');
+            newCard.innerHTML = renderClipCard(clip);
+            card.replaceWith(newCard.firstElementChild);
+          }
+        }
+        showToast(status === 'approved' ? 'Clip approved!' : status === 'skipped' ? 'Clip skipped' : 'Status updated', 'green');
+      } catch (e) {
+        showToast('Network error: ' + e.message, 'red');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Init
+    // ─────────────────────────────────────────────
+    loadFootage();
+  </script>
+</body>
+</html>
