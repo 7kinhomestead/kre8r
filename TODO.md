@@ -1,171 +1,271 @@
-# Kre8Ωr — Next Session TODO
+# Kre8Ωr — Roadmap to Downloadable App
+
+**The destination:** A creator downloads a `.exe` (Windows) or `.dmg` (Mac), runs an install wizard,
+enters their Anthropic API key, and has a fully working Kre8Ωr desktop app. No terminal. No Node.
+No PM2. A real app with an icon in the taskbar.
+
+**The route:** Feature polish → Electron wrapper → Bundle dependencies → Setup wizard → Package → Ship.
 
 ---
 
-## ⚡ Task 0A — Short-Form Pipeline Mode
-
-**Decision made 2026-04-09:**
-Short-form should be a first-class content type in Kre8Ωr — not an afterthought. When a creator says "short" at any point, the entire pipeline context should shift to short-form: story structure, script format, shot planning, and distribution. This also makes Kre8Ωr viable for short-form-only creators who would never use the long-form pipeline at all.
+## PHASE 1 — Feature & Polish (before packaging anything)
+*Get the app right before wrapping it. ~3-4 sessions.*
 
 ---
 
-### Id8Ωr changes
-- Detect "short", "reel", "TikTok", "60 seconds", "short-form" in conversation → set `content_type: 'short'` on the session
-- Or: add explicit "What are you making?" question early — Long-form video / Short-form (TikTok/Reels/Shorts) / Both
-- When `content_type: 'short'`: research phase focuses on scroll-stopping angles, hook formats, viral short patterns — not YouTube long-form performance
-- System prompt shifts: "This is a 15–90 second short-form video. Hook must land in 3 seconds. Story resolves in under 90 seconds."
-- Vision Brief output adapts: hook becomes the opening 3 seconds, thumbnail concept becomes thumbnail + cover frame, title is the caption hook
+### ⚡ P1-A — ReviewΩr Refocus (rough cut only)
 
-### PipΩr changes
-- Add a **SHORT FORM** tile alongside Save the Cat / Story Circle / VSL / Freeform
-- Short form tile opens sub-selection of short-form structures:
-  - **Hook → Tension → Payoff** — universal short arc (problem surfaces → moment of doubt → resolution lands)
-  - **Open Loop** — start with a mystery or claim, resolve at the end, viewers watch for the answer
-  - **PAS** — Problem / Agitate / Solve — classic persuasion arc for educational shorts
-  - **Before → Bridge → After** — transformation story in 60 seconds
-  - **5-Point List** — "5 things about X" — listicle format, each point is a beat
-  - **Hot Take** — state a counterintuitive opinion, defend it, land a call to reconsider
-  - **Tutorial** — do this, then this, then this — pure how-to, no narrative arc
-- Beat map generated from short structure: 3–7 beats max, each with duration target (e.g. Hook: 0–3s, Tension: 3–20s, etc.)
-- Project flagged as `content_type: 'short'` in DB → carried through entire pipeline
+Strip CutΩr analysis out of ReviewΩr entirely. One job: does this rough cut work as a long-form video?
 
-### WritΩr changes
-- When `content_type: 'short'`: 
-  - Full script mode writes 150–300 words max (60–90 second delivery)
-  - No bullets mode — shorts need full scripted delivery for precision
-  - Hook beat gets special treatment: written as a single punchy sentence, no wind-up
-  - Beat timing shown on each card (e.g. "Beat 1: 0–3s")
-  - Voice blend still works — same profiles, just shorter output
-
-### DirectΩr changes (V2.0 context)
-- Short-form shot list: 3–8 shots total, each with duration target
-- Shot types shift toward singles, close-ups, reaction beats — not coverage
-- "One shot per beat" guidance
-
-### VaultΩr / EditΩr changes
-- Shoot mode: add SHORTS mode alongside SCRIPTED / HYBRID / FREEFORM
-- SHORTS mode: single talking-head take selection + b-roll coverage for each beat
-- No multi-take comparison needed — pick the one clean take per beat
-
-### ClipsΩr changes
-- If `content_type: 'short'`: the video IS the clip — ClipsΩr role flips
-- Instead of extracting clips FROM the video, it validates the video AS a clip
-- Checks: hook timing (did the hook land in 3s?), retention arc, CTA presence, loop-ability
-- Outputs: clip validation report + caption + hashtags for all platforms
-
-### DB changes
-- `projects` table: add `content_type` column ('long' | 'short') — default 'long'
-- All tools check `content_type` to adapt their prompts and UI
-
-### Commercial note
-Short-form only creators (TikTok, Reels, Shorts) are a huge market. With this change, the pipeline works for:
-- Jason (long-form primary, shorts as clips) — current
-- Short-form only creator — new
-- Hybrid creator (plans both simultaneously) — future
-
----
-
-## ⚡ Task 0 — ReviewΩr Refocus (rough cut only)
-
-**Decision made 2026-04-09:**
-ReviewΩr should be purely a rough cut approval tool. Strip CutΩr analysis (social clips, retention cuts, CTA placement, off-script gold) out of it entirely. ClipsΩr handles all short-form extraction in the correct sequence — having it in ReviewΩr too is redundant and pulls the creator's attention in the wrong direction at the wrong time.
-
-**What ReviewΩr becomes:**
-- Load rough cut from EditΩr
-- Review each select: approve / skip / reorder
-- Extract approved clips via ffmpeg (stream copy)
-- One job: does this rough cut work as a long-form video?
-- Handoff → ComposΩr
-
-**What gets removed:**
-- CutΩr analysis panel ("Run CutΩr" button)
-- Social clips section + approve/skip per clip
-- Retention cuts section
-- CTA placement section
-- Off-script gold section
-- ClipsΩr advance banner (move to after ComposΩr — it's already wired there now)
-- All `/api/cutor/` calls from reviewr.html
+**What gets removed from reviewr.html:**
+- "Run CutΩr" button and all CutΩr result sections (social clips, retention cuts, CTA, off-script gold)
+- All `/api/cutor/` fetch calls
+- ClipsΩr advance banner (already correctly placed after ComposΩr)
 
 **What stays:**
 - Project select
-- Rough cut selects list (approve / skip / reorder)
+- Selects list (approve / skip / reorder)
 - Extract approved clips button (ffmpeg stream copy)
-- ComposΩr advance banner (→ score the edit)
-- `advance-banner` to PackageΩr (if creator wants to skip ComposΩr)
+- ComposΩr advance banner
+- PackageΩr bypass banner
 
-**DB impact:** `cuts` table rows generated by CutΩr still exist and are used by ClipsΩr downstream — don't drop the table or the `/api/cutor/` route, just remove them from ReviewΩr's UI.
-
-**Purpose doc:** Update `09-reviewr.html` in tool-purpose-docs/ after this change is built.
-
----
-
-## ⚡ Task 1 — ClipsΩr UI Polish (inline editing)
-
-User caught "Rockridge" instead of "Rock Rich" in clip hooks/captions with no way to fix them in-app.
-Add inline editing to ClipsΩr clip cards so the creator can correct hook text, captions, and hashtags
-without re-running analysis.
-
-**What to build:**
-- Click-to-edit on hook text, why_it_works, caption, and hashtags fields
-- Save button per card (or auto-save on blur) → `PATCH /api/mirrr/viral-clips/:id`
-- DB: ensure `viral_clips` UPDATE path accepts hook/caption/hashtags/why_it_works fields
-- Visual cue: field turns editable (light border + cursor change) on click, reverts to display on save
+**DB:** `cuts` table and `/api/cutor/` routes stay — ClipsΩr uses them. UI only.
+**Doc:** `09-reviewr.html` already updated to reflect the decision. No doc changes needed after build.
 
 ---
 
-## ⚡ Task 2 — MirrΩr: First Real Evaluation Run
+### ⚡ P1-B — Short-Form Pipeline Mode
 
-The entire compounding intelligence loop activates here. This is the payoff of Session 25.
+Add `content_type` ('long' | 'short') as a first-class flag that flows through the entire pipeline.
 
-**Steps:**
-1. Run YouTube sync → confirm video performance data is in DB (views/likes for published videos)
-2. Open NorthΩr → click **🪞 Evaluate Last Month**
-3. Confirm evaluation card renders: accuracy score (0–10), what worked / what missed, weight badges
-4. Confirm calibration flows upstream: open Id8Ωr → run a concept → check that mirrrBlock appears in server logs
-5. Open WritΩr → generate a script → confirm MIRRΩR CALIBRATION section is in the prompt context
+**DB:** `projects` table — add `content_type TEXT DEFAULT 'long'`
+
+**Id8Ωr:** Detect short-form intent in conversation OR ask explicitly at session start.
+When short: research prompt shifts to scroll-stopping angles, hook formats, viral patterns.
+Vision Brief adapts: hook = opening 3 seconds, title = caption hook.
+
+**PipΩr:** Add SHORT FORM tile. Sub-structures:
+- Hook → Tension → Payoff
+- Open Loop
+- PAS (Problem / Agitate / Solve)
+- Before → Bridge → After
+- 5-Point List
+- Hot Take
+- Tutorial
+Beat map: 3–7 beats max, each with second-range duration target (e.g. "Hook: 0–3s").
+
+**WritΩr:** When short — 150–300 words max, hook beat = one punchy sentence, timing shown per card.
+
+**EditΩr:** Add SHORTS shoot mode — single best take per beat, no multi-take comparison.
+
+**ClipsΩr:** When short — video IS the clip. Role flips to validator:
+checks hook timing, retention arc, CTA presence, loop-ability. Outputs validation report + captions.
 
 ---
 
-## ⚡ Task 3 — Deploy to DigitalOcean
+### ⚡ P1-C — ClipsΩr Inline Editing
 
-Push all 5 Session 25 commits to live server at kre8r.app.
+Click-to-edit on hook text, why_it_works, caption, and hashtags fields on each clip card.
+Auto-save on blur → `PATCH /api/mirrr/viral-clips/:id`
+Visual cue: light border + cursor change on click, reverts to display on save.
+
+---
+
+### ⚡ P1-D — MirrΩr First Real Evaluation Run
+
+The compounding intelligence loop activates here.
+1. Run YouTube sync → confirm video performance data in DB
+2. NorthΩr → Evaluate Last Month → confirm evaluation card renders with score + weight badges
+3. Id8Ωr → run a concept → confirm mirrrBlock appears in server logs
+4. WritΩr → generate script → confirm MIRRΩR CALIBRATION section in prompt context
+
+---
+
+### ⚡ P1-E — Cosmetic Polish Pass
+
+Before packaging, one focused pass on rough edges:
+- Any "Rockridge" / stale creator name artifacts still in generated content prompts
+- Empty states that don't explain what to do next
+- Error messages that say nothing useful
+- Mobile responsiveness on key pages (TeleprΩmpter, ShootDay)
+- CLAUDE.md: update tech stack — still says sql.js, migration to better-sqlite3 is done
+
+---
+
+### ⚡ P1-F — Deploy Session 26 to DigitalOcean
 
 ```bash
 cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
 sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
 ```
 
-**Verify after deploy:**
-- `/northr.html` → 3-MONTH TRAJECTORY section visible, Evaluate Last Month button present
-- `/pipr.html` → structure cards show live performance badges (or empty state if no data yet)
-- `/mirrr.html` → ClipsΩr approved clips section renders on Rock Rich Community Launch project
+---
+
+## PHASE 2 — Electron Wrapper
+*Wrap the existing app in a real desktop window. ~1-2 sessions.*
+
+The Express server runs inside Electron's main process.
+The HTML frontend runs in an Electron BrowserWindow.
+No terminal visible. Real app icon. Works like a native app.
+
+**Steps:**
+1. `npm install --save-dev electron electron-builder`
+2. Create `electron/main.js`:
+   - Start Express server programmatically (import server.js, don't spawn)
+   - Open BrowserWindow pointing to `http://localhost:3000`
+   - Handle app lifecycle: quit on window close, system tray option
+   - Splash screen while server starts
+3. Add `"main": "electron/main.js"` to package.json
+4. Add npm scripts: `"electron:dev"`, `"electron:build"`
+5. Test: `npm run electron:dev` — should open app window, no terminal
+
+**App identity:**
+- Name: Kre8Ωr
+- Icon: `build/icon.ico` (Windows), `build/icon.icns` (Mac), `build/icon.png` (Linux)
+- Window: 1280×800 minimum, resizable, no default Electron menu bar
 
 ---
 
-## ⚡ Task 4 — Tool Purpose Docs + Flow Audit
+## PHASE 3 — Bundle Dependencies
+*Make the app self-contained — user installs nothing else. ~2-3 sessions.*
 
-**After the full project test run (Id8Ωr → PipΩr → WritΩr → VaultΩr → EditΩr → ClipsΩr → GateΩr → PackageΩr → CaptionΩr → MailΩr → MirrΩr → NorthΩr) is complete:**
+| Dependency | Solution | Notes |
+|------------|----------|-------|
+| Node.js runtime | Electron bundles automatically | Nothing to do |
+| better-sqlite3 | `electron-rebuild` after install | Needs native recompile for Electron's Node version |
+| ffmpeg + ffprobe | `ffmpeg-static` npm package | Prebuilt binaries, cross-platform |
+| Python + Whisper | Optional in v1 — see below | Hardest dependency |
+| Anthropic API | HTTPS call | Nothing to bundle |
 
-**Step 1: Flow chart**
-Draw the complete process loop from Id8Ωr → MirrΩr → back to Id8Ωr showing all branch points.
-Identify wild branches — paths that exist in the code or UI but aren't part of the intended loop — flag them for pruning.
+**better-sqlite3:**
+```bash
+npm install --save-dev electron-rebuild
+./node_modules/.bin/electron-rebuild -f -w better-sqlite3
+```
+Add to package.json scripts: `"postinstall": "electron-rebuild -f -w better-sqlite3"`
 
-**Step 2: Per-tool docs**
-One document per tool, stored in `kre8r/tool-purpose-docs/`, numbered so they display in pipeline order.
+**ffmpeg:**
+```bash
+npm install ffmpeg-static ffprobe-static
+```
+Replace hardcoded `ffmpeg`/`ffprobe` path calls with:
+```js
+const ffmpegPath = require('ffmpeg-static');
+const ffprobePath = require('ffprobe-static').path;
+```
 
-Each doc covers:
-- **Inputs** — what data / files / context it receives and from where
-- **What the tool does** — its purpose, and an honest assessment of whether it achieves that purpose
-- **Data generated & preserved** — what it writes to the DB, what fields, how it persists across restarts
-- **How it changes state** — what is different in the system after the tool runs
-- **Valuable Final Product (VFP)** — the one thing the creator holds in their hand when done
-- **Handoff** — exactly what it passes to the next tool (data shape, field names, how it flows)
+**Python/Whisper — v1 strategy (make optional):**
+- App detects Python/Whisper on PATH at startup
+- If not found: transcription features show "Transcription requires Python + Whisper" with setup link
+- VaultΩr, WritΩr, ClipsΩr, MailΩr all work without it
+- v1.1: auto-download portable Python + Whisper on first transcription attempt
 
-**Naming convention:** `01-id8r.md`, `02-pipr.md`, `03-writr.md`, etc.
+**File paths — must be dynamic in packaged app:**
+All hardcoded paths (database location, intake folder, etc.) must use Electron's `app.getPath()`:
+- Database: `app.getPath('userData')/kre8r.db`
+- Intake folder: configurable, defaults to `app.getPath('home')/kre8r/intake`
+- Public/clips: inside app resources or userData
 
 ---
 
-## PM2 Quick Reference
+## PHASE 4 — First-Run Setup Wizard
+*New users get configured automatically on first launch. ~1-2 sessions.*
+
+On first launch: if no config exists → show setup screen before app loads.
+
+**Step 1 — API Key (required)**
+- Input: Anthropic API key
+- Validate: test call to Claude API, confirm it works
+- Won't proceed without a valid key
+- Stored in: OS keychain via `keytar` npm package (never plaintext)
+
+**Step 2 — Intake Folder**
+- Default: `~/kre8r/intake` (created automatically if missing)
+- Creator can change to any folder (e.g. DaVinci proxy output folder)
+- VaultΩr watcher starts here
+
+**Step 3 — Optional Integrations**
+- Kajabi: OAuth2 connect button (opens browser for auth flow)
+- Suno API key (optional — Prompt Mode works without it)
+- Both skippable — can configure later in app settings
+
+**Step 4 — DaVinci (Windows only, shown only if Resolve detected)**
+- Confirm Python path for scripting API
+- Test connection to port 9237
+
+**Config stored:** `app.getPath('userData')/config.json`
+Subsequent launches: skip wizard entirely, load app directly.
+Settings page in-app lets creator update any config value later.
+
+---
+
+## PHASE 5 — Packaging + Installer
+*Build the actual .exe / .dmg installer files. ~1-2 sessions.*
+
+**electron-builder config (`electron-builder.yml`):**
+```yaml
+appId: com.kre8r.app
+productName: Kre8Ωr
+directories:
+  output: dist
+win:
+  target: nsis
+  icon: build/icon.ico
+nsis:
+  installerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+mac:
+  target: dmg
+  icon: build/icon.icns
+files:
+  - "**/*"
+  - "!tool-purpose-docs/**"
+  - "!.git/**"
+```
+
+**Build commands:**
+```bash
+npm run electron:build        # builds for current platform
+npm run electron:build:win    # Windows .exe from any platform (via Wine or CI)
+npm run electron:build:mac    # Mac .dmg
+```
+
+**Code signing:**
+- Windows: Authenticode certificate — prevents SmartScreen "Unknown publisher" warning (~$300/yr or use self-signed for beta)
+- Mac: Apple Developer account required for Gatekeeper approval ($99/yr)
+- For beta: unsigned is fine, users right-click → Open to bypass warning
+
+**Distribution:**
+- GitHub Releases: upload `.exe` and `.dmg` to a release tag
+- Link from website: `https://github.com/7kinhomestead/kre8r/releases/latest`
+- Auto-update: `electron-updater` checks GitHub releases on launch, prompts to update
+
+---
+
+## PHASE 6 — Beta Testing
+*Put it in real hands before public release. ~2-3 sessions.*
+
+- Install on a second machine (not the dev machine) — confirm cold install works
+- Developer friend (the one who is already using kre8r.app) — ideal first beta tester
+- 5–10 creators from the community — free beta access in exchange for feedback
+- Document every setup friction point → fix before public release
+- Confirm: API key entry, VaultΩr watcher, DaVinci integration, first video pipeline end-to-end
+
+---
+
+## Technical Debt (cleared or confirmed)
+
+- ~~better-sqlite3 migration~~ — DONE (confirmed Session 26)
+- ~~Tool purpose docs~~ — DONE (Session 26)
+- Engine vs Soul audit — ongoing (creator-profile.json purpose field added Session 26)
+- No automated tests — acceptable for now, address before commercial launch
+- AudiencΩr tag filter — Kajabi 500 on filtered requests, low priority
+
+---
+
+## PM2 Quick Reference (local dev only — not needed after Electron)
 
 ```
 pm2 status              # check kre8r is running
@@ -176,20 +276,14 @@ pm2 save                # save process list after any pm2 changes
 
 ---
 
-## Technical Debt (Priority Order)
+## ✅ DONE — Session 26 (2026-04-09)
 
-1. **better-sqlite3 migration** — before commercialization. Crash recovery risk.
-2. **Engine vs Soul audit** — hardcoded creator data in route handlers.
-3. **No automated tests** — no error monitoring, no structured logging.
-
----
-
-## ✅ DONE THIS SESSION (Session 25 — 2026-04-09)
-
-- MirrΩr self-evaluation system — strategy holds up a mirror to itself
-- MirrΩr calibration wired into Id8Ωr (concept angle bias) and WritΩr (script context)
-- Story structure performance loop — PipΩr gets live performance badges, NorthΩr gets structure hints
-- NorthΩr 3-month growth trajectory — back-engineer a path from here to X in 3 months
-- Distribution readiness: ClipsΩr approved clips wired into PackageΩr and MailΩr
-- DaVinci audio fix: removed mediaType:1 (was video-only)
-- DaVinci end-time buffer: +1.5s after last phoneme so sentences land before the cut
+- 3 pipeline handoff gaps wired: VaultΩr→EditΩr, ReviewΩr→ComposΩr, ComposΩr→ClipsΩr
+- Id8Ωr rate limiting fix: compact prompts, max_uses caps, delays 120s→30s, Phase 3 wait removed
+- 19 tool purpose docs created (tool-purpose-docs/) — indexed, branded, Engine vs Soul clean
+- ReviewΩr doc rewritten: pure rough cut approval, CutΩr explained as moved to ClipsΩr
+- DirectΩr doc corrected: beat map → shot list today, V2.0 AI shot direction planned
+- Creator purpose added to creator-profile.json as load-bearing soul config
+- Short-form pipeline architecture logged with full implementation spec
+- ReviewΩr refocus decision logged with full implementation spec
+- CLAUDE.md stale sql.js note identified (needs updating)
