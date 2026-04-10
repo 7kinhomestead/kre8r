@@ -498,9 +498,8 @@ router.post('/research', async (req, res) => {
 
     // ── Phase 1: YouTube Research ─────────────────────────────────
     // max_uses: 2 — enough to find the landscape, not enough to blow the rate limit.
-    // max_tokens: 1200 — web_search_20260209 now uses server_tool_use + code_execution
-    // blocks internally; these consume output tokens. 800 was too low and caused
-    // the text block (Claude's actual analysis) to get cut off.
+    // max_tokens: 2000 — web_search_20260209 uses server_tool_use + code_execution
+    // blocks internally which consume output tokens; 1200 still hits max_tokens.
     const phase1Label = chosenAngle ? `YouTube Research — ${chosenAngle}` : 'YouTube Research';
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
@@ -510,7 +509,7 @@ router.post('/research', async (req, res) => {
           role: 'user',
           content: `${conceptBrief}\n\nSearch YouTube. Return 4-5 examples (title + channel), the dominant approach, and the biggest gap.`,
         }],
-        1200,
+        2000,
         [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
         session_id,
         onRetry
@@ -541,7 +540,9 @@ router.post('/research', async (req, res) => {
 
     // ── Phase 2: Data & Facts ─────────────────────────────────────
     // max_uses: 1 — one focused search is enough for stats/data; reduces rate limit
-    // pressure after Phase 1's 2 searches. max_tokens: 1200 for same reason as Phase 1.
+    // pressure after Phase 1's 2 searches.
+    // max_tokens: 2000 — the web_search tool burns tokens on internal code_execution
+    // retry loops. 1200 still hits max_tokens before Claude finishes writing results.
     const phase2Label = chosenAngle ? `Data & Facts — ${chosenAngle}` : 'Data & Facts';
     send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
@@ -551,7 +552,7 @@ router.post('/research', async (req, res) => {
           role: 'user',
           content: `${conceptBrief}\n\nSearch for 3-5 concrete stats or data points that strengthen this specific angle. Numbers, sources, recency.`,
         }],
-        1200,
+        2000,
         [{ type: 'web_search_20260209', name: 'web_search', max_uses: 1 }],
         session_id,
         onRetry
