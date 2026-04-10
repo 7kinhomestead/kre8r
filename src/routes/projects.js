@@ -100,6 +100,19 @@ router.patch('/:id/archive', (req, res) => {
   }
 });
 
+// PATCH /api/projects/:id/complete — mark project done & posted, signals all tools
+router.patch('/:id/complete', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!db.getProject(id)) return res.status(404).json({ error: 'Project not found' });
+    const { published_at } = req.body || {};
+    db.markProjectComplete(id, published_at || null);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH /api/projects/:id/unarchive
 router.patch('/:id/unarchive', (req, res) => {
   try {

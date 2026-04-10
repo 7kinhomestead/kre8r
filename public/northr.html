@@ -1203,12 +1203,16 @@ function renderPipeline(p) {
     stalledEl.innerHTML = `
       <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:8px">🟡 ${p.stalled.length} STALLED PROJECT${p.stalled.length !== 1 ? 'S' : ''}</div>
       ${p.stalled.map(s => `
-        <div class="stalled-card">
+        <div class="stalled-card" id="stalled-card-${s.id}">
           <div class="stalled-info">
             <div class="stalled-title">${esc(s.title)}</div>
             <div class="stalled-meta">${s.days_stalled} days in ${esc(s.stage_name)} · stalled since ${s.stalled_since}</div>
           </div>
-          <a href="/${s.stage_url}?project_id=${s.id}" class="stalled-link">Open →</a>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn" style="padding:5px 10px;font-size:11px;color:var(--teal);border-color:rgba(62,207,178,0.3);background:transparent"
+              onclick="markComplete(${s.id}, '${esc(s.title)}')">✓ Done</button>
+            <a href="/${s.stage_url}?project_id=${s.id}" class="stalled-link">Open →</a>
+          </div>
         </div>`).join('')}`;
   } else {
     stalledEl.innerHTML = '';
@@ -1272,19 +1276,21 @@ async function loadMarkPublished() {
     const rows = [...unpublished, ...published].map(p => {
       const isDone  = p.status === 'published';
       const dateVal = isDone && p.published_at ? p.published_at.slice(0, 10) : '';
+      const stageLabel = isDone && p.current_stage === 'COMPLETE'
+        ? '<span style="font-size:11px;color:var(--teal);font-weight:600">✓ COMPLETE</span>'
+        : `<span style="font-size:11px;color:var(--text-dimmer)">Stage: ${esc(p.current_stage || '—')}</span>`;
       return `
         <div class="alert-card${isDone ? ' is-read' : ''}" id="mp-row-${p.id}" style="align-items:center;padding:12px 16px;">
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title || 'Untitled')}</div>
-            <div style="font-size:11px;color:var(--text-dimmer);margin-top:2px">Stage: ${esc(p.current_stage || '—')}</div>
+            <div style="margin-top:2px">${stageLabel}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <input type="date" id="mp-date-${p.id}" value="${dateVal}"
-              style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:12px;padding:5px 8px;outline:none;width:140px"
-              ${isDone ? '' : ''}>
+              style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:12px;padding:5px 8px;outline:none;width:140px">
             ${isDone
-              ? `<span style="font-size:12px;color:var(--teal);font-weight:600">✓ Published</span>`
-              : `<button class="btn btn-teal" style="padding:6px 12px;font-size:12px" onclick="markPublished(${p.id})">Mark Published</button>`
+              ? `<span style="font-size:12px;color:var(--teal);font-weight:600">✓ Done</span>`
+              : `<button class="btn btn-teal" style="padding:6px 12px;font-size:12px" onclick="markComplete(${p.id}, '${esc(p.title || 'Untitled')}')">✓ Mark Complete</button>`
             }
           </div>
         </div>`;
@@ -1295,25 +1301,31 @@ async function loadMarkPublished() {
   }
 }
 
-async function markPublished(projectId) {
+async function markComplete(projectId, title) {
   const dateInput = document.getElementById(`mp-date-${projectId}`);
   const dateVal   = dateInput?.value || null;
   try {
-    const res  = await fetch(`/api/northr/projects/${projectId}/mark-published`, {
-      method:  'POST',
+    const res  = await fetch(`/api/projects/${projectId}/complete`, {
+      method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ published_at: dateVal ? new Date(dateVal).toISOString() : null }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    toast('Marked as published!', 'success');
-    // Refresh stats and this list
+    // Remove stalled card immediately if it exists
+    const stalledCard = document.getElementById(`stalled-card-${projectId}`);
+    if (stalledCard) stalledCard.remove();
+    toast(`"${title}" marked complete — removed from pipeline.`, 'success');
+    // Refresh full dashboard
     await loadDashboard();
     await loadMarkPublished();
   } catch (e) {
     toast('Failed: ' + e.message, 'error');
   }
 }
+
+// Legacy alias kept so any old references don't break
+async function markPublished(projectId) { return markComplete(projectId, 'Project'); }
 
 function toast(msg, type = 'success') {
   const el = document.getElementById('toast');

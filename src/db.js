@@ -841,6 +841,20 @@ function markProjectPublished(projectId, publishedAt) {
   _run(`UPDATE pipeline_state SET updated_at = CURRENT_TIMESTAMP WHERE project_id = ?`, [projectId]);
 }
 
+/** Mark a project fully complete: status=published, current_stage=COMPLETE, pipeline updated.
+ *  This is the definitive "it's done and posted" signal visible to all tools. */
+function markProjectComplete(projectId, publishedAt) {
+  const date = publishedAt || new Date().toISOString();
+  _run(
+    `UPDATE projects SET status = 'published', current_stage = 'COMPLETE', published_at = ? WHERE id = ?`,
+    [date, projectId]
+  );
+  _run(
+    `UPDATE pipeline_state SET current_stage = 'COMPLETE', updated_at = CURRENT_TIMESTAMP WHERE project_id = ?`,
+    [projectId]
+  );
+}
+
 function updateProjectMeta(projectId, { youtube_url, youtube_video_id, topic }) {
   _run(
     `UPDATE projects SET
@@ -2969,6 +2983,7 @@ module.exports = {
   setProjectSource,
   updateProjectStage,
   markProjectPublished,
+  markProjectComplete,
   updateProjectMeta,
   savePackages,
   getPackages,
