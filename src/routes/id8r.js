@@ -541,28 +541,21 @@ router.post('/research', async (req, res) => {
     const results = {};
 
     // ── Phase 1: YouTube Research ─────────────────────────────────
-    // Tries live web_search first; falls back to training knowledge if unavailable.
+    // Uses Claude training knowledge. web_search_20260209 is unreliable —
+    // when it fails it burns minutes retrying before giving up. Revisit when stable.
     const phase1Label = chosenAngle ? `YouTube Research — ${chosenAngle}` : 'YouTube Research';
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
-      const p1 = await callClaudeWithSearchFallback(
-        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Search YouTube for top performing content on this topic. Name real videos, channels, the dominant approach, and the ONE content gap this creator could own.`,
+      results.youtube = await callClaudeText(
         `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Draw on your training knowledge of YouTube content trends. Be specific — name real channels, real video types, and real gaps you know about.`,
-        [{ role: 'user', content: `${conceptBrief}\n\nSearch YouTube. Return 4-5 examples (title + channel), the dominant approach, and the biggest gap.` }],
         [{ role: 'user', content: `${conceptBrief}\n\nFrom your knowledge of YouTube: name 4-5 video types or approaches that perform well for this topic (with example channel styles if you know them). What angle dominates? What ONE content gap could this creator own?` }],
         1200, session_id, onRetry
       );
-      results.youtube = p1.text;
-      results.youtube_source = p1.source;
     } catch (e) {
       console.error('[id8r/research] Phase 1 error:', e.message);
       results.youtube = `Error: ${e.message}`;
-      results.youtube_source = 'error';
     }
-    const p1DisplayLabel = results.youtube_source === 'training'
-      ? `${phase1Label} · training data`
-      : phase1Label;
-    send({ stage: 'phase_result', phase: 1, label: p1DisplayLabel, data: results.youtube });
+    send({ stage: 'phase_result', phase: 1, label: phase1Label, data: results.youtube });
     // Checkpoint: phase 1 done — survives server restart
     try {
       db.setCheckpoint(session_id, 'id8r', {
@@ -572,30 +565,22 @@ router.post('/research', async (req, res) => {
     } catch (_) {}
 
     // ── Phase 2: Data & Facts ─────────────────────────────────────
-    // Tries live web_search first; falls back to training knowledge if unavailable.
+    // Uses Claude training knowledge. Same reasoning as Phase 1 — web_search unreliable.
     const phase2Label = chosenAngle ? `Data & Facts — ${chosenAngle}` : 'Data & Facts';
     send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
-      const p2 = await callClaudeWithSearchFallback(
-        `You are a research analyst for ${_brand}, a ${_niche} content creator. Search for current statistics, studies, and data points that directly support the concept below. Numbers and facts only — specific, citable, from credible sources.`,
+      results.data = await callClaudeText(
         `You are a research analyst for ${_brand}, a ${_niche} content creator. Draw on your training knowledge to surface compelling statistics, studies, and data points. Be specific — real numbers, named studies, credible sources where you know them.`,
-        [{ role: 'user', content: `${conceptBrief}\n\nSearch for 3-5 concrete stats or data points that strengthen this specific angle. Numbers, sources, recency.` }],
         [{ role: 'user', content: `${conceptBrief}\n\nFrom your knowledge: give 3-5 concrete statistics or research findings that strengthen this specific angle. Include the source name where you know it. These should be the kind of numbers that make an audience stop scrolling.` }],
         1200, session_id, onRetry
       );
-      results.data = p2.text;
-      results.data_source = p2.source;
       session.citations = [];
     } catch (e) {
       console.error('[id8r/research] Phase 2 error:', e.message);
       results.data = `Error: ${e.message}`;
-      results.data_source = 'error';
       session.citations = [];
     }
-    const p2DisplayLabel = results.data_source === 'training'
-      ? `${phase2Label} · training data`
-      : phase2Label;
-    send({ stage: 'phase_result', phase: 2, label: p2DisplayLabel, data: results.data });
+    send({ stage: 'phase_result', phase: 2, label: phase2Label, data: results.data });
     // Checkpoint: phase 2 done
     try {
       db.setCheckpoint(session_id, 'id8r', {
