@@ -343,6 +343,15 @@
       </div>
     </div>
 
+    <!-- COMPOSΩR — next step for completed-video workflow -->
+    <div class="advance-banner" style="margin-bottom:12px;border-color:rgba(62,207,178,0.25)">
+      <div class="advance-text">
+        <h3>SCORE YOUR EDIT</h3>
+        <p>AI film scoring. ComposΩr reads your scene structure and writes music that fits the emotional arc of the video.</p>
+      </div>
+      <a class="btn btn-ghost" id="goComposrBtn" href="/composor.html">Open Compos<em style="font-style:normal;color:var(--teal)">Ω</em>r →</a>
+    </div>
+
     <!-- CLIPSR SHORTCUT -->
     <div class="advance-banner" id="clipsrBanner" style="margin-bottom:12px">
       <div class="advance-text">
@@ -1041,6 +1050,10 @@ document.getElementById('projectSelect').addEventListener('change', async (e) =>
     return;
   }
   currentProjectId = id;
+
+  // Wire handoff buttons with project_id
+  document.getElementById('goComposrBtn').href = `/composor.html?project_id=${id}`;
+  document.getElementById('goClipsrBtn').href = `/clipsr.html?project_id=${id}`;
 
   // Try to load existing cuts first
   const data = await loadCuts(id);

@@ -459,34 +459,40 @@ router.post('/research', async (req, res) => {
 
     const { brand: _brand, creatorName: _cn, followerSummary: _fs, niche: _niche } = getCreatorContext();
 
-    const conversationText = getRecentMessages(session.messages)
-      .map(m => `${m.role === 'user' ? _cn : 'Id8r'}: ${m.content}`)
-      .join('\n');
-
     // Focused research on chosen concept
     const chosen         = session.chosenConcept;
     const chosenAngle    = chosen ? chosen.angle    : '';
     const chosenHeadline = chosen ? chosen.headline : '';
-    const chosenContext  = chosen
-      ? `\n\nChosen concept direction: "${chosenHeadline}" (${chosenAngle}). Research specifically for this angle — do not cover other directions.`
-      : '';
+    const chosenWhy      = chosen ? (chosen.why || '') : '';
+
+    // Compact brief — just what research needs, not the full conversation.
+    // Avoids oversized prompts that trigger rate limiting on web_search.
+    const recentUserLines = session.messages
+      .filter(m => m.role === 'user')
+      .slice(-2)
+      .map(m => m.content)
+      .join(' | ');
+    const conceptBrief = chosen
+      ? `Concept: "${chosenHeadline}" | Angle: ${chosenAngle} | Why it works: ${chosenWhy} | Context: ${recentUserLines}`
+      : recentUserLines;
 
     send({ stage: 'start', message: 'Starting research phase...' });
 
     const results = {};
 
     // ── Phase 1: YouTube Research ─────────────────────────────────
+    // max_uses: 2 — enough to find the landscape, not enough to blow the rate limit
     const phase1Label = chosenAngle ? `YouTube Research — ${chosenAngle}` : 'YouTube Research';
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
       const data = await callClaude(
-        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Search for the top performing YouTube videos on the topic from the conversation below. Return maximum 5-7 video examples with titles and channel names only — no URLs needed, no full lists. Summarize what's working: common angles, what's missing, and one key content gap.`,
+        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Find the top performing YouTube content for the specific concept below. Return 4-5 video titles + channels only. Then: what angle most of them take, and the ONE content gap this creator could own.`,
         [{
           role: 'user',
-          content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch YouTube for top performing videos on this specific angle. Return 5-7 examples (title + channel name only), the common approach across them, and the biggest content gap.`,
+          content: `${conceptBrief}\n\nSearch YouTube. Return 4-5 examples (title + channel), the dominant approach, and the biggest gap.`,
         }],
-        1024,
-        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
+        800,
+        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
         session_id,
         onRetry
       );
@@ -512,21 +518,22 @@ router.post('/research', async (req, res) => {
         phase1: results.youtube, phase2: null, phase3: null,
       });
     } catch (_) {}
-    send({ stage: 'phase_wait', phase: 1, duration: 120, message: 'Reviewing findings...' });
-    await new Promise(r => setTimeout(r, 120000));
+    send({ stage: 'phase_wait', phase: 1, duration: 30, message: 'Reviewing findings...' });
+    await new Promise(r => setTimeout(r, 30000));
 
     // ── Phase 2: Data & Facts ─────────────────────────────────────
+    // max_uses: 2 — hard cap, was previously unlimited (root cause of rate limiting)
     const phase2Label = chosenAngle ? `Data & Facts — ${chosenAngle}` : 'Data & Facts';
     send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
       const data = await callClaude(
-        `You are a research analyst for ${_brand}, a ${_niche} content creator. Search for statistics, studies, recent news, and compelling data hooks related to the topic. Focus on numbers and facts that would make the target audience lean in.`,
+        `You are a research analyst for ${_brand}, a ${_niche} content creator. Find 3-5 statistics, studies, or data points that directly support the concept below. Numbers and facts only — the kind that make an audience lean in. Be specific.`,
         [{
           role: 'user',
-          content: `Conversation:\n${conversationText}${chosenContext}\n\nSearch for relevant statistics, studies, news hooks, and data points that strengthen this specific concept.`,
+          content: `${conceptBrief}\n\nSearch for 3-5 concrete stats or data points that strengthen this specific angle. Numbers, sources, recency.`,
         }],
-        1024,
-        [{ type: 'web_search_20260209', name: 'web_search' }],
+        800,
+        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
         session_id,
         onRetry
       );
@@ -573,8 +580,8 @@ router.post('/research', async (req, res) => {
         phase1: results.youtube, phase2: results.data, phase3: null,
       });
     } catch (_) {}
-    send({ stage: 'phase_wait', phase: 2, duration: 120, message: 'Reviewing findings...' });
-    await new Promise(r => setTimeout(r, 120000));
+    send({ stage: 'phase_wait', phase: 2, duration: 30, message: 'Reviewing findings...' });
+    await new Promise(r => setTimeout(r, 30000));
 
     // ── Phase 3: VaultΩr cross-reference ─────────────────────────
     const phase3Label = 'VaultΩr — have you covered this before?';
@@ -612,8 +619,7 @@ router.post('/research', async (req, res) => {
         phase1: results.youtube, phase2: results.data, phase3: results.vault,
       });
     } catch (_) {}
-    send({ stage: 'phase_wait', phase: 3, duration: 120, message: 'Reviewing findings...' });
-    await new Promise(r => setTimeout(r, 120000));
+    // Phase 3 is a local VaultΩr check — no web searches, no delay needed.
 
     // ── Phase 4: Summarization ────────────────────────────────────
     send({ stage: 'phase_start', phase: 4, label: 'Summarizing...' });

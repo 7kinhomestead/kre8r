@@ -257,10 +257,13 @@
       <div class="advance-title">ALL SCENES SELECTED</div>
       <div class="advance-sub">Push your music to DaVinci Resolve 04_AUDIO timeline to complete the score.</div>
     </div>
-    <button class="btn btn-green" id="davinciBtn">
-      <span class="spinner" id="davinciSpinner" style="display:none"></span>
-      Push to DaVinci
-    </button>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-green" id="davinciBtn">
+        <span class="spinner" id="davinciSpinner" style="display:none"></span>
+        Push to DaVinci
+      </button>
+      <a class="btn btn-ghost" id="goClipsrBtn" href="/clipsr.html">→ Continue to Clips<em style="font-style:normal;color:var(--teal)">Ω</em>r</a>
+    </div>
   </div>
 
   <!-- GENERATION PROGRESS -->
@@ -535,7 +538,10 @@ projectSelect.addEventListener('change', () => {
   reanalyzeBtn.disabled = !projectId;
   clearBtn.disabled = !projectId;
   updateSunoPlaywrightBtn();
-  if (projectId) loadTracks();
+  if (projectId) {
+    loadTracks();
+    document.getElementById('goClipsrBtn').href = `/clipsr.html?project_id=${projectId}`;
+  }
 });
 
 // ─── LOAD TRACKS ──────────────────────────────

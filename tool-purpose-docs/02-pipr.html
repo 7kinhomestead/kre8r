@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — PipΩr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --border2: #333;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 300px 300px;
+}
+
+body > * { position: relative; z-index: 1; }
+
+/* TOP NAV */
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 48px;
+}
+
+.nav-back {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.nav-back:hover { color: var(--teal); }
+.nav-back::before { content: '←'; font-size: 14px; }
+
+.nav-num {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.page-wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+}
+
+/* HERO */
+.hero {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-tool-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(72px, 10vw, 120px);
+  letter-spacing: 0.04em;
+  line-height: 0.9;
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+.hero-tool-name .omega { color: var(--teal); }
+
+.phase-badge {
+  display: inline-block;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 100px;
+  margin-bottom: 20px;
+}
+
+.hero-purpose {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text-dim);
+  max-width: 640px;
+  line-height: 1.5;
+  margin-bottom: 36px;
+}
+
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pipeline-pill {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  white-space: nowrap;
+}
+
+.pipeline-pill.current {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-tile);
+  font-weight: 600;
+}
+
+.pipeline-arrow {
+  color: var(--border2);
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* SECTIONS */
+.section {
+  padding: 56px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--teal);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  padding-left: 14px;
+  border-left: 2px solid var(--teal);
+}
+
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 38px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 24px;
+  line-height: 1;
+}
+
+.section-body {
+  color: var(--text-dim);
+  max-width: 720px;
+}
+
+.section-body p + p { margin-top: 16px; }
+
+/* FRAMEWORK CARDS */
+.framework-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  max-width: 840px;
+  margin-top: 28px;
+}
+
+.framework-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+
+.framework-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 19px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.framework-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* STEPS */
+.steps {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+}
+
+.step {
+  display: flex;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step:last-child { border-bottom: none; }
+
+.step-num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.step-content { flex: 1; }
+.step-main { font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.step-dev { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+/* CREATES GRID */
+.creates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 840px;
+}
+
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+
+.creates-col {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.creates-col-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.creates-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.creates-list li {
+  font-size: 14px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.creates-list li::before {
+  content: '—';
+  color: var(--teal);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.creates-list .sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-style: italic;
+}
+
+/* BEAT VISUAL */
+.beat-demo {
+  max-width: 720px;
+  margin-top: 28px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.beat-demo-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.beat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.beat-row:last-child { border-bottom: none; }
+
+.beat-order {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal);
+  flex-shrink: 0;
+}
+
+.beat-info { flex: 1; }
+
+.beat-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.beat-emotion {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.beat-duration {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* VFP */
+.vfp-box {
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-radius: 12px;
+  padding: 32px 36px;
+  max-width: 760px;
+}
+
+.vfp-headline {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  color: var(--teal);
+  margin-bottom: 16px;
+  line-height: 1.15;
+}
+
+.vfp-bullets {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.vfp-bullets li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.vfp-bullets li::before {
+  content: '→';
+  color: var(--teal);
+  flex-shrink: 0;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* HANDOFF */
+.handoff-box { max-width: 720px; }
+
+.handoff-arrow-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.handoff-from {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 10px 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.handoff-to {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--teal);
+  padding: 10px 18px;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  border-radius: 8px;
+}
+
+.handoff-arrow-icon { font-size: 28px; color: var(--teal); }
+.handoff-desc { color: var(--text-dim); }
+
+.data-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.data-tag {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* FOOTER NAV */
+.footer-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 40px 0 0;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-nav-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 180px;
+}
+.footer-nav-link:hover { border-color: var(--teal); background: var(--teal-tile); }
+
+.footer-link-dir {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.footer-link-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+.footer-link-name .omega { color: var(--teal); }
+.footer-nav-link.next { text-align: right; margin-left: auto; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <a class="nav-back" href="../tool-purpose-docs/">All Tools</a>
+  <span class="nav-num">02 / 17</span>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="phase-badge">Pre-Production</div>
+    <h1 class="hero-tool-name">Pip<span class="omega">Ω</span>r</h1>
+    <p class="hero-purpose">The project brain — formally creates the video in the database, maps its emotional arc into a beat map, and gives every downstream tool the structural skeleton to work from.</p>
+
+    <div class="pipeline-row">
+      <span class="pipeline-pill">Id8<span style="color:var(--teal)">Ω</span>r</span>
+      <span class="pipeline-arrow">→</span>
+      <span class="pipeline-pill current">Pip<span style="color:var(--teal)">Ω</span>r</span>
+      <span class="pipeline-arrow">→</span>
+      <span class="pipeline-pill">Writ<span style="color:var(--teal)">Ω</span>r</span>
+    </div>
+  </section>
+
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Project Brain</h2>
+    <div class="section-body">
+      <p>Before PipΩr, your idea is just a creative direction. After PipΩr, it's a real project — with an ID in the database, a story structure, and a beat map that every other tool in the pipeline will hang off. This is the moment the video goes from concept to commitment.</p>
+      <p>The core job is the beat map. You pick a story framework — Save the Cat, Story Circle, VSL (Video Sales Letter), or Freeform — and Claude generates a timed, labeled breakdown of the video's emotional arc. Not just a list of sections. Actual beats: the moment of tension, the pivot, the payoff, the call to action. Each beat has a name, an emotional function description, and an approximate duration.</p>
+      <p>That beat map is what makes the rest of the pipeline coherent. WritΩr writes to it. DirectΩr shoots to it. EditΩr cuts to it. Without PipΩr, every tool downstream is guessing at structure. With it, the whole video has a spine before a single word is written or a frame is shot.</p>
+    </div>
+
+    <div class="framework-grid">
+      <div class="framework-card">
+        <div class="framework-name">Save the Cat</div>
+        <div class="framework-desc">Hollywood's 15-beat structure. Built for story tension and emotional payoff. Best for narrative-driven content.</div>
+      </div>
+      <div class="framework-card">
+        <div class="framework-name">Story Circle</div>
+        <div class="framework-desc">Dan Harmon's 8-step loop: you → need → go → search → find → take → return → change. Great for transformation arcs.</div>
+      </div>
+      <div class="framework-card">
+        <div class="framework-name">VSL</div>
+        <div class="framework-desc">Video Sales Letter structure. Hook → problem → agitate → solution → proof → offer → CTA. Best for your signature show offers and community content.</div>
+      </div>
+      <div class="framework-card">
+        <div class="framework-name">Freeform</div>
+        <div class="framework-desc">No template. Claude infers structure from the content. Best for day-in-the-life and unscripted formats.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">The Workflow</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-main">Name the project and confirm the video topic</div>
+          <div class="step-dev">If arriving from Id8Ωr, the Vision Brief pre-populates topic, angle, and title options. If starting fresh, these are entered manually.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-main">Select a story framework</div>
+          <div class="step-dev">Choice is stored with the project record. Framework selection determines the beat template Claude works from.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-main">Claude generates the beat map — named beats with emotional functions and timestamps</div>
+          <div class="step-dev">callClaude() in src/utils/claude.js with the selected framework template + Vision Brief context. Output is structured JSON: beat_name, emotional_function, order, duration_estimate.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-main">Review and confirm the structure</div>
+          <div class="step-dev">Beats can be adjusted before confirmation. Once locked, the beat map becomes the structural contract for every downstream tool.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-main">Project record written to the database — project_id issued</div>
+          <div class="step-dev">First DB write of the pipeline. projects table row created with title, topic, angle, youtube_url placeholder, and state = 'pre-production'.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-main">Beat rows written to DB — project_id links all beats to this project</div>
+          <div class="step-dev">beats table rows created. Each beat: beat_name, emotional_function, order, duration_estimate. WritΩr queries these by project_id at script generation time.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Beat example -->
+    <div class="beat-demo">
+      <div class="beat-demo-header">Example Beat Map — Save the Cat · "The $200 Water System"</div>
+      <div class="beat-row">
+        <div class="beat-order">1</div>
+        <div class="beat-info">
+          <div class="beat-name">Opening Image</div>
+          <div class="beat-emotion">Establish the problem visually before a word is said</div>
+        </div>
+        <div class="beat-duration">0:00 – 0:20</div>
+      </div>
+      <div class="beat-row">
+        <div class="beat-order">2</div>
+        <div class="beat-info">
+          <div class="beat-name">Theme Stated</div>
+          <div class="beat-emotion">The real cost isn't money, it's what you give up when you don't build this</div>
+        </div>
+        <div class="beat-duration">0:20 – 0:40</div>
+      </div>
+      <div class="beat-row">
+        <div class="beat-order">3</div>
+        <div class="beat-info">
+          <div class="beat-name">Catalyst</div>
+          <div class="beat-emotion">The moment everything went sideways and forced the build</div>
+        </div>
+        <div class="beat-duration">0:40 – 1:30</div>
+      </div>
+      <div class="beat-row" style="opacity:0.45;">
+        <div class="beat-order" style="opacity:0.4;">…</div>
+        <div class="beat-info">
+          <div class="beat-emotion" style="font-style:normal; color:var(--text-muted)">+ 12 more beats through to Final Image</div>
+        </div>
+        <div class="beat-duration"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CREATES -->
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+
+    <div class="creates-grid">
+      <div class="creates-col">
+        <div class="creates-col-title">Data &amp; Records</div>
+        <ul class="creates-list">
+          <li>
+            <div>
+              <strong>projects</strong> table row<br>
+              <span class="sub">id, title, topic, content_angle, state, youtube_url, created_at</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>beats</strong> table rows (one per beat)<br>
+              <span class="sub">id, project_id, beat_name, emotional_function, order, duration_estimate</span>
+            </div>
+          </li>
+          <li>Vision Brief linked to project_id — available to all downstream tools</li>
+        </ul>
+      </div>
+      <div class="creates-col">
+        <div class="creates-col-title">Files &amp; Outputs</div>
+        <ul class="creates-list">
+          <li>
+            <div>
+              Project config directory created<br>
+              <span class="sub">database/projects/{id}/ — holds project-level exports and artifacts</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              Beat map may be exported as JSON<br>
+              <span class="sub">Used by DirectΩr for shot list generation and by TeleprΩmpter for beat cue display</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUABLE FINAL PRODUCT -->
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+
+    <div class="vfp-box">
+      <div class="vfp-headline">The Beat Map — the video's emotional skeleton. Everything downstream writes to it, shoots to it, cuts to it.</div>
+      <p style="color:var(--text-dim); font-size:14px;">A confirmed project in the database with a named story structure and timed beats — each one carrying its emotional function as plain English. No guessing at intent when you're on set or in the edit.</p>
+      <ul class="vfp-bullets">
+        <li>WritΩr generates script segments beat by beat — so the script matches the structure instead of the structure being reverse-engineered from the script.</li>
+        <li>DirectΩr turns the beat map into a shot list — every beat becomes a camera directive, not a vague instruction.</li>
+        <li>EditΩr uses the beat map as the editing frame — rough cut assembly starts from structure, not instinct.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- HANDS OFF TO -->
+  <section class="section">
+    <div class="section-label">Hands Off To</div>
+    <h2 class="section-title">Next in the Pipeline</h2>
+
+    <div class="handoff-box">
+      <div class="handoff-arrow-row">
+        <span class="handoff-from">Pip<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="handoff-arrow-icon">→</span>
+        <span class="handoff-to">Writ<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+      <p class="handoff-desc">WritΩr loads the project by project_id and pulls the full beat map from the database. Each beat becomes a writing target — the script is generated beat by beat, in sequence, using the beat's emotional_function as the directive. The Vision Brief angle and chosen hook also travel through as context.</p>
+      <div class="data-tags">
+        <span class="data-tag">project_id</span>
+        <span class="data-tag">beats[]</span>
+        <span class="data-tag">beat_name</span>
+        <span class="data-tag">emotional_function</span>
+        <span class="data-tag">duration_estimate</span>
+        <span class="data-tag">content_angle</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER NAV -->
+  <nav class="footer-nav">
+    <a class="footer-nav-link" href="01-id8r.html">
+      <span class="footer-link-dir">← Prev</span>
+      <span class="footer-link-name">Id8<span class="omega">Ω</span>r</span>
+    </a>
+    <a class="footer-nav-link next" href="03-writr.html">
+      <span class="footer-link-dir">Next →</span>
+      <span class="footer-link-name">Writ<span class="omega">Ω</span>r</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

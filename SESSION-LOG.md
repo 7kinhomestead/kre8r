@@ -1,3 +1,81 @@
+# Kre8Ωr Session Log — 2026-04-09 (Session 26 — Pipeline Audit, Tool Purpose Docs, Rate Limiting Fix, Short-Form Architecture)
+
+## What Was Built — Session 26
+
+---
+
+### Fix 1: Three Pipeline Handoff Gaps Wired
+
+**VaultΩr → EditΩr** (`public/vault.html`)
+- Added "→ Continue to EditΩr" button to page-header (always visible, links to `/editor.html`)
+- Modified `.page-header` to flex layout to accommodate button alongside title
+
+**ReviewΩr → ComposΩr** (`public/reviewr.html`)
+- Added "SCORE YOUR EDIT" advance-banner above existing ClipsΩr banner
+- `goComposrBtn` href wired with `project_id` on project select
+- `goClipsrBtn` href also wired with `project_id` (was previously static)
+
+**ComposΩr → ClipsΩr** (`public/composor.html`)
+- Added "→ Continue to ClipsΩr" link button alongside existing "Push to DaVinci" in advance-banner
+- `goClipsrBtn` href wired with `project_id` on project select
+
+---
+
+### Fix 2: Id8Ωr Research Rate Limiting
+
+**Root cause confirmed:** Phase 2 had zero `max_uses` limit on web_search — Claude could fire unlimited searches. Full 14-message conversation sent to every research phase (oversized prompts). 120s delays after every phase including VaultΩr check (which does zero web searches).
+
+**`src/routes/id8r.js`:**
+- Built compact `conceptBrief` string (chosen concept + last 2 user messages) replacing full `conversationText` in research phases — dramatically smaller prompts
+- Phase 1 web_search: `max_uses: 3 → 2`, response tokens 1024 → 800
+- Phase 2 web_search: **added `max_uses: 2`** (was unlimited — root cause), response tokens 1024 → 800
+- Phase 1 delay: 120s → 30s
+- Phase 2 delay: 120s → 30s
+- Phase 3 (VaultΩr) delay: **removed entirely** — local check, no web searches
+- Total research wait time: was 6+ minutes hardcoded → now under 2 minutes worst case
+
+---
+
+### Feature 3: Tool Purpose Docs — Full Pipeline (19 files)
+
+Created `tool-purpose-docs/` directory with complete pipeline documentation:
+
+- `index.html` — master index, all tools by phase, status badges, navigation
+- `01-id8r.html` through `17-automator.html` — one doc per tool in pipeline order
+- `18-collaboratr.html` — CoLABoratr/Lab lateral tool doc (gold "THINKING SPACE" framing)
+
+**Design system:** Bebas Neue + DM Sans, `#0a0a0a` background, teal `#14b8a6` primary, red/gold accents only, no purple/green. Matches 7kinhomestead.com brand.
+
+**Each doc covers:** What It Is (plain English, creative-first) → How It Works (numbered steps, tech detail in dim text) → What It Creates (data + files two-column) → Valuable Final Product (teal-tiled box) → Hands Off To → Prev/Next footer navigation.
+
+**Engine vs Soul pass:** Full anonymization of all creator-specific references across all 19 files. Zero remaining hits for creator name, camera operator name, show names, community tier names, follower counts, or location-specific language. Docs are ready for any beta user.
+
+**Corrections made mid-session:**
+- `01-id8r.html` — fixed "sessionStorage" claim → localStorage (UI) + SQLite DB checkpoints (research)
+- `04-director.html` — corrected to reflect actual behavior (beat map → shot list display, not AI shot direction from script). V2.0 gold callout added.
+- `09-reviewr.html` — fully rewritten to reflect decision to remove CutΩr analysis. Pure rough cut approval. Gold callout explaining why CutΩr moved to ClipsΩr.
+
+---
+
+### Decisions Logged in TODO.md
+
+**Task 0A — Short-Form Pipeline Mode:**
+Full architecture for short-form as a first-class content type. `content_type` column on `projects` table carries context through entire pipeline. Id8Ωr detects intent, PipΩr gets Short Form tile with 7 structures (Hook/Tension/Payoff, Open Loop, PAS, Before/After/Bridge, Listicle, Hot Take, Tutorial), WritΩr adapts output length and hook treatment, ClipsΩr flips role for short-form (validates rather than extracts). Commercial unlock — enables short-form-only creator workflows.
+
+**Task 0 — ReviewΩr Refocus:**
+Strip CutΩr analysis (social clips, retention cuts, CTA placement, off-script gold) from ReviewΩr UI. One job: rough cut approval. `cuts` table and `/api/cutor/` routes stay — used by ClipsΩr downstream.
+
+---
+
+### Also Confirmed This Session
+
+- **better-sqlite3 migration** — already complete (CLAUDE.md was stale, still said sql.js)
+- **Id8Ωr concept-selection flow** — already wired in UI (concepts screen → choose → targeted research)
+- **DirectΩr** — confirmed it's a beat-map → shot list converter, not AI shot direction. V2.0 planned.
+- **CoLABoratr/Lab** — confirmed it's `/lab.html`, Creative Director chat with full project context
+
+---
+
 # Kre8Ωr Session Log — 2026-04-09 (Session 25 — MirrΩr Self-Evaluation + Compounding Intelligence Loop + Distribution Readiness)
 
 ## What Was Built — Session 25

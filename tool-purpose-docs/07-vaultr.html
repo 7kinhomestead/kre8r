@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VaultΩr — Kre8Ωr Tool Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 52px;
+}
+.top-nav a { color: var(--teal); text-decoration: none; font-size: 0.85rem; font-weight: 500; letter-spacing: 0.02em; transition: opacity 0.2s; }
+.top-nav a:hover { opacity: 0.75; }
+.top-nav .doc-count { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.05em; }
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 32px 80px; }
+
+.hero { padding: 64px 0 48px; border-bottom: 1px solid var(--border); }
+.phase-badge {
+  display: inline-block;
+  background: rgba(224,48,48,0.08);
+  border: 1px solid rgba(224,48,48,0.25);
+  color: var(--red);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  margin-bottom: 20px;
+}
+.hero-title .omega { color: var(--teal); }
+.hero-oneliner { font-size: 1.2rem; color: var(--text-dim); max-width: 640px; margin-bottom: 40px; line-height: 1.5; }
+
+.pipeline-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.pipe-node { display: flex; align-items: center; gap: 4px; }
+.pipe-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  white-space: nowrap;
+}
+.pipe-label.current { color: var(--teal); border-color: var(--teal); background: var(--teal-tile); }
+.pipe-arrow { color: var(--text-muted); font-size: 0.9rem; margin: 0 4px; }
+.pipe-shoot {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,180,0,0.3);
+  background: rgba(255,180,0,0.06);
+  white-space: nowrap;
+}
+
+.section { padding: 52px 0 0; }
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.section-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; letter-spacing: 0.04em; line-height: 1; margin-bottom: 24px; }
+.body-text { color: var(--text-dim); max-width: 760px; margin-bottom: 16px; font-size: 1rem; line-height: 1.7; }
+.body-text:last-child { margin-bottom: 0; }
+
+/* BRAW workflow highlight */
+.braw-note {
+  margin-bottom: 24px;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  max-width: 760px;
+}
+.braw-note strong { color: var(--gold); }
+
+/* Shot type chips */
+.shot-types { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+.shot-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-dim);
+}
+.shot-chip.primary { border-color: var(--teal); color: var(--teal); background: var(--teal-tile); }
+
+.steps { margin-top: 8px; }
+.step { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--border); }
+.step:last-child { border-bottom: none; }
+.step-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--teal); line-height: 1; min-width: 36px; padding-top: 2px; }
+.step-title { font-weight: 600; font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+.step-detail { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; }
+
+.creates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+.creates-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+.creates-card-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
+.creates-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.creates-item:last-child { margin-bottom: 0; }
+.creates-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); margin-top: 8px; flex-shrink: 0; }
+.creates-text { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
+.creates-text strong { color: var(--text); font-weight: 600; }
+.creates-text code { font-size: 0.8em; color: var(--teal); font-family: monospace; }
+
+.vfp-box { margin-top: 8px; background: var(--teal-tile); border: 1px solid rgba(20,184,166,0.25); border-left: 3px solid var(--teal); border-radius: 8px; padding: 28px 32px; }
+.vfp-box p { color: var(--text); font-size: 1.05rem; line-height: 1.7; }
+.vfp-box p strong { color: var(--teal); font-weight: 600; }
+
+.handoff-box { margin-top: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 28px 32px; display: flex; align-items: flex-start; gap: 20px; }
+.handoff-arrow { font-size: 2rem; color: var(--teal); line-height: 1; flex-shrink: 0; }
+.handoff-dest { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; color: var(--text); margin-bottom: 6px; }
+.handoff-dest .omega { color: var(--teal); }
+.handoff-desc { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; }
+
+.footer-nav { margin-top: 72px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; }
+.footer-link { display: flex; flex-direction: column; gap: 4px; text-decoration: none; padding: 16px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; flex: 1; max-width: 260px; transition: border-color 0.2s; }
+.footer-link:hover { border-color: var(--teal); }
+.footer-link.prev { align-items: flex-start; }
+.footer-link.next { align-items: flex-end; margin-left: auto; }
+.footer-dir { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.footer-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; color: var(--text); }
+.footer-name .omega { color: var(--teal); }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="00-pipeline-flowchart.html">← All Tools</a>
+  <span class="doc-count">07 / 17</span>
+</nav>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="phase-badge">Post-Production</div>
+    <h1 class="hero-title">Vault<span class="omega">Ω</span>r</h1>
+    <p class="hero-oneliner">The footage brain. Every clip ever shot — classified, described, project-linked, and searchable. Nothing lost. Nothing forgotten.</p>
+
+    <div class="pipeline-row">
+      <div class="pipe-node">
+        <span class="pipe-shoot">[SHOOT]</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label current">Vault<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label">Edit<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Footage Brain</h2>
+    <p class="body-text">VaultΩr is a living database of every piece of video the creator has ever shot. Not a folder. Not a manually-tagged library. A database — where every clip has been seen by Claude Vision, classified by shot type, described in plain language, and linked to the project it came from.</p>
+    <p class="body-text">It works by watching a folder. DaVinci Resolve exports proxy files into <code style="color:var(--teal);font-family:monospace;font-size:0.9em">D:\kre8r\intake</code> — VaultΩr's watcher detects the new file, immediately kicks off the intake pipeline, and by the time the creator switches windows, the clip is classified, thumbnailed, and in the database. No drag-and-drop. No tagging screen. No decisions required.</p>
+    <p class="body-text">B-roll from three years ago is findable. Talking-head footage from last Tuesday is linked to its project. A voice analysis button on completed-video cards feeds the WritΩr voice library — so the system gets more accurate about the creator's voice the more content runs through it.</p>
+  </section>
+
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Step by Step</h2>
+
+    <div class="braw-note"><strong>BRAW Proxy Workflow:</strong> Blackmagic cameras shoot .braw files — VaultΩr creates the BRAW record first. When DaVinci exports the proxy, it links back via the <code>_proxy.mp4</code> naming convention (findBrawByBasename). No manual linking required.</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">DaVinci Exports Proxy</div>
+          <div class="step-detail">After the shoot, DaVinci Resolve exports H.264 proxy files from the BRAW originals. Proxy lands in <code style="color:var(--teal);font-size:0.82em">D:\kre8r\intake</code>. The originals stay on the camera SSD or D:\ archive — VaultΩr never touches them.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Watcher Detects New File</div>
+          <div class="step-detail">VaultΩr's folder watcher fires the moment a new <code style="color:var(--teal);font-size:0.82em">.mp4</code> appears in the intake path. No polling delay. The intake pipeline starts immediately.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">ffmpeg Extracts Metadata</div>
+          <div class="step-detail">Duration, resolution, codec, frame rate, and a thumbnail image are extracted via ffprobe and ffmpeg. All stored in the DB. Thumbnail saved to <code style="color:var(--teal);font-size:0.82em">public/thumbnails/</code>.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Claude Vision Classifies Shot Type</div>
+          <div class="step-detail">Thumbnail is sent to Claude Vision. Shot type classified as: talking-head, b-roll, action, dialogue, completed-video, or unusable. No manual tagging required.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Record Written to Database</div>
+          <div class="step-detail">All metadata, classification, filepath, and thumbnail stored in the <code style="color:var(--teal);font-size:0.82em">footage</code> table. If the file matches a BRAW record via <code style="color:var(--teal);font-size:0.82em">_proxy.mp4</code> naming, the records are linked automatically.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">Creator Reviews + Adjusts</div>
+          <div class="step-detail">Creator can override classification, add a description, link a clip to a specific project, or flag a clip as unusable — directly from the VaultΩr card UI. These manual overrides are stored and respected downstream.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <div class="step-title">Voice Analysis (Completed Videos)</div>
+          <div class="step-detail">Completed-video cards show a "Analyze Voice" button. Runs Whisper transcription + Claude voice profiling. Output feeds the WritΩr voice library — the system learns from real delivered content.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">Shot Types Recognized</div>
+    <h2 class="section-title">Claude Vision Classification</h2>
+    <div class="shot-types">
+      <span class="shot-chip primary">Talking-Head</span>
+      <span class="shot-chip primary">B-Roll</span>
+      <span class="shot-chip">Action</span>
+      <span class="shot-chip">Dialogue</span>
+      <span class="shot-chip">Completed Video</span>
+      <span class="shot-chip">Unusable</span>
+    </div>
+    <p class="body-text" style="margin-top:0">Both <code style="color:var(--teal);font-family:monospace;font-size:0.9em">talking-head</code> (hyphen) and <code style="color:var(--teal);font-family:monospace;font-size:0.9em">talking_head</code> (underscore) formats are accepted and normalized at intake — EditΩr reads both without issue.</p>
+  </section>
+
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+    <div class="creates-grid">
+      <div class="creates-card">
+        <div class="creates-card-title">Data &amp; Records</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>footage table rows</strong> — <code>file_path</code>, <code>shot_type</code>, <code>quality_flag</code>, <code>description</code>, <code>duration</code>, <code>resolution</code>, <code>thumbnail_path</code>, <code>project_id</code>, <code>transcript</code></div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>BRAW proxy linkage</strong> — BRAW records linked to proxy MP4 via filename matching, no manual association needed</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Voice profiles</strong> — transcript + voice analysis written to WritΩr voice library for completed-video clips</div>
+        </div>
+      </div>
+      <div class="creates-card">
+        <div class="creates-card-title">Files &amp; Outputs</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Thumbnails</strong> — saved to <code>public/thumbnails/</code> for display in VaultΩr and EditΩr card UIs</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Transcripts in DB</strong> — Whisper transcripts stored as text in the footage record, not as separate files</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>No new video files</strong> — VaultΩr references source paths, never copies or converts footage</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+    <div class="vfp-box">
+      <p>A <strong>fully classified, project-linked footage library</strong> — every clip typed, described, and ready for AI-assisted editing without any manual tagging. B-roll from any shoot is findable. Every talking-head clip is linked to its project and ready to match against a script. The AI editor walks into a library, not a pile of files.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">Hands Off To</div>
+    <h2 class="section-title">Next in the Pipeline</h2>
+    <div class="handoff-box">
+      <div class="handoff-arrow">→</div>
+      <div class="handoff-text">
+        <div class="handoff-dest">Edit<span class="omega">Ω</span>r</div>
+        <div class="handoff-desc">EditΩr receives the classified footage list, project links, and any existing transcripts. It knows what every clip is before it starts making editorial decisions — shot type is already set, proxy paths are already linked, and the AI has everything it needs to build a rough cut.</div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="footer-nav">
+    <a class="footer-link prev" href="06-teleprompter.html">
+      <span class="footer-dir">← Previous</span>
+      <span class="footer-name">Telepr<span class="omega">Ω</span>mpter</span>
+    </a>
+    <a class="footer-link next" href="08-editor.html">
+      <span class="footer-dir">Next →</span>
+      <span class="footer-name">Edit<span class="omega">Ω</span>r</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

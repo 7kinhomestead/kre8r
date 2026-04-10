@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShootDay — Kre8Ωr Tool Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 52px;
+}
+.top-nav a {
+  color: var(--teal);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s;
+}
+.top-nav a:hover { opacity: 0.75; }
+.top-nav .doc-count {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+}
+
+.hero {
+  padding: 64px 0 48px;
+  border-bottom: 1px solid var(--border);
+}
+.phase-badge {
+  display: inline-block;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  margin-bottom: 20px;
+}
+.hero-title .omega { color: var(--teal); }
+.hero-oneliner {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  max-width: 640px;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pipe-node {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pipe-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  white-space: nowrap;
+}
+.pipe-label.current {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-tile);
+}
+.pipe-arrow { color: var(--text-muted); font-size: 0.9rem; margin: 0 4px; }
+.pipe-break {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pipe-shoot {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,180,0,0.3);
+  background: rgba(255,180,0,0.06);
+  white-space: nowrap;
+}
+
+.section {
+  padding: 52px 0 0;
+}
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.body-text {
+  color: var(--text-dim);
+  max-width: 760px;
+  margin-bottom: 16px;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.body-text:last-child { margin-bottom: 0; }
+
+.callout-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,180,0,0.07);
+  border: 1px solid rgba(255,180,0,0.25);
+  border-left: 3px solid var(--gold);
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 24px;
+}
+.callout-gold strong { color: var(--gold); }
+
+.steps { margin-top: 8px; }
+.step {
+  display: flex;
+  gap: 20px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step:last-child { border-bottom: none; }
+.step-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  color: var(--teal);
+  line-height: 1;
+  min-width: 36px;
+  padding-top: 2px;
+}
+.step-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.step-detail {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.creates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+.creates-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+}
+.creates-card-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+}
+.creates-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+.creates-item:last-child { margin-bottom: 0; }
+.creates-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--teal);
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.creates-text {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.creates-text strong { color: var(--text); font-weight: 600; }
+
+.vfp-box {
+  margin-top: 8px;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-left: 3px solid var(--teal);
+  border-radius: 8px;
+  padding: 28px 32px;
+}
+.vfp-box p {
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  font-weight: 400;
+}
+.vfp-box p strong { color: var(--teal); font-weight: 600; }
+
+.handoff-box {
+  margin-top: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 28px 32px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.handoff-arrow { font-size: 2rem; color: var(--teal); line-height: 1; flex-shrink: 0; }
+.handoff-dest {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.handoff-dest .omega { color: var(--teal); }
+.handoff-desc { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; }
+
+.footer-nav {
+  margin-top: 72px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.footer-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex: 1;
+  max-width: 260px;
+  transition: border-color 0.2s;
+}
+.footer-link:hover { border-color: var(--teal); }
+.footer-link.prev { align-items: flex-start; }
+.footer-link.next { align-items: flex-end; margin-left: auto; }
+.footer-dir { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.footer-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; color: var(--text); }
+.footer-name .omega { color: var(--teal); }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="00-pipeline-flowchart.html">← All Tools</a>
+  <span class="doc-count">05 / 17</span>
+</nav>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="phase-badge">Pre-Production — Day-Of Execution</div>
+    <h1 class="hero-title">ShootDay</h1>
+    <p class="hero-oneliner">The shoot day command center. Takes everything from pre-production and packages it for offline use on location — no wifi, no laptop, no problem.</p>
+
+    <div class="pipeline-row">
+      <div class="pipe-node">
+        <span class="pipe-label">Direct<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label current">ShootDay</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-shoot">[SHOOT]</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label">Vault<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Shoot Day Command Center</h2>
+    <div class="callout-gold"><strong>Design reality:</strong> Remote location shoots. No reliable wifi. Your camera operator's phone is the production bible.</div>
+    <p class="body-text">ShootDay takes everything built in pre-production — the shot list from DirectΩr, the crew brief, the script notes — and compresses it into a mobile-friendly checklist that works completely offline. No wifi required. No laptop on location. Just a QR code, a phone, and a plan.</p>
+    <p class="body-text">A location shoot is not a studio. The environment doesn't cooperate. Wind picks up, light changes, something unexpected enters frame. ShootDay gives the crew a single source of truth they can carry in their pocket: every shot, in order, with notes, checkable as they go. Nothing falls through the gaps between planning and execution.</p>
+    <p class="body-text">The QR code package your camera operator scans is a static HTML bundle — no server dependency. It works on their phone even with zero signal in a remote location. Notes can be added per shot in real time, capturing moments like "good take at 2:14" right where they happened.</p>
+  </section>
+
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Step by Step</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Load Project</div>
+          <div class="step-detail">Select the project. Shot list from DirectΩr and crew brief load automatically — no copy-paste, no file transfer.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Checklist Generated</div>
+          <div class="step-detail">Each shot list item becomes a checkable task. Shot type, movement, subject, and camera notes all visible inline — your camera operator can see exactly what each beat needs.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">QR Code Generated</div>
+          <div class="step-detail">The full offline package — checklist, crew brief, shot notes — is bundled into a self-contained HTML file. A QR code lets your camera operator scan and load it on their phone instantly.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">On Location: Check Off as You Shoot</div>
+          <div class="step-detail">Creator and camera operator work through the checklist shot by shot. Items checked off as captured. No paper, no clipboard, no confusion about what's been covered.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Notes Per Shot</div>
+          <div class="step-detail">Any shot can get a note in real time — "nailed at 2:14," "redo: wind noise," "went off-script, keep both." These notes travel with the shot into the post pipeline.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+    <div class="creates-grid">
+      <div class="creates-card">
+        <div class="creates-card-title">Data &amp; Records</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Checklist state</strong> — shot completion status and per-shot notes stored in sessionStorage on the device</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Shot notes</strong> — per-shot text annotations available for VaultΩr and EditΩr downstream</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Crew brief reference</strong> — loaded from project DB, no duplication</div>
+        </div>
+      </div>
+      <div class="creates-card">
+        <div class="creates-card-title">Files &amp; Outputs</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Offline QR package</strong> — static HTML bundle for your camera operator's phone, no server dependency</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Self-contained checklist</strong> — fully functional with zero signal, all shot data embedded</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>No permanent files</strong> — shoot state lives on the device; footage goes straight to VaultΩr after wrap</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+    <div class="vfp-box">
+      <p>An <strong>offline shoot checklist on your camera operator's phone</strong> — zero information loss between planning and execution, even in a remote location with no cell signal. Every shot accounted for, every note captured in the moment, nothing lost between what was planned and what was actually filmed.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">Hands Off To</div>
+    <h2 class="section-title">Next in the Pipeline</h2>
+    <div class="handoff-box">
+      <div class="handoff-arrow">→</div>
+      <div class="handoff-text">
+        <div class="handoff-dest">Vault<span class="omega">Ω</span>r</div>
+        <div class="handoff-desc">After the shoot wraps, footage flows into VaultΩr. DaVinci Resolve exports proxy files into the intake folder and VaultΩr's watcher picks them up automatically — classifying, logging, and linking every clip to its project without any manual input.</div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="footer-nav">
+    <a class="footer-link prev" href="04-director.html">
+      <span class="footer-dir">← Previous</span>
+      <span class="footer-name">Direct<span class="omega">Ω</span>r</span>
+    </a>
+    <a class="footer-link next" href="06-teleprompter.html">
+      <span class="footer-dir">Next →</span>
+      <span class="footer-name">Telepr<span class="omega">Ω</span>mpter</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

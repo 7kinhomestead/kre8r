@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewΩr — Kre8Ωr Tool Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 52px;
+}
+.top-nav a { color: var(--teal); text-decoration: none; font-size: 0.85rem; font-weight: 500; letter-spacing: 0.02em; transition: opacity 0.2s; }
+.top-nav a:hover { opacity: 0.75; }
+.top-nav .doc-count { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.05em; }
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 32px 80px; }
+
+.hero { padding: 64px 0 48px; border-bottom: 1px solid var(--border); }
+.phase-badge {
+  display: inline-block;
+  background: rgba(224,48,48,0.08);
+  border: 1px solid rgba(224,48,48,0.25);
+  color: var(--red);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+}
+.hero-title .omega { color: var(--teal); }
+.hero-subtitle {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+.hero-oneliner { font-size: 1.2rem; color: var(--text-dim); max-width: 640px; margin-bottom: 40px; line-height: 1.5; }
+
+.pipeline-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.pipe-node { display: flex; align-items: center; gap: 4px; }
+.pipe-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  white-space: nowrap;
+}
+.pipe-label.current { color: var(--teal); border-color: var(--teal); background: var(--teal-tile); }
+.pipe-arrow { color: var(--text-muted); font-size: 0.9rem; margin: 0 4px; }
+.pipe-fork-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  margin: 0 4px;
+  font-weight: 600;
+}
+
+.section { padding: 52px 0 0; }
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.section-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; letter-spacing: 0.04em; line-height: 1; margin-bottom: 24px; }
+.body-text { color: var(--text-dim); max-width: 760px; margin-bottom: 16px; font-size: 1rem; line-height: 1.7; }
+.body-text:last-child { margin-bottom: 0; }
+
+/* CutΩr outputs */
+.cutr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px; }
+@media (max-width: 640px) { .cutr-grid { grid-template-columns: 1fr; } }
+.cutr-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.cutr-card.gold { border-color: rgba(255,180,0,0.3); }
+.cutr-card.red { border-color: rgba(224,48,48,0.25); }
+.cutr-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.cutr-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.cutr-card.gold .cutr-name { color: var(--gold); }
+.cutr-card.red .cutr-name { color: var(--red); }
+.cutr-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+
+.steps { margin-top: 8px; }
+.step { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--border); }
+.step:last-child { border-bottom: none; }
+.step-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--teal); line-height: 1; min-width: 36px; padding-top: 2px; }
+.step-title { font-weight: 600; font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+.step-detail { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; }
+
+.creates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+.creates-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+.creates-card-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
+.creates-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.creates-item:last-child { margin-bottom: 0; }
+.creates-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); margin-top: 8px; flex-shrink: 0; }
+.creates-text { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
+.creates-text strong { color: var(--text); font-weight: 600; }
+.creates-text code { font-size: 0.8em; color: var(--teal); font-family: monospace; }
+
+.vfp-box { margin-top: 8px; background: var(--teal-tile); border: 1px solid rgba(20,184,166,0.25); border-left: 3px solid var(--teal); border-radius: 8px; padding: 28px 32px; }
+.vfp-box p { color: var(--text); font-size: 1.05rem; line-height: 1.7; }
+.vfp-box p strong { color: var(--teal); font-weight: 600; }
+
+/* Dual handoff */
+.handoff-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+@media (max-width: 640px) { .handoff-dual { grid-template-columns: 1fr; } }
+.handoff-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.handoff-arrow { font-size: 1.8rem; color: var(--teal); line-height: 1; flex-shrink: 0; }
+.handoff-dest { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; color: var(--text); margin-bottom: 6px; }
+.handoff-dest .omega { color: var(--teal); }
+.handoff-desc { font-size: 0.85rem; color: var(--text-dim); line-height: 1.5; }
+
+.footer-nav { margin-top: 72px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; }
+.footer-link { display: flex; flex-direction: column; gap: 4px; text-decoration: none; padding: 16px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; flex: 1; max-width: 260px; transition: border-color 0.2s; }
+.footer-link:hover { border-color: var(--teal); }
+.footer-link.prev { align-items: flex-start; }
+.footer-link.next { align-items: flex-end; margin-left: auto; }
+.footer-dir { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.footer-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; color: var(--text); }
+.footer-name .omega { color: var(--teal); }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="00-pipeline-flowchart.html">← All Tools</a>
+  <span class="doc-count">09 / 17</span>
+</nav>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="phase-badge">Post-Production</div>
+    <h1 class="hero-title">Review<span class="omega">Ω</span>r</h1>
+    <p class="hero-oneliner">One job: does this rough cut work as a long-form video? Approve it, adjust it, move on. Everything short-form lives in ClipsΩr where it belongs.</p>
+
+    <div class="pipeline-row">
+      <div class="pipe-node">
+        <span class="pipe-label">Edit<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label current">Review<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label">Compos<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Rough Cut Approval Tool</h2>
+    <p class="body-text">ReviewΩr is where human editorial judgment meets the AI rough cut. EditΩr made the first pass — chose the clips, set the order. ReviewΩr is where you look at that pass and decide: does this work? Each select gets a verdict. Approve the ones that belong. Skip the ones that don't. Reorder anything out of sequence. When you're done, the rough cut is locked and ready to score.</p>
+    <p class="body-text">That's it. One job. ReviewΩr is not a short-form tool — ClipsΩr handles viral clip extraction from the completed video with purpose-built analysis. Keeping social clip decisions in ReviewΩr was the wrong stage, the wrong context, and a distraction from the only question that matters here: does the long-form edit hold together?</p>
+    <p class="body-text">After approval, clips are extracted via ffmpeg stream copy — zero quality loss, no re-encode — and the approved sequence hands off to ComposΩr for music scoring.</p>
+
+    <!-- WHY CUTR WAS MOVED -->
+    <div style="margin-top:28px;background:rgba(255,180,0,0.06);border:1px solid rgba(255,180,0,0.2);border-radius:10px;padding:20px 24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.08em;color:var(--gold);margin-bottom:8px;">WHY CUTR ANALYSIS MOVED OUT</div>
+      <p style="color:var(--text-dim);font-size:0.92rem;line-height:1.65;">CutΩr analysis (social clips, retention cuts, CTA placement, off-script gold) used to live here. It was removed because ClipsΩr does the same work — better, later, in the right context. Once the video is complete and scored, ClipsΩr reads the full finished video and identifies viral moments with full production context. Running that analysis on a rough cut at ReviewΩr stage was premature and redundant. The <code style="color:var(--teal);font-size:0.82em">cuts</code> table and <code style="color:var(--teal);font-size:0.82em">/api/cutor/</code> routes still exist and are used by ClipsΩr downstream — they were just removed from this UI.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Step by Step</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Load Project — Rough Cut Ready</div>
+          <div class="step-detail">Select the project. The rough cut sequence from EditΩr loads automatically — every select in order, with beat references, footage links, and any b-roll suggestions from the selection run.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Review Each Select</div>
+          <div class="step-detail">Every clip in the rough cut gets a human verdict: Approve (keep), Skip (remove), or Reorder (drag to correct position). Nothing is locked until the creator says so. This is purely editorial — does this clip belong in this video in this order?</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Extract Approved Clips</div>
+          <div class="step-detail">Approved clips extracted via ffmpeg stream copy — no re-encode, zero quality loss. Output goes to <code style="color:var(--teal);font-size:0.82em">public/clips/{project_id}/</code>. Fast. Non-destructive. The rough cut is now locked.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Handoff to ComposΩr</div>
+          <div class="step-detail">The approved rough cut sequence passes to ComposΩr for scene analysis and music scoring. One banner. One next step. No branching decisions at this stage.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+    <div class="creates-grid">
+      <div class="creates-card">
+        <div class="creates-card-title">Data &amp; Records</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Approved selects</strong> — <code>selects</code> table updated with creator approval decisions and final clip order</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Project state updated</strong> — project marked as rough cut approved, ready for ComposΩr</div>
+        </div>
+      </div>
+      <div class="creates-card">
+        <div class="creates-card-title">Files &amp; Outputs</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Extracted clips</strong> — <code>public/clips/{project_id}/</code> — .mp4 files via ffmpeg stream copy, zero quality loss</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>No render</strong> — the rough cut is a DB sequence; full video render happens in DaVinci Resolve after scoring</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+    <div class="vfp-box">
+      <p>A <strong>human-approved rough cut sequence</strong> — every clip in the right order, locked and ready to score. The long-form edit is decided. Everything downstream (music, short-form, packaging, captions, email) flows from this approval.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">Hands Off To</div>
+    <h2 class="section-title">Next in the Pipeline</h2>
+    <div class="handoff-dual">
+      <div class="handoff-box">
+        <div class="handoff-arrow">→</div>
+        <div>
+          <div class="handoff-dest">Compos<span class="omega">Ω</span>r</div>
+          <div class="handoff-desc">Receives the approved rough cut sequence for scene analysis and music scoring. Claude maps the emotional arc, writes Suno prompts per scene, and places generated music directly into DaVinci Resolve.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="footer-nav">
+    <a class="footer-link prev" href="08-editor.html">
+      <span class="footer-dir">← Previous</span>
+      <span class="footer-name">Edit<span class="omega">Ω</span>r</span>
+    </a>
+    <a class="footer-link next" href="10-composr.html">
+      <span class="footer-dir">Next →</span>
+      <span class="footer-name">Compos<span class="omega">Ω</span>r</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

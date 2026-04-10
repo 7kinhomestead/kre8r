@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoLABoratr — Kre8Ωr Tool Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --border2: #333;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Dark noise texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 300px 300px;
+}
+
+body > * { position: relative; z-index: 1; }
+
+/* ── STICKY NAV ── */
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 48px;
+}
+.nav-back {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.nav-back:hover { color: var(--teal); }
+.nav-back::before { content: '←'; font-size: 14px; }
+.nav-num {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── LAYOUT ── */
+.page-wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--border);
+}
+.phase-badge {
+  display: inline-block;
+  background: rgba(255,180,0,0.08);
+  border: 1px solid rgba(255,180,0,0.3);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 100px;
+  margin-bottom: 20px;
+}
+.hero-tool-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(64px, 10vw, 112px);
+  letter-spacing: 0.04em;
+  line-height: 0.9;
+  color: var(--text);
+  margin-bottom: 24px;
+}
+.hero-tool-name .omega { color: var(--teal); }
+.hero-purpose {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text-dim);
+  max-width: 640px;
+  line-height: 1.5;
+  margin-bottom: 36px;
+}
+
+/* ── LATERAL PIPELINE ROW ── */
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pipeline-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pipeline-pill {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  white-space: nowrap;
+}
+.pipeline-pill.current {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-tile);
+  font-weight: 600;
+}
+.pipeline-pill.gold-pill {
+  color: var(--gold);
+  border-color: rgba(255,180,0,0.35);
+  background: rgba(255,180,0,0.06);
+  font-weight: 600;
+  border-style: dashed;
+}
+.pipeline-arrow {
+  color: var(--border2);
+  font-size: 18px;
+  line-height: 1;
+}
+.pipeline-branch-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border: 1px dashed var(--border2);
+  border-radius: 4px;
+  font-style: italic;
+}
+
+/* ── SECTIONS ── */
+.section {
+  padding: 56px 0;
+  border-bottom: 1px solid var(--border);
+}
+.section-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--teal);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  padding-left: 14px;
+  border-left: 2px solid var(--teal);
+}
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 38px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 24px;
+  line-height: 1;
+}
+.section-body {
+  color: var(--text-dim);
+  max-width: 720px;
+}
+.section-body p + p {
+  margin-top: 16px;
+}
+
+/* ── STEPS ── */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 720px;
+}
+.step {
+  display: flex;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step:last-child { border-bottom: none; }
+.step-num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+.step-content { flex: 1; }
+.step-main {
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.step-dev {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── CREATES GRID ── */
+.creates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 840px;
+}
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+.creates-col {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+.creates-col-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.creates-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.creates-list li {
+  font-size: 14px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.creates-list li::before {
+  content: '—';
+  color: var(--teal);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.creates-list .none {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.creates-list .none::before { content: ''; }
+
+/* ── WHEN TO USE LIST ── */
+.when-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 680px;
+  margin-top: 4px;
+}
+.when-list li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.when-list li::before {
+  content: '↳';
+  color: var(--teal);
+  flex-shrink: 0;
+  font-size: 16px;
+  margin-top: 1px;
+}
+
+/* ── THINKING SPACE BOX (gold) ── */
+.thinking-box {
+  background: rgba(255,180,0,0.06);
+  border: 1px solid rgba(255,180,0,0.25);
+  border-left: 3px solid var(--gold);
+  border-radius: 12px;
+  padding: 32px 36px;
+  max-width: 760px;
+}
+.thinking-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.thinking-headline {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+.thinking-body {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 620px;
+}
+.thinking-body p + p { margin-top: 14px; }
+
+/* ── TECH TAGS ── */
+.data-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.data-tag {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'DM Sans', monospace;
+}
+
+/* ── FOOTER NAV ── */
+.footer-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 40px 0 0;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.footer-nav-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 180px;
+}
+.footer-nav-link:hover {
+  border-color: var(--teal);
+  background: var(--teal-tile);
+}
+.footer-link-dir {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.footer-link-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+.footer-link-name .omega { color: var(--teal); }
+.footer-nav-link.next {
+  text-align: right;
+  margin-left: auto;
+}
+.footer-end-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: right;
+  margin-left: auto;
+  padding: 16px 0 0;
+  letter-spacing: 0.03em;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <a class="nav-back" href="../tool-purpose-docs/">All Tools</a>
+  <span class="nav-num">18 — Lateral Tool</span>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="phase-badge">Lateral Tool — Always Available</div>
+    <h1 class="hero-tool-name">COLAB<em class="omega">Ω</em>RATR</h1>
+    <p class="hero-purpose">Your on-demand creative director. Load a project, ask anything — shots, structure, pacing, hooks, narrative problems. Claude has full context and thinks in visuals and emotion, not bullet points.</p>
+
+    <div class="pipeline-row">
+      <span class="pipeline-branch-label">Available at any point in the pipeline</span>
+      <span class="pipeline-arrow">↗</span>
+      <div class="pipeline-node">
+        <span class="pipeline-pill current">CoLAB<span style="color:var(--teal)">Ω</span>ratr</span>
+      </div>
+      <span class="pipeline-arrow">↘</span>
+      <span class="pipeline-branch-label">Return to wherever you were</span>
+    </div>
+  </section>
+
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Creative Director Chat</h2>
+    <div class="section-body">
+      <p>CoLABoratr is a two-panel chat interface where Claude loads your full project context — the approved script, beat map, research findings, content angle, and creative package — and becomes your creative director for the session. You ask it anything about the project. It answers with the whole picture in mind.</p>
+      <p>It's not a sequential pipeline step. It's the smart collaborator you pull in when you're stuck, when you're thinking something through, or when you want a second opinion before committing to a direction. It doesn't produce a file or a database record. The output is clarity. You leave knowing what to do next.</p>
+      <p>Use it to think through specific shots for a new video — what moments would actually tell the story, which ones could be cut, what the camera needed to capture versus what the edit would carry. That kind of thinking used to happen in your head, alone, or in a production meeting. CoLABoratr gives you a room to think out loud in, with someone who already knows the project.</p>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">The Workflow</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-main">Open Lab from the nav — select a project</div>
+          <div class="step-dev">CoLABoratr lives at /lab.html. Branded as "🧪 LAB" in the nav. Select any active project to load its context.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-main">Full project context loads automatically</div>
+          <div class="step-dev">Context pulled via /api/lab/context/{project_id}: approved script, beat map, research findings, content angle, creative package, creator voice profile. Claude's system prompt is built from all of it.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-main">Chat interface opens — type any creative question</div>
+          <div class="step-dev">No form fields, no modes, no setup. Just a chat box. The sidebar shows project info: beats, angle, script excerpt — so you always have the map in front of you.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-main">Claude responds as creative director with full project awareness</div>
+          <div class="step-dev">Responses stream via /api/lab/chat (SSE). Claude knows the voice, the angle, the structure, the beats. It doesn't give you generic advice — it gives you answers about this project.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-main">Conversation held in memory for the session only</div>
+          <div class="step-dev">Chat history is not persisted. CoLABoratr is a thinking space, not a record. When you close the tab, the conversation ends. That's intentional — it keeps the space clean and low-stakes.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-main">Walk away knowing what to do — go do it in the right tool</div>
+          <div class="step-dev">The decisions you made in CoLABoratr get implemented wherever they belong: DirectΩr, EditΩr, WritΩr, ShootDay. CoLABoratr is the thinking. The other tools are the doing.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CREATES -->
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+
+    <div class="creates-grid">
+      <div class="creates-col">
+        <div class="creates-col-title">Data &amp; Records</div>
+        <ul class="creates-list">
+          <li class="none">— no database records —</li>
+          <li style="color:var(--text-muted); font-size:13px; margin-top:8px;">CoLABoratr is intentionally ephemeral. It reads project data; it writes nothing back. The value lives in the decisions it enables, not in any artifact it creates.</li>
+        </ul>
+      </div>
+      <div class="creates-col">
+        <div class="creates-col-title">Files &amp; Outputs</div>
+        <ul class="creates-list">
+          <li class="none">— no files —</li>
+          <li style="color:var(--text-muted); font-size:13px; margin-top:8px;">No exports, no downloads, no saved sessions. The conversation is session-only by design — low-stakes, no pressure, just thinking.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="data-tags" style="margin-top: 20px;">
+      <span class="data-tag">Route: /lab.html</span>
+      <span class="data-tag">API: /api/lab/chat (SSE)</span>
+      <span class="data-tag">Context: /api/lab/context/{project_id}</span>
+      <span class="data-tag">Session-only memory</span>
+    </div>
+  </section>
+
+  <!-- WHEN TO USE IT -->
+  <section class="section">
+    <div class="section-label">When To Use It</div>
+    <h2 class="section-title">Pull It In When You're Stuck</h2>
+
+    <ul class="when-list">
+      <li>Before a shoot when you're not sure what shots will actually tell the story</li>
+      <li>When the script feels off and you can't identify why</li>
+      <li>When you want to pressure-test a hook or angle before committing to it</li>
+      <li>When you've gone off-script during a shoot and need to think through what you've got</li>
+      <li>When you're stuck mid-edit and need a second opinion on structure or pacing</li>
+      <li>When something in the pipeline doesn't feel right and you can't name it yet</li>
+    </ul>
+  </section>
+
+  <!-- THINKING SPACE / VFP -->
+  <section class="section">
+    <div class="section-label">Thinking Space</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+
+    <div class="thinking-box">
+      <div class="thinking-label">Valuable Final Product</div>
+      <div class="thinking-headline">Unstuck.</div>
+      <div class="thinking-body">
+        <p>CoLABoratr doesn't produce a deliverable. It removes the block between you and the next decision. The output is clarity — you leave knowing what angle to push, what shot to get, what to cut, what the real problem was. That clarity is what lets every other tool do its job.</p>
+        <p>The conversation disappears when you close the tab. What stays is the direction you chose and the confidence you chose it with.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER NAV -->
+  <nav class="footer-nav">
+    <a class="footer-nav-link" href="17-automator.html">
+      <span class="footer-link-dir">← Previous</span>
+      <span class="footer-link-name">Automat<span class="omega">Ω</span>r</span>
+    </a>
+    <span class="footer-end-note">End of series — CoLABoratr is a lateral tool, not Step 18 of the pipeline</span>
+  </nav>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — WritΩr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --border2: #333;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 300px 300px;
+}
+
+body > * { position: relative; z-index: 1; }
+
+/* TOP NAV */
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 48px;
+}
+
+.nav-back {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.nav-back:hover { color: var(--teal); }
+.nav-back::before { content: '←'; font-size: 14px; }
+
+.nav-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.page-wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+}
+
+/* HERO */
+.hero {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-tool-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(72px, 10vw, 120px);
+  letter-spacing: 0.04em;
+  line-height: 0.9;
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+.hero-tool-name .omega { color: var(--teal); }
+
+.phase-badge {
+  display: inline-block;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 100px;
+  margin-bottom: 20px;
+}
+
+.hero-purpose {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text-dim);
+  max-width: 640px;
+  line-height: 1.5;
+  margin-bottom: 36px;
+}
+
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pipeline-pill {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  white-space: nowrap;
+}
+
+.pipeline-pill.current {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-tile);
+  font-weight: 600;
+}
+
+.pipeline-arrow { color: var(--border2); font-size: 18px; line-height: 1; }
+
+/* SECTIONS */
+.section {
+  padding: 56px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--teal);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  padding-left: 14px;
+  border-left: 2px solid var(--teal);
+}
+
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 38px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 24px;
+  line-height: 1;
+}
+
+.section-body {
+  color: var(--text-dim);
+  max-width: 720px;
+}
+.section-body p + p { margin-top: 16px; }
+
+/* MODE CARDS */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 840px;
+  margin-top: 28px;
+}
+
+@media (max-width: 640px) {
+  .mode-grid { grid-template-columns: 1fr; }
+}
+
+.mode-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 22px;
+}
+
+.mode-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 8px;
+}
+
+.mode-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.mode-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* VOICE BLEND */
+.voice-blend {
+  max-width: 720px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 32px;
+  margin-top: 28px;
+}
+
+.voice-blend-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.voice-blend-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.slider-demo {
+  position: relative;
+  height: 6px;
+  background: var(--border2);
+  border-radius: 3px;
+  margin: 16px 0;
+}
+
+.slider-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 70%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal), rgba(20,184,166,0.4));
+  border-radius: 3px;
+}
+
+.slider-thumb {
+  position: absolute;
+  left: 70%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-glow);
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
+.voice-profiles-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.profile-tag {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.profile-tag .tag-num {
+  color: var(--teal);
+  font-weight: 600;
+  margin-right: 5px;
+}
+
+/* STEPS */
+.steps {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+}
+
+.step {
+  display: flex;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step:last-child { border-bottom: none; }
+
+.step-num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.step-content { flex: 1; }
+.step-main { font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.step-dev { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+/* BEAT CARD DEMO */
+.beat-card-demo {
+  max-width: 720px;
+  margin-top: 28px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.bcd-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bcd-badge {
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+}
+
+.bcd-beat-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+
+.bcd-emotion {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bcd-script {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  border-left: 3px solid var(--teal);
+  margin: 16px 20px;
+  border-radius: 0 4px 4px 0;
+  background: rgba(20,184,166,0.04);
+}
+
+/* CREATES GRID */
+.creates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 840px;
+}
+
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+
+.creates-col {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.creates-col-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.creates-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.creates-list li {
+  font-size: 14px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.creates-list li::before {
+  content: '—';
+  color: var(--teal);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.creates-list .sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.creates-list .none { color: var(--text-muted); font-style: italic; }
+.creates-list .none::before { content: ''; }
+
+/* VFP */
+.vfp-box {
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-radius: 12px;
+  padding: 32px 36px;
+  max-width: 760px;
+}
+
+.vfp-headline {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  color: var(--teal);
+  margin-bottom: 16px;
+  line-height: 1.15;
+}
+
+.vfp-bullets {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.vfp-bullets li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.vfp-bullets li::before {
+  content: '→';
+  color: var(--teal);
+  flex-shrink: 0;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* HANDOFF — MULTI TARGET */
+.handoff-multi {
+  max-width: 760px;
+}
+
+.handoff-from-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 10px 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.handoff-targets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.handoff-target {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  border-top: 2px solid var(--teal);
+}
+
+.handoff-target-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: var(--teal);
+  margin-bottom: 6px;
+}
+
+.handoff-target-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* GOLD CALLOUT */
+.gold-note {
+  background: rgba(255,180,0,0.05);
+  border: 1px solid rgba(255,180,0,0.2);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  max-width: 720px;
+}
+
+.gold-note-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+
+.gold-note-body { font-size: 14px; color: var(--text-dim); }
+
+/* FOOTER NAV */
+.footer-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 40px 0 0;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-nav-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 180px;
+}
+.footer-nav-link:hover { border-color: var(--teal); background: var(--teal-tile); }
+
+.footer-link-dir {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.footer-link-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+.footer-link-name .omega { color: var(--teal); }
+.footer-nav-link.next { text-align: right; margin-left: auto; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <a class="nav-back" href="../tool-purpose-docs/">All Tools</a>
+  <span class="nav-num">03 / 17</span>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="phase-badge">Pre-Production</div>
+    <h1 class="hero-tool-name">Writ<span class="omega">Ω</span>r</h1>
+    <p class="hero-purpose">The voice machine — generates the actual script in the creator's authentic voice, beat by beat, using analyzed voice profiles from real videos. Not generic AI. The real thing.</p>
+
+    <div class="pipeline-row">
+      <span class="pipeline-pill">Pip<span style="color:var(--teal)">Ω</span>r</span>
+      <span class="pipeline-arrow">→</span>
+      <span class="pipeline-pill current">Writ<span style="color:var(--teal)">Ω</span>r</span>
+      <span class="pipeline-arrow">→</span>
+      <span class="pipeline-pill">Direct<span style="color:var(--teal)">Ω</span>r</span>
+    </div>
+  </section>
+
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Voice Machine</h2>
+    <div class="section-body">
+      <p>Most AI writing tools produce content that sounds like AI wrote it — competent, flat, nobody in particular. WritΩr is different because it's calibrated to a specific human. Before WritΩr generates a single word, it loads a voice profile: a deep analysis of how the creator actually talks. How they open. Where they put the jokes. The rhythm of their sentences. The places they go off-script. Voice profiles are built from real videos and live in the voice library.</p>
+      <p>The script is written to the beat map PipΩr created. Not as one long block of text — beat by beat, with each beat's emotional function serving as the creative directive. Beat 3 says "Catalyst — the moment everything went sideways." WritΩr writes that moment. The structure comes from PipΩr; the voice comes from the voice profiles; the words belong to the creator.</p>
+      <p>Three modes let you control how much WritΩr does versus how much the creator ad-libs on camera: Full Script (every word written out), Bullets (talking points only — trust the talent), or Hybrid (scripted intro and outro with bullet body for the middle). A voice blend slider lets you mix tones — more conversational, more educational, whatever the video calls for.</p>
+    </div>
+
+    <div class="mode-grid">
+      <div class="mode-card">
+        <div class="mode-label">Mode 01</div>
+        <div class="mode-name">Full Script</div>
+        <div class="mode-desc">Every word written out. Best for TeleprΩmpter delivery on complex or high-stakes topics.</div>
+      </div>
+      <div class="mode-card">
+        <div class="mode-label">Mode 02</div>
+        <div class="mode-name">Bullets</div>
+        <div class="mode-desc">Talking points only. Best for experienced-on-camera moments — the creator's off-script moments are often better anyway.</div>
+      </div>
+      <div class="mode-card">
+        <div class="mode-label">Mode 03</div>
+        <div class="mode-name">Hybrid</div>
+        <div class="mode-desc">Scripted intro and outro. Bullet body. Best for most content — nails the hook and close, frees the middle.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">The Workflow</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-main">Load a project — beat map loads automatically</div>
+          <div class="step-dev">WritΩr queries the beats table by project_id. All beat_name, emotional_function, and duration_estimate values load into beat cards displayed in the UI. Vision Brief context also loads.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-main">Select script mode: Full Script, Bullets, or Hybrid</div>
+          <div class="step-dev">Mode selection changes the Claude prompt structure — Full Script requests fully formed prose; Bullets requests concise talking points; Hybrid applies mode logic per beat position (first/last beats = scripted, middle = bullets).</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-main">Adjust the voice blend slider</div>
+          <div class="step-dev">0–100 scale blending between two selected voice profiles from the library. Slider value passed into the Claude prompt as a weighting instruction — e.g. "70% conversational, 30% educational".</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-main">Claude writes to each beat using the selected voice profile</div>
+          <div class="step-dev">callClaude() runs once per beat or as a single batched generation depending on script length. Voice profile analysis text is injected into the system prompt. Emotional function description is the per-beat creative directive.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-main">Beat cards display — each shows the beat name, emotional function, and generated script</div>
+          <div class="step-dev">UI renders one card per beat. emotional_function shown in dimmed italic above the script output so the intent is always visible while editing.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-main">Creator reviews and edits inline — then approves</div>
+          <div class="step-dev">Inline editing before approval. Once approved: writr_scripts row updated with is_approved = true. Approved script becomes the canonical source for downstream tools.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-content">
+          <div class="step-main">Approved script stored in DB — accessible to all downstream tools</div>
+          <div class="step-dev">full_script, generated_script, voice_profile_id, is_approved, project_id all written to writr_scripts. PackageΩr, CaptionΩr, MailΩr query the approved script as creative context.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Beat card demo -->
+    <div class="beat-card-demo">
+      <div class="bcd-header">
+        <div class="bcd-badge">Beat 3 of 15</div>
+        <div class="bcd-beat-name">Catalyst</div>
+      </div>
+      <div class="bcd-emotion">The moment everything went sideways and forced the build</div>
+      <div class="bcd-script">
+        So we're three days into this build — I've got pipe everywhere, the camera's rolling, everything's going sideways — and I go to turn the water on for the first time. Nothing. Not a drop. Turns out I had the whole thing backwards. Pressure in, no outlet. You know that feeling where you just... stare at something you built for a week and realize you gotta start over? That was Tuesday.
+      </div>
+    </div>
+
+    <div class="gold-note">
+      <div class="gold-note-label">Voice Library Note</div>
+      <div class="gold-note-body">Voice profiles from the creator's real videos live in the WritΩr library. New profiles are created via the Voice Analysis button on completed-video cards in VaultΩr — run it on a new video, the analysis gets stored, and it becomes available in the voice blend selector immediately.</div>
+    </div>
+
+    <!-- Voice blend visual -->
+    <div class="voice-blend">
+      <div class="voice-blend-title">Voice Blend Slider</div>
+      <div class="voice-blend-desc">Mix any two voice profiles at any ratio. The blend value rides along with the Claude prompt as a tonal weighting instruction.</div>
+      <div class="slider-demo">
+        <div class="slider-fill"></div>
+        <div class="slider-thumb"></div>
+      </div>
+      <div class="slider-labels">
+        <span>Conversational / Off-the-cuff</span>
+        <span>70 / 30</span>
+        <span>Educational / Structured</span>
+      </div>
+      <div class="voice-profiles-row">
+        <span class="profile-tag"><span class="tag-num">6</span> analyzed voice profiles in library</span>
+        <span class="profile-tag">from the creator's real videos</span>
+        <span class="profile-tag">stored in writr_voice_profiles</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CREATES -->
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+
+    <div class="creates-grid">
+      <div class="creates-col">
+        <div class="creates-col-title">Data &amp; Records</div>
+        <ul class="creates-list">
+          <li>
+            <div>
+              <strong>writr_scripts</strong> table row<br>
+              <span class="sub">project_id, full_script, generated_script, is_approved, voice_profile_id, mode, blend_value, created_at</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              Beat-level script segments<br>
+              <span class="sub">Stored per beat — each segment tied to a beat_id so structural context is preserved</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              Voice profile records (when analyzed via VaultΩr)<br>
+              <span class="sub">stored in writr_voice_profiles — name, analysis text, source_video_id</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="creates-col">
+        <div class="creates-col-title">Files &amp; Outputs</div>
+        <ul class="creates-list">
+          <li class="none">— none —</li>
+          <li style="color:var(--text-muted); font-size:13px; margin-top:8px;">Script lives in the database. TeleprΩmpter reads from DB at load time. No files written to disk during script generation.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUABLE FINAL PRODUCT -->
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+
+    <div class="vfp-box">
+      <div class="vfp-headline">An approved script in the creator's authentic voice — locked to the beat structure, ready for delivery, and trusted by every downstream AI tool.</div>
+      <p style="color:var(--text-dim); font-size:14px;">Not a rough draft. An approved, beat-mapped, voice-calibrated script that the pipeline treats as the canonical creative source from this point forward.</p>
+      <ul class="vfp-bullets">
+        <li>TeleprΩmpter loads it directly for on-camera delivery — no copy-paste, no reformatting, beats visible as cue markers.</li>
+        <li>CaptionΩr and MailΩr use the script as the anchor for platform copy — hook, body angle, and tone are already established before a single caption is drafted.</li>
+        <li>PackageΩr reads the script to generate platform-specific descriptions that stay faithful to the video's actual content and creative direction.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- HANDS OFF TO -->
+  <section class="section">
+    <div class="section-label">Hands Off To</div>
+    <h2 class="section-title">Next in the Pipeline</h2>
+
+    <div class="handoff-multi">
+      <div>
+        <span class="handoff-from-label">Writ<span style="color:var(--teal)">Ω</span>r → Multiple Downstream Tools</span>
+      </div>
+
+      <div class="handoff-targets">
+        <div class="handoff-target">
+          <div class="handoff-target-name">Direct<span style="color:var(--teal)">Ω</span>r</div>
+          <div class="handoff-target-desc">Shot list generated from the approved script. Each script segment becomes a camera directive.</div>
+        </div>
+        <div class="handoff-target">
+          <div class="handoff-target-name">Teleprοmpter</div>
+          <div class="handoff-target-desc">Script loaded for on-camera delivery. Beats display as section cues while text scrolls.</div>
+        </div>
+        <div class="handoff-target">
+          <div class="handoff-target-name">Package<span style="color:var(--teal)">Ω</span>r</div>
+          <div class="handoff-target-desc">Reads approved script to generate platform descriptions for YouTube, TikTok, Lemon8.</div>
+        </div>
+        <div class="handoff-target">
+          <div class="handoff-target-name">Caption<span style="color:var(--teal)">Ω</span>r</div>
+          <div class="handoff-target-desc">Script hook and tone anchor caption generation across all platforms.</div>
+        </div>
+        <div class="handoff-target">
+          <div class="handoff-target-name">Mail<span style="color:var(--teal)">Ω</span>r</div>
+          <div class="handoff-target-desc">Script provides the creative context for email broadcasts, blog posts, and community content.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER NAV -->
+  <nav class="footer-nav">
+    <a class="footer-nav-link" href="02-pipr.html">
+      <span class="footer-link-dir">← Prev</span>
+      <span class="footer-link-name">Pip<span class="omega">Ω</span>r</span>
+    </a>
+    <a class="footer-nav-link next" href="04-director.html">
+      <span class="footer-link-dir">Next →</span>
+      <span class="footer-link-name">Direct<span class="omega">Ω</span>r</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

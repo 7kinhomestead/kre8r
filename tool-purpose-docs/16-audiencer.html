@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AudiencΩr — Kre8Ωr Tool Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 52px;
+}
+.top-nav a {
+  color: var(--teal);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s;
+}
+.top-nav a:hover { opacity: 0.75; }
+.top-nav .doc-count { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.05em; }
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 32px 80px; }
+
+.hero { padding: 64px 0 48px; border-bottom: 1px solid var(--border); }
+.phase-badge {
+  display: inline-block;
+  background: rgba(255,180,0,0.07);
+  border: 1px solid rgba(255,180,0,0.28);
+  color: var(--gold);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  margin-bottom: 20px;
+}
+.hero-title .omega { color: var(--teal); }
+.hero-oneliner {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  max-width: 640px;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+/* Sidebar / standalone badge */
+.position-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,180,0,0.06);
+  border: 1px solid rgba(255,180,0,0.2);
+  border-radius: 6px;
+  padding: 6px 14px;
+  margin-bottom: 32px;
+}
+.position-badge-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.pipeline-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.pipe-node { display: flex; align-items: center; gap: 4px; }
+.pipe-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  white-space: nowrap;
+}
+.pipe-label.current { color: var(--teal); border-color: var(--teal); background: var(--teal-tile); }
+.pipe-arrow { color: var(--text-muted); font-size: 0.9rem; margin: 0 4px; }
+
+.section { padding: 52px 0 0; }
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.body-text { color: var(--text-dim); max-width: 760px; margin-bottom: 16px; font-size: 1rem; line-height: 1.7; }
+.body-text:last-child { margin-bottom: 0; }
+
+/* Tier cards */
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 24px;
+  max-width: 760px;
+}
+@media (max-width: 580px) { .tier-grid { grid-template-columns: 1fr; } }
+.tier-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+.tier-emoji { font-size: 1.4rem; margin-bottom: 8px; }
+.tier-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.tier-detail { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+
+.steps { margin-top: 8px; }
+.step { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--border); }
+.step:last-child { border-bottom: none; }
+.step-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--teal); line-height: 1; min-width: 36px; padding-top: 2px; }
+.step-title { font-weight: 600; font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+.step-detail { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; }
+
+.callout {
+  margin-top: 24px;
+  background: rgba(224,48,48,0.06);
+  border: 1px solid rgba(224,48,48,0.2);
+  border-radius: 8px;
+  padding: 16px 20px;
+  max-width: 760px;
+}
+.callout-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--red); margin-bottom: 6px; }
+.callout-body { font-size: 0.875rem; color: var(--text-dim); line-height: 1.6; }
+
+.creates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+.creates-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+.creates-card-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
+.creates-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.creates-item:last-child { margin-bottom: 0; }
+.creates-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); margin-top: 8px; flex-shrink: 0; }
+.creates-text { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
+.creates-text strong { color: var(--text); font-weight: 600; }
+
+.vfp-box {
+  margin-top: 8px;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-left: 3px solid var(--teal);
+  border-radius: 8px;
+  padding: 28px 32px;
+}
+.vfp-box p { color: var(--text); font-size: 1.05rem; line-height: 1.7; font-weight: 400; }
+.vfp-box p strong { color: var(--teal); font-weight: 600; }
+
+/* Informs box — no arrow, different framing */
+.informs-box {
+  margin-top: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 28px 32px;
+}
+.informs-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.informs-list { display: flex; flex-direction: column; gap: 10px; }
+.informs-item { display: flex; gap: 12px; align-items: flex-start; font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
+.informs-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); flex-shrink: 0; margin-top: 8px; }
+
+.footer-nav { margin-top: 72px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; }
+.footer-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex: 1;
+  max-width: 260px;
+  transition: border-color 0.2s;
+}
+.footer-link:hover { border-color: var(--teal); }
+.footer-link.prev { align-items: flex-start; }
+.footer-link.next { align-items: flex-end; margin-left: auto; }
+.footer-dir { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.footer-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; color: var(--text); }
+.footer-name .omega { color: var(--teal); }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="00-pipeline-flowchart.html">← All Tools</a>
+  <span class="doc-count">16 / 17</span>
+</nav>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="phase-badge">Audience</div>
+    <h1 class="hero-title">Audienc<span class="omega">Ω</span>r</h1>
+    <p class="hero-oneliner">The audience lens — connects to Kajabi via OAuth2 and surfaces every contact, tag, offer, and membership tier so distribution decisions are grounded in who is actually in the community.</p>
+
+    <div class="position-badge">
+      <span class="position-badge-text">Sidebar Tool — Accessible Alongside MailΩr</span>
+    </div>
+
+    <div class="pipeline-row">
+      <div class="pipe-label current">Audienc<span style="color:var(--teal)">Ω</span>r</div>
+      <span style="color:var(--text-muted); font-size:0.85rem; margin: 0 8px;">informs</span>
+      <div class="pipe-label">Mail<span style="color:var(--teal)">Ω</span>r</div>
+      <span style="color:var(--text-muted); font-size:0.85rem; margin: 0 8px;">+</span>
+      <div class="pipe-label">Automat<span style="color:var(--teal)">Ω</span>r</div>
+    </div>
+  </section>
+
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Audience Lens</h2>
+    <p class="body-text">Writing emails and community posts without knowing who's in the community is writing blind. AudiencΩr fixes that. It connects directly to the Kajabi community database via OAuth2 and pulls all contacts — their names, email addresses, tags, active offers, and membership status — in real time, with no export, no CSV, no spreadsheet.</p>
+    <p class="body-text">The community has three tiers, each with a different relationship to the creator and a different expectation from the content they receive. Seeing those numbers — how many in the free tier, the paid tier, and the inner circle — before you write an email changes how you write it. AudiencΩr is planned to live as a sidebar panel inside MailΩr so this data is visible at exactly the moment it's needed.</p>
+    <p class="body-text">It's a data source, not a pipeline step. It doesn't create records or files. It reads. But reading with accuracy is the foundation of every targeting decision downstream.</p>
+
+    <div class="tier-grid">
+      <div class="tier-card">
+        <div class="tier-emoji">🌱</div>
+        <div class="tier-name">Free Tier</div>
+        <div class="tier-detail">Largest segment, highest volume, lowest commitment</div>
+      </div>
+      <div class="tier-card">
+        <div class="tier-emoji">🌿</div>
+        <div class="tier-name">Paid Tier</div>
+        <div class="tier-detail">Active paid members, recurring relationship</div>
+      </div>
+      <div class="tier-card">
+        <div class="tier-emoji">🏆</div>
+        <div class="tier-name">Inner Circle Tier</div>
+        <div class="tier-detail">Limited spots, highest trust, inner circle access</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Step by Step</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">OAuth2 Connect to Kajabi</div>
+          <div class="step-detail">Client credentials flow — no user login required. Kajabi Public API OAuth2 connected at the application level. Token managed server-side.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Pull All Contacts</div>
+          <div class="step-detail">GET /contacts — Kajabi returns all contacts at once (no pagination). Name, email, tags, active offers, and membership status per contact displayed in the UI.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">View Tags and Offers</div>
+          <div class="step-detail">All tags and active offers surfaced per contact. Tag filter available — see a specific segment. Note: Kajabi 500s on filtered tag requests; full list works correctly.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Broadcast-Tag SSE</div>
+          <div class="step-detail">Real-time server-sent event stream shows live tag operations as they happen — useful for monitoring active campaigns or community events in progress.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Inform MailΩr and AutomatΩr</div>
+          <div class="step-detail">Audience data informs tier selection in MailΩr (who gets which email) and targeting logic in AutomatΩr (which segment to send to). AudiencΩr itself takes no action — it surfaces the data, then gets out of the way.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-label">Known Issue</div>
+      <div class="callout-body">Kajabi returns a 500 error on filtered tag requests. Tag filter in the UI is non-functional. Full contact list with all tags loads correctly. Fix requires investigation of Kajabi API behavior on tag-filtered endpoints.</div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CREATES -->
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+    <div class="creates-grid">
+      <div class="creates-card">
+        <div class="creates-card-title">Data &amp; Records</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>No database records</strong> — reads Kajabi API in real time, nothing persisted locally</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>All contact data</strong> is live from Kajabi — always current, never stale</div>
+        </div>
+      </div>
+      <div class="creates-card">
+        <div class="creates-card-title">Files &amp; Outputs</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>No files</strong> — data source only</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>No broadcast capability</strong> — Kajabi API has no broadcast endpoint. Sending requires copy-paste into Kajabi or AutomatΩr automation.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUABLE FINAL PRODUCT -->
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+    <div class="vfp-box">
+      <p><strong>Audience visibility</strong> — who they are, how many are in each tier, what tags they carry, which offers they hold. Every distribution decision grounded in real data instead of estimates. When you know the inner circle is 47 people and the free tier is 2,300, you write the Day 7 email differently. That clarity is what AudiencΩr provides.</p>
+    </div>
+  </section>
+
+  <!-- INFORMS / HANDS OFF TO -->
+  <section class="section">
+    <div class="section-label">Informs</div>
+    <h2 class="section-title">What It Feeds</h2>
+    <div class="informs-box">
+      <div class="informs-title">Data Source — Not a Pipeline Step</div>
+      <div class="informs-list">
+        <div class="informs-item">
+          <div class="informs-dot"></div>
+          <span><strong style="color:var(--text)">MailΩr tier decisions</strong> — knowing segment sizes before writing means the inner circle email gets the intimate tone it deserves, not the broadcast tone of the free tier version</span>
+        </div>
+        <div class="informs-item">
+          <div class="informs-dot"></div>
+          <span><strong style="color:var(--text)">AutomatΩr targeting logic</strong> — when AutomatΩr is built, AudiencΩr tag data will drive which segment receives which broadcast</span>
+        </div>
+        <div class="informs-item">
+          <div class="informs-dot"></div>
+          <span><strong style="color:var(--text)">Future: MailΩr sidebar</strong> — planned as a live panel visible while writing emails, so segment counts are visible at the moment of writing</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER NAV -->
+  <nav class="footer-nav">
+    <a class="footer-link prev" href="15-mirrr.html">
+      <span class="footer-dir">← Previous</span>
+      <span class="footer-name">Mirr<span class="omega">Ω</span>r</span>
+    </a>
+    <a class="footer-link next" href="17-automator.html">
+      <span class="footer-dir">Next →</span>
+      <span class="footer-name">Automat<span class="omega">Ω</span>r</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

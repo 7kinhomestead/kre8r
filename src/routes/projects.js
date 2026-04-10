@@ -75,6 +75,19 @@ router.get('/archived', (req, res) => {
   }
 });
 
+// PATCH /api/projects/:id/meta — update youtube_video_id, youtube_url, topic
+router.patch('/:id/meta', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!db.getProject(id)) return res.status(404).json({ error: 'Project not found' });
+    const { youtube_url, youtube_video_id, topic } = req.body;
+    db.updateProjectMeta(id, { youtube_url, youtube_video_id, topic });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH /api/projects/:id/archive
 router.patch('/:id/archive', (req, res) => {
   try {

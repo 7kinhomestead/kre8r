@@ -45,7 +45,8 @@
   @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 
   /* ── PAGE HEADER ── */
-  .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;}
+  .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .page-header-text{flex:1;}
   .page-title{font-family:var(--font-head);font-size:clamp(32px,7vw,52px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
   .page-title em{font-style:normal;color:var(--teal);}
   .page-sub{color:var(--text-dim);font-size:14px;line-height:1.6;}
@@ -331,8 +332,11 @@
 
   <!-- Page header -->
   <div class="page-header">
-    <div class="page-title">VAULT<em>Ω</em>R</div>
-    <div class="page-sub">Footage intelligence database. Ingest, classify, track distribution across every platform.</div>
+    <div class="page-header-text">
+      <div class="page-title">VAULT<em>Ω</em>R</div>
+      <div class="page-sub">Footage intelligence database. Ingest, classify, track distribution across every platform.</div>
+    </div>
+    <a class="btn btn-ghost" href="/editor.html" style="margin-top:10px;flex-shrink:0">→ Continue to Edit<em style="font-style:normal;color:var(--teal)">Ω</em>r</a>
   </div>
 
   <!-- Status bar -->

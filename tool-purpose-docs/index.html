@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — Tool Purpose Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+  --head: 'Bebas Neue', sans-serif;
+  --body: 'DM Sans', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  font-size:15px;
+  line-height:1.65;
+  font-weight:300;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:128px;
+  opacity:0.028;
+  z-index:1000;
+}
+
+/* NAV */
+.topnav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(10,10,10,0.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:0 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:56px;
+}
+.topnav-logo{
+  font-family:var(--head);
+  font-size:22px;
+  letter-spacing:3px;
+  color:var(--text);
+  text-decoration:none;
+}
+.topnav-logo em{font-style:normal;color:var(--teal);}
+.topnav-tag{font-size:12px;color:var(--text-muted);letter-spacing:0.15em;text-transform:uppercase;}
+
+/* LAYOUT */
+.main{max-width:1060px;margin:0 auto;padding:64px 32px 100px;}
+
+/* HERO */
+.hero{margin-bottom:72px;text-align:center;}
+.hero-eyebrow{
+  font-size:11px;
+  letter-spacing:0.3em;
+  text-transform:uppercase;
+  color:var(--teal);
+  margin-bottom:16px;
+}
+.hero-title{
+  font-family:var(--head);
+  font-size:clamp(48px,8vw,80px);
+  letter-spacing:0.03em;
+  line-height:1.05;
+  margin-bottom:20px;
+}
+.hero-title em{font-style:normal;color:var(--teal);}
+.hero-sub{
+  font-size:17px;
+  color:var(--text-dim);
+  max-width:640px;
+  margin:0 auto;
+  line-height:1.7;
+}
+
+/* PHASE LABELS */
+.phase-label{
+  font-family:var(--head);
+  font-size:13px;
+  letter-spacing:0.2em;
+  color:var(--text-muted);
+  text-transform:uppercase;
+  margin:48px 0 16px;
+  padding-left:4px;
+  border-left:3px solid var(--teal);
+  padding-left:12px;
+}
+
+/* TOOL GRID */
+.tool-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:16px;
+  margin-bottom:16px;
+}
+.tool-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:22px 24px;
+  text-decoration:none;
+  display:block;
+  transition:all 0.2s;
+  position:relative;
+  overflow:hidden;
+}
+.tool-card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:var(--teal-tile);
+  opacity:0;
+  transition:opacity 0.2s;
+}
+.tool-card:hover{border-color:rgba(20,184,166,0.4);}
+.tool-card:hover::before{opacity:1;}
+.tool-card-num{
+  font-size:11px;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+  margin-bottom:8px;
+  font-weight:500;
+}
+.tool-card-name{
+  font-family:var(--head);
+  font-size:26px;
+  letter-spacing:0.05em;
+  line-height:1.1;
+  margin-bottom:10px;
+  color:var(--text);
+  position:relative;
+}
+.tool-card-name em{font-style:normal;color:var(--teal);}
+.tool-card-desc{
+  font-size:13px;
+  color:var(--text-dim);
+  line-height:1.55;
+  position:relative;
+}
+.tool-card-arrow{
+  position:absolute;
+  right:20px;
+  bottom:20px;
+  color:var(--teal);
+  font-size:18px;
+  opacity:0;
+  transition:all 0.2s;
+}
+.tool-card:hover .tool-card-arrow{opacity:1;transform:translateX(4px);}
+
+/* STATUS BADGE */
+.tool-card-status{
+  display:inline-block;
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  padding:3px 8px;
+  border-radius:4px;
+  margin-bottom:8px;
+}
+.status-live{background:rgba(20,184,166,0.12);color:var(--teal);}
+.status-dev{background:rgba(255,180,0,0.1);color:var(--gold);}
+.status-planned{background:rgba(255,255,255,0.06);color:var(--text-muted);}
+
+/* DIVIDER */
+hr.section-divider{border:none;border-top:1px solid var(--border);margin:56px 0 48px;}
+
+/* FOOTER */
+.footer{text-align:center;padding:48px 32px;color:var(--text-muted);font-size:13px;}
+.footer a{color:var(--teal);text-decoration:none;}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="topnav-logo" href="../public/index.html">KRE8<em>Ω</em>R</a>
+  <span class="topnav-tag">Tool Purpose Docs</span>
+</nav>
+
+<main class="main">
+
+  <div class="hero">
+    <div class="hero-eyebrow">Kre8Ωr — Complete Pipeline Reference</div>
+    <h1 class="hero-title">THE T<em>Ω</em>OLS</h1>
+    <p class="hero-sub">Every tool in the Kre8Ωr pipeline. What it does, how it works, what it creates, and what it hands off.</p>
+  </div>
+
+  <!-- PRE-PRODUCTION -->
+  <div class="phase-label">Pre-Production — Idea to Camera</div>
+  <div class="tool-grid">
+
+    <a class="tool-card" href="01-id8r.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">01</div>
+      <div class="tool-card-name">ID8<em>Ω</em>R</div>
+      <div class="tool-card-desc">Ideation engine. Three modes to go from nothing to a Vision Brief with 3 titles, thumbnails, and hooks.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="02-pipr.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">02</div>
+      <div class="tool-card-name">PIP<em>Ω</em>R</div>
+      <div class="tool-card-desc">Project creation and story structure. Choose a framework — Save the Cat, Story Circle, VSL, or Freeform — and get a beat map.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="03-writr.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">03</div>
+      <div class="tool-card-name">WRIT<em>Ω</em>R</div>
+      <div class="tool-card-desc">Script generation in the creator's actual voice. Analyzed voice profiles. Voice blend slider. Beat-by-beat writing.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="04-director.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">04</div>
+      <div class="tool-card-name">DIRECT<em>Ω</em>R</div>
+      <div class="tool-card-desc">Beat map → shot list + crew brief + offline QR package for your camera operator. AI shot direction per beat is V2.0.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="05-shootday.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">05</div>
+      <div class="tool-card-name">SH<em>Ω</em>OT DAY</div>
+      <div class="tool-card-desc">Day-of checklist. Offline QR package for your camera operator's phone. Built for remote locations without signal.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="06-teleprompter.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">06</div>
+      <div class="tool-card-name">TELEPROMPT<em>Ω</em>R</div>
+      <div class="tool-card-desc">3-device teleprompter system. Voice-controlled scroll. QR setup. No clicker, no hands, no rig required.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- POST-PRODUCTION -->
+  <div class="phase-label">Post-Production — Footage to Finished</div>
+  <div class="tool-grid">
+
+    <a class="tool-card" href="07-vaultr.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">07</div>
+      <div class="tool-card-name">VAULT<em>Ω</em>R</div>
+      <div class="tool-card-desc">Footage intelligence database. Auto-classifies with Claude Vision. Watches intake folder. Every clip ever shot — findable.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="08-editor.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">08</div>
+      <div class="tool-card-name">EDIT<em>Ω</em>R</div>
+      <div class="tool-card-desc">SelectsΩr v2. AI editorial decisions — which clips in which order. 3 modes: Scripted, Hybrid, Freeform.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="09-reviewr.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">09</div>
+      <div class="tool-card-name">REVIEW<em>Ω</em>R</div>
+      <div class="tool-card-desc">Rough cut approval + CutΩr analysis. Social clips, retention cuts, CTA placement, off-script gold.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="10-composr.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">10</div>
+      <div class="tool-card-name">COMP<em>Ω</em>SΩR</div>
+      <div class="tool-card-desc">AI film scoring. Claude analyzes scenes → writes Suno prompts → music pushed to DaVinci 04_AUDIO timeline.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="11-clipsr.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">11</div>
+      <div class="tool-card-name">CLIPS<em>Ω</em>R</div>
+      <div class="tool-card-desc">Viral clip extraction. Claude finds the scroll-stopping moments, writes hooks, creator approves. Short-form done.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- DISTRIBUTION -->
+  <div class="phase-label">Distribution — Publish to Every Platform</div>
+  <div class="tool-grid">
+
+    <a class="tool-card" href="12-packager.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">12</div>
+      <div class="tool-card-name">PACKAGE<em>Ω</em>R</div>
+      <div class="tool-card-desc">5 content packages per video. YouTube title, hook, thumbnail concept, description. Creator picks one angle. Everything downstream follows it.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="13-captionr.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">13</div>
+      <div class="tool-card-name">CAPTION<em>Ω</em>R</div>
+      <div class="tool-card-desc">Platform-native captions for every clip. TikTok, Instagram, Facebook, Shorts, Lemon8 — written simultaneously in the creator's voice.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="14-mailor.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">14</div>
+      <div class="tool-card-name">MAIL<em>Ω</em>R</div>
+      <div class="tool-card-desc">Full email sequence. Day 0 / Day 3 / Day 7 for all 3 community tiers. Blog + community post optional. One generation.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- INTELLIGENCE + AUDIENCE -->
+  <div class="phase-label">Intelligence &amp; Audience — Close the Loop</div>
+  <div class="tool-grid">
+
+    <a class="tool-card" href="15-mirrr.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">15</div>
+      <div class="tool-card-name">MIRR<em>Ω</em>R</div>
+      <div class="tool-card-desc">Channel intelligence. Performance analysis. Content Universe map. Coaching. Closes the loop back to Id8Ωr.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="16-audiencer.html">
+      <div class="tool-card-status status-live">✓ Live</div>
+      <div class="tool-card-num">16</div>
+      <div class="tool-card-name">AUDIENCE<em>Ω</em>R</div>
+      <div class="tool-card-desc">Kajabi contacts, tags, and tiers. See who's in each community tier. Real audience data for smarter distribution.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="17-automator.html">
+      <div class="tool-card-status status-dev">⚙ In Dev</div>
+      <div class="tool-card-num">17</div>
+      <div class="tool-card-name">AUTOMAT<em>Ω</em>R</div>
+      <div class="tool-card-desc">Kajabi automation via Playwright. Broadcasts, sequences, community posts — published without touching Kajabi manually.</div>
+      <span class="tool-card-arrow">→</span>
+    </a>
+
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- LATERAL TOOLS -->
+  <div class="phase-label">Lateral Tools — Available Anytime</div>
+  <div class="tool-grid">
+
+    <a class="tool-card" href="18-collaboratr.html" style="border-color:rgba(255,180,0,0.2)">
+      <div class="tool-card-status" style="background:rgba(255,180,0,0.1);color:#ffb400">✦ Always On</div>
+      <div class="tool-card-num">LAB</div>
+      <div class="tool-card-name">COLLAB<em style="font-style:normal;color:#14b8a6">Ω</em>RATR</div>
+      <div class="tool-card-desc">Creative director on demand. Load any project and talk through shots, narrative, pacing, hooks — Claude knows the full script and beat structure.</div>
+      <span class="tool-card-arrow" style="color:#ffb400">→</span>
+    </a>
+
+  </div>
+
+</main>
+
+<footer class="footer">
+  Kre8Ωr — Built for creators who make things that matter.
+</footer>
+
+</body>
+</html>

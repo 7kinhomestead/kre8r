@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr — Id8Ωr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --border2: #333;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Dark noise texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 300px 300px;
+}
+
+body > * { position: relative; z-index: 1; }
+
+/* TOP NAV */
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 48px;
+}
+
+.nav-back {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.nav-back:hover { color: var(--teal); }
+.nav-back::before { content: '←'; font-size: 14px; }
+
+.nav-num {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* MAIN CONTENT */
+.page-wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+}
+
+/* HERO */
+.hero {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-tool-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(72px, 10vw, 120px);
+  letter-spacing: 0.04em;
+  line-height: 0.9;
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+.hero-tool-name .omega { color: var(--teal); }
+
+.phase-badge {
+  display: inline-block;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 100px;
+  margin-bottom: 20px;
+}
+
+.hero-purpose {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text-dim);
+  max-width: 640px;
+  line-height: 1.5;
+  margin-bottom: 36px;
+}
+
+/* PIPELINE POSITION ROW */
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pipeline-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pipeline-pill {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  white-space: nowrap;
+}
+
+.pipeline-pill.current {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-tile);
+  font-weight: 600;
+}
+
+.pipeline-pill.start-node {
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+.pipeline-arrow {
+  color: var(--border2);
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* SECTIONS */
+.section {
+  padding: 56px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--teal);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  padding-left: 14px;
+  border-left: 2px solid var(--teal);
+}
+
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 38px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 24px;
+  line-height: 1;
+}
+
+.section-body {
+  color: var(--text-dim);
+  max-width: 720px;
+}
+
+.section-body p + p {
+  margin-top: 16px;
+}
+
+/* STEPS */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 720px;
+}
+
+.step {
+  display: flex;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step:last-child { border-bottom: none; }
+
+.step-num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.step-content { flex: 1; }
+
+.step-main {
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.step-dev {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* CREATES GRID */
+.creates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 840px;
+}
+
+@media (max-width: 640px) {
+  .creates-grid { grid-template-columns: 1fr; }
+}
+
+.creates-col {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.creates-col-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.creates-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.creates-list li {
+  font-size: 14px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.creates-list li::before {
+  content: '—';
+  color: var(--teal);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.creates-list .none {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.creates-list .none::before { content: ''; }
+
+/* CALLOUT / KNOWN ISSUE */
+.callout {
+  background: rgba(224,48,48,0.06);
+  border: 1px solid rgba(224,48,48,0.2);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  max-width: 720px;
+}
+
+.callout-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 6px;
+}
+
+.callout-body {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+/* VALUABLE FINAL PRODUCT */
+.vfp-box {
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-radius: 12px;
+  padding: 32px 36px;
+  max-width: 760px;
+}
+
+.vfp-headline {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  color: var(--teal);
+  margin-bottom: 16px;
+  line-height: 1.15;
+}
+
+.vfp-bullets {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.vfp-bullets li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.vfp-bullets li::before {
+  content: '→';
+  color: var(--teal);
+  flex-shrink: 0;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* HANDOFF */
+.handoff-box {
+  max-width: 720px;
+}
+
+.handoff-arrow-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.handoff-from {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 10px 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.handoff-to {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--teal);
+  padding: 10px 18px;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  border-radius: 8px;
+}
+
+.handoff-arrow-icon {
+  font-size: 28px;
+  color: var(--teal);
+  font-weight: 300;
+}
+
+.handoff-desc {
+  color: var(--text-dim);
+}
+
+/* DATA TAGS */
+.data-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.data-tag {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'DM Sans', monospace;
+}
+
+/* FOOTER NAV */
+.footer-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 40px 0 0;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-nav-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 180px;
+}
+.footer-nav-link:hover {
+  border-color: var(--teal);
+  background: var(--teal-tile);
+}
+
+.footer-link-dir {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.footer-link-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+.footer-link-name .omega { color: var(--teal); }
+
+.footer-nav-link.next {
+  text-align: right;
+  margin-left: auto;
+}
+
+.footer-spacer { flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <a class="nav-back" href="../tool-purpose-docs/">All Tools</a>
+  <span class="nav-num">01 / 17</span>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="phase-badge">Pre-Production</div>
+    <h1 class="hero-tool-name">Id8<span class="omega">Ω</span>r</h1>
+    <p class="hero-purpose">The creative starting gun — turns a rough instinct or a blank slate into a locked creative direction with titles, thumbnails, hooks, and a rationale the whole pipeline runs on.</p>
+
+    <div class="pipeline-row">
+      <div class="pipeline-node">
+        <span class="pipeline-pill start-node">START</span>
+      </div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-node">
+        <span class="pipeline-pill current">Id8<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-node">
+        <span class="pipeline-pill">Pip<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Idea Engine</h2>
+    <div class="section-body">
+      <p>Every video starts with a feeling — a half-formed idea, a comment you saw, something that happened in your world that week. Id8Ωr is where that feeling becomes a direction. It gives you three modes depending on where you're starting from, and it asks the right questions so you're not staring at a blank page.</p>
+      <p><strong style="color:var(--text)">Shape It</strong> is for when you already have something — a rough topic, a hunch, a thing you want to say. Claude helps you sharpen it into a clear angle. <strong style="color:var(--text)">Find It</strong> is for when you have nothing — Claude hunts for the concept that fits your channel, your audience, and the moment. <strong style="color:var(--text)">Deep Dive</strong> is for when you have a topic but need to understand it thoroughly — Claude researches across the web before it builds your creative package.</p>
+      <p>Every session ends the same way regardless of mode: a Vision Brief. That's three title options, three thumbnail concepts, and three hook variants — all shaped around your channel's voice and content angles. You pick a direction, and that direction travels with the project through every tool downstream. Nothing in the rest of the pipeline starts without it.</p>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">The Workflow</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-main">Pick a mode: Shape It, Find It, or Deep Dive</div>
+          <div class="step-dev">Mode selection changes the conversation opening and whether web research runs. A session_id is written to localStorage so the tool can retrieve a saved checkpoint even after a tab close or browser restart.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-main">Have a conversation with Claude — each exchange refines the direction</div>
+          <div class="step-dev">Claude reads from creator-profile.json — voice, content angles, platform data — so recommendations are channel-specific, not generic.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-main">For Deep Dive: Claude runs sequential web research across multiple phases</div>
+          <div class="step-dev">Research phases are intentionally staggered with delays between them to avoid API rate limiting. Each phase builds on the previous. After each phase completes, results are checkpointed to the SQLite DB via db.setCheckpoint() — so a server restart mid-session doesn't lose your progress. Known issue: rate limiting can still occur on large research sets.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-main">Claude generates the package: 3 titles, 3 thumbnail concepts, 3 hooks</div>
+          <div class="step-dev">Generated via callClaude() in src/utils/claude.js using claude-sonnet-4-6. The package is shaped by the content angle (financial, system, rockrich, howto, mistakes, lifestyle, viral) selected or inferred during the conversation.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-main">You pick a direction — Vision Brief locked</div>
+          <div class="step-dev">Selected title, thumbnail, and hook are packaged into the Vision Brief. The chat UI history is persisted in localStorage (survives tab close and browser restart). Research results are checkpointed to SQLite after each phase — if the server restarted mid-session, the tool offers to restore from the saved checkpoint using the session_id stored in localStorage.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-main">Vision Brief handed off to PipΩr to formally create the project</div>
+          <div class="step-dev">Vision Brief content passes via URL parameters or sessionStorage to /pipr.html where the project is written into the SQLite database for the first time.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-label">Known Issue / Planned Redesign</div>
+      <div class="callout-body">Rate limiting can interrupt the research phase. A redesign is planned: fast concept pass first → creator picks direction → deep research runs only on the chosen angle. This cuts wasted research cycles and keeps momentum.</div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CREATES -->
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+
+    <div class="creates-grid">
+      <div class="creates-col">
+        <div class="creates-col-title">Data &amp; Records</div>
+        <ul class="creates-list">
+          <li>Vision Brief (title, thumbnail concept, hook, angle, rationale) — held in localStorage and passed to PipΩr at handoff</li>
+          <li>Chat UI conversation history — persisted in localStorage; survives tab close and browser restart</li>
+          <li>Research checkpoints — written to SQLite DB via db.setCheckpoint() after each Deep Dive phase; restored automatically on server restart</li>
+          <li>session_id — stored in localStorage so the checkpoint can be retrieved at any time</li>
+          <li class="none">No project record created here — project is formally created in PipΩr</li>
+        </ul>
+      </div>
+      <div class="creates-col">
+        <div class="creates-col-title">Files &amp; Outputs</div>
+        <ul class="creates-list">
+          <li class="none">— no exported files —</li>
+          <li style="color:var(--text-muted); font-size:13px; margin-top:8px;">Vision Brief and chat history persist in localStorage. Research checkpoints persist in SQLite. Everything passes to PipΩr at handoff — nothing is lost between sessions.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUABLE FINAL PRODUCT -->
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+
+    <div class="vfp-box">
+      <div class="vfp-headline">The Vision Brief — a locked creative direction the whole pipeline runs on.</div>
+      <p style="color:var(--text-dim); font-size:14px;">One chosen title, one thumbnail concept, one hook, and the angle rationale. Everything downstream either reads from this or builds on top of it.</p>
+      <ul class="vfp-bullets">
+        <li>WritΩr uses the Vision Brief as context when generating the script — so the voice and angle are baked in from the first word.</li>
+        <li>CaptionΩr and MailΩr use the chosen hook as a starting point for platform copy, keeping the creative thread consistent from idea to distribution.</li>
+        <li>Without a locked Vision Brief you're making creative decisions in every downstream tool. With it, those decisions are already made.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- HANDS OFF TO -->
+  <section class="section">
+    <div class="section-label">Hands Off To</div>
+    <h2 class="section-title">Next in the Pipeline</h2>
+
+    <div class="handoff-box">
+      <div class="handoff-arrow-row">
+        <span class="handoff-from">Id8<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="handoff-arrow-icon">→</span>
+        <span class="handoff-to">Pip<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+
+      <p class="handoff-desc">The Vision Brief — topic, angle, chosen title, thumbnail concept, and hook — passes to PipΩr where the project is formally created in the database. PipΩr uses this context to pre-populate the project name and inform the story framework selection.</p>
+
+      <div class="data-tags">
+        <span class="data-tag">topic</span>
+        <span class="data-tag">content_angle</span>
+        <span class="data-tag">title (chosen)</span>
+        <span class="data-tag">thumbnail_concept</span>
+        <span class="data-tag">hook</span>
+        <span class="data-tag">rationale</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER NAV -->
+  <nav class="footer-nav">
+    <a class="footer-nav-link" href="00-pipeline-flowchart.html">
+      <span class="footer-link-dir">← Back</span>
+      <span class="footer-link-name">Pipeline Map</span>
+    </a>
+    <a class="footer-nav-link next" href="02-pipr.html">
+      <span class="footer-link-dir">Next →</span>
+      <span class="footer-link-name">Pip<span class="omega">Ω</span>r</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

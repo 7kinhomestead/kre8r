@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ComposΩr — Kre8Ωr Tool Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── STICKY NAV ── */
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 52px;
+}
+.top-nav a {
+  color: var(--teal);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s;
+}
+.top-nav a:hover { opacity: 0.75; }
+.top-nav .doc-count {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+/* ── LAYOUT ── */
+.wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 64px 0 48px;
+  border-bottom: 1px solid var(--border);
+}
+.phase-badge {
+  display: inline-block;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  margin-bottom: 20px;
+}
+.hero-title .omega { color: var(--teal); }
+.hero-oneliner {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  max-width: 640px;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+/* ── PIPELINE ROW ── */
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pipe-node {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pipe-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  white-space: nowrap;
+}
+.pipe-label.current {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-tile);
+}
+.pipe-arrow {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0 4px;
+}
+
+/* ── SECTION ── */
+.section {
+  padding: 52px 0 0;
+}
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.body-text {
+  color: var(--text-dim);
+  max-width: 760px;
+  margin-bottom: 16px;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.body-text:last-child { margin-bottom: 0; }
+
+/* ── STEPS ── */
+.steps { margin-top: 8px; }
+.step {
+  display: flex;
+  gap: 20px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step:last-child { border-bottom: none; }
+.step-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  color: var(--teal);
+  line-height: 1;
+  min-width: 36px;
+  padding-top: 2px;
+}
+.step-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.step-detail {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ── TWO-COL CREATES ── */
+.creates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+.creates-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+}
+.creates-card-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+}
+.creates-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+.creates-item:last-child { margin-bottom: 0; }
+.creates-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--teal);
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.creates-text {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.creates-text strong { color: var(--text); font-weight: 600; }
+
+/* ── CALLOUT ── */
+.callout {
+  margin-top: 24px;
+  background: rgba(224,48,48,0.06);
+  border: 1px solid rgba(224,48,48,0.2);
+  border-radius: 8px;
+  padding: 16px 20px;
+  max-width: 760px;
+}
+.callout-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 6px;
+}
+.callout-body {
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── NOTE ── */
+.note {
+  margin-top: 24px;
+  background: rgba(255,180,0,0.06);
+  border: 1px solid rgba(255,180,0,0.2);
+  border-radius: 8px;
+  padding: 16px 20px;
+  max-width: 760px;
+}
+.note-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.note-body {
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── VALUABLE PRODUCT ── */
+.vfp-box {
+  margin-top: 8px;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-left: 3px solid var(--teal);
+  border-radius: 8px;
+  padding: 28px 32px;
+}
+.vfp-box p {
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  font-weight: 400;
+}
+.vfp-box p strong { color: var(--teal); font-weight: 600; }
+
+/* ── HANDOFF ── */
+.handoff-box {
+  margin-top: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 28px 32px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.handoff-arrow {
+  font-size: 2rem;
+  color: var(--teal);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.handoff-dest {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.handoff-dest .omega { color: var(--teal); }
+.handoff-desc {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── FOOTER NAV ── */
+.footer-nav {
+  margin-top: 72px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.footer-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex: 1;
+  max-width: 260px;
+  transition: border-color 0.2s;
+}
+.footer-link:hover { border-color: var(--teal); }
+.footer-link.prev { align-items: flex-start; }
+.footer-link.next { align-items: flex-end; margin-left: auto; }
+.footer-dir {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.footer-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.footer-name .omega { color: var(--teal); }
+</style>
+</head>
+<body>
+
+<!-- STICKY NAV -->
+<nav class="top-nav">
+  <a href="00-pipeline-flowchart.html">← All Tools</a>
+  <span class="doc-count">10 / 17</span>
+</nav>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="phase-badge">Post-Production</div>
+    <h1 class="hero-title">Compos<span class="omega">Ω</span>r</h1>
+    <p class="hero-oneliner">The film scorer — reads your video's emotional arc and writes AI music that matches it, then places every track directly into your DaVinci Resolve timeline.</p>
+
+    <div class="pipeline-row">
+      <div class="pipe-node">
+        <span class="pipe-label">Review<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label current">Compos<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label">Clips<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Film Scorer</h2>
+    <p class="body-text">Music is the thing most solo creators skip because hiring a composer is expensive and browsing stock libraries is a black hole. ComposΩr eliminates both problems. It reads what's happening emotionally in each scene of your video — the tension, the warmth, the payoff — and writes music that actually fits those moments instead of music that's merely inoffensive.</p>
+    <p class="body-text">It uses Claude to analyze your transcript and script, identify the emotional arc scene by scene, and generate precise prompts for Suno (an AI music generator). Those prompts go to Suno, tracks come back, you preview them in the browser, pick one per scene, and hit Push to DaVinci. The audio lands on the 04_AUDIO track in your Resolve timeline at the exact timestamps — no manual dragging, no track naming, no export-and-import loop.</p>
+    <p class="body-text">Two modes: <strong style="color:var(--text)">Full Mode</strong> calls the Suno API automatically and returns generated tracks for you to choose from. <strong style="color:var(--text)">Prompt Mode</strong> is the fallback — Claude writes the prompts, you paste them at suno.com yourself, then upload the audio files back. Either way, the music ends up in Resolve.</p>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Step by Step</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Select Project</div>
+          <div class="step-detail">The approved transcript and script load automatically from the project record. Both are available as context for scene analysis.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Analyze Scenes</div>
+          <div class="step-detail">Claude reads the full transcript and script, identifies the emotional arc, and segments the video into scenes. Each scene gets a label (e.g. "opening tension", "revelation moment", "warm resolution") and an emotional tone tag stored in <code style="color:var(--teal);font-size:0.82em">composor_scenes</code>.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Generate Music Prompts</div>
+          <div class="step-detail">Claude writes a Suno-optimized prompt for each scene — genre, tempo, instrumentation, mood, energy level. Prompts are crafted to produce music that fits the emotional beat, not just the topic.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Suno Generates Tracks (Full Mode)</div>
+          <div class="step-detail">Suno API is called for each scene. Tracks return as audio files, previewed directly in the browser. Full Mode requires Suno API configured. Prompt Mode skips this step — creator pastes prompts at suno.com manually.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Creator Selects a Track Per Scene</div>
+          <div class="step-detail">Each scene shows its candidate tracks. One click selects the keeper. Selection stored in <code style="color:var(--teal);font-size:0.82em">composor_tracks</code> with scene_id, audio_path, and selected flag.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">Push to DaVinci</div>
+          <div class="step-detail">Python script calls the DaVinci Resolve Studio scripting API on port 9237. Selected audio files are placed on the 04_AUDIO track at the correct timestamps. Resolve must be running. stdout = JSON confirmation, stderr = logs.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-label">Technical Requirement</div>
+      <div class="callout-body">DaVinci Resolve Studio 20.3.2.9 must be running before any Push to DaVinci action. Python scripting API runs on port 9237, Local mode, Windows only. All Python scripts use callable() guards for Resolve 20 API compatibility.</div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CREATES -->
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+    <div class="creates-grid">
+      <div class="creates-card">
+        <div class="creates-card-title">Data &amp; Records</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>composor_scenes rows</strong> — scene_index, scene_label, emotional_tone, suno_prompt per scene</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>composor_tracks rows</strong> — scene_id, audio_path, selected flag for every generated track</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>project record updated</strong> — music status flagged when push to DaVinci completes</div>
+        </div>
+      </div>
+      <div class="creates-card">
+        <div class="creates-card-title">Files &amp; Outputs</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Audio files</strong> — saved to <code style="color:var(--teal);font-size:0.82em">public/music/</code> per scene</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>DaVinci timeline modification</strong> — 04_AUDIO track populated via Python scripting API with correct timestamps</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Suno prompts</strong> — exportable as text (Prompt Mode) for manual paste at suno.com</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUABLE FINAL PRODUCT -->
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+    <div class="vfp-box">
+      <p>A <strong>fully scored video edit</strong> — AI-generated music placed into DaVinci with the emotional arc matched to sound. The 04_AUDIO track is populated, the timestamps align, and you didn't hire a composer, browse a library, or drag a single audio clip. The video sounds intentional because the music was written for it.</p>
+    </div>
+  </section>
+
+  <!-- HANDS OFF TO -->
+  <section class="section">
+    <div class="section-label">Hands Off To</div>
+    <h2 class="section-title">Next in the Pipeline</h2>
+    <div class="handoff-box">
+      <div class="handoff-arrow">→</div>
+      <div class="handoff-text">
+        <div class="handoff-dest">Clips<span class="omega">Ω</span>r</div>
+        <div class="handoff-desc">With the video fully scored and the edit complete, ClipsΩr takes over. It reads the full transcript and hunts for the moments that can stop a scroll on TikTok, Reels, or Shorts — extracting the short-form content plan from the long-form video.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER NAV -->
+  <nav class="footer-nav">
+    <a class="footer-link prev" href="09-reviewr.html">
+      <span class="footer-dir">← Previous</span>
+      <span class="footer-name">Review<span class="omega">Ω</span>r</span>
+    </a>
+    <a class="footer-link next" href="11-clipsr.html">
+      <span class="footer-dir">Next →</span>
+      <span class="footer-name">Clips<span class="omega">Ω</span>r</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

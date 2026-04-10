@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MirrΩr — Kre8Ωr Tool Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 52px;
+}
+.top-nav a {
+  color: var(--teal);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s;
+}
+.top-nav a:hover { opacity: 0.75; }
+.top-nav .doc-count { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.05em; }
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 32px 80px; }
+
+.hero { padding: 64px 0 48px; border-bottom: 1px solid var(--border); }
+.phase-badge {
+  display: inline-block;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  margin-bottom: 20px;
+}
+.hero-title .omega { color: var(--teal); }
+.hero-oneliner {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  max-width: 640px;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+.pipeline-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.pipe-node { display: flex; align-items: center; gap: 4px; }
+.pipe-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  white-space: nowrap;
+}
+.pipe-label.current { color: var(--teal); border-color: var(--teal); background: var(--teal-tile); }
+.pipe-arrow { color: var(--text-muted); font-size: 0.9rem; margin: 0 4px; }
+.pipe-loop-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--teal);
+  opacity: 0.65;
+  margin-left: 6px;
+}
+
+.section { padding: 52px 0 0; }
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.body-text { color: var(--text-dim); max-width: 760px; margin-bottom: 16px; font-size: 1rem; line-height: 1.7; }
+.body-text:last-child { margin-bottom: 0; }
+
+/* Insight signal cards */
+.signal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+  max-width: 760px;
+}
+.signal-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--teal);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.signal-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.signal-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.steps { margin-top: 8px; }
+.step { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--border); }
+.step:last-child { border-bottom: none; }
+.step-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--teal); line-height: 1; min-width: 36px; padding-top: 2px; }
+.step-title { font-weight: 600; font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+.step-detail { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; }
+
+.callout {
+  margin-top: 24px;
+  background: rgba(255,180,0,0.06);
+  border: 1px solid rgba(255,180,0,0.2);
+  border-radius: 8px;
+  padding: 16px 20px;
+  max-width: 760px;
+}
+.callout-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.callout-body { font-size: 0.875rem; color: var(--text-dim); line-height: 1.6; }
+
+.creates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+.creates-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+.creates-card-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
+.creates-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.creates-item:last-child { margin-bottom: 0; }
+.creates-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); margin-top: 8px; flex-shrink: 0; }
+.creates-text { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
+.creates-text strong { color: var(--text); font-weight: 600; }
+
+.vfp-box {
+  margin-top: 8px;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-left: 3px solid var(--teal);
+  border-radius: 8px;
+  padding: 28px 32px;
+}
+.vfp-box p { color: var(--text); font-size: 1.05rem; line-height: 1.7; font-weight: 400; }
+.vfp-box p strong { color: var(--teal); font-weight: 600; }
+
+.handoff-box {
+  margin-top: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 28px 32px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.handoff-arrow { font-size: 2rem; color: var(--teal); line-height: 1; flex-shrink: 0; }
+.handoff-dest { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; color: var(--text); margin-bottom: 6px; }
+.handoff-dest .omega { color: var(--teal); }
+.handoff-desc { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; }
+
+.loop-note {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--teal);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-nav { margin-top: 72px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; }
+.footer-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex: 1;
+  max-width: 260px;
+  transition: border-color 0.2s;
+}
+.footer-link:hover { border-color: var(--teal); }
+.footer-link.prev { align-items: flex-start; }
+.footer-link.next { align-items: flex-end; margin-left: auto; }
+.footer-dir { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.footer-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; color: var(--text); }
+.footer-name .omega { color: var(--teal); }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="00-pipeline-flowchart.html">← All Tools</a>
+  <span class="doc-count">15 / 17</span>
+</nav>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="phase-badge">Intelligence</div>
+    <h1 class="hero-title">Mirr<span class="omega">Ω</span>r</h1>
+    <p class="hero-oneliner">The pipeline looks at itself — every signal your video generates gets collected, analyzed by Claude, and turned into creative intelligence that seeds the next video.</p>
+
+    <div class="pipeline-row">
+      <div class="pipe-node">
+        <span class="pipe-label">Mail<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label current">Mirr<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label">Id8<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+      <span class="pipe-loop-label">↺ loop closes here</span>
+    </div>
+  </section>
+
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Channel Mirror</h2>
+    <p class="body-text">MirrΩr is where the pipeline looks at itself. Every video you make generates a signal — views, watch time, CTR, comments, community response — and that signal contains information about what to make next. MirrΩr collects that signal, runs it through Claude, and turns it into creative intelligence for the next video. It's the difference between guessing what your audience wants and knowing.</p>
+    <p class="body-text">The channel mirror metaphor is intentional. You look into it and see your content universe reflected back — which angles are working, which formats your audience returns for, where retention collapses, what the comments are actually asking for. Then that reflection becomes the starting point for Id8Ωr's next ideation session. The pipeline becomes a loop, not a line.</p>
+    <p class="body-text">MirrΩr also holds your YouTube video link connection, pulling the video ID from the URL and storing it against the project so downstream analytics can reference it. Every project that passes through MirrΩr is permanently tethered to its real-world performance data.</p>
+
+    <div class="signal-grid">
+      <div class="signal-card">
+        <div class="signal-title">Angle Performance</div>
+        <div class="signal-desc">Which content angle drove the most response — views, retention, comments</div>
+      </div>
+      <div class="signal-card">
+        <div class="signal-title">Retention Drop</div>
+        <div class="signal-desc">Which moment lost the audience and what was happening at that point</div>
+      </div>
+      <div class="signal-card">
+        <div class="signal-title">Comment Signal</div>
+        <div class="signal-desc">What the audience said — and what they were actually asking for next</div>
+      </div>
+      <div class="signal-card">
+        <div class="signal-title">Next Seed</div>
+        <div class="signal-desc">A recommended starting direction for the next video based on what worked</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Step by Step</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Load Project</div>
+          <div class="step-detail">Project loads with its full pipeline context. YouTube URL field pre-fills if previously linked.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Paste YouTube URL — Link or Link &amp; Sync</div>
+          <div class="step-detail">"Link" or "Link &amp; Sync" saves youtube_url and the extracted youtube_video_id to the project via <code style="color:var(--teal);font-size:0.82em">PATCH /api/projects/:id/meta</code> — permanently tethering the project to its published video.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Pull Performance Data</div>
+          <div class="step-detail">Where available, performance metrics are pulled: views, retention curve, CTR, average view duration, top comments. YouTube API integration in active development.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Claude Analyzes the Signal</div>
+          <div class="step-detail">Claude receives performance data alongside the original creative brief. Analysis covers: strongest retention moment, drop-off patterns, comment appetite signals, and angle performance compared against the channel's full history.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Coaching Insights Surface</div>
+          <div class="step-detail">Insights display: which angle outperformed, what format the audience returned for, where the hook landed or missed. Content Universe map shows all content angles and their relative performance in one visual.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">Strongest Signals Flagged as Seeds → Passed to Id8Ωr</div>
+          <div class="step-detail">Top insights flagged as ideation seeds. When the creator opens Id8Ωr for the next video, MirrΩr's intelligence is waiting — a recommended starting direction built from what actually worked, not guesswork.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-label">Build Status</div>
+      <div class="callout-body">YouTube URL linking and video ID extraction are live. Full YouTube Analytics API pull, coaching insights display, and Content Universe map are in active development. Current build stores and links the YouTube URL — analytics intelligence layers in next.</div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CREATES -->
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+    <div class="creates-grid">
+      <div class="creates-card">
+        <div class="creates-card-title">Data &amp; Records</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>projects row updated</strong> — youtube_url and youtube_video_id written via updateProjectMeta</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>mirrr_insights table</strong> (planned) — project_id, insight_type, content, metric_reference, created_at per insight</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Content Universe data</strong> (planned) — per-angle performance history across all projects in the library</div>
+        </div>
+      </div>
+      <div class="creates-card">
+        <div class="creates-card-title">Files &amp; Outputs</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>No files generated</strong> — all intelligence lives in the database and feeds forward to Id8Ωr</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Content Universe map</strong> (planned) — visual rendered in-browser from DB data, not exported</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Coaching report</strong> (planned) — angle performance summary, format recommendations, audience signal interpretation</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUABLE FINAL PRODUCT -->
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+    <div class="vfp-box">
+      <p>A <strong>feedback loop</strong> — the performance data from this video becomes the creative intelligence for the next one. The pipeline compounds. Each video makes the next one smarter. Instead of starting every ideation session from zero, you start from a signal: here is what your audience responded to, here is what they want more of, here is the angle worth doubling down on.</p>
+    </div>
+  </section>
+
+  <!-- HANDS OFF TO -->
+  <section class="section">
+    <div class="section-label">Hands Off To</div>
+    <h2 class="section-title">Closing the Loop</h2>
+    <div class="handoff-box">
+      <div class="handoff-arrow">↩</div>
+      <div class="handoff-text">
+        <div class="handoff-dest">Id8<span class="omega">Ω</span>r</div>
+        <div class="handoff-desc">MirrΩr closes the loop. Insights from channel performance become the recommended seeds for the next ideation session. Instead of starting from nothing, the creator starts from data — which angle is hot, what the audience is asking for, what format is working right now. The pipeline is a circle, not a line.</div>
+      </div>
+    </div>
+    <div class="loop-note">↺ &nbsp;MirrΩr → Id8Ωr — the pipeline restarts smarter every time</div>
+  </section>
+
+  <!-- FOOTER NAV -->
+  <nav class="footer-nav">
+    <a class="footer-link prev" href="14-mailor.html">
+      <span class="footer-dir">← Previous</span>
+      <span class="footer-name">Mail<span class="omega">Ω</span>r</span>
+    </a>
+    <a class="footer-link next" href="16-audiencer.html">
+      <span class="footer-dir">Next →</span>
+      <span class="footer-name">Audienc<span class="omega">Ω</span>r</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

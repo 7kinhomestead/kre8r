@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutomatΩr — Kre8Ωr Tool Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --card2: #1c1c1c;
+  --border: #252525;
+  --teal: #14b8a6;
+  --teal-tile: rgba(20,184,166,0.07);
+  --teal-glow: rgba(20,184,166,0.18);
+  --red: #E03030;
+  --gold: #ffb400;
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.65);
+  --text-muted: rgba(255,255,255,0.35);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 52px;
+}
+.top-nav a {
+  color: var(--teal);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s;
+}
+.top-nav a:hover { opacity: 0.75; }
+.top-nav .doc-count { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.05em; }
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 32px 80px; }
+
+.hero { padding: 64px 0 48px; border-bottom: 1px solid var(--border); }
+.phase-badge {
+  display: inline-block;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.3);
+  color: var(--teal);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  margin-bottom: 20px;
+}
+.hero-title .omega { color: var(--teal); }
+.hero-oneliner {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  max-width: 640px;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+.pipeline-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.pipe-node { display: flex; align-items: center; gap: 4px; }
+.pipe-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  white-space: nowrap;
+}
+.pipe-label.current { color: var(--teal); border-color: var(--teal); background: var(--teal-tile); }
+.pipe-label.end { color: var(--gold); border-color: rgba(255,180,0,0.4); background: rgba(255,180,0,0.06); }
+.pipe-arrow { color: var(--text-muted); font-size: 0.9rem; margin: 0 4px; }
+
+.section { padding: 52px 0 0; }
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.body-text { color: var(--text-dim); max-width: 760px; margin-bottom: 16px; font-size: 1rem; line-height: 1.7; }
+.body-text:last-child { margin-bottom: 0; }
+
+/* Status banner */
+.status-banner {
+  margin-top: 24px;
+  max-width: 760px;
+  background: rgba(224,48,48,0.06);
+  border: 1px solid rgba(224,48,48,0.22);
+  border-radius: 8px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.status-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 4px;
+}
+.status-text { font-size: 0.875rem; color: var(--text-dim); line-height: 1.6; }
+
+/* Gap bridge diagram */
+.gap-bridge {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  max-width: 700px;
+  margin-top: 24px;
+}
+.gap-side {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  text-align: center;
+}
+.gap-side-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.gap-side-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.gap-middle {
+  flex: 0 0 auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.gap-arrow {
+  font-size: 1.4rem;
+  color: var(--teal);
+}
+.gap-bridge-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  color: var(--teal);
+  white-space: nowrap;
+}
+
+.steps { margin-top: 8px; }
+.step { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--border); }
+.step:last-child { border-bottom: none; }
+.step-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--teal); line-height: 1; min-width: 36px; padding-top: 2px; }
+.step-title { font-weight: 600; font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+.step-detail { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; }
+.step.planned { opacity: 0.7; }
+.step.planned .step-num { color: var(--text-muted); }
+
+/* Requirements strip */
+.req-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+  max-width: 760px;
+}
+.req-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 5px 12px;
+  border-radius: 4px;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.creates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+@media (max-width: 640px) { .creates-grid { grid-template-columns: 1fr; } }
+.creates-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+.creates-card-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
+.creates-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.creates-item:last-child { margin-bottom: 0; }
+.creates-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); margin-top: 8px; flex-shrink: 0; }
+.creates-text { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
+.creates-text strong { color: var(--text); font-weight: 600; }
+
+.vfp-box {
+  margin-top: 8px;
+  background: var(--teal-tile);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-left: 3px solid var(--teal);
+  border-radius: 8px;
+  padding: 28px 32px;
+}
+.vfp-box p { color: var(--text); font-size: 1.05rem; line-height: 1.7; font-weight: 400; }
+.vfp-box p strong { color: var(--teal); font-weight: 600; }
+
+/* Pipeline Complete */
+.complete-box {
+  margin-top: 8px;
+  background: var(--card);
+  border: 1px solid rgba(255,180,0,0.3);
+  border-radius: 8px;
+  padding: 28px 32px;
+}
+.complete-header {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.complete-desc { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; max-width: 640px; }
+.complete-loop {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.complete-loop-item {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  color: var(--text-muted);
+}
+.complete-loop-sep { color: var(--teal); font-size: 0.9rem; }
+.complete-loop-item.first { color: var(--teal); border-color: var(--teal); background: var(--teal-tile); }
+
+.footer-nav { margin-top: 72px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; }
+.footer-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex: 1;
+  max-width: 260px;
+  transition: border-color 0.2s;
+}
+.footer-link:hover { border-color: var(--teal); }
+.footer-link.prev { align-items: flex-start; }
+.footer-link.next { align-items: flex-end; margin-left: auto; }
+.footer-dir { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.footer-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; color: var(--text); }
+.footer-name .omega { color: var(--teal); }
+.footer-name.gold { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="00-pipeline-flowchart.html">← All Tools</a>
+  <span class="doc-count">17 / 17</span>
+</nav>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="phase-badge">Distribution / Automation</div>
+    <h1 class="hero-title">Automat<span class="omega">Ω</span>r</h1>
+    <p class="hero-oneliner">The last mile — uses Playwright browser automation to take what MailΩr wrote and publish it to Kajabi directly, closing the gap between "Claude generated it" and "Kajabi sent it."</p>
+
+    <div class="pipeline-row">
+      <div class="pipe-node">
+        <span class="pipe-label">Mail<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label current">Automat<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="pipe-arrow">→</span>
+      </div>
+      <div class="pipe-node">
+        <span class="pipe-label end">Pipeline Complete</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="section-label">What It Is</div>
+    <h2 class="section-title">The Automation Layer</h2>
+    <p class="body-text">Kajabi's API doesn't support broadcasts, sequences, or community posts. Every email MailΩr generates has to be manually copied and pasted into Kajabi's web interface — subject line, body, tier selection, scheduling. For 9 emails across three tiers, that's 9 copy-paste sequences done by hand, every video. AutomatΩr is being built to end that.</p>
+    <p class="body-text">Using Playwright browser automation, AutomatΩr controls Chromium to open Kajabi, navigate to broadcasts, fill in the content MailΩr wrote, select the correct recipient segment based on AudiencΩr data, and schedule or publish — without the creator touching the keyboard. The creator clicks "Send to Kajabi" in MailΩr. AutomatΩr handles everything from there.</p>
+    <p class="body-text">It's the bridge between AI-generated content and actual audience delivery. Without it, the creator is the bridge. Once it works, the pipeline is complete from idea to audience — no human in the loop for the distribution layer unless they want to be.</p>
+
+    <div class="gap-bridge">
+      <div class="gap-side">
+        <div class="gap-side-label">Content Written By</div>
+        <div class="gap-side-name">Mail<span style="color:var(--teal)">Ω</span>r</div>
+      </div>
+      <div class="gap-middle">
+        <div class="gap-arrow">→</div>
+        <div class="gap-bridge-label">AutomatΩr</div>
+      </div>
+      <div class="gap-side">
+        <div class="gap-side-label">Published By</div>
+        <div class="gap-side-name" style="color:var(--gold)">Kajabi</div>
+      </div>
+    </div>
+
+    <div class="status-banner">
+      <div>
+        <div class="status-label">In Development</div>
+        <div class="status-text">Currently: MailΩr content must be manually copied into Kajabi. AutomatΩr is in active development. When it ships, the manual step disappears.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Planned Workflow</h2>
+    <div class="steps">
+      <div class="step planned">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Creator Clicks "Send to Kajabi" in MailΩr</div>
+          <div class="step-detail">Trigger passes the project_id, target tier, and email day to AutomatΩr. Creator sets it and walks away.</div>
+        </div>
+      </div>
+      <div class="step planned">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">AutomatΩr Launches Playwright</div>
+          <div class="step-detail">Chromium browser launches server-side. Session cookies persisted from a prior login — avoids triggering Kajabi's CAPTCHA on every run.</div>
+        </div>
+      </div>
+      <div class="step planned">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Navigate to Kajabi Broadcasts</div>
+          <div class="step-detail">Playwright navigates to the correct Kajabi product's broadcast section. Segment selection applied based on tier (free / paid / inner circle) using tag data from AudiencΩr.</div>
+        </div>
+      </div>
+      <div class="step planned">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Fill Subject, Body, Recipient Segment</div>
+          <div class="step-detail">Subject line and body from MailΩr's <code style="color:var(--teal);font-size:0.82em">emails</code> table fill the Kajabi broadcast form. Recipient segment set to the correct tier tag.</div>
+        </div>
+      </div>
+      <div class="step planned">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Schedule or Send</div>
+          <div class="step-detail">Based on creator instruction: send immediately or schedule for the correct day offset (Day 0 today, Day 3 three days out, Day 7 seven days out). Kajabi scheduling UI used directly.</div>
+        </div>
+      </div>
+      <div class="step planned">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">Confirmation Returned</div>
+          <div class="step-detail">Playwright extracts Kajabi broadcast ID from the confirmation page. Written to <code style="color:var(--teal);font-size:0.82em">automator_runs</code>: action_type, target_platform, status, kajabi_id, timestamp. Creator sees confirmation in MailΩr UI.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="req-strip">
+      <span class="req-chip">Playwright + Chromium required</span>
+      <span class="req-chip">Windows only (current architecture)</span>
+      <span class="req-chip">Kajabi session persistence</span>
+      <span class="req-chip">CAPTCHA awareness</span>
+    </div>
+  </section>
+
+  <!-- WHAT IT CREATES -->
+  <section class="section">
+    <div class="section-label">What It Creates</div>
+    <h2 class="section-title">Data &amp; Outputs</h2>
+    <div class="creates-grid">
+      <div class="creates-card">
+        <div class="creates-card-title">Data &amp; Records (Planned)</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>automator_runs rows</strong> — action_type, target_platform, status, kajabi_id, timestamp per automation run</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>emails record updated</strong> — broadcast confirmed status written back per email after successful Kajabi submission</div>
+        </div>
+      </div>
+      <div class="creates-card">
+        <div class="creates-card-title">Files &amp; Outputs</div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>No files</strong> — automation acts on the web, nothing written to disk</div>
+        </div>
+        <div class="creates-item">
+          <div class="creates-dot"></div>
+          <div class="creates-text"><strong>Kajabi broadcast IDs</strong> — returned from Kajabi UI and stored for audit trail</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUABLE FINAL PRODUCT -->
+  <section class="section">
+    <div class="section-label">Valuable Final Product</div>
+    <h2 class="section-title">What You Walk Away With</h2>
+    <div class="vfp-box">
+      <p><strong>Full end-to-end automation</strong> — from Claude writes it to Kajabi publishes it, with zero manual steps in between. When AutomatΩr ships, the pipeline completes without the creator touching the distribution layer at all. Idea to audience. No copy-paste. No tab switching. No scheduling UI. The work is done when MailΩr generates it.</p>
+    </div>
+  </section>
+
+  <!-- PIPELINE COMPLETE -->
+  <section class="section">
+    <div class="section-label">End of the Pipeline</div>
+    <h2 class="section-title">The Loop Closes</h2>
+    <div class="complete-box">
+      <div class="complete-header">Pipeline Complete — And It Starts Again</div>
+      <div class="complete-desc">AutomatΩr is the last mile of distribution. When it runs, the video is live, the captions are posted, and the emails are in inboxes. MirrΩr has already been handed the YouTube link. Performance data starts accumulating. The next idea is already forming. The loop closes — and opens again at Id8Ωr.</div>
+      <div class="complete-loop">
+        <span class="complete-loop-item first">Id8<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="complete-loop-sep">→</span>
+        <span class="complete-loop-item">Pip<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="complete-loop-sep">→</span>
+        <span class="complete-loop-item">Writ<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="complete-loop-sep">→ ··· →</span>
+        <span class="complete-loop-item">Mirr<span style="color:var(--teal)">Ω</span>r</span>
+        <span class="complete-loop-sep">↩</span>
+        <span class="complete-loop-item first">Id8<span style="color:var(--teal)">Ω</span>r</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER NAV -->
+  <nav class="footer-nav">
+    <a class="footer-link prev" href="16-audiencer.html">
+      <span class="footer-dir">← Previous</span>
+      <span class="footer-name">Audience<span class="omega">Ω</span>r</span>
+    </a>
+    <a class="footer-link next" href="00-pipeline-flowchart.html">
+      <span class="footer-dir">↩ Back to Start</span>
+      <span class="footer-name footer-name">Pipeline Map</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

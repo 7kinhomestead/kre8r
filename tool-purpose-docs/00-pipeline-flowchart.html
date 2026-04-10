@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr Pipeline Flowchart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0d0d;
+    color: #e5e5e5;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 48px 24px 32px;
+    border-bottom: 1px solid #1e1e1e;
+  }
+
+  .page-header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 2.8rem;
+    color: #ffffff;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  .page-header .subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    color: #14b8a6;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .page-header .datestamp {
+    font-size: 0.75rem;
+    color: #444;
+    margin-top: 6px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .diagram-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 40px 24px 60px;
+    overflow-x: auto;
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    flex-wrap: wrap;
+    padding: 0 24px 48px;
+    border-top: 1px solid #1a1a1a;
+    padding-top: 24px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #888;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .legend-line {
+    width: 36px;
+    height: 2px;
+    border-radius: 2px;
+  }
+
+  .legend-line.solid-teal { background: #14b8a6; }
+  .legend-line.dashed-gray { background: transparent; border-top: 2px dashed #555; }
+  .legend-line.amber { background: #f59e0b; }
+  .legend-line.dashed-red { background: transparent; border-top: 2px dashed #ef4444; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Kre8Ωr Pipeline</h1>
+  <div class="subtitle">Full workflow map — all tools, all exits, all gaps</div>
+  <div class="datestamp">2026-04-09</div>
+</div>
+
+<div class="diagram-wrapper">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 3280" width="1300" style="max-width:100%; display:block;">
+  <defs>
+    <!-- Arrow markers -->
+    <marker id="arrow-teal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#14b8a6"/>
+    </marker>
+    <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+    </marker>
+    <marker id="arrow-teal-up" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#14b8a6"/>
+    </marker>
+
+    <!-- Phase background gradients -->
+    <linearGradient id="phase1-bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0.01"/>
+    </linearGradient>
+    <linearGradient id="phase2-bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.01"/>
+    </linearGradient>
+    <linearGradient id="phase3-bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.01"/>
+    </linearGradient>
+    <linearGradient id="phase4-bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0.01"/>
+    </linearGradient>
+    <linearGradient id="phase5-bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.01"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE SWIM LANE BACKGROUNDS -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Phase 1: Pre-Production  y=60 → y=870 -->
+  <rect x="60" y="60" width="1200" height="820" rx="12" fill="url(#phase1-bg)" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- Phase 2: Production  y=910 → y=1060 -->
+  <rect x="60" y="910" width="1200" height="160" rx="12" fill="url(#phase2-bg)" stroke="#f59e0b" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- Phase 3: Post-Production  y=1100 → y=1760 -->
+  <rect x="60" y="1100" width="1200" height="670" rx="12" fill="url(#phase3-bg)" stroke="#8b5cf6" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- Phase 4: Distribution  y=1800 → y=2780 -->
+  <rect x="60" y="1800" width="1200" height="990" rx="12" fill="url(#phase4-bg)" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- Phase 5: Intelligence Loop  y=2820 → y=3060 -->
+  <rect x="60" y="2820" width="1200" height="250" rx="12" fill="url(#phase5-bg)" stroke="#f59e0b" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE LABELS (vertical text on left) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Phase 1 label -->
+  <g transform="translate(30, 470) rotate(-90)">
+    <text font-family="Space Grotesk, sans-serif" font-weight="700" font-size="11" fill="#14b8a6" letter-spacing="0.12em" text-anchor="middle">PHASE 1 — PRE-PRODUCTION</text>
+  </g>
+
+  <!-- Phase 2 label -->
+  <g transform="translate(30, 990) rotate(-90)">
+    <text font-family="Space Grotesk, sans-serif" font-weight="700" font-size="11" fill="#f59e0b" letter-spacing="0.12em" text-anchor="middle">PHASE 2 — PRODUCTION</text>
+  </g>
+
+  <!-- Phase 3 label -->
+  <g transform="translate(30, 1435) rotate(-90)">
+    <text font-family="Space Grotesk, sans-serif" font-weight="700" font-size="11" fill="#8b5cf6" letter-spacing="0.12em" text-anchor="middle">PHASE 3 — POST-PRODUCTION</text>
+  </g>
+
+  <!-- Phase 4 label -->
+  <g transform="translate(30, 2295) rotate(-90)">
+    <text font-family="Space Grotesk, sans-serif" font-weight="700" font-size="11" fill="#14b8a6" letter-spacing="0.12em" text-anchor="middle">PHASE 4 — DISTRIBUTION</text>
+  </g>
+
+  <!-- Phase 5 label -->
+  <g transform="translate(30, 2945) rotate(-90)">
+    <text font-family="Space Grotesk, sans-serif" font-weight="700" font-size="11" fill="#f59e0b" letter-spacing="0.12em" text-anchor="middle">PHASE 5 — INTELLIGENCE</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- HELPER FUNCTION: Tool Card macro (drawn manually per node)    -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- ID8ΩR  center x=500, y=80, w=260, h=110 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="370" y="80" width="260" height="118" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="370" y="80" width="260" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="105" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">Id8Ωr</text>
+  <text x="500" y="122" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Ideation engine: Shape It / Find It / Deep Dive</text>
+  <text x="500" y="137" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Web research → titles / thumbnails / hooks</text>
+  <text x="500" y="152" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">→ Vision Brief</text>
+  <text x="500" y="170" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/id8r.html</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- Arrow: Id8Ωr → PipΩr  (center down) -->
+  <!-- ─────────────────────────────────────────────── -->
+  <line x1="500" y1="198" x2="500" y2="238" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow-teal)"/>
+  <rect x="420" y="205" width="160" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="217" font-family="Inter, sans-serif" font-size="9" fill="#14b8a6" text-anchor="middle">→ Send to Pipeline</text>
+
+  <!-- Arrow: Id8Ωr → WritΩr skip branch (right) -->
+  <path d="M630 139 Q750 139 750 310" stroke="#555" stroke-width="1.5" fill="none" stroke-dasharray="5,4" marker-end="url(#arrow-gray)"/>
+  <text x="700" y="130" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle">→ Send to WritΩr</text>
+  <text x="700" y="142" font-family="Inter, sans-serif" font-size="8.5" fill="#444" text-anchor="middle">(skip PipΩr)</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- PIPΩR  center x=500, y=250, w=260, h=110 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="370" y="248" width="260" height="110" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="370" y="248" width="260" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="272" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">PipΩr</text>
+  <text x="500" y="289" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Project creation + story structure</text>
+  <text x="500" y="305" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Save the Cat / Story Circle / VSL / Freeform</text>
+  <text x="500" y="320" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Beat map generator</text>
+  <text x="500" y="338" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/pipr.html</text>
+
+  <!-- Arrow: PipΩr → WritΩr -->
+  <line x1="500" y1="358" x2="500" y2="398" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow-teal)"/>
+  <rect x="430" y="364" width="140" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="376" font-family="Inter, sans-serif" font-size="9" fill="#14b8a6" text-anchor="middle">→ WritΩr button</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- WRITΩR  center x=500, y=408, w=260, h=110 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="370" y="408" width="260" height="110" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="370" y="408" width="260" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="432" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">WritΩr</text>
+  <text x="500" y="449" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Script in the creator's voice — 3 modes</text>
+  <text x="500" y="465" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Full script / Bullets / Hybrid</text>
+  <text x="500" y="480" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Voice blend slider</text>
+  <text x="500" y="498" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/writr.html</text>
+
+  <!-- Arrow: WritΩr → DirectΩr (implied) -->
+  <line x1="500" y1="518" x2="500" y2="558" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow-gray)"/>
+  <rect x="420" y="524" width="160" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="536" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle">NO BUTTON — GAP</text>
+
+  <!-- Arrow: WritΩr → TeleprΩmpter (right branch implied) -->
+  <path d="M630 463 Q900 463 900 563" stroke="#555" stroke-width="1.5" fill="none" stroke-dasharray="5,4" marker-end="url(#arrow-gray)"/>
+  <text x="800" y="455" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle">→ TeleprΩmpter (implied)</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- DIRECTΩR  center x=500, y=570, w=240, h=100 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="380" y="568" width="240" height="100" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="380" y="568" width="240" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="591" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">DirectΩr</text>
+  <text x="500" y="607" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Shot list generator</text>
+  <text x="500" y="622" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Crew brief generation</text>
+  <text x="500" y="648" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/director.html</text>
+
+  <!-- Arrow: DirectΩr → ShootDay (implied) -->
+  <line x1="500" y1="668" x2="500" y2="708" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow-gray)"/>
+  <rect x="420" y="674" width="160" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="686" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle">NO BUTTON — GAP</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- SHOOTDAY  center x=500, y=720, w=240, h=100 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="380" y="718" width="240" height="100" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="380" y="718" width="240" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="741" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">ShootDay</text>
+  <text x="500" y="757" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Day-of checklist</text>
+  <text x="500" y="772" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Offline QR package for camera operator's phone</text>
+  <text x="500" y="797" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/shootday.html</text>
+
+  <!-- Arrow: ShootDay → QR end node -->
+  <line x1="500" y1="818" x2="500" y2="855" stroke="#14b8a6" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
+  <!-- QR end cap -->
+  <rect x="415" y="855" width="170" height="28" rx="6" fill="#1a1a1a" stroke="#14b8a6" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="500" y="873" font-family="Inter, sans-serif" font-size="9.5" fill="#14b8a6" text-anchor="middle">📱 QR offline package (end)</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- TELEPRΩMPTER  right branch x=840, y=563 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="770" y="563" width="240" height="118" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="770" y="563" width="240" height="4" rx="2" fill="#14b8a6"/>
+  <text x="890" y="586" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">TeleprΩmpter</text>
+  <text x="890" y="602" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">3-device system: Display / Control / Voice</text>
+  <text x="890" y="617" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">QR setup screen for each device</text>
+  <text x="890" y="632" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Voice mic drives scroll speed</text>
+  <text x="890" y="660" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/teleprompter.html</text>
+  <!-- End of pre-production note -->
+  <text x="890" y="676" font-family="Inter, sans-serif" font-size="8.5" fill="#f59e0b" text-anchor="middle">↳ End of pre-production — no handoff</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 2 — PRODUCTION (external system) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- External system: Blackmagic + DaVinci intake -->
+  <!-- Parallelogram-ish: use a polygon -->
+  <polygon points="250,930 1010,930 1030,1040 230,1040" fill="#1a1200" stroke="#f59e0b" stroke-width="1.5" opacity="0.95"/>
+  <!-- inner label -->
+  <text x="630" y="960" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="15" fill="#f59e0b" text-anchor="middle">Blackmagic Camera  →  DaVinci Resolve</text>
+  <text x="630" y="979" font-family="Inter, sans-serif" font-size="10.5" fill="#c9a040" text-anchor="middle">Shoots .braw files  →  Proxy export (H.264 MP4)</text>
+  <text x="630" y="997" font-family="Inter, sans-serif" font-size="10.5" fill="#c9a040" text-anchor="middle">Output: D:\kre8r\intake  →  VaultΩr watcher picks up automatically</text>
+  <text x="630" y="1015" font-family="Inter, sans-serif" font-size="9.5" fill="#7a5a10" text-anchor="middle">EXTERNAL SYSTEM — not a Kre8Ωr tool</text>
+
+  <!-- Arrow from ShootDay area → Production block (implied flow) -->
+  <line x1="500" y1="900" x2="620" y2="930" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-amber)"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 3 — POST-PRODUCTION -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Arrow from Production block → VaultΩr -->
+  <line x1="630" y1="1040" x2="500" y2="1118" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#arrow-amber)"/>
+  <rect x="520" y="1058" width="130" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="585" y="1070" font-family="Inter, sans-serif" font-size="9" fill="#f59e0b" text-anchor="middle">Watcher auto-ingest</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- VAULTΩR  center x=500, y=1130 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="340" y="1118" width="320" height="128" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="340" y="1118" width="320" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="1142" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">VaultΩr</text>
+  <text x="500" y="1159" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Footage intelligence DB — watches D:\kre8r\intake</text>
+  <text x="500" y="1174" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Types: talking-head / b-roll / action / dialogue</text>
+  <text x="500" y="1189" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">completed-video / unusable — BRAW proxy workflow</text>
+  <text x="500" y="1204" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Manual upload + ingest-by-path supported</text>
+  <text x="500" y="1220" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/vault.html</text>
+  <text x="500" y="1236" font-family="Inter, sans-serif" font-size="9" fill="#f59e0b" text-anchor="middle">Voice analysis button → WritΩr voice library</text>
+
+  <!-- Arrow: VaultΩr → EditΩr (no button — gap) -->
+  <line x1="500" y1="1246" x2="500" y2="1286" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow-gray)"/>
+  <rect x="420" y="1252" width="160" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="1264" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle">NO BUTTON — GAP</text>
+
+  <!-- Voice analysis feedback arrow to WritΩr (right side) -->
+  <path d="M660 1189 Q800 1189 800 463" stroke="#14b8a6" stroke-width="1.3" fill="none" stroke-dasharray="4,3" marker-end="url(#arrow-teal)"/>
+  <text x="830" y="840" font-family="Inter, sans-serif" font-size="9" fill="#14b8a6" text-anchor="start" transform="rotate(-90,830,840)">voice analysis → WritΩr voice library</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- EDITΩR  center x=500, y=1300 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="360" y="1296" width="280" height="120" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="360" y="1296" width="280" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="1319" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">EditΩr</text>
+  <text x="500" y="1336" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">SelectsΩr v2 engine</text>
+  <text x="500" y="1351" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">3 modes: SCRIPTED / HYBRID / FREEFORM</text>
+  <text x="500" y="1366" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Classifies by shot_type — Whisper transcription</text>
+  <text x="500" y="1393" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/editor.html</text>
+
+  <!-- Arrow: EditΩr → ReviewΩr (implied) -->
+  <line x1="500" y1="1416" x2="500" y2="1456" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow-gray)"/>
+  <rect x="420" y="1422" width="160" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="1434" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle">NO BUTTON — GAP</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- REVIEWΩR  center x=500, y=1470 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="370" y="1466" width="260" height="100" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="370" y="1466" width="260" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="1489" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">ReviewΩr</text>
+  <text x="500" y="1506" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Rough cut approval UI</text>
+  <text x="500" y="1521" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Review selects before post-processing</text>
+  <text x="500" y="1546" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/reviewr.html</text>
+
+  <!-- Arrow: ReviewΩr → ComposΩr (implied) -->
+  <line x1="500" y1="1566" x2="500" y2="1606" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow-gray)"/>
+  <rect x="420" y="1572" width="160" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="1584" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle">NO BUTTON — GAP</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- COMPOSΩR  center x=500, y=1620 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="360" y="1616" width="280" height="110" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="360" y="1616" width="280" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="1639" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">ComposΩr</text>
+  <text x="500" y="1656" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Scene analysis</text>
+  <text x="500" y="1671" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Suno music prompt generation</text>
+  <text x="500" y="1705" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/composor.html</text>
+
+  <!-- Arrow: ComposΩr → DaVinci final edit (external, gap) -->
+  <path d="M500 1726 Q500 1760 630 1760 Q860 1760 920 1840" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-dasharray="5,4" marker-end="url(#arrow-amber)"/>
+  <rect x="590" y="1745" width="200" height="22" rx="4" fill="#0d0d0d"/>
+  <text x="690" y="1758" font-family="Inter, sans-serif" font-size="9" fill="#f59e0b" text-anchor="middle">→ DaVinci final edit (external — GAP)</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 4 — DISTRIBUTION -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- ClipsΩr entry — comes after post-production. Also entry from completed-video in VaultΩr -->
+  <!-- Arrow from VaultΩr completed-video → ClipsΩr -->
+  <path d="M340 1200 Q160 1200 160 1860" stroke="#555" stroke-width="1.3" fill="none" stroke-dasharray="4,3" marker-end="url(#arrow-gray)"/>
+  <text x="120" y="1540" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle" transform="rotate(-90,120,1540)">completed-video → ClipsΩr</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- CLIPSΩR  center x=500, y=1870 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="350" y="1830" width="300" height="130" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="350" y="1830" width="300" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="1854" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">ClipsΩr</text>
+  <text x="500" y="1871" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Viral clip ID from completed video</text>
+  <text x="500" y="1886" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Whisper transcription + Claude analysis</text>
+  <text x="500" y="1901" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Rank / hook / caption / why-it-works</text>
+  <text x="500" y="1933" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/clipsr.html</text>
+  <text x="500" y="1949" font-family="Inter, sans-serif" font-size="9" fill="#14b8a6" text-anchor="middle">✓ Approve All — 🎬 Send to DaVinci</text>
+
+  <!-- Arrow ClipsΩr → DaVinci Resolve (external, right branch) -->
+  <path d="M650 1895 Q850 1895 850 1960" stroke="#f59e0b" stroke-width="1.8" fill="none" marker-end="url(#arrow-amber)"/>
+  <text x="800" y="1888" font-family="Inter, sans-serif" font-size="9" fill="#f59e0b" text-anchor="middle">🎬 Send to DaVinci</text>
+
+  <!-- DaVinci Resolve external node (right) -->
+  <polygon points="780,1960 980,1960 1000,2080 760,2080" fill="#1a1200" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="880" y="1998" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="14" fill="#f59e0b" text-anchor="middle">DaVinci Resolve</text>
+  <text x="880" y="2016" font-family="Inter, sans-serif" font-size="10" fill="#c9a040" text-anchor="middle">Creates 9:16 vertical timelines</text>
+  <text x="880" y="2032" font-family="Inter, sans-serif" font-size="10" fill="#c9a040" text-anchor="middle">for each approved clip</text>
+  <text x="880" y="2050" font-family="Inter, sans-serif" font-size="9" fill="#7a5a10" text-anchor="middle">EXTERNAL — exported clips → creator</text>
+  <text x="880" y="2066" font-family="Inter, sans-serif" font-size="9" fill="#7a5a10" text-anchor="middle">No auto-handoff back</text>
+
+  <!-- Arrow: ClipsΩr → PackageΩr (new this session) -->
+  <line x1="500" y1="1960" x2="500" y2="2000" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow-teal)"/>
+  <rect x="400" y="1966" width="200" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="1978" font-family="Inter, sans-serif" font-size="9" fill="#14b8a6" text-anchor="middle">→ Continue to PackageΩr</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- GATEΩR recovery node — left side, dashed/deprecated -->
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- Badge -->
+  <rect x="80" y="2008" width="220" height="120" rx="10" fill="#1a0a0a" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <rect x="80" y="2008" width="220" height="4" rx="2" fill="#ef4444"/>
+  <!-- Recovery badge -->
+  <rect x="130" y="2002" width="120" height="18" rx="4" fill="#ef4444"/>
+  <text x="190" y="2014" font-family="Inter, sans-serif" font-size="9" font-weight="600" fill="#fff" text-anchor="middle">RECOVERY ONLY</text>
+  <text x="190" y="2038" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="14" fill="#ef8484" text-anchor="middle">GateΩr / M1</text>
+  <text x="190" y="2054" font-family="Inter, sans-serif" font-size="9.5" fill="#a06060" text-anchor="middle">Approval dashboard — deprecated</text>
+  <text x="190" y="2069" font-family="Inter, sans-serif" font-size="9.5" fill="#a06060" text-anchor="middle">from linear flow. Use as recovery</text>
+  <text x="190" y="2084" font-family="Inter, sans-serif" font-size="9.5" fill="#a06060" text-anchor="middle">entry point only.</text>
+  <text x="190" y="2114" font-family="Inter, sans-serif" font-size="9" fill="#664444" text-anchor="middle">/m1-approval-dashboard.html</text>
+
+  <!-- Arrow: GateΩr → PackageΩr (dashed red deprecated) -->
+  <path d="M300 2068 Q340 2068 370 2068" stroke="#ef4444" stroke-width="1.3" fill="none" stroke-dasharray="5,4" marker-end="url(#arrow-red)"/>
+  <text x="325" y="2060" font-family="Inter, sans-serif" font-size="8.5" fill="#ef4444" text-anchor="middle">→ PackageΩr</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- PACKAGEΩR  center x=500, y=2090 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="350" y="2010" width="300" height="128" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="350" y="2010" width="300" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="2034" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">PackageΩr / M2</text>
+  <text x="500" y="2051" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">5 platform packages</text>
+  <text x="500" y="2066" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">YouTube description w/ real social links</text>
+  <text x="500" y="2081" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Selects angle — viral clips auto-injected</text>
+  <text x="500" y="2096" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">from ClipsΩr</text>
+  <text x="500" y="2120" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/m2-package-generator.html</text>
+  <text x="500" y="2133" font-family="Inter, sans-serif" font-size="8.5" fill="#ef4444" text-anchor="middle">→ M4 Email Generator (legacy, deprecated)</text>
+
+  <!-- Arrow: PackageΩr → CaptionΩr -->
+  <line x1="500" y1="2138" x2="500" y2="2178" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow-teal)"/>
+  <rect x="400" y="2144" width="200" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="2156" font-family="Inter, sans-serif" font-size="9" fill="#14b8a6" text-anchor="middle">→ CaptionΩr (M3) button</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- CAPTIONΩR  center x=500, y=2250 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="350" y="2188" width="300" height="120" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="350" y="2188" width="300" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="2212" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">CaptionΩr / M3</text>
+  <text x="500" y="2229" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Platform-native captions per approved clip</text>
+  <text x="500" y="2244" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">TikTok / Instagram / Facebook / Shorts / Lemon8</text>
+  <text x="500" y="2260" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">📋 Copy All Captions</text>
+  <text x="500" y="2288" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/m3-caption-generator.html</text>
+
+  <!-- Arrow: CaptionΩr → MailΩr -->
+  <line x1="500" y1="2308" x2="500" y2="2348" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow-teal)"/>
+  <rect x="390" y="2314" width="220" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="2326" font-family="Inter, sans-serif" font-size="9" fill="#14b8a6" text-anchor="middle">→ Continue to MailΩr button</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- MAILΩR  center x=500, y=2420 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="340" y="2358" width="320" height="130" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="340" y="2358" width="320" height="4" rx="2" fill="#14b8a6"/>
+  <text x="500" y="2382" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#14b8a6" text-anchor="middle">MailΩr</text>
+  <text x="500" y="2399" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">A/B email pair + blog post + community post</text>
+  <text x="500" y="2414" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">In the creator's voice — all pipeline context injected</text>
+  <text x="500" y="2429" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Voice blend slider — 📋 Copy Both</text>
+  <text x="500" y="2444" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Kajabi connection for broadcast</text>
+  <text x="500" y="2468" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/mailor.html</text>
+
+  <!-- AudiencΩr side branch (right) -->
+  <path d="M660 2430 Q820 2430 820 2460" stroke="#555" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arrow-gray)"/>
+  <text x="770" y="2422" font-family="Inter, sans-serif" font-size="9" fill="#555" text-anchor="middle">sidebar tool</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- AUDIENCΩR  right of MailΩr  x=820 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="800" y="2460" width="240" height="110" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5" stroke-dasharray="0"/>
+  <rect x="800" y="2460" width="240" height="4" rx="2" fill="#555"/>
+  <text x="920" y="2483" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="15" fill="#888" text-anchor="middle">AudiencΩr</text>
+  <text x="920" y="2500" font-family="Inter, sans-serif" font-size="10" fill="#666" text-anchor="middle">Kajabi contacts, tags, offers</text>
+  <text x="920" y="2515" font-family="Inter, sans-serif" font-size="10" fill="#666" text-anchor="middle">Broadcast-tag SSE feed</text>
+  <text x="920" y="2530" font-family="Inter, sans-serif" font-size="10" fill="#666" text-anchor="middle">Not strictly linear — sidebar tool</text>
+  <text x="920" y="2550" font-family="Inter, sans-serif" font-size="9" fill="#444" text-anchor="middle">/audience.html</text>
+  <text x="920" y="2564" font-family="Inter, sans-serif" font-size="8.5" fill="#555" text-anchor="middle">Known issue: tag filter Kajabi 500</text>
+
+  <!-- Arrow: MailΩr → MirrΩr -->
+  <line x1="500" y1="2488" x2="500" y2="2528" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow-teal)"/>
+  <rect x="390" y="2494" width="220" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="2506" font-family="Inter, sans-serif" font-size="9" fill="#14b8a6" text-anchor="middle">→ Continue to MirrΩr button</text>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- MIRRΩR  center x=500, y=2600 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- MirrΩr is Phase 5 start — it's at the boundary -->
+  <rect x="350" y="2538" width="300" height="120" rx="10" fill="#141414" stroke="#2a2a2a" stroke-width="1.5"/>
+  <rect x="350" y="2538" width="300" height="4" rx="2" fill="#f59e0b"/>
+  <text x="500" y="2561" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#f59e0b" text-anchor="middle">MirrΩr</text>
+  <text x="500" y="2578" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">YouTube sync + performance analysis</text>
+  <text x="500" y="2593" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Strategy evaluation — calibrates Id8Ωr</text>
+  <text x="500" y="2608" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">and WritΩr with performance data</text>
+  <text x="500" y="2638" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/mirrr.html</text>
+
+  <!-- Arrow: MirrΩr → NorthΩr -->
+  <line x1="500" y1="2658" x2="500" y2="2698" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#arrow-amber)"/>
+  <rect x="390" y="2664" width="220" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="500" y="2676" font-family="Inter, sans-serif" font-size="9" fill="#f59e0b" text-anchor="middle">YouTube data → NorthΩr</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 5 — INTELLIGENCE LOOP -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- NORTHΩR  center x=500, y=2780 -->
+  <!-- ─────────────────────────────────────────────── -->
+  <rect x="350" y="2708" width="300" height="118" rx="10" fill="#141414" stroke="#f59e0b" stroke-width="1.5"/>
+  <rect x="350" y="2708" width="300" height="4" rx="2" fill="#f59e0b"/>
+  <text x="500" y="2731" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#f59e0b" text-anchor="middle">NorthΩr</text>
+  <text x="500" y="2748" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">3-month growth trajectory</text>
+  <text x="500" y="2763" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">Strategic view — performance badges</text>
+  <text x="500" y="2778" font-family="Inter, sans-serif" font-size="10.5" fill="#aaa" text-anchor="middle">back to PipΩr</text>
+  <text x="500" y="2804" font-family="Inter, sans-serif" font-size="9.5" fill="#555" text-anchor="middle">/northr.html</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- FEEDBACK LOOP ARROW: NorthΩr → Id8Ωr (left side, curved up) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Path goes left side of diagram, curves from NorthΩr bottom-left back up to Id8Ωr left side -->
+  <path d="M350 2767 Q160 2767 160 2600 Q160 200 370 139"
+        stroke="#f59e0b" stroke-width="2.2" fill="none"
+        marker-end="url(#arrow-amber)" stroke-dasharray="8,5"/>
+
+  <!-- Feedback loop label (rotated text on left) -->
+  <rect x="80" y="1300" width="130" height="22" rx="5" fill="#1a1200"/>
+  <text x="145" y="1315" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="10" fill="#f59e0b" text-anchor="middle">↑ INTELLIGENCE LOOP</text>
+  <rect x="80" y="1328" width="130" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="145" y="1340" font-family="Inter, sans-serif" font-size="9" fill="#f59e0b" text-anchor="middle">NorthΩr → Id8Ωr</text>
+
+  <!-- Feedback from NorthΩr → PipΩr badge -->
+  <path d="M350 2740 Q260 2740 260 2400 Q260 350 370 310" stroke="#f59e0b" stroke-width="1.4" fill="none" stroke-dasharray="5,4" opacity="0.5" marker-end="url(#arrow-amber)"/>
+  <rect x="200" y="1000" width="140" height="18" rx="4" fill="#0d0d0d"/>
+  <text x="270" y="1012" font-family="Inter, sans-serif" font-size="8.5" fill="#f59e0b" text-anchor="middle">performance badges → PipΩr</text>
+
+  <!-- NorthΩr feedback to Id8Ωr label at arrow end -->
+  <rect x="78" y="120" width="130" height="30" rx="5" fill="#1a1200" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="143" y="133" font-family="Inter, sans-serif" font-size="8.5" fill="#f59e0b" text-anchor="middle">← NorthΩr feedback</text>
+  <text x="143" y="146" font-family="Inter, sans-serif" font-size="8.5" fill="#c9a040" text-anchor="middle">closes the loop</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- BOTTOM SUMMARY BAR -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="60" y="2860" width="1200" height="1" fill="#2a2a2a"/>
+
+  <!-- Stats row at very bottom -->
+  <text x="660" y="2900" font-family="Inter, sans-serif" font-size="11" fill="#555" text-anchor="middle">14 tools across 5 phases · 3-week build · No prior coding experience · Built with Claude Code</text>
+  <text x="660" y="2920" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="11" fill="#14b8a6" text-anchor="middle">kre8r.app — Creator OS for creators who make things that matter</text>
+
+</svg>
+</div>
+
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-line solid-teal"></div>
+    <span>Confirmed handoff button</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-line dashed-gray"></div>
+    <span>Implied / missing handoff (GAP)</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-line amber"></div>
+    <span>External system connection</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-line dashed-red"></div>
+    <span>Deprecated path</span>
+  </div>
+  <div class="legend-item">
+    <svg width="36" height="16" style="overflow:visible">
+      <rect x="0" y="6" width="34" height="14" rx="3" fill="#1a0a0a" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,2"/>
+    </svg>
+    <span>Recovery / deprecated node</span>
+  </div>
+  <div class="legend-item">
+    <svg width="36" height="16" style="overflow:visible">
+      <polygon points="2,14 34,14 36,2 0,2" fill="#1a1200" stroke="#f59e0b" stroke-width="1.2"/>
+    </svg>
+    <span>External system</span>
+  </div>
+</div>
+
+</body>
+</html>
