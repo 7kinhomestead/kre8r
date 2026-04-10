@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kre8Ωr — Sign In</title>
+  <style>
+    :root {
+      --bg:       #0d0d0f;
+      --bg-card:  #141418;
+      --bg-input: #1a1a20;
+      --border:   #2a2a35;
+      --text:     #e8e8f0;
+      --text-dim: #9090a8;
+      --teal:     #14b8a6;
+      --teal-dim: rgba(20,184,166,.15);
+      --red:      #ef4444;
+      --font:     'Inter', system-ui, sans-serif;
+      --radius:   12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-wordmark {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--teal);
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    input {
+      display: block;
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color .15s;
+      margin-bottom: 18px;
+    }
+
+    input:focus { border-color: var(--teal); }
+
+    input::placeholder { color: var(--text-dim); opacity: .5; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      background: var(--teal);
+      border: none;
+      border-radius: 8px;
+      color: #000;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      padding: 12px;
+      transition: opacity .15s;
+      margin-top: 4px;
+    }
+
+    .btn:hover:not(:disabled) { opacity: .88; }
+    .btn:disabled { opacity: .45; cursor: default; }
+
+    .error {
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-bottom: 18px;
+      display: none;
+    }
+    .error.visible { display: block; }
+
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 28px;
+      opacity: .5;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-wordmark">Kre8Ωr</div>
+      <div class="logo-sub">Creator OS</div>
+    </div>
+
+    <div class="error" id="err-msg"></div>
+
+    <form id="login-form" autocomplete="on">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" placeholder="jason" autocomplete="username" autofocus required>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+
+      <button type="submit" class="btn" id="submit-btn">Sign In</button>
+    </form>
+
+    <div class="footer">7 Kin Homestead · Private</div>
+  </div>
+
+  <script>
+    const form   = document.getElementById('login-form');
+    const errEl  = document.getElementById('err-msg');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      errEl.classList.add('visible');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errEl.classList.remove('visible');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Signing in…';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res  = await fetch('/auth/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.error || 'Sign in failed');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign In';
+          return;
+        }
+
+        // Redirect to the originally requested page, or home
+        const redirect = new URLSearchParams(window.location.search).get('next') || '/';
+        window.location.href = redirect;
+      } catch (err) {
+        showError('Network error — is the server running?');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>

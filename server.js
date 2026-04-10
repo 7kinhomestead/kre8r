@@ -54,6 +54,7 @@ const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
 const os      = require('os');
+const session = require('express-session');
 
 function getLocalIP() {
   const ifaces = os.networkInterfaces();
@@ -83,11 +84,69 @@ app.use((req, res, next) => {
 });
 
 // ─────────────────────────────────────────────
+// SESSION
+// ─────────────────────────────────────────────
+app.use(session({
+  name:   'kre8r.sid',
+  secret: process.env.SESSION_SECRET || 'kre8r-session-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure:   false,   // set true if serving HTTPS directly (nginx handles it here)
+    maxAge:   30 * 24 * 60 * 60 * 1000,  // 30 days
+  },
+}));
+
+// ─────────────────────────────────────────────
+// AUTH ROUTES — before guard so login page works
+// ─────────────────────────────────────────────
+app.use('/auth', require('./src/routes/auth'));
+
+// ─────────────────────────────────────────────
+// AUTH GUARD — protects everything except:
+//   • /login page
+//   • /auth/* (login/logout endpoints)
+//   • /landing, /media-kit, /beta-invite (public marketing)
+//   • /api/beta (public beta signup)
+//   • /api/health
+//   • teleprompter.kre8r.app subdomain (session-code protected)
+// ─────────────────────────────────────────────
+const TELEPROMPTER_HOST = 'teleprompter.kre8r.app';
+
+app.use((req, res, next) => {
+  // Allow the teleprompter subdomain through without user login —
+  // session codes protect individual sessions, scripts aren't secret
+  if (req.hostname === TELEPROMPTER_HOST) return next();
+
+  // Always public
+  if (req.path === '/login' || req.path === '/login.html') return next();
+  if (req.path.startsWith('/auth/'))       return next();
+  if (req.path.startsWith('/api/beta'))    return next();
+  if (req.path === '/api/health')          return next();
+  if (['/landing', '/landing.html', '/media-kit', '/media-kit.html',
+       '/beta-invite', '/beta-invite.html'].includes(req.path)) return next();
+
+  // Logged in — allow
+  if (req.session?.userId) return next();
+
+  // API request — return 401 (don't redirect, let the frontend handle it)
+  if (req.path.startsWith('/api/')) {
+    return res.status(401).json({ error: 'Not authenticated', redirect: '/login' });
+  }
+
+  // HTML page request — redirect to login with ?next= return path
+  const next_ = encodeURIComponent(req.originalUrl);
+  res.redirect(`/login?next=${next_}`);
+});
+
+// ─────────────────────────────────────────────
 // PUBLIC MARKETING PAGES — no auth, declared FIRST
-// Must stay above express.static and any future auth middleware so
-// nginx basic-auth passthrough (auth_basic off) can be matched by route.
 // ─────────────────────────────────────────────
 app.use('/api/beta', require('./src/routes/beta'));
+
+app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
 app.get('/landing',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/landing.html',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));

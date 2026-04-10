@@ -725,6 +725,29 @@ function runMigrations() {
     db.exec('ALTER TABLE strategy_reports ADD COLUMN evaluated_at DATETIME');
     console.log('[DB] Migration: added strategy_reports.evaluated_at');
   }
+
+  // ── Users table (auth system) ──────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      username      TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+      password_hash TEXT    NOT NULL,
+      role          TEXT    NOT NULL DEFAULT 'owner',
+      created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Seed default owner on first run if no users exist
+  const userCount = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
+  if (userCount === 0) {
+    // Sync bcrypt hash — only runs once ever
+    const bcrypt = require('bcryptjs');
+    const defaultUsername = process.env.KRE8R_USERNAME || 'jason';
+    const defaultPassword = process.env.KRE8R_PASSWORD || 'kre8r2024';
+    const hash = bcrypt.hashSync(defaultPassword, 10);
+    db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)').run(defaultUsername, hash, 'owner');
+    console.log(`[Auth] Default owner created — username: "${defaultUsername}" (set KRE8R_USERNAME / KRE8R_PASSWORD in .env to change)`);
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -744,6 +767,34 @@ function _get(sql, params = []) {
 
 function _all(sql, params = []) {
   return db.prepare(sql).all(params);
+}
+
+// ─────────────────────────────────────────────
+// AUTH HELPERS
+// ─────────────────────────────────────────────
+
+function getUserByUsername(username) {
+  return _get('SELECT * FROM users WHERE username = ?', [username]);
+}
+
+function getUserById(id) {
+  return _get('SELECT id, username, role, created_at FROM users WHERE id = ?', [id]);
+}
+
+function getAllUsers() {
+  return _all('SELECT id, username, role, created_at FROM users ORDER BY id');
+}
+
+function createUser(username, passwordHash, role = 'viewer') {
+  return _run('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)', [username, passwordHash, role]);
+}
+
+function updateUserPassword(id, passwordHash) {
+  _run('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, id]);
+}
+
+function deleteUser(id) {
+  _run('DELETE FROM users WHERE id = ?', [id]);
 }
 
 // ─────────────────────────────────────────────
@@ -2975,6 +3026,14 @@ function checkpoint() {
 module.exports = {
   initDb,
   checkpoint,
+  // Auth
+  getUserByUsername,
+  getUserById,
+  getAllUsers,
+  createUser,
+  updateUserPassword,
+  deleteUser,
+  // Projects
   createProject,
   getProject,
   getAllProjects,

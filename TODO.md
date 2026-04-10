@@ -101,6 +101,71 @@ sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
 
 ---
 
+### ✅ P1-G — Auth System + TeleprΩmpter Subdomain — Session 28
+
+See Phase 1-G below for implementation details (built this session).
+
+---
+
+## PHASE 1-G — Auth + Field TeleprΩmpter (Session 28)
+
+### Auth — kre8r.app login system
+Full session-based login replacing nginx basic auth.
+- `users` table: id, username, password_hash (bcrypt), role ('owner' | 'viewer'), created_at
+- `sessions` table via express-session + better-sqlite3 session store
+- `/login` page (dark theme, matches app) — POST → sets session cookie
+- Auth middleware on all routes except /login and /health
+- Owner role: full access. Viewer role: read-only, no destructive actions.
+- First run: seeds default owner (jason / set via env var KRE8R_OWNER_PW)
+- Remove nginx basic auth (htpasswd) once Express auth is confirmed working
+
+### teleprompter.kre8r.app subdomain
+Dedicated subdomain for field teleprompter use. Same DigitalOcean droplet.
+- DNS: A record `teleprompter.kre8r.app` → same IP as kre8r.app
+- Nginx: new server block for teleprompter.kre8r.app → proxy port 3000
+- SSL: certbot --expand to add teleprompter.kre8r.app to existing cert
+- Express: detect Host header, serve teleprompter.html with no main-app auth wall
+- Auth model: session code IS the auth — 4-digit code required to join any session
+  so hitting the URL blind does nothing useful
+- Script fetch: teleprompter calls existing /api/projects/:id/script endpoint
+  (no separate API needed — same server)
+
+**Field workflow:**
+1. Jason selects project in kre8r.app desktop before leaving
+2. Display device (laptop) opens teleprompter.kre8r.app, loads project, generates session QR codes
+3. Phone 1 (hotspot): scans QR → control mode. Phone 1 data provides internet to all devices.
+4. Phone 2 (voice): scans QR → voice mode
+5. All three reach teleprompter.kre8r.app through Phone 1's hotspot data. Zero office wifi needed.
+
+---
+
+### 📱 Android APK — Beta User Onboarding + Zero-Signal Fallback
+
+**When to build:** After beta users are onboarded. Dedicated session.
+
+**Primary use case:** Zero mobile signal locations (no data on hotspot phone).
+For normal field use, teleprompter.kre8r.app through Phone 1's hotspot data handles it.
+
+**Architecture (Phone 1 = server in the field):**
+- Phase 1 (office, on same wifi as desktop): Scan QR from Kre8r → app fetches script, stores locally
+- Phase 2 (field, no signal): App starts NanoHTTPD server + Java-WebSocket on Phone 1
+- Laptop: scans QR from app → browser opens `http://[phone1-hotspot-ip]:PORT/` → display mode
+- Phone 2: scans QR → browser → voice mode
+- Phone 1 app: control interface + WebSocket hub. Zero internet needed.
+
+**Libraries:** NanoHTTPD (HTTP server in Android), Java-WebSocket, ZXing (QR scanner)
+**Size estimate:** ~400-500 lines Kotlin + bundled teleprompter.html assets
+**Distribution:** Sideload APK (Settings → Unknown sources). NOT Play Store.
+
+**Beta user onboarding flow:**
+- Upon first login to kre8r.app: modal/banner — "Download the Field TeleprΩmpter app"
+- QR code to download the APK directly from kre8r.app/downloads/kre8r-teleprompter.apk
+- Small written tutorial (3 steps): Enable unknown sources → scan QR → install
+- Tutorial lives at kre8r.app/teleprompter-setup (simple HTML page, printable)
+- Also shown in ShootDay checklist ("Field kit ready?")
+
+---
+
 ## PHASE 2 — Electron Wrapper ← NEXT
 *Wrap the existing app in a real desktop window. ~1-2 sessions.*
 

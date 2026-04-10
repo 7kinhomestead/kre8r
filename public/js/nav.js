@@ -548,6 +548,7 @@
           </a>
           ${categoryHTML}
           <button class="kn-tour-btn" onclick="window.kre8rTour && window.kre8rTour.start()" title="Pipeline tour — how Kre8r works" aria-label="Start pipeline tour">?</button>
+          <button class="kn-tour-btn" onclick="kre8rSignOut()" title="Sign out" aria-label="Sign out" style="opacity:.55;font-size:14px" id="kn-signout-btn">⏏</button>
         </div>
         <button class="kn-hamburger" aria-label="Open navigation menu" aria-expanded="false" aria-controls="kn-mobile-overlay">
           ☰
@@ -755,3 +756,12 @@
   };
 
 })();
+
+// ─────────────────────────────────────────────
+// SIGN OUT — global so nav button can call it
+// ─────────────────────────────────────────────
+function kre8rSignOut() {
+  fetch('/auth/logout', { method: 'POST' })
+    .then(function() { window.location.href = '/login'; })
+    .catch(function() { window.location.href = '/login'; });
+}
