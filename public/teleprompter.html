@@ -1220,21 +1220,30 @@ function processScript(rawText) {
     }
 
     // ── 3. Drop entire lines that start with a production cue ───
-    //    Covers [anything], (anything), *, **, ---, emoji-only
+    //    Covers [anything], *, **, ---
     const fc = trimmed[0]; // first char
-    if (fc === '[')  continue;   // any bracketed line
-    if (fc === '(')  continue;   // any paren-started line
+    if (fc === '[')  continue;   // any bracketed line (not already handled above)
     if (fc === '*')  continue;   // * or ** markdown notes
     if (/^-{2,}/.test(trimmed)) continue; // --- dividers
 
     // Drop lines that are only emoji / symbols (no latin/number content)
     if (/^[\p{Emoji}\p{S}\s]+$/u.test(trimmed) && !/[a-zA-Z0-9]/.test(trimmed)) continue;
 
-    // ── 4. Strip 🎤 and apply keyword bail-out ───────────────────
+    // ── 4. Strip 🎤 and run inline production-note removal FIRST ──
+    // We do inline stripping before keyword bail-out so that lines like
+    // "Built this (b-roll: shots) ourselves." survive — the b-roll note
+    // is stripped and the spoken text remains.
     line = trimmed.replace(/^🎤\s*/u, '').trim();
 
-    // After stripping the mic emoji, check drop keywords
-    if (DROP_KEYWORDS.some(re => re.test(line))) continue;
+    // Paren-started lines: try stripping a leading b-roll/production note,
+    // then decide if anything spoken remains. If still starts with ( → drop.
+    if (line[0] === '(') {
+      line = line.replace(/^\(b-roll:[^)]*\)\s*/i, '');
+      line = line.replace(/^\([^)]*b-roll[^)]*\)\s*/i, '');
+      line = line.replace(/^\([^)]*insert[^)]*\)\s*/i, '');
+      line = line.trim();
+      if (!line || line[0] === '(') continue; // pure production note or still paren-led
+    }
 
     // ── 5. Inline production-note removal (within spoken lines) ──
     line = line.replace(/\(b-roll:[^)]*\)/gi, '');
@@ -1244,6 +1253,11 @@ function processScript(rawText) {
     line = line.replace(/\([a-z][^)]{0,80}\)/g, '');    // (lowercase-starting note)
     line = line.replace(/\*{1,2}[^*\n]+\*{1,2}/g, ''); // **bold** or *italic* notes
     line = line.replace(/\s{2,}/g, ' ').trim();
+
+    // ── 5b. Keyword bail-out — runs AFTER inline stripping ───────
+    // This way "Built this (b-roll: shots) ourselves." →
+    // after stripping → "Built this ourselves." → passes keyword check.
+    if (DROP_KEYWORDS.some(re => re.test(line))) continue;
 
     // ── 6. Reject if nothing spoken remains ──────────────────────
     if (!line) {
