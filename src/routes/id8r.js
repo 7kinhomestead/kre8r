@@ -456,15 +456,27 @@ router.post('/research', async (req, res) => {
     try { res.write('data: ' + JSON.stringify(data) + '\n\n'); } catch (_) {}
   };
 
+  // Global keepalive — pings every 8s for the entire duration of the research stream.
+  // Prevents nginx proxy_read_timeout from closing the SSE connection during long
+  // API calls (Phase 1 web search can take 15-20s of silence without this).
+  // SSE comment lines (': ping') are ignored by EventSource — no client-side handling needed.
+  const globalPing = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (_) {}
+  }, 8000);
+
+  const cleanup = () => clearInterval(globalPing);
+
   try {
     if (!session_id) {
       send({ stage: 'error', error: 'session_id is required' });
+      cleanup();
       return res.end();
     }
 
     const session = sessions.get(session_id);
     if (!session) {
       send({ stage: 'error', error: 'SESSION_EXPIRED', message: SESSION_EXPIRED.message });
+      cleanup();
       return res.end();
     }
 
@@ -682,10 +694,12 @@ router.post('/research', async (req, res) => {
     };
 
     send({ stage: 'done', message: 'Research complete.' });
+    cleanup();
     res.end();
   } catch (e) {
     console.error('[id8r/research]', e);
     send({ stage: 'error', error: e.message });
+    cleanup();
     res.end();
   }
 });
