@@ -13,7 +13,7 @@ No PM2. A real app with an icon in the taskbar.
 
 ---
 
-### ⚡ P1-A — ReviewΩr Refocus (rough cut only)
+### ✅ P1-A — ReviewΩr Refocus (rough cut only) — DONE Session 27
 
 Strip CutΩr analysis out of ReviewΩr entirely. One job: does this rough cut work as a long-form video?
 
@@ -34,7 +34,7 @@ Strip CutΩr analysis out of ReviewΩr entirely. One job: does this rough cut wo
 
 ---
 
-### ⚡ P1-B — Short-Form Pipeline Mode
+### ✅ P1-B — Short-Form Pipeline Mode — DONE Session 27
 
 Add `content_type` ('long' | 'short') as a first-class flag that flows through the entire pipeline.
 
@@ -63,7 +63,7 @@ checks hook timing, retention arc, CTA presence, loop-ability. Outputs validatio
 
 ---
 
-### ⚡ P1-C — ClipsΩr Inline Editing
+### ✅ P1-C — ClipsΩr Inline Editing — DONE Session 27
 
 Click-to-edit on hook text, why_it_works, caption, and hashtags fields on each clip card.
 Auto-save on blur → `PATCH /api/mirrr/viral-clips/:id`
@@ -71,7 +71,7 @@ Visual cue: light border + cursor change on click, reverts to display on save.
 
 ---
 
-### ⚡ P1-D — MirrΩr First Real Evaluation Run
+### ✅ P1-D — MirrΩr First Real Evaluation Run — DONE Session 27
 
 The compounding intelligence loop activates here.
 1. Run YouTube sync → confirm video performance data in DB
@@ -81,7 +81,7 @@ The compounding intelligence loop activates here.
 
 ---
 
-### ⚡ P1-E — Cosmetic Polish Pass
+### ✅ P1-E — Cosmetic Polish Pass — DONE Session 27
 
 Before packaging, one focused pass on rough edges:
 - Any "Rockridge" / stale creator name artifacts still in generated content prompts
@@ -92,7 +92,7 @@ Before packaging, one focused pass on rough edges:
 
 ---
 
-### ⚡ P1-F — Deploy Session 26 to DigitalOcean
+### ⚡ P1-F — Deploy Sessions 26+27 to DigitalOcean — CODE PUSHED, RUN VIA DO CONSOLE
 
 ```bash
 cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
@@ -101,7 +101,7 @@ sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
 
 ---
 
-## PHASE 2 — Electron Wrapper
+## PHASE 2 — Electron Wrapper ← NEXT
 *Wrap the existing app in a real desktop window. ~1-2 sessions.*
 
 The Express server runs inside Electron's main process.

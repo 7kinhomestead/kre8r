@@ -1,3 +1,112 @@
+# Kre8Ωr Session Log — 2026-04-10 (Session 27 — Phase 1 Feature Execution: Short-Form, ReviewΩr Refocus, ClipsΩr Editing, MirrΩr Loop)
+
+## What Was Built — Session 27
+
+---
+
+### P1-A: ReviewΩr Refocused — Pure Rough Cut Approval
+
+**`public/reviewr.html`** — Complete rewrite. CutΩr analysis stripped entirely.
+- Beat cards: section index, beat label, gold_nugget badge, takes count, selected duration
+- Expand to show fire_suggestion note and all takes with winner badge
+- Status pills: beats count, gold moments count, total runtime
+- Empty state guides user to EditΩr to run SelectsΩr first
+- Three advance banners: ComposΩr (teal), ClipsΩr (green), PackageΩr (blue)
+- All banner hrefs wired with `?project_id=` on project select
+
+---
+
+### P1-B: Short-Form Pipeline Mode
+
+**`src/db.js`** — Added `format TEXT DEFAULT 'long'` column to projects table
+
+**`src/pipr/beats.js`** — 7 new short-form beat structures:
+  - SHORT_HOOK_TENSION_PAYOFF, SHORT_OPEN_LOOP, SHORT_PAS, SHORT_BEFORE_AFTER
+  - SHORT_LIST, SHORT_HOT_TAKE, SHORT_TUTORIAL
+  - Each beat has `duration_label` (e.g. "0–3s"), `target_pct` for 60s video, `short_form: true`
+
+**`public/pipr.html`** — Short-form section added to structure picker
+  - SHORT FORM visual divider + 7 new structure cards with teal "SHORT" badge
+  - Beat preview shows duration_label for short-form structures
+  - BEAT_TEMPLATES client-side object synced with beats.js
+  - `form.format` set to 'short' when short_ structure selected
+
+**`src/routes/pipr.js`** — Format detection on project create
+  - `isShort = story_structure.startsWith('short_')` → sets format field in DB
+
+**`src/routes/writr.js`** — SHORT-FORM FORMAT block injected into id8rBlock
+  - 150–300 word limit, 10-word hook rule, no filler, payoff in last 10–15s
+
+**`public/writr.html`** — SHORT FORM badge shown when `project.format === 'short'`
+
+---
+
+### P1-C: ClipsΩr Inline Editing
+
+**`public/clipsr.html`** — Click-to-edit on 4 fields in each clip card:
+  - `hook`: contenteditable div with onblur → saveClipField()
+  - `why_it_works`: contenteditable div with onblur → saveClipField()
+  - `caption`: existing textarea, added onblur → saveClipField()
+  - `hashtags`: contenteditable div with onblur (Enter/Escape blur)
+  - `saveClipField()` async function: PUT /api/clipsr/clips/:id, saving-flash animation on success
+  - `copyHook` and `copyHashtags` updated to read live element content
+
+---
+
+### P1-D: MirrΩr Evaluation Loop — Fixed and Verified
+
+**Bug fixed: `src/db.js`** — `getVideosByMonth()` used `pr.angle` which doesn't exist on `projects`.
+  Fixed to `po.angle` (angle is on the `posts` table, aliased `po`).
+
+**`src/routes/mirrr.js`** — `evaluate-strategy` endpoint improvements:
+  - `evalMonth` / `evalYear` changed from `const` to `let` for fallback reassignment
+  - Fallback: if no strategy report for requested month, uses most recent available
+  - Error message improved: "No strategy reports found. Generate a strategy in NorthΩr first."
+
+**Verified full loop:**
+  1. evaluate-strategy → Claude evaluates → `saveStrategyEvaluation()` stores result
+  2. GET /api/mirrr/evaluations → returns stored eval with score, weight badges
+  3. Id8Ωr `mirrrBlock` reads from `getRecentEvaluations()` — injects MIRRΩR CALIBRATION
+  4. WritΩr `buildWritrPromptContext()` also reads evaluations → MIRRΩR CALIBRATION in every script prompt
+
+---
+
+### P1-E: Cosmetic Polish
+
+**`CLAUDE.md`** — Cleaned up:
+  - better-sqlite3 migration removed from Planned Features (completed)
+  - Confusing duplicate MirrΩr entry removed
+  - Known Issues renumbered (2 was missing after sql.js migration item was removed)
+
+**`public/northr.html`** — Evaluations empty state text improved to explain the required flow
+
+**Audit findings (no changes needed):**
+  - "Rockridge" references in src/ are all defensive fixes (Whisper transcription correction) — correct
+  - Empty states across all key pages (EditΩr, VaultΩr, WritΩr, ComposΩr, ClipsΩr, ReviewΩr) are descriptive
+  - TeleprΩmpter and ShootDay both have mobile viewport meta + media queries
+
+---
+
+### P1-F: Deploy
+
+Git commit pushed to origin/master (github.com/7kinhomestead/kre8r).
+SSH access not available from this machine — use DigitalOcean console:
+
+```bash
+cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
+sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
+```
+
+---
+
+## Session 27 State — End of Session
+
+- ✅ P1-A through P1-E complete
+- 🔲 P1-F: deploy commands above — run via DigitalOcean console
+- Phase 2 (Electron wrapper) is next when Phase 1 is fully deployed
+
+---
+
 # Kre8Ωr Session Log — 2026-04-09 (Session 26 — Pipeline Audit, Tool Purpose Docs, Rate Limiting Fix, Short-Form Architecture)
 
 ## What Was Built — Session 26
