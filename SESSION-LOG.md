@@ -1,3 +1,119 @@
+# Kre8Ωr Session Log — 2026-04-10 (Session 28 — TeleprΩmpter Fixes, Auth System, Mark Complete, Field Teleprompter Architecture)
+
+## What Was Built — Session 28
+
+---
+
+### TeleprΩmpter: processScript() Bug Fixes
+
+**`public/teleprompter.html`** — Two real bugs fixed, found via 35-test simulation suite:
+
+**Bug 1 — B-roll inline stripping:**
+Lines containing b-roll as a parenthetical (e.g. `"Three years (b-roll: timelapse) teaches things."`)
+were being dropped entirely because `DROP_KEYWORDS` ran BEFORE inline stripping.
+Fix: moved DROP_KEYWORDS check to AFTER inline stripping (step 5b instead of step 4).
+
+**Bug 2 — Paren-prefixed spoken lines:**
+Lines like `"(b-roll: laughing) Backup plan always works."` were dropped entirely by the
+`if (fc === '(') continue` guard before the spoken content could be extracted.
+Fix: when a line starts with `(`, attempt to strip leading b-roll/insert prefix first,
+then decide based on what remains — if anything spoken left, keep it.
+
+35/35 unit tests pass. Test file: `test-processscript.js` (can be deleted after this session).
+
+---
+
+### Mark Complete — Pipeline Control
+
+**`src/db.js`** — `markProjectComplete(projectId, publishedAt)`:
+Sets `projects.status = 'published'` AND `projects.current_stage = 'COMPLETE'`
+AND `pipeline_state.current_stage = 'COMPLETE'`. The definitive done signal for all tools.
+
+**`src/routes/projects.js`** — `PATCH /api/projects/:id/complete`
+
+**`public/northr.html`** — Two places to mark complete:
+1. Stalled cards (🟡 section) now have a `✓ Done` button inline — one tap
+2. Mark Published section upgraded to `✓ Mark Complete`, shows COMPLETE badge when done
+
+**To use now:** Open NorthΩr → stalled list → hit `✓ Done` on the Rock Rich video.
+
+---
+
+### Auth System — Session Login Replaces Nginx Basic Auth
+
+**`src/db.js`** — `users` table added with migration:
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  username      TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+  password_hash TEXT    NOT NULL,
+  role          TEXT    NOT NULL DEFAULT 'owner',
+  created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+)
+```
+Seeds default owner on first run. Username: `jason`, password: `kre8r2024` (change before deploy).
+Set `KRE8R_USERNAME` / `KRE8R_PASSWORD` env vars to override seed values.
+Auth functions exported: `getUserByUsername`, `getUserById`, `getAllUsers`, `createUser`,
+`updateUserPassword`, `deleteUser`.
+
+**`src/routes/auth.js`** — New route file:
+- `POST /auth/login` — bcrypt compare → set session cookie
+- `POST /auth/logout` — destroy session
+- `GET /auth/me` — returns current user info
+- `GET /auth/users` — list all users (owner only)
+- `POST /auth/users` — create user with role (owner only)
+- `DELETE /auth/users/:id` — delete user, can't delete self (owner only)
+- `POST /auth/users/:id/password` — change password (owner only)
+
+**`public/login.html`** — New login page. Dark theme, matches app.
+Redirects to `?next=` original destination after login.
+
+**`server.js`** — Session middleware + auth guard added:
+- `express-session` with `kre8r.sid` cookie, 30-day expiry, httpOnly
+- Auth guard middleware blocks all routes unless:
+  - `req.hostname === 'teleprompter.kre8r.app'` (subdomain bypass)
+  - `/login`, `/auth/*`, `/api/beta`, `/api/health`, public marketing pages
+- API routes return `401 { error, redirect }` instead of HTML redirect
+- HTML routes redirect to `/login?next=[original-url]`
+
+**`public/js/nav.js`** — Sign out button `⏏` added to top nav bar (calls `/auth/logout`).
+
+**Dependencies added:** `bcryptjs`, `express-session`
+
+---
+
+### Architecture Decision: Field TeleprΩmpter
+
+**Problem:** Outside office wifi, phones connect through Phone 1's hotspot data.
+`kre8r.app` was shared with dev friend. Needed a clean field solution.
+
+**Decision:** `teleprompter.kre8r.app` subdomain (same DO droplet, same server).
+The subdomain bypasses user auth — session codes protect individual sessions.
+All field devices reach the subdomain through Phone 1's mobile data via hotspot.
+This is NOT offline — "outside wifi range" still has mobile data. True offline
+(zero signal) is a future Android APK (documented in TODO.md).
+
+**Still to do (separate session):**
+1. DNS A record: `teleprompter.kre8r.app` → same DigitalOcean IP
+2. Nginx server block for the subdomain
+3. SSL: `certbot --expand` to add the subdomain to existing cert
+
+---
+
+### TODO.md Updates
+
+- P1-G section added: Auth + Field TeleprΩmpter plan documented
+- Android APK section added: beta onboarding flow, zero-signal architecture,
+  NanoHTTPD + Java-WebSocket approach, sideload instructions for users
+
+---
+
+## DigitalOcean Deploy — Session 28
+
+**Full step-by-step in DEPLOY-SESSION28.md** — see that file.
+
+---
+
 # Kre8Ωr Session Log — 2026-04-10 (Session 27 — Phase 1 Feature Execution: Short-Form, ReviewΩr Refocus, ClipsΩr Editing, MirrΩr Loop)
 
 ## What Was Built — Session 27
