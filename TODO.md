@@ -320,6 +320,50 @@ npm run electron:build:mac    # Mac .dmg
 
 ---
 
+## Email Marketing — Distribution Pipeline Decision
+
+**The problem:** Kajabi's API has no broadcast send endpoint. MailΩr generates email copy but final
+send requires manual copy/paste. This is the last un-automated step in the distribution pipeline.
+
+**Research completed Session 28.**
+
+### Option A — Wait on Kajabi (free, best outcome)
+Kajabi is known to be building out their email API surface. If they ship a broadcast endpoint,
+the problem solves itself at zero extra cost. **Action: ask Kajabi support if broadcast API
+is on the roadmap and rough timeframe.**
+
+### Option B — Mailerlite (~$20/mo, best value if going third-party)
+Subscriber-count based (same model as Kit, easier to predict). Full broadcast API on all paid
+plans. ~$20/mo at 5k subscribers vs Kit's $89–109/mo. 92% inbox placement rate.
+Kre8r calls their API directly — no Zapier. One session to wire into MailΩr.
+
+### Option C — Brevo (~$18/mo, cheapest, volume-based)
+Prices by emails sent, not subscribers. ~$18/mo for 40k sends/month (5k subs × 2/week).
+Full broadcast API. Free tier (300/day) usable for dev/testing. Slight unpredictability
+if send volume spikes.
+
+### Option D — Upgrade Kit to Creator ($39–109/mo depending on subs)
+Known platform, already had account, best creator features. But $89/mo at 5k subs is
+painful alongside Kajabi. Only worth it if already heavily invested in Kit ecosystem.
+
+### Comparison at 5k subscribers
+| Platform | Price | Broadcast API |
+|---|---|---|
+| Kit Creator | $89–109/mo | ✅ |
+| Mailerlite | ~$20/mo | ✅ |
+| Brevo | ~$18/mo | ✅ |
+| EmailOctopus | $24/mo | ✅ |
+| Resend | $40/mo | ✅ |
+| Kajabi (if they ship it) | $0 extra | ❓ |
+
+**Decision pending Kajabi support call. If Kajabi punts → build Mailerlite integration in MailΩr.**
+
+When building: `src/routes/mailerlite.js` (or `kitr.js`), same pattern as kajabi.js.
+POST /api/mailerlite/send-broadcast → calls Mailerlite v2 API with subject + HTML body + tag segment.
+MailΩr gets a second send button alongside the Kajabi copy/paste option.
+
+---
+
 ## Technical Debt (cleared or confirmed)
 
 - ~~better-sqlite3 migration~~ — DONE (confirmed Session 26)
