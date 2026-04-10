@@ -39,7 +39,7 @@ of future multi-tenancy. Never hardcode creator-specific data anywhere in the en
 ## Tech Stack
 - Runtime: Node.js 18+
 - Server: Express.js on port 3000
-- Database: SQLite via sql.js (in-memory, persisted to disk via persist())
+- Database: SQLite via better-sqlite3 (synchronous, WAL mode, file-based)
 - AI: Anthropic Claude API (claude-sonnet-4-6), shared caller in src/utils/claude.js
 - Video processing: ffmpeg + ffprobe (local)
 - Transcription: Whisper (local Python)
@@ -50,11 +50,10 @@ of future multi-tenancy. Never hardcode creator-specific data anywhere in the en
 - Process manager: PM2
 
 ## CRITICAL DATABASE RULE
-Kre8Ωr uses sql.js — SQLite in memory, persisted to disk on every write.
+Kre8Ωr uses better-sqlite3 — synchronous, file-based SQLite with WAL mode.
 NEVER edit the .db file directly with sqlite3 CLI or any external tool while
 the server is running. All reads and writes MUST go through the live server API.
-Direct edits go to an isolated in-memory copy and are lost on next server write.
-A migration to better-sqlite3 is planned before commercialization.
+Direct edits to the file while the server holds a WAL lock can corrupt data.
 
 ## Project Structure
 - `server.js` — Express server, mounts all routes
@@ -199,21 +198,19 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 - Commit at end of every session with SESSION-LOG.md updated
 
 ## Known Issues / Technical Debt (Priority Order)
-1. sql.js → better-sqlite3 migration (before commercialization)
-2. Id8Ωr redesign: cut mind map, add fast concept pass → choose → deep research
-3. VaultΩr subject/topic tagging for semantic search
-4. AudiencΩr tag filter (Kajabi 500 on filtered requests)
-5. BRAW proxy timeout — 30min per job too short for large files
-6. Project resolution defaults to 4K DCI instead of reading footage resolution
-7. No automated tests, no error monitoring, no structured logging
-8. No backup strategy for SQLite file
-9. Hardcoded Windows paths in some Python scripts
+1. Id8Ωr redesign: cut mind map, add fast concept pass → choose → deep research
+2. VaultΩr subject/topic tagging for semantic search
+3. AudiencΩr tag filter (Kajabi 500 on filtered requests)
+4. BRAW proxy timeout — 30min per job too short for large files
+5. Project resolution defaults to 4K DCI instead of reading footage resolution
+6. No automated tests, no error monitoring, no structured logging
+7. No backup strategy for SQLite file
+8. Hardcoded Windows paths in some Python scripts
 
 ## Planned Features (Not Yet Built)
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
 - Cari creator profile (second voice profile for Rock Rich Shows)
 - Configurable workflow order (onboarding wizard)
-- MirrΩr (`/mirrr.html`) — replaces MirrΩr. Channel intelligence, 3D Content Universe, coaching, secrets. Route: /api/mirrr (legacy /api/mirrr alias kept)
 - RetentΩr — viral clip / retention cut module (post-edit, split from SelectsΩr)
 - CoverageΩr — coverage tracking
 - Affiliate link manager
@@ -221,7 +218,6 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 - NotebookLM/Gamma integration in Id8Ωr research phase
 - VaultΩr subject/topic tagging at ingest
 - Analytics feedback loop (TikTok/YouTube performance → Id8Ωr recommendations)
-- better-sqlite3 migration
 - Multi-tenant creator profiles
 - Playwright automation for Kajabi (broadcasts, sequences, community posts)
 

@@ -494,7 +494,12 @@
       font-size: 0.88rem;
       color: var(--text);
       line-height: 1.5;
+      cursor: text;
+      transition: border-color 0.15s, background 0.15s;
     }
+    .hook-box:hover { border-color: rgba(20,184,166,0.5); }
+    .hook-box:focus { outline: none; border-color: var(--teal); background: rgba(20,184,166,0.14); }
+    .hook-box[contenteditable="true"] { cursor: text; }
 
     .overlay-box {
       background: #000;
@@ -528,8 +533,14 @@
       font-size: 0.83rem;
       color: var(--muted);
       line-height: 1.6;
-      padding: 6px 0;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: text;
+      transition: border-color 0.15s;
     }
+    .why-text:hover { border-color: var(--border); }
+    .why-text:focus { outline: none; border-color: var(--teal); background: rgba(255,255,255,0.03); }
 
     /* Caption */
     .caption-textarea {
@@ -559,7 +570,15 @@
       padding: 6px 10px;
       word-break: break-all;
       line-height: 1.5;
+      cursor: text;
+      transition: border-color 0.15s;
     }
+    .hashtag-pill:hover { border-color: rgba(20,184,166,0.4); }
+    .hashtag-pill:focus { outline: none; border-color: var(--teal); background: rgba(20,184,166,0.14); }
+
+    /* Save indicator flash */
+    @keyframes saveFlash { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .saving-flash { animation: saveFlash 0.4s ease; }
 
     /* Action row */
     .clip-actions {
@@ -1019,8 +1038,11 @@
 
         <div class="clip-body">
           <div>
-            <div class="clip-section-label">🪝 Hook</div>
-            <div class="hook-box">${escHtml(clip.hook || '')}</div>
+            <div class="clip-section-label">🪝 Hook <span style="font-size:0.65rem;color:var(--muted);font-weight:400">· click to edit</span></div>
+            <div class="hook-box" contenteditable="true" id="hook-${clip.id}"
+              onblur="saveClipField(${clip.id}, 'hook', this)"
+              onkeydown="if(event.key==='Escape'){this.blur()}"
+            >${escHtml(clip.hook || '')}</div>
           </div>
 
           ${hookOverlay}
@@ -1029,20 +1051,29 @@
             <details${whyOpen}>
               <summary>
                 <span class="why-chevron">▶</span>
-                <span>Why It Works</span>
+                <span>Why It Works <span style="font-size:0.65rem;color:var(--muted);font-weight:400">· click to edit</span></span>
               </summary>
-              <div class="why-text">${escHtml(clip.why_it_works || '')}</div>
+              <div class="why-text" contenteditable="true" id="why-${clip.id}"
+                onblur="saveClipField(${clip.id}, 'why_it_works', this)"
+                onkeydown="if(event.key==='Escape'){this.blur()}"
+              >${escHtml(clip.why_it_works || '')}</div>
             </details>
           </div>
 
           <div>
-            <div class="clip-section-label">📝 Caption</div>
-            <textarea class="caption-textarea" id="caption-${clip.id}" rows="4" oninput="autoResize(this)">${escHtml(clip.caption || '')}</textarea>
+            <div class="clip-section-label">📝 Caption <span style="font-size:0.65rem;color:var(--muted);font-weight:400">· edits auto-save</span></div>
+            <textarea class="caption-textarea" id="caption-${clip.id}" rows="4"
+              oninput="autoResize(this)"
+              onblur="saveClipField(${clip.id}, 'caption', this)"
+            >${escHtml(clip.caption || '')}</textarea>
           </div>
 
           <div>
-            <div class="clip-section-label"># Hashtags</div>
-            <div class="hashtag-pill">${escHtml(clip.hashtags || '')}</div>
+            <div class="clip-section-label"># Hashtags <span style="font-size:0.65rem;color:var(--muted);font-weight:400">· click to edit</span></div>
+            <div class="hashtag-pill" contenteditable="true" id="hashtags-${clip.id}"
+              onblur="saveClipField(${clip.id}, 'hashtags', this)"
+              onkeydown="if(event.key==='Enter'||event.key==='Escape'){this.blur();event.preventDefault()}"
+            >${escHtml(clip.hashtags || '')}</div>
           </div>
         </div>
 
@@ -1071,6 +1102,36 @@
     }
 
     // ─────────────────────────────────────────────
+    // Inline field auto-save (hook, why_it_works, caption, hashtags)
+    // ─────────────────────────────────────────────
+    async function saveClipField(clipId, field, el) {
+      const value = el.tagName === 'TEXTAREA' ? el.value : el.innerText.trim();
+
+      // Skip if unchanged
+      const clip = currentClips.find(c => c.id === clipId);
+      if (clip && clip[field] === value) return;
+
+      try {
+        const r = await fetch(`/api/clipsr/clips/${clipId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: value })
+        });
+        const data = await r.json();
+        if (!data.ok) { showToast('Save failed', 'red'); return; }
+
+        // Update local state
+        if (clip) clip[field] = value;
+
+        // Visual flash
+        el.classList.add('saving-flash');
+        setTimeout(() => el.classList.remove('saving-flash'), 400);
+      } catch (e) {
+        showToast('Save error: ' + e.message, 'red');
+      }
+    }
+
+    // ─────────────────────────────────────────────
     // Copy actions
     // ─────────────────────────────────────────────
     function copyCaption(clipId) {
@@ -1079,11 +1140,14 @@
     }
 
     function copyHook(clipId, hookText) {
-      copyText(hookText, 'Hook');
+      // Read live value from the contenteditable element
+      const el = document.getElementById(`hook-${clipId}`);
+      copyText(el ? el.innerText.trim() : hookText, 'Hook');
     }
 
     function copyHashtags(clipId, hashtagText) {
-      copyText(hashtagText, 'Hashtags');
+      const el = document.getElementById(`hashtags-${clipId}`);
+      copyText(el ? el.innerText.trim() : hashtagText, 'Hashtags');
     }
 
     // ─────────────────────────────────────────────

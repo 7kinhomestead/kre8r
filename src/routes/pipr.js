@@ -144,6 +144,10 @@ router.post('/create', (req, res) => {
     );
     const projectId = project.id;
 
+    // Detect format from structure name (short_* prefix = short form)
+    const isShort = (story_structure || '').startsWith('short_');
+    const format  = req.body.format || (isShort ? 'short' : 'long');
+
     // Update project with PipΩr fields
     db.updateProjectPipr(projectId, {
       high_concept:                high_concept || null,
@@ -152,7 +156,8 @@ router.post('/create', (req, res) => {
       setup_depth:                 setup_depth || 'standard',
       entry_point:                 entry_point || 'hybrid',
       estimated_duration_minutes:  parseInt(estimated_duration_minutes) || null,
-      pipr_complete:               1
+      pipr_complete:               1,
+      format:                      format
     });
 
     // Save collaborators if provided

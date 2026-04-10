@@ -451,6 +451,18 @@ router.post('/generate', async (req, res) => {
 
   } catch (_) {}
 
+  // Short-form format constraint — injected into every prompt when project.format = 'short'
+  if (project.format === 'short') {
+    id8rBlock += `\n\n## SHORT-FORM FORMAT — STRICT CONSTRAINTS
+This is a SHORT-FORM video (TikTok / Reels / Shorts). These rules override all other length guidance:
+- TOTAL SCRIPT: 150–300 words maximum. Count words. If over 300, cut.
+- HOOK BEAT: One punchy sentence. Maximum 10 words. No setup before the hook.
+- Every beat has a second-range duration target — write to fit it.
+- No padding. No "in this video we will". No filler. Every word earns its place.
+- The payoff must be in the last 10–15 seconds — that's the shareable moment.
+- Write for scroll-stopping energy throughout, not just the opener.`;
+  }
+
   // Switch to SSE stream — client reads this response body directly
   const { write, end } = startSseResponse(req, res);
 

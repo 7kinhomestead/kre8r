@@ -1441,14 +1441,21 @@ router.post('/evaluate-strategy', async (req, res) => {
   // Default: evaluate last month
   const lastMonth = now.getMonth() === 0 ? 12 : now.getMonth();
   const lastYear  = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  const evalMonth = String(req.body?.month || lastMonth).padStart(2, '0');
-  const evalYear  = parseInt(req.body?.year  || lastYear, 10);
+  let evalMonth = String(req.body?.month || lastMonth).padStart(2, '0');
+  let evalYear  = parseInt(req.body?.year  || lastYear, 10);
 
   try {
     // ── 1. Get the strategy report for that month ─────────────────────────────
-    const report = db.getLatestReport(evalMonth, evalYear);
+    let report = db.getLatestReport(evalMonth, evalYear);
+    // Fallback: if no report for the exact month, use the most recent available
     if (!report) {
-      return res.status(404).json({ error: `No strategy report found for ${evalMonth}/${evalYear}. Generate a strategy for that month first.` });
+      report = db.getLatestReport();
+      if (!report) {
+        return res.status(404).json({ error: `No strategy reports found. Generate a strategy in NorthΩr first.` });
+      }
+      // Update evalMonth/evalYear to match the report we found
+      evalMonth = report.month;
+      evalYear  = parseInt(report.year, 10);
     }
 
     let strategyContent;

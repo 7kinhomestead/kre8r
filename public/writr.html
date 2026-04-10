@@ -361,6 +361,11 @@
           <div class="ep-badge none" id="epBadge">No entry point</div>
         </div>
 
+        <!-- SHORT FORM indicator — shown when project.format = 'short' -->
+        <div id="shortFormBadge" style="display:none;margin-bottom:12px;padding:8px 14px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.35);border-radius:6px;font-size:12px;font-weight:600;color:var(--teal);">
+          ⚡ SHORT FORM — 150–300 words · Scroll-stopping angles · Beat timing targets active
+        </div>
+
         <!-- Conditional input area (shown after project selected) -->
         <div id="inputArea" style="display:none">
 
@@ -858,6 +863,10 @@ async function onProjectChange(pid) {
 
     const project = data.project || {};
     currentEntryPoint = project.entry_point || data.config?.entry_point || null;
+
+    // Show/hide short form indicator
+    const shortBadge = document.getElementById('shortFormBadge');
+    if (shortBadge) shortBadge.style.display = project.format === 'short' ? 'block' : 'none';
 
     showInputArea(currentEntryPoint, data);
 

@@ -127,24 +127,87 @@ const DUAL_TIMELINE = [
   { index:6, name:"Full Circle Moment",                          target_pct:90, emotional_function:"The moment where past and present unify into understanding.", reality_note:"The moment where it all connects. The emotional payoff." }
 ];
 
+// ─────────────────────────────────────────────
+// SHORT-FORM STRUCTURES (TikTok / Reels / Shorts)
+// Beat map: 3–7 beats, second-range duration targets
+// target_pct is calibrated for ~60s video (adjust with estimated_duration_minutes = 1)
+// duration_label shows the target range for creator reference
+// ─────────────────────────────────────────────
+
+const SHORT_HOOK_TENSION_PAYOFF = [
+  { index:1, name:"Hook",    target_pct:0,  duration_label:"0–3s",  short_form:true, emotional_function:"One scroll-stopping image, action, or statement. No intro. In medias res.", reality_note:"What's the most visually or verbally arresting way to start? No 'hey guys'." },
+  { index:2, name:"Tension", target_pct:5,  duration_label:"3–45s", short_form:true, emotional_function:"Build curiosity or conflict. Tease the payoff without giving it.", reality_note:"What's the situation? What creates the question the viewer needs answered?" },
+  { index:3, name:"Payoff",  target_pct:75, duration_label:"45–60s",short_form:true, emotional_function:"The resolution that makes them comment, share, or rewatch.", reality_note:"What's the moment that earns the watch? The result, the punchline, the reveal." }
+];
+
+const SHORT_OPEN_LOOP = [
+  { index:1, name:"Hook / Question",  target_pct:0,  duration_label:"0–3s",  short_form:true, emotional_function:"Ask the most irresistible question — one they can't leave without knowing the answer to.", reality_note:"What question makes someone unable to scroll past?" },
+  { index:2, name:"Build Curiosity",  target_pct:5,  duration_label:"3–30s", short_form:true, emotional_function:"Show why the answer matters — raise the stakes.", reality_note:"Why does this question matter to the viewer's life?" },
+  { index:3, name:"False Reveal",     target_pct:50, duration_label:"30–45s",short_form:true, emotional_function:"Almost answer it — create satisfying frustration.", reality_note:"Get close to the answer, then pull back. 'But here's the thing…'" },
+  { index:4, name:"Real Payoff",      target_pct:75, duration_label:"45–60s",short_form:true, emotional_function:"The actual answer. Worth the wait.", reality_note:"Answer the question definitively. Make it satisfying." }
+];
+
+const SHORT_PAS = [
+  { index:1, name:"Problem",  target_pct:0,  duration_label:"0–5s",  short_form:true, emotional_function:"Name the problem in the first breath. Make them feel seen.", reality_note:"What's the exact problem? Name it directly." },
+  { index:2, name:"Agitate",  target_pct:8,  duration_label:"5–40s", short_form:true, emotional_function:"Make the problem feel urgent. The cost of staying stuck.", reality_note:"Why does this problem matter? What's the pain of not solving it?" },
+  { index:3, name:"Solve",    target_pct:67, duration_label:"40–60s",short_form:true, emotional_function:"The clean, memorable solution. Easy to share.", reality_note:"What's the solution? State it clearly. Make it actionable in one sentence." }
+];
+
+const SHORT_BEFORE_AFTER = [
+  { index:1, name:"Before",   target_pct:0,  duration_label:"0–10s", short_form:true, emotional_function:"The painful starting state — specific and relatable.", reality_note:"What was it like before? Be honest and specific." },
+  { index:2, name:"Bridge",   target_pct:17, duration_label:"10–45s",short_form:true, emotional_function:"What changed and exactly how. The mechanism.", reality_note:"What's the exact thing that caused the change? One clear action or insight." },
+  { index:3, name:"After",    target_pct:75, duration_label:"45–60s",short_form:true, emotional_function:"The new reality — show it, don't just say it. How they can get there.", reality_note:"What does the after look like? What can someone watching do right now?" }
+];
+
+const SHORT_LIST = [
+  { index:1, name:"Hook / List Promise",  target_pct:0,  duration_label:"0–3s",  short_form:true, emotional_function:"The bold promise. 'X things that…' Make it irresistible.", reality_note:"State the list. Make the premise sound valuable or surprising." },
+  { index:2, name:"Point 1",              target_pct:5,  duration_label:"3–15s", short_form:true, emotional_function:"Strongest point first — keep them watching for the rest.", reality_note:"What's point 1? One sentence. Specific and useful." },
+  { index:3, name:"Point 2",              target_pct:22, duration_label:"13–25s",short_form:true, emotional_function:"Build on point 1. Different angle.", reality_note:"Point 2. Different from point 1 but related." },
+  { index:4, name:"Point 3",              target_pct:42, duration_label:"25–40s",short_form:true, emotional_function:"The middle ground. Solid and useful.", reality_note:"Point 3. Keep it specific." },
+  { index:5, name:"Final Point / Reveal", target_pct:67, duration_label:"40–55s",short_form:true, emotional_function:"The closer — most surprising or most actionable.", reality_note:"The point that makes them comment or share." },
+  { index:6, name:"CTA",                  target_pct:92, duration_label:"55–60s",short_form:true, emotional_function:"One clear next step. Comment, follow, or try it.", reality_note:"What do you want them to do? One action only." }
+];
+
+const SHORT_HOT_TAKE = [
+  { index:1, name:"The Claim",                target_pct:0,  duration_label:"0–3s",  short_form:true, emotional_function:"The most controversial thing you actually believe. One sentence. Bold.", reality_note:"What's the take? State it as clearly and boldly as possible." },
+  { index:2, name:"Why Everyone Gets It Wrong",target_pct:5,  duration_label:"3–25s", short_form:true, emotional_function:"Dismantle the conventional view — not angrily, but clearly.", reality_note:"What's the common belief? Why is it wrong or incomplete?" },
+  { index:3, name:"The Evidence",              target_pct:42, duration_label:"25–50s",short_form:true, emotional_function:"Back it up — one specific example, number, or story.", reality_note:"What's the proof? One specific, concrete piece of evidence." },
+  { index:4, name:"The Challenge",             target_pct:83, duration_label:"50–60s",short_form:true, emotional_function:"Invite disagreement — this is what drives comments and shares.", reality_note:"'Change my mind.' or 'If you think I'm wrong, tell me why.'" }
+];
+
+const SHORT_TUTORIAL = [
+  { index:1, name:"Result First",      target_pct:0,  duration_label:"0–5s",  short_form:true, emotional_function:"Show the finished result before anything else. Make them want it.", reality_note:"What does the end result look like? Lead with that." },
+  { index:2, name:"Setup / Why",       target_pct:8,  duration_label:"5–15s", short_form:true, emotional_function:"Who this is for and what they need. Fast and specific.", reality_note:"Who is this for? What do they need to have or know before starting?" },
+  { index:3, name:"Step by Step",      target_pct:25, duration_label:"15–50s",short_form:true, emotional_function:"The actual how-to. One take, no tangents.", reality_note:"The steps. Keep it tight — only what matters." },
+  { index:4, name:"Application / Try It",target_pct:83,duration_label:"50–60s",short_form:true, emotional_function:"Make it actionable right now. Lower the barrier to starting.", reality_note:"What's the first step someone can take right now? Make it easy." }
+];
+
 function getBeats(structure) {
   switch (structure) {
-    case 'save_the_cat':        return SAVE_THE_CAT;
-    case 'story_circle':        return STORY_CIRCLE;
-    case 'vsl_arc':             return VSL_ARC;
-    case 'free_form':           return FREE_FORM;
-    case 'confession_arc':      return CONFESSION_ARC;
-    case 'before_after_bridge': return BEFORE_AFTER_BRIDGE;
-    case 'myth_buster':         return MYTH_BUSTER;
-    case 'documentary_arc':     return DOCUMENTARY_ARC;
-    case 'tutorial_with_stakes':return TUTORIAL_WITH_STAKES;
-    case 'explainer_pyramid':   return EXPLAINER_PYRAMID;
-    case 'heros_gauntlet':      return HEROS_GAUNTLET;
-    case 'virality_pyramid':    return VIRALITY_PYRAMID;
-    case 'permission_structure':return PERMISSION_STRUCTURE;
-    case 'dual_timeline':       return DUAL_TIMELINE;
-    case 'episode_arc':         return EPISODE_ARC;
-    default:                    return [];
+    case 'save_the_cat':           return SAVE_THE_CAT;
+    case 'story_circle':           return STORY_CIRCLE;
+    case 'vsl_arc':                return VSL_ARC;
+    case 'free_form':              return FREE_FORM;
+    case 'confession_arc':         return CONFESSION_ARC;
+    case 'before_after_bridge':    return BEFORE_AFTER_BRIDGE;
+    case 'myth_buster':            return MYTH_BUSTER;
+    case 'documentary_arc':        return DOCUMENTARY_ARC;
+    case 'tutorial_with_stakes':   return TUTORIAL_WITH_STAKES;
+    case 'explainer_pyramid':      return EXPLAINER_PYRAMID;
+    case 'heros_gauntlet':         return HEROS_GAUNTLET;
+    case 'virality_pyramid':       return VIRALITY_PYRAMID;
+    case 'permission_structure':   return PERMISSION_STRUCTURE;
+    case 'dual_timeline':          return DUAL_TIMELINE;
+    case 'episode_arc':            return EPISODE_ARC;
+    // Short-form structures
+    case 'short_hook_tension_payoff': return SHORT_HOOK_TENSION_PAYOFF;
+    case 'short_open_loop':           return SHORT_OPEN_LOOP;
+    case 'short_pas':                 return SHORT_PAS;
+    case 'short_before_after':        return SHORT_BEFORE_AFTER;
+    case 'short_list':                return SHORT_LIST;
+    case 'short_hot_take':            return SHORT_HOT_TAKE;
+    case 'short_tutorial':            return SHORT_TUTORIAL;
+    default:                          return [];
   }
 }
 
@@ -179,5 +242,8 @@ module.exports = {
   TUTORIAL_WITH_STAKES, EXPLAINER_PYRAMID, HEROS_GAUNTLET,
   VIRALITY_PYRAMID, PERMISSION_STRUCTURE, DUAL_TIMELINE,
   EPISODE_ARC,
+  // Short-form
+  SHORT_HOOK_TENSION_PAYOFF, SHORT_OPEN_LOOP, SHORT_PAS,
+  SHORT_BEFORE_AFTER, SHORT_LIST, SHORT_HOT_TAKE, SHORT_TUTORIAL,
   getBeats, buildBeatMap
 };

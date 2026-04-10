@@ -635,6 +635,13 @@ function runMigrations() {
     console.log('[DB] Migration: added projects.archived_at');
   }
 
+  // Short-form pipeline — format flag ('long' | 'short') flows through entire pipeline
+  const projectsColsFormat = db.pragma('table_info(projects)').map(r => r.name);
+  if (!projectsColsFormat.includes('format')) {
+    db.exec("ALTER TABLE projects ADD COLUMN format TEXT NOT NULL DEFAULT 'long'");
+    console.log('[DB] Migration: added projects.format (long|short)');
+  }
+
   // AssemblΩr — proxy_path on footage so transcription always has a working file
   const footageColsAssemblr = db.pragma('table_info(footage)').map(r => r.name);
   if (!footageColsAssemblr.includes('proxy_path')) {
@@ -1819,7 +1826,7 @@ function updateProjectPipr(projectId, fields) {
   const allowed = [
     'setup_depth', 'entry_point', 'story_structure', 'content_type',
     'high_concept', 'estimated_duration_minutes', 'pipr_complete',
-    'shoot_folder', 'archive_state', 'archived_at'
+    'shoot_folder', 'archive_state', 'archived_at', 'format'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (!updates.length) return;
@@ -2626,7 +2633,7 @@ function getVideosByMonth(month, year) {
   const nextYear  = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
   const endDate   = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
   return _all(
-    `SELECT pr.id, pr.title, pr.topic, pr.angle,
+    `SELECT pr.id, pr.title, pr.topic, po.angle,
             po.posted_at, po.url, po.format,
             COALESCE((
               SELECT SUM(a.metric_value) FROM analytics a
