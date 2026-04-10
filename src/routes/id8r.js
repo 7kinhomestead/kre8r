@@ -161,6 +161,38 @@ async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024, sessionI
   }
 }
 
+/**
+ * callClaudeWithSearchFallback(systemPrompt, fallbackSystem, messages, fallbackMessages, maxTokens, sessionId, onRetry)
+ *
+ * Tries web_search_20260209 first. If Anthropic can't serve the search request,
+ * falls back to Claude's training knowledge automatically.
+ * Returns { text, source: 'web'|'training' }
+ */
+async function callClaudeWithSearchFallback(systemPrompt, fallbackSystem, messages, fallbackMessages, maxTokens = 1200, sessionId = null, onRetry = null) {
+  try {
+    const data = await callClaude(
+      systemPrompt,
+      messages,
+      2000,
+      [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
+      sessionId,
+      onRetry
+    );
+    const text = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .filter(Boolean)
+      .join('\n\n');
+    if (!text) throw new Error('web search returned no text');
+    console.log('[id8r] web search succeeded');
+    return { text, source: 'web' };
+  } catch (e) {
+    console.warn(`[id8r] web search failed (${e.message}) — falling back to training knowledge`);
+    const text = await callClaudeText(fallbackSystem, fallbackMessages, maxTokens, sessionId, onRetry);
+    return { text, source: 'training' };
+  }
+}
+
 // ─── Message Window Helper ─────────────────────────────────────────────────────
 
 function getRecentMessages(messages, maxExchanges = 6) {
@@ -509,26 +541,28 @@ router.post('/research', async (req, res) => {
     const results = {};
 
     // ── Phase 1: YouTube Research ─────────────────────────────────
-    // Uses Claude's training knowledge — no web_search tool.
-    // Reliable, fast, no "Could not serve request" errors.
+    // Tries live web_search first; falls back to training knowledge if unavailable.
     const phase1Label = chosenAngle ? `YouTube Research — ${chosenAngle}` : 'YouTube Research';
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
-      results.youtube = await callClaudeText(
-        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Draw on your knowledge of YouTube content trends and popular videos in this space. Be specific — name real channels, real video types, and real gaps.`,
-        [{
-          role: 'user',
-          content: `${conceptBrief}\n\nFrom your knowledge of YouTube: name 4-5 video types or approaches that perform well for this topic (with example channel styles if you know them). What angle dominates? What ONE content gap could this creator own that others aren't hitting?`,
-        }],
-        1200,
-        session_id,
-        onRetry
+      const p1 = await callClaudeWithSearchFallback(
+        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Search YouTube for top performing content on this topic. Name real videos, channels, the dominant approach, and the ONE content gap this creator could own.`,
+        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Draw on your training knowledge of YouTube content trends. Be specific — name real channels, real video types, and real gaps you know about.`,
+        [{ role: 'user', content: `${conceptBrief}\n\nSearch YouTube. Return 4-5 examples (title + channel), the dominant approach, and the biggest gap.` }],
+        [{ role: 'user', content: `${conceptBrief}\n\nFrom your knowledge of YouTube: name 4-5 video types or approaches that perform well for this topic (with example channel styles if you know them). What angle dominates? What ONE content gap could this creator own?` }],
+        1200, session_id, onRetry
       );
+      results.youtube = p1.text;
+      results.youtube_source = p1.source;
     } catch (e) {
       console.error('[id8r/research] Phase 1 error:', e.message);
       results.youtube = `Error: ${e.message}`;
+      results.youtube_source = 'error';
     }
-    send({ stage: 'phase_result', phase: 1, label: phase1Label, data: results.youtube });
+    const p1DisplayLabel = results.youtube_source === 'training'
+      ? `${phase1Label} · training data`
+      : phase1Label;
+    send({ stage: 'phase_result', phase: 1, label: p1DisplayLabel, data: results.youtube });
     // Checkpoint: phase 1 done — survives server restart
     try {
       db.setCheckpoint(session_id, 'id8r', {
@@ -538,27 +572,30 @@ router.post('/research', async (req, res) => {
     } catch (_) {}
 
     // ── Phase 2: Data & Facts ─────────────────────────────────────
-    // Uses Claude's training knowledge — no web_search tool.
+    // Tries live web_search first; falls back to training knowledge if unavailable.
     const phase2Label = chosenAngle ? `Data & Facts — ${chosenAngle}` : 'Data & Facts';
     send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
-      results.data = await callClaudeText(
+      const p2 = await callClaudeWithSearchFallback(
+        `You are a research analyst for ${_brand}, a ${_niche} content creator. Search for current statistics, studies, and data points that directly support the concept below. Numbers and facts only — specific, citable, from credible sources.`,
         `You are a research analyst for ${_brand}, a ${_niche} content creator. Draw on your training knowledge to surface compelling statistics, studies, and data points. Be specific — real numbers, named studies, credible sources where you know them.`,
-        [{
-          role: 'user',
-          content: `${conceptBrief}\n\nFrom your knowledge: give 3-5 concrete statistics or research findings that strengthen this specific angle. Include the source name where you know it. These should be the kind of numbers that make an audience stop scrolling.`,
-        }],
-        1200,
-        session_id,
-        onRetry
+        [{ role: 'user', content: `${conceptBrief}\n\nSearch for 3-5 concrete stats or data points that strengthen this specific angle. Numbers, sources, recency.` }],
+        [{ role: 'user', content: `${conceptBrief}\n\nFrom your knowledge: give 3-5 concrete statistics or research findings that strengthen this specific angle. Include the source name where you know it. These should be the kind of numbers that make an audience stop scrolling.` }],
+        1200, session_id, onRetry
       );
-      session.citations = []; // No live URLs without web search
+      results.data = p2.text;
+      results.data_source = p2.source;
+      session.citations = [];
     } catch (e) {
       console.error('[id8r/research] Phase 2 error:', e.message);
       results.data = `Error: ${e.message}`;
+      results.data_source = 'error';
       session.citations = [];
     }
-    send({ stage: 'phase_result', phase: 2, label: phase2Label, data: results.data });
+    const p2DisplayLabel = results.data_source === 'training'
+      ? `${phase2Label} · training data`
+      : phase2Label;
+    send({ stage: 'phase_result', phase: 2, label: p2DisplayLabel, data: results.data });
     // Checkpoint: phase 2 done
     try {
       db.setCheckpoint(session_id, 'id8r', {
