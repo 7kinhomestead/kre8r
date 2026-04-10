@@ -1327,7 +1327,7 @@ function startTeleprompter() {
     const raw = (document.getElementById('tp-paste-text').value || '').trim();
     if (!raw) { alert('Please paste some script text first.'); return; }
     segs = processScript(raw);
-    loadedScript = { projectId: null, text: raw, segments: segs };
+    loadedScript = { projectId: null, projectName: 'Script', text: raw, segments: segs };
   } else {
     if (!loadedScript) { alert('Please select a project first.'); return; }
     segs = loadedScript.segments;
@@ -1624,6 +1624,10 @@ function connectDisplayWS() {
         updateCountBadge(msg.count);
         if (stateTimer) clearInterval(stateTimer);
         stateTimer = setInterval(sendDisplayState, 250);
+        // Push script to any controls already in the session
+        if (loadedScript?.text) {
+          wsConn.send(JSON.stringify({ type: 'script_sync', text: loadedScript.text, title: loadedScript.projectName || null }));
+        }
       }
 
     if (msg.type === 'count_update') {
@@ -1917,9 +1921,14 @@ function connectRemote() {
         _reconnDelay = 1000; // reset backoff
         setRemStatus(true);
         if (msg.state) applyRemState(msg.state);
-        const pid   = msg.projectId;
-        const title = msg.title || null;
-        showRemConnected(pid, title);
+        const pid        = msg.projectId;
+        const title      = msg.title || null;
+        const scriptText = msg.scriptText || null;
+        showRemConnected(pid, title, scriptText);
+      }
+      if (msg.type === 'script_sync') {
+        // Display pushed script text (paste mode or project load) — render it now
+        if (msg.text) renderRemoteScriptText(msg.text, msg.title || null);
       }
       if (msg.type === 'peer_connected') { setRemStatus(true); }
       if (msg.type === 'peer_disconnected' && msg.role === 'display') setRemStatus(false);
@@ -1984,7 +1993,7 @@ function applyRemState(s) {
   }
 }
 
-function showRemConnected(projectId, title) {
+function showRemConnected(projectId, title, scriptText) {
   // Hide connect panel, show script + controls
   document.getElementById('tp-rem-connect-panel').style.display = 'none';
   document.getElementById('tp-rem-script-wrap').classList.add('live');
@@ -2003,7 +2012,35 @@ function showRemConnected(projectId, title) {
     if (el) el.textContent = title;
   }
 
-  if (projectId) loadRemoteScript(projectId);
+  // If display already pushed script text, use it directly (works for paste mode + no-DB scenarios)
+  if (scriptText) {
+    renderRemoteScriptText(scriptText, title);
+  } else if (projectId) {
+    loadRemoteScript(projectId);
+  }
+}
+
+function renderRemoteScriptText(rawText, title) {
+  const container = document.getElementById('tp-rem-script-lines');
+  if (!container) return;
+  if (title) {
+    const el = document.getElementById('tp-rem-project-name');
+    if (el) el.textContent = title;
+  }
+  const segs = processScript(rawText);
+  let html = '';
+  for (const seg of segs) {
+    if (seg.type === 'beat_marker') {
+      html += `<span class="tp-rem-beat-label">${escHtml(seg.beatName)}</span>`;
+    } else if (seg.type === 'speaker') {
+      html += `<span class="tp-rem-beat-label" style="color:#f0b942;background:rgba(240,185,66,0.09);">${escHtml(seg.name)}</span>`;
+    } else if (seg.type === 'text' && seg.content?.trim()) {
+      html += `<p class="tp-rem-line">${escHtml(seg.content)}</p>`;
+    }
+  }
+  container.innerHTML = html || '<p class="tp-rem-line" style="opacity:0.4">Script loaded.</p>';
+  remScriptReady = true;
+  buildRemBeatPills(segs);
 }
 
 async function loadRemoteScript(projectId) {

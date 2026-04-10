@@ -191,7 +191,8 @@ function createTeleprompterWS(httpServer) {
               state:          { speed: 3, paused: true, position: 0 },
               operatorPaused: false,
               title:          null,
-              projectId:      null
+              projectId:      null,
+              scriptText:     null,   // full raw script — set by display, served to late-joining controls
             });
           }
 
@@ -237,6 +238,7 @@ function createTeleprompterWS(httpServer) {
             operatorPaused: sess.operatorPaused,
             title:          sess.title,
             projectId:      sess.projectId,
+            scriptText:     sess.scriptText || null,  // send script immediately if display already loaded one
             count
           });
 
@@ -264,6 +266,14 @@ function createTeleprompterWS(httpServer) {
         if (msg.action === 'seek_pct')  sess.state.position = msg.value;
         // Echo updated state + operatorPaused to all controls
         broadcastToControls(sess, { type: 'state', ...sess.state, operatorPaused: sess.operatorPaused, title: sess.title });
+      }
+
+      // ── DISPLAY → CONTROLS: script text sync (paste mode or project load) ──
+      if (msg.type === 'script_sync' && myRole === 'display') {
+        sess.scriptText = msg.text || null;
+        if (msg.title) sess.title = msg.title;
+        broadcastToControls(sess, { type: 'script_sync', text: sess.scriptText, title: sess.title });
+        return;
       }
 
       // ── DISPLAY → CONTROLS + OTHER DISPLAYS: state sync ────────
