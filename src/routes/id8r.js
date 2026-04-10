@@ -509,32 +509,21 @@ router.post('/research', async (req, res) => {
     const results = {};
 
     // ── Phase 1: YouTube Research ─────────────────────────────────
-    // max_uses: 2 — enough to find the landscape, not enough to blow the rate limit.
-    // max_tokens: 2000 — web_search_20260209 uses server_tool_use + code_execution
-    // blocks internally which consume output tokens; 1200 still hits max_tokens.
+    // Uses Claude's training knowledge — no web_search tool.
+    // Reliable, fast, no "Could not serve request" errors.
     const phase1Label = chosenAngle ? `YouTube Research — ${chosenAngle}` : 'YouTube Research';
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
-      const data = await callClaude(
-        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Find the top performing YouTube content for the specific concept below. Return 4-5 video titles + channels only. Then: what angle most of them take, and the ONE content gap this creator could own.`,
+      results.youtube = await callClaudeText(
+        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Draw on your knowledge of YouTube content trends and popular videos in this space. Be specific — name real channels, real video types, and real gaps.`,
         [{
           role: 'user',
-          content: `${conceptBrief}\n\nSearch YouTube. Return 4-5 examples (title + channel), the dominant approach, and the biggest gap.`,
+          content: `${conceptBrief}\n\nFrom your knowledge of YouTube: name 4-5 video types or approaches that perform well for this topic (with example channel styles if you know them). What angle dominates? What ONE content gap could this creator own that others aren't hitting?`,
         }],
-        2000,
-        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
+        1200,
         session_id,
         onRetry
       );
-      // Extract only Claude's written text — web_search_tool_result blocks contain
-      // encrypted search payloads (not human-readable); server_tool_use blocks are
-      // internal scaffolding. Claude's text synthesis is the useful content.
-      const fullText = (data.content || [])
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
-        .filter(Boolean)
-        .join('\n\n');
-      results.youtube = fullText || 'No YouTube results found.';
     } catch (e) {
       console.error('[id8r/research] Phase 1 error:', e.message);
       results.youtube = `Error: ${e.message}`;
@@ -547,69 +536,23 @@ router.post('/research', async (req, res) => {
         phase1: results.youtube, phase2: null, phase3: null,
       });
     } catch (_) {}
-    send({ stage: 'phase_wait', phase: 1, duration: 30, message: 'Reviewing findings...' });
-    await sseWait(res, 30000);
 
     // ── Phase 2: Data & Facts ─────────────────────────────────────
-    // max_uses: 1 — one focused search is enough for stats/data; reduces rate limit
-    // pressure after Phase 1's 2 searches.
-    // max_tokens: 2000 — the web_search tool burns tokens on internal code_execution
-    // retry loops. 1200 still hits max_tokens before Claude finishes writing results.
+    // Uses Claude's training knowledge — no web_search tool.
     const phase2Label = chosenAngle ? `Data & Facts — ${chosenAngle}` : 'Data & Facts';
     send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
-      const data = await callClaude(
-        `You are a research analyst for ${_brand}, a ${_niche} content creator. Find 3-5 statistics, studies, or data points that directly support the concept below. Numbers and facts only — the kind that make an audience lean in. Be specific.`,
+      results.data = await callClaudeText(
+        `You are a research analyst for ${_brand}, a ${_niche} content creator. Draw on your training knowledge to surface compelling statistics, studies, and data points. Be specific — real numbers, named studies, credible sources where you know them.`,
         [{
           role: 'user',
-          content: `${conceptBrief}\n\nSearch for 3-5 concrete stats or data points that strengthen this specific angle. Numbers, sources, recency.`,
+          content: `${conceptBrief}\n\nFrom your knowledge: give 3-5 concrete statistics or research findings that strengthen this specific angle. Include the source name where you know it. These should be the kind of numbers that make an audience stop scrolling.`,
         }],
-        2000,
-        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 1 }],
+        1200,
         session_id,
         onRetry
       );
-      // Extract only Claude's text synthesis — same reasoning as Phase 1.
-      const textOnly = (data.content || [])
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
-        .filter(Boolean)
-        .join('\n\n');
-
-      // Separately collect search result URLs for citation extraction (no encrypted blobs)
-      const searchUrls = (data.content || [])
-        .filter(block => block.type === 'web_search_tool_result')
-        .flatMap(block => (block.content || []).map(r => `${r.title || ''}: ${r.url || ''}`))
-        .filter(Boolean)
-        .join('\n');
-
-      results.data = textOnly || 'No data results found.';
-      console.log(`[id8r/research] Phase 2 stop_reason=${data.stop_reason} text_blocks=${(data.content||[]).filter(b=>b.type==='text').length}`);
-
-      // Extract credible citations from search results for downstream blog/content use
-      if (textOnly) {
-        try {
-          const citationInput = [textOnly.slice(0, 2000), searchUrls.slice(0, 500)].filter(Boolean).join('\n\nSearch URLs found:\n');
-          const citationRaw = await callClaudeText(
-            'You are a citation extractor. Return JSON only — no preamble.',
-            [{
-              role: 'user',
-              content: `From the research text below, extract 3–5 of the most credible and citable sources — government data, academic studies, reputable news outlets, industry reports. Prefer sources with actual statistics or findings that support the argument.\n\nResearch:\n${citationInput}\n\nReturn JSON array only:\n[\n  { "title": "Source name / article title", "url": "https://...", "key_stat": "The specific fact or stat that makes this useful", "credibility": "why this source is credible" }\n]`,
-            }],
-            600,
-            session_id,
-            onRetry
-          );
-          try {
-            const parsed = JSON.parse(citationRaw.replace(/```json|```/g, '').trim());
-            session.citations = Array.isArray(parsed) ? parsed : [];
-          } catch { session.citations = []; }
-        } catch (e) {
-          session.citations = [];
-        }
-      } else {
-        session.citations = [];
-      }
+      session.citations = []; // No live URLs without web search
     } catch (e) {
       console.error('[id8r/research] Phase 2 error:', e.message);
       results.data = `Error: ${e.message}`;
@@ -623,8 +566,6 @@ router.post('/research', async (req, res) => {
         phase1: results.youtube, phase2: results.data, phase3: null,
       });
     } catch (_) {}
-    send({ stage: 'phase_wait', phase: 2, duration: 30, message: 'Reviewing findings...' });
-    await sseWait(res, 30000);
 
     // ── Phase 3: VaultΩr cross-reference ─────────────────────────
     const phase3Label = 'VaultΩr — have you covered this before?';
