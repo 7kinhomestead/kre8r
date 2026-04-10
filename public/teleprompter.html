@@ -361,6 +361,46 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 #tp-operator-badge.visible { display: block; }
 
+/* ── Speaker name divider (dialogue scripts) ──────────────────── */
+.tp-speaker-marker {
+  display: flex; align-items: center; gap: 14px;
+  margin: calc(var(--font-size) * 0.4) 0;
+  padding-left: 19px;
+}
+.tp-speaker-rule { flex: 1; height: 1px; background: #f0b942; opacity: 0.22; }
+.tp-speaker-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: #f0b942; opacity: 0.55;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* ── Beat counter in session badge ────────────────────────────── */
+#tp-beat-counter {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--teal); opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* ── Beat nav pills on remote control ─────────────────────────── */
+#tp-rem-beats {
+  display: none; flex-wrap: wrap; gap: 5px;
+  padding: 6px 0 2px;
+}
+#tp-rem-beats.live { display: flex; }
+.tp-rem-beat-pill {
+  flex: 1; min-width: 60px; max-width: 120px;
+  min-height: 36px; padding: 4px 8px;
+  background: rgba(62,207,178,0.08); border: 1px solid rgba(62,207,178,0.25);
+  border-radius: 8px; color: var(--teal); font-family: var(--font);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; cursor: pointer; text-align: center;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1.2; transition: all 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.tp-rem-beat-pill:active { background: rgba(62,207,178,0.22); transform: scale(0.95); }
+.tp-rem-beat-pill.current { background: rgba(62,207,178,0.2); border-color: var(--teal); }
+
 /* Browser compat warning */
 #tp-voice-warn {
   position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 60;
@@ -688,6 +728,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     <div class="tp-session-lbl">Remote code</div>
     <div id="tp-session-code">----</div>
     <div id="tp-peer-status">Waiting for remote…</div>
+    <div id="tp-beat-counter"></div>
   </div>
 
   <!-- Operator-paused indicator (shown when control device has locked out voice) -->
@@ -717,6 +758,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     </div>
 
     <button class="tp-ctrl-btn" id="tp-mirror-btn" onclick="toggleMirror()">⇆ Mirror</button>
+    <button class="tp-ctrl-btn" id="tp-names-btn" onclick="toggleSpeakerNames()" title="Show/hide character names in dialogue scripts">👥 Names</button>
     <button class="tp-ctrl-btn" id="tp-voice-btn" onclick="toggleVoiceSync()">🎤 Voice</button>
 
     <div id="tp-voice-sense-row">
@@ -767,6 +809,9 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   <!-- Sticky bottom controls — shown when connected -->
   <div id="tp-rem-ctrl-bar">
     <div id="tp-rem-prog-bar-inner"><div id="tp-rem-prog-fill"></div></div>
+
+    <!-- Beat nav pills — one per beat, tap to jump -->
+    <div id="tp-rem-beats"></div>
 
     <!-- Row 1: Play/Pause · Speed − + · Size A− A+ · Restart -->
     <div class="tp-rem-ctrl-row">
@@ -903,6 +948,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 const MIN_FONT = 32, MAX_FONT = 120, DEF_FONT = 64;
 
 // ─── State ────────────────────────────────────────────────────
+let showSpeakerNames = true;   // toggle: show [NAME] dividers in dialogue scripts
 let currentMode    = 'selector';
 let activeTab      = 'project';
 let loadedScript   = null;
@@ -1160,6 +1206,19 @@ function processScript(rawText) {
       continue;
     }
 
+    // ── 2b. Speaker name: [NAME] — all-caps, no punctuation ──────
+    // Matches [JASON], [CARI], [BOTH], [JASON AND CARI], etc.
+    // Does NOT match [B-ROLL: ...], [INSERT ...] (those have punctuation/lowercase)
+    const sm = trimmed.match(/^\[([A-Z][A-Z\s]{0,25})\]$/);
+    if (sm) {
+      if (showSpeakerNames) {
+        segs.push({ type: 'speaker', name: sm[1].trim() });
+        lastT = 'speaker';
+      }
+      // Always skip — either rendered as speaker marker or silently dropped
+      continue;
+    }
+
     // ── 3. Drop entire lines that start with a production cue ───
     //    Covers [anything], (anything), *, **, ---, emoji-only
     const fc = trimmed[0]; // first char
@@ -1203,9 +1262,12 @@ function processScript(rawText) {
 // RENDER
 // ═══════════════════════════════════════════════════════════════
 
+let totalBeats = 0; // set during render, used for beat counter
+
 function renderScript(segs) {
   const c = document.getElementById('tp-script-lines');
   c.innerHTML = '';
+  totalBeats = 0;
 
   for (const seg of segs) {
     if (seg.type === 'text') {
@@ -1214,11 +1276,20 @@ function renderScript(segs) {
       d.textContent = seg.content;
       c.appendChild(d);
     } else if (seg.type === 'beat_marker') {
+      totalBeats = seg.beatN; // track highest beatN seen
       const d = document.createElement('div');
       d.className = 'tp-beat-marker';
+      d.dataset.beatN = seg.beatN;
       d.innerHTML = `<div class="tp-beat-rule"></div>` +
         `<div class="tp-beat-label">— ${esc(seg.beatName)} —</div>` +
         `<div class="tp-beat-rule"></div>`;
+      c.appendChild(d);
+    } else if (seg.type === 'speaker') {
+      const d = document.createElement('div');
+      d.className = 'tp-speaker-marker';
+      d.innerHTML = `<div class="tp-speaker-rule"></div>` +
+        `<div class="tp-speaker-label">${esc(seg.name)}</div>` +
+        `<div class="tp-speaker-rule"></div>`;
       c.appendChild(d);
     } else if (seg.type === 'break') {
       const d = document.createElement('div');
@@ -1332,17 +1403,41 @@ function updateCurrentLine() {
     if (d < bestD) { bestD = d; best = l; }
   }
 
-  if (best === currentLineEl) return;
-  currentLineEl = best;
+  if (best !== currentLineEl) {
+    currentLineEl = best;
+    const all = Array.from(lines);
+    const idx  = all.indexOf(best);
+    all.forEach((l, i) => {
+      l.classList.remove('tp-current', 'tp-above', 'tp-below');
+      if      (i < idx) l.classList.add('tp-above');
+      else if (i > idx) l.classList.add('tp-below');
+      else              l.classList.add('tp-current');
+    });
+  }
 
-  const all = Array.from(lines);
-  const idx  = all.indexOf(best);
-  all.forEach((l, i) => {
-    l.classList.remove('tp-current', 'tp-above', 'tp-below');
-    if      (i < idx) l.classList.add('tp-above');
-    else if (i > idx) l.classList.add('tp-below');
-    else              l.classList.add('tp-current');
-  });
+  // Beat counter — find the last beat_marker that has scrolled above center
+  if (totalBeats > 0) {
+    const beatMarkers = document.querySelectorAll('.tp-beat-marker');
+    let currentBeat = 0;
+    for (const bm of beatMarkers) {
+      const r = bm.getBoundingClientRect();
+      if (r.top < focusY) currentBeat = parseInt(bm.dataset.beatN || 0, 10);
+    }
+    const el = document.getElementById('tp-beat-counter');
+    if (el) el.textContent = currentBeat > 0 ? `Beat ${currentBeat} / ${totalBeats}` : '';
+
+    // Update current pill on remote if any
+    broadcastBeatState(currentBeat);
+  }
+}
+
+let _lastBroadcastBeat = -1;
+function broadcastBeatState(beatN) {
+  if (beatN === _lastBroadcastBeat) return;
+  _lastBroadcastBeat = beatN;
+  if (wsConn && wsConn.readyState === WebSocket.OPEN) {
+    wsConn.send(JSON.stringify({ type: 'beat_update', currentBeat: beatN }));
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1381,6 +1476,18 @@ function toggleMirror() {
   isMirror = !isMirror;
   document.getElementById('tp-scroll-wrap').classList.toggle('mirror', isMirror);
   document.getElementById('tp-mirror-btn').classList.toggle('active', isMirror);
+}
+
+function toggleSpeakerNames() {
+  showSpeakerNames = !showSpeakerNames;
+  document.getElementById('tp-names-btn').classList.toggle('active', showSpeakerNames);
+  // Re-process and re-render the current script with the new setting
+  if (loadedScript?.text) {
+    loadedScript.segments = processScript(loadedScript.text);
+    const pos = document.getElementById('tp-scroll-wrap').scrollTop;
+    renderScript(loadedScript.segments);
+    document.getElementById('tp-scroll-wrap').scrollTop = pos; // restore position
+  }
 }
 
 function backToSelector() {
@@ -1803,6 +1910,7 @@ function connectRemote() {
       if (msg.type === 'peer_connected') { setRemStatus(true); }
       if (msg.type === 'peer_disconnected' && msg.role === 'display') setRemStatus(false);
       if (msg.type === 'state') applyRemState(msg);
+      if (msg.type === 'beat_update') remUpdateCurrentBeatPill(msg.currentBeat);
     };
 
     remoteWS.onerror = () => setRemStatus(false);
@@ -1893,19 +2001,75 @@ async function loadRemoteScript(projectId) {
     const d = await r.json();
     if (!d.ok) throw new Error(d.error);
     const segs = processScript(d.script_text);
+
+    // Build script HTML
     let html = '';
     for (const seg of segs) {
       if (seg.type === 'beat_marker') {
         html += `<span class="tp-rem-beat-label">${escHtml(seg.beatName)}</span>`;
+      } else if (seg.type === 'speaker') {
+        html += `<span class="tp-rem-beat-label" style="color:#f0b942;background:rgba(240,185,66,0.09);">${escHtml(seg.name)}</span>`;
       } else if (seg.type === 'text' && seg.content?.trim()) {
         html += `<p class="tp-rem-line">${escHtml(seg.content)}</p>`;
       }
     }
     container.innerHTML = html || '<p class="tp-rem-line" style="opacity:0.4">Script loaded.</p>';
     remScriptReady = true;
+
+    // Build beat nav pills
+    buildRemBeatPills(segs);
   } catch (e) {
     container.innerHTML = `<p style="color:rgba(255,255,255,0.4);font-size:14px;">Could not load script: ${e.message}</p>`;
   }
+}
+
+// Beat positions: for each beat, compute what % of total text segs precede it
+let remBeatPcts = []; // [{beatN, beatName, pct}]
+
+function buildRemBeatPills(segs) {
+  const pillsEl = document.getElementById('tp-rem-beats');
+  if (!pillsEl) return;
+
+  // Count total text segments and find position of each beat marker
+  const textTotal = segs.filter(s => s.type === 'text').length;
+  if (textTotal === 0) return;
+
+  let textCount = 0;
+  remBeatPcts = [];
+  for (const seg of segs) {
+    if (seg.type === 'text') textCount++;
+    if (seg.type === 'beat_marker') {
+      remBeatPcts.push({
+        beatN:    seg.beatN,
+        beatName: seg.beatName,
+        pct:      Math.round((textCount / textTotal) * 100),
+      });
+    }
+  }
+
+  if (!remBeatPcts.length) return;
+
+  pillsEl.innerHTML = remBeatPcts.map(b =>
+    `<button class="tp-rem-beat-pill" id="rem-beat-pill-${b.beatN}"
+       onclick="remJumpToBeat(${b.pct}, ${b.beatN})"
+       title="Jump to: ${escHtml(b.beatName)}">${b.beatN}. ${escHtml(b.beatName)}</button>`
+  ).join('');
+  pillsEl.classList.add('live');
+}
+
+function remJumpToBeat(pct, beatN) {
+  remoteSend('seek_pct', pct);
+  // Highlight active pill
+  document.querySelectorAll('.tp-rem-beat-pill').forEach(p => p.classList.remove('current'));
+  const pill = document.getElementById(`rem-beat-pill-${beatN}`);
+  if (pill) pill.classList.add('current');
+}
+
+function remUpdateCurrentBeatPill(currentBeat) {
+  document.querySelectorAll('.tp-rem-beat-pill').forEach((p, i) => {
+    const bn = remBeatPcts[i]?.beatN;
+    p.classList.toggle('current', bn === currentBeat);
+  });
 }
 
 function escHtml(s) {
@@ -2166,14 +2330,18 @@ function sampleVoiceVolume() {
     // ── Silence ───────────────────────────────────────────────
     if (voiceScrolling && !silenceTimer) {
       silenceTimer = setTimeout(() => {
-        voiceScrolling    = false;
-        voiceEffectiveSpd = 0;
-        silenceTimer      = null;
-        setMicIndicator('paused');
-        document.getElementById('tp-voice-btn').classList.remove('listening');
-        document.getElementById('tp-voice-btn').classList.add('paused-speech');
-        console.log('[Voice Sync] Silence — scroll paused');
-        showVoiceDebug(0, threshold);
+        // Coast: slow to 30% for 900ms to bridge paragraph gaps, then stop
+        voiceEffectiveSpd = Math.max(0.3, scrollSpeed * 0.3);
+        silenceTimer = setTimeout(() => {
+          voiceScrolling    = false;
+          voiceEffectiveSpd = 0;
+          silenceTimer      = null;
+          setMicIndicator('paused');
+          document.getElementById('tp-voice-btn').classList.remove('listening');
+          document.getElementById('tp-voice-btn').classList.add('paused-speech');
+          console.log('[Voice Sync] Silence — scroll paused');
+          showVoiceDebug(0, threshold);
+        }, 900);
       }, 450); // 450ms debounce — brief pauses between words don't stop scroll
     }
   }
@@ -2230,6 +2398,7 @@ let vdOperatorLocked = false;  // true when Cari has operator-paused
 let vdManualPause    = false;  // true when Jason presses his own pause button
 let vdSpeedMult      = 1.0;    // speed multiplier slider (0.5–2.0)
 let vdWakeLock       = null;
+let vdLastKnownSpeed = 3;      // updated from display state; voice modulates around this
 
 function showVoiceDevice(codeFromUrl) {
   currentMode = 'voice';
@@ -2297,6 +2466,9 @@ function connectVoiceDeviceWS(code) {
       }
       if (msg.type === 'state') {
         if (msg.operatorPaused !== undefined) vdSetOperatorLock(msg.operatorPaused);
+        // Track display's base speed so voice modulation stays in the right range
+        const spd = msg.speed ?? msg.state?.speed;
+        if (spd !== undefined && spd > 0) vdLastKnownSpeed = spd;
       }
       if (msg.type === 'error') {
         document.getElementById('tp-vd-status').textContent = 'SESSION NOT FOUND';
@@ -2399,18 +2571,24 @@ function vdSampleLoop() {
     }
     if (!vdOperatorLocked && !vdManualPause) {
       // Speed modulation: louder = faster, scaled by vdSpeedMult slider
+      // baseSpeed tracks the display's current speed — voice modulates around it
       const overage   = Math.max(0, (vdSmoothedVol - threshold) / threshold);
       const voiceMult = 0.65 + Math.min(overage, 2) * 0.42;
-      const baseSpeed = 3;
-      vdSend('speed', Math.max(0.3, parseFloat((baseSpeed * voiceMult * vdSpeedMult).toFixed(1))));
+      vdSend('speed', Math.max(0.3, parseFloat((vdLastKnownSpeed * voiceMult * vdSpeedMult).toFixed(1))));
     }
   } else {
     if (vdScrolling && !vdSilTimer) {
       vdSilTimer = setTimeout(() => {
-        vdScrolling = false;
-        vdSilTimer  = null;
-        if (!vdManualPause) setVdStatus('paused');
-        vdSend('pause');
+        // Coast stage: slow to 30% speed for 900ms to bridge paragraph breaks,
+        // then fully stop. Prevents stalling mid-gap between paragraphs.
+        const coastSpeed = Math.max(0.3, parseFloat((vdLastKnownSpeed * 0.3).toFixed(1)));
+        vdSend('speed', coastSpeed);
+        vdSilTimer = setTimeout(() => {
+          vdScrolling = false;
+          vdSilTimer  = null;
+          if (!vdManualPause) setVdStatus('paused');
+          vdSend('pause');
+        }, 900);
       }, 450);
     }
   }
