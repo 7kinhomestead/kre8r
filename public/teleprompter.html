@@ -125,6 +125,41 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-start-btn:hover { background: #52dfc5; }
 #tp-start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Speaker filter ─────────────────────────────────────────── */
+#tp-speaker-filter {
+  display: none; /* shown when multi-speaker script detected */
+  flex-direction: column; gap: 8px; margin-top: 20px;
+  padding: 14px 16px; background: rgba(62,207,178,0.05);
+  border: 1px solid rgba(62,207,178,0.15); border-radius: 10px;
+}
+#tp-speaker-filter-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 2px;
+}
+#tp-speaker-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.tp-speaker-btn {
+  padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(62,207,178,0.25);
+  background: transparent; color: var(--teal); font-family: var(--font);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.tp-speaker-btn:hover { background: rgba(62,207,178,0.1); }
+.tp-speaker-btn.active { background: rgba(62,207,178,0.2); border-color: var(--teal); }
+
+/* ── Display screen speaker filter pill ────────────────────── */
+#tp-display-speaker-filter {
+  display: none;
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 10; flex-direction: row; gap: 6px; align-items: center;
+}
+.tp-disp-spk-btn {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(62,207,178,0.3);
+  background: rgba(0,0,0,0.6); color: var(--teal); font-family: var(--font);
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; cursor: pointer;
+  text-transform: uppercase; transition: all 0.15s; white-space: nowrap;
+}
+.tp-disp-spk-btn:hover { background: rgba(62,207,178,0.15); }
+.tp-disp-spk-btn.active { background: rgba(62,207,178,0.25); border-color: var(--teal); }
+
 /* ═══════════════════════════════════════
    DISPLAY SCREEN
 ═══════════════════════════════════════ */
@@ -700,6 +735,12 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
       <div id="tp-offline-note"></div>
     </div>
 
+    <!-- Speaker filter — appears when multi-speaker script is loaded -->
+    <div id="tp-speaker-filter">
+      <div id="tp-speaker-filter-label">👤 Film as one person</div>
+      <div id="tp-speaker-btns"></div>
+    </div>
+
     <button id="tp-start-btn" disabled onclick="startTeleprompter()">Start Teleprompter →</button>
 
   </div>
@@ -710,6 +751,9 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 ══════════════════════════════════════════ -->
 <div id="tp-display">
   <div id="tp-reading-guide"></div>
+
+  <!-- Speaker filter pills — floating top-center, shown when multi-speaker script -->
+  <div id="tp-display-speaker-filter"></div>
 
   <!-- Mic status indicator — top-left, only when voice sync is active -->
   <div id="tp-mic-indicator">
@@ -948,7 +992,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 const MIN_FONT = 32, MAX_FONT = 120, DEF_FONT = 64;
 
 // ─── State ────────────────────────────────────────────────────
-let showSpeakerNames = true;   // toggle: show [NAME] dividers in dialogue scripts
+let showSpeakerNames   = true;   // toggle: show [NAME] dividers in dialogue scripts
+let activeSpeakerFilter = null;  // null = all speakers, 'JASON' = only Jason's lines
 let currentMode    = 'selector';
 let activeTab      = 'project';
 let loadedScript   = null;
@@ -1136,6 +1181,8 @@ async function onProjectChange() {
       text:        d.script_text,
       segments:    segs
     };
+    activeSpeakerFilter = null; // reset filter on new script load
+    buildSpeakerFilterUI(segs);
 
     const preview = segs.filter(s => s.type === 'text').slice(0, 4).map(s => s.content).join('\n');
     prev.textContent = preview || '(Script is empty after stripping production notes)';
@@ -1273,6 +1320,104 @@ function processScript(rawText) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SPEAKER FILTER
+// ═══════════════════════════════════════════════════════════════
+
+/** Extract unique speaker names from processed segments. */
+function detectSpeakers(segs) {
+  const names = [];
+  for (const s of segs) {
+    if (s.type === 'speaker' && !names.includes(s.name)) names.push(s.name);
+  }
+  return names;
+}
+
+/** Filter segments to only the chosen speaker's lines.
+ *  Beat markers always pass through — they give context.
+ *  Speaker markers for other speakers are dropped silently. */
+function filterBySpeaker(segs, speaker) {
+  if (!speaker) return segs;
+  const out = [];
+  let currentSpeaker = null;
+  for (const s of segs) {
+    if (s.type === 'speaker') {
+      currentSpeaker = s.name;
+      // Show the speaker marker only for the active speaker
+      if (s.name === speaker) out.push(s);
+      continue;
+    }
+    if (s.type === 'beat_marker') { out.push(s); continue; }
+    if (s.type === 'break')       { if (currentSpeaker === speaker) out.push(s); continue; }
+    if (s.type === 'text')        { if (currentSpeaker === speaker) out.push(s); continue; }
+  }
+  return out;
+}
+
+/** Build speaker filter buttons on setup screen + display screen floating pills.
+ *  Called after any script load. Hidden when script has 0 or 1 speakers. */
+function buildSpeakerFilterUI(segs) {
+  const speakers = detectSpeakers(segs);
+  const filterWrap = document.getElementById('tp-speaker-filter');
+  const btnsEl     = document.getElementById('tp-speaker-btns');
+  const dispFilter = document.getElementById('tp-display-speaker-filter');
+
+  if (speakers.length < 2) {
+    if (filterWrap)  filterWrap.style.display  = 'none';
+    if (dispFilter)  dispFilter.style.display   = 'none';
+    activeSpeakerFilter = null;
+    return;
+  }
+
+  // Setup screen
+  if (filterWrap && btnsEl) {
+    filterWrap.style.display = 'flex';
+    btnsEl.innerHTML =
+      `<button class="tp-speaker-btn active" onclick="setSpeakerFilter(null)">👥 Everyone</button>` +
+      speakers.map(n =>
+        `<button class="tp-speaker-btn" onclick="setSpeakerFilter('${n}')">${n}</button>`
+      ).join('');
+  }
+
+  // Display screen floating pills
+  if (dispFilter) {
+    dispFilter.style.display = 'flex';
+    dispFilter.innerHTML =
+      `<button class="tp-disp-spk-btn active" onclick="setSpeakerFilter(null)" id="dspk-all">ALL</button>` +
+      speakers.map(n =>
+        `<button class="tp-disp-spk-btn" onclick="setSpeakerFilter('${n}')" id="dspk-${n}">${n}</button>`
+      ).join('');
+  }
+}
+
+/** Set the active speaker filter and re-render. */
+function setSpeakerFilter(speaker) {
+  activeSpeakerFilter = speaker;
+
+  // Update setup screen buttons
+  document.querySelectorAll('.tp-speaker-btn').forEach(b => b.classList.remove('active'));
+  const setupActive = speaker
+    ? document.querySelector(`.tp-speaker-btn[onclick="setSpeakerFilter('${speaker}')"]`)
+    : document.querySelector('.tp-speaker-btn[onclick="setSpeakerFilter(null)"]');
+  if (setupActive) setupActive.classList.add('active');
+
+  // Update display screen pills
+  document.querySelectorAll('.tp-disp-spk-btn').forEach(b => b.classList.remove('active'));
+  const dispActive = speaker
+    ? document.getElementById(`dspk-${speaker}`)
+    : document.getElementById('dspk-all');
+  if (dispActive) dispActive.classList.add('active');
+
+  // Re-render with filter applied
+  if (loadedScript?.segments) {
+    const filtered = filterBySpeaker(loadedScript.segments, speaker);
+    const scrollWrap = document.getElementById('tp-scroll-wrap');
+    const pos = scrollWrap ? scrollWrap.scrollTop : 0;
+    renderScript(filtered);
+    if (scrollWrap) scrollWrap.scrollTop = pos;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // RENDER
 // ═══════════════════════════════════════════════════════════════
 
@@ -1328,18 +1473,28 @@ function startTeleprompter() {
     if (!raw) { alert('Please paste some script text first.'); return; }
     segs = processScript(raw);
     loadedScript = { projectId: null, projectName: 'Script', text: raw, segments: segs };
+    activeSpeakerFilter = null;
+    buildSpeakerFilterUI(segs);
   } else {
     if (!loadedScript) { alert('Please select a project first.'); return; }
     segs = loadedScript.segments;
   }
-  if (!segs.length) { alert('No displayable content after stripping production notes.'); return; }
+  // Apply any active speaker filter before rendering
+  const segsToRender = filterBySpeaker(segs, activeSpeakerFilter);
+  if (!segsToRender.length) { alert('No displayable content after stripping production notes.'); return; }
 
-  renderScript(segs);
+  renderScript(segsToRender);
   document.documentElement.style.setProperty('--font-size', fontSize + 'px');
   document.getElementById('tp-font-val').textContent = fontSize + 'px';
 
   document.getElementById('tp-selector').style.display = 'none';
   document.getElementById('tp-display').classList.add('active');
+
+  // Show speaker filter pills on display screen if multi-speaker script
+  const dispFilter = document.getElementById('tp-display-speaker-filter');
+  if (dispFilter && detectSpeakers(loadedScript?.segments || []).length >= 2) {
+    dispFilter.style.display = 'flex';
+  }
 
   document.getElementById('tp-scroll-wrap').scrollTop = 0;
   isPlaying = false; updatePPBtn();
