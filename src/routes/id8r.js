@@ -425,6 +425,22 @@ router.post('/choose', async (req, res) => {
   }
 });
 
+// ─── SSE wait with keepalive pings ────────────────────────────────────────────
+// Sends SSE comment pings every 5s during the wait to prevent nginx/proxy from
+// closing the connection due to silence (proxy_read_timeout). Without this,
+// the Phase 1→Phase 2 wait would silently kill the stream on proxied deployments.
+function sseWait(res, ms) {
+  return new Promise(resolve => {
+    const pingInterval = setInterval(() => {
+      try { res.write(': ping\n\n'); } catch (_) {}
+    }, 5000);
+    setTimeout(() => {
+      clearInterval(pingInterval);
+      resolve();
+    }, ms);
+  });
+}
+
 // ─── POST /api/id8r/research ───────────────────────────────────────────────────
 // SSE stream — 3 focused research passes on the chosen concept
 
@@ -481,7 +497,10 @@ router.post('/research', async (req, res) => {
     const results = {};
 
     // ── Phase 1: YouTube Research ─────────────────────────────────
-    // max_uses: 2 — enough to find the landscape, not enough to blow the rate limit
+    // max_uses: 2 — enough to find the landscape, not enough to blow the rate limit.
+    // max_tokens: 1200 — web_search_20260209 now uses server_tool_use + code_execution
+    // blocks internally; these consume output tokens. 800 was too low and caused
+    // the text block (Claude's actual analysis) to get cut off.
     const phase1Label = chosenAngle ? `YouTube Research — ${chosenAngle}` : 'YouTube Research';
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
@@ -491,23 +510,22 @@ router.post('/research', async (req, res) => {
           role: 'user',
           content: `${conceptBrief}\n\nSearch YouTube. Return 4-5 examples (title + channel), the dominant approach, and the biggest gap.`,
         }],
-        800,
+        1200,
         [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
         session_id,
         onRetry
       );
-      const fullText = data.content
-        .map(block => {
-          if (block.type === 'text') return block.text;
-          if (block.type === 'web_search_tool_result') {
-            return block.content?.map(r => `${r.title}\n${r.url}\n${r.encrypted_content || ''}`).join('\n\n') || '';
-          }
-          return '';
-        })
+      // Extract only Claude's written text — web_search_tool_result blocks contain
+      // encrypted search payloads (not human-readable); server_tool_use blocks are
+      // internal scaffolding. Claude's text synthesis is the useful content.
+      const fullText = (data.content || [])
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
         .filter(Boolean)
         .join('\n\n');
       results.youtube = fullText || 'No YouTube results found.';
     } catch (e) {
+      console.error('[id8r/research] Phase 1 error:', e.message);
       results.youtube = `Error: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 1, label: phase1Label, data: results.youtube });
@@ -519,10 +537,11 @@ router.post('/research', async (req, res) => {
       });
     } catch (_) {}
     send({ stage: 'phase_wait', phase: 1, duration: 30, message: 'Reviewing findings...' });
-    await new Promise(r => setTimeout(r, 30000));
+    await sseWait(res, 30000);
 
     // ── Phase 2: Data & Facts ─────────────────────────────────────
-    // max_uses: 2 — hard cap, was previously unlimited (root cause of rate limiting)
+    // max_uses: 1 — one focused search is enough for stats/data; reduces rate limit
+    // pressure after Phase 1's 2 searches. max_tokens: 1200 for same reason as Phase 1.
     const phase2Label = chosenAngle ? `Data & Facts — ${chosenAngle}` : 'Data & Facts';
     send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
@@ -532,43 +551,54 @@ router.post('/research', async (req, res) => {
           role: 'user',
           content: `${conceptBrief}\n\nSearch for 3-5 concrete stats or data points that strengthen this specific angle. Numbers, sources, recency.`,
         }],
-        800,
-        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
+        1200,
+        [{ type: 'web_search_20260209', name: 'web_search', max_uses: 1 }],
         session_id,
         onRetry
       );
-      const fullText = data.content
-        .map(block => {
-          if (block.type === 'text') return block.text;
-          if (block.type === 'web_search_tool_result') {
-            return block.content?.map(r => `${r.title}\n${r.url}\n${r.encrypted_content || ''}`).join('\n\n') || '';
-          }
-          return '';
-        })
+      // Extract only Claude's text synthesis — same reasoning as Phase 1.
+      const textOnly = (data.content || [])
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
         .filter(Boolean)
         .join('\n\n');
-      results.data = fullText || 'No data results found.';
+
+      // Separately collect search result URLs for citation extraction (no encrypted blobs)
+      const searchUrls = (data.content || [])
+        .filter(block => block.type === 'web_search_tool_result')
+        .flatMap(block => (block.content || []).map(r => `${r.title || ''}: ${r.url || ''}`))
+        .filter(Boolean)
+        .join('\n');
+
+      results.data = textOnly || 'No data results found.';
+      console.log(`[id8r/research] Phase 2 stop_reason=${data.stop_reason} text_blocks=${(data.content||[]).filter(b=>b.type==='text').length}`);
 
       // Extract credible citations from search results for downstream blog/content use
-      try {
-        const citationRaw = await callClaudeText(
-          'You are a citation extractor. Return JSON only — no preamble.',
-          [{
-            role: 'user',
-            content: `From the research text below, extract 3–5 of the most credible and citable sources — government data, academic studies, reputable news outlets, industry reports. Prefer sources with actual statistics or findings that support the argument.\n\nResearch:\n${fullText.slice(0, 3000)}\n\nReturn JSON array only:\n[\n  { "title": "Source name / article title", "url": "https://...", "key_stat": "The specific fact or stat that makes this useful", "credibility": "why this source is credible" }\n]`,
-          }],
-          800,
-          session_id,
-          onRetry
-        );
+      if (textOnly) {
         try {
-          const parsed = JSON.parse(citationRaw.replace(/```json|```/g, '').trim());
-          session.citations = Array.isArray(parsed) ? parsed : [];
-        } catch { session.citations = []; }
-      } catch (e) {
+          const citationInput = [textOnly.slice(0, 2000), searchUrls.slice(0, 500)].filter(Boolean).join('\n\nSearch URLs found:\n');
+          const citationRaw = await callClaudeText(
+            'You are a citation extractor. Return JSON only — no preamble.',
+            [{
+              role: 'user',
+              content: `From the research text below, extract 3–5 of the most credible and citable sources — government data, academic studies, reputable news outlets, industry reports. Prefer sources with actual statistics or findings that support the argument.\n\nResearch:\n${citationInput}\n\nReturn JSON array only:\n[\n  { "title": "Source name / article title", "url": "https://...", "key_stat": "The specific fact or stat that makes this useful", "credibility": "why this source is credible" }\n]`,
+            }],
+            600,
+            session_id,
+            onRetry
+          );
+          try {
+            const parsed = JSON.parse(citationRaw.replace(/```json|```/g, '').trim());
+            session.citations = Array.isArray(parsed) ? parsed : [];
+          } catch { session.citations = []; }
+        } catch (e) {
+          session.citations = [];
+        }
+      } else {
         session.citations = [];
       }
     } catch (e) {
+      console.error('[id8r/research] Phase 2 error:', e.message);
       results.data = `Error: ${e.message}`;
       session.citations = [];
     }
@@ -581,7 +611,7 @@ router.post('/research', async (req, res) => {
       });
     } catch (_) {}
     send({ stage: 'phase_wait', phase: 2, duration: 30, message: 'Reviewing findings...' });
-    await new Promise(r => setTimeout(r, 30000));
+    await sseWait(res, 30000);
 
     // ── Phase 3: VaultΩr cross-reference ─────────────────────────
     const phase3Label = 'VaultΩr — have you covered this before?';
