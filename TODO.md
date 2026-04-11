@@ -8,6 +8,24 @@ No PM2. A real app with an icon in the taskbar.
 
 ---
 
+## ✅ PHASES 2, 3 & 5 — Electron + Bundling + Packaging — DONE Session 32–33
+
+Desktop app boots on Jason's laptop. Login screen, server starts, DB initialises.
+Default credentials: jason / kre8r2024. Installer: `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.0.exe`
+
+**Key fixes locked in (Session 33):**
+- `npmRebuild: false` + `scripts/prebuild-sqlite.js` — correct Electron 41 ABI (NMV 145) every build
+- server.js loads from inside asar via `app.getAppPath()` — all require() calls resolve correctly
+- Diagnostic error dialog on startup failure — no more silent white screen
+- `!node_modules` removed from files — was silently stripping all dependencies
+
+**Remaining before wider distribution:**
+- App size: 238MB (playwright is the main culprit — move to devDependencies if not needed in packaged app)
+- Mac build: untested (needs Mac machine or CI)
+- Code signing: self-signed for now, SmartScreen warning on Windows install is expected
+
+---
+
 ## PHASE 1 — Feature & Polish (before packaging anything)
 *Get the app right before wrapping it. ~3-4 sessions.*
 
@@ -166,7 +184,7 @@ For normal field use, teleprompter.kre8r.app through Phone 1's hotspot data hand
 
 ---
 
-## PHASE 2 — Electron Wrapper ← NEXT
+## PHASE 4 — First-Run Setup Wizard ← NEXT
 *Wrap the existing app in a real desktop window. ~1-2 sessions.*
 
 The Express server runs inside Electron's main process.

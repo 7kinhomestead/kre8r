@@ -922,3 +922,95 @@ Watch beat_mapped SSE events closely — first multi-person assembly.
 
 ---
 
+
+---
+
+## Session 33 — Electron Desktop App: Working on Laptop
+
+**Date:** 2026-04-11
+
+### What We Did
+
+Debugged and fixed the Electron desktop app end-to-end. After 3 previous failed
+builds (white screen, then module errors), the app now boots and runs on Jason's
+laptop. Three root causes were found and fixed in sequence:
+
+---
+
+**Root Cause 1 — `!node_modules` excluded all dependencies from the asar**
+
+The `files` array in package.json had `"!node_modules"` which silently stripped
+every npm dependency from the packaged app. First error: `Cannot find module 'dotenv'`.
+Fix: removed the exclusion. electron-builder handles node_modules automatically.
+
+**Root Cause 2 — server.js was unpacked but node_modules were not**
+
+Initially server.js was in `asarUnpack` (real file on disk) but its dependencies
+stayed inside the asar. Node's module resolution can't bridge that gap.
+Fix: moved server.js back into the asar. Load via `app.getAppPath()` — Electron's
+asar interception handles all `require()` calls transparently. Only native binaries
+(better-sqlite3, ffmpeg, ffprobe) need to be real files (asarUnpack).
+
+**Root Cause 3 — better-sqlite3 ABI mismatch (NMV 137 vs 145)**
+
+Electron 41's runtime uses NMV 145 (its own ABI, separate from Node 24's 137).
+`@electron/rebuild` was building from source using system Node headers (NMV 137)
+because `~/.electron-gyp` wasn't being populated with Electron's headers.
+The correct prebuilt (`better-sqlite3-v12.8.0-electron-v145-win32-x64`) exists
+and was cached by npm. Fix: `prebuild-install --runtime electron --target 41.1.1`
+fetches the correct binary. `npmRebuild: false` in electron-builder config prevents
+it from overwriting it. `scripts/prebuild-sqlite.js` runs as part of `dist:win`.
+
+---
+
+### Diagnostic Tooling Added
+
+Added `dialog.showErrorBox()` on the 15-second server timeout — shows actual stderr
+from the server process instead of silently opening a blank white window. This is
+what enabled diagnosing all three root causes from the laptop without DevTools.
+
+---
+
+### Files Changed
+
+- `electron/main.js` — load server via `app.getAppPath()`, diagnostic error dialog,
+  stderr buffer collection, `utilityProcess.fork()` retained
+- `package.json` — removed `!node_modules`, removed server.js/src from asarUnpack,
+  `npmRebuild: false`, `prebuild-sqlite` script added to dist:win
+- `scripts/prebuild-sqlite.js` — new script, installs correct Electron 41 prebuilt
+  for better-sqlite3 before every dist:win build
+
+---
+
+### Result
+
+- Login screen appears on first launch ✓
+- Server starts, DB initialises, session auth works ✓
+- Default credentials: jason / kre8r2024
+- Deployed to kre8r.app ✓
+
+---
+
+## Next Session — Priority Order
+
+### 1. Soul BuildΩr Onboarding Wizard (`/setup.html`)
+Full UI wizard that writes creator-profile.json through plain-English steps.
+No JSON, no typed paths — native folder pickers (Electron), OAuth buttons,
+dropdowns for camera type. Each step has a "why this matters" explanation.
+
+### 2. Pipeline Tour
+Interactive overlay walkthrough — 8 stops following the creative thread.
+Triggered on first login, re-triggerable via "?" in nav.
+
+### 3. MirrΩr bugs
+`no such column: pr.angle` DB error and `TypeError: Assignment to constant variable`
+in mirrr.js — both pre-existing, need fixing before commercial launch.
+
+### 4. Email API decision
+Kajabi broadcast API: ask support if on roadmap.
+If no → build Mailerlite integration in MailΩr (one session).
+
+### 5. App size optimisation (238MB)
+Main culprits: playwright (~100MB+), sharp. Playwright can move to devDependencies
+if Kajabi automation isn't used in the packaged app. Investigate before next build.
+
