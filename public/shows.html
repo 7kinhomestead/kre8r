@@ -523,7 +523,7 @@
       <div id="imp-review" style="display:none;">
         <div class="review-divider">
           <div class="review-divider-line"></div>
-          <div class="review-divider-label">Claude&rsquo;s Analysis &mdash; Review &amp; Edit</div>
+          <div class="review-divider-label">Kre8r&rsquo;s Analysis &mdash; Review &amp; Edit</div>
           <div class="review-divider-line"></div>
         </div>
 
@@ -586,7 +586,7 @@
         <div class="field" id="rev-audience-block" style="display:none;">
           <label class="field-label">&#128172; Audience Signals <span style="font-size:11px;color:var(--text-dimmer);font-weight:400;text-transform:none;">(from YouTube comments)</span></label>
           <div id="rev-audience-signals" style="background:var(--bg-deep);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.65;color:var(--text-dim);"></div>
-          <div class="field-hint">Claude&rsquo;s read of the comment section &mdash; what landed, what they want next</div>
+          <div class="field-hint">Kre8r&rsquo;s read of the comment section &mdash; what landed, what they want next</div>
         </div>
 
         <div id="imp-save-error" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none;"></div>
@@ -1136,11 +1136,11 @@
     const epNum = parseInt(document.getElementById('imp-ep-num').value) || 1;
     const btn   = document.getElementById('imp-analyze-btn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Analyzing with Claude&hellip; (10-20s)';
+    btn.innerHTML = '<span class="spinner"></span> Analyzing… (10–20s)';
 
     document.getElementById('imp-review').style.display = 'block';
     document.getElementById('imp-status-card').style.display = 'flex';
-    document.getElementById('imp-status-text').textContent = 'Claude is reading the transcript and extracting season intelligence…';
+    document.getElementById('imp-status-text').textContent = 'Reading transcript and extracting season intelligence…';
     // hide save section until done
     document.querySelectorAll('#imp-review .field, #imp-review .review-divider, #imp-review div[style*="flex-end"]').forEach(el => {
       el.style.display = 'none';

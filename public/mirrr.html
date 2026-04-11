@@ -427,7 +427,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
   <div class="section-spacer" id="content-secrets">
     <div class="section-header">
       <div class="section-title">🔭 SECRETS OF YOUR CONTENT UNIVERSE</div>
-      <div class="section-sub">Patterns and connections Claude found that you wouldn't notice from inside the work</div>
+      <div class="section-sub">Patterns and connections Kre8r found that you wouldn't notice from inside the work</div>
     </div>
     <div class="dna-panel dna-panel-full">
       <button class="secrets-generate-btn" id="secretsBtn" onclick="generateSecrets()">
@@ -486,7 +486,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
   <div class="section-spacer ab-wrap">
     <div class="section-header">
       <div class="section-title">THUMBNAIL A/B TESTER</div>
-      <div class="section-sub">Upload two thumbnails — Claude scores both and picks a winner</div>
+      <div class="section-sub">Upload two thumbnails — Kre8r scores both and picks a winner</div>
     </div>
 
     <div class="ab-upload-grid">
@@ -585,7 +585,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
   <div class="section-spacer coaching-wrap">
     <div class="section-header">
       <div class="section-title">PATTERN ANALYSIS</div>
-      <div class="section-sub">Claude reads your last 10 videos and coaches you</div>
+      <div class="section-sub">Kre8r reads your last 10 videos and coaches you</div>
     </div>
     <button class="coach-btn" id="coachBtn" onclick="generateCoaching()">
       <div class="coach-spinner"></div>
@@ -1360,7 +1360,7 @@ async function runAbTest() {
   btn.disabled = true;
   errEl.classList.remove('visible');
   results.classList.remove('visible');
-  status.textContent = 'Sending thumbnails to Claude…';
+  status.textContent = 'Analyzing thumbnails…';
   status.classList.add('visible');
 
   try {
@@ -1874,7 +1874,7 @@ async function generateSecrets(force) {
   btn.textContent = 'Discovering...';
   status.style.display   = 'block';
   status.style.color     = '';
-  status.textContent     = 'Sending your content universe to Claude...';
+  status.textContent     = 'Analyzing your content…';
   cards.innerHTML        = '';
 
   // Hide lock + force button while running
@@ -2035,7 +2035,7 @@ async function generateContentDna() {
   btn.disabled         = true;
   btn.textContent      = 'Analyzing...';
   status.style.display = 'block';
-  status.textContent   = 'Sending your content library to Claude...';
+  status.textContent   = 'Analyzing your content library…';
   status.style.color   = '';
   nicheDef.style.display  = 'none';
   pillarsWr.style.display = 'none';

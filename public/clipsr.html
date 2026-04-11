@@ -823,7 +823,7 @@
         </div>
         <div class="analyze-cta">
           <div class="analyze-cta-title">🔍 Find Clip Gold</div>
-          <div class="analyze-cta-desc">Claude will analyze this video and surface the 3–6 moments most likely to pop on TikTok, Reels, and Shorts. Each clip comes with a caption, hook, and platform scores.</div>
+          <div class="analyze-cta-desc">Kre8r will analyze this video and surface the 3–6 moments most likely to pop on TikTok, Reels, and Shorts. Each clip comes with a caption, hook, and platform scores.</div>
           <button class="btn btn-primary btn-big" onclick="startAnalysis(${footage.id}, false)">⛏ Find Clips</button>
         </div>`;
     }
@@ -901,7 +901,7 @@
         } else if (data.stage === 'transcribe_progress') {
           addLog(data.message || JSON.stringify(data));
         } else if (data.stage === 'analyzing') {
-          stageEl && (stageEl.textContent = 'Claude is finding the gold...');
+          stageEl && (stageEl.textContent = 'Finding the gold…');
           progress = 60;
           addLog(data.message || 'Analyzing for clips...');
         } else if (data.stage === 'done') {

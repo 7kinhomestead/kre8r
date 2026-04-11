@@ -256,7 +256,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     instance,
     version: '1.0',
-    anthropic_configured: !!process.env.ANTHROPIC_API_KEY
+    ai_configured: !!process.env.ANTHROPIC_API_KEY
   });
 });
 

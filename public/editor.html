@@ -192,7 +192,7 @@
   <!-- PAGE HEADER -->
   <div class="page-header">
     <div class="page-title">ASSEMBL<em>Ω</em>R</div>
-    <div class="page-sub">Transcript → beat map → best takes. Claude picks the winner from every retake. One click to DaVinci.</div>
+    <div class="page-sub">Transcript → beat map → best takes. Kre8r picks the winner from every retake. One click to DaVinci.</div>
   </div>
 
   <!-- DEPENDENCY WARNING BANNER -->
@@ -292,7 +292,7 @@
         <div class="empty-state" id="selectsEmpty">
           <div class="empty-icon">🎬</div>
           <div class="empty-title">NO ASSEMBLY YET</div>
-          <div class="empty-sub">Select a project with talking-head footage and click "Run AssemblΩr". Claude will transcribe every clip, map each segment to your beat map, and pick the best take from every retake.</div>
+          <div class="empty-sub">Select a project with talking-head footage and click "Run AssemblΩr". Kre8r will transcribe every clip, map each segment to your beat map, and pick the best take from every retake.</div>
         </div>
         <div class="sections-list" id="sectionsList" style="display:none"></div>
       </div>
@@ -676,7 +676,7 @@ async function onBuildSelects() {
           banner.classList.add('visible');
         }
         // Legacy SelectsΩr events (freeform fallback path)
-        if (type === 'chunks_planned')   appendLog('selectsLog', `Claude: ${ev.total_clips} clip(s) → ${ev.total_chunks} chunk(s)`, 'dim');
+        if (type === 'chunks_planned')   appendLog('selectsLog', `Found ${ev.total_clips} clip(s) → ${ev.total_chunks} chunk(s)`, 'dim');
         if (type === 'analyzing_chunk')  appendLog('selectsLog', msg, 'dim');
         if (type === 'chunk_done')       appendLog('selectsLog', msg, 'ok');
         if (type === 'merging')          appendLog('selectsLog', msg, 'dim');

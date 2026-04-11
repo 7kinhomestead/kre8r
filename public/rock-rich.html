@@ -240,7 +240,7 @@ input.ep-title:focus { border-color: var(--purple); }
     <!-- Episode Analyzer -->
     <div class="edit-section">
       <div class="edit-section-title">Analyze Episodes</div>
-      <div class="edit-section-sub">Add episode descriptions (and optional transcript excerpts) to let Claude refine the format profile based on what the show actually looks like in practice. Claude will update the profile fields where it finds clear evidence.</div>
+      <div class="edit-section-sub">Add episode descriptions (and optional transcript excerpts) to let Kre8r refine the format profile based on what the show actually looks like in practice. Kre8r will update the profile fields where it finds clear evidence.</div>
 
       <div id="episodes-container">
         <div class="ep-entry" id="ep-0">
@@ -261,8 +261,8 @@ input.ep-title:focus { border-color: var(--purple); }
       </div>
 
       <div class="btn-row" style="margin-top:20px;">
-        <button class="btn btn-purple" onclick="analyzeEpisodes()" id="analyze-btn">Analyze with Claude</button>
-        <div id="analyze-loading" class="loading-state hidden"><div class="spinner"></div> Claude is analyzing episodes...</div>
+        <button class="btn btn-purple" onclick="analyzeEpisodes()" id="analyze-btn">Analyze</button>
+        <div id="analyze-loading" class="loading-state hidden"><div class="spinner"></div> Analyzing episodes…</div>
       </div>
 
       <div id="analyze-result" class="hidden" style="margin-top:16px;">

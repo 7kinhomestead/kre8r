@@ -271,7 +271,7 @@
         </select>
       </div>
       <div class="field full">
-        <label>Selected Package Title (optional — helps Claude match the tone)</label>
+        <label>Selected Package Title (optional — helps Kre8r match the tone)</label>
         <input type="text" id="package-title" placeholder="e.g. 'We Haven't Used City Water in 3 Years. Here's Our Whole Setup.'">
       </div>
       <div class="field full">
@@ -287,7 +287,7 @@
       YOUR CLIPS
       <span class="badge badge-teal">STEP 2</span>
     </div>
-    <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">Add each clip from VidIQ. Timestamp is optional but helps. The description is what Claude writes captions from — be specific about what's said or shown in the clip.</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">Add each clip from VidIQ. Timestamp is optional but helps. The description is what Kre8r writes captions from — be specific about what's said or shown in the clip.</div>
 
     <div id="clips-container"></div>
 
@@ -532,7 +532,7 @@ async function generate() {
   if (clips.length === 0) { showToast('Add at least one clip description', 'amber'); return; }
 
   const title = document.getElementById('video-title').value.trim();
-  if (!title) { showToast('Add the video title so Claude has context', 'amber'); return; }
+  if (!title) { showToast('Add the video title for context', 'amber'); return; }
 
   // Reset
   generatedResults = [];

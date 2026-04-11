@@ -382,7 +382,7 @@
   <div class="section">
     <div class="section-header">
       <div class="section-title">INGEST FOLDER</div>
-      <div class="section-sub">Scan a folder for video files and classify with Claude Vision</div>
+      <div class="section-sub">Scan a folder for video files and classify with Kre8r</div>
     </div>
     <div class="intake-panel">
       <div class="intake-row">
@@ -495,7 +495,7 @@
       <div class="section-title">FOOTAGE LIBRARY</div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <div class="section-sub" id="footageCount">Loading…</div>
-        <button class="btn btn-ghost" id="backfillBtn" onclick="backfillSubjects()" style="font-size:11px;padding:5px 10px;" title="Tag all clips with searchable subjects using Claude Vision">⟳ Tag Subjects</button>
+        <button class="btn btn-ghost" id="backfillBtn" onclick="backfillSubjects()" style="font-size:11px;padding:5px 10px;" title="Tag all clips with searchable subjects">⟳ Tag Subjects</button>
         <span id="backfillStatus" style="font-size:11px;color:var(--text-dimmer);display:none;"></span>
         <button class="btn btn-ghost" id="findDupesBtn" onclick="findDuplicates()" style="font-size:11px;padding:5px 10px;" title="Find duplicate clips in the vault by filename">🔍 Find Duplicates</button>
       </div>
@@ -1835,7 +1835,7 @@ async function startIngest() {
             const evt = JSON.parse(line.slice(6));
             lastStage = evt;
             if (evt.stage === 'uploaded')   addLog('', `  Saved to server, running intake…`);
-            if (evt.stage === 'ingesting')  addLog('', `  Classifying with Claude Vision…`);
+            if (evt.stage === 'ingesting')  addLog('', `  Classifying…`);
             if (evt.stage === 'error')      addLog('err', `  ✗ ${evt.error}`);
           } catch (_) {}
         }

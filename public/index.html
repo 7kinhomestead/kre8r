@@ -657,11 +657,11 @@ async function loadHealth() {
 
 function updateStatusBar(h) {
   const dotApi = document.getElementById('dot-api');
-  if (h.anthropic_configured) {
+  if (h.ai_configured) {
     dotApi.className = 'svc-dot ok';
   } else {
     dotApi.className = 'svc-dot err';
-    showToast('Anthropic API key not set — add to .env', 'amber');
+    showToast('Kre8r AI not configured', 'amber');
   }
 }
 

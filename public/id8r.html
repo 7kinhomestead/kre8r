@@ -374,7 +374,7 @@
       <div class="mode-card" data-mode="episodic" id="mode-card-episodic">
         <div class="mode-icon">📺</div>
         <div class="mode-title">EPISODIC</div>
-        <div class="mode-sub">Start a new show or generate the next episode. Claude knows where you are in the season arc.</div>
+        <div class="mode-sub">Start a new show or generate the next episode. Kre8r knows where you are in the season arc.</div>
         <button class="mode-btn" data-mode="episodic">Start →</button>
       </div>
 
@@ -1382,7 +1382,7 @@
         document.body.appendChild(toast);
       }
       const secs = Math.round((ev.delay_ms || 2000) / 1000);
-      toast.textContent = `Claude is busy — retrying in ${secs}s… (attempt ${ev.attempt || 1})`;
+      toast.textContent = `Kre8r is busy — retrying in ${secs}s… (attempt ${ev.attempt || 1})`;
       toast.style.opacity = '1';
       clearTimeout(window._retryToastTimer);
       window._retryToastTimer = setTimeout(() => { toast.style.opacity = '0'; }, (ev.delay_ms || 2000) + 500);

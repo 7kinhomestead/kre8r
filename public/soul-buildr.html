@@ -1007,7 +1007,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       <div class="wz-screen-head">
         <div class="wz-screen-number">02 / 05</div>
         <div class="wz-screen-title">YOUR <em>VOICE</em></div>
-        <div class="wz-screen-sub">Paste examples of your best writing — captions, scripts, emails, anything. Claude will read your actual words and learn how you communicate.</div>
+        <div class="wz-screen-sub">Paste examples of your best writing — captions, scripts, emails, anything. Kre8r will read your actual words and learn how you communicate.</div>
       </div>
 
       <div class="wz-field">
@@ -1127,7 +1127,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       <div class="wz-screen-head">
         <div class="wz-screen-number">04 / 05</div>
         <div class="wz-screen-title">YOUR <em>CONTENT</em></div>
-        <div class="wz-screen-sub">Your best work teaches Claude what to amplify.</div>
+        <div class="wz-screen-sub">Your best work teaches Kre8r what to amplify.</div>
       </div>
 
       <div class="wz-field">
@@ -1303,7 +1303,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 <!-- ─── SCREEN 6: GENERATING ─────────────────────────────────────────────────── -->
 <div id="screen6">
   <div class="gen-title">BUILDING YOUR <em>SOUL</em></div>
-  <p class="gen-sub">Claude is synthesizing everything you gave it into a living creator profile.</p>
+  <p class="gen-sub">Kre8r is synthesizing everything you gave it into a living creator profile.</p>
 
   <div class="gen-steps" id="genSteps">
     <div class="gen-step" id="gstep0">
@@ -1404,7 +1404,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         <label class="field-label" for="c-relationship">Your dynamic with the primary creator</label>
         <input class="field-input" id="c-relationship" type="text"
           placeholder="e.g. The calm one who grounds the chaos">
-        <div class="field-help">How your energy plays against theirs on camera. This makes scripted dialogue feel natural instead of written. One sentence is enough — <em>"The calm counterpoint to their chaos"</em> tells Claude everything.</div>
+        <div class="field-help">How your energy plays against theirs on camera. This makes scripted dialogue feel natural instead of written. One sentence is enough — <em>"The calm counterpoint to their chaos"</em> is all Kre8r needs.</div>
       </div>
       <div class="field-group">
         <label class="field-label" for="c-beats">What parts of videos do you typically own?</label>
@@ -1439,7 +1439,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
     <div class="collab-screen" id="cscreen-1" style="display:none;">
       <div class="wz-screen-number">COLLABORATOR SOUL — 2 OF 4</div>
       <div class="wz-screen-title">THEIR <em>VOICE</em></div>
-      <div class="wz-screen-sub">Give Claude something real to analyze. Best results: upload actual clips.</div>
+      <div class="wz-screen-sub">Give Kre8r something real to analyze. Best results: upload actual clips.</div>
 
       <!-- Voice input option tabs -->
       <div class="cv-tabs">
@@ -1532,7 +1532,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         </div>
         <div class="cv-analysis-step" id="cva-transcribe">Transcribing clips with Whisper...</div>
         <div class="cv-analysis-step" id="cva-analyze">Analyzing voice patterns...</div>
-        <div class="cv-analysis-step" id="cva-claude">Building voice profile with Claude...</div>
+        <div class="cv-analysis-step" id="cva-claude">Building your voice profile…</div>
         <div class="cv-timing-note" id="cvTimingNote">
           <strong>⏱ Heads up:</strong> Whisper transcription runs locally and takes roughly
           <strong>1 minute per minute of video</strong>. A 5-minute clip = ~5 minutes.
@@ -1552,7 +1552,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
     <div class="collab-screen" id="cscreen-2" style="display:none;">
       <div class="wz-screen-number">COLLABORATOR SOUL — 3 OF 4</div>
       <div class="wz-screen-title">THEIR VOICE <em>PROFILE</em></div>
-      <div class="wz-screen-sub">Claude read their voice. Does this sound like them?</div>
+      <div class="wz-screen-sub">Kre8r read their voice. Does this sound like them?</div>
 
       <div class="cv-profile-preview" id="cvProfilePreview">
         <!-- Populated by renderCollabVoiceProfile() -->
@@ -1651,7 +1651,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
       <div class="update-option-icon">🔮</div>
       <div>
         <div class="update-option-label">Intelligence from MirrΩr</div>
-        <div class="update-option-sub">View secrets saved to your soul — add context around what Claude found</div>
+        <div class="update-option-sub">View secrets saved to your soul — add context around what Kre8r found</div>
       </div>
     </div>
     <div class="update-option-card" onclick="fullRebuild()">
@@ -2406,7 +2406,7 @@ async function runCollabVoiceAnalysis() {
     } else if (activeId === 'cva-analyze') {
       setCvProgress(72, 'Analyzing voice patterns...');
     } else if (activeId === 'cva-claude') {
-      setCvProgress(88, 'Building voice profile with Claude...');
+      setCvProgress(88, 'Building your voice profile…');
     }
   }
   setAStep('cva-transcribe');

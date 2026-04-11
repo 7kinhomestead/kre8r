@@ -196,7 +196,7 @@
   <!-- PAGE HEADER -->
   <div class="page-header">
     <div class="page-title">COMPOS<em>Ω</em>R</div>
-    <div class="page-sub">AI film scoring. Claude identifies scenes → writes Suno prompts → generates music → one click to DaVinci.</div>
+    <div class="page-sub">AI film scoring. Kre8r identifies scenes → writes Suno prompts → generates music → one click to DaVinci.</div>
   </div>
 
   <!-- PROJECT SELECTOR -->
@@ -223,7 +223,7 @@
     <div class="prompt-mode-icon">🎵</div>
     <div class="prompt-mode-text">
       <div class="prompt-mode-title">PROMPT MODE ACTIVE</div>
-      <div class="prompt-mode-sub">Claude will write your Suno prompts. Copy each prompt and paste it at <a href="https://suno.com/create" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600">suno.com/create</a> to generate tracks, then upload the audio file here.</div>
+      <div class="prompt-mode-sub">Kre8r will write your Suno prompts. Copy each prompt and paste it at <a href="https://suno.com/create" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600">suno.com/create</a> to generate tracks, then upload the audio file here.</div>
     </div>
   </div>
 
@@ -926,7 +926,7 @@ function formatStageLog(d) {
   switch(d.stage) {
     case 'start':            return `Starting analysis for "${d.project}"`;
     case 'data_loaded':      return `Loaded ${d.sections} sections`;
-    case 'claude_start':     return 'Asking Claude to identify scenes…';
+    case 'claude_start': return 'Kre8r is working…';
     case 'analysis_done':    return `Found ${d.scenes} scenes`;
     case 'scene_start':      return `Scene: ${d.scene_label}`;
     case 'writing_prompt':   return `Writing variation ${d.generation_index}…`;

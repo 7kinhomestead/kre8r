@@ -708,7 +708,11 @@
       "Bash(timeout 25)",
       "Bash(curl -s http://localhost:3000/api/id8r/start -X POST -H \"Content-Type: application/json\" -d '{\"mode\":\"shape_it\"}')",
       "Bash(grep -n \"markProjectPublished\\\\|archiveProject\\\\|updateProjectStage\" src/routes/*.js)",
-      "Bash(grep -n \"valuat\\\\|commerciali\\\\|SaaS\\\\|ARR\\\\|revenue\\\\|operator\\\\|partner\\\\|Charlie\\\\|$\\\\|pricing\\\\|market\\\\|beta\" \"C:\\\\Users\\\\18054\\\\kre8r\\\\SESSION-LOG.md\")"
+      "Bash(grep -n \"valuat\\\\|commerciali\\\\|SaaS\\\\|ARR\\\\|revenue\\\\|operator\\\\|partner\\\\|Charlie\\\\|$\\\\|pricing\\\\|market\\\\|beta\" \"C:\\\\Users\\\\18054\\\\kre8r\\\\SESSION-LOG.md\")",
+      "Bash(git unstage:*)",
+      "Bash(git restore:*)",
+      "Bash(grep -v \"//.*claude\\\\|//.*anthropic\")",
+      "Bash(grep -v \"^\\\\s*//\")"
     ]
   }
 }
