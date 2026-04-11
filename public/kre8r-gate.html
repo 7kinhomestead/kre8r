@@ -181,32 +181,71 @@ body {
   margin-top: 8px;
 }
 
-/* ── WritΩr station ────────────────────────────── */
+/* ── WritΩr station label ──────────────────────── */
 #station-writr {
   position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+  top: 22px; left: 50%;
+  transform: translateX(-50%);
   text-align: center;
   pointer-events: none;
   z-index: 20;
   opacity: 0;
-  transition: opacity 1.6s ease;
+  transition: opacity 1.4s ease;
 }
-#writr-hero-line {
-  font-family: 'DM Sans', sans-serif;
-  font-size: clamp(10px, 1.05vw, 14px);
-  font-weight: 300;
-  font-style: italic;
-  color: rgba(62,207,178,0.9);
-  max-width: 420px;
-  margin: 18px auto 0;
-  line-height: 2.0;
-  letter-spacing: 0.02em;
+
+/* ── Research brief cards ──────────────────────── */
+#writr-cards {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: min(800px, 90vw);
+  pointer-events: none;
+  z-index: 20;
   opacity: 0;
-  transition: opacity 1.2s ease 0.8s;
+  transition: opacity 0.6s ease;
 }
-#station-writr.revealed #writr-hero-line {
-  opacity: 1;
+.writr-card {
+  background: rgba(8, 24, 28, 0.88);
+  border: 1px solid rgba(62, 207, 178, 0.22);
+  border-left: 3px solid rgba(62, 207, 178, 0.7);
+  border-radius: 6px;
+  padding: 20px 22px;
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.writr-card-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: rgba(62, 207, 178, 0.65);
+  margin-bottom: 12px;
+}
+.writr-card-body {
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(11px, 1.1vw, 14px);
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+}
+.writr-card-body em {
+  color: rgba(62, 207, 178, 0.9);
+  font-style: normal;
+}
+.writr-card-body ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.writr-card-body ul li::before {
+  content: '·  ';
+  color: rgba(62, 207, 178, 0.6);
 }
 
 /* ── Section hint ──────────────────────────────── */
@@ -259,11 +298,46 @@ body {
   <div class="station-sub">Ideation Engine</div>
 </div>
 
-<!-- WritΩr station -->
+<!-- WritΩr station label (top) -->
 <div id="station-writr">
   <div class="station-name">WRITR</div>
   <div class="station-sub">Script Engine</div>
-  <div id="writr-hero-line">"Built wrong the first time. Cost me two months and money I didn't have. That's the only reason this works now."</div>
+</div>
+
+<!-- Research brief cards — revealed after particles scatter -->
+<div id="writr-cards">
+  <div class="writr-card" id="wcard-0">
+    <div class="writr-card-label">Elevator Pitch</div>
+    <div class="writr-card-body">
+      KRE8R eliminates the layer between <em>having an idea</em> and that idea reaching your audience — without a team, without a studio, without the wait.
+    </div>
+  </div>
+  <div class="writr-card" id="wcard-1">
+    <div class="writr-card-label">The Hook</div>
+    <div class="writr-card-body">
+      A solo creator shouldn't need a production team.<br>
+      <em>You need a system.</em><br>
+      KRE8R is that system — built by a creator, for creators who can't afford to lose the thread.
+    </div>
+  </div>
+  <div class="writr-card" id="wcard-2">
+    <div class="writr-card-label">Talking Points</div>
+    <div class="writr-card-body">
+      <ul>
+        <li>Built in 3 weeks — zero prior coding experience</li>
+        <li>7 tools: Id8r → PipΩr → WritΩr → EditΩr → MailΩr</li>
+        <li>725K TikTok · 54K YouTube · 80K Lemon8</li>
+        <li>One pipeline. Zero context switches. No momentum lost.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="writr-card" id="wcard-3">
+    <div class="writr-card-label">The Result</div>
+    <div class="writr-card-body">
+      Raw idea → script → footage → edit → caption → email → published.<br><br>
+      <em>One session. Start to finish.</em>
+    </div>
+  </div>
 </div>
 
 <!-- Section hint -->
@@ -1002,8 +1076,8 @@ class BigBang {
 // hero row brightens → WRITR label reveals
 // ═══════════════════════════════════════════════
 
-const WR_COUNT = 3000;
-const WR_LINES = 8;
+const WR_COUNT   = 3000;
+const WR_LINES   = 8;
 const WR_PER_LINE = Math.floor(WR_COUNT / WR_LINES);
 
 class WritrStation {
@@ -1012,46 +1086,51 @@ class WritrStation {
     this.phaseTime = 0;
     this.triggered = false;
 
-    this.pos    = new Float32Array(WR_COUNT * 3);
-    this.vel    = new Float32Array(WR_COUNT * 3);
-    this.col    = new Float32Array(WR_COUNT * 3);
-    this.sizes  = new Float32Array(WR_COUNT);
-    this.target = new Float32Array(WR_COUNT * 3);
+    this.pos     = new Float32Array(WR_COUNT * 3);
+    this.vel     = new Float32Array(WR_COUNT * 3);
+    this.col     = new Float32Array(WR_COUNT * 3);
+    this.sizes   = new Float32Array(WR_COUNT);
+    this.target  = new Float32Array(WR_COUNT * 3);
     this.lineIdx = new Uint8Array(WR_COUNT);
+    // Track which half: true = teal/voice, false = amber/research
+    this.isTeal  = new Uint8Array(WR_COUNT);
 
-    // Assign particles to lines — interleaved teal/amber per line
     for (let i = 0; i < WR_COUNT; i++) {
-      const line = i % WR_LINES;
+      const line   = i % WR_LINES;
       this.lineIdx[i] = line;
+      const teal   = (line % 2 === 0); // even rows teal, odd rows amber
+      this.isTeal[i]  = teal ? 1 : 0;
 
-      const isTeal = (line % 2 === 0);  // even lines teal, odd lines amber
-
-      // Initial scatter — teal left, amber right, organic cloud spread
-      const xBias = isTeal ? -2.0 : 2.0;
-      this.pos[i*3]   = xBias + (Math.random() - 0.5) * 7;
-      this.pos[i*3+1] = (Math.random() - 0.5) * 5.5;
-      this.pos[i*3+2] = (Math.random() - 0.5) * 2.5;
-
-      this.vel[i*3]   = (Math.random() - 0.5) * 0.008;
-      this.vel[i*3+1] = (Math.random() - 0.5) * 0.008;
-      this.vel[i*3+2] = (Math.random() - 0.5) * 0.004;
-
-      // Color — teal for voice, warm amber-gold for story structure
-      if (isTeal) {
-        this.col[i*3]   = 0.08 + Math.random() * 0.15;
+      if (teal) {
+        // Teal — Jason's voice — starts left, drifts organically
+        this.pos[i*3]   = -2.5 + (Math.random() - 0.5) * 6.0;
+        this.pos[i*3+1] = (Math.random() - 0.5) * 5.5;
+        this.pos[i*3+2] = (Math.random() - 0.5) * 2.5;
+        this.vel[i*3]   = (Math.random() - 0.5) * 0.007;
+        this.vel[i*3+1] = (Math.random() - 0.5) * 0.007;
+        this.vel[i*3+2] = (Math.random() - 0.5) * 0.003;
+        this.col[i*3]   = 0.08 + Math.random() * 0.14;
         this.col[i*3+1] = 0.45 + Math.random() * 0.35;
         this.col[i*3+2] = 0.45 + Math.random() * 0.30;
       } else {
+        // Amber — research — starts far right, streams in purposefully
+        this.pos[i*3]   = 7.0 + Math.random() * 5.0;   // off-screen right
+        this.pos[i*3+1] = (Math.random() - 0.5) * 5.0;
+        this.pos[i*3+2] = (Math.random() - 0.5) * 2.0;
+        // Directed leftward stream — faster than teal drift
+        this.vel[i*3]   = -(0.025 + Math.random() * 0.04);
+        this.vel[i*3+1] = (Math.random() - 0.5) * 0.008;
+        this.vel[i*3+2] = (Math.random() - 0.5) * 0.003;
         this.col[i*3]   = 0.55 + Math.random() * 0.35;
         this.col[i*3+1] = 0.32 + Math.random() * 0.18;
-        this.col[i*3+2] = 0.04 + Math.random() * 0.08;
+        this.col[i*3+2] = 0.03 + Math.random() * 0.07;
       }
 
       this.sizes[i] = 0.010 + Math.random() * 0.022;
 
-      // Target: horizontal row positions — full width, evenly spaced rows
-      const lineY = -1.75 + line * 0.50;               // y: -1.75 to +1.75
-      const xFrac = (i % WR_PER_LINE) / WR_PER_LINE;   // 0..1 along row
+      // Row target positions
+      const lineY = -1.75 + line * 0.50;
+      const xFrac = (i % WR_PER_LINE) / WR_PER_LINE;
       this.target[i*3]   = -2.8 + xFrac * 5.6;
       this.target[i*3+1] = lineY;
       this.target[i*3+2] = 0.0;
@@ -1096,18 +1175,6 @@ class WritrStation {
     scene.add(this.points);
   }
 
-  // Camera arrived — wake up the cloud, auto-trigger after settling
-  activate() {
-    if (this.phase !== 'dormant') return;
-    this.phase     = 'scattered';
-    this.phaseTime = 0;
-    // Fade in gently
-    this._fadeIntensity(0, 0.65, 1200);
-    // Auto-trigger organizing after 1.8 seconds
-    setTimeout(() => this._organize(), 1800);
-  }
-
-  // Ramp material intensity smoothly via RAF
   _fadeIntensity(from, to, durationMs) {
     const start = performance.now();
     const step = () => {
@@ -1118,49 +1185,67 @@ class WritrStation {
     requestAnimationFrame(step);
   }
 
+  // Camera arrived — teal voice cloud fades in, amber research streams in
+  activate() {
+    if (this.phase !== 'dormant') return;
+    this.phase     = 'scattered';
+    this.phaseTime = 0;
+    this._fadeIntensity(0, 0.7, 1000);
+    // Organize after research has streamed in (~2.5s)
+    setTimeout(() => this._organize(), 2500);
+  }
+
   _organize() {
     if (this.triggered) return;
     this.triggered = true;
     this.phase     = 'organizing';
     this.phaseTime = 0;
-    // Give each particle an initial push toward its target
+    // Push each particle toward its row target
     for (let i = 0; i < WR_COUNT; i++) {
-      const dx = this.target[i*3]   - this.pos[i*3];
-      const dy = this.target[i*3+1] - this.pos[i*3+1];
-      const dz = this.target[i*3+2] - this.pos[i*3+2];
+      const dx  = this.target[i*3]   - this.pos[i*3];
+      const dy  = this.target[i*3+1] - this.pos[i*3+1];
+      const dz  = this.target[i*3+2] - this.pos[i*3+2];
       const len = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1;
-      const speed = 0.015 + Math.random() * 0.03;
-      this.vel[i*3]   = (dx/len) * speed;
-      this.vel[i*3+1] = (dy/len) * speed;
-      this.vel[i*3+2] = (dz/len) * speed;
+      const spd = 0.018 + Math.random() * 0.025;
+      this.vel[i*3]   = (dx/len) * spd;
+      this.vel[i*3+1] = (dy/len) * spd;
+      this.vel[i*3+2] = (dz/len) * spd;
     }
   }
 
-  _revealWritr() {
-    // Brighten the 4th line (hero row) to near-white; dim all others
-    const heroLine = 3;
+  // Scatter particles outward, then show cards
+  _clearAndReveal() {
+    this.phase     = 'clearing';
+    this.phaseTime = 0;
+    // Radial outward burst from row positions
     for (let i = 0; i < WR_COUNT; i++) {
-      if (this.lineIdx[i] === heroLine) {
-        this.col[i*3]   = 0.75 + Math.random() * 0.25;
-        this.col[i*3+1] = 0.88 + Math.random() * 0.12;
-        this.col[i*3+2] = 0.82 + Math.random() * 0.15;
-        this.sizes[i]  *= 1.9;
-      } else {
-        const dim = 0.3 + Math.random() * 0.15;
-        this.col[i*3]   *= dim;
-        this.col[i*3+1] *= dim;
-        this.col[i*3+2] *= dim;
-      }
+      const x   = this.pos[i*3]   || 0.001;
+      const y   = this.pos[i*3+1] || 0.001;
+      const len = Math.sqrt(x*x + y*y) || 1;
+      const spd = 0.06 + Math.random() * 0.12;
+      this.vel[i*3]   = (x/len) * spd;
+      this.vel[i*3+1] = (y/len) * spd;
+      this.vel[i*3+2] = (Math.random() - 0.5) * 0.06;
     }
-    this.geom.attributes.aColor.needsUpdate = true;
-    this.geom.attributes.aSize.needsUpdate  = true;
-    this._fadeIntensity(this.mat.uniforms.intensity.value, 1.8, 800);
+    // Fade particles out as they scatter
+    this._fadeIntensity(this.mat.uniforms.intensity.value, 0, 1100);
+    // Cards appear as particles clear
+    setTimeout(() => this._showCards(), 1200);
+  }
 
-    // Station label + hero quote
-    const el = document.getElementById('station-writr');
-    el.style.opacity = '1';
-    setTimeout(() => el.classList.add('revealed'), 100);
-    document.getElementById('section-hint').textContent = 'Script';
+  _showCards() {
+    // Station label at top
+    document.getElementById('station-writr').style.opacity = '1';
+    // Cards wrapper fades in
+    const wrapper = document.getElementById('writr-cards');
+    wrapper.style.opacity = '1';
+    // Stagger each card
+    for (let c = 0; c < 4; c++) {
+      setTimeout(() => {
+        document.getElementById(`wcard-${c}`).style.opacity = '1';
+      }, c * 220);
+    }
+    document.getElementById('section-hint').textContent  = 'Script Engine';
     document.getElementById('section-hint').style.opacity = '1';
   }
 
@@ -1169,14 +1254,22 @@ class WritrStation {
     this.phaseTime += dt;
 
     if (this.phase === 'scattered') {
-      // Two clouds drift — organic slow motion
       for (let i = 0; i < WR_COUNT; i++) {
-        // Subtle sine breathing — each cloud sways slightly
-        this.vel[i*3]   += Math.sin(time * 0.4 + i * 0.07) * 0.00015;
-        this.vel[i*3+1] += Math.cos(time * 0.3 + i * 0.05) * 0.00015;
-        this.vel[i*3]   *= 0.992;
-        this.vel[i*3+1] *= 0.992;
-        this.vel[i*3+2] *= 0.992;
+        if (this.isTeal[i]) {
+          // Teal: slow organic drift
+          this.vel[i*3]   += Math.sin(time * 0.35 + i * 0.07) * 0.00012;
+          this.vel[i*3+1] += Math.cos(time * 0.28 + i * 0.05) * 0.00012;
+          this.vel[i*3]   *= 0.991;
+          this.vel[i*3+1] *= 0.991;
+          this.vel[i*3+2] *= 0.991;
+        } else {
+          // Amber: stream in from right — decelerate as they enter the field
+          this.vel[i*3]   *= 0.978;  // slow left-ward stream
+          this.vel[i*3+1] *= 0.990;
+          this.vel[i*3+2] *= 0.990;
+          // Slight sine weave as they stream — data isn't perfectly straight
+          this.vel[i*3+1] += Math.sin(time * 1.8 + i * 0.12) * 0.00018;
+        }
         this.pos[i*3]   += this.vel[i*3];
         this.pos[i*3+1] += this.vel[i*3+1];
         this.pos[i*3+2] += this.vel[i*3+2];
@@ -1184,50 +1277,42 @@ class WritrStation {
       this.geom.attributes.position.needsUpdate = true;
 
     } else if (this.phase === 'organizing') {
-      // Spring toward target line positions — teal from left, amber from right
-      // They cross each other creating natural interweave
-      const progress = Math.min(this.phaseTime / 3.5, 1.0);
-      const springK  = 0.025 + progress * 0.04;  // spring strengthens over time
+      const progress = Math.min(this.phaseTime / 3.8, 1.0);
+      const springK  = 0.022 + progress * 0.045;
 
       for (let i = 0; i < WR_COUNT; i++) {
         const tx = this.target[i*3];
         const ty = this.target[i*3+1];
         const tz = this.target[i*3+2];
-
-        // Spring force toward target
         this.vel[i*3]   += (tx - this.pos[i*3])   * springK;
         this.vel[i*3+1] += (ty - this.pos[i*3+1]) * springK;
         this.vel[i*3+2] += (tz - this.pos[i*3+2]) * springK;
-
-        // Damping — increases to lock particles into position
-        const damp = 0.78 + progress * 0.15;
+        const damp = 0.76 + progress * 0.17;
         this.vel[i*3]   *= damp;
         this.vel[i*3+1] *= damp;
         this.vel[i*3+2] *= damp;
-
         this.pos[i*3]   += this.vel[i*3];
         this.pos[i*3+1] += this.vel[i*3+1];
         this.pos[i*3+2] += this.vel[i*3+2];
       }
       this.geom.attributes.position.needsUpdate = true;
 
-      if (this.phaseTime > 4.5) {
+      if (this.phaseTime > 5.0) {
         this.phase     = 'formed';
         this.phaseTime = 0;
-        this._fadeIntensity(this.mat.uniforms.intensity.value, 1.3, 600);
+        this._fadeIntensity(this.mat.uniforms.intensity.value, 1.2, 500);
       }
 
     } else if (this.phase === 'formed') {
-      // Settled — particles breathe gently along their rows
+      // Rows breathe gently for a moment so the user sees the structure
       for (let i = 0; i < WR_COUNT; i++) {
         const tx = this.target[i*3];
         const ty = this.target[i*3+1];
         const tz = this.target[i*3+2];
-        // Gentle row breathing
-        const breathe = Math.sin(time * 1.2 + this.lineIdx[i] * 0.8 + i * 0.02) * 0.0006;
-        this.vel[i*3]   += (tx - this.pos[i*3])   * 0.012 + breathe;
-        this.vel[i*3+1] += (ty - this.pos[i*3+1]) * 0.012;
-        this.vel[i*3+2] += (tz - this.pos[i*3+2]) * 0.010;
+        const breathe = Math.sin(time * 1.1 + this.lineIdx[i] * 0.9 + i * 0.02) * 0.0005;
+        this.vel[i*3]   += (tx - this.pos[i*3])   * 0.011 + breathe;
+        this.vel[i*3+1] += (ty - this.pos[i*3+1]) * 0.011;
+        this.vel[i*3+2] += (tz - this.pos[i*3+2]) * 0.009;
         this.vel[i*3]   *= 0.82;
         this.vel[i*3+1] *= 0.82;
         this.vel[i*3+2] *= 0.82;
@@ -1236,32 +1321,23 @@ class WritrStation {
         this.pos[i*3+2] += this.vel[i*3+2];
       }
       this.geom.attributes.position.needsUpdate = true;
+      // After 1.5s of rows, scatter and show cards
+      if (this.phaseTime > 1.5) this._clearAndReveal();
 
-      // After settling, do the hero reveal
-      if (this.phaseTime > 1.8) {
-        this.phase = 'reveal';
-        this._revealWritr();
-      }
-
-    } else if (this.phase === 'reveal') {
-      // Hold position with gentle breathing
+    } else if (this.phase === 'clearing') {
+      // Particles fly outward
+      const drag = Math.pow(0.958, dt * 60);
       for (let i = 0; i < WR_COUNT; i++) {
-        const tx = this.target[i*3];
-        const ty = this.target[i*3+1];
-        const tz = this.target[i*3+2];
-        const breathe = Math.sin(time * 1.0 + this.lineIdx[i] * 0.9 + i * 0.015) * 0.0004;
-        this.vel[i*3]   += (tx - this.pos[i*3])   * 0.010 + breathe;
-        this.vel[i*3+1] += (ty - this.pos[i*3+1]) * 0.010;
-        this.vel[i*3+2] += (tz - this.pos[i*3+2]) * 0.008;
-        this.vel[i*3]   *= 0.85;
-        this.vel[i*3+1] *= 0.85;
-        this.vel[i*3+2] *= 0.85;
+        this.vel[i*3]   *= drag;
+        this.vel[i*3+1] *= drag;
+        this.vel[i*3+2] *= drag;
         this.pos[i*3]   += this.vel[i*3];
         this.pos[i*3+1] += this.vel[i*3+1];
         this.pos[i*3+2] += this.vel[i*3+2];
       }
       this.geom.attributes.position.needsUpdate = true;
     }
+    // 'cards' phase — nothing to update, particles gone
   }
 }
 
