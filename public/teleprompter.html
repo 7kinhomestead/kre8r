@@ -2,8 +2,14 @@
 <html lang="en">
 <head>
 <link rel='icon' type='image/png' href='/images/kre8r-icon.png'>
+<link rel="manifest" href="/teleprompter-manifest.json">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prompter">
 <title>TeleprΩmpter — Kre8Ωr</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap">
@@ -46,6 +52,13 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   transition: all 0.15s; flex-shrink: 0;
 }
 .tp-back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+#tp-install-btn {
+  color: var(--teal); font-size: 13px; font-family: var(--font); font-weight: 600;
+  padding: 6px 12px; border: 1px solid var(--teal-dim); border-radius: 6px;
+  background: rgba(62,207,178,0.06); cursor: pointer; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+#tp-install-btn:active { background: rgba(62,207,178,0.18); }
 .tp-sel-title {
   font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 2px;
 }
@@ -784,6 +797,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     <div class="tp-sel-header">
       <a href="/" class="tp-back">← Dashboard</a>
       <h1 class="tp-sel-title">TELEPR<span>Ω</span>MPTER</h1>
+      <button id="tp-install-btn" style="display:none" onclick="installPWA()"
+        title="Install as app for offline use">📲 Install</button>
     </div>
 
     <div class="tp-tabs">
@@ -3369,6 +3384,63 @@ function resumeSessionNow() {
       if (max > 0) w.scrollTop = Math.round((recovery.scrollPct / 100) * max);
     }, 300);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PWA — Service Worker + Install Prompt
+// Only activates on teleprompter.kre8r.app (the field subdomain).
+// Caches the page for offline use. "📲 Install" button appears
+// when Chrome/Edge offers the Add to Home Screen prompt.
+// ═══════════════════════════════════════════════════════════════
+
+let _pwaInstallPrompt = null;
+
+// Register service worker (teleprompter subdomain only)
+if ('serviceWorker' in navigator &&
+    (location.hostname === 'teleprompter.kre8r.app' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('/teleprompter-sw.js')
+    .then(reg => {
+      // Check for SW update on every visit
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        if (w) w.addEventListener('statechange', () => {
+          if (w.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version cached — will activate on next page load
+            console.log('[PWA] Update cached — will apply on next open');
+          }
+        });
+      });
+    })
+    .catch(() => {}); // fail silently — offline still works via cached version
+}
+
+// Capture the "Add to Home Screen" prompt (Chrome/Edge Android)
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); // don't show browser's default mini-bar
+  _pwaInstallPrompt = e;
+  const btn = document.getElementById('tp-install-btn');
+  if (btn) btn.style.display = ''; // show our custom button
+});
+
+// If already installed as PWA, never show the install button
+window.addEventListener('appinstalled', () => {
+  _pwaInstallPrompt = null;
+  const btn = document.getElementById('tp-install-btn');
+  if (btn) btn.style.display = 'none';
+});
+
+function installPWA() {
+  if (!_pwaInstallPrompt) {
+    // iOS or already installed — show instructions
+    alert('To install:\n\nSafari: tap Share → Add to Home Screen\nChrome: tap ⋮ menu → Add to Home Screen');
+    return;
+  }
+  _pwaInstallPrompt.prompt();
+  _pwaInstallPrompt.userChoice.then(() => {
+    _pwaInstallPrompt = null;
+    const btn = document.getElementById('tp-install-btn');
+    if (btn) btn.style.display = 'none';
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
