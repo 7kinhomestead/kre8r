@@ -304,6 +304,89 @@ V1.0 launches as desktop app with creator-supplied API key (Model C).
 Proves the workflow. Builds testimonials. Low infrastructure overhead.
 Model A (SaaS bundles) follows when we have operator partner to run infrastructure.
 
+### The Unsolved Problem: License Enforcement for Locally-Run Software
+
+This is the one billing architecture question we have NOT resolved, and it must be
+answered before V1.0 can be a subscription product.
+
+**The problem:** Kre8Ωr is a desktop app that runs entirely locally (Express server +
+SQLite + local Python). Once a creator has the installer, there is nothing technically
+preventing them from running it indefinitely without paying. Model C (one-time purchase)
+sidesteps this — you pay once, you own it. But if we want recurring subscription revenue
+(Model A or B), we need a mechanism that ties continued access to continued payment.
+
+**The Adobe Creative Cloud approach (reference model):**
+Adobe ships a companion background service that runs at OS startup. On launch of any
+CC app, it pings Adobe's license server, checks that the subscription is active, and
+either unlocks the app or shows a "subscription lapsed" screen. The local app has no
+value without the license check passing. This is battle-tested but heavyweight: Adobe
+has a persistent cloud infrastructure, OAuth, and can absorb the engineering cost.
+
+**Four realistic approaches for Kre8Ωr:**
+
+**Approach 1 — API key IS the subscription (current best answer for V1.0)**
+The Anthropic API key the creator brings is the natural choke point. Kre8Ωr cannot
+do anything meaningful without calling Claude. If we ever move to a platform-supplied
+API key model (we pay Anthropic, we bill the creator), the key is only provisioned
+to active subscribers. Lapsed subscription → key revoked → app is a shell.
+Pros: zero additional infrastructure, works today, the chokepoint is real.
+Cons: only works if we're supplying the API key. In Model C (creator brings own key),
+there is no chokepoint — they can run the app forever on their own key.
+
+**Approach 2 — License key + periodic license server ping**
+On first install, creator enters a license key (purchased via Stripe/LemonSqueezy).
+Electron app pings a lightweight license server (a single Cloudflare Worker or
+Vercel function is sufficient — no full backend needed) on each launch and once per
+day. Server checks if the associated subscription is active. If not, app shows a
+grace period screen then locks after 7 days without a valid check-in.
+Pros: standard pattern, well-understood, libraries exist (electron-license, Keygen.sh).
+Cons: requires a license server to be running forever. Offline grace period must be
+generous enough not to frustrate creators with intermittent internet.
+Implementation: Keygen.sh handles the license server as a service (~$29/mo);
+electron-updater + a custom license check in Electron main.js before server starts.
+
+**Approach 3 — Time-limited builds with auto-update**
+App build has a hardcoded expiry date (e.g. 90 days). electron-updater checks for
+a new build on launch. Valid subscription → update server delivers new build → app
+continues. Lapsed subscription → update server returns 402 → app expires after
+grace period.
+Pros: no separate license infrastructure, updates and license checks are the same call.
+Cons: requires frequent builds (every 90 days minimum), update server must be
+subscription-aware, aggressive for creators on slow connections or offline workflows.
+
+**Approach 4 — Honour system for V1.0 beta, enforcement for V1.1**
+Beta users (the first 5–10) run on trust. They're in Jason's community, they know him.
+Enforce properly when moving to cold acquisition (V1.1 public launch).
+Pros: zero engineering cost for beta, lets us focus on product quality.
+Cons: establishes a pattern of unprotected builds in the wild (beta users could share).
+Acceptable if beta is small and personally known to Jason.
+
+**Recommended architecture for Kre8Ωr:**
+
+Phase 1 (beta / Model C one-time): no enforcement. Creator brings own API key.
+No license check needed — one-time purchase is already collected.
+
+Phase 2 (subscription / Model A-B): Approach 2 with Keygen.sh.
+- Stripe or LemonSqueezy handles payment + webhook
+- Webhook hits Keygen.sh API to activate/deactivate license on subscription events
+- Electron main.js: before starting Express server, check license with Keygen.sh
+- Valid → start server, load app normally
+- Invalid after grace period → show "Subscription lapsed" screen with reactivation link
+- Offline grace period: 7 days (generous for creators, tight enough to matter)
+
+Keygen.sh is the right choice over building a custom license server because:
+- It's a dedicated license management service, not a general backend
+- Handles offline validation via signed license files (no ping needed for offline grace)
+- $29/mo is trivial against subscription revenue
+- Can be swapped out for a self-hosted solution later if scale warrants it
+
+**Question for Opus:**
+Is Approach 2 (Keygen.sh + Stripe webhooks) genuinely the right architecture here,
+or is there a simpler/more robust pattern for a small operator running a desktop app
+subscription business? Specifically: how do well-run indie desktop app businesses
+(things like Sketch, Cleanshot, Proxyman) actually handle license enforcement, and
+is there a standard that has emerged in the Electron ecosystem that we should follow?
+
 ### The Moat Question
 
 **What's defensible:**
