@@ -2,6 +2,7 @@
   "name": "kre8r",
   "version": "1.0.0",
   "description": "Kre8Ωr — AI-native content production OS for 7 Kin Homestead",
+  "author": "Jason Rutland <jason@7kinhomestead.com>",
   "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
@@ -90,13 +91,6 @@
     "extraResources": [
       {
         "from": "build-resources/node-win",
-        "to":   "node",
-        "filter": ["**/*"]
-      }
-    ],
-    "extraResourcesMac": [
-      {
-        "from": "build-resources/node-mac",
         "to":   "node",
         "filter": ["**/*"]
       }
