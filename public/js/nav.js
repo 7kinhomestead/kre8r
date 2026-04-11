@@ -547,6 +547,7 @@
             ${escHtml(LAB_LINK.label)}
           </a>
           ${categoryHTML}
+          <a href="/doctor.html" class="kn-northr-link${getActivePage() === '/doctor.html' ? ' is-active' : ''}" aria-label="Kre8Ωr Doctor — system check" title="System preflight check" style="font-size:14px;opacity:.7">⚕</a>
           <button class="kn-tour-btn" onclick="window.kre8rTour && window.kre8rTour.start()" title="Pipeline tour — how Kre8r works" aria-label="Start pipeline tour">?</button>
           <button class="kn-tour-btn" onclick="kre8rSignOut()" title="Sign out" aria-label="Sign out" style="opacity:.55;font-size:14px" id="kn-signout-btn">⏏</button>
         </div>

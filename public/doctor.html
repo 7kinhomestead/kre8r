@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel='icon' type='image/png' href='/images/kre8r-icon.png'>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kre8Ωr Doctor</title>
+<style>
+  :root {
+    --bg:         #0d1117;
+    --surface:    #161b22;
+    --surface2:   #1c2128;
+    --border:     #30363d;
+    --teal:       #14b8a6;
+    --teal-dim:   rgba(20,184,166,.15);
+    --green:      #22c55e;
+    --red:        #ef4444;
+    --yellow:     #f59e0b;
+    --text:       #e6edf3;
+    --text-dim:   #8b949e;
+    --text-faint: #484f58;
+    --radius:     8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  h1 {
+    font-size: 22px;
+    letter-spacing: .04em;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+  .checks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color .15s;
+  }
+  .check-row.ok   { border-left: 3px solid var(--green); }
+  .check-row.fail { border-left: 3px solid var(--red); }
+  .check-row.warn { border-left: 3px solid var(--yellow); }
+  .check-icon {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .check-body { flex: 1; min-width: 0; }
+  .check-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    margin-bottom: 3px;
+  }
+  .check-detail {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .check-fix {
+    font-size: 12px;
+    color: var(--yellow);
+    margin-top: 4px;
+  }
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+  .summary.ok   { background: rgba(34,197,94,.1);  border: 1px solid rgba(34,197,94,.3);  color: var(--green); }
+  .summary.fail { background: rgba(239,68,68,.1);  border: 1px solid rgba(239,68,68,.3);  color: var(--red); }
+  .summary-icon { font-size: 18px; }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .btn {
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    cursor: pointer;
+    border: none;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--teal); color: #000; }
+  .btn-ghost   { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .skeleton {
+    height: 64px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: .5; }
+  }
+</style>
+</head>
+<body>
+
+<div id="kre8r-nav"></div>
+
+<div class="page">
+  <h1>Kre8Ωr Doctor</h1>
+  <div class="subtitle">System preflight check — run this if anything feels broken.</div>
+
+  <div id="summary" style="display:none"></div>
+  <div id="checks-container">
+    <div class="loading-state">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" onclick="runChecks()">↺ Re-run checks</button>
+    <button class="btn btn-ghost" onclick="copyDiagnostics()">Copy diagnostic info</button>
+  </div>
+</div>
+
+<script>
+const ICON = { ok: '✓', fail: '✗', warn: '⚠' };
+
+function state(check) {
+  if (check.id === 'davinci' && !check.ok) return 'warn';
+  if (check.id.startsWith('disk_') && !check.ok) return 'warn';
+  if (check.id === 'profile_warn') return 'warn';
+  return check.ok ? 'ok' : 'fail';
+}
+
+function renderChecks(data) {
+  const summaryEl = document.getElementById('summary');
+  const container = document.getElementById('checks-container');
+
+  summaryEl.style.display = 'flex';
+  summaryEl.className = `summary ${data.ok ? 'ok' : 'fail'}`;
+  summaryEl.innerHTML = `
+    <span class="summary-icon">${data.ok ? '✓' : '✗'}</span>
+    ${data.ok
+      ? 'All critical systems operational.'
+      : 'One or more issues need your attention.'}
+  `;
+
+  const rows = data.checks.map(c => {
+    const s = state(c);
+    return `
+      <div class="check-row ${s}">
+        <div class="check-icon">${ICON[s]}</div>
+        <div class="check-body">
+          <div class="check-label">${esc(c.label)}</div>
+          ${c.detail ? `<div class="check-detail">${esc(c.detail)}</div>` : ''}
+          ${!c.ok && c.fix ? `<div class="check-fix">→ ${esc(c.fix)}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `<div class="checks-list">${rows}</div>`;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function runChecks() {
+  document.getElementById('summary').style.display = 'none';
+  document.getElementById('checks-container').innerHTML = `
+    <div class="loading-state">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>`;
+  try {
+    const data = await fetch('/api/doctor').then(r => r.json());
+    renderChecks(data);
+  } catch (err) {
+    document.getElementById('checks-container').innerHTML =
+      `<div style="color:var(--red);padding:16px;">Could not reach server: ${esc(err.message)}</div>`;
+  }
+}
+
+async function copyDiagnostics() {
+  try {
+    const [health, diag] = await Promise.all([
+      fetch('/api/health').then(r => r.json()).catch(() => ({})),
+      fetch('/api/health/diagnostic').then(r => r.json()).catch(() => ({ lines: [] })),
+    ]);
+    const snap = [
+      `=== Kre8Ωr Diagnostic Snapshot ===`,
+      `Date:     ${new Date().toISOString()}`,
+      `Instance: ${health.instance || '—'}`,
+      `Version:  ${health.version || '—'}`,
+      `AI:       ${health.ai_configured ? 'connected' : 'not configured'}`,
+      `Log:      ${diag.log_file || '—'}`,
+      ``,
+      `--- Recent Log (last ${(diag.lines || []).length} lines) ---`,
+      ...(diag.lines || []),
+    ].join('\n');
+    await navigator.clipboard.writeText(snap);
+    alert('Diagnostic info copied to clipboard.');
+  } catch (err) {
+    alert('Could not copy: ' + err.message);
+  }
+}
+
+runChecks();
+</script>
+
+<script src="/js/nav.js" defer></script>
+<script>window.addEventListener('load', () => initNav())</script>
+</body>
+</html>

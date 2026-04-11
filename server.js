@@ -282,6 +282,146 @@ app.get('/api/health/diagnostic', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// KREΩR DOCTOR — preflight system check
+// GET /api/doctor
+// ─────────────────────────────────────────────
+app.get('/api/doctor', async (req, res) => {
+  const checks = [];
+
+  // Helper: push a check result
+  const check = (id, label, ok, detail = '', fix = '') =>
+    checks.push({ id, label, ok, detail, fix });
+
+  // 1. AI connection — key set + live ping
+  const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+  if (!hasApiKey) {
+    check('ai', 'AI connection', false,
+      'ANTHROPIC_API_KEY not set',
+      'Add ANTHROPIC_API_KEY to your .env file and restart.');
+  } else {
+    try {
+      const { default: fetch } = await import('node-fetch');
+      const r = await fetch('https://api.anthropic.com/v1/models', {
+        headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        signal: AbortSignal.timeout(8000),
+      });
+      check('ai', 'AI connection', r.ok,
+        r.ok ? 'Anthropic API reachable' : `API returned ${r.status}`,
+        r.ok ? '' : 'Check your API key and network connection.');
+    } catch (e) {
+      check('ai', 'AI connection', false, `Network error: ${e.message}`, 'Check internet connection.');
+    }
+  }
+
+  // 2. ffmpeg
+  const ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
+  try {
+    const { execSync } = require('child_process');
+    const out = execSync(`"${ffmpegBin}" -version 2>&1`, { timeout: 5000 }).toString();
+    const ver = (out.match(/ffmpeg version ([^\s]+)/) || [])[1] || 'found';
+    check('ffmpeg', 'ffmpeg', true, `v${ver}`);
+  } catch {
+    check('ffmpeg', 'ffmpeg', false,
+      'ffmpeg not found',
+      'ffmpeg-static should be bundled. Try reinstalling: npm install');
+  }
+
+  // 3. Python
+  try {
+    const { detectPython } = require('./src/vault/transcribe');
+    const bin = await detectPython();
+    check('python', 'Python', !!bin,
+      bin ? `Found: ${bin}` : 'Python not found',
+      bin ? '' : 'Install Python 3.8+ from python.org and add to PATH.');
+  } catch (e) {
+    check('python', 'Python', false, e.message, 'Install Python 3.8+');
+  }
+
+  // 4. Whisper
+  try {
+    const { checkWhisper } = require('./src/vault/transcribe');
+    const w = await checkWhisper();
+    check('whisper', 'Whisper (transcription)', w.whisper,
+      w.whisper ? `v${w.whisper_version || 'found'} at ${w.whisper_binary}` : 'openai-whisper not installed',
+      w.whisper ? '' : 'Open EditΩr and click "Install Whisper".');
+  } catch (e) {
+    check('whisper', 'Whisper (transcription)', false, e.message, 'Open EditΩr and click "Install Whisper".');
+  }
+
+  // 5. Creator profile
+  try {
+    const { loadProfile } = require('./src/utils/profile-validator');
+    const result = loadProfile();
+    check('profile', 'Creator profile', result.ok,
+      result.ok ? `${result.profile.instance} (schema v${result.profile.schema_version})` : result.errors.join('; '),
+      result.ok ? '' : 'Fix creator-profile.json or restore from backup.');
+    if (result.ok && result.warnings && result.warnings.length) {
+      for (const w of result.warnings) {
+        check('profile_warn', 'Profile warning', false, w, 'Check vault path in creator-profile.json.');
+      }
+    }
+  } catch (e) {
+    check('profile', 'Creator profile', false, e.message, 'creator-profile.json missing or unreadable.');
+  }
+
+  // 6. Vault intake path
+  try {
+    const { loadProfile } = require('./src/utils/profile-validator');
+    const result = loadProfile();
+    if (result.ok && result.profile.vault && result.profile.vault.intake_folder) {
+      const intakePath = result.profile.vault.intake_folder;
+      try {
+        fs.accessSync(intakePath, fs.constants.R_OK);
+        check('vault', 'Vault intake folder', true, intakePath);
+      } catch {
+        check('vault', 'Vault intake folder', false,
+          `Not accessible: ${intakePath}`,
+          'Connect external drive or update vault.intake_folder in creator-profile.json.');
+      }
+    }
+  } catch (_) { /* profile already checked above */ }
+
+  // 7. Disk space (C:\ and DB location)
+  try {
+    const { execSync } = require('child_process');
+    if (process.platform === 'win32') {
+      const out = execSync('wmic logicaldisk get caption,freespace,size /format:csv 2>nul', { timeout: 5000 }).toString();
+      const lines = out.trim().split('\n').slice(1).filter(Boolean);
+      for (const line of lines) {
+        const parts = line.split(',');
+        if (parts.length < 4) continue;
+        const drive = (parts[1] || '').trim();
+        const free  = parseInt(parts[2], 10);
+        const total = parseInt(parts[3], 10);
+        if (!drive || isNaN(free) || isNaN(total) || total === 0) continue;
+        const freeGB = (free / 1e9).toFixed(1);
+        const pct    = Math.round((free / total) * 100);
+        const low    = freeGB < 5;
+        check(`disk_${drive}`, `Disk ${drive}`, !low,
+          `${freeGB} GB free (${pct}%)`,
+          low ? `${drive} is low on space. Free up disk space.` : '');
+      }
+    }
+  } catch (_) { /* disk check is non-fatal */ }
+
+  // 8. DaVinci Resolve (Windows only, non-fatal)
+  if (process.platform === 'win32') {
+    try {
+      const { execSync } = require('child_process');
+      execSync('tasklist /FI "IMAGENAME eq Resolve.exe" 2>nul', { timeout: 3000 });
+      check('davinci', 'DaVinci Resolve', true, 'Process running');
+    } catch {
+      check('davinci', 'DaVinci Resolve', false,
+        'Not running (optional for non-video work)',
+        'Open DaVinci Resolve before using DaVinci integration features.');
+    }
+  }
+
+  const allOk = checks.every(c => c.ok || c.id === 'davinci' || c.id.startsWith('disk_'));
+  res.json({ ok: allOk, checks });
+});
+
+// ─────────────────────────────────────────────
 // SPA FALLBACK — serve index.html for all non-API routes
 // ─────────────────────────────────────────────
 app.get('/', (req, res) => {
@@ -376,6 +516,7 @@ async function start() {
     console.log(`  \x1b[2m  M3 Caption\u03a9r   →\x1b[0m http://localhost:${PORT}/m3-caption-generator.html`);
     console.log(`  \x1b[2m  M4 Mail\u03a9r      →\x1b[0m http://localhost:${PORT}/m4-email-generator.html`);
     console.log(`  \x1b[2m  Mail\u03a9r         →\x1b[0m http://localhost:${PORT}/mailor.html`);
+    console.log(`  \x1b[2m  Kre8\u03a9r Doctor  →\x1b[0m http://localhost:${PORT}/doctor.html`);
     console.log('');
     console.log('  \x1b[2mSINE RESISTENTIA\x1b[0m');
     console.log('');
