@@ -114,6 +114,14 @@ app.use('/auth', require('./src/routes/auth'));
 // ─────────────────────────────────────────────
 const TELEPROMPTER_HOST = 'teleprompter.kre8r.app';
 
+// Teleprompter subdomain root → go straight to the teleprompter page
+app.get('/', (req, res, next) => {
+  if (req.hostname === TELEPROMPTER_HOST) {
+    return res.redirect(301, '/teleprompter.html');
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   // Allow the teleprompter subdomain through without user login —
   // session codes protect individual sessions, scripts aren't secret

@@ -797,7 +797,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
     <div class="tp-sel-header">
       <a href="/" class="tp-back">← Dashboard</a>
       <h1 class="tp-sel-title">TELEPR<span>Ω</span>MPTER</h1>
-      <button id="tp-install-btn" style="display:none" onclick="installPWA()"
+      <button id="tp-install-btn" onclick="installPWA()"
         title="Install as app for offline use">📲 Install</button>
     </div>
 
@@ -3417,12 +3417,20 @@ if ('serviceWorker' in navigator &&
 // Capture the "Add to Home Screen" prompt (Chrome/Edge Android)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault(); // don't show browser's default mini-bar
-  _pwaInstallPrompt = e;
-  const btn = document.getElementById('tp-install-btn');
-  if (btn) btn.style.display = ''; // show our custom button
+  _pwaInstallPrompt = e; // use this when user taps Install
 });
 
-// If already installed as PWA, never show the install button
+// Hide install button if already running as installed PWA
+if (window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true) {
+  // Running installed — hide button
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('tp-install-btn');
+    if (btn) btn.style.display = 'none';
+  });
+}
+
 window.addEventListener('appinstalled', () => {
   _pwaInstallPrompt = null;
   const btn = document.getElementById('tp-install-btn');
@@ -3430,17 +3438,23 @@ window.addEventListener('appinstalled', () => {
 });
 
 function installPWA() {
-  if (!_pwaInstallPrompt) {
-    // iOS or already installed — show instructions
-    alert('To install:\n\nSafari: tap Share → Add to Home Screen\nChrome: tap ⋮ menu → Add to Home Screen');
+  if (_pwaInstallPrompt) {
+    // Chrome/Edge Android — use the native prompt
+    _pwaInstallPrompt.prompt();
+    _pwaInstallPrompt.userChoice.then(() => {
+      _pwaInstallPrompt = null;
+      const btn = document.getElementById('tp-install-btn');
+      if (btn) btn.style.display = 'none';
+    });
     return;
   }
-  _pwaInstallPrompt.prompt();
-  _pwaInstallPrompt.userChoice.then(() => {
-    _pwaInstallPrompt = null;
-    const btn = document.getElementById('tp-install-btn');
-    if (btn) btn.style.display = 'none';
-  });
+  // iOS Safari or Chrome (prompt not available yet) — manual instructions
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (isIOS) {
+    alert('Install on iPhone/iPad:\n\n1. Tap the Share button (□↑) at the bottom\n2. Scroll down → tap "Add to Home Screen"\n3. Tap Add');
+  } else {
+    alert('Install on Android:\n\n1. Tap the ⋮ menu (top right in Chrome)\n2. Tap "Add to Home Screen" or "Install app"\n3. Tap Install\n\nIf you don\'t see it, try opening this page in Chrome.');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
