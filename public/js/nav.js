@@ -766,3 +766,49 @@ function kre8rSignOut() {
     .then(function() { window.location.href = '/login'; })
     .catch(function() { window.location.href = '/login'; });
 }
+
+// ─────────────────────────────────────────────
+// SERVER RECONNECT OVERLAY
+// Called by Electron main.js on server crash/restart.
+// Also auto-polls in Electron mode to detect dropped server.
+// ─────────────────────────────────────────────
+(function () {
+  var overlay = null;
+
+  function ensureOverlay() {
+    if (overlay) return overlay;
+    var style = document.createElement('style');
+    style.textContent = [
+      '#kre8r-reconnect{position:fixed;inset:0;z-index:9999;',
+      'background:rgba(13,17,23,.92);display:flex;flex-direction:column;',
+      'align-items:center;justify-content:center;gap:16px;',
+      'font-family:monospace;color:#e6edf3;backdrop-filter:blur(8px);}',
+      '#kre8r-reconnect .rc-spinner{width:32px;height:32px;border:3px solid #30363d;',
+      'border-top-color:#14b8a6;border-radius:50%;animation:rcspin .7s linear infinite;}',
+      '#kre8r-reconnect .rc-title{font-size:16px;font-weight:600;letter-spacing:.04em;}',
+      '#kre8r-reconnect .rc-sub{font-size:12px;color:#8b949e;}',
+      '@keyframes rcspin{to{transform:rotate(360deg)}}'
+    ].join('');
+    document.head.appendChild(style);
+
+    overlay = document.createElement('div');
+    overlay.id = 'kre8r-reconnect';
+    overlay.style.display = 'none';
+    overlay.innerHTML = [
+      '<div class="rc-spinner"></div>',
+      '<div class="rc-title">Reconnecting…</div>',
+      '<div class="rc-sub">Kre8Ωr server restarted — back in a moment</div>'
+    ].join('');
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  window.__kre8rShowReconnect = function () {
+    ensureOverlay().style.display = 'flex';
+  };
+  window.__kre8rHideReconnect = function () {
+    if (overlay) overlay.style.display = 'none';
+    // Reload the current page so the UI reflects fresh server state
+    window.location.reload();
+  };
+})();

@@ -37,6 +37,9 @@ const crypto    = require('crypto');
 const db = require('../db');
 
 const WHISPER_MODEL  = process.env.WHISPER_MODEL  || 'medium';
+// Models dir — in Electron, set to userData/models so models are stored per-user
+// and survive app updates. Falls back to Whisper's default (~/.cache/whisper).
+const WHISPER_MODELS_DIR = process.env.WHISPER_MODELS_DIR || null;
 const TRANSCRIPTS_DIR = path.join(__dirname, '..', '..', 'database', 'transcripts');
 
 // Binary detection — cached after first successful probe
@@ -137,7 +140,7 @@ function ensureTranscriptsDir() {
 //                           --word_timestamps True --output_dir <dir>
 // ─────────────────────────────────────────────
 
-async function runWhisper(filePath, onProgress = null) {
+async function runWhisper(filePath, onProgress = null, options = {}) {
   const binary = await detectWhisperBinary();
   if (!binary) {
     throw new Error(
@@ -149,17 +152,22 @@ async function runWhisper(filePath, onProgress = null) {
   return new Promise((resolve, reject) => {
     ensureTranscriptsDir();
 
+    // Allow per-job model override via options.model, else use server default
+    const modelToUse = (options && options.model) || WHISPER_MODEL;
+
     const args = [
       '-m', 'whisper',
       filePath,
-      '--model',           WHISPER_MODEL,
+      '--model',           modelToUse,
       '--output_format',   'json',
       '--word_timestamps', 'True',
       '--output_dir',      TRANSCRIPTS_DIR,
-      '--verbose',         'False'
+      '--verbose',         'False',
+      // Store downloaded models in Electron userData/models/ if configured
+      ...(WHISPER_MODELS_DIR ? ['--download_root', WHISPER_MODELS_DIR] : []),
     ];
 
-    onProgress?.({ stage: 'whisper_start', model: WHISPER_MODEL, file: path.basename(filePath) });
+    onProgress?.({ stage: 'whisper_start', model: modelToUse, file: path.basename(filePath) });
 
     // Whisper calls ffmpeg internally to decode audio — inject the bin dir into PATH
     // so it can find it even when the system PATH doesn't include it.

@@ -142,6 +142,50 @@ router.post('/install-whisper', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// GET /api/cutor/models
+// Returns available Whisper models with sizes + current active model.
+// ─────────────────────────────────────────────
+
+const WHISPER_MODELS = [
+  { id: 'tiny',     label: 'Tiny',     size_mb: 75,   note: 'Fast, decent accuracy. Good for demos.' },
+  { id: 'tiny.en',  label: 'Tiny.en',  size_mb: 75,   note: 'English-only tiny. Slightly better accuracy than tiny.' },
+  { id: 'base',     label: 'Base',     size_mb: 142,  note: 'Good balance of speed and accuracy.' },
+  { id: 'base.en',  label: 'Base.en',  size_mb: 142,  note: 'English-only base.' },
+  { id: 'small',    label: 'Small',    size_mb: 466,  note: 'Better accuracy, slower.' },
+  { id: 'medium',   label: 'Medium',   size_mb: 1500, note: 'Recommended for outdoor/noisy production audio.' },
+  { id: 'medium.en',label: 'Medium.en',size_mb: 1500, note: 'English-only medium. Slightly faster.' },
+  { id: 'large',    label: 'Large',    size_mb: 2900, note: 'Best accuracy. Slow, needs good GPU.' },
+];
+
+router.get('/models', (req, res) => {
+  const current = process.env.WHISPER_MODEL || 'medium';
+  const modelsDir = process.env.WHISPER_MODELS_DIR || null;
+
+  // Check which models are already downloaded (present on disk)
+  const downloaded = new Set();
+  if (modelsDir) {
+    try {
+      const files = require('fs').readdirSync(modelsDir);
+      for (const f of files) {
+        const m = f.replace(/\.pt$/, '').replace(/^whisper-/, '');
+        downloaded.add(m);
+      }
+    } catch (_) {}
+  }
+
+  res.json({
+    current,
+    models_dir: modelsDir,
+    models: WHISPER_MODELS.map(m => ({
+      ...m,
+      active:     m.id === current,
+      downloaded: modelsDir ? downloaded.has(m.id) : null, // null = unknown (no models dir)
+    }))
+  });
+});
+
+// ─────────────────────────────────────────────
 // POST /api/cutor/start
 // Body: { project_id, footage_id? }
 // Returns: { job_id }

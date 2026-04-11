@@ -17,6 +17,18 @@ let splashWindow;
 let serverProcess;
 const PORT = 3000;
 
+// ─── Path resolution helper ───────────────────────────────────────────────────
+// Server-side files (server.js, src/, public/, database/) are unpacked from
+// the asar to allow child_process.spawn to read them as real files on disk.
+// In dev: files are at ../../<file> relative to this module.
+// In packaged: files are at process.resourcesPath/app.asar.unpacked/<file>.
+function getResourcePath(...parts) {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'app.asar.unpacked', ...parts);
+  }
+  return path.join(__dirname, '..', ...parts);
+}
+
 // ─── Register kre8r:// protocol for OAuth callbacks ──────────────────────────
 protocol.registerSchemesAsPrivileged([{
   scheme:     'kre8r',
@@ -26,7 +38,7 @@ protocol.registerSchemesAsPrivileged([{
 // ─── Start Express server as child process ───────────────────────────────────
 function startServer() {
   return new Promise((resolve) => {
-    const serverPath = path.join(__dirname, '../server.js');
+    const serverPath = getResourcePath('server.js');
 
     // ── First-run setup ───────────────────────────────────────────────────────
     const userData = app.getPath('userData');
@@ -35,7 +47,7 @@ function startServer() {
     // DB: only copy template on a genuine fresh install (no DB in AppData).
     // NEVER overwrite an existing DB — that would wipe all user data.
     const dbDest     = path.join(userData, 'kre8r.db');
-    const dbTemplate = path.join(__dirname, '../database/kre8r-template.db');
+    const dbTemplate = getResourcePath('database', 'kre8r-template.db');
     if (!fs.existsSync(dbDest)) {
       // Fresh install — seed from template if available, otherwise let
       // the server create the schema from scratch via migrations.
@@ -55,7 +67,7 @@ function startServer() {
     // (Dev exception: if running from the repo and no profile exists, copy it
     //  so local development still works without completing the wizard.)
     const profileDest = path.join(userData, 'creator-profile.json');
-    const profileSrc  = path.join(__dirname, '../creator-profile.json');
+    const profileSrc  = getResourcePath('creator-profile.json');
     const isDev       = !app.isPackaged;
     if (!fs.existsSync(profileDest) && isDev && fs.existsSync(profileSrc)) {
       fs.copyFileSync(profileSrc, profileDest);
@@ -75,9 +87,24 @@ function startServer() {
       try { ffprobePath = require('ffprobe-static').path;   } catch (_) {}
     }
 
-    // Spawn server with system Node.js (not Electron's bundled node)
-    // so native modules compiled for system Node (better-sqlite3, etc.) load correctly.
-    const nodeBin = process.platform === 'win32' ? 'node.exe' : 'node';
+    // Resolve Node.js binary — prefer the bundled sidecar (extraResources/node/)
+    // so users don't need Node installed. Falls back to system node in dev.
+    function getNodeBin() {
+      if (app.isPackaged) {
+        const isWin = process.platform === 'win32';
+        const sidecar = path.join(
+          process.resourcesPath,
+          'node',
+          isWin ? 'node.exe' : 'bin/node'
+        );
+        if (fs.existsSync(sidecar)) return sidecar;
+      }
+      // Dev mode or sidecar not present — use system node
+      return process.platform === 'win32' ? 'node.exe' : 'node';
+    }
+    const nodeBin = getNodeBin();
+    console.log('[Electron] Node binary:', nodeBin);
+
     serverProcess = spawn(nodeBin, [serverPath], {
       env: {
         ...process.env,
@@ -85,8 +112,11 @@ function startServer() {
         NODE_ENV:            'production',
         ELECTRON:            'true',
         // DB and creator profile live in the user's AppData / Application Support
-        DB_PATH:             path.join(app.getPath('userData'), 'kre8r.db'),
+        DB_PATH:              path.join(app.getPath('userData'), 'kre8r.db'),
         CREATOR_PROFILE_PATH: path.join(app.getPath('userData'), 'creator-profile.json'),
+        // Whisper models stored per-user so they survive app updates
+        WHISPER_MODELS_DIR:   path.join(app.getPath('userData'), 'models'),
+        LOG_DIR:              path.join(app.getPath('userData'), 'logs'),
         // Bundled binary paths — overrides system PATH for cross-platform reliability
         ...(ffmpegPath  && { FFMPEG_PATH:  ffmpegPath  }),
         ...(ffprobePath && { FFPROBE_PATH: ffprobePath }),
@@ -106,8 +136,24 @@ function startServer() {
       console.error('[Server Error]', data.toString().trim());
     });
 
-    serverProcess.on('exit', (code) => {
-      console.log('[Server] exited with code', code);
+    serverProcess.on('exit', (code, signal) => {
+      console.log(`[Server] exited — code ${code}, signal ${signal}`);
+      // Auto-restart on unexpected exit (not a deliberate app quit)
+      if (!app.isQuitting && code !== 0) {
+        console.warn('[Server] Unexpected exit — restarting in 2s…');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.executeJavaScript(
+            'if (window.__kre8rShowReconnect) window.__kre8rShowReconnect()'
+          ).catch(() => {});
+        }
+        setTimeout(() => startServer().then(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.executeJavaScript(
+              'if (window.__kre8rHideReconnect) window.__kre8rHideReconnect()'
+            ).catch(() => {});
+          }
+        }), 2000);
+      }
     });
 
     // Poll health endpoint every 300ms — resolves as soon as server responds
@@ -158,13 +204,13 @@ function createMainWindow() {
     minHeight: 768,
     // macOS: traffic lights inside the frame; Windows: default chrome
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    icon: path.join(__dirname, '../public/images/kre8r-icon.png'),
+    icon: getResourcePath('public', 'images', 'kre8r-icon.png'),
     show: false,
     webPreferences: {
       nodeIntegration:  false,
       contextIsolation: true,
       spellcheck:       true,
-      preload:          path.join(__dirname, 'preload.js'),
+      preload:          path.join(__dirname, 'preload.js'), // always inside asar — Electron can load this directly
     },
   });
 
@@ -242,7 +288,7 @@ app.whenReady().then(async () => {
   // Guards against AppData corruption and bad shutdowns.
   // Backup lives in the project /database folder (gitignored).
   const dbSrc    = path.join(app.getPath('userData'), 'kre8r.db');
-  const dbBackup = path.join(__dirname, '../database/kre8r-electron-backup.db');
+  const dbBackup = getResourcePath('database', 'kre8r-electron-backup.db');
   setInterval(() => {
     try {
       if (fs.existsSync(dbSrc)) {
@@ -266,6 +312,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  app.isQuitting = true;
   if (serverProcess) serverProcess.kill();
 });
 

@@ -12,7 +12,9 @@
     "dist:mac": "electron-builder --mac",
     "dist": "electron-builder --win --mac",
     "generate-icons": "node scripts/generate-icons.js",
-    "build-template-db": "node scripts/build-template-db.js"
+    "build-template-db": "node scripts/build-template-db.js",
+    "download-node": "node scripts/download-node-sidecar.js",
+    "download-node:all": "node scripts/download-node-sidecar.js --all"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -75,10 +77,31 @@
       "!.env",
       "!uploads/**"
     ],
-    "extraResources": [],
+    "asarUnpack": [
+      "server.js",
+      "src/**/*",
+      "database/**/*",
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/ffmpeg-static/**/*",
+      "node_modules/ffprobe-static/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build-resources/node-win",
+        "to":   "node",
+        "filter": ["**/*"]
+      }
+    ],
+    "extraResourcesMac": [
+      {
+        "from": "build-resources/node-mac",
+        "to":   "node",
+        "filter": ["**/*"]
+      }
+    ],
     "win": {
       "target": "nsis",
-      "icon": "public/images/kre8r-icon.png"
+      "icon": "public/images/kre8r-icon.ico"
     },
     "mac": {
       "target": "dmg",
