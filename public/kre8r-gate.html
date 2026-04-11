@@ -1157,6 +1157,7 @@ class BigBang {
   // Reveals Id8r station label + research brief cards inside the void
   _revealId8r() {
     if (this._id8rRevealed) return;
+    if (writrActivated) return; // user already scrolled past — don't fight WritΩr
     this._id8rRevealed = true;
 
     // Station label — small, sits above the cards
@@ -1408,17 +1409,8 @@ class WritrStation {
     if (this.phase !== 'dormant') return;
     this.phase     = 'scattered';
     this.phaseTime = 0;
-
-    // Fade out Id8r elements — we're moving on
-    const fadeOut = (id) => {
-      const el = document.getElementById(id);
-      if (el) el.style.opacity = '0';
-    };
-    fadeOut('station-id8r');
-    fadeOut('id8r-brief');
-    fadeOut('void-overlay');
-    fadeOut('section-hint');
-
+    // NOTE: Id8r fadeout happens in _showScript() with proper sequencing
+    // so it's guaranteed to complete before WritΩr content appears
     this._fadeIntensity(0, 0.7, 1000);
     // Organize after research has streamed in (~2.5s)
     setTimeout(() => this._organize(), 2500);
@@ -1463,38 +1455,50 @@ class WritrStation {
   }
 
   _showScript() {
-    // Station label
-    document.getElementById('station-writr').style.opacity = '1';
-    // Script wrapper fades in
-    document.getElementById('writr-script').style.opacity = '1';
-    // Beats stagger in — feels like being written
-    for (let b = 0; b < 3; b++) {
-      setTimeout(() => {
-        const beat = document.getElementById(`wbeat-${b}`);
-        if (beat) beat.style.opacity = '1';
-      }, 300 + b * 450);
-    }
-    // Pipeline map appears after all beats are visible
-    // Map wrapper first, then each tool cascades left-to-right
-    setTimeout(() => {
-      document.getElementById('pipeline-map').style.opacity = '1';
-      const TOOLS = 6, ARROWS = 5;
-      for (let t = 0; t < TOOLS; t++) {
-        setTimeout(() => {
-          const tool = document.getElementById(`ptool-${t}`);
-          if (tool) tool.style.opacity = '1';
-          if (t < ARROWS) {
-            setTimeout(() => {
-              const arr = document.getElementById(`parr-${t}`);
-              if (arr) arr.style.opacity = '1';
-            }, 120);
-          }
-        }, t * 200);
-      }
-    }, 300 + 3 * 450 + 600);  // after last beat + 600ms breathing room
+    // Step 1 — kill any Id8r content that might still be on screen
+    // This is the single authoritative fadeout point
+    ['station-id8r', 'id8r-brief', 'void-overlay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.opacity = '0';
+    });
 
-    document.getElementById('section-hint').textContent   = 'Script Engine';
-    document.getElementById('section-hint').style.opacity = '1';
+    // Step 2 — wait for Id8r transitions to complete, then show WritΩr
+    // id8r-brief has 0.8s transition, station-id8r has 1.4s — wait 1.2s
+    setTimeout(() => {
+      // Station label
+      document.getElementById('station-writr').style.opacity = '1';
+      // Script wrapper
+      document.getElementById('writr-script').style.opacity = '1';
+      // Beats stagger in — feels like being written
+      for (let b = 0; b < 3; b++) {
+        setTimeout(() => {
+          const beat = document.getElementById(`wbeat-${b}`);
+          if (beat) beat.style.opacity = '1';
+        }, 300 + b * 450);
+      }
+      // Pipeline map after all beats settle
+      setTimeout(() => {
+        document.getElementById('pipeline-map').style.opacity = '1';
+        for (let t = 0; t < 6; t++) {
+          setTimeout(() => {
+            const tool = document.getElementById(`ptool-${t}`);
+            if (tool) tool.style.opacity = '1';
+            if (t < 5) {
+              setTimeout(() => {
+                const arr = document.getElementById(`parr-${t}`);
+                if (arr) arr.style.opacity = '1';
+              }, 120);
+            }
+          }, t * 200);
+        }
+      }, 300 + 3 * 450 + 600);
+
+      // Section hint
+      const hint = document.getElementById('section-hint');
+      hint.textContent   = 'Script Engine';
+      hint.style.opacity = '1';
+
+    }, 1200); // Id8r fadeout window
   }
 
   update(dt, time) {
