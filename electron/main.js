@@ -6,10 +6,9 @@
 
 'use strict';
 
-const { app, BrowserWindow, shell, protocol, ipcMain, Menu, MenuItem, dialog } = require('electron');
+const { app, BrowserWindow, shell, protocol, ipcMain, Menu, MenuItem, dialog, utilityProcess } = require('electron');
 const path   = require('path');
 const fs     = require('fs');
-const { spawn } = require('child_process');
 const http   = require('http');
 
 let mainWindow;
@@ -87,25 +86,13 @@ function startServer() {
       try { ffprobePath = require('ffprobe-static').path;   } catch (_) {}
     }
 
-    // Resolve Node.js binary — prefer the bundled sidecar (extraResources/node/)
-    // so users don't need Node installed. Falls back to system node in dev.
-    function getNodeBin() {
-      if (app.isPackaged) {
-        const isWin = process.platform === 'win32';
-        const sidecar = path.join(
-          process.resourcesPath,
-          'node',
-          isWin ? 'node.exe' : 'bin/node'
-        );
-        if (fs.existsSync(sidecar)) return sidecar;
-      }
-      // Dev mode or sidecar not present — use system node
-      return process.platform === 'win32' ? 'node.exe' : 'node';
-    }
-    const nodeBin = getNodeBin();
-    console.log('[Electron] Node binary:', nodeBin);
-
-    serverProcess = spawn(nodeBin, [serverPath], {
+    // Use utilityProcess.fork() — runs server.js inside Electron's own Node context.
+    // This means better-sqlite3 (compiled for Electron) loads without ABI mismatch.
+    // No external Node.js binary needed on the user's machine.
+    console.log('[Electron] Starting server via utilityProcess.fork:', serverPath);
+    serverProcess = utilityProcess.fork(serverPath, [], {
+      stdio:       'pipe',
+      serviceName: 'kre8r-server',
       env: {
         ...process.env,
         PORT:                String(PORT),
@@ -121,7 +108,6 @@ function startServer() {
         ...(ffmpegPath  && { FFMPEG_PATH:  ffmpegPath  }),
         ...(ffprobePath && { FFPROBE_PATH: ffprobePath }),
       },
-      stdio: 'pipe',
     });
 
     serverProcess.stdout.on('data', (data) => {
@@ -136,8 +122,8 @@ function startServer() {
       console.error('[Server Error]', data.toString().trim());
     });
 
-    serverProcess.on('exit', (code, signal) => {
-      console.log(`[Server] exited — code ${code}, signal ${signal}`);
+    serverProcess.on('exit', (code) => {
+      console.log(`[Server] exited — code ${code}`);
       // Auto-restart on unexpected exit (not a deliberate app quit)
       if (!app.isQuitting && code !== 0) {
         console.warn('[Server] Unexpected exit — restarting in 2s…');
