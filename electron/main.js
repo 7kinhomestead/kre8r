@@ -37,7 +37,11 @@ protocol.registerSchemesAsPrivileged([{
 // ─── Start Express server as child process ───────────────────────────────────
 function startServer() {
   return new Promise((resolve) => {
-    const serverPath = getResourcePath('server.js');
+    // server.js lives inside the asar — app.getAppPath() resolves correctly in both
+    // dev (returns project root dir) and packaged (returns app.asar virtual path).
+    // Electron's asar interception handles all require() calls from inside the asar,
+    // including pure-JS deps. Native .node binaries are unpacked separately (asarUnpack).
+    const serverPath = path.join(app.getAppPath(), 'server.js');
 
     // ── First-run setup ───────────────────────────────────────────────────────
     const userData = app.getPath('userData');
@@ -118,8 +122,12 @@ function startServer() {
       }
     });
 
+    // Collect stderr for diagnostic dialog on startup failure
+    const stderrLines = [];
     serverProcess.stderr.on('data', (data) => {
-      console.error('[Server Error]', data.toString().trim());
+      const msg = data.toString().trim();
+      console.error('[Server Error]', msg);
+      stderrLines.push(msg);
     });
 
     serverProcess.on('exit', (code) => {
@@ -155,12 +163,19 @@ function startServer() {
       }).on('error', () => { /* server not ready yet, keep polling */ });
     }, 300);
 
-    // Safety timeout — open the window after 15s even if health check never responds
+    // Safety timeout — if server hasn't responded in 15s, show diagnostic dialog
     setTimeout(() => {
       if (!resolved) {
         resolved = true;
         clearInterval(poll);
-        console.warn('[Electron] Server ready timeout (15s) — loading window anyway');
+        console.warn('[Electron] Server ready timeout (15s)');
+        const errSummary = stderrLines.length
+          ? stderrLines.slice(-20).join('\n')
+          : '(no stderr output — server may have exited silently)';
+        dialog.showErrorBox(
+          'Kre8\u03A9r — Server failed to start',
+          `The backend server did not respond after 15 seconds.\n\nError output:\n\n${errSummary}\n\nThe app will open but will not function. Check that all dependencies are installed.`
+        );
         resolve();
       }
     }, 15000);
