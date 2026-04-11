@@ -1,3 +1,168 @@
+# Session 31 — Pre-Electron Audit + Mac Readiness + Whisper One-Click Install (2026-04-11)
+
+## Goal
+Pre-Electron audit (per OPUS recommendations), Mac compatibility plan, Whisper one-click install in EditΩr.
+
+## Pre-Electron Audit — Findings & Fixes
+
+### Already done (no changes needed)
+- `src/db.js` — `process.env.DB_PATH` with Electron comment already in place
+- `src/vault/intake.js` + `extractor.js` — `FFMPEG_PATH`/`FFPROBE_PATH` env var guards already wired
+- `src/vault/transcribe.js` — `python3` first in candidate list, runs whisper as `python3 -m whisper`, injects ffmpeg bin dir into child PATH
+- `electron/main.js` — `node` vs `node.exe` platform check, `CREATOR_PROFILE_PATH` already abstracted
+
+### Changes made
+
+**`package.json`** — Added `ffmpeg-static ^5.3.0` and `ffprobe-static ^3.1.0` to dependencies. Installed.
+
+**`server.js`** — Added ffmpeg bootstrap block (after Electron mode block, before error handlers):
+- Auto-sets `FFMPEG_PATH` from `require('ffmpeg-static')` if env var not already set
+- Auto-sets `FFPROBE_PATH` from `require('ffprobe-static').path` if env var not already set
+- Logs which binary is being used on startup
+- Priority: env var (Electron/Docker) → ffmpeg-static package → system PATH
+
+**`electron/main.js`** — Added ffmpeg-static path resolution before server spawn:
+- Resolves ffmpeg-static and ffprobe-static in Electron's process
+- Passes `FFMPEG_PATH` and `FFPROBE_PATH` explicitly into server spawn env
+- Falls back gracefully if packages not present
+
+**`src/routes/soul-buildr.js`** — Two fixes in voice analysis transcription:
+- Replaced `execSync('ffmpeg ...')` with `execSync('"${ffmpegBin}" ...')` using `process.env.FFMPEG_PATH || 'ffmpeg'`
+- Removed `--device cuda` from Whisper call — Whisper now auto-selects (CUDA on Windows/Linux with NVIDIA, Metal on Apple Silicon, CPU fallback)
+
+### Not bugs (confirmed)
+- `fix_analytr.js`, `build-runbook*.js` — hardcoded D:\ in content strings, one-off utility scripts not loaded by server
+- `creator-profile.json` vault paths (`D:\`) — soul config, correct. Mac users configure their own paths via setup wizard
+
+## Mac Compatibility Assessment
+
+**What works on Mac right now:**
+- ffmpeg/ffprobe — bundled binaries (ffmpeg-static) handle Mac ARM and Intel automatically ✅
+- better-sqlite3 — same install process, different platform binary ✅
+- Python detection — `python3` first in WHISPER_CANDIDATES (exactly what Mac has) ✅
+- Whisper CLI — `pip install openai-whisper` puts `whisper` binary on PATH on Mac ✅
+- DaVinci Resolve — runs on Mac, same Python API, port 9237, same scripts ✅
+- Electron dmg target — already in package.json build config ✅
+
+**What a Mac user needs to install once:**
+1. Python (often pre-installed; fallback: `brew install python3`)
+2. `pip3 install openai-whisper` — now handled by one-click install in EditΩr
+3. First transcription downloads Whisper model (~500 MB, automatic)
+
+## Whisper One-Click Install — EditΩr
+
+### New files/functions
+
+**`src/vault/transcribe.js`** — Added two exports:
+- `detectPython()` — probes WHISPER_CANDIDATES with `--version` to find Python independent of Whisper
+- `resetWhisperCache()` — resets `_whisperBinary` / `_whisperVersion` to null so next `checkWhisper()` re-probes
+
+**`src/routes/cutor.js`** — Added `POST /api/cutor/install-whisper`:
+- SSE endpoint — streams pip install output line by line
+- Detects Python first; if missing returns `{ type:'done', ok:false, error:'no_python' }`
+- Runs `{pythonBin} -m pip install --upgrade openai-whisper`
+- On success: calls `resetWhisperCache()` then sends `{ type:'done', ok:true }`
+- Streams: `{ type:'status' }` → `{ type:'line' }` → `{ type:'done' }`
+
+**`public/editor.html`** — Banner redesign (state machine):
+
+States:
+- `no_python` — Python not found. Shows brew/python.org link. Manual only.
+- `no_whisper` — Python found, Whisper missing. Shows "Install Whisper" button.
+- `installing` — SSE in progress. Shows scrolling log output. Actions hidden.
+- `success` — Install done. Green banner. Auto-dismisses after 3 seconds.
+- `error` — pip failed. Shows error text. "Try Again" button.
+
+Flow:
+1. `checkDeps()` fires on page load (non-blocking)
+2. Calls `/api/cutor/check` — if `whisper: true`, banner stays hidden
+3. If Whisper missing: shows `no_whisper` state with "Install Whisper" button (optimistic — server handles no-python case)
+4. Button click → `installWhisper()` → SSE stream → live pip output in scrolling log
+5. On success → `success` state → auto-dismiss 3s
+6. If server returns `no_python` → switches to `no_python` state with manual instructions
+7. "Check Again" button always available to re-probe after manual install
+
+CSS: `.dep-banner`, `.dep-icon`, `.dep-body`, `.dep-title`, `.dep-msg`, `.dep-cmd`, `.dep-progress`, `.dep-log`, `.dep-actions`, `.dep-recheck`, `.dep-dismiss`
+
+## Status at End of Session
+- Pre-Electron audit: complete ✅
+- Mac compatibility: complete ✅ (ffmpeg bundled, Python/Whisper cross-platform, paths abstracted)
+- Whisper one-click install: complete ✅
+- Server running clean, no startup errors
+- Next: Phase 2 Electron wrapper, then Opus review for V1.0
+
+---
+
+# Session 30 — KRE8R Website Prototype (2026-04-11)
+
+## What Was Built
+
+### public/kre8r-gate.html — Full Three.js cinematic website prototype
+
+Accessible at `/gate` or `/kre8r-gate` (public route, no auth).
+
+**Portal / wormhole scene:**
+- 5000-particle starfield with gaussian falloff GLSL shaders (no cartoon circles)
+- Teal energy ring portal: main ring (emissive 4.0), shimmer ring (animated plasma shader), corona, void disc
+- 400 orbital particles around ring
+- ACESFilmicToneMapping, EffectComposer: RenderPass → UnrealBloomPass → grain/aberration ShaderPass → OutputPass
+- Scroll-driven CatmullRomCurve3 camera path (14 control points, z=8 to z=-45)
+- Custom easeScroll: slow hero approach, portal acceleration, slow zone at Id8r, cruise to WritΩr
+- Custom cursor (8px teal dot + 32px ring), mouse-reactive portal tilt
+- Page height 900vh
+
+**Id8r station (z=-22):**
+- BigBang class — 2500 particles, 5 phases: nebula → compressing → singularity → exploding → formed
+- Nebula particles drift toward cursor position (mouseNDC × 4.0 / 2.8 → BigBang local space)
+- Trigger locks cursor position as singularity — everything collapses to wherever cursor rests
+- Explosion bursts from that exact point
+- Dark void overlay (CSS, above bloom so it's truly dark) grows from singularity screen position
+- ID8ΩR label + 4 research brief cards fade in: Elevator Pitch / The Hook / Talking Points / The Result
+- Cards represent actual Id8r output — the demo IS the metaphor
+
+**Transit (z=-22 → z=-45):**
+- PIP<span>Ω</span>R waypoint label fades in/out during transit (scrollT 0.806–0.870)
+- Scroll-driven opacity in animation loop, no CSS transition
+
+**WritΩr station (z=-45):**
+- WritrStation class — 3000 particles, 8 row targets
+- Teal particles (voice) start left, amber particles (research) start off-screen right and stream in
+- Two distinct clouds converge, interweave as they spring to row targets
+- Rows form, hold 1.5s, then scatter outward radially
+- _showScript() fires: kills Id8r elements → waits 1.2s → reveals WritΩr content
+- Station label (WRITΩR) + script header + 3 beat cards stagger in (450ms apart)
+- Pipeline map cascades: ID8ΩR → PIPΩR → WRITΩR → EDITΩR → COMPOSΩR → MAILΩR
+
+**Ω symbol:**
+- .omega CSS class: DM Sans weight 200, 0.82em, aligned to Bebas Neue caps height
+- Applied to all station labels and pipeline map tool names
+- KRE8R hero wordmark stays clean (no Ω — brand spec)
+
+**Race condition fix:**
+- writrScriptShown flag: set true only when WritΩr content actually hits screen
+- _revealId8r() guards on writrScriptShown (not writrActivated) — Id8r cards show correctly
+- _showScript() is single authoritative fadeout point for Id8r elements
+
+## server.js changes
+- /gate, /kre8r-gate, /kre8r-gate.html routes added (public, no auth)
+- Auth bypass middleware updated for gate paths
+
+## Pending on Website
+- DO deploy needed to see all changes (pull + pm2 restart)
+- Test full scroll journey end-to-end after deploy
+- Next stations to build: EditΩr, ComposΩr (or a CTA / launch page at the end)
+- Consider a scroll-to-top / loop after pipeline map
+
+## Session Notes
+- Jason is having a rough day — website work was a productive creative distraction
+- Password is still "NEWPASSWORD" — needs changing
+- Kajabi broadcast API call still pending
+- Email platform decision (MailerLite vs wait for Kajabi) still pending
+
+
+
+---
+
 # Kre8Ωr Session Log — 2026-04-10 (Session 29 — Solo Mode, Session Survival, Voice Commands)
 
 ## What Was Built — Session 29
@@ -680,162 +845,3 @@ Watch beat_mapped SSE events closely — first multi-person assembly.
 
 ---
 
-# Session 30 — KRE8R Website Prototype (2026-04-11)
-
-## What Was Built
-
-### public/kre8r-gate.html — Full Three.js cinematic website prototype
-
-Accessible at `/gate` or `/kre8r-gate` (public route, no auth).
-
-**Portal / wormhole scene:**
-- 5000-particle starfield with gaussian falloff GLSL shaders (no cartoon circles)
-- Teal energy ring portal: main ring (emissive 4.0), shimmer ring (animated plasma shader), corona, void disc
-- 400 orbital particles around ring
-- ACESFilmicToneMapping, EffectComposer: RenderPass → UnrealBloomPass → grain/aberration ShaderPass → OutputPass
-- Scroll-driven CatmullRomCurve3 camera path (14 control points, z=8 to z=-45)
-- Custom easeScroll: slow hero approach, portal acceleration, slow zone at Id8r, cruise to WritΩr
-- Custom cursor (8px teal dot + 32px ring), mouse-reactive portal tilt
-- Page height 900vh
-
-**Id8r station (z=-22):**
-- BigBang class — 2500 particles, 5 phases: nebula → compressing → singularity → exploding → formed
-- Nebula particles drift toward cursor position (mouseNDC × 4.0 / 2.8 → BigBang local space)
-- Trigger locks cursor position as singularity — everything collapses to wherever cursor rests
-- Explosion bursts from that exact point
-- Dark void overlay (CSS, above bloom so it's truly dark) grows from singularity screen position
-- ID8ΩR label + 4 research brief cards fade in: Elevator Pitch / The Hook / Talking Points / The Result
-- Cards represent actual Id8r output — the demo IS the metaphor
-
-**Transit (z=-22 → z=-45):**
-- PIP<span>Ω</span>R waypoint label fades in/out during transit (scrollT 0.806–0.870)
-- Scroll-driven opacity in animation loop, no CSS transition
-
-**WritΩr station (z=-45):**
-- WritrStation class — 3000 particles, 8 row targets
-- Teal particles (voice) start left, amber particles (research) start off-screen right and stream in
-- Two distinct clouds converge, interweave as they spring to row targets
-- Rows form, hold 1.5s, then scatter outward radially
-- _showScript() fires: kills Id8r elements → waits 1.2s → reveals WritΩr content
-- Station label (WRITΩR) + script header + 3 beat cards stagger in (450ms apart)
-- Pipeline map cascades: ID8ΩR → PIPΩR → WRITΩR → EDITΩR → COMPOSΩR → MAILΩR
-
-**Ω symbol:**
-- .omega CSS class: DM Sans weight 200, 0.82em, aligned to Bebas Neue caps height
-- Applied to all station labels and pipeline map tool names
-- KRE8R hero wordmark stays clean (no Ω — brand spec)
-
-**Race condition fix:**
-- writrScriptShown flag: set true only when WritΩr content actually hits screen
-- _revealId8r() guards on writrScriptShown (not writrActivated) — Id8r cards show correctly
-- _showScript() is single authoritative fadeout point for Id8r elements
-
-## server.js changes
-- /gate, /kre8r-gate, /kre8r-gate.html routes added (public, no auth)
-- Auth bypass middleware updated for gate paths
-
-## Pending on Website
-- DO deploy needed to see all changes (pull + pm2 restart)
-- Test full scroll journey end-to-end after deploy
-- Next stations to build: EditΩr, ComposΩr (or a CTA / launch page at the end)
-- Consider a scroll-to-top / loop after pipeline map
-
-## Session Notes
-- Jason is having a rough day — website work was a productive creative distraction
-- Password is still "NEWPASSWORD" — needs changing
-- Kajabi broadcast API call still pending
-- Email platform decision (MailerLite vs wait for Kajabi) still pending
-
-
-# Session 31 — Pre-Electron Audit + Mac Readiness + Whisper One-Click Install (2026-04-11)
-
-## Goal
-Pre-Electron audit (per OPUS recommendations), Mac compatibility plan, Whisper one-click install in EditΩr.
-
-## Pre-Electron Audit — Findings & Fixes
-
-### Already done (no changes needed)
-- `src/db.js` — `process.env.DB_PATH` with Electron comment already in place
-- `src/vault/intake.js` + `extractor.js` — `FFMPEG_PATH`/`FFPROBE_PATH` env var guards already wired
-- `src/vault/transcribe.js` — `python3` first in candidate list, runs whisper as `python3 -m whisper`, injects ffmpeg bin dir into child PATH
-- `electron/main.js` — `node` vs `node.exe` platform check, `CREATOR_PROFILE_PATH` already abstracted
-
-### Changes made
-
-**`package.json`** — Added `ffmpeg-static ^5.3.0` and `ffprobe-static ^3.1.0` to dependencies. Installed.
-
-**`server.js`** — Added ffmpeg bootstrap block (after Electron mode block, before error handlers):
-- Auto-sets `FFMPEG_PATH` from `require('ffmpeg-static')` if env var not already set
-- Auto-sets `FFPROBE_PATH` from `require('ffprobe-static').path` if env var not already set
-- Logs which binary is being used on startup
-- Priority: env var (Electron/Docker) → ffmpeg-static package → system PATH
-
-**`electron/main.js`** — Added ffmpeg-static path resolution before server spawn:
-- Resolves ffmpeg-static and ffprobe-static in Electron's process
-- Passes `FFMPEG_PATH` and `FFPROBE_PATH` explicitly into server spawn env
-- Falls back gracefully if packages not present
-
-**`src/routes/soul-buildr.js`** — Two fixes in voice analysis transcription:
-- Replaced `execSync('ffmpeg ...')` with `execSync('"${ffmpegBin}" ...')` using `process.env.FFMPEG_PATH || 'ffmpeg'`
-- Removed `--device cuda` from Whisper call — Whisper now auto-selects (CUDA on Windows/Linux with NVIDIA, Metal on Apple Silicon, CPU fallback)
-
-### Not bugs (confirmed)
-- `fix_analytr.js`, `build-runbook*.js` — hardcoded D:\ in content strings, one-off utility scripts not loaded by server
-- `creator-profile.json` vault paths (`D:\`) — soul config, correct. Mac users configure their own paths via setup wizard
-
-## Mac Compatibility Assessment
-
-**What works on Mac right now:**
-- ffmpeg/ffprobe — bundled binaries (ffmpeg-static) handle Mac ARM and Intel automatically ✅
-- better-sqlite3 — same install process, different platform binary ✅
-- Python detection — `python3` first in WHISPER_CANDIDATES (exactly what Mac has) ✅
-- Whisper CLI — `pip install openai-whisper` puts `whisper` binary on PATH on Mac ✅
-- DaVinci Resolve — runs on Mac, same Python API, port 9237, same scripts ✅
-- Electron dmg target — already in package.json build config ✅
-
-**What a Mac user needs to install once:**
-1. Python (often pre-installed; fallback: `brew install python3`)
-2. `pip3 install openai-whisper` — now handled by one-click install in EditΩr
-3. First transcription downloads Whisper model (~500 MB, automatic)
-
-## Whisper One-Click Install — EditΩr
-
-### New files/functions
-
-**`src/vault/transcribe.js`** — Added two exports:
-- `detectPython()` — probes WHISPER_CANDIDATES with `--version` to find Python independent of Whisper
-- `resetWhisperCache()` — resets `_whisperBinary` / `_whisperVersion` to null so next `checkWhisper()` re-probes
-
-**`src/routes/cutor.js`** — Added `POST /api/cutor/install-whisper`:
-- SSE endpoint — streams pip install output line by line
-- Detects Python first; if missing returns `{ type:'done', ok:false, error:'no_python' }`
-- Runs `{pythonBin} -m pip install --upgrade openai-whisper`
-- On success: calls `resetWhisperCache()` then sends `{ type:'done', ok:true }`
-- Streams: `{ type:'status' }` → `{ type:'line' }` → `{ type:'done' }`
-
-**`public/editor.html`** — Banner redesign (state machine):
-
-States:
-- `no_python` — Python not found. Shows brew/python.org link. Manual only.
-- `no_whisper` — Python found, Whisper missing. Shows "Install Whisper" button.
-- `installing` — SSE in progress. Shows scrolling log output. Actions hidden.
-- `success` — Install done. Green banner. Auto-dismisses after 3 seconds.
-- `error` — pip failed. Shows error text. "Try Again" button.
-
-Flow:
-1. `checkDeps()` fires on page load (non-blocking)
-2. Calls `/api/cutor/check` — if `whisper: true`, banner stays hidden
-3. If Whisper missing: shows `no_whisper` state with "Install Whisper" button (optimistic — server handles no-python case)
-4. Button click → `installWhisper()` → SSE stream → live pip output in scrolling log
-5. On success → `success` state → auto-dismiss 3s
-6. If server returns `no_python` → switches to `no_python` state with manual instructions
-7. "Check Again" button always available to re-probe after manual install
-
-CSS: `.dep-banner`, `.dep-icon`, `.dep-body`, `.dep-title`, `.dep-msg`, `.dep-cmd`, `.dep-progress`, `.dep-log`, `.dep-actions`, `.dep-recheck`, `.dep-dismiss`
-
-## Status at End of Session
-- Pre-Electron audit: complete ✅
-- Mac compatibility: complete ✅ (ffmpeg bundled, Python/Whisper cross-platform, paths abstracted)
-- Whisper one-click install: complete ✅
-- Server running clean, no startup errors
-- Next: Phase 2 Electron wrapper, then Opus review for V1.0

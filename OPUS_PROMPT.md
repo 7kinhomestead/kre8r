@@ -93,13 +93,13 @@ email marketing decision and technical debt register.*
 
 ---
 
-### Document 5: SESSION-LOG.md (Sessions 25–31 only)
+### Document 5: SESSION-LOG.md (Sessions 24–31)
 *The granular build log for the work since the original Opus review. Shows what
 was built, the architectural decisions made in the moment, and what was discovered.
-Start from the "Session 25" heading — everything before that is older context.*
+The file is newest-first. Paste the whole thing — it covers Sessions 24–31,
+which is everything since the original Opus review.*
 
-→ Paste contents of: SESSION-LOG.md, starting from the line:
-  "# Kre8Ωr Session Log — 2026-04-09 (Session 25 —"
+→ Paste the full contents of: SESSION-LOG.md
 
 ---
 
