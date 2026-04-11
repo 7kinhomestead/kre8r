@@ -297,6 +297,95 @@ body {
   font-weight: 400;
 }
 
+/* ── Omega character — Bebas Neue lacks it ─────── */
+/* Wraps the Ω in each tool name so it falls back cleanly */
+.omega {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 200;
+  font-size: 0.82em;
+  letter-spacing: 0;
+  vertical-align: 0.04em;
+}
+
+/* ── PipΩr waypoint — appears during transit ───── */
+#waypoint {
+  position: fixed;
+  bottom: 56px; left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  /* no CSS transition — driven frame-by-frame in animate loop */
+}
+#waypoint .wp-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(18px, 2.2vw, 28px);
+  letter-spacing: 0.35em;
+  color: rgba(255,255,255,0.7);
+}
+#waypoint .wp-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: rgba(62,207,178,0.45);
+  margin-top: 4px;
+}
+
+/* ── End-of-journey pipeline map ───────────────── */
+#pipeline-map {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(62,207,178,0.12);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.pipeline-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: rgba(62,207,178,0.45);
+  margin-bottom: 14px;
+}
+.pipeline-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+.pipe-tool {
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.pipe-tool-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(11px, 1.3vw, 16px);
+  letter-spacing: 0.25em;
+  color: rgba(255,255,255,0.75);
+}
+.pipe-tool-fn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(62,207,178,0.4);
+  margin-top: 3px;
+}
+.pipe-arrow {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: rgba(62,207,178,0.25);
+  padding: 0 8px;
+  align-self: flex-start;
+  margin-top: 2px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
 /* ── Section hint ──────────────────────────────── */
 #section-hint {
   position: fixed;
@@ -341,9 +430,15 @@ body {
 <!-- Dark void that grows from singularity (above bloom layer) -->
 <div id="void-overlay"></div>
 
+<!-- PipΩr waypoint — fades in during transit from Id8r → WritΩr -->
+<div id="waypoint">
+  <div class="wp-name">PIP<span class="omega">Ω</span>R</div>
+  <div class="wp-sub">Story Structure</div>
+</div>
+
 <!-- Id8r station label -->
 <div id="station-id8r">
-  <div class="station-name">ID8R</div>
+  <div class="station-name">ID8<span class="omega">Ω</span>R</div>
   <div class="station-sub">Ideation Engine</div>
 </div>
 
@@ -385,7 +480,7 @@ body {
 
 <!-- WritΩr station label -->
 <div id="station-writr">
-  <div class="station-name">WRITR</div>
+  <div class="station-name">WRIT<span class="omega">Ω</span>R</div>
   <div class="station-sub">Script Engine</div>
 </div>
 
@@ -412,6 +507,42 @@ body {
       One session. Idea to published.<br>
       Every tool connected. <em>Nothing lost.</em><br>
       That's the whole thing.
+    </div>
+  </div>
+
+  <!-- Full pipeline map — appears last, names every station -->
+  <div id="pipeline-map">
+    <div class="pipeline-label">The complete system</div>
+    <div class="pipeline-flow">
+      <div class="pipe-tool" id="ptool-0">
+        <div class="pipe-tool-name">ID8<span class="omega">Ω</span>R</div>
+        <div class="pipe-tool-fn">Ideation</div>
+      </div>
+      <div class="pipe-arrow" id="parr-0">→</div>
+      <div class="pipe-tool" id="ptool-1">
+        <div class="pipe-tool-name">PIP<span class="omega">Ω</span>R</div>
+        <div class="pipe-tool-fn">Structure</div>
+      </div>
+      <div class="pipe-arrow" id="parr-1">→</div>
+      <div class="pipe-tool" id="ptool-2">
+        <div class="pipe-tool-name">WRIT<span class="omega">Ω</span>R</div>
+        <div class="pipe-tool-fn">Script</div>
+      </div>
+      <div class="pipe-arrow" id="parr-2">→</div>
+      <div class="pipe-tool" id="ptool-3">
+        <div class="pipe-tool-name">EDIT<span class="omega">Ω</span>R</div>
+        <div class="pipe-tool-fn">Selection</div>
+      </div>
+      <div class="pipe-arrow" id="parr-3">→</div>
+      <div class="pipe-tool" id="ptool-4">
+        <div class="pipe-tool-name">COMPOS<span class="omega">Ω</span>R</div>
+        <div class="pipe-tool-fn">Sound</div>
+      </div>
+      <div class="pipe-arrow" id="parr-4">→</div>
+      <div class="pipe-tool" id="ptool-5">
+        <div class="pipe-tool-name">MAIL<span class="omega">Ω</span>R</div>
+        <div class="pipe-tool-fn">Broadcast</div>
+      </div>
     </div>
   </div>
 </div>
@@ -1324,13 +1455,32 @@ class WritrStation {
     document.getElementById('station-writr').style.opacity = '1';
     // Script wrapper fades in
     document.getElementById('writr-script').style.opacity = '1';
-    // Stagger each beat — feels like it's being written in real time
+    // Beats stagger in — feels like being written
     for (let b = 0; b < 3; b++) {
       setTimeout(() => {
         const beat = document.getElementById(`wbeat-${b}`);
         if (beat) beat.style.opacity = '1';
       }, 300 + b * 450);
     }
+    // Pipeline map appears after all beats are visible
+    // Map wrapper first, then each tool cascades left-to-right
+    setTimeout(() => {
+      document.getElementById('pipeline-map').style.opacity = '1';
+      const TOOLS = 6, ARROWS = 5;
+      for (let t = 0; t < TOOLS; t++) {
+        setTimeout(() => {
+          const tool = document.getElementById(`ptool-${t}`);
+          if (tool) tool.style.opacity = '1';
+          if (t < ARROWS) {
+            setTimeout(() => {
+              const arr = document.getElementById(`parr-${t}`);
+              if (arr) arr.style.opacity = '1';
+            }, 120);
+          }
+        }, t * 200);
+      }
+    }, 300 + 3 * 450 + 600);  // after last beat + 600ms breathing room
+
     document.getElementById('section-hint').textContent   = 'Script Engine';
     document.getElementById('section-hint').style.opacity = '1';
   }
@@ -1622,6 +1772,15 @@ function animate() {
   // ── Station updates ───────────────────────────
   bigBang.update(dt, t);
   writrStation.update(dt, t);
+
+  // ── PipΩr waypoint — fades through transit zone ─
+  {
+    const wEl = document.getElementById('waypoint');
+    // Visible scrollT 0.806→0.870, peak at 0.838
+    const wIn  = Math.min(Math.max((scrollT - 0.806) / 0.018, 0), 1);
+    const wOut = Math.min(Math.max((0.870  - scrollT) / 0.018, 0), 1);
+    wEl.style.opacity = (wIn * wOut).toFixed(3);
+  }
 
   // ── Hero text fade ────────────────────────────
   const heroOpacity = Math.max(0, 1 - scrollT * 5);
