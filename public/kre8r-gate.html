@@ -135,14 +135,13 @@ body {
 }
 
 /* ── Station label (Id8r) ──────────────────────── */
-/* top/left set by JS to match singularity screen position */
 #station-id8r {
   position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+  top: 20px; left: 50%;
+  transform: translateX(-50%);
   text-align: center;
   pointer-events: none;
-  z-index: 20;
+  z-index: 22;
   opacity: 0;
   transition: opacity 1.4s ease;
 }
@@ -166,19 +165,21 @@ body {
   transform: translate(-50%, -50%) scale(0);
   will-change: transform, opacity;
 }
-#station-id8r .station-name {
+/* shared station label styles */
+.station-name {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(48px, 7vw, 96px);
-  letter-spacing: 0.25em;
-  color: #fff;
+  font-size: clamp(22px, 2.5vw, 36px);
+  letter-spacing: 0.35em;
+  color: rgba(255,255,255,0.9);
+  line-height: 1;
 }
-#station-id8r .station-sub {
+.station-sub {
   font-family: 'DM Sans', sans-serif;
-  font-size: clamp(10px, 1vw, 13px);
+  font-size: 9px;
   letter-spacing: 0.5em;
   text-transform: uppercase;
-  color: rgba(62,207,178,0.6);
-  margin-top: 8px;
+  color: rgba(62,207,178,0.55);
+  margin-top: 5px;
 }
 
 /* ── WritΩr station label ──────────────────────── */
@@ -193,59 +194,107 @@ body {
   transition: opacity 1.4s ease;
 }
 
-/* ── Research brief cards ──────────────────────── */
-#writr-cards {
+/* ── Id8r research brief cards (Id8r output) ───── */
+#id8r-brief {
   position: fixed;
   top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -46%);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  width: min(800px, 90vw);
+  gap: 14px;
+  width: min(760px, 88vw);
   pointer-events: none;
   z-index: 20;
   opacity: 0;
   transition: opacity 0.6s ease;
 }
-.writr-card {
-  background: rgba(8, 24, 28, 0.88);
-  border: 1px solid rgba(62, 207, 178, 0.22);
-  border-left: 3px solid rgba(62, 207, 178, 0.7);
+.id8r-card {
+  background: rgba(6, 18, 22, 0.92);
+  border: 1px solid rgba(62, 207, 178, 0.20);
+  border-left: 3px solid rgba(62, 207, 178, 0.65);
   border-radius: 6px;
-  padding: 20px 22px;
-  backdrop-filter: blur(8px);
+  padding: 18px 20px;
+  backdrop-filter: blur(10px);
   opacity: 0;
   transition: opacity 0.5s ease;
 }
-.writr-card-label {
+.id8r-card-label {
   font-family: 'DM Sans', sans-serif;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.45em;
   text-transform: uppercase;
-  color: rgba(62, 207, 178, 0.65);
-  margin-bottom: 12px;
+  color: rgba(62, 207, 178, 0.6);
+  margin-bottom: 10px;
 }
-.writr-card-body {
+.id8r-card-body {
   font-family: 'DM Sans', sans-serif;
-  font-size: clamp(11px, 1.1vw, 14px);
+  font-size: clamp(10px, 1.05vw, 13px);
   font-weight: 300;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.80);
   line-height: 1.85;
   letter-spacing: 0.01em;
 }
-.writr-card-body em {
+.id8r-card-body em {
   color: rgba(62, 207, 178, 0.9);
   font-style: normal;
 }
-.writr-card-body ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.id8r-card-body ul {
+  list-style: none; padding: 0; margin: 0;
 }
-.writr-card-body ul li::before {
+.id8r-card-body ul li::before {
   content: '·  ';
-  color: rgba(62, 207, 178, 0.6);
+  color: rgba(62, 207, 178, 0.55);
+}
+
+/* ── WritΩr script output ──────────────────────── */
+#writr-script {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -46%);
+  width: min(620px, 88vw);
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.writr-script-header {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: rgba(62, 207, 178, 0.55);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(62, 207, 178, 0.15);
+}
+.writr-beat {
+  margin-bottom: 22px;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.writr-beat-marker {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: rgba(62, 207, 178, 0.5);
+  margin-bottom: 8px;
+}
+.writr-beat-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(12px, 1.3vw, 17px);
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.9;
+  letter-spacing: 0.01em;
+}
+.writr-beat-text em {
+  color: rgba(62, 207, 178, 0.95);
+  font-style: normal;
+  font-weight: 400;
 }
 
 /* ── Section hint ──────────────────────────────── */
@@ -292,37 +341,31 @@ body {
 <!-- Dark void that grows from singularity (above bloom layer) -->
 <div id="void-overlay"></div>
 
-<!-- Id8r station -->
+<!-- Id8r station label -->
 <div id="station-id8r">
   <div class="station-name">ID8R</div>
   <div class="station-sub">Ideation Engine</div>
 </div>
 
-<!-- WritΩr station label (top) -->
-<div id="station-writr">
-  <div class="station-name">WRITR</div>
-  <div class="station-sub">Script Engine</div>
-</div>
-
-<!-- Research brief cards — revealed after particles scatter -->
-<div id="writr-cards">
-  <div class="writr-card" id="wcard-0">
-    <div class="writr-card-label">Elevator Pitch</div>
-    <div class="writr-card-body">
+<!-- Id8r research brief — revealed inside void after Big Bang -->
+<div id="id8r-brief">
+  <div class="id8r-card" id="icard-0">
+    <div class="id8r-card-label">Elevator Pitch</div>
+    <div class="id8r-card-body">
       KRE8R eliminates the layer between <em>having an idea</em> and that idea reaching your audience — without a team, without a studio, without the wait.
     </div>
   </div>
-  <div class="writr-card" id="wcard-1">
-    <div class="writr-card-label">The Hook</div>
-    <div class="writr-card-body">
+  <div class="id8r-card" id="icard-1">
+    <div class="id8r-card-label">The Hook</div>
+    <div class="id8r-card-body">
       A solo creator shouldn't need a production team.<br>
       <em>You need a system.</em><br>
-      KRE8R is that system — built by a creator, for creators who can't afford to lose the thread.
+      KRE8R is that system — built by a creator who couldn't afford to lose the thread.
     </div>
   </div>
-  <div class="writr-card" id="wcard-2">
-    <div class="writr-card-label">Talking Points</div>
-    <div class="writr-card-body">
+  <div class="id8r-card" id="icard-2">
+    <div class="id8r-card-label">Talking Points</div>
+    <div class="id8r-card-body">
       <ul>
         <li>Built in 3 weeks — zero prior coding experience</li>
         <li>7 tools: Id8r → PipΩr → WritΩr → EditΩr → MailΩr</li>
@@ -331,11 +374,44 @@ body {
       </ul>
     </div>
   </div>
-  <div class="writr-card" id="wcard-3">
-    <div class="writr-card-label">The Result</div>
-    <div class="writr-card-body">
+  <div class="id8r-card" id="icard-3">
+    <div class="id8r-card-label">The Result</div>
+    <div class="id8r-card-body">
       Raw idea → script → footage → edit → caption → email → published.<br><br>
       <em>One session. Start to finish.</em>
+    </div>
+  </div>
+</div>
+
+<!-- WritΩr station label -->
+<div id="station-writr">
+  <div class="station-name">WRITR</div>
+  <div class="station-sub">Script Engine</div>
+</div>
+
+<!-- WritΩr script output — revealed after particles scatter -->
+<div id="writr-script">
+  <div class="writr-script-header">Project: KRE8R — The System &nbsp;·&nbsp; WritΩr Output &nbsp;·&nbsp; Jason's Voice</div>
+  <div class="writr-beat" id="wbeat-0">
+    <div class="writr-beat-marker">Beat 1 — Hook</div>
+    <div class="writr-beat-text">
+      Look, I'm gonna tell you something nobody building content tools wants to admit.<br>
+      <em>The tools aren't the problem. The gap between them is.</em>
+    </div>
+  </div>
+  <div class="writr-beat" id="wbeat-1">
+    <div class="writr-beat-marker">Beat 2 — The Turn</div>
+    <div class="writr-beat-text">
+      I built this whole thing in three weeks. No coding background.<br>
+      Because I was tired of losing the thread somewhere between the idea and the upload.
+    </div>
+  </div>
+  <div class="writr-beat" id="wbeat-2">
+    <div class="writr-beat-marker">Beat 3 — The Pitch</div>
+    <div class="writr-beat-text">
+      One session. Idea to published.<br>
+      Every tool connected. <em>Nothing lost.</em><br>
+      That's the whole thing.
     </div>
   </div>
 </div>
@@ -946,17 +1022,27 @@ class BigBang {
     el.style.transform = `translate(-50%, -50%) scale(${next})`;
   }
 
-  // Positions ID8R label at singularity screen coords and reveals it
+  // Reveals Id8r station label + research brief cards inside the void
   _revealId8r() {
     if (this._id8rRevealed) return;
     this._id8rRevealed = true;
-    const el     = document.getElementById('station-id8r');
-    el.style.left    = this._voidScreenX + 'px';
-    el.style.top     = this._voidScreenY + 'px';
-    el.style.opacity = '1';
+
+    // Station label — small, sits above the cards
+    document.getElementById('station-id8r').style.opacity = '1';
+
+    // Research brief — Id8r's actual output — fades in centered on screen
+    const brief = document.getElementById('id8r-brief');
+    brief.style.opacity = '1';
+    for (let c = 0; c < 4; c++) {
+      setTimeout(() => {
+        const card = document.getElementById(`icard-${c}`);
+        if (card) card.style.opacity = '1';
+      }, c * 230);
+    }
+
     const hint = document.getElementById('section-hint');
-    hint.style.opacity  = '1';
-    hint.textContent    = 'Ideation';
+    hint.style.opacity = '1';
+    hint.textContent   = 'Ideation';
   }
 
   update(dt, time) {
@@ -1229,23 +1315,23 @@ class WritrStation {
     }
     // Fade particles out as they scatter
     this._fadeIntensity(this.mat.uniforms.intensity.value, 0, 1100);
-    // Cards appear as particles clear
-    setTimeout(() => this._showCards(), 1200);
+    // Script appears as particles clear
+    setTimeout(() => this._showScript(), 1200);
   }
 
-  _showCards() {
-    // Station label at top
+  _showScript() {
+    // Station label
     document.getElementById('station-writr').style.opacity = '1';
-    // Cards wrapper fades in
-    const wrapper = document.getElementById('writr-cards');
-    wrapper.style.opacity = '1';
-    // Stagger each card
-    for (let c = 0; c < 4; c++) {
+    // Script wrapper fades in
+    document.getElementById('writr-script').style.opacity = '1';
+    // Stagger each beat — feels like it's being written in real time
+    for (let b = 0; b < 3; b++) {
       setTimeout(() => {
-        document.getElementById(`wcard-${c}`).style.opacity = '1';
-      }, c * 220);
+        const beat = document.getElementById(`wbeat-${b}`);
+        if (beat) beat.style.opacity = '1';
+      }, 300 + b * 450);
     }
-    document.getElementById('section-hint').textContent  = 'Script Engine';
+    document.getElementById('section-hint').textContent   = 'Script Engine';
     document.getElementById('section-hint').style.opacity = '1';
   }
 
