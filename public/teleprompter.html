@@ -704,6 +704,25 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-vd-conn-dot.ok { background: var(--teal); }
 
 /* ═══════════════════════════════════════
+   VOICE COMMAND TOAST + BUTTON
+═══════════════════════════════════════ */
+#tp-cmd-toast {
+  position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+  z-index: 80; padding: 10px 22px;
+  background: rgba(0,0,0,0.82); border: 1px solid rgba(62,207,178,0.5);
+  border-radius: 24px; font-size: 16px; font-weight: 600; color: var(--teal);
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.2s; white-space: nowrap;
+}
+#tp-cmd-toast.visible { opacity: 1; }
+#tp-vcmd-btn.listening {
+  color: var(--teal); border-color: var(--teal);
+  background: rgba(62,207,178,0.12);
+  animation: tp-pulse 1s ease-in-out infinite;
+}
+#tp-vcmd-btn.listening::before { content: '🎙 '; }
+
+/* ═══════════════════════════════════════
    RECOVERY OVERLAY
 ═══════════════════════════════════════ */
 #tp-recovery-overlay {
@@ -852,6 +871,9 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   <!-- Operator-paused indicator (shown when control device has locked out voice) -->
   <div id="tp-operator-badge">⏸ Operator paused</div>
 
+  <!-- Voice command toast — brief feedback after spoken command -->
+  <div id="tp-cmd-toast"></div>
+
   <div id="tp-scroll-wrap">
     <div id="tp-text-wrap">
       <div id="tp-spacer-top"></div>
@@ -884,6 +906,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
       <input type="range" id="tp-sense-slider" min="1" max="10" step="1" value="5"
              title="Mic sensitivity: low = starts scrolling on whisper, high = needs loud voice">
     </div>
+
+    <button class="tp-ctrl-btn" id="tp-vcmd-btn" title="Hold to speak a command">🎙 Cmd</button>
 
     <button class="tp-ctrl-btn" onclick="backToSelector()">📋 Scripts</button>
 
@@ -1822,6 +1846,17 @@ function attachDisplayEvents() {
 
   display.addEventListener('mousemove',  showCtrl);
   display.addEventListener('touchstart', showCtrl, { passive: true });
+
+  // Voice command button — hold to speak
+  const vcmdBtn = document.getElementById('tp-vcmd-btn');
+  if (vcmdBtn) {
+    vcmdBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); vcmdBtn.setPointerCapture(e.pointerId);
+      startVoiceCmd();
+    });
+    vcmdBtn.addEventListener('pointerup',   stopVoiceCmd);
+    vcmdBtn.addEventListener('pointerleave', stopVoiceCmd);
+  }
 
   wrap.addEventListener('click', function (e) {
     if (e.target.closest('#tp-controls')) return;
@@ -3022,6 +3057,190 @@ function vdUpdateBeatPill(beatN) {
 function showOperatorBadge(visible) {
   const el = document.getElementById('tp-operator-badge');
   if (el) el.classList.toggle('visible', visible);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VOICE COMMANDS — hold the 🎙 button, speak, release
+// Uses Web Speech API SpeechRecognition (Chrome/Edge/Safari iOS)
+// Commands: pause, play, restart, beat N, back N, faster, slower
+// ═══════════════════════════════════════════════════════════════
+
+let _vcmdRecog      = null;   // SpeechRecognition instance
+let _vcmdActive     = false;  // true while button is held
+let _vcmdSupported  = !!( window.SpeechRecognition || window.webkitSpeechRecognition);
+let _cmdToastTimer  = null;
+
+function initVoiceCmd() {
+  if (_vcmdRecog) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  _vcmdRecog = new SR();
+  _vcmdRecog.lang       = 'en-US';
+  _vcmdRecog.continuous = false;
+  _vcmdRecog.interimResults = false;
+  _vcmdRecog.maxAlternatives = 3;
+
+  _vcmdRecog.onresult = (e) => {
+    // Try each alternative until one matches a command
+    for (let i = 0; i < e.results[0].length; i++) {
+      const t = e.results[0][i].transcript;
+      if (processVoiceCmd(t)) return;
+    }
+    // No match on any alternative — show the raw transcript
+    showCmdToast(`❓ "${e.results[0][0].transcript.slice(0, 28)}"`);
+  };
+
+  _vcmdRecog.onnomatch = () => showCmdToast('🎙 Didn\'t catch that');
+  _vcmdRecog.onerror   = (e) => {
+    if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      showCmdToast(`⚠ ${e.error}`);
+    }
+    _stopVcmd();
+  };
+  _vcmdRecog.onend = _stopVcmd;
+}
+
+function _stopVcmd() {
+  _vcmdActive = false;
+  const btn = document.getElementById('tp-vcmd-btn');
+  if (btn) btn.classList.remove('listening');
+}
+
+function startVoiceCmd() {
+  if (!_vcmdSupported) {
+    showCmdToast('⚠ Voice commands need Chrome/Edge/Safari');
+    return;
+  }
+  if (_vcmdActive) return;
+  initVoiceCmd();
+  if (!_vcmdRecog) return;
+  _vcmdActive = true;
+  const btn = document.getElementById('tp-vcmd-btn');
+  if (btn) btn.classList.add('listening');
+  showCmdToast('🎙 Listening…');
+  try { _vcmdRecog.start(); } catch (_) { _stopVcmd(); }
+}
+
+function stopVoiceCmd() {
+  if (!_vcmdRecog || !_vcmdActive) return;
+  try { _vcmdRecog.stop(); } catch (_) {}
+  // _stopVcmd() fires via onend
+}
+
+/** Show a brief toast on the display screen. Auto-hides after 2.5s. */
+function showCmdToast(msg) {
+  const el = document.getElementById('tp-cmd-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(_cmdToastTimer);
+  _cmdToastTimer = setTimeout(() => el.classList.remove('visible'), 2500);
+}
+
+/** Convert a word or digit string to a number. "three" → 3, "10" → 10. */
+function wordToNum(word) {
+  const map = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10 };
+  return parseInt(word, 10) || map[word.toLowerCase()] || 0;
+}
+
+/** Parse transcript and execute a command. Returns true if handled. */
+function processVoiceCmd(transcript) {
+  const t = transcript.toLowerCase().trim();
+
+  // ── Pause / stop ──────────────────────────────────────────────
+  if (/\b(pause|stop|hold|freeze|wait)\b/.test(t)) {
+    isPlaying = false; lastTs = null; updatePPBtn(); sendDisplayState();
+    showCmdToast('⏸ Paused'); return true;
+  }
+
+  // ── Play / go ─────────────────────────────────────────────────
+  if (/\b(play|go|start|resume|continue|scroll|roll)\b/.test(t) && !/beat/.test(t) && !/back/.test(t)) {
+    isPlaying = true; lastTs = null; updatePPBtn(); sendDisplayState();
+    showCmdToast('▶ Playing'); return true;
+  }
+
+  // ── Restart entire script ─────────────────────────────────────
+  if (/\b(restart|start over|top|beginning|from the top)\b/.test(t) && !/beat/.test(t)) {
+    document.getElementById('tp-scroll-wrap').scrollTop = 0;
+    isPlaying = false; lastTs = null; updatePPBtn(); sendDisplayState();
+    showCmdToast('↺ Restart'); return true;
+  }
+
+  // ── Next beat ─────────────────────────────────────────────────
+  if (/\bnext\s*beat\b/.test(t)) {
+    const focusY     = window.innerHeight * 0.5;
+    const beatMarkers = [...document.querySelectorAll('.tp-beat-marker')];
+    const next = beatMarkers.find(b => b.getBoundingClientRect().top > focusY + 100);
+    if (next) {
+      const w = document.getElementById('tp-scroll-wrap');
+      w.scrollTop += next.getBoundingClientRect().top - focusY;
+      sendDisplayState(); showCmdToast('→ Next beat'); return true;
+    }
+    showCmdToast('⚑ Already at last beat'); return true;
+  }
+
+  // ── Previous beat ─────────────────────────────────────────��───
+  if (/\b(prev|previous|last)\s*beat\b/.test(t) || /\bback\s*(one\s*)?beat\b/.test(t)) {
+    const focusY      = window.innerHeight * 0.5;
+    const beatMarkers = [...document.querySelectorAll('.tp-beat-marker')];
+    // Find last beat that's well above center
+    const prev = [...beatMarkers].reverse().find(b => b.getBoundingClientRect().top < focusY - 80);
+    if (prev) {
+      const w = document.getElementById('tp-scroll-wrap');
+      w.scrollTop += prev.getBoundingClientRect().top - focusY;
+      sendDisplayState(); showCmdToast('← Prev beat'); return true;
+    }
+    showCmdToast('⚑ Already at first beat'); return true;
+  }
+
+  // ── Beat N — "beat three", "beat 3", "go to beat 2" ──────────
+  const beatMatch = t.match(/\bbeat\s+(\w+)/);
+  if (beatMatch) {
+    const beatN  = wordToNum(beatMatch[1]);
+    const beatEl = beatN > 0
+      ? document.querySelector(`.tp-beat-marker[data-beat-n="${beatN}"]`)
+      : null;
+    if (beatEl) {
+      const w = document.getElementById('tp-scroll-wrap');
+      const focusY = window.innerHeight * 0.5;
+      w.scrollTop += beatEl.getBoundingClientRect().top - focusY;
+      sendDisplayState(); showCmdToast(`→ Beat ${beatN}`); return true;
+    }
+    showCmdToast(`⚑ Beat ${beatN} not found`); return true;
+  }
+
+  // ── Back N seconds — "back ten seconds", "go back 15" ────────
+  const backMatch = t.match(/\bback\s+(\w+)/);
+  if (backMatch || /^back$/.test(t)) {
+    const secs = backMatch ? (wordToNum(backMatch[1]) || 10) : 10;
+    const w    = document.getElementById('tp-scroll-wrap');
+    w.scrollTop = Math.max(0, w.scrollTop - secs * scrollSpeed * 20);
+    sendDisplayState(); showCmdToast(`⏪ Back ${secs}s`); return true;
+  }
+
+  // ── Forward N seconds ─────────────────────────────────────────
+  const fwdMatch = t.match(/\bforward\s+(\w+)/);
+  if (fwdMatch) {
+    const secs = wordToNum(fwdMatch[1]) || 10;
+    const w    = document.getElementById('tp-scroll-wrap');
+    const max  = w.scrollHeight - w.clientHeight;
+    w.scrollTop = Math.min(max, w.scrollTop + secs * scrollSpeed * 20);
+    sendDisplayState(); showCmdToast(`⏩ Forward ${secs}s`); return true;
+  }
+
+  // ── Faster / speed up ────────────────────────────────────────
+  if (/\b(faster|speed up|quicker|more)\b/.test(t)) {
+    setSpeed(Math.min(10, scrollSpeed + 1));
+    showCmdToast(`▲ Speed ${scrollSpeed}`); return true;
+  }
+
+  // ── Slower / slow down ───────────────────────────────────────
+  if (/\b(slower|slow down|less)\b/.test(t)) {
+    setSpeed(Math.max(0.5, scrollSpeed - 1));
+    showCmdToast(`▼ Speed ${scrollSpeed}`); return true;
+  }
+
+  return false; // no command matched
 }
 
 // ═══════════════════════════════════════════════════════════════
