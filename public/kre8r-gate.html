@@ -135,15 +135,36 @@ body {
 }
 
 /* ── Station label (Id8r) ──────────────────────── */
+/* top/left set by JS to match singularity screen position */
 #station-id8r {
   position: fixed;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
   pointer-events: none;
-  z-index: 10;
+  z-index: 20;
   opacity: 0;
-  transition: opacity 1.2s ease;
+  transition: opacity 1.4s ease;
+}
+
+/* ── Void overlay — dark circle that grows from singularity ── */
+/* Renders ABOVE canvas so bloom can't eat it */
+#void-overlay {
+  position: fixed;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(0,0,0,1.0)   0%,
+    rgba(0,0,0,0.97)  35%,
+    rgba(0,0,0,0.85)  55%,
+    rgba(0,0,0,0.4)   72%,
+    transparent       100%
+  );
+  pointer-events: none;
+  z-index: 15;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+  will-change: transform, opacity;
 }
 #station-id8r .station-name {
   font-family: 'Bebas Neue', sans-serif;
@@ -200,6 +221,9 @@ body {
 
 <!-- Flash -->
 <div id="flash"></div>
+
+<!-- Dark void that grows from singularity (above bloom layer) -->
+<div id="void-overlay"></div>
 
 <!-- Id8r station -->
 <div id="station-id8r">
@@ -587,8 +611,12 @@ portalGroup.add(orbitalParticles);
 
 // ═══════════════════════════════════════════════
 // ID8R — BIG BANG PARTICLE SYSTEM
-// Nebulous thoughts drift → compress to singularity
-// → silent dark moment → Big Bang explosion → idea forms
+// Nebulous thoughts drift toward cursor →
+// compression triggered → all particles collapse
+// to wherever cursor was → singularity pulse →
+// Big Bang explosion from that point →
+// dark void grows from singularity →
+// ID8R reveals inside the darkness
 // ═══════════════════════════════════════════════
 
 const BB_COUNT = 2500;
@@ -598,6 +626,21 @@ class BigBang {
     this.phase     = 'nebula';
     this.phaseTime = 0;
     this.triggered = false;
+
+    // Cursor-driven gravity target (BigBang local XY space)
+    // Scale: mouseNDC ±1 → roughly ±4/2.8 local units at station depth
+    this.cursorX = 0;
+    this.cursorY = 0;
+
+    // Singularity position — locked from cursor when compression fires
+    this.singX = 0;
+    this.singY = 0;
+
+    // Screen-space coords of singularity (set in _startVoid)
+    this._voidScreenX  = window.innerWidth  / 2;
+    this._voidScreenY  = window.innerHeight / 2;
+    this._voidGrowing  = false;
+    this._id8rRevealed = false;
 
     this.pos   = new Float32Array(BB_COUNT * 3);
     this.vel   = new Float32Array(BB_COUNT * 3);
@@ -635,7 +678,6 @@ class BigBang {
           vec2  c = gl_PointCoord - 0.5;
           float d = length(c);
           if (d > 0.5) discard;
-          // Gaussian falloff — cinematic, not cartoon
           float a = exp(-d * d * 7.0);
           gl_FragColor = vec4(vColor, a);
         }
@@ -646,51 +688,48 @@ class BigBang {
     });
 
     this.points = new THREE.Points(geom, this.mat);
-    this.points.position.set(0, 0, -22); // at Id8r station
+    this.points.position.set(0, 0, -22);
     scene.add(this.points);
+  }
+
+  // Called every frame from mousemove — update the gravity target
+  setCursor(x, y) {
+    this.cursorX = x;
+    this.cursorY = y;
   }
 
   _seedNebula() {
     for (let i = 0; i < BB_COUNT; i++) {
-      // Organic cloud — phi/theta sphere distribution
       const theta = Math.random() * Math.PI * 2;
       const phi   = Math.acos(2 * Math.random() - 1);
-      // Non-uniform radius — denser in center, wispy at edges
-      const r = 1.5 + Math.pow(Math.random(), 0.6) * 5.5;
+      const r     = 1.5 + Math.pow(Math.random(), 0.6) * 5.5;
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.sin(phi) * Math.sin(theta);
-      const z = r * Math.cos(phi) * 0.5; // slightly flattened
+      const z = r * Math.cos(phi) * 0.5;
 
-      this.pos[i * 3]     = this.home[i * 3]     = x;
-      this.pos[i * 3 + 1] = this.home[i * 3 + 1] = y;
-      this.pos[i * 3 + 2] = this.home[i * 3 + 2] = z;
+      this.pos[i*3]     = this.home[i*3]     = x;
+      this.pos[i*3+1]   = this.home[i*3+1]   = y;
+      this.pos[i*3+2]   = this.home[i*3+2]   = z;
 
-      // Nebula palette: purple thoughts, blue intuitions, teal clarity
-      // All dim — these are ideas that haven't formed yet
       const t = Math.random();
       if (t < 0.35) {
-        // Dim purple — subconscious fragment
         this.col[i*3]   = 0.25 + Math.random() * 0.2;
         this.col[i*3+1] = 0.05 + Math.random() * 0.1;
         this.col[i*3+2] = 0.35 + Math.random() * 0.3;
       } else if (t < 0.65) {
-        // Deep blue — half-formed thought
         this.col[i*3]   = 0.05 + Math.random() * 0.1;
         this.col[i*3+1] = 0.15 + Math.random() * 0.2;
         this.col[i*3+2] = 0.4  + Math.random() * 0.35;
       } else {
-        // Dim teal — almost an idea
         this.col[i*3]   = 0.05 + Math.random() * 0.1;
         this.col[i*3+1] = 0.3  + Math.random() * 0.25;
         this.col[i*3+2] = 0.3  + Math.random() * 0.25;
       }
 
-      // Tiny nebula drift velocities — slow, organic
       this.vel[i*3]   = (Math.random() - 0.5) * 0.003;
       this.vel[i*3+1] = (Math.random() - 0.5) * 0.003;
       this.vel[i*3+2] = (Math.random() - 0.5) * 0.001;
-
-      this.sizes[i] = 0.015 + Math.random() * 0.035;
+      this.sizes[i]   = 0.015 + Math.random() * 0.035;
     }
   }
 
@@ -700,50 +739,95 @@ class BigBang {
     this.phase     = 'compressing';
     this.phaseTime = 0;
 
-    // Set compression velocities — inward rush, faster for outliers
+    // Lock the cursor position as the singularity — THIS is where it all collapses
+    this.singX = this.cursorX;
+    this.singY = this.cursorY;
+
+    // Give each particle an initial velocity toward singularity
     for (let i = 0; i < BB_COUNT; i++) {
-      const x = this.pos[i*3], y = this.pos[i*3+1], z = this.pos[i*3+2];
-      const len = Math.sqrt(x*x + y*y + z*z) || 1;
+      const dx  = this.pos[i*3]   - this.singX;
+      const dy  = this.pos[i*3+1] - this.singY;
+      const dz  = this.pos[i*3+2];
+      const len = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1;
       const speed = 0.03 + Math.random() * 0.08;
-      this.vel[i*3]   = -(x / len) * speed;
-      this.vel[i*3+1] = -(y / len) * speed;
-      this.vel[i*3+2] = -(z / len) * speed;
+      this.vel[i*3]   = -(dx / len) * speed;
+      this.vel[i*3+1] = -(dy / len) * speed;
+      this.vel[i*3+2] = -(dz / len) * speed;
     }
   }
 
   _explode() {
-    // Scatter all particles to near-origin, then burst
+    // Burst from singularity position
     for (let i = 0; i < BB_COUNT; i++) {
-      this.pos[i*3]   = (Math.random() - 0.5) * 0.08;
-      this.pos[i*3+1] = (Math.random() - 0.5) * 0.08;
+      this.pos[i*3]   = this.singX + (Math.random() - 0.5) * 0.08;
+      this.pos[i*3+1] = this.singY + (Math.random() - 0.5) * 0.08;
       this.pos[i*3+2] = (Math.random() - 0.5) * 0.08;
 
       const theta = Math.random() * Math.PI * 2;
       const phi   = Math.acos(2 * Math.random() - 1);
-      const speed = 0.1 + Math.pow(Math.random(), 0.5) * 0.5; // varied — some fast, some slow
+      const speed = 0.1 + Math.pow(Math.random(), 0.5) * 0.5;
       this.vel[i*3]   = speed * Math.sin(phi) * Math.cos(theta);
       this.vel[i*3+1] = speed * Math.sin(phi) * Math.sin(theta);
       this.vel[i*3+2] = speed * Math.cos(phi) * 0.6;
 
-      // Explosion palette: leading edge bright white-teal, trailing blue-purple
       const isFront = Math.random() > 0.35;
       if (isFront) {
-        // Bright teal-white — the idea igniting
         this.col[i*3]   = 0.4 + Math.random() * 0.6;
         this.col[i*3+1] = 0.8 + Math.random() * 0.2;
         this.col[i*3+2] = 0.7 + Math.random() * 0.3;
       } else {
-        // Blue-violet — the energy of the bang
         this.col[i*3]   = 0.15 + Math.random() * 0.35;
         this.col[i*3+1] = 0.1  + Math.random() * 0.3;
         this.col[i*3+2] = 0.5  + Math.random() * 0.5;
       }
-      // Larger during explosion — motion energy
       this.sizes[i] = 0.025 + Math.random() * 0.07;
     }
     this.geom.attributes.position.needsUpdate = true;
     this.geom.attributes.aColor.needsUpdate   = true;
     this.geom.attributes.aSize.needsUpdate    = true;
+
+    // Project singularity world pos → screen coords, start the void
+    this._startVoid();
+  }
+
+  // Project singularity to screen, kick off the dark void overlay
+  _startVoid() {
+    const worldPos = new THREE.Vector3(this.singX, this.singY, -22);
+    worldPos.project(camera);
+    this._voidScreenX = (worldPos.x  + 1) / 2 * window.innerWidth;
+    this._voidScreenY = (1 - worldPos.y) / 2 * window.innerHeight;
+
+    const el = document.getElementById('void-overlay');
+    el.style.left        = this._voidScreenX + 'px';
+    el.style.top         = this._voidScreenY + 'px';
+    el.dataset.scale     = '0';
+    el.style.opacity     = '0';
+    el.style.transform   = 'translate(-50%, -50%) scale(0)';
+    this._voidGrowing    = true;
+  }
+
+  // Grows the CSS void overlay every frame — stays above bloom so it's truly dark
+  _growVoid(dt) {
+    const el          = document.getElementById('void-overlay');
+    const cur         = parseFloat(el.dataset.scale || '0');
+    const target      = Math.min(this.phaseTime / 2.2, 1.0) * 4.2;
+    const next        = cur + (target - cur) * Math.min(dt * 2.8, 1);
+    el.dataset.scale  = next;
+    el.style.opacity  = next > 0.04 ? '1' : '0';
+    el.style.transform = `translate(-50%, -50%) scale(${next})`;
+  }
+
+  // Positions ID8R label at singularity screen coords and reveals it
+  _revealId8r() {
+    if (this._id8rRevealed) return;
+    this._id8rRevealed = true;
+    const el     = document.getElementById('station-id8r');
+    el.style.left    = this._voidScreenX + 'px';
+    el.style.top     = this._voidScreenY + 'px';
+    el.style.opacity = '1';
+    const hint = document.getElementById('section-hint');
+    hint.style.opacity  = '1';
+    hint.textContent    = 'Ideation';
   }
 
   update(dt, time) {
@@ -751,12 +835,15 @@ class BigBang {
     this.mat.uniforms.time.value = time;
 
     if (this.phase === 'nebula') {
-      // Slow drift with elastic pull back to home — thoughts that wander
+      // Gentle cursor pull + home spring — thoughts drawn toward focus
       for (let i = 0; i < BB_COUNT; i++) {
-        // Spring toward home
+        // Cursor gravity — weak but persistent
+        this.vel[i*3]   += (this.cursorX - this.pos[i*3])   * 0.00012;
+        this.vel[i*3+1] += (this.cursorY - this.pos[i*3+1]) * 0.00012;
+        // Home spring — keeps cloud from drifting off entirely
         const hx = this.home[i*3], hy = this.home[i*3+1], hz = this.home[i*3+2];
-        this.vel[i*3]   += (hx - this.pos[i*3])   * 0.0003;
-        this.vel[i*3+1] += (hy - this.pos[i*3+1]) * 0.0003;
+        this.vel[i*3]   += (hx - this.pos[i*3])   * 0.00015;
+        this.vel[i*3+1] += (hy - this.pos[i*3+1]) * 0.00015;
         this.vel[i*3+2] += (hz - this.pos[i*3+2]) * 0.0003;
         // Damping
         this.vel[i*3]   *= 0.988;
@@ -777,8 +864,10 @@ class BigBang {
         this.pos[i*3+1] += this.vel[i*3+1];
         this.pos[i*3+2] += this.vel[i*3+2];
 
-        // Gravity well — accelerate toward origin
-        const x = this.pos[i*3], y = this.pos[i*3+1], z = this.pos[i*3+2];
+        // Gravity well centered on locked singularity position
+        const x = this.pos[i*3]   - this.singX;
+        const y = this.pos[i*3+1] - this.singY;
+        const z = this.pos[i*3+2];
         const d = Math.sqrt(x*x + y*y + z*z);
         if (d > 0.25) allIn = false;
 
@@ -792,20 +881,18 @@ class BigBang {
       if (allIn || this.phaseTime > 3.5) {
         this.phase     = 'singularity';
         this.phaseTime = 0;
-        this.mat.uniforms.intensity.value = 4.0; // blindingly bright
+        this.mat.uniforms.intensity.value = 4.0;
         triggerBigBangFlash();
       }
 
     } else if (this.phase === 'singularity') {
-      // All particles pulse at origin — the infinite density moment
+      // All particles pulse at singularity position — infinite density
       for (let i = 0; i < BB_COUNT; i++) {
-        this.pos[i*3]   = (Math.random() - 0.5) * 0.04;
-        this.pos[i*3+1] = (Math.random() - 0.5) * 0.04;
+        this.pos[i*3]   = this.singX + (Math.random() - 0.5) * 0.04;
+        this.pos[i*3+1] = this.singY + (Math.random() - 0.5) * 0.04;
         this.pos[i*3+2] = (Math.random() - 0.5) * 0.04;
       }
       this.geom.attributes.position.needsUpdate = true;
-
-      // Singularity pulses with intensity
       this.mat.uniforms.intensity.value = 3.0 + Math.sin(this.phaseTime * 40) * 1.5;
 
       if (this.phaseTime > 0.6) {
@@ -827,16 +914,15 @@ class BigBang {
       }
       this.geom.attributes.position.needsUpdate = true;
 
+      // Grow dark void as particles scatter
+      if (this._voidGrowing) this._growVoid(dt);
+
       if (this.phaseTime > 3.0) {
         this.phase = 'formed';
-        // Id8r label fades in
-        document.getElementById('station-id8r').style.opacity = '1';
-        document.getElementById('section-hint').style.opacity = '1';
-        document.getElementById('section-hint').textContent   = 'Ideation';
+        this._revealId8r();
       }
 
     } else if (this.phase === 'formed') {
-      // Slow drift — the idea exists now, particles settle
       const drag = Math.pow(0.99, dt * 60);
       for (let i = 0; i < BB_COUNT; i++) {
         this.vel[i*3]   *= drag;
@@ -847,6 +933,8 @@ class BigBang {
         this.pos[i*3+2] += this.vel[i*3+2];
       }
       this.geom.attributes.position.needsUpdate = true;
+      // Keep filling the void to its max size
+      if (this._voidGrowing) this._growVoid(dt);
     }
   }
 }
@@ -931,6 +1019,10 @@ window.addEventListener('mousemove', (e) => {
   cursorEl.style.top      = e.clientY + 'px';
   cursorRingEl.style.left = e.clientX + 'px';
   cursorRingEl.style.top  = e.clientY + 'px';
+
+  // Update BigBang gravity target — cursor is the attractor in local space
+  // Scale: mouseNDC ±1.0 → approx ±4.0 / ±2.8 local units at station depth
+  bigBang.setCursor(mouseNDC.x * 4.0, mouseNDC.y * 2.8);
 });
 
 // ═══════════════════════════════════════════════
