@@ -1222,7 +1222,21 @@ async function onGenerate() {
       },
       onError: (msg) => {
         appendLog('generateLog', 'Error: ' + msg, 'err');
-        showToast(msg, 'error');
+        // Check if any tabs completed before the drop — don't lose that work
+        const partialTabs = ['full','bullets','hybrid'].filter(m => currentScripts[m]?.content);
+        if (partialTabs.length) {
+          const tabNames = partialTabs.join(', ');
+          showToast(`Network dropped — but ${tabNames} script${partialTabs.length > 1 ? 's' : ''} loaded. Export now to save.`, 'warn');
+          appendLog('generateLog', `Partial save: ${tabNames} script available — use Export .txt`, 'ok');
+          // Render whatever we have
+          const best = currentScripts[activeScriptTab] || currentScripts[partialTabs[0]];
+          if (best) { currentScript = best; renderScript(best); }
+          document.getElementById('scriptActions').style.display = '';
+          document.getElementById('exportBtn').style.display = '';
+          document.getElementById('approveBtn').style.display = 'none'; // not saved to DB
+        } else {
+          showToast(msg, 'error');
+        }
         showRetry();
         setGenerateLoading(false);
         isGenerating = false;
@@ -1857,10 +1871,28 @@ async function streamWritr({ url, body, barId, logId, onEvent, onComplete, onErr
 
     // Stream ended — only report unexpected if we never got complete/error
     if (!settled) {
-      onError('Stream ended unexpectedly — the request may have timed out. Click Retry to try again.');
+      onError('Stream ended unexpectedly — network dropped mid-generation. Click Retry to try again.');
     }
   } catch (e) {
-    if (!settled) onError(e.message);
+    if (!settled) {
+      // ERR_INCOMPLETE_CHUNKED_ENCODING = network hiccup mid-stream
+      // Auto-retry once — most of the time this just works on second attempt
+      const isChunkError = e.message && (
+        e.message.includes('INCOMPLETE_CHUNKED') ||
+        e.message.includes('network') ||
+        e.message.includes('Failed to fetch')
+      );
+      if (isChunkError && !streamWritr._retrying) {
+        streamWritr._retrying = true;
+        appendLog && console.log('[WritΩr] Network drop — auto-retrying once…');
+        // Small delay then retry the entire call
+        await new Promise(r => setTimeout(r, 1500));
+        streamWritr._retrying = false;
+        return streamWritr({ url, body, barId, logId, onEvent, onComplete, onError });
+      }
+      streamWritr._retrying = false;
+      onError('Network error: ' + e.message + ' — click Retry to try again.');
+    }
   }
 }
 
