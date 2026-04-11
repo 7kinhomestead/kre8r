@@ -818,8 +818,15 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 
     <div id="tp-mode-paste" style="display:none">
       <div id="tp-paste-wrap">
-        <div class="tp-label">Script Text</div>
-        <textarea id="tp-paste-text" placeholder="Paste any script here — production notes will be automatically stripped."></textarea>
+        <div class="tp-label" style="display:flex;align-items:center;justify-content:space-between;">
+          Script Text
+          <label style="font-size:11px;font-weight:600;color:var(--teal);cursor:pointer;letter-spacing:0.5px;">
+            📂 Load .txt
+            <input type="file" accept=".txt,text/plain" style="display:none"
+                   onchange="loadScriptFile(this)">
+          </label>
+        </div>
+        <textarea id="tp-paste-text" placeholder="Paste script here — or use Load .txt to open an exported script file.&#10;&#10;Production notes and b-roll cues are stripped automatically."></textarea>
       </div>
     </div>
 
@@ -1317,6 +1324,31 @@ async function onProjectChange() {
 // ═══════════════════════════════════════════════════════════════
 // TAB SWITCHING
 // ═══════════════════════════════════════════════════════════════
+
+function loadScriptFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result || '';
+    document.getElementById('tp-paste-text').value = text;
+    document.getElementById('tp-start-btn').disabled = !text.trim();
+    // Show a preview of first line so they know it loaded
+    const firstLine = text.split('\n').find(l => l.trim()) || '';
+    showFileLoadToast(file.name, firstLine);
+  };
+  reader.readAsText(file);
+  input.value = ''; // reset so same file can be loaded again
+}
+
+function showFileLoadToast(filename, preview) {
+  // Reuse the existing preview div to confirm load
+  const prev = document.getElementById('tp-preview');
+  if (prev) {
+    prev.textContent = `✓ Loaded: ${filename}\n${preview}…`;
+    prev.className = '';
+  }
+}
 
 function switchTab(tab) {
   activeTab = tab;
