@@ -11,7 +11,7 @@
 
 body {
   background: #000;
-  height: 600vh;
+  height: 900vh;
   overflow-x: hidden;
   cursor: none;
 }
@@ -181,6 +181,34 @@ body {
   margin-top: 8px;
 }
 
+/* ── WritΩr station ────────────────────────────── */
+#station-writr {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+#writr-hero-line {
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(10px, 1.05vw, 14px);
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(62,207,178,0.9);
+  max-width: 420px;
+  margin: 18px auto 0;
+  line-height: 2.0;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transition: opacity 1.2s ease 0.8s;
+}
+#station-writr.revealed #writr-hero-line {
+  opacity: 1;
+}
+
 /* ── Section hint ──────────────────────────────── */
 #section-hint {
   position: fixed;
@@ -229,6 +257,13 @@ body {
 <div id="station-id8r">
   <div class="station-name">ID8R</div>
   <div class="station-sub">Ideation Engine</div>
+</div>
+
+<!-- WritΩr station -->
+<div id="station-writr">
+  <div class="station-name">WRITR</div>
+  <div class="station-sub">Script Engine</div>
+  <div id="writr-hero-line">"Built wrong the first time. Cost me two months and money I didn't have. That's the only reason this works now."</div>
 </div>
 
 <!-- Section hint -->
@@ -340,31 +375,51 @@ composer.addPass(new OutputPass());
 // ═══════════════════════════════════════════════
 
 const cameraPath = new THREE.CatmullRomCurve3([
-  new THREE.Vector3( 0.0,  0.0,   8.0),   // 0   — far approach
-  new THREE.Vector3( 0.3,  0.1,   5.5),   // slight drift — portal's gravity
-  new THREE.Vector3(-0.2, -0.1,   3.5),   // subtle correction
-  new THREE.Vector3( 0.0,  0.05,  1.8),   // close approach, nearly aligned
-  new THREE.Vector3( 0.0,  0.0,   0.4),   // threshold face
-  new THREE.Vector3( 0.0,  0.0,  -1.5),   // crossing
-  new THREE.Vector3( 0.0,  0.2,  -5.0),   // wormhole interior — slight lift
-  new THREE.Vector3( 0.0,  0.0, -10.0),   // emerging
-  new THREE.Vector3( 0.0,  0.0, -16.0),   // coasting
-  new THREE.Vector3( 0.0,  0.0, -22.0),   // Id8r station arrival
+  new THREE.Vector3( 0.0,  0.0,   8.0),   // 0  — hero / far approach
+  new THREE.Vector3( 0.3,  0.1,   5.5),   // 1  — portal gravity drift
+  new THREE.Vector3(-0.2, -0.1,   3.5),   // 2  — subtle correction
+  new THREE.Vector3( 0.0,  0.05,  1.8),   // 3  — close approach
+  new THREE.Vector3( 0.0,  0.0,   0.4),   // 4  — portal face
+  new THREE.Vector3( 0.0,  0.0,  -1.5),   // 5  — crossing
+  new THREE.Vector3( 0.0,  0.2,  -5.0),   // 6  — wormhole interior
+  new THREE.Vector3( 0.0,  0.0, -10.0),   // 7  — emerging
+  new THREE.Vector3( 0.0,  0.0, -16.0),   // 8  — coasting
+  new THREE.Vector3( 0.0,  0.0, -22.0),   // 9  — Id8r station
+  new THREE.Vector3( 0.25,-0.1, -28.0),   // 10 — leaving Id8r
+  new THREE.Vector3(-0.15, 0.1, -34.0),   // 11 — deep space drift
+  new THREE.Vector3( 0.0,  0.0, -40.0),   // 12 — approaching WritΩr
+  new THREE.Vector3( 0.0,  0.0, -45.0),   // 13 — WritΩr station
 ], false, 'catmullrom', 0.5);
 
-// Scroll easing — accelerates through portal, gentles into Id8r
+// Scroll easing — path has 14 points covering z=8→-45
+// Portal ≈ path t=0.15, Id8r ≈ path t=0.57, WritΩr = path t=1.0
+// Scroll mapping:
+//   0→35%  : slow hero approach
+//   35→52% : accelerate through portal
+//   52→65% : decelerate into Id8r
+//   65→80% : very slow — BigBang plays here
+//   80→100%: cruise to WritΩr
 function easeScroll(t) {
   if (t < 0.35) {
-    // Gentle linear approach
-    return t * 0.55;
-  } else if (t < 0.60) {
-    // Accelerate through portal — quadratic
-    const s = (t - 0.35) / 0.25;
-    return 0.1925 + s * s * 0.35;
+    // Gentle quadratic approach — builds anticipation
+    const s = t / 0.35;
+    return s * s * 0.14;
+  } else if (t < 0.52) {
+    // Acceleration through portal
+    const s = (t - 0.35) / 0.17;
+    return 0.14 + s * s * 0.21;
+  } else if (t < 0.65) {
+    // Decelerate into Id8r — pow gives nice softening
+    const s = (t - 0.52) / 0.13;
+    return 0.35 + Math.pow(s, 0.55) * 0.22;
+  } else if (t < 0.80) {
+    // Very slow crawl — let BigBang breathe
+    const s = (t - 0.65) / 0.15;
+    return 0.57 + s * 0.03;
   } else {
-    // Gentle deceleration into Id8r space
-    const s = (t - 0.60) / 0.40;
-    return 0.5425 + Math.pow(s, 0.6) * 0.4575;
+    // Journey to WritΩr — ease in
+    const s = (t - 0.80) / 0.20;
+    return 0.60 + Math.pow(s, 0.65) * 0.40;
   }
 }
 
@@ -940,6 +995,277 @@ class BigBang {
 }
 
 // ═══════════════════════════════════════════════
+// WRITR — SCRIPT ENGINE PARTICLE SYSTEM
+// Two color clouds (teal=voice, amber=structure) →
+// converge and interweave at center →
+// organize into horizontal text rows →
+// hero row brightens → WRITR label reveals
+// ═══════════════════════════════════════════════
+
+const WR_COUNT = 3000;
+const WR_LINES = 8;
+const WR_PER_LINE = Math.floor(WR_COUNT / WR_LINES);
+
+class WritrStation {
+  constructor() {
+    this.phase     = 'dormant';
+    this.phaseTime = 0;
+    this.triggered = false;
+
+    this.pos    = new Float32Array(WR_COUNT * 3);
+    this.vel    = new Float32Array(WR_COUNT * 3);
+    this.col    = new Float32Array(WR_COUNT * 3);
+    this.sizes  = new Float32Array(WR_COUNT);
+    this.target = new Float32Array(WR_COUNT * 3);
+    this.lineIdx = new Uint8Array(WR_COUNT);
+
+    // Assign particles to lines — interleaved teal/amber per line
+    for (let i = 0; i < WR_COUNT; i++) {
+      const line = i % WR_LINES;
+      this.lineIdx[i] = line;
+
+      const isTeal = (line % 2 === 0);  // even lines teal, odd lines amber
+
+      // Initial scatter — teal left, amber right, organic cloud spread
+      const xBias = isTeal ? -2.0 : 2.0;
+      this.pos[i*3]   = xBias + (Math.random() - 0.5) * 7;
+      this.pos[i*3+1] = (Math.random() - 0.5) * 5.5;
+      this.pos[i*3+2] = (Math.random() - 0.5) * 2.5;
+
+      this.vel[i*3]   = (Math.random() - 0.5) * 0.008;
+      this.vel[i*3+1] = (Math.random() - 0.5) * 0.008;
+      this.vel[i*3+2] = (Math.random() - 0.5) * 0.004;
+
+      // Color — teal for voice, warm amber-gold for story structure
+      if (isTeal) {
+        this.col[i*3]   = 0.08 + Math.random() * 0.15;
+        this.col[i*3+1] = 0.45 + Math.random() * 0.35;
+        this.col[i*3+2] = 0.45 + Math.random() * 0.30;
+      } else {
+        this.col[i*3]   = 0.55 + Math.random() * 0.35;
+        this.col[i*3+1] = 0.32 + Math.random() * 0.18;
+        this.col[i*3+2] = 0.04 + Math.random() * 0.08;
+      }
+
+      this.sizes[i] = 0.010 + Math.random() * 0.022;
+
+      // Target: horizontal row positions — full width, evenly spaced rows
+      const lineY = -1.75 + line * 0.50;               // y: -1.75 to +1.75
+      const xFrac = (i % WR_PER_LINE) / WR_PER_LINE;   // 0..1 along row
+      this.target[i*3]   = -2.8 + xFrac * 5.6;
+      this.target[i*3+1] = lineY;
+      this.target[i*3+2] = 0.0;
+    }
+
+    const geom = this.geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(this.pos,   3));
+    geom.setAttribute('aColor',   new THREE.BufferAttribute(this.col,   3));
+    geom.setAttribute('aSize',    new THREE.BufferAttribute(this.sizes, 1));
+
+    this.mat = new THREE.ShaderMaterial({
+      uniforms: { intensity: { value: 0.0 } },
+      vertexShader: `
+        attribute float aSize;
+        attribute vec3  aColor;
+        varying   vec3  vColor;
+        uniform   float intensity;
+        void main() {
+          vColor = aColor * intensity;
+          vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = aSize * (420.0 / max(-mvPos.z, 0.1));
+          gl_Position  = projectionMatrix * mvPos;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        void main() {
+          vec2  c = gl_PointCoord - 0.5;
+          float d = length(c);
+          if (d > 0.5) discard;
+          float a = exp(-d * d * 7.0);
+          gl_FragColor = vec4(vColor, a);
+        }
+      `,
+      transparent: true,
+      depthWrite:  false,
+      blending:    THREE.AdditiveBlending,
+    });
+
+    this.points = new THREE.Points(geom, this.mat);
+    this.points.position.set(0, 0, -45);
+    scene.add(this.points);
+  }
+
+  // Camera arrived — wake up the cloud, auto-trigger after settling
+  activate() {
+    if (this.phase !== 'dormant') return;
+    this.phase     = 'scattered';
+    this.phaseTime = 0;
+    // Fade in gently
+    this._fadeIntensity(0, 0.65, 1200);
+    // Auto-trigger organizing after 1.8 seconds
+    setTimeout(() => this._organize(), 1800);
+  }
+
+  // Ramp material intensity smoothly via RAF
+  _fadeIntensity(from, to, durationMs) {
+    const start = performance.now();
+    const step = () => {
+      const p = Math.min((performance.now() - start) / durationMs, 1);
+      this.mat.uniforms.intensity.value = from + (to - from) * p;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  _organize() {
+    if (this.triggered) return;
+    this.triggered = true;
+    this.phase     = 'organizing';
+    this.phaseTime = 0;
+    // Give each particle an initial push toward its target
+    for (let i = 0; i < WR_COUNT; i++) {
+      const dx = this.target[i*3]   - this.pos[i*3];
+      const dy = this.target[i*3+1] - this.pos[i*3+1];
+      const dz = this.target[i*3+2] - this.pos[i*3+2];
+      const len = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1;
+      const speed = 0.015 + Math.random() * 0.03;
+      this.vel[i*3]   = (dx/len) * speed;
+      this.vel[i*3+1] = (dy/len) * speed;
+      this.vel[i*3+2] = (dz/len) * speed;
+    }
+  }
+
+  _revealWritr() {
+    // Brighten the 4th line (hero row) to near-white; dim all others
+    const heroLine = 3;
+    for (let i = 0; i < WR_COUNT; i++) {
+      if (this.lineIdx[i] === heroLine) {
+        this.col[i*3]   = 0.75 + Math.random() * 0.25;
+        this.col[i*3+1] = 0.88 + Math.random() * 0.12;
+        this.col[i*3+2] = 0.82 + Math.random() * 0.15;
+        this.sizes[i]  *= 1.9;
+      } else {
+        const dim = 0.3 + Math.random() * 0.15;
+        this.col[i*3]   *= dim;
+        this.col[i*3+1] *= dim;
+        this.col[i*3+2] *= dim;
+      }
+    }
+    this.geom.attributes.aColor.needsUpdate = true;
+    this.geom.attributes.aSize.needsUpdate  = true;
+    this._fadeIntensity(this.mat.uniforms.intensity.value, 1.8, 800);
+
+    // Station label + hero quote
+    const el = document.getElementById('station-writr');
+    el.style.opacity = '1';
+    setTimeout(() => el.classList.add('revealed'), 100);
+    document.getElementById('section-hint').textContent = 'Script';
+    document.getElementById('section-hint').style.opacity = '1';
+  }
+
+  update(dt, time) {
+    if (this.phase === 'dormant') return;
+    this.phaseTime += dt;
+
+    if (this.phase === 'scattered') {
+      // Two clouds drift — organic slow motion
+      for (let i = 0; i < WR_COUNT; i++) {
+        // Subtle sine breathing — each cloud sways slightly
+        this.vel[i*3]   += Math.sin(time * 0.4 + i * 0.07) * 0.00015;
+        this.vel[i*3+1] += Math.cos(time * 0.3 + i * 0.05) * 0.00015;
+        this.vel[i*3]   *= 0.992;
+        this.vel[i*3+1] *= 0.992;
+        this.vel[i*3+2] *= 0.992;
+        this.pos[i*3]   += this.vel[i*3];
+        this.pos[i*3+1] += this.vel[i*3+1];
+        this.pos[i*3+2] += this.vel[i*3+2];
+      }
+      this.geom.attributes.position.needsUpdate = true;
+
+    } else if (this.phase === 'organizing') {
+      // Spring toward target line positions — teal from left, amber from right
+      // They cross each other creating natural interweave
+      const progress = Math.min(this.phaseTime / 3.5, 1.0);
+      const springK  = 0.025 + progress * 0.04;  // spring strengthens over time
+
+      for (let i = 0; i < WR_COUNT; i++) {
+        const tx = this.target[i*3];
+        const ty = this.target[i*3+1];
+        const tz = this.target[i*3+2];
+
+        // Spring force toward target
+        this.vel[i*3]   += (tx - this.pos[i*3])   * springK;
+        this.vel[i*3+1] += (ty - this.pos[i*3+1]) * springK;
+        this.vel[i*3+2] += (tz - this.pos[i*3+2]) * springK;
+
+        // Damping — increases to lock particles into position
+        const damp = 0.78 + progress * 0.15;
+        this.vel[i*3]   *= damp;
+        this.vel[i*3+1] *= damp;
+        this.vel[i*3+2] *= damp;
+
+        this.pos[i*3]   += this.vel[i*3];
+        this.pos[i*3+1] += this.vel[i*3+1];
+        this.pos[i*3+2] += this.vel[i*3+2];
+      }
+      this.geom.attributes.position.needsUpdate = true;
+
+      if (this.phaseTime > 4.5) {
+        this.phase     = 'formed';
+        this.phaseTime = 0;
+        this._fadeIntensity(this.mat.uniforms.intensity.value, 1.3, 600);
+      }
+
+    } else if (this.phase === 'formed') {
+      // Settled — particles breathe gently along their rows
+      for (let i = 0; i < WR_COUNT; i++) {
+        const tx = this.target[i*3];
+        const ty = this.target[i*3+1];
+        const tz = this.target[i*3+2];
+        // Gentle row breathing
+        const breathe = Math.sin(time * 1.2 + this.lineIdx[i] * 0.8 + i * 0.02) * 0.0006;
+        this.vel[i*3]   += (tx - this.pos[i*3])   * 0.012 + breathe;
+        this.vel[i*3+1] += (ty - this.pos[i*3+1]) * 0.012;
+        this.vel[i*3+2] += (tz - this.pos[i*3+2]) * 0.010;
+        this.vel[i*3]   *= 0.82;
+        this.vel[i*3+1] *= 0.82;
+        this.vel[i*3+2] *= 0.82;
+        this.pos[i*3]   += this.vel[i*3];
+        this.pos[i*3+1] += this.vel[i*3+1];
+        this.pos[i*3+2] += this.vel[i*3+2];
+      }
+      this.geom.attributes.position.needsUpdate = true;
+
+      // After settling, do the hero reveal
+      if (this.phaseTime > 1.8) {
+        this.phase = 'reveal';
+        this._revealWritr();
+      }
+
+    } else if (this.phase === 'reveal') {
+      // Hold position with gentle breathing
+      for (let i = 0; i < WR_COUNT; i++) {
+        const tx = this.target[i*3];
+        const ty = this.target[i*3+1];
+        const tz = this.target[i*3+2];
+        const breathe = Math.sin(time * 1.0 + this.lineIdx[i] * 0.9 + i * 0.015) * 0.0004;
+        this.vel[i*3]   += (tx - this.pos[i*3])   * 0.010 + breathe;
+        this.vel[i*3+1] += (ty - this.pos[i*3+1]) * 0.010;
+        this.vel[i*3+2] += (tz - this.pos[i*3+2]) * 0.008;
+        this.vel[i*3]   *= 0.85;
+        this.vel[i*3+1] *= 0.85;
+        this.vel[i*3+2] *= 0.85;
+        this.pos[i*3]   += this.vel[i*3];
+        this.pos[i*3+1] += this.vel[i*3+1];
+        this.pos[i*3+2] += this.vel[i*3+2];
+      }
+      this.geom.attributes.position.needsUpdate = true;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
 // FLASH UTILITIES
 // ═══════════════════════════════════════════════
 
@@ -962,27 +1288,29 @@ function triggerBigBangFlash() {
 }
 
 // ═══════════════════════════════════════════════
-// INSTANTIATE BIG BANG
+// INSTANTIATE STATIONS
 // ═══════════════════════════════════════════════
 
-const bigBang = new BigBang();
+const bigBang     = new BigBang();
+const writrStation = new WritrStation();
 
 // ═══════════════════════════════════════════════
 // SCROLL STATE
 // ═══════════════════════════════════════════════
 
-let scrollT          = 0;  // 0-1 raw scroll
-let bigBangTriggered = false;
-let portalFlashed    = false;
-let prevCamZ         = 8;
-let camSpeed         = 0;
+let scrollT           = 0;   // 0–1 raw scroll
+let bigBangTriggered  = false;
+let writrActivated    = false;
+let portalFlashed     = false;
+let prevCamZ          = 8;
+let camSpeed          = 0;
 
 window.addEventListener('scroll', () => {
   const max = document.body.scrollHeight - window.innerHeight;
   scrollT = max > 0 ? window.scrollY / max : 0;
 
-  // Portal flash — at threshold crossing (~scroll 52-58%)
-  if (scrollT > 0.52 && scrollT < 0.60 && !portalFlashed) {
+  // Portal flash — at threshold crossing (~scroll 46–54%)
+  if (scrollT > 0.46 && scrollT < 0.54 && !portalFlashed) {
     portalFlashed = true;
     doFlash(
       'radial-gradient(ellipse at center, rgba(140,255,230,0.95) 0%, rgba(62,207,178,0.7) 50%, rgba(0,10,20,0.9) 100%)',
@@ -990,12 +1318,18 @@ window.addEventListener('scroll', () => {
       900
     );
   }
-  if (scrollT < 0.48) portalFlashed = false;
+  if (scrollT < 0.42) portalFlashed = false;
 
   // Id8r Big Bang — when camera arrives at station
-  if (scrollT > 0.88 && !bigBangTriggered) {
+  if (scrollT > 0.64 && !bigBangTriggered) {
     bigBangTriggered = true;
     bigBang.trigger();
+  }
+
+  // WritΩr — activate particle cloud when camera leaves Id8r slow zone
+  if (scrollT > 0.79 && !writrActivated) {
+    writrActivated = true;
+    writrStation.activate();
   }
 });
 
@@ -1109,13 +1443,13 @@ function animate() {
   currentPortalScale += (targetPortalScale - currentPortalScale) * 0.04;
   portalGroup.scale.setScalar(currentPortalScale * breathe);
 
-  // ── Bloom ramps up through portal ────────────
-  const portalProximity = Math.max(0, (scrollT - 0.25) / 0.35);
+  // ── Bloom ramps up through portal, eases at stations ─
+  const portalProximity = Math.max(0, (scrollT - 0.22) / 0.25);
   bloomPass.strength = 1.6 + Math.min(portalProximity, 1.0) * 3.5;
 
-  // Chromatic aberration — strongest at portal threshold
-  const aberrationPeak = scrollT > 0.45 && scrollT < 0.65
-    ? Math.sin(((scrollT - 0.45) / 0.20) * Math.PI) * 0.012
+  // Chromatic aberration — strongest at portal threshold (now ~scroll 46-54%)
+  const aberrationPeak = scrollT > 0.40 && scrollT < 0.58
+    ? Math.sin(((scrollT - 0.40) / 0.18) * Math.PI) * 0.012
     : 0;
   grainPass.uniforms.aberration.value = aberrationPeak;
   grainPass.uniforms.time.value       = t;
@@ -1123,8 +1457,9 @@ function animate() {
   // ── Orbital particles ─────────────────────────
   updateOrbitalParticles(t);
 
-  // ── Big Bang update ───────────────────────────
+  // ── Station updates ───────────────────────────
   bigBang.update(dt, t);
+  writrStation.update(dt, t);
 
   // ── Hero text fade ────────────────────────────
   const heroOpacity = Math.max(0, 1 - scrollT * 5);
