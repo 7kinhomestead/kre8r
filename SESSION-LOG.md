@@ -677,3 +677,72 @@ Watch beat_mapped SSE events closely — first multi-person assembly.
 - Restart count on PM2 is high (60+) due to the stale process crash loop — not a sign
   of instability, just accumulated from the port conflict troubleshooting
 - TODO.md needs update next session (Soul Builder + Tour added as top priorities)
+
+---
+
+# Session 30 — KRE8R Website Prototype (2026-04-11)
+
+## What Was Built
+
+### public/kre8r-gate.html — Full Three.js cinematic website prototype
+
+Accessible at `/gate` or `/kre8r-gate` (public route, no auth).
+
+**Portal / wormhole scene:**
+- 5000-particle starfield with gaussian falloff GLSL shaders (no cartoon circles)
+- Teal energy ring portal: main ring (emissive 4.0), shimmer ring (animated plasma shader), corona, void disc
+- 400 orbital particles around ring
+- ACESFilmicToneMapping, EffectComposer: RenderPass → UnrealBloomPass → grain/aberration ShaderPass → OutputPass
+- Scroll-driven CatmullRomCurve3 camera path (14 control points, z=8 to z=-45)
+- Custom easeScroll: slow hero approach, portal acceleration, slow zone at Id8r, cruise to WritΩr
+- Custom cursor (8px teal dot + 32px ring), mouse-reactive portal tilt
+- Page height 900vh
+
+**Id8r station (z=-22):**
+- BigBang class — 2500 particles, 5 phases: nebula → compressing → singularity → exploding → formed
+- Nebula particles drift toward cursor position (mouseNDC × 4.0 / 2.8 → BigBang local space)
+- Trigger locks cursor position as singularity — everything collapses to wherever cursor rests
+- Explosion bursts from that exact point
+- Dark void overlay (CSS, above bloom so it's truly dark) grows from singularity screen position
+- ID8ΩR label + 4 research brief cards fade in: Elevator Pitch / The Hook / Talking Points / The Result
+- Cards represent actual Id8r output — the demo IS the metaphor
+
+**Transit (z=-22 → z=-45):**
+- PIP<span>Ω</span>R waypoint label fades in/out during transit (scrollT 0.806–0.870)
+- Scroll-driven opacity in animation loop, no CSS transition
+
+**WritΩr station (z=-45):**
+- WritrStation class — 3000 particles, 8 row targets
+- Teal particles (voice) start left, amber particles (research) start off-screen right and stream in
+- Two distinct clouds converge, interweave as they spring to row targets
+- Rows form, hold 1.5s, then scatter outward radially
+- _showScript() fires: kills Id8r elements → waits 1.2s → reveals WritΩr content
+- Station label (WRITΩR) + script header + 3 beat cards stagger in (450ms apart)
+- Pipeline map cascades: ID8ΩR → PIPΩR → WRITΩR → EDITΩR → COMPOSΩR → MAILΩR
+
+**Ω symbol:**
+- .omega CSS class: DM Sans weight 200, 0.82em, aligned to Bebas Neue caps height
+- Applied to all station labels and pipeline map tool names
+- KRE8R hero wordmark stays clean (no Ω — brand spec)
+
+**Race condition fix:**
+- writrScriptShown flag: set true only when WritΩr content actually hits screen
+- _revealId8r() guards on writrScriptShown (not writrActivated) — Id8r cards show correctly
+- _showScript() is single authoritative fadeout point for Id8r elements
+
+## server.js changes
+- /gate, /kre8r-gate, /kre8r-gate.html routes added (public, no auth)
+- Auth bypass middleware updated for gate paths
+
+## Pending on Website
+- DO deploy needed to see all changes (pull + pm2 restart)
+- Test full scroll journey end-to-end after deploy
+- Next stations to build: EditΩr, ComposΩr (or a CTA / launch page at the end)
+- Consider a scroll-to-top / loop after pipeline map
+
+## Session Notes
+- Jason is having a rough day — website work was a productive creative distraction
+- Password is still "NEWPASSWORD" — needs changing
+- Kajabi broadcast API call still pending
+- Email platform decision (MailerLite vs wait for Kajabi) still pending
+
