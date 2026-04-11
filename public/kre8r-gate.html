@@ -1157,7 +1157,7 @@ class BigBang {
   // Reveals Id8r station label + research brief cards inside the void
   _revealId8r() {
     if (this._id8rRevealed) return;
-    if (writrActivated) return; // user already scrolled past — don't fight WritΩr
+    if (writrScriptShown) return; // WritΩr script already on screen — don't overlay
     this._id8rRevealed = true;
 
     // Station label — small, sits above the cards
@@ -1465,6 +1465,8 @@ class WritrStation {
     // Step 2 — wait for Id8r transitions to complete, then show WritΩr
     // id8r-brief has 0.8s transition, station-id8r has 1.4s — wait 1.2s
     setTimeout(() => {
+      writrScriptShown = true; // Id8r _revealId8r() will bail if it fires late
+
       // Station label
       document.getElementById('station-writr').style.opacity = '1';
       // Script wrapper
@@ -1629,6 +1631,7 @@ const writrStation = new WritrStation();
 let scrollT           = 0;   // 0–1 raw scroll
 let bigBangTriggered  = false;
 let writrActivated    = false;
+let writrScriptShown  = false; // true only after script beats are on screen
 let portalFlashed     = false;
 let prevCamZ          = 8;
 let camSpeed          = 0;
