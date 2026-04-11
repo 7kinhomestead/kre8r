@@ -197,6 +197,9 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 - Use src/utils/claude.js for all Claude API calls — never inline the fetch
 - Shared callClaude(prompt, maxTokens = 8192) — always pass explicit maxTokens
 - Never hardcode creator data — always read from creator-profile.json
+- All SSE endpoints must use src/utils/sse.js (attachSseStream or startSseResponse)
+- Load/validate creator-profile.json through src/utils/profile-validator.js — never raw JSON.parse
+- Log errors via src/utils/logger.js (pino) — never console.error in new code
 - Commit at end of every session with SESSION-LOG.md updated
 
 ## Known Issues / Technical Debt (Priority Order)
@@ -205,10 +208,11 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 3. AudiencΩr tag filter (Kajabi 500 on filtered requests)
 4. BRAW proxy timeout — 30min per job too short for large files
 5. Project resolution defaults to 4K DCI instead of reading footage resolution
-6. No automated tests, no error monitoring, no structured logging
-7. No backup strategy for SQLite file
+6. ~~No automated tests, no error monitoring, no structured logging~~ — FIXED Session 32 (pino logging, test-sse.js, DIAG button)
+7. ~~No backup strategy for SQLite file~~ — Electron 5-min rolling backup to database/kre8r-electron-backup.db
 8. ~~Hardcoded Windows paths~~ — FIXED Session 31 (DB_PATH, FFMPEG_PATH, CREATOR_PROFILE_PATH all env-var driven)
 9. Whisper model download has no progress indicator on first transcription run (looks like hang)
+10. MirrΩr: `no such column: pr.angle` DB error (pre-existing), and `TypeError: Assignment to constant variable` — both in mirrr.js evaluate-strategy handler
 
 ## Planned Features (Not Yet Built)
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)

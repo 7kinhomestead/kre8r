@@ -1,3 +1,80 @@
+# Session 32 — Phase 1/2/3 Reliability + Electron Packaging (2026-04-11)
+
+## Goal
+Execute the full pre-V1.0 Electron packaging checklist from the Opus review. All three phases completed in one session.
+
+## Phase 1 — Reliability (Items 3–6)
+
+**Item 3: creator-profile.json schema validation**
+- Added `schema_version: 1` to creator-profile.json
+- `src/utils/profile-validator.js` — validates required fields, migration framework (v0→v1 auto-stamps), vault path accessibility warning
+- `GET /api/creator-profile` uses validator, returns structured errors instead of generic 500
+- Health check and startup banner updated to use validator
+
+**Item 4: Observability**
+- `src/utils/logger.js` — pino structured logging, JSON to `logs/kre8r.log` always (even in dev), pino-pretty to console in dev, 10MB rotation
+- `GET /api/health/diagnostic` — returns last 150 log lines + log file path
+- `DIAG` button in index.html status bar — copies diagnostic snapshot to clipboard for support
+
+**Item 5: SSE timeouts + heartbeats**
+- `src/utils/sse.js` — shared helper: `startSseResponse()` and `attachSseStream()`, 20s keepalive heartbeat, 8-minute hard timeout
+- `editor.js` `sseStream()` — refactored to use shared helper (SelectsΩr + b-roll SSE)
+- `cutor.js` — both `/status/:job_id` and `/install-whisper` use shared helper
+
+**Item 6: kre8r doctor**
+- `GET /api/doctor` — checks AI (live ping), ffmpeg, Python, Whisper, creator profile validation, vault intake path, disk space (Windows), DaVinci
+- `public/doctor.html` — full preflight UI with skeleton loading, green/red/warn rows, fix hints, re-run button
+- `⚕` nav link added to desktop menu
+
+## Phase 2 — Electron Packaging (Items 7–11)
+
+**Item 7: getResourcePath() helper**
+- `electron/main.js` — `getResourcePath(...parts)`: dev = `__dirname/..`, packaged = `process.resourcesPath/app.asar.unpacked/`
+- All `path.join(__dirname, '../...')` calls updated to use helper
+- `package.json` — `asarUnpack`: server.js, src/, database/, better-sqlite3, ffmpeg-static unpacked so child_process.spawn works
+
+**Item 8: Node 20 LTS sidecar**
+- `electron/main.js` — `getNodeBin()` resolves bundled sidecar at `resources/node/`, falls back to system node in dev
+- `package.json` — `extraResources` configured for node-win/ and node-mac/ directories
+- `scripts/download-node-sidecar.js` — downloads Node 20.19.1 LTS binary (win/mac) into `build-resources/`
+- `npm run download-node` / `npm run download-node:all` scripts
+
+**Item 9: Server crash supervisor + Reconnecting UI**
+- `electron/main.js` — auto-restart on unexpected server exit; calls `__kre8rShowReconnect` in renderer
+- `app.isQuitting` flag prevents restart loop on deliberate quit
+- `public/js/nav.js` — `__kre8rShowReconnect` / `__kre8rHideReconnect` overlay available on every page
+
+**Item 10: App icons**
+- `scripts/generate-icons.js` updated — now also generates multi-size `kre8r-icon.ico`
+- `package.json win.icon` updated to `.ico`
+- macOS `.icns` note: requires `iconutil` on Mac (run `iconutil -c icns kre8r-icon.iconset`)
+
+**Item 11: Whisper model management**
+- `src/vault/transcribe.js` — `WHISPER_MODELS_DIR` env var for `--download_root`, `options.model` per-job override
+- `GET /api/cutor/models` — returns all 8 Whisper model options with sizes, current active, downloaded status
+- `electron/main.js` — `WHISPER_MODELS_DIR` + `LOG_DIR` passed to server pointing to `userData/`
+
+## Phase 3 — Pre-Launch Polish (Items 12–14)
+
+**Item 12: data-flow.md**
+- Complete cross-module dependency map: DB tables, read/write matrix for every module, pipeline order diagram, external services
+
+**Item 13: SSE integration tests**
+- `scripts/test-sse.js` — 6 tests: WritΩr, EditΩr, CutΩr status/install, models, doctor
+- Auth-aware (accepts 401 as "route exists"; full SSE test with TEST_USER/TEST_PASS)
+- `npm run test:sse` — all 6 pass
+
+**Item 14: Data export**
+- `GET /api/export/all` — JSON snapshot of projects + footage, downloads as `kre8r-export-YYYY-MM-DD.json`
+
+## Commits
+- `992940b` Phase 1 reliability — schema validation, structured logging, SSE heartbeats
+- `b933b6c` Phase 1 reliability — kre8r doctor preflight screen
+- `21dea34` Phase 2 Electron packaging — resource paths, Node sidecar, crash supervisor
+- `52e198e` Phase 3 pre-launch polish — data-flow doc, SSE tests, data export
+
+---
+
 # Session 31 — Pre-Electron Audit + Mac Readiness + Whisper One-Click Install (2026-04-11)
 
 ## Goal
