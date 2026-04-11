@@ -164,6 +164,7 @@ body {
   opacity: 0;
   transform: translate(-50%, -50%) scale(0);
   will-change: transform, opacity;
+  transition: opacity 1.2s ease; /* for fade-out when leaving Id8r */
 }
 /* shared station label styles */
 .station-name {
@@ -206,7 +207,7 @@ body {
   pointer-events: none;
   z-index: 20;
   opacity: 0;
-  transition: opacity 0.6s ease;
+  transition: opacity 0.8s ease;
 }
 .id8r-card {
   background: rgba(6, 18, 22, 0.92);
@@ -1407,6 +1408,17 @@ class WritrStation {
     if (this.phase !== 'dormant') return;
     this.phase     = 'scattered';
     this.phaseTime = 0;
+
+    // Fade out Id8r elements — we're moving on
+    const fadeOut = (id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.opacity = '0';
+    };
+    fadeOut('station-id8r');
+    fadeOut('id8r-brief');
+    fadeOut('void-overlay');
+    fadeOut('section-hint');
+
     this._fadeIntensity(0, 0.7, 1000);
     // Organize after research has streamed in (~2.5s)
     setTimeout(() => this._organize(), 2500);
