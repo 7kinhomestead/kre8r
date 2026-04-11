@@ -1,4 +1,67 @@
-# Kre8Ωr Session Log — 2026-04-10 (Session 28 — TeleprΩmpter Fixes, Auth System, Mark Complete, Field Teleprompter Architecture)
+# Kre8Ωr Session Log — 2026-04-10 (Session 29 — Solo Mode, Session Survival, Voice Commands)
+
+## What Was Built — Session 29
+
+---
+
+### TeleprΩmpter: Session Survival
+
+**`public/teleprompter.html`** — If the page reloads or crashes during filming, everything is recovered automatically.
+
+- `saveRecoveryState()` — called when `startTeleprompter()` runs. Saves script text, project name, font size, speaker filter, and scroll position to `localStorage.tp_recovery`.
+- `updateRecoveryScroll()` — called every 5 seconds from `animTick`, keeps scroll position current.
+- `checkSessionRecovery()` — checks for recovery data < 10 minutes old on page load.
+- `showRecoveryOverlay(recovery)` — shows "SESSION FOUND" overlay with 3-second countdown and project name. Auto-resumes. "Start Fresh" escape hatch clears state.
+- `resumeSessionNow()` — rebuilds `loadedScript` from stored text, restores font/speaker filter, calls `startTeleprompter()`, then restores scroll position.
+- Recovery is cleared on deliberate `backToSelector()` — only triggers on accidental reload.
+
+---
+
+### TeleprΩmpter: Solo Mode
+
+**`public/teleprompter.html`** — New "🎬 Solo" tab on the selector screen. One phone handles everything Jason was doing with two phones (voice + control).
+
+**Solo Display (phone IS the teleprompter):**
+- "🎬 Solo" tab shows same project selector
+- "🎬 Start Solo →" button calls `startSoloMode()`:
+  - Calls `startTeleprompter()` (display mode)
+  - Requests Wake Lock (screen stays on)
+  - Auto-starts voice sync after 800ms
+- No second phone needed for solo filming
+
+**Enhanced Voice Device (phone as voice + control combined):**
+- Beat navigation pills now appear on the voice device screen
+- Populated via `script_sync` WebSocket message when display loads a script
+- `vdBuildBeatPills(rawText)` — processes script, builds pill buttons
+- `vdUpdateBeatPill(beatN)` — highlights current beat (driven by `beat_update` messages)
+- Tapping a beat pill seeks display to that position via `vdSend('seek_pct', pct)`
+- Restart button added to voice device seek row
+- Voice device handles `script_sync` and `beat_update` WebSocket messages
+
+---
+
+### TeleprΩmpter: Voice Commands
+
+**`public/teleprompter.html`** — New "🎙 Cmd" hold button on the display controls bar.
+
+Hold the button → speak → release → command executes. Web Speech API SpeechRecognition (Chrome/Edge/Safari).
+
+Supported commands:
+- `pause` / `stop` / `hold` → pauses scroll
+- `play` / `go` / `roll` / `start` → starts scroll
+- `restart` / `from the top` → scrolls to top, pauses
+- `beat N` (beat 3, beat five) → seeks to that beat marker
+- `next beat` / `previous beat` → relative beat navigation
+- `back N` / `back 10 seconds` → seeks backwards
+- `forward N seconds` → seeks forward
+- `faster` / `speed up` → speed + 1
+- `slower` / `slow down` → speed - 1
+
+Toast feedback on screen for 2.5 seconds. Button pulses while listening. `processVoiceCmd()` tries up to 3 speech alternatives before showing "didn't catch that."
+
+**Commits:** 8227692, 9e037f7, 83bbfbd
+
+---
 
 ## What Was Built — Session 28
 
