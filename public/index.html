@@ -588,7 +588,14 @@
   <span class="svc"><span class="svc-dot ok" id="dot-ffmpeg"></span>ffmpeg</span>
   <span class="svc"><span class="svc-dot ok" id="dot-whisper"></span>Whisper</span>
   <span class="svc"><span class="svc-dot ok" id="dot-davinci"></span>DaVinci</span>
-  <span class="status-bar-right">SINE RESISTENTIA</span>
+  <span class="status-bar-right">
+    <button id="diag-btn" onclick="copyDiagnostics()"
+      style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);
+             font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:12px;
+             font-family:inherit;letter-spacing:.04em;"
+      title="Copy diagnostic info for support">DIAG</button>
+    SINE RESISTENTIA
+  </span>
 </div>
 
 <div class="toast-wrap" id="toast-wrap"></div>
@@ -1508,6 +1515,36 @@ async function loadArchivedGrid() {
       </div>`).join('');
   } catch {
     grid.innerHTML = '<div class="empty-state"><div class="empty-sub">Could not load archived projects.</div></div>';
+  }
+}
+
+async function copyDiagnostics() {
+  const btn = document.getElementById('diag-btn');
+  const orig = btn.textContent;
+  btn.textContent = '…';
+  btn.disabled = true;
+  try {
+    const [health, diag] = await Promise.all([
+      fetch('/api/health').then(r => r.json()).catch(() => ({})),
+      fetch('/api/health/diagnostic').then(r => r.json()).catch(() => ({ lines: [] })),
+    ]);
+    const snap = [
+      `=== Kre8Ωr Diagnostic Snapshot ===`,
+      `Date:     ${new Date().toISOString()}`,
+      `Instance: ${health.instance || '—'}`,
+      `Version:  ${health.version || '—'}`,
+      `AI:       ${health.ai_configured ? 'connected' : 'not configured'}`,
+      `Log:      ${diag.log_file || '—'}`,
+      ``,
+      `--- Recent Log (last ${(diag.lines || []).length} lines) ---`,
+      ...(diag.lines || []),
+    ].join('\n');
+    await navigator.clipboard.writeText(snap);
+    btn.textContent = 'COPIED';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  } catch (err) {
+    btn.textContent = 'ERR';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
   }
 }
 </script>

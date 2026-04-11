@@ -79,6 +79,7 @@ const path    = require('path');
 const fs      = require('fs');
 const os      = require('os');
 const session = require('express-session');
+const log     = require('./src/utils/logger');
 
 function getLocalIP() {
   const ifaces = os.networkInterfaces();
@@ -237,26 +238,46 @@ app.use('/api/lab',           require('./src/routes/lab'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {
-  try {
-    const profile = JSON.parse(fs.readFileSync(path.join(__dirname, 'creator-profile.json'), 'utf8'));
-    res.json(profile);
-  } catch (err) {
-    res.status(500).json({ error: 'Could not load creator profile' });
+  const { loadProfile } = require('./src/utils/profile-validator');
+  const result = loadProfile();
+  if (!result.ok) {
+    console.error('[Profile] Validation failed:', result.errors);
+    return res.status(500).json({
+      error: 'creator-profile.json is invalid or missing',
+      details: result.errors
+    });
   }
+  if (result.warnings && result.warnings.length) {
+    result.warnings.forEach(w => console.warn('[Profile]', w));
+  }
+  if (result.migrations && result.migrations.length) {
+    console.log('[Profile] Migrations applied:', result.migrations.join(', '));
+  }
+  res.json(result.profile);
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
   let instance = 'kre8r';
   try {
-    const _p = process.env.CREATOR_PROFILE_PATH || require('path').join(__dirname, 'creator-profile.json');
-    instance = JSON.parse(require('fs').readFileSync(_p, 'utf8')).instance || 'kre8r';
+    const { loadProfile } = require('./src/utils/profile-validator');
+    const result = loadProfile();
+    if (result.ok) instance = result.profile.instance || 'kre8r';
   } catch (_) { /* no profile yet — fresh install */ }
   res.json({
     status: 'ok',
     instance,
     version: '1.0',
     ai_configured: !!process.env.ANTHROPIC_API_KEY
+  });
+});
+
+// Diagnostic — returns recent structured log lines for "Copy Diagnostic Info" UI
+app.get('/api/health/diagnostic', (req, res) => {
+  const lines = log.getRecentLines(150);
+  res.json({
+    log_file: log.logFilePath,
+    lines: lines ? lines.split('\n') : [],
   });
 });
 
@@ -271,13 +292,13 @@ app.get('/', (req, res) => {
 // GLOBAL ERROR HANDLER — must be last app.use()
 // ─────────────────────────────────────────────
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
-  console.error('[API ERROR]', {
+  log.error({
+    module:    'api',
     requestId: req.id,
     method:    req.method,
     url:       req.url,
-    error:     err.message,
-    stack:     err.stack
-  });
+    err,
+  }, 'Unhandled API error');
   if (res.headersSent) return next(err);
   res.status(err.status || 500).json({
     error:     'Internal server error',
@@ -320,9 +341,12 @@ async function start() {
       : '\x1b[33m⚠ ANTHROPIC_API_KEY not set — add to .env to enable generation\x1b[0m';
 
     console.log('');
-    const _profilePath = process.env.CREATOR_PROFILE_PATH || require('path').join(__dirname, 'creator-profile.json');
     let _brand = 'INSTANCE';
-    try { _brand = (JSON.parse(require('fs').readFileSync(_profilePath, 'utf8'))?.creator?.brand || 'INSTANCE').toUpperCase(); } catch (_) {}
+    try {
+      const { loadProfile } = require('./src/utils/profile-validator');
+      const _pr = loadProfile();
+      if (_pr.ok) _brand = (_pr.profile?.creator?.brand || 'INSTANCE').toUpperCase();
+    } catch (_) {}
     const _banner  = `KRE8\u03a9R \u2014 ${_brand}`;
     const _pad     = Math.max(0, Math.floor((42 - _banner.length) / 2));
     const _bannerL = ' '.repeat(_pad) + _banner + ' '.repeat(Math.max(0, 42 - _pad - _banner.length));
@@ -355,6 +379,8 @@ async function start() {
     console.log('');
     console.log('  \x1b[2mSINE RESISTENTIA\x1b[0m');
     console.log('');
+
+    log.info({ module: 'server', port: PORT, instance: _brand }, 'Kre8Ωr started');
   });
 }
 

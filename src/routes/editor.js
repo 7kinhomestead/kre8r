@@ -65,27 +65,10 @@ function failJob(job, error) {
   job.emitter.emit('done');
 }
 
+const { attachSseStream } = require('../utils/sse');
+
 function sseStream(job, req, res) {
-  res.setHeader('Content-Type',  'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection',    'keep-alive');
-  res.flushHeaders();
-
-  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
-
-  for (const ev of job.events) send(ev);
-
-  if (job.status !== 'running') { res.end(); return; }
-
-  const onEvent = (data) => send(data);
-  const onDone  = () => res.end();
-
-  job.emitter.on('event', onEvent);
-  job.emitter.once('done', onDone);
-  req.on('close', () => {
-    job.emitter.off('event', onEvent);
-    job.emitter.off('done', onDone);
-  });
+  attachSseStream(job, req, res);
 }
 
 // ─────────────────────────────────────────────

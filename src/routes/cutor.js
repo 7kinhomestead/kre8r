@@ -21,6 +21,7 @@ const { transcribeFile, checkWhisper, detectPython, resetWhisperCache } = requir
 const { identifyCuts }   = require('../vault/cutor');
 const { extractProject } = require('../vault/extractor');
 const { checkFfmpeg }    = require('../vault/intake');
+const { startSseResponse, attachSseStream } = require('../utils/sse');
 const db = require('../db');
 
 const router = express.Router();
@@ -92,13 +93,7 @@ router.get('/check', async (req, res) => {
 // ─────────────────────────────────────────────
 
 router.post('/install-whisper', async (req, res) => {
-  // SSE headers
-  res.setHeader('Content-Type',  'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection',    'keep-alive');
-  res.flushHeaders();
-
-  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  const { send, end } = startSseResponse(res, { timeoutMs: 10 * 60 * 1000 }); // 10 min for slow connections
 
   // 1. Find Python
   send({ type: 'status', text: 'Detecting Python…' });
@@ -107,7 +102,7 @@ router.post('/install-whisper', async (req, res) => {
   if (!pythonBin) {
     send({ type: 'done', ok: false, error: 'no_python',
            text: 'Python not found. Install Python first, then come back.' });
-    return res.end();
+    return end();
   }
 
   send({ type: 'status', text: `Python found (${pythonBin}). Starting install…` });
@@ -132,7 +127,7 @@ router.post('/install-whisper', async (req, res) => {
 
   child.on('error', (err) => {
     send({ type: 'done', ok: false, error: err.message });
-    res.end();
+    end();
   });
 
   child.on('close', (code) => {
@@ -142,7 +137,7 @@ router.post('/install-whisper', async (req, res) => {
     } else {
       send({ type: 'done', ok: false, error: `pip exited with code ${code}` });
     }
-    res.end();
+    end();
   });
 });
 
@@ -241,36 +236,7 @@ router.post('/start', async (req, res) => {
 router.get('/status/:job_id', (req, res) => {
   const job = jobs.get(req.params.job_id);
   if (!job) return res.status(404).json({ error: 'Job not found' });
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
-
-  // Flush buffered events first
-  for (const event of job.events) {
-    send(event);
-  }
-
-  // If already done, close immediately
-  if (job.status !== 'running') {
-    res.end();
-    return;
-  }
-
-  // Stream live events
-  const onEvent = (data) => send(data);
-  const onDone  = () => res.end();
-
-  job.emitter.on('event', onEvent);
-  job.emitter.once('done', onDone);
-
-  req.on('close', () => {
-    job.emitter.off('event', onEvent);
-    job.emitter.off('done', onDone);
-  });
+  attachSseStream(job, req, res);
 });
 
 // ─────────────────────────────────────────────
