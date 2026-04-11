@@ -682,9 +682,59 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   display: inline-block; margin-right: 6px; transition: background 0.3s;
 }
 #tp-vd-conn-dot.ok { background: var(--teal); }
+
+/* ═══════════════════════════════════════
+   RECOVERY OVERLAY
+═══════════════════════════════════════ */
+#tp-recovery-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.94);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; text-align: center; padding: 40px;
+}
+#tp-recovery-overlay.visible { display: flex; }
+.tp-rec-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: 28px;
+  letter-spacing: 3px; color: var(--teal);
+}
+.tp-rec-script-name { font-size: 19px; font-weight: 600; color: #fff; }
+.tp-rec-sub {
+  font-size: 14px; color: rgba(255,255,255,0.5);
+  max-width: 300px; line-height: 1.6; margin: 0;
+}
+.tp-rec-timer {
+  font-size: 12px; color: rgba(255,255,255,0.3); margin-top: -4px;
+}
+.tp-rec-resume-btn {
+  margin-top: 4px; padding: 14px 36px;
+  background: var(--teal); color: #000; border: none;
+  border-radius: 10px; font-family: var(--font); font-size: 16px;
+  font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.tp-rec-resume-btn:active { opacity: 0.8; }
+.tp-rec-fresh-btn {
+  padding: 9px 22px; background: transparent;
+  color: rgba(255,255,255,0.3);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; font-family: var(--font); font-size: 13px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.tp-rec-fresh-btn:active { color: rgba(255,255,255,0.6); }
 </style>
 </head>
 <body>
+
+<!-- ══════════════════════════════════════════
+     RECOVERY OVERLAY — auto-resume interrupted session
+══════════════════════════════════════════ -->
+<div id="tp-recovery-overlay">
+  <div class="tp-rec-title">SESSION FOUND</div>
+  <div class="tp-rec-script-name" id="tp-rec-script-name">Loading…</div>
+  <div class="tp-rec-sub">Your last session was interrupted. Picking up where you left off.</div>
+  <div class="tp-rec-timer" id="tp-rec-timer">Resuming in 3…</div>
+  <button class="tp-rec-resume-btn" onclick="resumeSessionNow()">▶ Resume Now</button>
+  <button class="tp-rec-fresh-btn" id="tp-recovery-fresh">Start Fresh</button>
+</div>
 
 <!-- ══════════════════════════════════════════
      SCREEN 1 — SELECTOR
@@ -1055,6 +1105,10 @@ async function init() {
     showJoinScreen(P_SESS);
     return;
   }
+
+  // Check for recent session to recover before showing selector
+  const recovery = checkSessionRecovery();
+  if (recovery) { showRecoveryOverlay(recovery); return; }
 
   // Selector flow
   await loadScriptList();
@@ -1502,6 +1556,7 @@ function startTeleprompter() {
 
   attachDisplayEvents();
   connectDisplayWS();
+  saveRecoveryState();  // persist for reload recovery
   reqFS(document.getElementById('tp-display'));
 
   if (rafId) cancelAnimationFrame(rafId);
@@ -1544,11 +1599,17 @@ function animTick(ts) {
 
   updateCurrentLine();
 
-  // Throttled position broadcast to remotes
+  // Throttled position broadcast to remotes (250ms)
   const now = Date.now();
   if (!animTick._lastBcast || now - animTick._lastBcast > 250) {
     animTick._lastBcast = now;
     sendDisplayState();
+  }
+
+  // Throttled recovery state update — keeps scroll position current (5s)
+  if (!animTick._lastRecovery || now - animTick._lastRecovery > 5000) {
+    animTick._lastRecovery = now;
+    updateRecoveryScroll();
   }
 
   rafId = requestAnimationFrame(animTick);
@@ -1671,6 +1732,7 @@ function backToSelector() {
   document.getElementById('tp-selector').style.display = '';
   document.getElementById('tp-session-badge').classList.remove('visible');
   currentMode = 'selector';
+  localStorage.removeItem('tp_recovery'); // deliberate exit — don't offer recovery
 }
 
 function doExitFullscreen() {
@@ -2850,6 +2912,134 @@ function vdUpdateMult(val) {
 function showOperatorBadge(visible) {
   const el = document.getElementById('tp-operator-badge');
   if (el) el.classList.toggle('visible', visible);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION SURVIVAL — localStorage recovery
+// Saves script + position when teleprompter starts.
+// On reload (accidental or otherwise) within 10 minutes,
+// auto-resumes from exactly where you left off.
+// ═══════════════════════════════════════════════════════════════
+
+let _recoveryTimer   = null;  // countdown interval
+let _pendingRecovery = null;  // recovery data held until user confirms or countdown fires
+
+/** Persist current script + position to localStorage. */
+function saveRecoveryState() {
+  if (!loadedScript?.text) return;
+  try {
+    const w = document.getElementById('tp-scroll-wrap');
+    const max = w ? w.scrollHeight - w.clientHeight : 0;
+    const scrollPct = (max > 0) ? Math.round((w.scrollTop / max) * 100) : 0;
+    localStorage.setItem('tp_recovery', JSON.stringify({
+      scriptText:    loadedScript.text,
+      projectName:   loadedScript.projectName || 'Script',
+      projectId:     loadedScript.projectId   || null,
+      speakerFilter: activeSpeakerFilter,
+      fontSize,
+      scrollPct,
+      timestamp:     Date.now()
+    }));
+  } catch (_) {}
+}
+
+/** Update only the scroll position + timestamp in the stored recovery state. */
+function updateRecoveryScroll() {
+  if (currentMode !== 'display') return;
+  try {
+    const raw = localStorage.getItem('tp_recovery');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    const w = document.getElementById('tp-scroll-wrap');
+    const max = w ? w.scrollHeight - w.clientHeight : 0;
+    data.scrollPct = (max > 0) ? Math.round((w.scrollTop / max) * 100) : 0;
+    data.timestamp = Date.now();
+    localStorage.setItem('tp_recovery', JSON.stringify(data));
+  } catch (_) {}
+}
+
+/** Return stored recovery data if it exists and is < 10 minutes old. */
+function checkSessionRecovery() {
+  try {
+    const raw = localStorage.getItem('tp_recovery');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data.scriptText) return null;
+    if (Date.now() - data.timestamp > 10 * 60 * 1000) {
+      localStorage.removeItem('tp_recovery');
+      return null;
+    }
+    return data;
+  } catch (_) { return null; }
+}
+
+/** Show the recovery overlay with a 3-second countdown then auto-resume. */
+function showRecoveryOverlay(recovery) {
+  _pendingRecovery = recovery;
+  const overlay = document.getElementById('tp-recovery-overlay');
+  const nameEl  = document.getElementById('tp-rec-script-name');
+  const timerEl = document.getElementById('tp-rec-timer');
+  if (nameEl) nameEl.textContent = recovery.projectName || 'Script';
+  overlay.classList.add('visible');
+
+  let count = 3;
+  if (timerEl) timerEl.textContent = `Resuming in ${count}…`;
+  _recoveryTimer = setInterval(() => {
+    count--;
+    if (count <= 0) {
+      clearInterval(_recoveryTimer); _recoveryTimer = null;
+      resumeSessionNow();
+    } else {
+      if (timerEl) timerEl.textContent = `Resuming in ${count}…`;
+    }
+  }, 1000);
+
+  document.getElementById('tp-recovery-fresh').onclick = () => {
+    clearInterval(_recoveryTimer); _recoveryTimer = null;
+    _pendingRecovery = null;
+    localStorage.removeItem('tp_recovery');
+    overlay.classList.remove('visible');
+    loadScriptList(); // normal selector flow
+  };
+}
+
+/** Immediately resume the session (called by button or countdown). */
+function resumeSessionNow() {
+  const recovery = _pendingRecovery;
+  if (!recovery) return;
+  clearInterval(_recoveryTimer); _recoveryTimer = null;
+  _pendingRecovery = null;
+  document.getElementById('tp-recovery-overlay').classList.remove('visible');
+
+  // Rebuild loadedScript from stored text
+  const segs = processScript(recovery.scriptText);
+  loadedScript = {
+    projectId:   recovery.projectId   || null,
+    projectName: recovery.projectName || 'Script',
+    text:        recovery.scriptText,
+    segments:    segs
+  };
+
+  // Restore speaker filter + font size
+  activeSpeakerFilter = recovery.speakerFilter || null;
+  if (activeSpeakerFilter) buildSpeakerFilterUI(segs);
+  if (recovery.fontSize && recovery.fontSize >= MIN_FONT && recovery.fontSize <= MAX_FONT) {
+    fontSize = recovery.fontSize;
+  }
+
+  // Force project-tab path so startTeleprompter() uses loadedScript
+  activeTab = 'project';
+  startTeleprompter();
+
+  // Restore scroll position after DOM has rendered
+  if (recovery.scrollPct > 0) {
+    setTimeout(() => {
+      const w = document.getElementById('tp-scroll-wrap');
+      if (!w) return;
+      const max = w.scrollHeight - w.clientHeight;
+      if (max > 0) w.scrollTop = Math.round((recovery.scrollPct / 100) * max);
+    }, 300);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
