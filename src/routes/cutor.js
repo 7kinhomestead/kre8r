@@ -17,7 +17,7 @@ const express   = require('express');
 const { EventEmitter } = require('events');
 const crypto    = require('crypto');
 
-const { transcribeFile, checkWhisper } = require('../vault/transcribe');
+const { transcribeFile, checkWhisper, detectPython, resetWhisperCache } = require('../vault/transcribe');
 const { identifyCuts }   = require('../vault/cutor');
 const { extractProject } = require('../vault/extractor');
 const { checkFfmpeg }    = require('../vault/intake');
@@ -83,6 +83,67 @@ router.get('/check', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/cutor/install-whisper
+// SSE stream — installs openai-whisper via pip into the detected Python env.
+// Events: { type:'python_check' } → { type:'line', text } → { type:'done', ok, error? }
+// ─────────────────────────────────────────────
+
+router.post('/install-whisper', async (req, res) => {
+  // SSE headers
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+  // 1. Find Python
+  send({ type: 'status', text: 'Detecting Python…' });
+  const pythonBin = await detectPython();
+
+  if (!pythonBin) {
+    send({ type: 'done', ok: false, error: 'no_python',
+           text: 'Python not found. Install Python first, then come back.' });
+    return res.end();
+  }
+
+  send({ type: 'status', text: `Python found (${pythonBin}). Starting install…` });
+
+  // 2. Run: <python> -m pip install --upgrade openai-whisper
+  //    Using -m pip ensures we're installing into the exact Python we found.
+  const { spawn } = require('child_process');
+  const child = spawn(pythonBin, ['-m', 'pip', 'install', '--upgrade', 'openai-whisper'], {
+    windowsHide: true
+  });
+
+  const handleData = (data) => {
+    const lines = data.toString().split('\n');
+    for (const line of lines) {
+      const t = line.trim();
+      if (t) send({ type: 'line', text: t });
+    }
+  };
+
+  child.stdout.on('data', handleData);
+  child.stderr.on('data', handleData);
+
+  child.on('error', (err) => {
+    send({ type: 'done', ok: false, error: err.message });
+    res.end();
+  });
+
+  child.on('close', (code) => {
+    if (code === 0) {
+      resetWhisperCache();   // clear stale "not found" so next /check re-probes
+      send({ type: 'done', ok: true, text: 'Whisper installed successfully.' });
+    } else {
+      send({ type: 'done', ok: false, error: `pip exited with code ${code}` });
+    }
+    res.end();
+  });
 });
 
 // ─────────────────────────────────────────────

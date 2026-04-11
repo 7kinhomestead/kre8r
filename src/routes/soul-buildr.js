@@ -629,14 +629,18 @@ router.post('/analyze-voice', voiceUpload.array('clips', 6), async (req, res) =>
 
       try {
         // Resample to 16 kHz mono WAV — works for .mp3, .mp4, .mov, .m4a, .wav, etc.
+        // Use FFMPEG_PATH env var (set by server.js bootstrap from ffmpeg-static)
+        // so this works on Mac, Linux, and Windows without a system ffmpeg install.
+        const ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
         execSync(
-          `ffmpeg -y -i "${file.path}" -ar 16000 -ac 1 "${wavPath}"`,
+          `"${ffmpegBin}" -y -i "${file.path}" -ar 16000 -ac 1 "${wavPath}"`,
           { timeout: 120_000, stdio: 'pipe' }
         );
 
-        // Whisper transcription — GPU accelerated, small model, English forced
+        // Whisper transcription — no --device flag so Whisper auto-selects:
+        // CUDA on Windows/Linux with NVIDIA, Metal on Apple Silicon, CPU everywhere else.
         execSync(
-          `"${WHISPER_BIN}" "${wavPath}" --model small --language en --device cuda --output_format txt --output_dir "${os.tmpdir()}"`,
+          `"${WHISPER_BIN}" "${wavPath}" --model small --language en --output_format txt --output_dir "${os.tmpdir()}"`,
           { timeout: 600_000, stdio: 'pipe' }   // 10 min per clip
         );
 

@@ -27,6 +27,30 @@ if (process.env.ELECTRON === 'true') {
 }
 
 // ─────────────────────────────────────────────
+// FFMPEG PATH BOOTSTRAP
+// ─────────────────────────────────────────────
+// Auto-wire bundled ffmpeg-static binaries when the env vars aren't already set.
+// This fires before any route file requires fluent-ffmpeg, so the paths are in
+// place by the time the library initialises.
+// Priority: env var (Electron/Docker) → ffmpeg-static package → system PATH
+if (!process.env.FFMPEG_PATH) {
+  try {
+    process.env.FFMPEG_PATH = require('ffmpeg-static');
+    console.log('[ffmpeg] bundled binary →', process.env.FFMPEG_PATH);
+  } catch (_) {
+    console.log('[ffmpeg] ffmpeg-static not found — falling back to system PATH');
+  }
+}
+if (!process.env.FFPROBE_PATH) {
+  try {
+    process.env.FFPROBE_PATH = require('ffprobe-static').path;
+    console.log('[ffprobe] bundled binary →', process.env.FFPROBE_PATH);
+  } catch (_) {
+    console.log('[ffprobe] ffprobe-static not found — falling back to system PATH');
+  }
+}
+
+// ─────────────────────────────────────────────
 // PROCESS-LEVEL ERROR HANDLERS — must be first
 // ─────────────────────────────────────────────
 process.on('unhandledRejection', (reason, promise) => {

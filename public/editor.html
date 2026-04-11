@@ -166,6 +166,21 @@
   .advance-text{flex:1;}
   .advance-title{font-family:var(--font-head);font-size:18px;letter-spacing:2px;color:var(--teal);margin-bottom:4px;}
   .advance-sub{font-size:13px;color:var(--text-dim);}
+
+  /* ── DEP WARNING BANNER ── */
+  .dep-banner{background:linear-gradient(135deg,var(--amber-glow) 0%,var(--bg-card) 100%);border:1px solid var(--amber-border);border-radius:var(--radius);padding:18px 22px;margin-bottom:20px;display:none;animation:fadeUp 0.35s ease both;gap:14px;align-items:flex-start;}
+  .dep-banner.visible{display:flex;}
+  .dep-icon{font-size:22px;flex-shrink:0;line-height:1;padding-top:1px;}
+  .dep-body{flex:1;min-width:0;}
+  .dep-title{font-family:var(--font-head);font-size:16px;letter-spacing:1.5px;color:var(--amber);margin-bottom:6px;}
+  .dep-msg{font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:10px;}
+  .dep-cmd{display:inline-block;background:rgba(0,0,0,0.35);border:1px solid var(--border-bright);border-radius:5px;padding:6px 12px;font-family:monospace;font-size:12px;color:var(--text);letter-spacing:0.3px;margin-bottom:4px;}
+  .dep-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .dep-recheck{background:transparent;border:1px solid var(--amber-border);color:var(--amber);font-family:var(--font-body);font-size:12px;font-weight:600;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;}
+  .dep-recheck:hover{background:var(--amber-glow);}
+  .dep-recheck:disabled{opacity:0.5;cursor:not-allowed;}
+  .dep-dismiss{background:transparent;border:1px solid var(--border);color:var(--text-dimmer);font-family:var(--font-body);font-size:12px;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;}
+  .dep-dismiss:hover{color:var(--text-dim);}
 </style>
 </head>
 <body>
@@ -178,6 +193,24 @@
   <div class="page-header">
     <div class="page-title">ASSEMBL<em>Ω</em>R</div>
     <div class="page-sub">Transcript → beat map → best takes. Claude picks the winner from every retake. One click to DaVinci.</div>
+  </div>
+
+  <!-- DEPENDENCY WARNING BANNER -->
+  <div class="dep-banner" id="depBanner">
+    <div class="dep-icon" id="depIcon">⚠️</div>
+    <div class="dep-body">
+      <div class="dep-title" id="depTitle">WHISPER NOT FOUND</div>
+      <div class="dep-msg" id="depMsg"></div>
+      <div id="depCmds"></div>
+      <div id="depProgress" style="display:none">
+        <div style="font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Installing…</div>
+        <div id="depLog" style="font-family:monospace;font-size:11px;color:var(--text-dim);background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:5px;padding:10px 12px;max-height:140px;overflow-y:auto;line-height:1.6;white-space:pre-wrap;"></div>
+      </div>
+      <div class="dep-actions" id="depActions">
+        <button class="dep-recheck" id="depRecheck">Check Again</button>
+        <button class="dep-dismiss" id="depDismiss">Dismiss</button>
+      </div>
+    </div>
   </div>
 
   <!-- PROJECT SELECTOR -->
@@ -323,8 +356,191 @@ let projectsMap      = {};     // id → project object
 // INIT
 // ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+// DEPENDENCY CHECK + ONE-CLICK INSTALL — Whisper pre-flight
+// ─────────────────────────────────────────────
+
+const isMac = navigator.platform.toLowerCase().includes('mac') ||
+              navigator.userAgent.toLowerCase().includes('mac');
+const isWin = navigator.platform.toLowerCase().includes('win') &&
+              !navigator.platform.toLowerCase().includes('mac');
+
+function _depEl(id) { return document.getElementById(id); }
+
+function _showBannerState(state) {
+  // state: 'no_python' | 'no_whisper' | 'installing' | 'success' | 'error'
+  const icon    = _depEl('depIcon');
+  const title   = _depEl('depTitle');
+  const msg     = _depEl('depMsg');
+  const cmds    = _depEl('depCmds');
+  const prog    = _depEl('depProgress');
+  const actions = _depEl('depActions');
+  const recheck = _depEl('depRecheck');
+  const banner  = _depEl('depBanner');
+
+  // Reset visibility
+  cmds.style.display    = 'block';
+  prog.style.display    = 'none';
+  actions.style.display = 'flex';
+  banner.style.borderColor = '';
+  banner.style.background  = '';
+
+  if (state === 'no_python') {
+    icon.textContent  = '⚠️';
+    title.textContent = 'PYTHON NOT FOUND';
+    msg.innerHTML = 'Kre8Ωr needs Python to run Whisper transcription. Install Python first, then come back — Kre8Ωr will install Whisper for you automatically.';
+    if (isMac) {
+      cmds.innerHTML =
+        '<div style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;">Install Python via Homebrew (recommended for Mac):</div>' +
+        '<div class="dep-cmd">brew install python3</div>' +
+        '<div style="margin-top:8px;font-size:12px;color:var(--text-dim);">No Homebrew? <a href="https://brew.sh" target="_blank" style="color:var(--amber);">brew.sh</a> — or download Python directly from <a href="https://python.org" target="_blank" style="color:var(--amber);">python.org</a></div>';
+    } else {
+      cmds.innerHTML =
+        '<div style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;">Download from:</div>' +
+        '<div><a href="https://python.org/downloads" target="_blank" style="color:var(--amber);font-size:13px;">python.org/downloads</a></div>' +
+        '<div style="margin-top:6px;font-size:12px;color:var(--text-dimmer);">Check "Add Python to PATH" during install, then click Check Again.</div>';
+    }
+    recheck.textContent = 'Check Again';
+    recheck.onclick = checkDeps;
+
+  } else if (state === 'no_whisper') {
+    icon.textContent  = '⚠️';
+    title.textContent = 'WHISPER NOT FOUND';
+    msg.innerHTML = 'AssemblΩr uses OpenAI Whisper for transcription — it\'s free and open-source. Python is installed, so Kre8Ωr can install Whisper for you now.';
+    cmds.innerHTML =
+      '<div style="font-size:12px;color:var(--text-dimmer);margin-bottom:2px;">First transcription will also download the Whisper model (~500 MB). Happens once, automatically.</div>';
+    recheck.textContent = 'Install Whisper';
+    recheck.onclick = installWhisper;
+
+  } else if (state === 'installing') {
+    icon.textContent  = '⏳';
+    title.textContent = 'INSTALLING WHISPER…';
+    msg.innerHTML     = 'This takes 1–3 minutes. You can keep using Kre8Ωr while it runs.';
+    cmds.style.display    = 'none';
+    prog.style.display    = 'block';
+    actions.style.display = 'none';
+
+  } else if (state === 'success') {
+    icon.textContent  = '✅';
+    title.textContent = 'WHISPER INSTALLED';
+    msg.innerHTML     = 'Transcription features are now unlocked. The banner will close automatically.';
+    cmds.style.display    = 'none';
+    prog.style.display    = 'none';
+    actions.style.display = 'none';
+    banner.style.borderColor = 'var(--green-border)';
+    banner.style.background  = 'linear-gradient(135deg,var(--green-glow) 0%,var(--bg-card) 100%)';
+
+  } else if (state === 'error') {
+    icon.textContent  = '❌';
+    title.textContent = 'INSTALL FAILED';
+    recheck.textContent = 'Try Again';
+    recheck.onclick = installWhisper;
+  }
+}
+
+async function checkDeps() {
+  const banner  = _depEl('depBanner');
+  const recheck = _depEl('depRecheck');
+
+  recheck.disabled    = true;
+  recheck.textContent = 'Checking…';
+
+  let data;
+  try {
+    const r = await fetch('/api/cutor/check');
+    data = await r.json();
+  } catch (_) {
+    recheck.disabled    = false;
+    recheck.textContent = 'Check Again';
+    return;
+  }
+
+  recheck.disabled = false;
+
+  if (data.whisper) {
+    banner.classList.remove('visible');
+    return;
+  }
+
+  // Whisper missing — ask server if Python at least exists
+  let pythonFound = false;
+  try {
+    // We piggyback on the install endpoint with a GET-style probe:
+    // The check endpoint doesn't expose python separately, so we try a quick
+    // install probe that returns immediately if python is missing.
+    // Simpler: just show no_whisper state and let the install attempt figure it out.
+    pythonFound = true; // optimistic — install endpoint handles the no-python case
+  } catch (_) {}
+
+  _showBannerState(pythonFound ? 'no_whisper' : 'no_python');
+  banner.classList.add('visible');
+}
+
+async function installWhisper() {
+  const banner = _depEl('depBanner');
+  const log    = _depEl('depLog');
+
+  _showBannerState('installing');
+  log.textContent = '';
+
+  let finalOk = false;
+  let finalErr = '';
+
+  try {
+    const res = await fetch('/api/cutor/install-whisper', { method: 'POST' });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop(); // keep incomplete chunk
+      for (const part of parts) {
+        const dataLine = part.replace(/^data: /, '').trim();
+        if (!dataLine) continue;
+        try {
+          const ev = JSON.parse(dataLine);
+          if (ev.type === 'line') {
+            log.textContent += ev.text + '\n';
+            log.scrollTop = log.scrollHeight;
+          } else if (ev.type === 'status') {
+            log.textContent += '▸ ' + ev.text + '\n';
+            log.scrollTop = log.scrollHeight;
+          } else if (ev.type === 'done') {
+            finalOk  = ev.ok;
+            finalErr = ev.error || '';
+            // If server said no Python, switch to no_python state
+            if (!ev.ok && ev.error === 'no_python') {
+              _showBannerState('no_python');
+              return;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (err) {
+    finalErr = err.message;
+    finalOk  = false;
+  }
+
+  if (finalOk) {
+    _showBannerState('success');
+    // Auto-hide after 3 s — Whisper is installed, move on
+    setTimeout(() => {
+      banner.classList.remove('visible');
+    }, 3000);
+  } else {
+    _depEl('depMsg').innerHTML =
+      `Install failed: <span style="color:var(--red);font-family:monospace;font-size:12px;">${finalErr}</span>`;
+    _showBannerState('error');
+  }
+}
+
 async function init() {
-  await loadProjects();
+  checkDeps(); // fire and forget — don't block project load
 
   const params = new URLSearchParams(window.location.search);
   const pid = params.get('project_id');
@@ -342,6 +558,11 @@ async function init() {
   document.getElementById('davinciBtn').addEventListener('click', onPushToDavinci);
   document.getElementById('importBrollBtn').addEventListener('click', onImportBroll);
   document.getElementById('clearBtn').addEventListener('click', onClearSelects);
+
+  document.getElementById('depRecheck').addEventListener('click', checkDeps);
+  document.getElementById('depDismiss').addEventListener('click', () => {
+    document.getElementById('depBanner').classList.remove('visible');
+  });
 }
 
 // ─────────────────────────────────────────────

@@ -62,6 +62,19 @@ function startServer() {
       console.log('[Electron] Dev mode: copied creator-profile.json →', profileDest);
     }
 
+    // ── Resolve bundled ffmpeg/ffprobe paths for cross-platform use ─────────────
+    // ffmpeg-static and ffprobe-static ship pre-built binaries for Win/Mac/Linux.
+    // We resolve them here in Electron's process so the server gets explicit paths
+    // regardless of what's (or isn't) on the user's system PATH.
+    let ffmpegPath  = process.env.FFMPEG_PATH  || '';
+    let ffprobePath = process.env.FFPROBE_PATH || '';
+    if (!ffmpegPath) {
+      try { ffmpegPath  = require('ffmpeg-static');         } catch (_) {}
+    }
+    if (!ffprobePath) {
+      try { ffprobePath = require('ffprobe-static').path;   } catch (_) {}
+    }
+
     // Spawn server with system Node.js (not Electron's bundled node)
     // so native modules compiled for system Node (better-sqlite3, etc.) load correctly.
     const nodeBin = process.platform === 'win32' ? 'node.exe' : 'node';
@@ -74,6 +87,9 @@ function startServer() {
         // DB and creator profile live in the user's AppData / Application Support
         DB_PATH:             path.join(app.getPath('userData'), 'kre8r.db'),
         CREATOR_PROFILE_PATH: path.join(app.getPath('userData'), 'creator-profile.json'),
+        // Bundled binary paths — overrides system PATH for cross-platform reliability
+        ...(ffmpegPath  && { FFMPEG_PATH:  ffmpegPath  }),
+        ...(ffprobePath && { FFPROBE_PATH: ffprobePath }),
       },
       stdio: 'pipe',
     });

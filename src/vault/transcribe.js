@@ -95,6 +95,30 @@ async function checkWhisper() {
   };
 }
 
+// Probe whether any Python binary exists (regardless of Whisper install).
+// Returns the binary name ('python3', 'python', 'py') or null.
+async function detectPython() {
+  for (const bin of WHISPER_CANDIDATES) {
+    const found = await new Promise((resolve) => {
+      const proc = spawn(bin, ['--version'], { windowsHide: true, timeout: 5_000 });
+      let out = '';
+      proc.stdout.on('data', d => { out += d.toString(); });
+      proc.stderr.on('data', d => { out += d.toString(); });
+      proc.on('error', () => resolve(null));
+      proc.on('close', () => resolve(out.toLowerCase().includes('python') ? bin : null));
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
+// Reset the Whisper detection cache — call after a successful pip install
+// so the next checkWhisper() re-probes instead of returning the stale miss.
+function resetWhisperCache() {
+  _whisperBinary  = null;
+  _whisperVersion = null;
+}
+
 // ─────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────
@@ -321,4 +345,4 @@ async function transcribeFile(filePath, options = {}) {
   }
 }
 
-module.exports = { transcribeFile, checkWhisper, TRANSCRIPTS_DIR };
+module.exports = { transcribeFile, checkWhisper, detectPython, resetWhisperCache, TRANSCRIPTS_DIR };

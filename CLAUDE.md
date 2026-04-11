@@ -41,7 +41,8 @@ of future multi-tenancy. Never hardcode creator-specific data anywhere in the en
 - Server: Express.js on port 3000
 - Database: SQLite via better-sqlite3 (synchronous, WAL mode, file-based)
 - AI: Anthropic Claude API (claude-sonnet-4-6), shared caller in src/utils/claude.js
-- Video processing: ffmpeg + ffprobe (local)
+- Video processing: ffmpeg + ffprobe via ffmpeg-static + ffprobe-static (bundled cross-platform binaries)
+  FFMPEG_PATH / FFPROBE_PATH env vars bootstrapped in server.js — set before any route loads
 - Transcription: Whisper (local Python)
 - DaVinci integration: Python scripting API (port 9237, Local mode, Windows only)
 - Music: Suno API (when configured) or Prompt Mode
@@ -71,7 +72,8 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 - `database/` — SQLite db file
 - `creator-profile.json` — Soul config for 7 Kin Homestead instance
 - `DEVNOTES.md` — Critical dev notes including DB write rule
-- `OPUS_REVIEW.md` — Senior architecture review (read this)
+- `OPUS_REVIEW.md` — First senior architecture review (Sessions 1–24)
+- `OPUS_REVIEW_V2.md` — Second Opus review (Sessions 25–31, pre-V1.0 desktop app)
 
 ## Full Pipeline (Current Build State)
 
@@ -205,7 +207,8 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 5. Project resolution defaults to 4K DCI instead of reading footage resolution
 6. No automated tests, no error monitoring, no structured logging
 7. No backup strategy for SQLite file
-8. Hardcoded Windows paths in some Python scripts
+8. ~~Hardcoded Windows paths~~ — FIXED Session 31 (DB_PATH, FFMPEG_PATH, CREATOR_PROFILE_PATH all env-var driven)
+9. Whisper model download has no progress indicator on first transcription run (looks like hang)
 
 ## Planned Features (Not Yet Built)
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
@@ -230,11 +233,11 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 - GitHub: github.com/7kinhomestead/kre8r (private, master branch)
 - Target: use it publicly → document publicly → find operator partner
 - Founding 50 developer member also interested
-- Read OPUS_REVIEW.md for senior architecture assessment
+- Read OPUS_REVIEW_V2.md for current senior architecture assessment (updated pre-V1.0)
 
 ## Session Start Checklist
 1. Read SESSION-LOG.md and TODO.md
-2. Read OPUS_REVIEW.md for architectural context
+2. Read OPUS_REVIEW_V2.md for architectural context (current); OPUS_REVIEW.md for original
 3. Check PM2 status: pm2 status
 4. Open DaVinci Resolve if doing video work
 5. Confirm VaultΩr watcher path in startup log (should say D:/kre8r/intake)
