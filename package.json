@@ -14,7 +14,9 @@
     "generate-icons": "node scripts/generate-icons.js",
     "build-template-db": "node scripts/build-template-db.js",
     "download-node": "node scripts/download-node-sidecar.js",
-    "download-node:all": "node scripts/download-node-sidecar.js --all"
+    "download-node:all": "node scripts/download-node-sidecar.js --all",
+    "test:sse": "node scripts/test-sse.js",
+    "test:sse:verbose": "node scripts/test-sse.js --verbose"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

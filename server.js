@@ -422,6 +422,41 @@ app.get('/api/doctor', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// DATA EXPORT — GET /api/export/all
+// Returns a JSON snapshot of all user data for backup / migration.
+// Excludes binary files (footage, thumbnails) — just the DB records.
+// ─────────────────────────────────────────────
+app.get('/api/export/all', (req, res) => {
+  try {
+    const db     = require('./src/db');
+    const profResult = require('./src/utils/profile-validator').loadProfile();
+
+    const snapshot = {
+      exported_at:    new Date().toISOString(),
+      schema_version: 1,
+      instance:       profResult.ok ? profResult.profile.instance : 'unknown',
+      data: {
+        projects:   db.getAllProjects(),
+        footage:    db.getAllFootage(),
+        voice_profiles: (() => {
+          try { return db.getAllVoiceProfiles ? db.getAllVoiceProfiles() : []; } catch { return []; }
+        })(),
+      }
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="kre8r-export-${new Date().toISOString().slice(0,10)}.json"`
+    );
+    res.json(snapshot);
+  } catch (err) {
+    log.error({ module: 'export', err }, 'Export failed');
+    res.status(500).json({ error: 'Export failed', detail: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // SPA FALLBACK — serve index.html for all non-API routes
 // ─────────────────────────────────────────────
 app.get('/', (req, res) => {
