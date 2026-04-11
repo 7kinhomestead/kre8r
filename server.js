@@ -133,7 +133,8 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/beta'))    return next();
   if (req.path === '/api/health')          return next();
   if (['/landing', '/landing.html', '/media-kit', '/media-kit.html',
-       '/beta-invite', '/beta-invite.html'].includes(req.path)) return next();
+       '/beta-invite', '/beta-invite.html',
+       '/gate', '/kre8r-gate', '/kre8r-gate.html'].includes(req.path)) return next();
 
   // Logged in — allow
   if (req.session?.userId) return next();
@@ -162,6 +163,11 @@ app.get('/media-kit',        (req, res) => res.sendFile(path.join(__dirname, 'pu
 app.get('/media-kit.html',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
 app.get('/beta-invite',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
 app.get('/beta-invite.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
+
+// KRE8R website prototype — public, no auth
+app.get('/gate',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'kre8r-gate.html')));
+app.get('/kre8r-gate',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'kre8r-gate.html')));
+app.get('/kre8r-gate.html',(req, res) => res.sendFile(path.join(__dirname, 'public', 'kre8r-gate.html')));
 
 // Admin dashboard — behind nginx basic auth on production
 app.get('/admin',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));

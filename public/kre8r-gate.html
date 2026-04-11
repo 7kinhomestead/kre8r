@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KRE8R — Create Without Limit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,200;0,300;0,400;0,600;1,300&display=swap">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #000;
+  height: 600vh;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+#scene {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+}
+
+/* ── Custom cursor ─────────────────────────────── */
+#cursor {
+  position: fixed;
+  width: 8px; height: 8px;
+  background: #3ecfb2;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+  transition: transform 0.1s ease, opacity 0.3s;
+}
+#cursor-ring {
+  position: fixed;
+  width: 32px; height: 32px;
+  border: 1px solid rgba(62,207,178,0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s, height 0.2s, border-color 0.2s;
+}
+
+/* ── Hero text ─────────────────────────────────── */
+#hero {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 10;
+  width: 100%;
+}
+
+#hero-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(72px, 14vw, 200px);
+  letter-spacing: 0.12em;
+  color: #fff;
+  line-height: 1;
+  /* subtle teal glow — not cartoon */
+  text-shadow:
+    0 0 80px rgba(62,207,178,0.15),
+    0 0 200px rgba(62,207,178,0.05);
+}
+
+#hero-tagline {
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(10px, 1.2vw, 15px);
+  font-weight: 300;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: rgba(62,207,178,0.7);
+  margin-top: 20px;
+  line-height: 2.2;
+}
+
+#hero-line {
+  display: block;
+  width: 40px;
+  height: 1px;
+  background: rgba(62,207,178,0.4);
+  margin: 16px auto 0;
+}
+
+/* ── Scroll prompt ─────────────────────────────── */
+#scroll-prompt {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+  pointer-events: none;
+}
+#scroll-prompt span {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+}
+#scroll-arrow {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(62,207,178,0.6), transparent);
+  animation: scrollArrow 2s ease-in-out infinite;
+}
+@keyframes scrollArrow {
+  0%   { transform: scaleY(0); transform-origin: top; opacity: 0; }
+  50%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+  100% { transform: scaleY(1); transform-origin: bottom; opacity: 0; }
+}
+
+/* ── Flash overlay ─────────────────────────────── */
+#flash {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center,
+    rgba(100,255,220,0.95) 0%,
+    rgba(62,207,178,0.8) 40%,
+    rgba(0,20,30,0.9) 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* ── Station label (Id8r) ──────────────────────── */
+#station-id8r {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+#station-id8r .station-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 7vw, 96px);
+  letter-spacing: 0.25em;
+  color: #fff;
+}
+#station-id8r .station-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(10px, 1vw, 13px);
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: rgba(62,207,178,0.6);
+  margin-top: 8px;
+}
+
+/* ── Section hint ──────────────────────────────── */
+#section-hint {
+  position: fixed;
+  top: 40px; left: 50%;
+  transform: translateX(-50%);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(62,207,178,0.4);
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- Hero -->
+<div id="hero">
+  <div id="hero-logo">KRE8R</div>
+  <div id="hero-tagline">
+    Create Without Limit<br>Distribute Without Resistance
+  </div>
+  <span id="hero-line"></span>
+</div>
+
+<!-- Scroll prompt -->
+<div id="scroll-prompt">
+  <span>Enter</span>
+  <div id="scroll-arrow"></div>
+</div>
+
+<!-- Flash -->
+<div id="flash"></div>
+
+<!-- Id8r station -->
+<div id="station-id8r">
+  <div class="station-name">ID8R</div>
+  <div class="station-sub">Ideation Engine</div>
+</div>
+
+<!-- Section hint -->
+<div id="section-hint">Ideation</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer }   from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }       from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass }  from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass }       from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass }       from 'three/addons/postprocessing/OutputPass.js';
+
+// ═══════════════════════════════════════════════
+// SETUP
+// ═══════════════════════════════════════════════
+
+const canvas   = document.getElementById('scene');
+let W = window.innerWidth;
+let H = window.innerHeight;
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping        = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+const scene  = new THREE.Scene();
+scene.background = new THREE.Color(0x010208);
+scene.fog        = new THREE.FogExp2(0x010208, 0.012);
+
+const camera = new THREE.PerspectiveCamera(65, W / H, 0.01, 500);
+camera.position.set(0, 0, 8);
+
+// ═══════════════════════════════════════════════
+// POST-PROCESSING
+// ═══════════════════════════════════════════════
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(W, H),
+  1.6,   // strength
+  0.5,   // radius
+  0.08   // threshold — low so ring glows richly
+);
+composer.addPass(bloomPass);
+
+// Chromatic aberration + film grain — cinematic texture
+const grainAberrationShader = {
+  uniforms: {
+    tDiffuse:   { value: null },
+    aberration: { value: 0.0 },
+    grain:      { value: 0.04 },
+    time:       { value: 0.0 },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float aberration;
+    uniform float grain;
+    uniform float time;
+    varying vec2 vUv;
+
+    float rand(vec2 co) {
+      return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    void main() {
+      vec2 dir = vUv - 0.5;
+      float dist = length(dir);
+
+      // Chromatic aberration — stronger at edges, ramps near portal
+      float r = texture2D(tDiffuse, vUv + dir * aberration * dist).r;
+      float g = texture2D(tDiffuse, vUv).g;
+      float b = texture2D(tDiffuse, vUv - dir * aberration * dist).b;
+
+      // Film grain — high frequency noise, very subtle
+      float noise = (rand(vUv + fract(time * 0.1)) - 0.5) * grain;
+
+      gl_FragColor = vec4(r + noise, g + noise, b + noise, 1.0);
+    }
+  `,
+};
+
+const grainPass = new ShaderPass(grainAberrationShader);
+composer.addPass(grainPass);
+composer.addPass(new OutputPass());
+
+// ═══════════════════════════════════════════════
+// CAMERA PATH
+// Portal at z=0. Camera travels z=8 → z=-22.
+// ═══════════════════════════════════════════════
+
+const cameraPath = new THREE.CatmullRomCurve3([
+  new THREE.Vector3( 0.0,  0.0,   8.0),   // 0   — far approach
+  new THREE.Vector3( 0.3,  0.1,   5.5),   // slight drift — portal's gravity
+  new THREE.Vector3(-0.2, -0.1,   3.5),   // subtle correction
+  new THREE.Vector3( 0.0,  0.05,  1.8),   // close approach, nearly aligned
+  new THREE.Vector3( 0.0,  0.0,   0.4),   // threshold face
+  new THREE.Vector3( 0.0,  0.0,  -1.5),   // crossing
+  new THREE.Vector3( 0.0,  0.2,  -5.0),   // wormhole interior — slight lift
+  new THREE.Vector3( 0.0,  0.0, -10.0),   // emerging
+  new THREE.Vector3( 0.0,  0.0, -16.0),   // coasting
+  new THREE.Vector3( 0.0,  0.0, -22.0),   // Id8r station arrival
+], false, 'catmullrom', 0.5);
+
+// Scroll easing — accelerates through portal, gentles into Id8r
+function easeScroll(t) {
+  if (t < 0.35) {
+    // Gentle linear approach
+    return t * 0.55;
+  } else if (t < 0.60) {
+    // Accelerate through portal — quadratic
+    const s = (t - 0.35) / 0.25;
+    return 0.1925 + s * s * 0.35;
+  } else {
+    // Gentle deceleration into Id8r space
+    const s = (t - 0.60) / 0.40;
+    return 0.5425 + Math.pow(s, 0.6) * 0.4575;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// STARFIELD — 5000 soft gaussian points
+// Not cartoon: varying size/brightness, no hard edges
+// ═══════════════════════════════════════════════
+
+function buildStarfield(count) {
+  const geom      = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  const sizes     = new Float32Array(count);
+  const bright    = new Float32Array(count); // per-star brightness variation
+
+  for (let i = 0; i < count; i++) {
+    // Distribute in a long tube around the camera path
+    const angle = Math.random() * Math.PI * 2;
+    const r     = 6 + Math.random() * 50;
+    positions[i * 3]     = Math.cos(angle) * r + (Math.random() - 0.5) * 4;
+    positions[i * 3 + 1] = Math.sin(angle) * r + (Math.random() - 0.5) * 4;
+    positions[i * 3 + 2] = -25 + Math.random() * 40;
+
+    sizes[i]  = 0.008 + Math.pow(Math.random(), 3) * 0.06; // most tiny, few bright
+    bright[i] = 0.3 + Math.random() * 0.7;
+  }
+
+  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geom.setAttribute('aSize',    new THREE.BufferAttribute(sizes,     1));
+  geom.setAttribute('aBright',  new THREE.BufferAttribute(bright,    1));
+
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { camSpeed: { value: 0.0 } },
+    vertexShader: `
+      attribute float aSize;
+      attribute float aBright;
+      varying float vBright;
+      uniform float camSpeed;
+      void main() {
+        vBright = aBright;
+        vec4 mvPos    = modelViewMatrix * vec4(position, 1.0);
+        float depthScale = 300.0 / max(-mvPos.z, 0.1);
+        // Slightly elongate in z direction when moving fast (streak effect)
+        gl_PointSize = aSize * depthScale * (1.0 + camSpeed * 2.0);
+        gl_Position  = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      varying float vBright;
+      void main() {
+        vec2  c = gl_PointCoord - 0.5;
+        float d = length(c);
+        if (d > 0.5) discard;
+        // Gaussian falloff — no hard edge, no cartoon circle
+        float a = exp(-d * d * 8.0) * vBright;
+        // Blue-white color, slight warm/cool variation per brightness
+        vec3 col = mix(vec3(0.7, 0.8, 1.0), vec3(1.0, 0.97, 0.88), vBright * 0.5);
+        gl_FragColor = vec4(col, a * 0.9);
+      }
+    `,
+    transparent: true,
+    depthWrite:  false,
+    blending:    THREE.AdditiveBlending,
+  });
+
+  return new THREE.Points(geom, mat);
+}
+
+const stars = buildStarfield(5000);
+scene.add(stars);
+
+// ═══════════════════════════════════════════════
+// PORTAL
+// — void disc (black)
+// — main teal ring (emissive, bloom)
+// — inner shimmer (animated shader)
+// — outer corona (dim, wide)
+// — energy wisp planes (volumetric feel)
+// ═══════════════════════════════════════════════
+
+const portalGroup = new THREE.Group();
+scene.add(portalGroup);
+
+// Void — pure black disc, occludes stars inside ring
+const voidMesh = new THREE.Mesh(
+  new THREE.CircleGeometry(1.48, 128),
+  new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide })
+);
+voidMesh.renderOrder = 1;
+portalGroup.add(voidMesh);
+
+// Main ring — teal, heavy emissive so bloom makes it glow properly
+const ringMat = new THREE.MeshStandardMaterial({
+  color:             new THREE.Color(0x3ecfb2),
+  emissive:          new THREE.Color(0x3ecfb2),
+  emissiveIntensity: 4.0,
+  roughness:         0.05,
+  metalness:         0.9,
+});
+const ring = new THREE.Mesh(
+  new THREE.TorusGeometry(1.5, 0.035, 32, 256),
+  ringMat
+);
+ring.renderOrder = 2;
+portalGroup.add(ring);
+
+// Inner energy shimmer — animated plasma on the ring
+const shimmerMat = new THREE.ShaderMaterial({
+  uniforms: {
+    time:    { value: 0.0 },
+    opacity: { value: 0.55 },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float time;
+    uniform float opacity;
+    varying vec2 vUv;
+    void main() {
+      // Multiple frequency shimmer bands traveling around the ring
+      float s1 = sin(vUv.x * 31.4 + time * 1.8) * 0.5 + 0.5;
+      float s2 = sin(vUv.x * 62.8 - time * 3.1) * 0.5 + 0.5;
+      float s3 = sin(vUv.x * 15.7 + time * 0.9) * 0.5 + 0.5;
+      float shimmer = pow(s1 * s2 + s3 * 0.3, 2.5);
+
+      // Cross-section fade — bright at outer edge, soft inside
+      float fade = sin(vUv.y * 3.14159);
+      fade = pow(fade, 1.5);
+
+      vec3 innerCol = vec3(0.6, 1.0, 0.95); // bright near-white teal
+      vec3 outerCol = vec3(0.15, 0.6, 0.55); // deep teal
+      vec3 col      = mix(outerCol, innerCol, shimmer);
+
+      gl_FragColor = vec4(col, shimmer * fade * opacity);
+    }
+  `,
+  transparent: true,
+  depthWrite:  false,
+  side:        THREE.DoubleSide,
+  blending:    THREE.AdditiveBlending,
+});
+const shimmerRing = new THREE.Mesh(
+  new THREE.TorusGeometry(1.5, 0.18, 16, 256),
+  shimmerMat
+);
+shimmerRing.renderOrder = 3;
+portalGroup.add(shimmerRing);
+
+// Corona — wide, very dim, bloom turns it into a deep glow
+const coronaMat = new THREE.ShaderMaterial({
+  uniforms: { time: { value: 0.0 } },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float time;
+    varying vec2 vUv;
+    void main() {
+      float fade = pow(sin(vUv.y * 3.14159), 1.2);
+      float pulse = 0.85 + 0.15 * sin(time * 0.7 + vUv.x * 6.28);
+      // Slight color variation — outer edge trends blue
+      vec3 col = mix(vec3(0.05, 0.35, 0.32), vec3(0.1, 0.5, 0.45), fade * pulse);
+      gl_FragColor = vec4(col, fade * pulse * 0.18);
+    }
+  `,
+  transparent: true,
+  depthWrite:  false,
+  side:        THREE.DoubleSide,
+  blending:    THREE.AdditiveBlending,
+});
+const corona = new THREE.Mesh(
+  new THREE.TorusGeometry(1.5, 0.7, 8, 256),
+  coronaMat
+);
+corona.renderOrder = 0;
+portalGroup.add(corona);
+
+// Orbital energy particles — fine, teal, distributed around ring
+// These are NOT floating spheres — they're sub-pixel soft points
+function buildOrbitalParticles(count) {
+  const geom    = new THREE.BufferGeometry();
+  const pos     = new Float32Array(count * 3);
+  const angles  = new Float32Array(count);
+  const radii   = new Float32Array(count);
+  const offsets = new Float32Array(count);   // vertical offset from ring plane
+  const speeds  = new Float32Array(count);
+  const sizes   = new Float32Array(count);
+
+  for (let i = 0; i < count; i++) {
+    angles[i]  = Math.random() * Math.PI * 2;
+    radii[i]   = 1.5 + (Math.random() - 0.5) * 0.5;
+    offsets[i] = (Math.random() - 0.5) * 0.2;
+    speeds[i]  = (0.003 + Math.random() * 0.01) * (Math.random() > 0.5 ? 1 : -1);
+    sizes[i]   = 0.005 + Math.random() * 0.015;
+
+    pos[i * 3]     = Math.cos(angles[i]) * radii[i];
+    pos[i * 3 + 1] = offsets[i];
+    pos[i * 3 + 2] = Math.sin(angles[i]) * radii[i];
+  }
+
+  geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geom.setAttribute('aSize',    new THREE.BufferAttribute(sizes, 1));
+  geom._angles  = angles;
+  geom._radii   = radii;
+  geom._offsets = offsets;
+  geom._speeds  = speeds;
+
+  const mat = new THREE.ShaderMaterial({
+    vertexShader: `
+      attribute float aSize;
+      void main() {
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = aSize * (250.0 / -mvPos.z);
+        gl_Position  = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      void main() {
+        vec2 c = gl_PointCoord - 0.5;
+        float d = length(c);
+        if (d > 0.5) discard;
+        float a = exp(-d * d * 6.0); // gaussian — no hard edge
+        gl_FragColor = vec4(0.3, 0.95, 0.8, a * 0.85);
+      }
+    `,
+    transparent: true,
+    depthWrite:  false,
+    blending:    THREE.AdditiveBlending,
+  });
+
+  return new THREE.Points(geom, mat);
+}
+
+const orbitalParticles = buildOrbitalParticles(400);
+portalGroup.add(orbitalParticles);
+
+// ═══════════════════════════════════════════════
+// ID8R — BIG BANG PARTICLE SYSTEM
+// Nebulous thoughts drift → compress to singularity
+// → silent dark moment → Big Bang explosion → idea forms
+// ═══════════════════════════════════════════════
+
+const BB_COUNT = 2500;
+
+class BigBang {
+  constructor() {
+    this.phase     = 'nebula';
+    this.phaseTime = 0;
+    this.triggered = false;
+
+    this.pos   = new Float32Array(BB_COUNT * 3);
+    this.vel   = new Float32Array(BB_COUNT * 3);
+    this.col   = new Float32Array(BB_COUNT * 3);
+    this.sizes = new Float32Array(BB_COUNT);
+    this.home  = new Float32Array(BB_COUNT * 3);
+
+    this._seedNebula();
+
+    const geom = this.geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(this.pos,   3));
+    geom.setAttribute('aColor',   new THREE.BufferAttribute(this.col,   3));
+    geom.setAttribute('aSize',    new THREE.BufferAttribute(this.sizes, 1));
+
+    this.mat = new THREE.ShaderMaterial({
+      uniforms: {
+        time:      { value: 0.0 },
+        intensity: { value: 1.0 },
+      },
+      vertexShader: `
+        attribute float aSize;
+        attribute vec3  aColor;
+        varying   vec3  vColor;
+        uniform   float intensity;
+        void main() {
+          vColor = aColor * intensity;
+          vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = aSize * (400.0 / max(-mvPos.z, 0.1));
+          gl_Position  = projectionMatrix * mvPos;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        void main() {
+          vec2  c = gl_PointCoord - 0.5;
+          float d = length(c);
+          if (d > 0.5) discard;
+          // Gaussian falloff — cinematic, not cartoon
+          float a = exp(-d * d * 7.0);
+          gl_FragColor = vec4(vColor, a);
+        }
+      `,
+      transparent: true,
+      depthWrite:  false,
+      blending:    THREE.AdditiveBlending,
+    });
+
+    this.points = new THREE.Points(geom, this.mat);
+    this.points.position.set(0, 0, -22); // at Id8r station
+    scene.add(this.points);
+  }
+
+  _seedNebula() {
+    for (let i = 0; i < BB_COUNT; i++) {
+      // Organic cloud — phi/theta sphere distribution
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.acos(2 * Math.random() - 1);
+      // Non-uniform radius — denser in center, wispy at edges
+      const r = 1.5 + Math.pow(Math.random(), 0.6) * 5.5;
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta);
+      const z = r * Math.cos(phi) * 0.5; // slightly flattened
+
+      this.pos[i * 3]     = this.home[i * 3]     = x;
+      this.pos[i * 3 + 1] = this.home[i * 3 + 1] = y;
+      this.pos[i * 3 + 2] = this.home[i * 3 + 2] = z;
+
+      // Nebula palette: purple thoughts, blue intuitions, teal clarity
+      // All dim — these are ideas that haven't formed yet
+      const t = Math.random();
+      if (t < 0.35) {
+        // Dim purple — subconscious fragment
+        this.col[i*3]   = 0.25 + Math.random() * 0.2;
+        this.col[i*3+1] = 0.05 + Math.random() * 0.1;
+        this.col[i*3+2] = 0.35 + Math.random() * 0.3;
+      } else if (t < 0.65) {
+        // Deep blue — half-formed thought
+        this.col[i*3]   = 0.05 + Math.random() * 0.1;
+        this.col[i*3+1] = 0.15 + Math.random() * 0.2;
+        this.col[i*3+2] = 0.4  + Math.random() * 0.35;
+      } else {
+        // Dim teal — almost an idea
+        this.col[i*3]   = 0.05 + Math.random() * 0.1;
+        this.col[i*3+1] = 0.3  + Math.random() * 0.25;
+        this.col[i*3+2] = 0.3  + Math.random() * 0.25;
+      }
+
+      // Tiny nebula drift velocities — slow, organic
+      this.vel[i*3]   = (Math.random() - 0.5) * 0.003;
+      this.vel[i*3+1] = (Math.random() - 0.5) * 0.003;
+      this.vel[i*3+2] = (Math.random() - 0.5) * 0.001;
+
+      this.sizes[i] = 0.015 + Math.random() * 0.035;
+    }
+  }
+
+  trigger() {
+    if (this.triggered) return;
+    this.triggered = true;
+    this.phase     = 'compressing';
+    this.phaseTime = 0;
+
+    // Set compression velocities — inward rush, faster for outliers
+    for (let i = 0; i < BB_COUNT; i++) {
+      const x = this.pos[i*3], y = this.pos[i*3+1], z = this.pos[i*3+2];
+      const len = Math.sqrt(x*x + y*y + z*z) || 1;
+      const speed = 0.03 + Math.random() * 0.08;
+      this.vel[i*3]   = -(x / len) * speed;
+      this.vel[i*3+1] = -(y / len) * speed;
+      this.vel[i*3+2] = -(z / len) * speed;
+    }
+  }
+
+  _explode() {
+    // Scatter all particles to near-origin, then burst
+    for (let i = 0; i < BB_COUNT; i++) {
+      this.pos[i*3]   = (Math.random() - 0.5) * 0.08;
+      this.pos[i*3+1] = (Math.random() - 0.5) * 0.08;
+      this.pos[i*3+2] = (Math.random() - 0.5) * 0.08;
+
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.acos(2 * Math.random() - 1);
+      const speed = 0.1 + Math.pow(Math.random(), 0.5) * 0.5; // varied — some fast, some slow
+      this.vel[i*3]   = speed * Math.sin(phi) * Math.cos(theta);
+      this.vel[i*3+1] = speed * Math.sin(phi) * Math.sin(theta);
+      this.vel[i*3+2] = speed * Math.cos(phi) * 0.6;
+
+      // Explosion palette: leading edge bright white-teal, trailing blue-purple
+      const isFront = Math.random() > 0.35;
+      if (isFront) {
+        // Bright teal-white — the idea igniting
+        this.col[i*3]   = 0.4 + Math.random() * 0.6;
+        this.col[i*3+1] = 0.8 + Math.random() * 0.2;
+        this.col[i*3+2] = 0.7 + Math.random() * 0.3;
+      } else {
+        // Blue-violet — the energy of the bang
+        this.col[i*3]   = 0.15 + Math.random() * 0.35;
+        this.col[i*3+1] = 0.1  + Math.random() * 0.3;
+        this.col[i*3+2] = 0.5  + Math.random() * 0.5;
+      }
+      // Larger during explosion — motion energy
+      this.sizes[i] = 0.025 + Math.random() * 0.07;
+    }
+    this.geom.attributes.position.needsUpdate = true;
+    this.geom.attributes.aColor.needsUpdate   = true;
+    this.geom.attributes.aSize.needsUpdate    = true;
+  }
+
+  update(dt, time) {
+    this.phaseTime += dt;
+    this.mat.uniforms.time.value = time;
+
+    if (this.phase === 'nebula') {
+      // Slow drift with elastic pull back to home — thoughts that wander
+      for (let i = 0; i < BB_COUNT; i++) {
+        // Spring toward home
+        const hx = this.home[i*3], hy = this.home[i*3+1], hz = this.home[i*3+2];
+        this.vel[i*3]   += (hx - this.pos[i*3])   * 0.0003;
+        this.vel[i*3+1] += (hy - this.pos[i*3+1]) * 0.0003;
+        this.vel[i*3+2] += (hz - this.pos[i*3+2]) * 0.0003;
+        // Damping
+        this.vel[i*3]   *= 0.988;
+        this.vel[i*3+1] *= 0.988;
+        this.vel[i*3+2] *= 0.988;
+
+        this.pos[i*3]   += this.vel[i*3];
+        this.pos[i*3+1] += this.vel[i*3+1];
+        this.pos[i*3+2] += this.vel[i*3+2];
+      }
+      this.geom.attributes.position.needsUpdate = true;
+
+    } else if (this.phase === 'compressing') {
+      let allIn = true;
+
+      for (let i = 0; i < BB_COUNT; i++) {
+        this.pos[i*3]   += this.vel[i*3];
+        this.pos[i*3+1] += this.vel[i*3+1];
+        this.pos[i*3+2] += this.vel[i*3+2];
+
+        // Gravity well — accelerate toward origin
+        const x = this.pos[i*3], y = this.pos[i*3+1], z = this.pos[i*3+2];
+        const d = Math.sqrt(x*x + y*y + z*z);
+        if (d > 0.25) allIn = false;
+
+        const accel = Math.min(0.005 / Math.max(d * d, 0.05), 0.05);
+        this.vel[i*3]   -= x * accel;
+        this.vel[i*3+1] -= y * accel;
+        this.vel[i*3+2] -= z * accel;
+      }
+      this.geom.attributes.position.needsUpdate = true;
+
+      if (allIn || this.phaseTime > 3.5) {
+        this.phase     = 'singularity';
+        this.phaseTime = 0;
+        this.mat.uniforms.intensity.value = 4.0; // blindingly bright
+        triggerBigBangFlash();
+      }
+
+    } else if (this.phase === 'singularity') {
+      // All particles pulse at origin — the infinite density moment
+      for (let i = 0; i < BB_COUNT; i++) {
+        this.pos[i*3]   = (Math.random() - 0.5) * 0.04;
+        this.pos[i*3+1] = (Math.random() - 0.5) * 0.04;
+        this.pos[i*3+2] = (Math.random() - 0.5) * 0.04;
+      }
+      this.geom.attributes.position.needsUpdate = true;
+
+      // Singularity pulses with intensity
+      this.mat.uniforms.intensity.value = 3.0 + Math.sin(this.phaseTime * 40) * 1.5;
+
+      if (this.phaseTime > 0.6) {
+        this.phase     = 'exploding';
+        this.phaseTime = 0;
+        this._explode();
+        this.mat.uniforms.intensity.value = 1.0;
+      }
+
+    } else if (this.phase === 'exploding') {
+      const drag = Math.pow(0.955, dt * 60);
+      for (let i = 0; i < BB_COUNT; i++) {
+        this.vel[i*3]   *= drag;
+        this.vel[i*3+1] *= drag;
+        this.vel[i*3+2] *= drag;
+        this.pos[i*3]   += this.vel[i*3];
+        this.pos[i*3+1] += this.vel[i*3+1];
+        this.pos[i*3+2] += this.vel[i*3+2];
+      }
+      this.geom.attributes.position.needsUpdate = true;
+
+      if (this.phaseTime > 3.0) {
+        this.phase = 'formed';
+        // Id8r label fades in
+        document.getElementById('station-id8r').style.opacity = '1';
+        document.getElementById('section-hint').style.opacity = '1';
+        document.getElementById('section-hint').textContent   = 'Ideation';
+      }
+
+    } else if (this.phase === 'formed') {
+      // Slow drift — the idea exists now, particles settle
+      const drag = Math.pow(0.99, dt * 60);
+      for (let i = 0; i < BB_COUNT; i++) {
+        this.vel[i*3]   *= drag;
+        this.vel[i*3+1] *= drag;
+        this.vel[i*3+2] *= drag;
+        this.pos[i*3]   += this.vel[i*3];
+        this.pos[i*3+1] += this.vel[i*3+1];
+        this.pos[i*3+2] += this.vel[i*3+2];
+      }
+      this.geom.attributes.position.needsUpdate = true;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+// FLASH UTILITIES
+// ═══════════════════════════════════════════════
+
+let _flashTO = null;
+function doFlash(color = 'rgba(62,207,178,0.9)', duration = 150, fadeOut = 700) {
+  const el = document.getElementById('flash');
+  clearTimeout(_flashTO);
+  el.style.background = color;
+  el.style.transition = 'opacity 0.08s ease';
+  el.style.opacity    = '1';
+  _flashTO = setTimeout(() => {
+    el.style.transition = `opacity ${fadeOut}ms ease`;
+    el.style.opacity    = '0';
+  }, duration);
+}
+
+function triggerBigBangFlash() {
+  // The singularity moment — deep white flash, then dark
+  doFlash('rgba(240,255,252,0.98)', 80, 500);
+}
+
+// ═══════════════════════════════════════════════
+// INSTANTIATE BIG BANG
+// ═══════════════════════════════════════════════
+
+const bigBang = new BigBang();
+
+// ═══════════════════════════════════════════════
+// SCROLL STATE
+// ═══════════════════════════════════════════════
+
+let scrollT          = 0;  // 0-1 raw scroll
+let bigBangTriggered = false;
+let portalFlashed    = false;
+let prevCamZ         = 8;
+let camSpeed         = 0;
+
+window.addEventListener('scroll', () => {
+  const max = document.body.scrollHeight - window.innerHeight;
+  scrollT = max > 0 ? window.scrollY / max : 0;
+
+  // Portal flash — at threshold crossing (~scroll 52-58%)
+  if (scrollT > 0.52 && scrollT < 0.60 && !portalFlashed) {
+    portalFlashed = true;
+    doFlash(
+      'radial-gradient(ellipse at center, rgba(140,255,230,0.95) 0%, rgba(62,207,178,0.7) 50%, rgba(0,10,20,0.9) 100%)',
+      120,
+      900
+    );
+  }
+  if (scrollT < 0.48) portalFlashed = false;
+
+  // Id8r Big Bang — when camera arrives at station
+  if (scrollT > 0.88 && !bigBangTriggered) {
+    bigBangTriggered = true;
+    bigBang.trigger();
+  }
+});
+
+// ═══════════════════════════════════════════════
+// MOUSE — cursor + portal tilt
+// ═══════════════════════════════════════════════
+
+let mouse    = new THREE.Vector2(0, 0);
+let mouseNDC = new THREE.Vector2(0, 0); // -1 to 1
+
+const cursorEl     = document.getElementById('cursor');
+const cursorRingEl = document.getElementById('cursor-ring');
+
+window.addEventListener('mousemove', (e) => {
+  mouse.x    = e.clientX;
+  mouse.y    = e.clientY;
+  mouseNDC.x = (e.clientX / W) * 2 - 1;
+  mouseNDC.y = -(e.clientY / H) * 2 + 1;
+
+  cursorEl.style.left     = e.clientX + 'px';
+  cursorEl.style.top      = e.clientY + 'px';
+  cursorRingEl.style.left = e.clientX + 'px';
+  cursorRingEl.style.top  = e.clientY + 'px';
+});
+
+// ═══════════════════════════════════════════════
+// ORBITAL PARTICLE UPDATE
+// ═══════════════════════════════════════════════
+
+function updateOrbitalParticles(time) {
+  const geom    = orbitalParticles.geometry;
+  const posAttr = geom.attributes.position;
+  const angles  = geom._angles;
+  const radii   = geom._radii;
+  const offsets = geom._offsets;
+  const speeds  = geom._speeds;
+  const n       = speeds.length;
+
+  for (let i = 0; i < n; i++) {
+    angles[i] += speeds[i];
+    posAttr.array[i * 3]     = Math.cos(angles[i]) * radii[i];
+    posAttr.array[i * 3 + 1] = offsets[i] + Math.sin(time * 0.4 + i * 0.3) * 0.025;
+    posAttr.array[i * 3 + 2] = Math.sin(angles[i]) * radii[i];
+  }
+  posAttr.needsUpdate = true;
+}
+
+// ═══════════════════════════════════════════════
+// ANIMATION LOOP
+// ═══════════════════════════════════════════════
+
+let prevNow  = performance.now();
+let baseScale = 1.0;
+let targetPortalScale = 1.0;
+let currentPortalScale = 1.0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const now  = performance.now();
+  const dt   = Math.min((now - prevNow) / 1000, 0.05);
+  prevNow    = now;
+  const time = now * 0.001;
+
+  // ── Camera path ──────────────────────────────
+  const easedT  = easeScroll(Math.min(scrollT, 0.9999));
+  const target  = cameraPath.getPointAt(easedT);
+  camera.position.lerp(target, 0.07);
+
+  // Camera speed for star streak effect
+  camSpeed = Math.abs(camera.position.z - prevCamZ) * 20;
+  prevCamZ = camera.position.z;
+  stars.material.uniforms.camSpeed.value += (camSpeed - stars.material.uniforms.camSpeed.value) * 0.1;
+
+  // Look ahead on path
+  const lookT  = Math.min(easedT + 0.015, 0.9999);
+  const lookPt = cameraPath.getPointAt(lookT);
+  camera.lookAt(lookPt);
+
+  // Subtle mouse-based camera tilt (hero only)
+  if (scrollT < 0.3) {
+    const tiltStrength = (1 - scrollT / 0.3) * 0.015;
+    camera.rotation.x += (mouseNDC.y * tiltStrength - camera.rotation.x) * 0.05;
+    camera.rotation.y += (mouseNDC.x * tiltStrength - camera.rotation.y) * 0.05;
+  }
+
+  // ── Portal animations ─────────────────────
+  const t = time;
+  ring.rotation.z        += 0.0008;
+  shimmerRing.rotation.z -= 0.0025;
+  shimmerMat.uniforms.time.value = t;
+  coronaMat.uniforms.time.value  = t;
+
+  // Portal breathes — very subtle
+  const breathe = 1.0 + Math.sin(t * 0.9) * 0.007;
+  portalGroup.scale.setScalar(breathe);
+
+  // Portal tilts very slightly toward mouse when close
+  if (scrollT < 0.45) {
+    const tilt = (1 - scrollT / 0.45) * 0.08;
+    portalGroup.rotation.y = mouseNDC.x * tilt;
+    portalGroup.rotation.x = mouseNDC.y * tilt * -1;
+  }
+
+  // Portal scale increases as camera approaches — fills viewport
+  targetPortalScale = 1.0 + Math.min(scrollT * 1.8, 1.0) * 0.25;
+  currentPortalScale += (targetPortalScale - currentPortalScale) * 0.04;
+  portalGroup.scale.setScalar(currentPortalScale * breathe);
+
+  // ── Bloom ramps up through portal ────────────
+  const portalProximity = Math.max(0, (scrollT - 0.25) / 0.35);
+  bloomPass.strength = 1.6 + Math.min(portalProximity, 1.0) * 3.5;
+
+  // Chromatic aberration — strongest at portal threshold
+  const aberrationPeak = scrollT > 0.45 && scrollT < 0.65
+    ? Math.sin(((scrollT - 0.45) / 0.20) * Math.PI) * 0.012
+    : 0;
+  grainPass.uniforms.aberration.value = aberrationPeak;
+  grainPass.uniforms.time.value       = t;
+
+  // ── Orbital particles ─────────────────────────
+  updateOrbitalParticles(t);
+
+  // ── Big Bang update ───────────────────────────
+  bigBang.update(dt, t);
+
+  // ── Hero text fade ────────────────────────────
+  const heroOpacity = Math.max(0, 1 - scrollT * 5);
+  document.getElementById('hero').style.opacity        = heroOpacity;
+  document.getElementById('scroll-prompt').style.opacity = Math.max(0, 1 - scrollT * 8);
+
+  // ── Render ─────────────────────────────────
+  composer.render();
+}
+
+animate();
+
+// ═══════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════
+
+window.addEventListener('resize', () => {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+  renderer.setSize(W, H);
+  composer.setSize(W, H);
+  bloomPass.resolution.set(W, H);
+});
+</script>
+</body>
+</html>
