@@ -24,9 +24,11 @@ if (process.env.ELECTRON === 'true') {
   if (!process.env.CREATOR_PROFILE_PATH) {
     process.env.CREATOR_PROFILE_PATH = _path.join(_kre8rHome, 'creator-profile.json');
   }
-  // Reload .env from the user's AppData directory so saved settings
-  // (SYNC_SERVER_URL, SYNC_TOKEN, etc.) survive app restarts.
-  require('dotenv').config({ path: _path.join(_kre8rHome, '.env'), override: true });
+  // Reload .env from the same directory as the DB (set above by main.js env vars).
+  // override: false — never overwrite DB_PATH/CREATOR_PROFILE_PATH that main.js set.
+  // This pulls in SYNC_SERVER_URL, SYNC_TOKEN etc. saved by upsertEnv() between sessions.
+  const _userEnvPath = _path.join(_path.dirname(process.env.DB_PATH), '.env');
+  require('dotenv').config({ path: _userEnvPath, override: false });
 }
 
 // ─────────────────────────────────────────────
