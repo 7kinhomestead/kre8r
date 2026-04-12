@@ -1445,11 +1445,13 @@ async function launchViaCloud() {
     const d = await r.json();
     if (!d.ok) throw new Error(d.error);
 
-    // Navigate laptop browser to the cloud display URL
+    // Open the cloud display URL in the system browser (Chrome/Edge/Firefox)
+    // — Electron's setWindowOpenHandler intercepts window.open() for external URLs
+    //   and routes them to shell.openExternal(), keeping the Electron app window intact.
     // as=display → loads script, starts as normal display (not solo phone mode)
-    // QR codes on that page will point to teleprompter.kre8r.app → phone can scan from anywhere
+    // QR codes on that page will use teleprompter.kre8r.app as base → phone can scan from anywhere
     const cloudUrl = `https://teleprompter.kre8r.app/teleprompter.html?field=${d.code}&as=display`;
-    window.location.href = cloudUrl;
+    window.open(cloudUrl, '_blank');
 
   } catch (e) {
     btn.textContent = '📡 Cloud Launch — phone controls from anywhere, no shared WiFi';
