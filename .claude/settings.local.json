@@ -734,7 +734,12 @@
       "Bash(curl -s http://localhost:3000/api/users)",
       "Bash(ssh kre8r@kre8r.app \"cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r && pm2 status\")",
       "Bash(ssh kre8r@kre8r.app)",
-      "Bash(curl -s http://localhost:3000/api/mailerlite/status)"
+      "Bash(curl -s http://localhost:3000/api/mailerlite/status)",
+      "Bash(cat *.bat)",
+      "Bash(ls *.bat)",
+      "Bash(tasklist /FI \"PID eq 30208\")",
+      "Bash(powershell -command \"Get-Process -Id 30208 | Select-Object Name, Id, Path\")",
+      "Bash(powershell -command \"Stop-Process -Id 30208 -Force\")"
     ]
   }
 }

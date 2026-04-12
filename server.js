@@ -129,6 +129,13 @@ app.use(session({
 app.use('/auth', require('./src/routes/auth'));
 
 // ─────────────────────────────────────────────
+// KAJABI WEBHOOK — PUBLIC (no auth)
+// Must be mounted BEFORE the auth guard.
+// Kajabi calls /api/kajabi-webhook/receive from their servers.
+// ─────────────────────────────────────────────
+app.use('/api/kajabi-webhook', require('./src/routes/kajabi-webhook'));
+
+// ─────────────────────────────────────────────
 // AUTH GUARD — protects everything except:
 //   • /login page
 //   • /auth/* (login/logout endpoints)
