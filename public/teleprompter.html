@@ -2777,6 +2777,7 @@ let voiceActive       = false;
 let voicePrePlayState = false;  // isPlaying before voice mode started
 let voiceEffectiveSpd = 0;      // scroll speed set by voice volume
 let voiceScrolling    = false;  // true while volume is above threshold
+const VOICE_BASE      = 1.5;   // base scroll speed for voice mode — independent of display slider
 let audioCtx          = null;
 let analyserNode      = null;
 let micStream         = null;
@@ -2923,13 +2924,19 @@ function sampleVoiceVolume() {
       console.log('[Voice Sync] Speaking — scroll start, vol:', smoothedVol.toFixed(1), 'threshold:', threshold.toFixed(1));
     }
 
-    // Volume → speed mapping:
-    //   at threshold   → 0.6× base speed  (just started speaking, cautious)
-    //   at 2× threshold → 1.0× base speed  (normal speaking volume)
-    //   at 3× threshold → 1.5× base speed  (louder delivery = faster scroll)
+    // Volume → speed mapping (voice mode uses its own base speed, not the display slider).
+    // The display slider (scrollSpeed) is irrelevant when voice is driving scroll —
+    // using it made voice scroll 3–5× too fast at default slider settings.
+    //
+    // Voice base speed: VOICE_BASE (1.5) — comfortable reading pace for a slow talker.
+    // Independent of the display speed slider (scrollSpeed) which was making voice
+    // scroll 3–5× too fast at default slider settings.
+    //   at threshold   → 0.9  (just started speaking)
+    //   at 2× threshold → 1.5  (normal speaking volume)
+    //   at 3× threshold → 2.2  (louder/faster delivery)
     const overage     = Math.max(0, (smoothedVol - threshold) / threshold); // 0 at threshold, 1 at 2×
     const speedMult   = 0.6 + Math.min(overage, 2) * 0.45;                  // 0.6 → 1.5
-    voiceEffectiveSpd = Math.max(0.3, scrollSpeed * speedMult);
+    voiceEffectiveSpd = VOICE_BASE * speedMult;
 
     // Throttled debug update (max ~10fps)
     if (!voiceDebugTimer) {
@@ -2943,8 +2950,8 @@ function sampleVoiceVolume() {
     // ── Silence ───────────────────────────────────────────────
     if (voiceScrolling && !silenceTimer) {
       silenceTimer = setTimeout(() => {
-        // Coast: slow to 30% for 900ms to bridge paragraph gaps, then stop
-        voiceEffectiveSpd = Math.max(0.3, scrollSpeed * 0.3);
+        // Coast: slow to 30% of voice base for 900ms to bridge paragraph gaps, then stop
+        voiceEffectiveSpd = VOICE_BASE * 0.3;
         silenceTimer = setTimeout(() => {
           voiceScrolling    = false;
           voiceEffectiveSpd = 0;
