@@ -1434,7 +1434,9 @@ async function launchViaCloud() {
   btn.textContent = '📡 Pushing to cloud…';
 
   try {
-    const r = await fetch('/api/teleprompter/field-script', {
+    // POST directly to teleprompter.kre8r.app so the script lives on the same
+    // server that the cloud display URL will fetch it from
+    const r = await fetch('https://teleprompter.kre8r.app/api/teleprompter/field-script', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ text, projectName })
