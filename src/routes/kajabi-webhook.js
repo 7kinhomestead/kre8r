@@ -177,6 +177,44 @@ async function addToMailerlite(email, first_name, last_name, groupId) {
   await ml('POST', '/subscribers', body);
 }
 
+// ── Fire welcome email for new subscriber ─────────────────────────────────────
+// Sends a transactional email (to one person, not a campaign) using the
+// welcome email template stored in kv_store for that tier.
+// groupKey: 'greenhouse' | 'garden' | 'founding50'
+
+async function fireWelcomeEmail(email, firstName, groupKey) {
+  const db = require('../db');
+
+  const stored = db.getKv(`welcome_email_${groupKey}`);
+  if (!stored) return { fired: false, reason: 'No welcome email configured for this tier' };
+
+  let template;
+  try { template = JSON.parse(stored); } catch (_) { return { fired: false, reason: 'Malformed template' }; }
+  if (!template.subject || !template.body) return { fired: false, reason: 'Template missing subject or body' };
+
+  const profile   = loadProfile();
+  const fromEmail = profile?.creator?.email;
+  const fromName  = profile?.creator?.brand || profile?.creator?.name || 'Jason';
+
+  if (!fromEmail) return { fired: false, reason: 'creator.email not set in creator-profile.json' };
+
+  // Personalise — replace {{first_name}} with real name
+  const greeting  = firstName || 'there';
+  const subject   = template.subject.replace(/\{\{first_name\}\}/gi, greeting);
+  const html      = template.body.replace(/\{\{first_name\}\}/gi, greeting);
+
+  await ml('POST', '/transactional/emails', {
+    from:    { email: fromEmail, name: fromName },
+    to:      [{ email }],
+    subject,
+    html,
+    reply_to: fromEmail,
+  });
+
+  log.info({ module: 'kajabi-webhook', email, groupKey }, 'Welcome email fired');
+  return { fired: true };
+}
+
 // ── POST /receive — PUBLIC ─────────────────────────────────────────────────────
 
 router.post('/receive', async (req, res) => {
@@ -224,6 +262,21 @@ router.post('/receive', async (req, res) => {
 
     logEntry.synced = true;
     log.info({ module: 'kajabi-webhook', email: parsed.email, groupKey: parsed.groupKey }, 'Subscriber synced to Mailerlite');
+
+    // Fire welcome email — non-blocking, log result but don't throw
+    try {
+      const welcome = await fireWelcomeEmail(parsed.email, parsed.first_name, parsed.groupKey);
+      logEntry.welcome_email = welcome;
+      if (welcome.fired) {
+        log.info({ module: 'kajabi-webhook', email: parsed.email, groupKey: parsed.groupKey }, 'Welcome email fired');
+      } else {
+        log.info({ module: 'kajabi-webhook', reason: welcome.reason }, 'Welcome email skipped');
+      }
+    } catch (wErr) {
+      log.warn({ module: 'kajabi-webhook', err: wErr }, 'Welcome email failed — subscriber still synced');
+      logEntry.welcome_email = { fired: false, reason: wErr.message };
+    }
+
     appendEventLog(logEntry);
 
   } catch (err) {
@@ -295,6 +348,124 @@ router.get('/config', async (req, res) => {
     });
   } catch (err) {
     log.error({ module: 'kajabi-webhook', err }, 'Config endpoint error');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Welcome email template management ─────────────────────────────────────────
+// POST /api/kajabi-webhook/welcome-email/test       — test-fire to an email  ← must be first (before :tier param)
+// GET  /api/kajabi-webhook/welcome-email/:tier      — get stored template
+// POST /api/kajabi-webhook/welcome-email/:tier      — save template { subject, body }
+// POST /api/kajabi-webhook/welcome-email/:tier/generate — Claude generates from profile
+
+const VALID_TIERS = ['greenhouse', 'garden', 'founding50'];
+
+router.post('/welcome-email/test', async (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { tier, email, first_name } = req.body || {};
+  if (!tier || !email) return res.status(400).json({ error: 'tier and email required' });
+  if (!VALID_TIERS.includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
+
+  try {
+    const result = await fireWelcomeEmail(email, first_name || 'Friend', tier);
+    if (result.fired) {
+      res.json({ ok: true, message: `Test welcome email sent to ${email}` });
+    } else {
+      res.status(400).json({ ok: false, reason: result.reason });
+    }
+  } catch (err) {
+    log.error({ module: 'kajabi-webhook', err }, 'Test welcome email error');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/welcome-email/:tier', (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { tier } = req.params;
+  if (!VALID_TIERS.includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
+
+  try {
+    const db     = require('../db');
+    const stored = db.getKv(`welcome_email_${tier}`);
+    if (!stored) return res.json({ tier, configured: false });
+
+    let template;
+    try { template = JSON.parse(stored); } catch (_) { return res.json({ tier, configured: false }); }
+
+    res.json({ tier, configured: true, subject: template.subject, body: template.body });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/welcome-email/:tier', (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { tier } = req.params;
+  if (!VALID_TIERS.includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
+
+  const { subject, body } = req.body || {};
+  if (!subject || !body) return res.status(400).json({ error: 'subject and body required' });
+
+  try {
+    const db = require('../db');
+    db.setKv(`welcome_email_${tier}`, JSON.stringify({ subject, body }));
+    log.info({ module: 'kajabi-webhook', tier }, 'Welcome email template saved');
+    res.json({ ok: true, tier });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/welcome-email/:tier/generate', async (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { tier } = req.params;
+  if (!VALID_TIERS.includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
+
+  try {
+    const callClaude = require('../utils/claude');
+    const profile    = loadProfile();
+
+    const tierNames = { greenhouse: 'The Greenhouse (free)', garden: 'The Garden ($19/mo)', founding50: 'The Founding 50 ($297 one-time)' };
+    const creatorName  = profile?.creator?.name || 'Jason';
+    const brandName    = profile?.creator?.brand || '7 Kin Homestead';
+    const communityName = profile?.community?.name || 'ROCK RICH';
+    const voice        = profile?.creator?.voice_summary || 'Straight-talking, warm, funny, never corporate.';
+
+    const prompt = `You are writing a welcome email for ${creatorName} from ${brandName}.
+
+Community: ${communityName}
+New member tier: ${tierNames[tier]}
+Creator voice: ${voice}
+
+Write a short, personal welcome email for someone who just joined ${tierNames[tier]}.
+- Subject line: punchy, warm, matches the creator's voice
+- Body: 3-5 short paragraphs, conversational, excited but not corporate
+- Include {{first_name}} placeholder once at the start
+- DO NOT use emojis
+- Tier context:
+  - greenhouse: free tier, they're just exploring, welcome them in, low pressure
+  - garden: paying member, make them feel the investment was smart, hint at what's coming
+  - founding50: inner circle, they're one of 50, make them feel like they just got access to something rare
+
+Return ONLY valid JSON in this exact shape:
+{
+  "subject": "...",
+  "body": "<p>...</p><p>...</p>"
+}`;
+
+    const raw     = await callClaude(prompt, 1024);
+    const match   = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Claude returned no JSON');
+    const parsed  = JSON.parse(match[0]);
+    if (!parsed.subject || !parsed.body) throw new Error('Claude response missing subject or body');
+
+    res.json({ ok: true, tier, subject: parsed.subject, body: parsed.body });
+  } catch (err) {
+    log.error({ module: 'kajabi-webhook', err }, 'Welcome email generate error');
     res.status(500).json({ error: err.message });
   }
 });

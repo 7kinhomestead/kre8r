@@ -60,13 +60,38 @@
 
   /* GROUPS GRID */
   .groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px;}
-  .group-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
+  .group-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;cursor:pointer;transition:border-color 0.15s;}
+  .group-card:hover{border-color:var(--teal-dim);}
   .group-name{font-size:14px;font-weight:600;margin-bottom:4px;}
   .group-count{font-size:24px;font-weight:700;color:var(--teal);font-family:var(--font-head);letter-spacing:1px;}
   .group-sub{font-size:11px;color:var(--text-dimmer);margin-top:2px;}
   .group-card.greenhouse .group-count{color:var(--green);}
   .group-card.garden     .group-count{color:var(--teal);}
   .group-card.founding50 .group-count{color:var(--amber);}
+  /* SUBSCRIBERS PANEL */
+  .sub-panel{background:var(--bg-card);border:1px solid var(--teal-dim);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;animation:fadeUp 0.2s ease both;}
+  .sub-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .sub-panel-title{font-family:var(--font-head);font-size:16px;letter-spacing:1.5px;color:var(--teal);}
+  .sub-list{display:grid;gap:6px;}
+  .sub-row{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;font-size:13px;}
+  .sub-email{font-weight:500;}
+  .sub-name{font-size:11px;color:var(--text-dimmer);margin-top:1px;}
+  .sub-date{font-size:11px;color:var(--text-dimmer);white-space:nowrap;}
+  .sub-pagination{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--text-dimmer);}
+  /* CUSTOM GROUP FORM */
+  .create-group-form{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-top:14px;}
+  .form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+  .form-field{flex:1;min-width:140px;}
+  .form-field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:5px;}
+  .form-input{width:100%;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;outline:none;}
+  .form-input:focus{border-color:var(--teal-dim);}
+  /* MAPPING TABLE */
+  .mapping-list{display:grid;gap:6px;margin-top:10px;}
+  .mapping-row{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;display:flex;align-items:center;gap:10px;font-size:13px;}
+  .mapping-keyword{font-family:monospace;background:var(--bg-card-2);padding:2px 8px;border-radius:4px;font-size:12px;color:var(--teal);}
+  .mapping-group{color:var(--text-dim);flex:1;}
+  .mapping-del{background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:color 0.15s;}
+  .mapping-del:hover{color:var(--red);}
 
   /* CAMPAIGNS TABLE */
   .campaign-list{display:grid;gap:8px;}
@@ -163,9 +188,29 @@
   .dot-ok{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px;}
   .dot-warn{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--amber);margin-right:5px;}
 
+  /* WELCOME EMAIL TAB */
+  .welcome-tier-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;display:grid;grid-template-columns:1fr auto;align-items:start;gap:16px;}
+  .welcome-tier-name{font-family:var(--font-head);font-size:15px;letter-spacing:1px;margin-bottom:4px;}
+  .welcome-tier-name.greenhouse{color:var(--green);}
+  .welcome-tier-name.garden{color:var(--teal);}
+  .welcome-tier-name.founding50{color:var(--amber);}
+  .welcome-status-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+  .welcome-status-armed{background:rgba(92,186,138,0.15);color:var(--green);}
+  .welcome-status-unarmed{background:var(--bg-card-2);color:var(--text-dimmer);}
+  .welcome-subject-preview{font-size:12px;color:var(--text-dim);font-style:italic;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px;}
+  .welcome-btns{display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
+  .welcome-action-btn{padding:7px 16px;font-size:12px;font-weight:700;border-radius:var(--radius-sm);border:none;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;transition:all 0.15s;}
+  .welcome-action-btn.generate{background:var(--teal);color:#000;}
+  .welcome-action-btn.generate:hover{background:var(--teal-dim);}
+  .welcome-action-btn.edit{background:var(--bg-alt);border:1px solid var(--border);color:var(--text);}
+  .welcome-action-btn.edit:hover{border-color:var(--teal-dim);}
+  .welcome-action-btn:disabled{opacity:.5;cursor:not-allowed;}
+
   /* MOBILE */
   @media(max-width:480px){
     .main{padding:20px 12px 80px;}
+    .welcome-tier-card{grid-template-columns:1fr;gap:10px;}
+    .welcome-btns{flex-direction:row;flex-wrap:wrap;}
   }
 </style>
 </head>
@@ -197,20 +242,68 @@
     <button class="tab" onclick="switchTab('import')">Import CSV</button>
     <button class="tab" onclick="switchTab('campaigns')">Campaigns</button>
     <button class="tab" onclick="switchTab('webhook')">Webhook</button>
+    <button class="tab" onclick="switchTab('welcome')">Welcome Emails</button>
   </div>
 
   <!-- ── GROUPS TAB ──────────────────────────────────────────────────────── -->
   <div id="tab-groups" class="tab-panel active">
 
     <div class="section-card">
-      <div class="section-label">ROCK RICH GROUPS</div>
+      <div class="section-label" style="justify-content:space-between;">
+        <span>ROCK RICH GROUPS</span>
+        <button class="sync-btn" onclick="refreshGroupCounts()" id="refresh-counts-btn" style="font-size:11px;padding:5px 12px;">↻ Refresh Counts</button>
+      </div>
       <div class="section-sub">
-        The three community tier groups in Mailerlite. Click <strong>Sync Groups</strong> above to create them if they don't exist yet — Kre8r will store the group IDs automatically.
+        Click any group card to view its subscribers. Click <strong>Sync Groups</strong> above to create the 3 Rock Rich tiers.
       </div>
       <div class="groups-grid" id="groups-grid">
         <div class="empty-state">Loading groups…</div>
       </div>
       <div id="sync-result" style="font-size:12px;color:var(--text-dim);margin-top:8px;display:none;"></div>
+    </div>
+
+    <!-- Subscriber list panel (shown when a group is clicked) -->
+    <div id="sub-panel" class="sub-panel" style="display:none;">
+      <div class="sub-panel-header">
+        <div class="sub-panel-title" id="sub-panel-title">GROUP SUBSCRIBERS</div>
+        <button class="sync-btn" style="font-size:11px;padding:5px 10px;" onclick="closeSubPanel()">✕ Close</button>
+      </div>
+      <div id="sub-list" class="sub-list"><div class="empty-state">Loading…</div></div>
+      <div class="sub-pagination" id="sub-pagination" style="display:none;">
+        <button class="sync-btn" style="padding:4px 10px;font-size:11px;" id="sub-prev" onclick="subPage(-1)">← Prev</button>
+        <span id="sub-page-info">Page 1</span>
+        <button class="sync-btn" style="padding:4px 10px;font-size:11px;" id="sub-next" onclick="subPage(1)">Next →</button>
+      </div>
+    </div>
+
+    <!-- Custom group / webhook mapping -->
+    <div class="section-card">
+      <div class="section-label">CREATE GROUP + WEBHOOK MAPPING</div>
+      <div class="section-sub">
+        Create a new Mailerlite group for a product or offer. Add a <strong>keyword</strong> (part of the offer title in Kajabi) so the webhook automatically routes purchases to it.
+      </div>
+
+      <div class="create-group-form">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Group Name</label>
+            <input class="form-input" type="text" id="new-group-name" placeholder="e.g. Kre8r Beta 🚀">
+          </div>
+          <div class="form-field">
+            <label>Offer Keyword (optional)</label>
+            <input class="form-input" type="text" id="new-group-keyword" placeholder="e.g. beta or kre8r">
+          </div>
+          <div style="display:flex;align-items:flex-end;">
+            <button class="sync-btn" onclick="createGroup()" id="create-group-btn">+ Create</button>
+          </div>
+        </div>
+        <div id="create-group-result" style="font-size:12px;color:var(--text-dim);margin-top:8px;display:none;"></div>
+      </div>
+
+      <div id="mappings-section" style="margin-top:14px;display:none;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;">Active Keyword Mappings</div>
+        <div id="mappings-list" class="mapping-list"></div>
+      </div>
     </div>
 
   </div>
@@ -239,6 +332,14 @@
           <option value="garden">🌿 Garden ($19/mo)</option>
           <option value="founding50">🏆 Founding 50 ($297)</option>
         </select>
+      </div>
+      <div id="import-group-custom" style="display:none;margin-top:8px;">
+        <div class="import-group-select">
+          <label>Or pick any group:</label>
+          <select id="import-group-any" onchange="document.getElementById('import-group').value = '';">
+            <option value="">— use tier selection above —</option>
+          </select>
+        </div>
       </div>
 
       <div class="import-preview" id="import-preview" style="display:none;"></div>
@@ -372,6 +473,48 @@
 
   </div>
 
+  <!-- ── WELCOME EMAILS TAB ─────────────────────────────────────────────────── -->
+  <div id="tab-welcome" class="tab-panel">
+
+    <div class="section-card">
+      <div class="section-label">WELCOME EMAIL AUTOMATION</div>
+      <div class="section-sub">
+        When a new member joins via Kajabi webhook, a personal welcome email fires automatically from your Mailerlite account.
+        Configure one template per tier. Use <code>{{first_name}}</code> to personalise. Hit <strong>Generate</strong> to let Claude write it in your voice.
+      </div>
+    </div>
+
+    <!-- Tier cards -->
+    <div id="welcome-tiers-grid" style="display:grid;gap:14px;">
+      <!-- rendered by JS -->
+      <div class="empty-state">Loading welcome email status…</div>
+    </div>
+
+    <!-- Edit modal overlay -->
+    <div id="welcome-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);max-width:680px;width:100%;padding:24px;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div class="section-label" style="margin:0" id="welcome-edit-title">EDIT WELCOME EMAIL</div>
+          <button class="mapping-del" onclick="closeWelcomeEdit()" style="font-size:18px;padding:2px 8px;">✕</button>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">SUBJECT</label>
+          <input id="welcome-edit-subject" type="text" class="filter-input" style="width:100%;box-sizing:border-box;" placeholder="Welcome to ROCK RICH, {{first_name}}!" />
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">BODY (HTML supported)</label>
+          <textarea id="welcome-edit-body" style="width:100%;min-height:240px;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:10px;font-family:monospace;resize:vertical;" placeholder="<p>Hey {{first_name}},</p>…"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="sync-btn" onclick="saveWelcomeEmail()" id="welcome-save-btn">💾 Save Template</button>
+          <button class="sync-btn" onclick="testWelcomeEmail()" id="welcome-test-btn" style="background:var(--bg-alt);">⚡ Test Fire</button>
+          <span style="font-size:12px;color:var(--text-dimmer);align-self:center;" id="welcome-edit-status"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
 </main>
 
 <div class="toast-wrap" id="toast-wrap"></div>
@@ -381,6 +524,7 @@
 let isConnected   = false;
 let allGroups     = [];
 let parsedCsv     = null;   // { headers, rows: [{email, name}] }
+let subState      = { groupId: null, groupName: '', page: 1, lastPage: 1 };
 
 const TIER_KEYS = ['greenhouse', 'garden', 'founding50'];
 const TIER_LABELS = {
@@ -395,6 +539,7 @@ async function init() {
   if (isConnected) {
     loadGroups();
     loadCampaigns();
+    loadMappings();
   }
 }
 
@@ -414,6 +559,9 @@ async function checkStatus() {
       lbl.innerHTML = `<strong>Mailerlite connected</strong> — ${data.groupCount} group${data.groupCount !== 1 ? 's' : ''}`;
       syncBtn.style.display = 'inline-flex';
       allGroups = data.groups || [];
+      // Always re-render groups so counts stay fresh
+      renderGroups(allGroups);
+      populateAnyGroupDropdown(allGroups);
     } else {
       bar.classList.add('error');
       lbl.innerHTML = `<strong>Mailerlite not connected</strong> — ${data.reason || 'Add MAILERLITE_API_KEY to .env'}`;
@@ -423,9 +571,19 @@ async function checkStatus() {
   }
 }
 
+async function refreshGroupCounts() {
+  const btn = document.getElementById('refresh-counts-btn');
+  btn.disabled = true;
+  btn.textContent = '↻ Refreshing…';
+  await checkStatus();
+  btn.disabled = false;
+  btn.textContent = '↻ Refresh Counts';
+  showToast('Group counts updated', 'teal');
+}
+
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 function switchTab(name) {
-  const names = ['groups', 'import', 'campaigns', 'webhook'];
+  const names = ['groups', 'import', 'campaigns', 'webhook', 'welcome'];
   document.querySelectorAll('.tab').forEach((t, i) => {
     t.classList.toggle('active', names[i] === name);
   });
@@ -435,6 +593,8 @@ function switchTab(name) {
   if (name === 'campaigns' && isConnected) loadCampaigns();
   // Load webhook config when tab first opened
   if (name === 'webhook') loadWebhookConfig();
+  // Load welcome email status when tab first opened
+  if (name === 'welcome') loadWelcomeTiers();
 }
 
 // ─── Groups ───────────────────────────────────────────────────────────────────
@@ -474,12 +634,175 @@ function renderGroups(groups) {
 
   grid.innerHTML = all.map(g => {
     const tierKey = g.tierKey || '';
-    return `<div class="group-card ${tierKey}">
+    return `<div class="group-card ${tierKey}" onclick="openSubPanel('${escHtml(g.id)}','${escHtml(g.name)}')" title="Click to view subscribers">
       <div class="group-name">${escHtml(g.name)}</div>
       <div class="group-count">${(g.total || 0).toLocaleString()}</div>
-      <div class="group-sub">subscribers</div>
+      <div class="group-sub">subscribers · click to view</div>
     </div>`;
   }).join('');
+}
+
+function populateAnyGroupDropdown(groups) {
+  const sel = document.getElementById('import-group-any');
+  const custom = document.getElementById('import-group-custom');
+  const tierIds = new Set(['Greenhouse 🌱', 'Garden 🌿', 'Founding 50 🏆']);
+  const nonTier = groups.filter(g => !tierIds.has(g.name));
+  if (nonTier.length > 0) {
+    custom.style.display = 'block';
+    sel.innerHTML = '<option value="">— use tier selection above —</option>' +
+      nonTier.map(g => `<option value="${escHtml(g.id)}">${escHtml(g.name)} (${(g.total||0).toLocaleString()})</option>`).join('');
+  }
+}
+
+// ─── Subscriber panel ─────────────────────────────────────────────────────────
+async function openSubPanel(groupId, groupName) {
+  subState = { groupId, groupName, page: 1, lastPage: 1 };
+  document.getElementById('sub-panel').style.display = 'block';
+  document.getElementById('sub-panel-title').textContent = groupName.toUpperCase() + ' — SUBSCRIBERS';
+  document.getElementById('sub-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  await fetchSubscribers();
+}
+
+function closeSubPanel() {
+  document.getElementById('sub-panel').style.display = 'none';
+  subState.groupId = null;
+}
+
+async function subPage(delta) {
+  subState.page = Math.max(1, Math.min(subState.lastPage, subState.page + delta));
+  await fetchSubscribers();
+}
+
+async function fetchSubscribers() {
+  const listEl = document.getElementById('sub-list');
+  const pagEl  = document.getElementById('sub-pagination');
+  listEl.innerHTML = '<div class="empty-state">Loading…</div>';
+
+  try {
+    const res  = await fetch(`/api/mailerlite/groups/${subState.groupId}/subscribers?limit=25&page=${subState.page}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load subscribers');
+
+    subState.lastPage = data.last_page || 1;
+
+    if (!data.subscribers.length) {
+      listEl.innerHTML = '<div class="empty-state">No subscribers in this group yet.</div>';
+      pagEl.style.display = 'none';
+      return;
+    }
+
+    listEl.innerHTML = data.subscribers.map(s => {
+      const joined = s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
+      return `<div class="sub-row">
+        <div>
+          <div class="sub-email">${escHtml(s.email)}</div>
+          ${s.name ? `<div class="sub-name">${escHtml(s.name)}</div>` : ''}
+        </div>
+        <div class="sub-date">${escHtml(joined)}</div>
+      </div>`;
+    }).join('');
+
+    // Pagination
+    if (data.last_page > 1) {
+      pagEl.style.display = 'flex';
+      document.getElementById('sub-page-info').textContent = `Page ${data.page} of ${data.last_page} · ${data.total.toLocaleString()} total`;
+      document.getElementById('sub-prev').disabled = data.page <= 1;
+      document.getElementById('sub-next').disabled = data.page >= data.last_page;
+    } else {
+      pagEl.style.display = data.total > 0 ? 'flex' : 'none';
+      document.getElementById('sub-page-info').textContent = `${data.total.toLocaleString()} subscribers`;
+      document.getElementById('sub-prev').style.display = 'none';
+      document.getElementById('sub-next').style.display = 'none';
+    }
+  } catch(e) {
+    listEl.innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`;
+    pagEl.style.display = 'none';
+  }
+}
+
+// ─── Custom group creation + mapping ──────────────────────────────────────────
+async function createGroup() {
+  const name    = document.getElementById('new-group-name').value.trim();
+  const keyword = document.getElementById('new-group-keyword').value.trim();
+  if (!name) { showToast('Group name is required', 'amber'); return; }
+
+  const btn = document.getElementById('create-group-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+  document.getElementById('create-group-result').style.display = 'none';
+
+  try {
+    const res  = await fetch('/api/mailerlite/groups/create', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ name, keyword }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+
+    const resultEl = document.getElementById('create-group-result');
+    resultEl.textContent = `Group "${data.group.name}" ready (ID: ${data.group.id})${keyword ? ` · Keyword "${keyword}" mapped` : ''}`;
+    resultEl.style.display = 'block';
+
+    document.getElementById('new-group-name').value    = '';
+    document.getElementById('new-group-keyword').value = '';
+
+    showToast(`Group created${keyword ? ' + mapped' : ''}`, 'green');
+
+    // Refresh everything
+    await checkStatus();
+    await loadMappings();
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Create';
+  }
+}
+
+async function loadMappings() {
+  try {
+    const res  = await fetch('/api/mailerlite/mappings');
+    const data = await res.json();
+    if (!res.ok) return;
+
+    const mappings = data.mappings || {};
+    const entries  = Object.entries(mappings);
+    const section  = document.getElementById('mappings-section');
+    const listEl   = document.getElementById('mappings-list');
+
+    if (!entries.length) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+
+    // Build group name lookup from allGroups
+    const groupNameById = {};
+    for (const g of allGroups) groupNameById[g.id] = g.name;
+
+    listEl.innerHTML = entries.map(([kw, gid]) => {
+      const groupName = groupNameById[gid] || gid;
+      return `<div class="mapping-row">
+        <span class="mapping-keyword">${escHtml(kw)}</span>
+        <span>→</span>
+        <span class="mapping-group">${escHtml(groupName)}</span>
+        <button class="mapping-del" onclick="deleteMapping('${escHtml(kw)}')" title="Remove mapping">✕</button>
+      </div>`;
+    }).join('');
+  } catch(_) {}
+}
+
+async function deleteMapping(keyword) {
+  try {
+    const res = await fetch(`/api/mailerlite/mappings/${encodeURIComponent(keyword)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed');
+    showToast(`Mapping "${keyword}" removed`, 'teal');
+    await loadMappings();
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'red');
+  }
 }
 
 async function syncGroups() {
@@ -505,9 +828,9 @@ async function syncGroups() {
     resultEl.textContent = lines.join(' · ');
     resultEl.style.display = 'block';
 
-    // Refresh status + groups
-    allGroups = data.groups.map(g => ({ id: g.id, name: g.name, total: 0 }));
-    renderGroups(allGroups);
+    // Refresh status + groups (fetch fresh totals from API)
+    await checkStatus();
+    loadMappings();
 
     showToast(`Groups synced — ${data.groups.length} groups ready`, 'green');
   } catch(e) {
@@ -642,7 +965,9 @@ function parseCsv(text) {
 async function runImport() {
   if (!parsedCsv || parsedCsv.rows.length === 0) return;
 
-  const group = document.getElementById('import-group').value;
+  // Use custom any-group dropdown if a non-tier group is selected
+  const anyGroupId = document.getElementById('import-group-any')?.value;
+  const group = anyGroupId || document.getElementById('import-group').value;
   const btn   = document.getElementById('import-btn');
   btn.disabled = true;
   document.getElementById('import-btn-text').textContent = 'IMPORTING…';
@@ -678,8 +1003,9 @@ async function runImport() {
 
     document.getElementById('import-progress-bar').style.width = '100%';
 
+    const groupLabel = TIER_LABELS[group] || allGroups.find(g => g.id === group)?.name || group;
     document.getElementById('import-progress-text').textContent =
-      `Submitted ${imported} subscribers to ${TIER_LABELS[group]} — Mailerlite is processing. Check the Groups tab in a minute to confirm counts.`;
+      `Submitted ${imported} subscribers to ${groupLabel} — Mailerlite is processing. Check the Groups tab in a minute to confirm counts.`;
     showToast(`${imported} subscribers submitted to Mailerlite`, 'green');
 
     // Reset state
@@ -877,6 +1203,170 @@ function copyWebhookUrl() {
   }).catch(() => {
     showToast('Copy failed — select and copy manually', 'amber');
   });
+}
+
+// ─── Welcome Emails ───────────────────────────────────────────────────────────
+let welcomeTemplates   = {};   // tier → { configured, subject, body }
+let welcomeEditingTier = null;
+let welcomeTiersLoaded = false;
+
+const TIER_DISPLAY = {
+  greenhouse: { label: 'The Greenhouse 🌱', desc: 'Free tier — just joined', cls: 'greenhouse' },
+  garden:     { label: 'The Garden 🌿',     desc: '$19/month member',       cls: 'garden'     },
+  founding50: { label: 'The Founding 50 🏆', desc: '$297 inner circle',      cls: 'founding50' },
+};
+
+async function loadWelcomeTiers() {
+  if (welcomeTiersLoaded) return;
+  const grid = document.getElementById('welcome-tiers-grid');
+  grid.innerHTML = '<div class="empty-state">Loading…</div>';
+
+  try {
+    const results = await Promise.all(
+      TIER_KEYS.map(tier => fetch(`/api/kajabi-webhook/welcome-email/${tier}`).then(r => r.json()))
+    );
+    TIER_KEYS.forEach((tier, i) => { welcomeTemplates[tier] = results[i]; });
+    welcomeTiersLoaded = true;
+    renderWelcomeTiers();
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="color:var(--red)">Failed to load: ${escHtml(e.message)}</div>`;
+  }
+}
+
+function renderWelcomeTiers() {
+  const grid = document.getElementById('welcome-tiers-grid');
+  grid.innerHTML = TIER_KEYS.map(tier => {
+    const tmpl = welcomeTemplates[tier] || {};
+    const disp = TIER_DISPLAY[tier];
+    const armed = tmpl.configured && tmpl.subject && tmpl.body;
+    return `<div class="welcome-tier-card">
+      <div>
+        <div class="welcome-tier-name ${disp.cls}">${disp.label}</div>
+        <div style="font-size:12px;color:var(--text-dimmer);margin-bottom:8px;">${disp.desc}</div>
+        <span class="welcome-status-badge ${armed ? 'welcome-status-armed' : 'welcome-status-unarmed'}">
+          ${armed ? '● ARMED — fires on new member' : '○ UNARMED — no template set'}
+        </span>
+        ${armed ? `<div class="welcome-subject-preview">Subject: ${escHtml(tmpl.subject)}</div>` : ''}
+      </div>
+      <div class="welcome-btns">
+        <button class="welcome-action-btn generate" id="gen-btn-${tier}" onclick="generateWelcomeEmail('${tier}')">✦ Generate</button>
+        <button class="welcome-action-btn edit" onclick="openWelcomeEdit('${tier}')">${armed ? '✎ Edit' : '+ Write'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function generateWelcomeEmail(tier) {
+  const btn = document.getElementById(`gen-btn-${tier}`);
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  try {
+    const res  = await fetch(`/api/kajabi-webhook/welcome-email/${tier}/generate`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Generate failed');
+
+    // Open the editor pre-filled with the generated content
+    openWelcomeEdit(tier, data.subject, data.body);
+    showToast(`Welcome email generated for ${TIER_DISPLAY[tier].label}`, 'teal');
+  } catch(e) {
+    showToast('Generate failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✦ Generate';
+  }
+}
+
+function openWelcomeEdit(tier, subjectOverride, bodyOverride) {
+  welcomeEditingTier = tier;
+  const tmpl = welcomeTemplates[tier] || {};
+  document.getElementById('welcome-edit-title').textContent = `EDIT WELCOME EMAIL — ${TIER_DISPLAY[tier].label.toUpperCase()}`;
+  document.getElementById('welcome-edit-subject').value = subjectOverride || tmpl.subject || '';
+  document.getElementById('welcome-edit-body').value    = bodyOverride    || tmpl.body    || '';
+  document.getElementById('welcome-edit-status').textContent = '';
+
+  const overlay = document.getElementById('welcome-edit-overlay');
+  overlay.style.display = 'flex';
+}
+
+function closeWelcomeEdit() {
+  document.getElementById('welcome-edit-overlay').style.display = 'none';
+  welcomeEditingTier = null;
+}
+
+async function saveWelcomeEmail() {
+  if (!welcomeEditingTier) return;
+  const subject = document.getElementById('welcome-edit-subject').value.trim();
+  const body    = document.getElementById('welcome-edit-body').value.trim();
+
+  if (!subject || !body) { showToast('Subject and body are required', 'amber'); return; }
+
+  const btn = document.getElementById('welcome-save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  document.getElementById('welcome-edit-status').textContent = '';
+
+  try {
+    const res  = await fetch(`/api/kajabi-webhook/welcome-email/${welcomeEditingTier}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ subject, body }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+
+    welcomeTemplates[welcomeEditingTier] = { configured: true, subject, body };
+    document.getElementById('welcome-edit-status').textContent = 'Saved!';
+    renderWelcomeTiers();
+    showToast('Welcome email saved — armed and ready', 'green');
+    setTimeout(closeWelcomeEdit, 800);
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Save Template';
+  }
+}
+
+async function testWelcomeEmail() {
+  if (!welcomeEditingTier) return;
+
+  // First save if there are unsaved changes
+  const subject = document.getElementById('welcome-edit-subject').value.trim();
+  const body    = document.getElementById('welcome-edit-body').value.trim();
+  if (!subject || !body) { showToast('Fill in subject and body first', 'amber'); return; }
+
+  const testEmail = prompt('Send test to which email?');
+  if (!testEmail || !testEmail.includes('@')) { showToast('Valid email required', 'amber'); return; }
+
+  // Save first, then fire test
+  const saveRes = await fetch(`/api/kajabi-webhook/welcome-email/${welcomeEditingTier}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ subject, body }),
+  });
+  if (!saveRes.ok) { showToast('Save failed before test', 'red'); return; }
+  welcomeTemplates[welcomeEditingTier] = { configured: true, subject, body };
+
+  const btn = document.getElementById('welcome-test-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const res  = await fetch('/api/kajabi-webhook/welcome-email/test', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ tier: welcomeEditingTier, email: testEmail, first_name: 'Friend' }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.reason || data.error || 'Test failed');
+    showToast(`Test email sent to ${testEmail}`, 'green');
+    document.getElementById('welcome-edit-status').textContent = `Test sent to ${testEmail}`;
+  } catch(e) {
+    showToast('Test failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Test Fire';
+  }
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
