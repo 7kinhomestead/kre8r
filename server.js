@@ -303,6 +303,7 @@ app.post('/setup-api', async (req, res) => {
   }
 });
 
+app.get('/download',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'download.html')));
 app.get('/landing',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/landing.html',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/media-kit',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
