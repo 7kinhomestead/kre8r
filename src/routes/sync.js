@@ -189,4 +189,33 @@ router.get('/tenants', (req, res) => {
   }
 });
 
+// ── GET /api/sync/token — retrieve token for a tenant (operator only) ─────────
+// Allows the operator to recover a token if it was lost from the startup log.
+// Protected by OPERATOR_SECRET — never expose without it.
+router.get('/token', (req, res) => {
+  const operatorSecret = process.env.OPERATOR_SECRET;
+  const auth = req.headers['x-operator-secret'] || req.query.secret;
+  if (!operatorSecret) {
+    return res.status(403).json({ error: 'OPERATOR_SECRET not set — cannot expose tokens' });
+  }
+  if (auth !== operatorSecret) {
+    return res.status(403).json({ error: 'Operator access required' });
+  }
+  try {
+    const tenants = db.getAllTenants();
+    if (!tenants.length) return res.status(404).json({ error: 'No tenants registered yet' });
+    // Return all tenants with real tokens — operator use only
+    res.json({ tenants: tenants.map(t => ({
+      tenant_slug:  t.tenant_slug,
+      display_name: t.display_name,
+      sync_token:   t.sync_token,
+      plan:         t.plan,
+      active:       t.active,
+      last_sync_at: t.last_sync_at,
+    }))});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
