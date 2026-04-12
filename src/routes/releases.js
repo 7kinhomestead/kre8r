@@ -103,7 +103,12 @@ router.get('/latest', (req, res) => {
 // Streams the installer file — sidesteps Unicode/space filename URL problems.
 router.get('/download', (req, res) => {
   const files = fs.readdirSync(DOWNLOADS_DIR);
-  const exe   = files.find(f => f.endsWith('.exe') && !f.endsWith('.blockmap'));
+  // Sort descending so newest version (highest semver string) is served first
+  const exes  = files
+    .filter(f => f.endsWith('.exe') && !f.endsWith('.blockmap'))
+    .sort()
+    .reverse();
+  const exe = exes[0];
   if (!exe) {
     return res.status(404).json({ error: 'No installer available' });
   }
