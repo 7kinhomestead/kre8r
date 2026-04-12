@@ -1,3 +1,92 @@
+# Session 34 — ABI Conflict Attempt, Mailerlite Import Fix (2026-04-11)
+
+## Goal
+Fix the subscriber CSV import error, stabilize the ABI conflict between dev and Electron, address multi-user architecture question.
+
+## ABI Conflict — npm pre-scripts (attempted, then reverted)
+- Added `preelectron`, `prestart`, `predev` npm hooks to auto-swap better-sqlite3 binary between NMV 145 (Electron) and NMV 137 (system Node)
+- Rewrote `scripts/prebuild-sqlite.js` with stamp-file check (`scripts/.sqlite-mode`) to skip download if binary already correct
+- Created `scripts/rebuild-sqlite-node.js` — same stamp pattern for dev server direction
+- **Problem:** `preelectron` ran `prebuild-install` on every bat file launch → download blocked Electron from opening
+- **Resolution:** Removed all pre-script hooks entirely. Binary was already at NMV 145 and working. Pre-scripts are only needed for `dist:win` (already explicit there). No hooks = no breakage.
+
+## Mailerlite Import Fix
+- Root cause: Mailerlite v2 `/subscribers/import` requires a CSV **file upload** (multipart), not JSON
+- Fix: rewrote `src/routes/mailerlite.js` `/subscribers/import` handler to use individual `POST /subscribers` upserts instead — 10 concurrent, Promise.allSettled so partial failures don't abort the batch
+- Response now returns `{ ok, imported, failed }` counts
+- **Status:** Not confirmed working yet — server restart may be needed; CSV parser may also break on Kajabi's quoted-comma fields
+
+## Architecture Discussions
+- **Multi-user desktop app:** Not a real problem. Each installation = one creator. Second user (e.g. Cari) gets a second login via existing user management. Multi-tenancy is a hosted-server (kre8r.app) concern, not desktop V1.
+- **Webhooks + localhost:** Kajabi webhooks require a public HTTPS URL — localhost desktop installs can't receive them. Correct model: desktop users use CSV import; webhooks are a hosted-server feature. AudiencΩr webhook tab should detect localhost and show a message instead of the webhook URL.
+
+## Status at End of Session
+- Electron bat file: working ✅
+- Mailerlite import: not confirmed — needs restart + retest
+- Remaining items logged in TODO
+
+---
+
+# Session 33 — Mailerlite Integration, Kajabi Webhook, Electron Fixes, Setup Wizard (2026-04-11)
+
+## Goal
+Fix Electron app on laptop (ABI + dotenv errors), build Mailerlite email integration, build Kajabi webhook receiver, fix first-run credential setup, strip Anthropic branding from frontend.
+
+## Electron App — Three Root Cause Fixes
+- **Build 1 (dotenv missing):** `!node_modules` in package.json files array was silently stripping all dependencies from asar. Removed that line.
+- **Build 2 (server.js unpacked but deps in asar):** Node can't bridge from unpacked file into asar modules. Fixed by keeping server.js inside asar, loading via `app.getAppPath()` instead of `getResourcePath()`.
+- **Build 3 (NMV 137 vs 145):** `@electron/rebuild` used system Node headers. Fixed by using `prebuild-install --runtime electron --target 41.1.1` to fetch correct prebuilt. Added `scripts/prebuild-sqlite.js` and `npmRebuild: false`.
+- **Old process conflict:** Stale PID on port 3000 serving old routes. Killed manually.
+- Laptop confirmed: login screen ✅, server starts ✅, DB initialises ✅
+
+## Mailerlite Integration — src/routes/mailerlite.js
+- `GET /status` — checks key, calls /groups, returns {connected, groupCount, groups}
+- `POST /groups/sync` — creates Greenhouse/Garden/Founding 50 if missing, writes IDs to creator-profile.json under `integrations.mailerlite_groups`
+- `POST /subscribers/import` — bulk import (later fixed in Session 34 — see above)
+- `POST /send` — creates campaign, sets content, sends immediately
+- `GET /stats` — last 10 campaigns with open_rate, click_rate
+- Mounted in server.js at `/api/mailerlite`
+
+## AudiencΩr — public/audience.html (rebuilt)
+Four tabs replacing the broken Kajabi contacts view:
+- **Groups** — live subscriber counts per tier (Greenhouse/Garden/Founding 50)
+- **Import CSV** — drag-and-drop, client-side parse, batch import to selected group
+- **Campaigns** — last 10 with open/click rates
+- **Webhook** — copyable URL, mapping table, test panel, event log
+
+## MailΩr — Mailerlite Send Button
+- Added Mailerlite send section to mailor.html: audience checkboxes (per tier), Send Now button
+- Calls `POST /api/mailerlite/send` with subject + html_body + selected group_ids
+- Copy/paste fallback retained alongside it
+
+## Kajabi Webhook Receiver — src/routes/kajabi-webhook.js
+- `POST /receive` — PUBLIC endpoint (mounted before auth middleware), always returns 200
+  - `member.created` → Greenhouse
+  - `purchase.created / offer.purchase` → keyword match: "Garden"/"$19" → Garden, "Founding"/"$297" → Founding 50, else Greenhouse
+  - `member.removed` → log only (no Mailerlite delete)
+  - Logs last 20 events to kv_store under `kajabi_webhook_log`
+- `POST /test` — session-auth dry run
+- `GET /config` — returns webhook URL, group config status, last 20 events
+- Mounted at `/api/kajabi-webhook` before auth middleware in server.js
+
+## Setup Wizard — First-Run Credential Fix
+- Removed hardcoded `jason / kre8r2024` auto-seed from `src/db.js`
+- Added `getUserCount()` export to db.js
+- First-run detection middleware in server.js: if getUserCount() === 0, redirect to /setup
+- `GET /setup`, `GET /setup.html` routes added (public, no auth)
+- `POST /setup-api` handler: validates inputs, bcrypt hashes password, creates owner, writes ANTHROPIC_API_KEY to .env, updates creator-profile.json
+- `public/setup.html` — dark theme wizard (name, username, password, confirm password, intake folder)
+- **Pending:** Remove Anthropic API key field — operator pays the fees, users don't enter their own key
+
+## Phase 0 — Strip Anthropic/Claude Branding
+- Removed all Claude/Anthropic references from frontend HTML (footers, tooltips, about text)
+- Committed: `54d855a Phase 0 — Strip Claude/Anthropic branding from all frontend UI`
+
+## Commits This Session
+- `54d855a` Phase 0 — Strip Claude/Anthropic branding from all frontend UI
+
+---
+
 # Session 32 — Phase 1/2/3 Reliability + Electron Packaging (2026-04-11)
 
 ## Goal

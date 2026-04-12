@@ -11,18 +11,41 @@ No PM2. A real app with an icon in the taskbar.
 ## ✅ PHASES 2, 3 & 5 — Electron + Bundling + Packaging — DONE Session 32–33
 
 Desktop app boots on Jason's laptop. Login screen, server starts, DB initialises.
-Default credentials: jason / kre8r2024. Installer: `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.0.exe`
+Setup wizard on first run (no more hardcoded credentials). Installer: `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.0.exe`
 
 **Key fixes locked in (Session 33):**
 - `npmRebuild: false` + `scripts/prebuild-sqlite.js` — correct Electron 41 ABI (NMV 145) every build
 - server.js loads from inside asar via `app.getAppPath()` — all require() calls resolve correctly
 - Diagnostic error dialog on startup failure — no more silent white screen
 - `!node_modules` removed from files — was silently stripping all dependencies
+- First-run setup wizard: getUserCount() === 0 → redirect to /setup, create owner account
 
 **Remaining before wider distribution:**
-- App size: 238MB (playwright is the main culprit — move to devDependencies if not needed in packaged app)
-- Mac build: untested (needs Mac machine or CI)
-- Code signing: self-signed for now, SmartScreen warning on Windows install is expected
+- [ ] Remove Anthropic API key field from `public/setup.html` — operator pays API fees, users don't enter their own key
+- [ ] App size: 238MB (playwright is the main culprit — move to devDependencies if not needed in packaged app)
+- [ ] Mac build: untested (needs Mac machine or CI)
+- [ ] Code signing: self-signed for now, SmartScreen warning on Windows install is expected
+
+---
+
+## ✅ Mailerlite Integration — DONE Session 33
+
+Full email pipeline: AudiencΩr rebuilt, MailΩr send button live, Kajabi webhook receiver built.
+
+**Confirmed working:**
+- `src/routes/mailerlite.js` — status, groups/sync, send, stats endpoints
+- AudiencΩr rebuilt: Groups tab (live counts), Campaigns tab (open/click rates)
+- MailΩr: Mailerlite send button (per-tier audience selection)
+- Kajabi webhook receiver at `/api/kajabi-webhook/receive` (public, always 200)
+
+**Still needed:**
+- [ ] CSV import broken — Mailerlite `/subscribers/import` needs file upload, switched to `POST /subscribers` individual upserts (Session 34) but not yet confirmed working — needs server restart + retest
+- [ ] CSV parser in audience.html does simple `split(',')` — breaks on Kajabi's quoted fields (addresses, tags with commas). Needs a proper CSV parser.
+- [ ] Webhook localhost detection — AudiencΩr webhook tab should show "use CSV import instead" when running on localhost, not the webhook URL
+- [ ] Webhook group/keyword mapping — discuss with Jason: which Kajabi product names/keywords map to which Mailerlite groups. Currently: "Garden"/"$19" → Garden, "Founding"/"$297" → Founding 50, else Greenhouse.
+- [ ] Deploy Mailerlite + webhook code to DigitalOcean (not yet pushed)
+- [ ] Add Kajabi webhook URL to Kajabi settings (needs DO deploy first)
+- [ ] Cancel Kajabi API subscription ($25/mo — was only pulling 25 contacts, no broadcast endpoint)
 
 ---
 

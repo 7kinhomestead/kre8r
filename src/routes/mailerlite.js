@@ -136,7 +136,7 @@ router.post('/groups/sync', async (req, res) => {
 // ── POST /api/mailerlite/subscribers/import ───────────────────────────────────
 // Accepts { subscribers: [{email, name, group}] }
 // group: 'greenhouse' | 'garden' | 'founding50'
-// Batches into chunks of 1000.
+// Uses POST /subscribers (upsert) in parallel batches of 10 — avoids file upload requirement.
 
 router.post('/subscribers/import', async (req, res) => {
   try {
@@ -155,35 +155,31 @@ router.post('/subscribers/import', async (req, res) => {
     }
 
     let imported = 0;
+    let failed  = 0;
+    const CONCURRENCY = 10;
 
-    // Group subscribers by their target group
-    const byGroup = {};
-    for (const sub of subscribers) {
-      const g = sub.group || 'greenhouse';
-      if (!byGroup[g]) byGroup[g] = [];
-      byGroup[g].push({ email: sub.email, name: sub.name || '' });
+    // Upsert each subscriber individually via POST /subscribers (handles groups inline)
+    for (let i = 0; i < subscribers.length; i += CONCURRENCY) {
+      const batch = subscribers.slice(i, i + CONCURRENCY);
+      await Promise.allSettled(
+        batch.map(async sub => {
+          try {
+            const groupKey = sub.group || 'greenhouse';
+            const groupId  = groupIds[groupKey];
+            const payload  = { email: sub.email };
+            if (sub.name)  payload.fields = { name: sub.name };
+            if (groupId)   payload.groups = [groupId];
+            await ml('POST', '/subscribers', payload);
+            imported++;
+          } catch (err) {
+            log.warn({ module: 'mailerlite', email: sub.email, err }, 'subscriber upsert failed');
+            failed++;
+          }
+        })
+      );
     }
 
-    for (const [groupKey, subs] of Object.entries(byGroup)) {
-      const groupId = groupIds[groupKey];
-
-      // Batch in 1000s
-      for (let i = 0; i < subs.length; i += 1000) {
-        const batch = subs.slice(i, i + 1000);
-        const payload = {
-          subscribers: batch.map(s => {
-            const entry = { email: s.email };
-            if (s.name) entry.fields = { name: s.name };
-            if (groupId) entry.groups = [groupId];
-            return entry;
-          }),
-        };
-        await ml('POST', '/subscribers/import', payload);
-        imported += batch.length;
-      }
-    }
-
-    res.json({ ok: true, imported });
+    res.json({ ok: true, imported, failed });
   } catch (e) {
     log.error({ module: 'mailerlite', err: e }, 'subscribers/import failed');
     res.status(500).json({ error: e.message });
