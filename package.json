@@ -11,6 +11,7 @@
     "electron:dev": "cross-env NODE_ENV=development electron .",
     "prebuild-sqlite": "node scripts/prebuild-sqlite.js",
     "dist:win": "npm run prebuild-sqlite && electron-builder --win",
+    "deploy:update": "node scripts/deploy-update.js",
     "dist:mac": "electron-builder --mac",
     "dist": "electron-builder --win --mac",
     "generate-icons": "node scripts/generate-icons.js",
@@ -27,6 +28,7 @@
     "cors": "^2.8.5",
     "docx": "^9.6.1",
     "dotenv": "^16.4.5",
+    "electron-updater": "^6.8.3",
     "express": "^4.19.2",
     "express-session": "^1.19.0",
     "ffmpeg-static": "^5.3.0",
@@ -90,8 +92,10 @@
     "extraResources": [
       {
         "from": "build-resources/node-win",
-        "to":   "node",
-        "filter": ["**/*"]
+        "to": "node",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
@@ -112,6 +116,10 @@
     "dmg": {
       "background": "#0e0f0e",
       "icon": "public/images/kre8r-icon.png"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://kre8r.app/downloads"
     }
   },
   "engines": {

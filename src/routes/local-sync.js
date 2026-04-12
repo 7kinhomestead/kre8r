@@ -198,8 +198,9 @@ router.post('/import', (req, res) => {
 
   const incoming       = snapshot.db_export.projects      || [];
   const incomingScript = snapshot.db_export.writr_scripts || [];
-  let imported = 0;
-  let skipped  = 0;
+  let imported        = 0;
+  let skipped         = 0;
+  let scriptsImported = 0;
 
   try {
     // Get all local projects to check for duplicates
@@ -207,41 +208,52 @@ router.post('/import', (req, res) => {
     const existingIds = new Set(existing.map(p => p.id));
 
     for (const project of incoming) {
-      // Skip if ID already exists locally
-      if (existingIds.has(project.id)) {
-        skipped++;
-        continue;
-      }
+      const alreadyExists = existingIds.has(project.id);
 
-      // Skip if a project with the same title + stage already exists
-      const titleMatch = existing.find(
-        p => p.title === project.title && p.current_stage === project.current_stage
-      );
-      if (titleMatch) {
-        skipped++;
-        continue;
-      }
-
-      // Import — create project preserving all fields
-      try {
-        db.createProjectFromSnapshot(project);
-        imported++;
-
-        // Import associated writr scripts so teleprompter works immediately
-        const scripts = incomingScript.filter(s => s.project_id === project.id);
-        for (const script of scripts) {
-          try {
-            db.insertWritrScript(script);
-          } catch (_) { /* non-fatal — project is imported even if script fails */ }
+      if (!alreadyExists) {
+        // Check title+stage duplicate
+        const titleMatch = existing.find(
+          p => p.title === project.title && p.current_stage === project.current_stage
+        );
+        if (titleMatch) {
+          skipped++;
+          continue;
         }
-      } catch (innerErr) {
-        log.warn({ module: 'local-sync', title: project.title, err: innerErr }, 'Skipped project on import');
+
+        // Import the project
+        try {
+          db.createProjectFromSnapshot(project);
+          imported++;
+        } catch (innerErr) {
+          log.warn({ module: 'local-sync', title: project.title, err: innerErr }, 'Skipped project on import');
+          skipped++;
+          continue;
+        }
+      } else {
         skipped++;
+      }
+
+      // Always try to import scripts — even for pre-existing projects.
+      // This handles the case where projects were synced before scripts were included.
+      const scripts = incomingScript.filter(s => s.project_id === project.id);
+      for (const script of scripts) {
+        try {
+          // Check if this script already exists (by project_id + approved + created_at)
+          const existing = db.getWritrScriptsByProject(project.id) || [];
+          const dup = existing.find(e =>
+            e.approved === script.approved &&
+            e.created_at === script.created_at
+          );
+          if (!dup) {
+            db.insertWritrScript(script);
+            scriptsImported++;
+          }
+        } catch (_) { /* non-fatal */ }
       }
     }
 
-    log.info({ module: 'local-sync', imported, skipped }, 'Snapshot import complete');
-    res.json({ ok: true, imported, skipped });
+    log.info({ module: 'local-sync', imported, skipped, scriptsImported }, 'Snapshot import complete');
+    res.json({ ok: true, imported, skipped, scripts_imported: scriptsImported });
   } catch (err) {
     log.error({ module: 'local-sync', err }, 'Import failed');
     res.status(500).json({ ok: false, error: err.message });

@@ -7,6 +7,7 @@
 'use strict';
 
 const { app, BrowserWindow, shell, protocol, ipcMain, Menu, MenuItem, dialog, utilityProcess } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path   = require('path');
 const fs     = require('fs');
 const http   = require('http');
@@ -215,7 +216,8 @@ function createMainWindow() {
     },
   });
 
-  mainWindow.loadURL(`http://localhost:${PORT}`);
+  // Load index.html explicitly — avoids any cached redirects from previous sessions
+  mainWindow.loadURL(`http://localhost:${PORT}/index.html`);
 
   mainWindow.once('ready-to-show', () => {
     if (splashWindow) {
@@ -304,6 +306,40 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (!mainWindow) createMainWindow();
   });
+
+  // ── Auto-update check ─────────────────────────────────────────────────────
+  // Checks kre8r.app/downloads/latest.yml a few seconds after launch.
+  // Shows a native dialog when an update is ready to install.
+  if (app.isPackaged) {
+    autoUpdater.logger = null; // suppress noisy logs
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('update-available', (info) => {
+      dialog.showMessageBox(mainWindow, {
+        type:    'info',
+        title:   'Update available',
+        message: `Kre8Ωr ${info.version} is available — downloading now.`,
+        buttons: ['OK'],
+      });
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+      dialog.showMessageBox(mainWindow, {
+        type:    'info',
+        title:   'Update ready',
+        message: 'A new version of Kre8Ωr has downloaded. Restart the app to apply the update.',
+        buttons: ['Restart Now', 'Later'],
+      }).then(({ response }) => {
+        if (response === 0) autoUpdater.quitAndInstall();
+      });
+    });
+
+    // Check 5 seconds after startup so it doesn't slow first load
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch(() => { /* no internet / server down — silent fail */ });
+    }, 5000);
+  }
 });
 
 // ─── Cleanup ──────────────────────────────────────────────────────────────────

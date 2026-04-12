@@ -740,7 +740,11 @@
       "Bash(tasklist /FI \"PID eq 30208\")",
       "Bash(powershell -command \"Get-Process -Id 30208 | Select-Object Name, Id, Path\")",
       "Bash(powershell -command \"Stop-Process -Id 30208 -Force\")",
-      "Bash(findstr /i north)"
+      "Bash(findstr /i north)",
+      "Bash(curl -s http://localhost:3000/api/local-sync/config -H \"Cookie: kre8r.sid=\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/sync.html)",
+      "Bash(ssh kre8r@kre8r.app \"cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r\")",
+      "Bash(ls C:/Users/18054/kre8r/dist/*.exe)"
     ]
   }
 }

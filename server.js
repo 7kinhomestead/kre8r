@@ -155,7 +155,7 @@ const TELEPROMPTER_HOST = 'teleprompter.kre8r.app';
 // Teleprompter subdomain root → go straight to the teleprompter page
 app.get('/', (req, res, next) => {
   if (req.hostname === TELEPROMPTER_HOST) {
-    return res.redirect(301, '/teleprompter.html');
+    return res.redirect(302, '/teleprompter.html'); // 302 not 301 — never cache this permanently
   }
   next();
 });
@@ -195,11 +195,15 @@ app.use((req, res, next) => {
   // Always public
   if (req.path === '/login' || req.path === '/login.html') return next();
   if (req.path.startsWith('/auth/'))       return next();
-  if (req.path.startsWith('/api/beta'))    return next();
-  if (req.path === '/api/health')          return next();
+  if (req.path.startsWith('/api/beta'))              return next();
+  if (req.path === '/api/health')                    return next();
+  if (req.path.startsWith('/api/releases'))          return next(); // own auth
   if (['/landing', '/landing.html', '/media-kit', '/media-kit.html',
        '/beta-invite', '/beta-invite.html',
-       '/gate', '/kre8r-gate', '/kre8r-gate.html'].includes(req.path)) return next();
+       '/gate', '/kre8r-gate', '/kre8r-gate.html',
+       '/download', '/download.html'].includes(req.path)) return next();
+  // Download assets (installer, yml) are public
+  if (req.path.startsWith('/downloads/')) return next();
 
   // Logged in — allow
   if (req.session?.userId) return next();
@@ -354,6 +358,7 @@ app.use('/api/project-vault', require('./src/routes/project-vault'));
 app.use('/api/northr',        require('./src/routes/northr'));
 app.use('/api/lab',           require('./src/routes/lab'));
 app.use('/api/local-sync',    require('./src/routes/local-sync'));
+app.use('/api/releases',      require('./src/routes/releases'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

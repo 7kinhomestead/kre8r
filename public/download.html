@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Download Kre8Ωr</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0e0f0e;
+      color: #e8ebe6;
+      font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #161916;
+      border: 1px solid #2a2e28;
+      border-radius: 16px;
+      padding: 48px 40px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+    .logo {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+      color: #e8ebe6;
+    }
+    .logo span { color: #14b8a6; }
+    .tagline {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 40px;
+    }
+    .version-badge {
+      display: inline-block;
+      background: #0d2a27;
+      color: #14b8a6;
+      border: 1px solid #14b8a640;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      margin-bottom: 28px;
+    }
+    .btn-download {
+      display: block;
+      width: 100%;
+      background: #14b8a6;
+      color: #000;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 16px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      margin-bottom: 12px;
+      transition: background 0.15s;
+    }
+    .btn-download:hover { background: #0d9488; }
+    .btn-download.disabled {
+      background: #2a2e28;
+      color: #555;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .platform-note {
+      font-size: 0.78rem;
+      color: #555;
+      margin-bottom: 32px;
+    }
+    .instructions {
+      text-align: left;
+      border-top: 1px solid #2a2e28;
+      padding-top: 28px;
+      margin-top: 8px;
+    }
+    .instructions h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #555;
+      margin-bottom: 14px;
+    }
+    .steps {
+      list-style: none;
+      counter-reset: step;
+    }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 0.85rem;
+      color: #8a9487;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #1c1f1b;
+      border: 1px solid #2a2e28;
+      color: #14b8a6;
+      font-size: 0.72rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+    .no-build {
+      color: #666;
+      font-size: 0.88rem;
+      padding: 20px 0;
+    }
+    .release-date {
+      font-size: 0.75rem;
+      color: #444;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">KRE<span>8Ω</span>R</div>
+    <div class="tagline">AI-native content production OS</div>
+
+    <div id="content">
+      <div class="no-build">Checking for latest build…</div>
+    </div>
+
+    <div class="instructions">
+      <h3>Install Instructions</h3>
+      <ol class="steps">
+        <li>Download and run the installer</li>
+        <li>If Windows shows a SmartScreen warning, click "More info" → "Run anyway"</li>
+        <li>Follow the installer — it creates a desktop shortcut</li>
+        <li>On first launch, complete the setup wizard</li>
+        <li>Open SyncΩr → enter your sync token → Pull to get your data</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+  fetch('/api/releases/latest')
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('content');
+      if (!d.available) {
+        el.innerHTML = '<div class="no-build">No build available yet.</div>';
+        return;
+      }
+      const date = d.releaseDate
+        ? new Date(d.releaseDate).toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' })
+        : '';
+      el.innerHTML = `
+        <div class="version-badge">v${d.version}</div>
+        ${date ? `<div class="release-date">Released ${date}</div>` : ''}
+        <a href="${d.downloadUrl}" class="btn-download">⬇ Download for Windows</a>
+        <div class="platform-note">Windows 10 / 11 · 64-bit · ~240 MB</div>
+      `;
+    })
+    .catch(() => {
+      document.getElementById('content').innerHTML =
+        '<div class="no-build">Could not load build info.</div>';
+    });
+  </script>
+</body>
+</html>
