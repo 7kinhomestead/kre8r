@@ -1,6 +1,6 @@
 {
   "name": "kre8r",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Kre8Ωr — AI-native content production OS for 7 Kin Homestead",
   "author": "Jason Rutland <jason@7kinhomestead.com>",
   "main": "electron/main.js",

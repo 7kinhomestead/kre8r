@@ -1415,10 +1415,12 @@ function setFieldQRBtnState(enabled) {
   if (btn) btn.disabled = !enabled;
 }
 
+// When Cloud Launch is active, display WebSocket routes through teleprompter.kre8r.app
+// so phone and laptop meet at the same cloud WebSocket. No shared WiFi needed.
+let cloudLaunchActive = false;
+const CLOUD_WS_HOST   = 'teleprompter.kre8r.app';
+
 async function launchViaCloud() {
-  // Push script to DigitalOcean field store, then navigate THIS laptop browser to
-  // teleprompter.kre8r.app?field=CODE&as=display — so both laptop display and phone
-  // voice device connect through the same cloud WebSocket. No shared WiFi needed.
   let text = null;
   let projectName = 'Script';
   if (activeTab === 'paste') {
@@ -1432,11 +1434,10 @@ async function launchViaCloud() {
 
   const btn = document.getElementById('tp-field-qr-btn');
   btn.disabled = true;
-  btn.textContent = '📡 Pushing to cloud…';
+  btn.textContent = '📡 Connecting to cloud…';
 
   try {
-    // POST directly to teleprompter.kre8r.app so the script lives on the same
-    // server that the cloud display URL will fetch it from
+    // Verify cloud is reachable (field-script endpoint used as a ping)
     const r = await fetch('https://teleprompter.kre8r.app/api/teleprompter/field-script', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1445,18 +1446,23 @@ async function launchViaCloud() {
     const d = await r.json();
     if (!d.ok) throw new Error(d.error);
 
-    // Open the cloud display URL in the system browser (Chrome/Edge/Firefox)
-    // — Electron's setWindowOpenHandler intercepts window.open() for external URLs
-    //   and routes them to shell.openExternal(), keeping the Electron app window intact.
-    // as=display → loads script, starts as normal display (not solo phone mode)
-    // QR codes on that page will use teleprompter.kre8r.app as base → phone can scan from anywhere
-    const cloudUrl = `https://teleprompter.kre8r.app/teleprompter.html?field=${d.code}&as=display`;
-    window.open(cloudUrl, '_blank');
+    // Stay on localhost — just reroute the WebSocket and QR base through the cloud.
+    // connectDisplayWS() checks cloudLaunchActive and connects to DO instead of localhost.
+    // updateQRForSession() uses module-level `base` which we set here to the cloud domain.
+    cloudLaunchActive = true;
+    base = `https://${CLOUD_WS_HOST}`;
+
+    btn.textContent = '📡 Cloud active';
+    btn.disabled = false;
+
+    // Start the display — WebSocket will now go through teleprompter.kre8r.app
+    startTeleprompter();
 
   } catch (e) {
+    cloudLaunchActive = false;
     btn.textContent = '📡 Cloud Launch — phone controls from anywhere, no shared WiFi';
     btn.disabled = false;
-    alert('Could not push to cloud: ' + e.message + '\n\nCheck that kre8r.app is reachable.');
+    alert('Could not reach cloud: ' + e.message + '\n\nCheck internet connection.');
   }
 }
 
@@ -2140,12 +2146,15 @@ function showCtrl() {
 // ═══════════════════════════════════════════════════════════════
 
 function connectDisplayWS() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  // Cloud Launch: route WebSocket through teleprompter.kre8r.app so phone can connect
+  // from anywhere without being on the same network as the laptop.
+  const wsHost = cloudLaunchActive ? CLOUD_WS_HOST : location.host;
+  const proto  = (cloudLaunchActive || location.protocol === 'https:') ? 'wss' : 'ws';
   let _reconnDelay = 1000;
 
   function _connect() {
     if (currentMode !== 'display') return; // stopped navigating away
-    try { wsConn = new WebSocket(`${proto}://${location.host}/ws/teleprompter`); }
+    try { wsConn = new WebSocket(`${proto}://${wsHost}/ws/teleprompter`); }
     catch (_) { return; }
 
     wsConn.onopen = () => {
