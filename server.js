@@ -152,6 +152,33 @@ app.use((req, res, next) => {
   // session codes protect individual sessions, scripts aren't secret
   if (req.hostname === TELEPROMPTER_HOST) return next();
 
+  // ── First-run detection: if no users exist, funnel to setup wizard ──────────
+  // Import here to avoid circular-require; initDb() has already run by this point.
+  const _db = require('./src/db');
+  let _userCount = 0;
+  try { _userCount = _db.getUserCount(); } catch (_) { /* table may not exist yet during initDb */ }
+
+  if (_userCount === 0) {
+    // Setup page itself and its static assets must always pass through
+    const isSetupPath =
+      req.path === '/setup' ||
+      req.path === '/setup.html' ||
+      req.path === '/setup-api' ||
+      req.path.startsWith('/js/') ||
+      req.path.startsWith('/css/') ||
+      req.path.startsWith('/images/') ||
+      req.path === '/favicon.ico' ||
+      req.path === '/favicon.png' ||
+      req.path === '/api/health';
+    if (isSetupPath) return next();
+    // API calls during first run — tell the client to go to setup
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({ error: 'Setup required', redirect: '/setup' });
+    }
+    return res.redirect('/setup');
+  }
+
+  // ── Normal auth guard ────────────────────────────────────────────────────────
   // Always public
   if (req.path === '/login' || req.path === '/login.html') return next();
   if (req.path.startsWith('/auth/'))       return next();
@@ -181,6 +208,118 @@ app.use('/api/beta', require('./src/routes/beta'));
 
 app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+
+// ─────────────────────────────────────────────
+// FIRST-RUN SETUP
+// GET  /setup       — setup wizard HTML
+// POST /setup-api   — create owner account + write API key
+// ─────────────────────────────────────────────
+app.get('/setup',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'setup.html')));
+app.get('/setup.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'setup.html')));
+
+app.post('/setup-api', async (req, res) => {
+  const bcrypt = require('bcryptjs');
+  const _db    = require('./src/db');
+  const { loadProfile } = require('./src/utils/profile-validator');
+
+  try {
+    // Guard: only works on a fresh install
+    const count = _db.getUserCount();
+    if (count > 0) {
+      return res.status(403).json({ error: 'Setup has already been completed. Sign in to continue.' });
+    }
+
+    const { name, username, password, confirmPassword, apiKey, intakeFolder } = req.body || {};
+
+    // Validation
+    if (!username || !password || !confirmPassword || !apiKey) {
+      return res.status(400).json({ error: 'Username, password, and API key are required.' });
+    }
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+    if (!apiKey.startsWith('sk-ant-')) {
+      return res.status(400).json({ error: 'API key must start with sk-ant-' });
+    }
+
+    // 1. Create owner account
+    const hash = await bcrypt.hash(password, 10);
+    _db.createUser(username.trim(), hash, 'owner');
+    log.info({ module: 'setup', username: username.trim() }, 'Owner account created via setup wizard');
+
+    // 2. Set API key in memory immediately (no restart needed)
+    process.env.ANTHROPIC_API_KEY = apiKey.trim();
+
+    // 3. Write API key to .env file for persistence across restarts
+    try {
+      // Determine .env path: prefer DB_PATH directory (userData in Electron, project root in dev)
+      let envDir;
+      if (process.env.DB_PATH) {
+        envDir = path.dirname(process.env.DB_PATH);
+      } else {
+        envDir = __dirname;
+      }
+      const envPath = path.join(envDir, '.env');
+
+      // Read existing .env if present, then upsert the key
+      let envContent = '';
+      try { envContent = fs.readFileSync(envPath, 'utf8'); } catch (_) { /* new file */ }
+
+      if (envContent.match(/^ANTHROPIC_API_KEY\s*=/m)) {
+        // Replace existing line
+        envContent = envContent.replace(/^ANTHROPIC_API_KEY\s*=.*$/m, `ANTHROPIC_API_KEY=${apiKey.trim()}`);
+      } else {
+        envContent = envContent.trimEnd();
+        envContent += (envContent.length ? '\n' : '') + `ANTHROPIC_API_KEY=${apiKey.trim()}\n`;
+      }
+      fs.writeFileSync(envPath, envContent, 'utf8');
+      log.info({ module: 'setup', envPath }, 'ANTHROPIC_API_KEY written to .env');
+    } catch (envErr) {
+      // Non-fatal — key is already set in process.env
+      log.warn({ module: 'setup', err: envErr }, 'Could not write .env file — API key active in memory only');
+    }
+
+    // 4. Update creator-profile.json if name or intake folder was provided
+    if (name || intakeFolder) {
+      try {
+        const profPath = process.env.CREATOR_PROFILE_PATH
+          || path.join(__dirname, 'creator-profile.json');
+        const profResult = loadProfile(profPath);
+
+        if (profResult.ok) {
+          const profile = profResult.profile;
+          if (name && name.trim()) {
+            profile.creator = profile.creator || {};
+            profile.creator.name       = name.trim();
+            profile.creator.first_name = name.trim().split(' ')[0];
+          }
+          if (intakeFolder && intakeFolder.trim()) {
+            profile.vault = profile.vault || {};
+            profile.vault.intake_folder = intakeFolder.trim();
+          }
+          fs.writeFileSync(profPath, JSON.stringify(profile, null, 2), 'utf8');
+          log.info({ module: 'setup' }, 'creator-profile.json updated from setup wizard');
+        } else {
+          log.warn({ module: 'setup', errors: profResult.errors }, 'Could not load creator-profile.json during setup');
+        }
+      } catch (profErr) {
+        // Non-fatal — app works fine with default profile
+        log.warn({ module: 'setup', err: profErr }, 'Could not update creator-profile.json during setup');
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    log.error({ module: 'setup', err }, 'Setup failed');
+    if (err.message?.includes('UNIQUE')) {
+      return res.status(409).json({ error: 'Username already exists.' });
+    }
+    res.status(500).json({ error: 'Setup failed — ' + err.message });
+  }
+});
 
 app.get('/landing',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/landing.html',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
@@ -226,6 +365,7 @@ app.use('/api/shootday',      require('./src/routes/shootday'));
 app.use('/api/voice-library', require('./src/routes/voice-library'));
 app.use('/api/mailor',       require('./src/routes/mailor'));
 app.use('/api/kajabi',       require('./src/routes/kajabi'));
+app.use('/api/mailerlite',   require('./src/routes/mailerlite'));
 app.use('/api/id8r',         require('./src/routes/id8r'));
 app.use('/api/playwright',   require('./src/routes/playwright'));
 const mirrRouter = require('./src/routes/mirrr');

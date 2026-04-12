@@ -737,17 +737,8 @@ function runMigrations() {
     )
   `);
 
-  // Seed default owner on first run if no users exist
-  const userCount = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
-  if (userCount === 0) {
-    // Sync bcrypt hash — only runs once ever
-    const bcrypt = require('bcryptjs');
-    const defaultUsername = process.env.KRE8R_USERNAME || 'jason';
-    const defaultPassword = process.env.KRE8R_PASSWORD || 'kre8r2024';
-    const hash = bcrypt.hashSync(defaultPassword, 10);
-    db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)').run(defaultUsername, hash, 'owner');
-    console.log(`[Auth] Default owner created — username: "${defaultUsername}" (set KRE8R_USERNAME / KRE8R_PASSWORD in .env to change)`);
-  }
+  // No automatic seed — fresh installs start with an empty users table.
+  // The first-run setup wizard (GET /setup, POST /setup-api) creates the owner account.
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -783,6 +774,10 @@ function getUserById(id) {
 
 function getAllUsers() {
   return _all('SELECT id, username, role, created_at FROM users ORDER BY id');
+}
+
+function getUserCount() {
+  return db.prepare('SELECT COUNT(*) as n FROM users').get().n;
 }
 
 function createUser(username, passwordHash, role = 'viewer') {
@@ -3030,6 +3025,7 @@ module.exports = {
   getUserByUsername,
   getUserById,
   getAllUsers,
+  getUserCount,
   createUser,
   updateUserPassword,
   deleteUser,

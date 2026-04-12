@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kre8Ωr — Setup</title>
+  <style>
+    :root {
+      --bg:       #0e0f0e;
+      --bg-card:  #141418;
+      --bg-input: #1a1a20;
+      --border:   #2a2a35;
+      --text:     #e8e8f0;
+      --text-dim: #9090a8;
+      --teal:     #14b8a6;
+      --teal-dim: rgba(20,184,166,.12);
+      --red:      #ef4444;
+      --font:     'DM Sans', 'Inter', system-ui, sans-serif;
+      --radius:   12px;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 24px 60px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 460px;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .logo-wordmark {
+      font-family: 'Bebas Neue', 'DM Sans', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--teal);
+      line-height: 1;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: 5px;
+    }
+
+    .setup-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 24px 0 4px;
+    }
+
+    .setup-desc {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin: 24px 0 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-label:first-of-type {
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      opacity: .7;
+      margin-top: -3px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    input {
+      display: block;
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color .15s;
+      margin-bottom: 16px;
+    }
+
+    input:focus { border-color: var(--teal); }
+    input::placeholder { color: var(--text-dim); opacity: .45; }
+
+    .folder-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .folder-row input {
+      margin-bottom: 0;
+      flex: 1;
+    }
+
+    .btn-pick {
+      flex-shrink: 0;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 0 14px;
+      transition: border-color .15s, color .15s;
+      white-space: nowrap;
+    }
+
+    .btn-pick:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .api-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .api-row label { margin-bottom: 0; }
+
+    .api-link {
+      font-size: 11px;
+      color: var(--teal);
+      text-decoration: none;
+      opacity: .8;
+    }
+
+    .api-link:hover { opacity: 1; text-decoration: underline; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      background: var(--teal);
+      border: none;
+      border-radius: 8px;
+      color: #000;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      padding: 13px;
+      transition: opacity .15s;
+      margin-top: 28px;
+    }
+
+    .btn:hover:not(:disabled) { opacity: .88; }
+    .btn:disabled { opacity: .45; cursor: default; }
+
+    .error {
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      display: none;
+      line-height: 1.5;
+    }
+
+    .error.visible { display: block; }
+
+    .success {
+      background: rgba(20,184,166,.1);
+      border: 1px solid rgba(20,184,166,.3);
+      border-radius: 8px;
+      color: var(--teal);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 14px;
+      text-align: center;
+      display: none;
+      margin-top: 20px;
+    }
+
+    .success.visible { display: block; }
+
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 28px;
+      opacity: .4;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-wordmark">KRE8<span style="font-family:'Arial Unicode MS',Arial,sans-serif">Ω</span>R</div>
+      <div class="logo-sub">Creator OS</div>
+    </div>
+
+    <div class="setup-title">Welcome. Let's get you set up.</div>
+    <div class="setup-desc">This only runs once. Create your owner account and connect your AI key to get started.</div>
+
+    <div class="error" id="err-msg"></div>
+
+    <form id="setup-form" autocomplete="off" novalidate>
+
+      <!-- CREATOR -->
+      <div class="section-label">Your Profile</div>
+
+      <label for="name">Your Name</label>
+      <input type="text" id="name" name="name" placeholder="Jason" autocomplete="off">
+
+      <!-- ACCOUNT -->
+      <div class="section-label">Login Account</div>
+
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" placeholder="jason" autocomplete="off" required>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="new-password" required>
+
+      <label for="confirm-password">Confirm Password</label>
+      <input type="password" id="confirm-password" name="confirmPassword" placeholder="••••••••" autocomplete="new-password" required>
+
+      <!-- AI KEY -->
+      <div class="section-label">AI Connection</div>
+
+      <div class="api-row">
+        <label for="api-key">Anthropic API Key</label>
+        <a class="api-link" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get your key →</a>
+      </div>
+      <input type="password" id="api-key" name="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" required>
+      <p class="hint">Your key is stored locally in your .env file and never sent anywhere except Anthropic.</p>
+
+      <!-- FOOTAGE -->
+      <div class="section-label">Footage Intake (Optional)</div>
+
+      <label for="intake-folder">Intake Folder Path</label>
+      <div class="folder-row">
+        <input type="text" id="intake-folder" name="intakeFolder" placeholder="D:\kre8r\intake">
+        <button type="button" class="btn-pick" id="btn-pick-folder">Browse…</button>
+      </div>
+      <p class="hint">Where VaultΩr watches for new footage. You can set this later in Settings.</p>
+
+      <button type="submit" class="btn" id="submit-btn">Create Account &amp; Launch</button>
+    </form>
+
+    <div class="success" id="success-msg">Account created. Taking you to sign in…</div>
+
+    <div class="footer">Kre8Ωr · First-run setup</div>
+  </div>
+
+  <script>
+    const form      = document.getElementById('setup-form');
+    const errEl     = document.getElementById('err-msg');
+    const successEl = document.getElementById('success-msg');
+    const submitBtn = document.getElementById('submit-btn');
+    const pickBtn   = document.getElementById('btn-pick-folder');
+    const intakeEl  = document.getElementById('intake-folder');
+
+    // Hide browse button if not in Electron
+    if (typeof window.electronAPI === 'undefined' || typeof window.electronAPI.pickFolder !== 'function') {
+      pickBtn.style.display = 'none';
+    }
+
+    pickBtn.addEventListener('click', async () => {
+      try {
+        const folder = await window.electronAPI.pickFolder();
+        if (folder) intakeEl.value = folder;
+      } catch (e) {
+        // ignore — user cancelled or not in Electron
+      }
+    });
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      errEl.classList.add('visible');
+      successEl.classList.remove('visible');
+    }
+
+    function clearError() {
+      errEl.classList.remove('visible');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+
+      const name            = document.getElementById('name').value.trim();
+      const username        = document.getElementById('username').value.trim();
+      const password        = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      const apiKey          = document.getElementById('api-key').value.trim();
+      const intakeFolder    = intakeEl.value.trim();
+
+      // Client-side validation
+      if (!username) { showError('Username is required.'); return; }
+      if (!password) { showError('Password is required.'); return; }
+      if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
+      if (password !== confirmPassword) { showError('Passwords do not match.'); return; }
+      if (!apiKey) { showError('Anthropic API key is required.'); return; }
+      if (!apiKey.startsWith('sk-ant-')) { showError('API key must start with sk-ant-'); return; }
+
+      submitBtn.disabled    = true;
+      submitBtn.textContent = 'Setting up…';
+
+      try {
+        const res  = await fetch('/setup-api', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ name, username, password, confirmPassword, apiKey, intakeFolder }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.error || 'Setup failed. Please try again.');
+          submitBtn.disabled    = false;
+          submitBtn.textContent = 'Create Account & Launch';
+          return;
+        }
+
+        // Success
+        form.style.display = 'none';
+        successEl.classList.add('visible');
+        setTimeout(() => { window.location.href = '/login'; }, 1500);
+
+      } catch (err) {
+        showError('Network error — is the server running?');
+        submitBtn.disabled    = false;
+        submitBtn.textContent = 'Create Account & Launch';
+      }
+    });
+  </script>
+</body>
+</html>

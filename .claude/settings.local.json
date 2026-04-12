@@ -712,7 +712,29 @@
       "Bash(git unstage:*)",
       "Bash(git restore:*)",
       "Bash(grep -v \"//.*claude\\\\|//.*anthropic\")",
-      "Bash(grep -v \"^\\\\s*//\")"
+      "Bash(grep -v \"^\\\\s*//\")",
+      "Bash(curl -s http://localhost:3000/api/creator-profile)",
+      "Bash(curl -s http://localhost:3000/api/doctor)",
+      "Bash(ls C:/Users/18054/kre8r/public/images/*.ico C:/Users/18054/kre8r/public/images/*.icns)",
+      "Bash(ls C:/Users/18054/kre8r/test*)",
+      "Bash(ls C:/Users/18054/kre8r/*.test.js)",
+      "Bash(npx asar:*)",
+      "Bash(./node_modules/.bin/electron --version)",
+      "Bash(npx @electron/rebuild --help)",
+      "Bash(ls node_modules/better-sqlite3/build/Release/*.node)",
+      "Bash(npx @electron/rebuild -v 41.1.1 --build-from-source -m node_modules -w better-sqlite3)",
+      "Bash(npx @electron/rebuild -v 41.1.1 --build-from-source -w better-sqlite3)",
+      "Bash(npx prebuild-install:*)",
+      "Bash(taskkill /F /IM \"electron.exe\")",
+      "Bash(taskkill /F /IM \"Kre8r.exe\")",
+      "Bash(handle64 \"better_sqlite3.node\")",
+      "Bash(handle \"better_sqlite3.node\")",
+      "Bash(taskkill /F /IM \"node.exe\" /T)",
+      "Bash(taskkill /F /IM \"electron.exe\" /T)",
+      "Bash(curl -s http://localhost:3000/api/users)",
+      "Bash(ssh kre8r@kre8r.app \"cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r && pm2 status\")",
+      "Bash(ssh kre8r@kre8r.app)",
+      "Bash(curl -s http://localhost:3000/api/mailerlite/status)"
     ]
   }
 }

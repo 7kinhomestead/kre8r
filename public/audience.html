@@ -26,41 +26,81 @@
   body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;}
   body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
 
-  /* NAV */
-  .topbar{position:sticky;top:0;z-index:50;background:rgba(14,15,14,0.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
-  .logo{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);text-decoration:none;}
-  .logo .sub{color:var(--text-dimmer);font-size:11px;font-family:var(--font-body);letter-spacing:0.5px;font-weight:500;margin-left:10px;text-transform:uppercase;}
-  .nav{display:flex;gap:4px;align-items:center;}
-  .nav a{color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;}
-  .nav a:hover{background:var(--bg-card-2);color:var(--text);}
-  .nav a.active{background:var(--purple-glow);color:var(--purple);}
-
   /* LAYOUT */
-  .main{max-width:860px;margin:0 auto;padding:32px 16px 100px;}
+  .main{max-width:900px;margin:0 auto;padding:32px 16px 100px;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 
   /* HEADER */
   .page-header{margin-bottom:24px;animation:fadeUp 0.4s ease both;}
   .page-title{font-family:var(--font-head);font-size:clamp(34px,8vw,54px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
-  .page-title em{font-style:normal;color:var(--gold);}
+  .page-title em{font-style:normal;color:var(--teal);}
   .page-sub{color:var(--text-dim);font-size:14px;max-width:560px;line-height:1.6;}
+
+  /* STATUS BANNER */
+  .status-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:20px;font-size:12px;animation:fadeUp 0.4s 0.02s ease both;}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dimmer);flex-shrink:0;}
+  .status-dot.connected{background:var(--green);}
+  .status-label{color:var(--text-dim);}
+  .status-label strong{color:var(--text);}
+  .status-bar.connected{border-color:rgba(92,186,138,0.3);}
+  .status-bar.error{border-color:rgba(224,92,92,0.3);}
 
   /* SECTION CARD */
   .section-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:14px;animation:fadeUp 0.4s ease both;}
-  .section-label{font-family:var(--font-head);font-size:15px;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:12px;}
+  .section-label{font-family:var(--font-head);font-size:15px;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .section-sub{font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.6;}
 
-  /* FIELDS */
-  .field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:5px;}
-  .field input,.field select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:9px 12px;transition:border-color 0.15s;}
-  .field input:focus,.field select:focus{outline:none;border-color:var(--teal-dim);}
-  .field select{appearance:none;cursor:pointer;}
+  /* TABS */
+  .tabs{display:flex;gap:0;margin-bottom:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:4px;animation:fadeUp 0.4s 0.04s ease both;}
+  .tab{flex:1;padding:10px 16px;border:none;background:none;cursor:pointer;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--text-dimmer);transition:all 0.15s;text-align:center;}
+  .tab:hover{color:var(--text);}
+  .tab.active{background:var(--teal-glow);color:var(--teal);border-bottom:2px solid var(--teal);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;animation:fadeUp 0.2s ease both;}
 
-  /* BUTTONS */
-  .btn{display:inline-block;white-space:nowrap;padding:7px 14px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all 0.15s;}
-  .btn:active{transform:scale(0.97);}
-  .btn-sm{font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;}
-  .btn-sm:hover{border-color:var(--gold);color:var(--gold);}
-  .btn-sm.danger:hover{border-color:#ef4444;color:#ef4444;}
+  /* GROUPS GRID */
+  .groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px;}
+  .group-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
+  .group-name{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .group-count{font-size:24px;font-weight:700;color:var(--teal);font-family:var(--font-head);letter-spacing:1px;}
+  .group-sub{font-size:11px;color:var(--text-dimmer);margin-top:2px;}
+  .group-card.greenhouse .group-count{color:var(--green);}
+  .group-card.garden     .group-count{color:var(--teal);}
+  .group-card.founding50 .group-count{color:var(--amber);}
+
+  /* CAMPAIGNS TABLE */
+  .campaign-list{display:grid;gap:8px;}
+  .campaign-row{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:12px;}
+  @media(max-width:600px){.campaign-row{grid-template-columns:1fr;gap:4px;}}
+  .campaign-subject{font-size:13px;font-weight:500;}
+  .campaign-meta{font-size:11px;color:var(--text-dimmer);margin-top:2px;}
+  .campaign-stat{text-align:right;}
+  .campaign-stat-val{font-size:16px;font-weight:700;font-family:var(--font-head);letter-spacing:0.5px;}
+  .campaign-stat-lbl{font-size:10px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;}
+  .stat-open{color:var(--teal);}
+  .stat-click{color:var(--purple);}
+  .campaign-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+  .status-sent{background:rgba(92,186,138,0.15);color:var(--green);}
+  .status-draft{background:rgba(91,156,246,0.15);color:var(--blue);}
+  .status-other{background:var(--bg-card-2);color:var(--text-dimmer);}
+
+  /* CSV IMPORT */
+  .import-drop{border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--bg);}
+  .import-drop:hover,.import-drop.drag-over{border-color:var(--teal);background:var(--teal-glow);}
+  .import-drop-icon{font-size:32px;margin-bottom:8px;}
+  .import-drop-label{font-size:14px;color:var(--text-dim);margin-bottom:4px;}
+  .import-drop-sub{font-size:12px;color:var(--text-dimmer);}
+  .import-drop input[type=file]{display:none;}
+  .import-group-select{margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .import-group-select label{font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);}
+  .import-group-select select{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;cursor:pointer;}
+  .import-preview{margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;font-size:12px;color:var(--text-dim);}
+  .import-preview strong{color:var(--text);}
+
+  /* SYNC BUTTON */
+  .sync-btn{display:inline-flex;align-items:center;gap:8px;background:none;border:1.5px solid var(--teal-dim);color:var(--teal);border-radius:var(--radius-sm);padding:8px 16px;font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+  .sync-btn:hover{background:var(--teal-glow);}
+  .sync-btn:disabled{opacity:0.5;cursor:not-allowed;}
 
   /* GENERATE BTN */
   .generate-btn{width:100%;background:var(--teal);border:none;border-radius:var(--radius-sm);color:#0a0a0a;font-family:var(--font-head);font-size:20px;letter-spacing:2px;padding:16px 24px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;}
@@ -68,379 +108,463 @@
   .generate-btn:active{transform:translateY(0);}
   .generate-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 
+  /* FIELDS */
+  .field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:5px;}
+
+  /* EMPTY STATE */
+  .empty-state{text-align:center;padding:40px 24px;color:var(--text-dimmer);font-size:14px;}
+
+  /* PROGRESS */
+  .progress-wrap{background:var(--bg);border-radius:4px;height:6px;margin-top:8px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--teal);border-radius:4px;transition:width 0.3s;}
+
   /* TOAST */
   .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
   .toast{background:var(--bg-card);border:1px solid var(--border);padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,0.6);animation:toastIn 0.2s ease,toastOut 0.2s ease 2.6s forwards;}
   .toast.green{border-color:var(--green);color:var(--green);}
   .toast.amber{border-color:var(--amber);color:var(--amber);}
   .toast.red{border-color:var(--red);color:var(--red);}
+  .toast.teal{border-color:var(--teal);color:var(--teal);}
   @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes toastOut{from{opacity:1}to{opacity:0}}
 
   /* MOBILE */
   @media(max-width:480px){
     .main{padding:20px 12px 80px;}
-    .topbar{padding:0 12px;}
-    .nav a{display:none;}
-    .nav a.active{display:inline-flex;}
   }
-
-  /* AUDIENCE-SPECIFIC */
-  :root { --gold:#3ecfb2; --gold-dim:rgba(20,184,166,0.1); --gold-border:rgba(20,184,166,0.25); }
-  .container{max-width:1200px;margin:0 auto;padding:0 24px;}
-  .page-title span{color:var(--teal);}
-
-
-  .status-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:20px;font-size:12px;animation:fadeUp 0.4s 0.02s ease both;}
-  .status-bar.connected{border-color:rgba(92,186,138,0.3);color:var(--green);}
-  .status-bar.disconnected{border-color:rgba(224,92,92,0.3);color:var(--red);}
-  .status-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0;}
-
-  .tabs{display:flex;gap:0;margin-bottom:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:4px;animation:fadeUp 0.4s 0.04s ease both;}
-  .tab{flex:1;padding:10px 16px;border:none;background:none;cursor:pointer;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--text-dimmer);transition:all 0.15s;text-align:center;}
-  .tab:hover{color:var(--text);}
-  .tab.active{background:transparent;color:var(--teal);border-bottom:2px solid var(--teal);}
-  .tab-panel{display:none;padding:0;}
-  .tab-panel.active{display:block;animation:fadeUp 0.2s ease both;}
-
-  .contacts-grid{display:grid;gap:8px;}
-  .contact-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);}
-  .contact-name{font-size:14px;font-weight:500;}
-  .contact-email{font-size:12px;color:var(--text-dim);}
-  .contact-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;}
-  .contact-tag{font-size:10px;padding:2px 8px;background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold);border-radius:4px;}
-  .contact-actions{display:flex;gap:6px;flex-shrink:0;}
-
-  .tags-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
-  .tag-card{padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;}
-  .tag-name{font-size:13px;}
-  .tag-count{font-size:11px;color:var(--text-dimmer);}
-
-  .broadcast-tag-box{display:grid;gap:12px;}
-  .offers-grid{display:grid;gap:8px;}
-  .offer-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);}
-  .offer-name{font-size:14px;}
-  .offer-price{font-size:12px;color:var(--text-dimmer);}
-
-  .progress-bar-wrap{background:var(--bg);border-radius:4px;height:6px;margin-top:8px;overflow:hidden;}
-  .progress-bar-fill{height:100%;background:var(--teal);border-radius:4px;transition:width 0.3s;}
-  #tag-filter,#bc-tag-id,#bc-filter-tag,select{background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 12px;}
-
-  .empty-state{text-align:center;padding:48px 24px;color:var(--text-dimmer);font-size:14px;}
-  .pagination{display:flex;gap:8px;justify-content:center;margin-top:16px;}
-  .page-btn{padding:6px 12px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);cursor:pointer;font-size:12px;}
-  .page-btn:disabled{opacity:0.4;cursor:not-allowed;}
-  .search-row{display:flex;gap:8px;margin-bottom:12px;}
-  .search-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);font-size:13px;}
 </style>
 </head>
 <body>
-  <div id="kre8r-nav"></div>
+<div id="kre8r-nav"></div>
 
-  <div class="container">
+<main class="main">
+
+  <!-- PAGE HEADER -->
   <div class="page-header">
-    <h1 class="page-title">AUDIENC<span>Ω</span>R</h1>
-    <p class="page-sub">Contacts, tags, offers — your Rock Rich audience in one place.</p>
+    <div class="page-title">AUDIENC<em>Ω</em>R</div>
+    <div class="page-sub">Mailerlite groups, subscriber import, and campaign stats for Rock Rich.</div>
   </div>
 
-  <div id="status-bar" class="status-bar disconnected">
-    <div class="status-dot"></div>
-    <span id="status-text">Checking Kajabi connection…</span>
+  <!-- CONNECTION STATUS -->
+  <div class="status-bar" id="status-bar">
+    <div class="status-dot" id="status-dot"></div>
+    <div class="status-label" id="status-label">Checking Mailerlite…</div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+      <button class="sync-btn" id="sync-btn" onclick="syncGroups()" style="display:none;">
+        ↻ Sync Groups
+      </button>
+    </div>
   </div>
 
+  <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('contacts')">Contacts</button>
-    <button class="tab" onclick="switchTab('tags')">Tags</button>
-    <button class="tab" onclick="switchTab('broadcast')">Broadcast Tag</button>
-    <button class="tab" onclick="switchTab('offers')">Offers</button>
+    <button class="tab active" onclick="switchTab('groups')">Groups</button>
+    <button class="tab" onclick="switchTab('import')">Import CSV</button>
+    <button class="tab" onclick="switchTab('campaigns')">Campaigns</button>
   </div>
 
-  <!-- CONTACTS -->
-  <div id="tab-contacts" class="tab-panel active">
+  <!-- ── GROUPS TAB ──────────────────────────────────────────────────────── -->
+  <div id="tab-groups" class="tab-panel active">
+
     <div class="section-card">
-      <div class="section-label">CONTACTS</div>
-      <div class="search-row">
-        <input type="text" id="contact-search" placeholder="Search by name or email…" oninput="filterContacts()">
-        <select id="tag-filter" onchange="loadContacts(1)">
-          <option value="">All contacts</option>
+      <div class="section-label">ROCK RICH GROUPS</div>
+      <div class="section-sub">
+        The three community tier groups in Mailerlite. Click <strong>Sync Groups</strong> above to create them if they don't exist yet — Kre8r will store the group IDs automatically.
+      </div>
+      <div class="groups-grid" id="groups-grid">
+        <div class="empty-state">Loading groups…</div>
+      </div>
+      <div id="sync-result" style="font-size:12px;color:var(--text-dim);margin-top:8px;display:none;"></div>
+    </div>
+
+  </div>
+
+  <!-- ── IMPORT TAB ──────────────────────────────────────────────────────── -->
+  <div id="tab-import" class="tab-panel">
+
+    <div class="section-card">
+      <div class="section-label">IMPORT SUBSCRIBERS FROM CSV</div>
+      <div class="section-sub">
+        CSV must have at minimum an <strong>email</strong> column. Optionally include a <strong>name</strong> column.
+        Batches up to 1000 subscribers per request.
+      </div>
+
+      <div class="import-drop" id="import-drop" onclick="document.getElementById('csv-file').click()">
+        <input type="file" id="csv-file" accept=".csv" onchange="handleCsvFile(this.files[0])">
+        <div class="import-drop-icon">📋</div>
+        <div class="import-drop-label">Click to select a CSV file</div>
+        <div class="import-drop-sub">or drag and drop here</div>
+      </div>
+
+      <div class="import-group-select">
+        <label>Import to group:</label>
+        <select id="import-group">
+          <option value="greenhouse">🌱 Greenhouse (Free)</option>
+          <option value="garden">🌿 Garden ($19/mo)</option>
+          <option value="founding50">🏆 Founding 50 ($297)</option>
         </select>
       </div>
-      <div id="contacts-list" class="contacts-grid">
-        <div class="empty-state">Loading contacts…</div>
-      </div>
-      <div class="pagination" style="display:none">
-        <button class="page-btn" id="prev-btn" onclick="loadContacts(currentPage-1)" disabled>← Prev</button>
-        <span id="page-info" style="font-size:12px;color:var(--text-muted);padding:6px 8px;"></span>
-        <button class="page-btn" id="next-btn" onclick="loadContacts(currentPage+1)" disabled>Next →</button>
+
+      <div class="import-preview" id="import-preview" style="display:none;"></div>
+
+      <button class="generate-btn" id="import-btn" onclick="runImport()" disabled>
+        <span id="import-btn-text">SELECT A CSV FIRST</span>
+      </button>
+
+      <div id="import-progress" style="display:none;margin-top:12px;">
+        <div style="font-size:12px;color:var(--text-dim);" id="import-progress-text">Importing…</div>
+        <div class="progress-wrap"><div class="progress-fill" id="import-progress-bar" style="width:0%"></div></div>
       </div>
     </div>
+
   </div>
 
-  <!-- TAGS -->
-  <div id="tab-tags" class="tab-panel">
+  <!-- ── CAMPAIGNS TAB ──────────────────────────────────────────────────── -->
+  <div id="tab-campaigns" class="tab-panel">
+
     <div class="section-card">
-      <div class="section-label">ALL TAGS</div>
-      <div id="tags-list" class="tags-grid">
-        <div class="empty-state">Loading tags…</div>
+      <div class="section-label">LAST 10 CAMPAIGNS</div>
+      <div class="campaign-list" id="campaign-list">
+        <div class="empty-state">Loading campaigns…</div>
       </div>
     </div>
+
   </div>
 
-  <!-- BROADCAST TAG -->
-  <div id="tab-broadcast" class="tab-panel">
-    <div class="section-card">
-      <div class="section-label">BROADCAST TAG — fire an automation to a segment</div>
-      <div class="broadcast-tag-box">
-        <div class="field">
-          <label>TAG TO ADD</label>
-          <select id="bc-tag-id">
-            <option value="">Select a tag…</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>SEGMENT (optional — leave blank for everyone)</label>
-          <select id="bc-filter-tag">
-            <option value="">Everyone</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>LABEL (for your reference)</label>
-          <input type="text" id="bc-label" placeholder="e.g. Rock Rich launch announcement">
-        </div>
-        <div id="bc-progress" style="display:none">
-          <div style="font-size:12px;color:var(--text-muted)" id="bc-progress-text">Starting…</div>
-          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="bc-progress-bar" style="width:0%"></div></div>
-        </div>
-        <button class="generate-btn" id="bc-btn" onclick="broadcastTag()">FIRE TAG</button>
-      </div>
-    </div>
-  </div>
+</main>
 
-  <!-- OFFERS -->
-  <div id="tab-offers" class="tab-panel">
-    <div class="section-card">
-      <div class="section-label">ROCK RICH OFFERS</div>
-      <div id="offers-list" class="offers-grid">
-        <div class="empty-state">Loading offers…</div>
-      </div>
-    </div>
-  </div>
+<div class="toast-wrap" id="toast-wrap"></div>
 
-  <div class="toast" id="toast"></div>
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let isConnected   = false;
+let allGroups     = [];
+let parsedCsv     = null;   // { headers, rows: [{email, name}] }
 
-  <script>
-    let currentPage   = 1;
-    let allContacts   = [];
-    let allTags       = [];
-    let isConnected   = false;
+const TIER_KEYS = ['greenhouse', 'garden', 'founding50'];
+const TIER_LABELS = {
+  greenhouse: 'Greenhouse 🌱',
+  garden:     'Garden 🌿',
+  founding50: 'Founding 50 🏆',
+};
 
-    // ── Init ──────────────────────────────────────────────────────────────────
-    async function init() {
-      await checkStatus();
-      if (isConnected) {
-        await loadTags();
-        await loadContacts(1);
-        await loadOffers();
+// ─── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  await checkStatus();
+  if (isConnected) {
+    loadGroups();
+    loadCampaigns();
+  }
+}
+
+async function checkStatus() {
+  try {
+    const res  = await fetch('/api/mailerlite/status');
+    const data = await res.json();
+    isConnected = data.connected;
+    const bar  = document.getElementById('status-bar');
+    const dot  = document.getElementById('status-dot');
+    const lbl  = document.getElementById('status-label');
+    const syncBtn = document.getElementById('sync-btn');
+
+    if (data.connected) {
+      bar.classList.add('connected');
+      dot.classList.add('connected');
+      lbl.innerHTML = `<strong>Mailerlite connected</strong> — ${data.groupCount} group${data.groupCount !== 1 ? 's' : ''}`;
+      syncBtn.style.display = 'inline-flex';
+      allGroups = data.groups || [];
+    } else {
+      bar.classList.add('error');
+      lbl.innerHTML = `<strong>Mailerlite not connected</strong> — ${data.reason || 'Add MAILERLITE_API_KEY to .env'}`;
+    }
+  } catch(e) {
+    document.getElementById('status-label').innerHTML = '<strong>Error</strong> — could not reach API';
+  }
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  const names = ['groups', 'import', 'campaigns'];
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  // Lazy load campaigns when tab first opened
+  if (name === 'campaigns' && isConnected) loadCampaigns();
+}
+
+// ─── Groups ───────────────────────────────────────────────────────────────────
+function loadGroups() {
+  if (!allGroups.length) {
+    document.getElementById('groups-grid').innerHTML =
+      '<div class="empty-state">No groups found. Click <strong>Sync Groups</strong> to create the Rock Rich tiers.</div>';
+    return;
+  }
+  renderGroups(allGroups);
+}
+
+function renderGroups(groups) {
+  const grid = document.getElementById('groups-grid');
+
+  // Build a map by name to match tier keys
+  const tierNames = {
+    'Greenhouse 🌱': 'greenhouse',
+    'Garden 🌿':     'garden',
+    'Founding 50 🏆': 'founding50',
+  };
+
+  // Show tier groups first, then any others
+  const tierGroups = [];
+  const otherGroups = [];
+  for (const g of groups) {
+    if (tierNames[g.name]) tierGroups.push({ ...g, tierKey: tierNames[g.name] });
+    else otherGroups.push(g);
+  }
+
+  const all = [...tierGroups, ...otherGroups];
+
+  if (!all.length) {
+    grid.innerHTML = '<div class="empty-state">No groups yet. Click Sync Groups to create them.</div>';
+    return;
+  }
+
+  grid.innerHTML = all.map(g => {
+    const tierKey = g.tierKey || '';
+    return `<div class="group-card ${tierKey}">
+      <div class="group-name">${escHtml(g.name)}</div>
+      <div class="group-count">${(g.total || 0).toLocaleString()}</div>
+      <div class="group-sub">subscribers</div>
+    </div>`;
+  }).join('');
+}
+
+async function syncGroups() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+  btn.textContent = 'Syncing…';
+  document.getElementById('sync-result').style.display = 'none';
+
+  try {
+    const res  = await fetch('/api/mailerlite/groups/sync', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Sync failed');
+
+    const created  = data.groups.filter(g => g.created).map(g => g.name);
+    const existing = data.groups.filter(g => !g.created).map(g => g.name);
+
+    const lines = [];
+    if (created.length)  lines.push(`Created: ${created.join(', ')}`);
+    if (existing.length) lines.push(`Already existed: ${existing.join(', ')}`);
+    lines.push('Group IDs saved to creator-profile.json.');
+
+    const resultEl = document.getElementById('sync-result');
+    resultEl.textContent = lines.join(' · ');
+    resultEl.style.display = 'block';
+
+    // Refresh status + groups
+    allGroups = data.groups.map(g => ({ id: g.id, name: g.name, total: 0 }));
+    renderGroups(allGroups);
+
+    showToast(`Groups synced — ${data.groups.length} groups ready`, 'green');
+  } catch(e) {
+    showToast('Sync failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↻ Sync Groups';
+  }
+}
+
+// ─── CSV Import ───────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('import-drop');
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) handleCsvFile(file);
+});
+
+function handleCsvFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      parsedCsv = parseCsv(e.target.result);
+      const preview = document.getElementById('import-preview');
+      const btn     = document.getElementById('import-btn');
+      const btnTxt  = document.getElementById('import-btn-text');
+
+      if (!parsedCsv || parsedCsv.rows.length === 0) {
+        preview.innerHTML = '<span style="color:var(--red)">No valid rows found — check your CSV has an "email" column.</span>';
+        preview.style.display = 'block';
+        btn.disabled = true;
+        btnTxt.textContent = 'NO VALID DATA';
+        return;
       }
-    }
 
-    async function checkStatus() {
-      const res  = await fetch('/api/kajabi/status');
-      const data = await res.json();
-      const bar  = document.getElementById('status-bar');
-      const txt  = document.getElementById('status-text');
-      isConnected = data.connected;
-      if (data.connected) {
-        bar.className = 'status-bar connected';
-        txt.textContent = `Connected — ${data.site}`;
-      } else {
-        bar.className = 'status-bar disconnected';
-        txt.textContent = `Not connected — ${data.reason || 'Check API credentials'}`;
-      }
-    }
-
-    // ── Tabs ──────────────────────────────────────────────────────────────────
-    function switchTab(name) {
-      document.querySelectorAll('.tab').forEach((t,i) => {
-        const names = ['contacts','tags','broadcast','offers'];
-        t.classList.toggle('active', names[i] === name);
-      });
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      document.getElementById(`tab-${name}`).classList.add('active');
-    }
-
-    // ── Contacts ──────────────────────────────────────────────────────────────
-    async function loadContacts(page = 1) {
-      currentPage = page;
-      const tagFilter = document.getElementById('tag-filter').value;
-      const url = tagFilter
-        ? `/api/kajabi/contacts?tag=${encodeURIComponent(tagFilter)}&page=${page}`
-        : `/api/kajabi/contacts?page=${page}`;
-      const res  = await fetch(url);
-      const data = await res.json();
-      allContacts = data?.data || [];
-      renderContacts(allContacts);
-      const meta = data?.meta || {};
-      document.getElementById('page-info').textContent = `Page ${page}`;
-      document.getElementById('prev-btn').disabled = page <= 1;
-      document.getElementById('next-btn').disabled = !meta.next_page;
-    }
-
-    function renderContacts(contacts) {
-      const el = document.getElementById('contacts-list');
-      if (!contacts.length) { el.innerHTML = '<div class="empty-state">No contacts found.</div>'; return; }
-      el.innerHTML = contacts.map(c => {
-        const a  = c.attributes || {};
-        const tagRefs = (c.relationships?.tags?.data || []);
-        const tags = tagRefs.map(t => {
-          const tag = allTags.find(at => at.id === t.id);
-          return tag ? `<span class='contact-tag'>${escHtml(tag.attributes?.name || t.id)}</span>` : '';
-        }).join('');
-        return `<div class="contact-row">
-          <div>
-            <div class="contact-name">${escHtml(a.name || a.email)}</div>
-            <div class="contact-email">${escHtml(a.email)}</div>
-            <div class="contact-tags" style="margin-top:4px">${tags}</div>
-          </div>
-          <div class="contact-actions">
-            <button class="btn-sm" onclick="addTagToContact('${c.id}')">+ Tag</button>
-          </div>
-        </div>`;
-      }).join('');
-    }
-
-    function filterContacts() {
-      const q = document.getElementById('contact-search').value.toLowerCase();
-      const filtered = allContacts.filter(c => {
-        const a = c.attributes || {};
-        return (a.name || '').toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q);
-      });
-      renderContacts(filtered);
-    }
-
-    async function addTagToContact(contactId) {
-      const tag = allTags.find(t => {
-        const name = prompt('Tag name to add:');
-        return t.attributes?.name === name;
-      });
-      if (!tag) return;
-      const res = await fetch('/api/kajabi/tag', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact_id: contactId, tag_id: tag.id })
-      });
-      const data = await res.json();
-      if (data.ok) showToast('Tag added', 'green');
-      else showToast(data.error || 'Failed', 'red');
-    }
-
-    // ── Tags ──────────────────────────────────────────────────────────────────
-    async function loadTags() {
-      const res  = await fetch('/api/kajabi/tags');
-      const data = await res.json();
-      allTags    = data?.data || [];
-
-      // Populate tag filter dropdowns
-      const opts = allTags.map(t => `<option value="${t.id}">${escHtml(t.attributes?.name || t.id)}</option>`).join('');
-      document.getElementById('tag-filter').innerHTML    = '<option value="">All contacts</option>' + opts;
-      document.getElementById('bc-tag-id').innerHTML     = '<option value="">Select a tag…</option>' + opts;
-      document.getElementById('bc-filter-tag').innerHTML = '<option value="">Everyone</option>' + opts;
-
-      // Render tags tab
-      const el = document.getElementById('tags-list');
-      if (!allTags.length) { el.innerHTML = '<div class="empty-state">No tags found.</div>'; return; }
-      el.innerHTML = allTags.map(t => `
-        <div class="tag-card">
-          <div class="tag-name">${escHtml(t.attributes?.name || t.id)}</div>
-          <div class="tag-count">${t.attributes?.contacts_count ?? ''}</div>
-        </div>`).join('');
-    }
-
-    // ── Broadcast Tag ─────────────────────────────────────────────────────────
-    async function broadcastTag() {
-      const tag_id        = document.getElementById('bc-tag-id').value;
-      const filter_tag_id = document.getElementById('bc-filter-tag').value;
-      const label         = document.getElementById('bc-label').value.trim();
-      if (!tag_id) { showToast('Select a tag to add', 'amber'); return; }
-
-      const btn = document.getElementById('bc-btn');
-      btn.disabled = true;
-      btn.textContent = 'FIRING…';
-      document.getElementById('bc-progress').style.display = 'block';
-
-      const res = await fetch('/api/kajabi/broadcast-tag', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tag_id, filter_tag_id: filter_tag_id || null, label })
-      });
-
-      const reader = res.body.getReader();
-      const dec    = new TextDecoder();
-      let buf      = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value);
-        const lines = buf.split('\n\n');
-        buf = lines.pop();
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue;
-          try {
-            const ev = JSON.parse(line.slice(5).trim());
-            if (ev.stage === 'progress') {
-              const pct = ev.total ? Math.round((ev.tagged / ev.total) * 100) : 0;
-              document.getElementById('bc-progress-bar').style.width = pct + '%';
-              document.getElementById('bc-progress-text').textContent = `Tagged ${ev.tagged} of ${ev.total} contacts`;
-            }
-            if (ev.stage === 'done') {
-              showToast(ev.message, 'green');
-              document.getElementById('bc-progress-bar').style.width = '100%';
-            }
-            if (ev.stage === 'error') showToast(ev.error, 'red');
-          } catch (_) {}
-        }
-      }
+      const sample = parsedCsv.rows.slice(0, 3).map(r => r.email).join(', ');
+      preview.innerHTML = `<strong>${parsedCsv.rows.length} subscribers</strong> found · Columns: ${escHtml(parsedCsv.headers.join(', '))} · Sample: ${escHtml(sample)}${parsedCsv.rows.length > 3 ? '…' : ''}`;
+      preview.style.display = 'block';
 
       btn.disabled = false;
-      btn.textContent = 'FIRE TAG';
+      btnTxt.textContent = `IMPORT ${parsedCsv.rows.length} SUBSCRIBERS`;
+      dropZone.querySelector('.import-drop-label').textContent = file.name;
+    } catch(err) {
+      showToast('Could not parse CSV: ' + err.message, 'red');
     }
+  };
+  reader.readAsText(file);
+}
 
-    // ── Offers ────────────────────────────────────────────────────────────────
-    async function loadOffers() {
-      const res  = await fetch('/api/kajabi/offers');
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return { headers: [], rows: [] };
+
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+  const emailIdx = headers.findIndex(h => h === 'email' || h === 'email address' || h === 'e-mail');
+  const nameIdx  = headers.findIndex(h => h === 'name' || h === 'full name' || h === 'first name');
+
+  if (emailIdx === -1) throw new Error('No "email" column found in CSV');
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols  = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+    const email = cols[emailIdx];
+    if (!email || !email.includes('@')) continue;
+    const row = { email };
+    if (nameIdx !== -1 && cols[nameIdx]) row.name = cols[nameIdx];
+    rows.push(row);
+  }
+
+  return { headers, rows };
+}
+
+async function runImport() {
+  if (!parsedCsv || parsedCsv.rows.length === 0) return;
+
+  const group = document.getElementById('import-group').value;
+  const btn   = document.getElementById('import-btn');
+  btn.disabled = true;
+  document.getElementById('import-btn-text').textContent = 'IMPORTING…';
+  document.getElementById('import-progress').style.display = 'block';
+  document.getElementById('import-progress-bar').style.width = '10%';
+  document.getElementById('import-progress-text').textContent = `Sending ${parsedCsv.rows.length} subscribers to Mailerlite…`;
+
+  try {
+    const subscribers = parsedCsv.rows.map(r => ({ ...r, group }));
+
+    // Split into 1000-subscriber batches, POST each
+    const batchSize = 1000;
+    let imported = 0;
+
+    for (let i = 0; i < subscribers.length; i += batchSize) {
+      const batch = subscribers.slice(i, i + batchSize);
+      const res   = await fetch('/api/mailerlite/subscribers/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscribers: batch }),
+      });
       const data = await res.json();
-      const offers = data?.data || [];
-      const el   = document.getElementById('offers-list');
-      if (!offers.length) { el.innerHTML = '<div class="empty-state">No offers found.</div>'; return; }
-      el.innerHTML = offers.map(o => {
-        const a = o.attributes || {};
-        return `<div class="offer-row">
-          <div>
-            <div class="offer-name">${escHtml(a.name || o.id)}</div>
-            <div class="offer-price">${a.price ? '$' + (a.price/100).toFixed(2) : 'Free'}</div>
-          </div>
-        </div>`;
-      }).join('');
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+      imported += data.imported || batch.length;
+
+      const pct = Math.round(((i + batch.length) / subscribers.length) * 100);
+      document.getElementById('import-progress-bar').style.width = pct + '%';
+      document.getElementById('import-progress-text').textContent = `Imported ${imported} of ${subscribers.length}…`;
     }
 
-    // ── Utils ─────────────────────────────────────────────────────────────────
-    function escHtml(str) {
-      return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+    document.getElementById('import-progress-bar').style.width = '100%';
+    document.getElementById('import-progress-text').textContent = `Done — ${imported} subscribers imported to ${TIER_LABELS[group]}.`;
+    showToast(`${imported} subscribers imported`, 'green');
 
-    function showToast(msg, type = 'green') {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.className   = `toast ${type} show`;
-      setTimeout(() => t.classList.remove('show'), 3000);
-    }
+    // Reset state
+    parsedCsv = null;
+    document.getElementById('import-btn-text').textContent = 'SELECT A CSV FIRST';
+    document.getElementById('import-preview').style.display = 'none';
+    document.querySelector('.import-drop-label').textContent = 'Click to select a CSV file';
+    document.getElementById('csv-file').value = '';
 
-    init();
-  </script>
-  </div><!-- /container -->
-  <script src="/js/nav.js" defer></script>
-  <script>window.addEventListener('load', () => initNav())</script>
+    // Refresh groups tab in background
+    checkStatus();
+  } catch(e) {
+    document.getElementById('import-progress-text').textContent = 'Import failed: ' + e.message;
+    showToast('Import failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─── Campaigns ────────────────────────────────────────────────────────────────
+let campaignsLoaded = false;
+
+async function loadCampaigns() {
+  if (campaignsLoaded) return;
+  try {
+    const res  = await fetch('/api/mailerlite/stats');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load campaigns');
+    campaignsLoaded = true;
+    renderCampaigns(data.campaigns || []);
+  } catch(e) {
+    document.getElementById('campaign-list').innerHTML =
+      `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`;
+  }
+}
+
+function renderCampaigns(campaigns) {
+  const el = document.getElementById('campaign-list');
+  if (!campaigns.length) {
+    el.innerHTML = '<div class="empty-state">No campaigns yet. Send your first broadcast from MailΩr.</div>';
+    return;
+  }
+  el.innerHTML = campaigns.map(c => {
+    const openRate  = c.open_rate  != null ? (c.open_rate  * 100).toFixed(1) + '%' : '—';
+    const clickRate = c.click_rate != null ? (c.click_rate * 100).toFixed(1) + '%' : '—';
+    const sentAt    = c.sent_at ? new Date(c.sent_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+    const statusCls = c.status === 'sent' ? 'status-sent' : c.status === 'draft' ? 'status-draft' : 'status-other';
+    return `<div class="campaign-row">
+      <div>
+        <div class="campaign-subject">${escHtml(c.subject)}</div>
+        <div class="campaign-meta">${sentAt}${c.total_sent ? ' · ' + c.total_sent.toLocaleString() + ' sent' : ''}</div>
+      </div>
+      <div class="campaign-stat">
+        <div class="campaign-stat-val stat-open">${openRate}</div>
+        <div class="campaign-stat-lbl">Open</div>
+      </div>
+      <div class="campaign-stat">
+        <div class="campaign-stat-val stat-click">${clickRate}</div>
+        <div class="campaign-stat-lbl">Click</div>
+      </div>
+      <div><span class="campaign-status ${statusCls}">${escHtml(c.status || 'unknown')}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type = '') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+init();
+</script>
+
+<script src="/js/nav.js" defer></script>
+<script>window.addEventListener('load', () => initNav())</script>
 <script src="/js/bug-reporter.js"></script>
 </body>
 </html>

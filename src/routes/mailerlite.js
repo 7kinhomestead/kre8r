@@ -1,0 +1,301 @@
+/**
+ * MailerliteΩr — src/routes/mailerlite.js
+ *
+ * Mailerlite v2 API integration for MailΩr broadcast + AudiencΩr
+ *
+ * GET  /api/mailerlite/status                — check key + verify against API
+ * POST /api/mailerlite/groups/sync           — create/ensure the 3 tier groups exist
+ * POST /api/mailerlite/subscribers/import    — bulk import subscribers to a group
+ * POST /api/mailerlite/send                  — create campaign + add content + send
+ * GET  /api/mailerlite/stats                 — last 10 campaigns with rates
+ */
+
+const express = require('express');
+const router  = express.Router();
+const fs      = require('fs');
+const path    = require('path');
+const log     = require('../utils/logger');
+
+const ML_BASE = 'https://connect.mailerlite.com/api';
+
+// ── Helper: get profile path ───────────────────────────────────────────────────
+function getProfilePath() {
+  return process.env.CREATOR_PROFILE_PATH
+    || path.join(__dirname, '../../creator-profile.json');
+}
+
+function loadProfile() {
+  const p = getProfilePath();
+  return JSON.parse(fs.readFileSync(p, 'utf8'));
+}
+
+function saveProfile(profile) {
+  const p = getProfilePath();
+  fs.writeFileSync(p, JSON.stringify(profile, null, 2), 'utf8');
+}
+
+// ── Helper: Mailerlite API caller ──────────────────────────────────────────────
+async function ml(method, path_, body = null) {
+  const apiKey = process.env.MAILERLITE_API_KEY;
+  if (!apiKey) throw new Error('MAILERLITE_API_KEY not set');
+
+  const { default: fetch } = await import('node-fetch');
+  const opts = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type':  'application/json',
+      'Accept':        'application/json',
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+
+  const res  = await fetch(`${ML_BASE}${path_}`, opts);
+  const text = await res.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = {}; }
+
+  if (!res.ok) {
+    const msg = data?.message || data?.error || `Mailerlite API ${res.status}: ${path_}`;
+    log.error({ module: 'mailerlite', status: res.status, path: path_, body: data }, msg);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// ── GET /api/mailerlite/status ─────────────────────────────────────────────────
+
+router.get('/status', async (req, res) => {
+  const hasKey = !!process.env.MAILERLITE_API_KEY;
+  if (!hasKey) {
+    return res.json({ connected: false, reason: 'MAILERLITE_API_KEY not set' });
+  }
+  try {
+    const data       = await ml('GET', '/groups?limit=25');
+    const groups     = (data.data || []).map(g => ({
+      id:    g.id,
+      name:  g.name,
+      total: g.total || 0,
+    }));
+    res.json({ connected: true, groupCount: groups.length, groups });
+  } catch (e) {
+    log.warn({ module: 'mailerlite', err: e }, 'Status check failed');
+    res.json({ connected: false, reason: e.message });
+  }
+});
+
+// ── POST /api/mailerlite/groups/sync ──────────────────────────────────────────
+// Creates the 3 community tier groups in Mailerlite if they don't already exist.
+// Stores the resulting IDs in creator-profile.json under integrations.mailerlite_groups.
+
+const TIER_GROUPS = [
+  { key: 'greenhouse', name: 'Greenhouse 🌱' },
+  { key: 'garden',     name: 'Garden 🌿'     },
+  { key: 'founding50', name: 'Founding 50 🏆' },
+];
+
+router.post('/groups/sync', async (req, res) => {
+  try {
+    const existing = (await ml('GET', '/groups?limit=100')).data || [];
+    const existingByName = {};
+    for (const g of existing) existingByName[g.name] = g;
+
+    const results = [];
+
+    for (const tier of TIER_GROUPS) {
+      if (existingByName[tier.name]) {
+        results.push({ key: tier.key, name: tier.name, id: existingByName[tier.name].id, created: false });
+      } else {
+        const created = await ml('POST', '/groups', { name: tier.name });
+        results.push({ key: tier.key, name: tier.name, id: created.data.id, created: true });
+        log.info({ module: 'mailerlite', group: tier.name, id: created.data.id }, 'Mailerlite group created');
+      }
+    }
+
+    // Persist group IDs to creator-profile.json
+    try {
+      const profile = loadProfile();
+      if (!profile.integrations) profile.integrations = {};
+      profile.integrations.mailerlite_groups = {};
+      for (const r of results) {
+        profile.integrations.mailerlite_groups[r.key] = r.id;
+      }
+      saveProfile(profile);
+      log.info({ module: 'mailerlite' }, 'Mailerlite group IDs saved to creator-profile.json');
+    } catch (profErr) {
+      log.warn({ module: 'mailerlite', err: profErr }, 'Could not save group IDs to creator-profile.json — IDs returned in response');
+    }
+
+    res.json({ ok: true, groups: results });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'groups/sync failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mailerlite/subscribers/import ───────────────────────────────────
+// Accepts { subscribers: [{email, name, group}] }
+// group: 'greenhouse' | 'garden' | 'founding50'
+// Batches into chunks of 1000.
+
+router.post('/subscribers/import', async (req, res) => {
+  try {
+    const { subscribers } = req.body;
+    if (!Array.isArray(subscribers) || subscribers.length === 0) {
+      return res.status(400).json({ error: 'subscribers array is required' });
+    }
+
+    // Resolve group IDs
+    let groupIds;
+    try {
+      const profile = loadProfile();
+      groupIds = profile?.integrations?.mailerlite_groups || {};
+    } catch (_) {
+      groupIds = {};
+    }
+
+    let imported = 0;
+
+    // Group subscribers by their target group
+    const byGroup = {};
+    for (const sub of subscribers) {
+      const g = sub.group || 'greenhouse';
+      if (!byGroup[g]) byGroup[g] = [];
+      byGroup[g].push({ email: sub.email, name: sub.name || '' });
+    }
+
+    for (const [groupKey, subs] of Object.entries(byGroup)) {
+      const groupId = groupIds[groupKey];
+
+      // Batch in 1000s
+      for (let i = 0; i < subs.length; i += 1000) {
+        const batch = subs.slice(i, i + 1000);
+        const payload = {
+          subscribers: batch.map(s => {
+            const entry = { email: s.email };
+            if (s.name) entry.fields = { name: s.name };
+            if (groupId) entry.groups = [groupId];
+            return entry;
+          }),
+        };
+        await ml('POST', '/subscribers/import', payload);
+        imported += batch.length;
+      }
+    }
+
+    res.json({ ok: true, imported });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'subscribers/import failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mailerlite/send ──────────────────────────────────────────────────
+// Creates a campaign, sets content, sends immediately.
+//
+// Body: { subject, html_body, group_ids: ['greenhouse'|'garden'|'founding50'|'all'],
+//         from_name, from_email }
+
+router.post('/send', async (req, res) => {
+  try {
+    const {
+      subject,
+      html_body,
+      group_ids = ['all'],
+      from_name,
+      from_email,
+    } = req.body;
+
+    if (!subject)   return res.status(400).json({ error: 'subject is required' });
+    if (!html_body) return res.status(400).json({ error: 'html_body is required' });
+
+    // Resolve group IDs from creator-profile.json
+    let mlGroupIds = [];
+    try {
+      const profile  = loadProfile();
+      const groupMap = profile?.integrations?.mailerlite_groups || {};
+      const creator  = profile?.creator || {};
+
+      if (group_ids.includes('all')) {
+        // All groups configured
+        mlGroupIds = Object.values(groupMap).filter(Boolean);
+      } else {
+        for (const key of group_ids) {
+          if (groupMap[key]) mlGroupIds.push(groupMap[key]);
+        }
+      }
+
+      // Use profile defaults for from if not passed
+      if (!from_name && creator.brand)  req.body.from_name  = creator.brand;
+      if (!from_email && creator.email) req.body.from_email = creator.email;
+    } catch (_) { /* profile not critical for sending */ }
+
+    const senderName  = from_name  || req.body.from_name  || 'Kre8r';
+    const senderEmail = from_email || req.body.from_email;
+
+    if (!senderEmail) {
+      return res.status(400).json({ error: 'from_email is required (or set creator.email in creator-profile.json)' });
+    }
+
+    // 1. Create campaign
+    const campaignBody = {
+      name:    `${subject} — ${new Date().toISOString().slice(0, 10)}`,
+      subject,
+      type:    'regular',
+      emails: [{
+        subject,
+        from_name:  senderName,
+        from_email: senderEmail,
+        content:    html_body,
+        reply_to:   senderEmail,
+      }],
+    };
+
+    if (mlGroupIds.length > 0) {
+      campaignBody.groups = mlGroupIds;
+    }
+
+    const campaign = await ml('POST', '/campaigns', campaignBody);
+    const campaignId = campaign?.data?.id;
+
+    if (!campaignId) {
+      throw new Error('Mailerlite did not return a campaign ID');
+    }
+
+    log.info({ module: 'mailerlite', campaignId, subject }, 'Campaign created');
+
+    // 2. Send immediately
+    await ml('POST', `/campaigns/${campaignId}/actions/send`);
+
+    log.info({ module: 'mailerlite', campaignId }, 'Campaign sent');
+
+    res.json({ ok: true, campaign_id: campaignId, status: 'sent' });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'send failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET /api/mailerlite/stats ──────────────────────────────────────────────────
+// Last 10 campaigns with open/click rates.
+
+router.get('/stats', async (req, res) => {
+  try {
+    const data      = await ml('GET', '/campaigns?limit=10&sort=-created_at');
+    const campaigns = (data.data || []).map(c => ({
+      id:         c.id,
+      subject:    c.emails?.[0]?.subject || c.name || '—',
+      status:     c.status,
+      sent_at:    c.sent_at,
+      open_rate:  c.stats?.open_rate  ?? null,
+      click_rate: c.stats?.click_rate ?? null,
+      total_sent: c.stats?.sent       ?? null,
+    }));
+    res.json({ ok: true, campaigns });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'stats failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
+module.exports = router;

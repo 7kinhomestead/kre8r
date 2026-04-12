@@ -46,11 +46,29 @@
   .page-sub{color:var(--text-dim);font-size:14px;max-width:560px;line-height:1.6;}
 
   /* STATUS BAR */
-  .status-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:20px;font-size:12px;animation:fadeUp 0.4s 0.02s ease both;}
+  .status-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;font-size:12px;animation:fadeUp 0.4s 0.02s ease both;}
   .kajabi-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dimmer);flex-shrink:0;}
   .kajabi-dot.connected{background:var(--green);}
   .kajabi-label{color:var(--text-dim);}
   .kajabi-label strong{color:var(--text);}
+
+  /* MAILERLITE SEND SECTION */
+  .ml-send-section{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-top:14px;}
+  .ml-send-title{font-family:var(--font-head);font-size:15px;letter-spacing:1.5px;color:var(--teal);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .ml-audience-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .ml-audience-check{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;transition:all 0.15s;user-select:none;color:var(--text-dim);}
+  .ml-audience-check input{accent-color:var(--teal);width:14px;height:14px;cursor:pointer;}
+  .ml-audience-check:has(input:checked){border-color:var(--teal);color:var(--teal);background:var(--teal-glow);}
+  .ml-version-pick{display:flex;gap:8px;margin-bottom:12px;}
+  .ml-version-btn{flex:1;padding:8px 14px;border:1.5px solid var(--border);background:var(--bg);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+  .ml-version-btn:hover{border-color:var(--teal-dim);color:var(--teal);}
+  .ml-version-btn.active{border-color:var(--teal);color:var(--teal);background:var(--teal-glow);}
+  .ml-send-btn{width:100%;background:var(--teal);border:none;border-radius:var(--radius-sm);color:#0a0a0a;font-family:var(--font-head);font-size:18px;letter-spacing:2px;padding:14px 24px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:10px;}
+  .ml-send-btn:hover{opacity:0.9;transform:translateY(-1px);}
+  .ml-send-btn:active{transform:translateY(0);}
+  .ml-send-btn:disabled{background:var(--bg-card-2);color:var(--text-dimmer);cursor:not-allowed;transform:none;border:1px solid var(--border);}
+  .ml-success{background:var(--green-glow);border:1px solid var(--green);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--green);margin-top:10px;display:none;}
+  .ml-success.show{display:block;}
 
   /* MODE TABS */
   .mode-tabs{display:flex;gap:0;margin-bottom:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:4px;animation:fadeUp 0.4s 0.04s ease both;}
@@ -232,8 +250,14 @@
     <div class="page-sub">Broadcast an A/B pair for any segment. Or generate a full 7-email tier sequence from a video. Both run in your blended voice.</div>
   </div>
 
-  <!-- KAJABI STATUS -->
-  <div class="status-bar" id="kajabi-status-bar">
+  <!-- MAILERLITE STATUS -->
+  <div class="status-bar" id="ml-status-bar">
+    <div class="kajabi-dot" id="ml-dot"></div>
+    <div class="kajabi-label" id="ml-label">Checking Mailerlite…</div>
+  </div>
+
+  <!-- KAJABI STATUS (legacy fallback) -->
+  <div class="status-bar" id="kajabi-status-bar" style="margin-bottom:20px;">
     <div class="kajabi-dot" id="kajabi-dot"></div>
     <div class="kajabi-label" id="kajabi-label">Checking Kajabi…</div>
   </div>
@@ -346,6 +370,38 @@
         </div>
       </div>
       <div class="ab-pair" id="bc-pair-container"></div>
+
+      <!-- MAILERLITE SEND -->
+      <div class="ml-send-section" id="ml-send-section" style="display:none;">
+        <div class="ml-send-title">⚡ SEND VIA MAILERLITE</div>
+
+        <!-- Version picker -->
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;">Which version to send?</div>
+        <div class="ml-version-pick">
+          <button class="ml-version-btn active" id="ml-pick-a" onclick="mlPickVersion('a')">Version A</button>
+          <button class="ml-version-btn" id="ml-pick-b" onclick="mlPickVersion('b')">Version B</button>
+        </div>
+
+        <!-- Audience -->
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;">Send to which groups?</div>
+        <div class="ml-audience-row">
+          <label class="ml-audience-check">
+            <input type="checkbox" id="ml-grp-all" onchange="mlAudienceToggle('all', this.checked)" checked> All Subscribers
+          </label>
+          <label class="ml-audience-check">
+            <input type="checkbox" id="ml-grp-greenhouse" onchange="mlAudienceToggle('greenhouse', this.checked)"> 🌱 Greenhouse
+          </label>
+          <label class="ml-audience-check">
+            <input type="checkbox" id="ml-grp-garden" onchange="mlAudienceToggle('garden', this.checked)"> 🌿 Garden
+          </label>
+          <label class="ml-audience-check">
+            <input type="checkbox" id="ml-grp-founding50" onchange="mlAudienceToggle('founding50', this.checked)"> 🏆 Founding 50
+          </label>
+        </div>
+
+        <button class="ml-send-btn" id="ml-send-btn" onclick="sendViaMailerlite()">SEND NOW</button>
+        <div class="ml-success" id="ml-success"></div>
+      </div>
     </div>
 
   </div><!-- /mode-broadcast -->
@@ -541,6 +597,9 @@ let activeTiers = ['greenhouse', 'garden', 'founding'];
 let lastBroadcast = null;
 let lastSequence  = null;
 let voiceProfiles = [];
+let mlConnected   = false;
+let mlPickedVersion = 'a';
+let mlSelectedGroups = ['all'];
 
 const TIER_CONFIG = {
   greenhouse: { label: 'Greenhouse (Free)',  emoji: '🌱', note: 'Tag: greenhouse — free-member tag in Kajabi' },
@@ -558,7 +617,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     currentProjectId = parseInt(pid);
     loadProjectContext(currentProjectId);
   }
-  await Promise.all([checkKajabiStatus(), loadVoiceProfiles()]);
+  await Promise.all([checkKajabiStatus(), checkMailerliteStatus(), loadVoiceProfiles()]);
 });
 
 async function loadProjectContext(id) {
@@ -596,6 +655,96 @@ async function checkKajabiStatus() {
       lbl.innerHTML = '<strong>Kajabi not connected</strong> — add KAJABI_API_KEY to .env to enable direct send. Copy/paste to Kajabi manually for now.';
     }
   } catch(e) { /* non-fatal */ }
+}
+
+async function checkMailerliteStatus() {
+  try {
+    const res  = await fetch('/api/mailerlite/status');
+    const data = await res.json();
+    const dot  = document.getElementById('ml-dot');
+    const lbl  = document.getElementById('ml-label');
+    mlConnected = data.connected;
+    if (data.connected) {
+      dot.classList.add('connected');
+      lbl.innerHTML = `<strong>Mailerlite connected</strong> — ${data.groupCount} group${data.groupCount !== 1 ? 's' : ''} · direct send ready`;
+    } else {
+      lbl.innerHTML = `<strong>Mailerlite not connected</strong> — ${data.reason || 'Add MAILERLITE_API_KEY to .env'}`;
+    }
+  } catch(e) {
+    document.getElementById('ml-label').innerHTML = '<strong>Mailerlite</strong> — could not reach API';
+  }
+}
+
+function mlPickVersion(v) {
+  mlPickedVersion = v;
+  document.getElementById('ml-pick-a').classList.toggle('active', v === 'a');
+  document.getElementById('ml-pick-b').classList.toggle('active', v === 'b');
+}
+
+function mlAudienceToggle(group, checked) {
+  if (group === 'all') {
+    // Selecting "all" deselects individual groups
+    if (checked) {
+      mlSelectedGroups = ['all'];
+      ['greenhouse','garden','founding50'].forEach(k => {
+        const el = document.getElementById(`ml-grp-${k}`);
+        if (el) el.checked = false;
+      });
+    } else {
+      mlSelectedGroups = mlSelectedGroups.filter(g => g !== 'all');
+    }
+  } else {
+    // Selecting an individual group deselects "all"
+    if (checked) {
+      document.getElementById('ml-grp-all').checked = false;
+      mlSelectedGroups = mlSelectedGroups.filter(g => g !== 'all');
+      if (!mlSelectedGroups.includes(group)) mlSelectedGroups.push(group);
+    } else {
+      mlSelectedGroups = mlSelectedGroups.filter(g => g !== group);
+    }
+  }
+  // If nothing selected, default back to all
+  if (mlSelectedGroups.length === 0) {
+    mlSelectedGroups = ['all'];
+    document.getElementById('ml-grp-all').checked = true;
+  }
+}
+
+async function sendViaMailerlite() {
+  if (!lastBroadcast) { showToast('Generate a broadcast first', 'amber'); return; }
+  if (!mlConnected)   { showToast('Mailerlite not connected', 'amber'); return; }
+
+  const version = mlPickedVersion === 'a' ? lastBroadcast.version_a : lastBroadcast.version_b;
+  if (!version) { showToast('No version available', 'amber'); return; }
+
+  const btn = document.getElementById('ml-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'SENDING…';
+  document.getElementById('ml-success').classList.remove('show');
+
+  try {
+    const res = await fetch('/api/mailerlite/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject:    version.subject,
+        html_body:  version.body,
+        group_ids:  mlSelectedGroups,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+
+    const successEl = document.getElementById('ml-success');
+    successEl.textContent = `Sent! Campaign ID: ${data.campaign_id}`;
+    successEl.classList.add('show');
+    showToast('Email sent via Mailerlite', 'green');
+  } catch(e) {
+    showToast('Send failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'SEND NOW';
+  }
 }
 
 async function loadVoiceProfiles() {
@@ -837,6 +986,10 @@ function renderBroadcastResults(broadcast) {
   }
 
   document.getElementById('bc-results').classList.add('show');
+  // Show Mailerlite send section if connected
+  if (mlConnected) {
+    document.getElementById('ml-send-section').style.display = 'block';
+  }
   document.getElementById('bc-results').scrollIntoView({ behavior: 'smooth' });
 }
 
