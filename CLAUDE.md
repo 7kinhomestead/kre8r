@@ -212,7 +212,7 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 7. ~~No backup strategy for SQLite file~~ — Electron 5-min rolling backup to database/kre8r-electron-backup.db
 8. ~~Hardcoded Windows paths~~ — FIXED Session 31 (DB_PATH, FFMPEG_PATH, CREATOR_PROFILE_PATH all env-var driven)
 9. Whisper model download has no progress indicator on first transcription run (looks like hang)
-10. MirrΩr: `no such column: pr.angle` DB error (pre-existing), and `TypeError: Assignment to constant variable` — both in mirrr.js evaluate-strategy handler
+10. ~~MirrΩr: `no such column: pr.angle` and `TypeError: Assignment to constant variable`~~ — FIXED (po.angle + let evalMonth/evalYear)
 
 ## Planned Features (Not Yet Built)
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
