@@ -154,32 +154,51 @@ router.post('/subscribers/import', async (req, res) => {
       groupIds = {};
     }
 
-    let imported = 0;
-    let failed  = 0;
-    const CONCURRENCY = 10;
+    // Use Mailerlite's batch CSV import — one request for all subscribers,
+    // no rate limit issues. Import is async on their end; we report count immediately.
+    const groupKey = (subscribers[0]?.group) || 'greenhouse';
+    const groupId  = groupIds[groupKey];
 
-    // Upsert each subscriber individually via POST /subscribers (handles groups inline)
-    for (let i = 0; i < subscribers.length; i += CONCURRENCY) {
-      const batch = subscribers.slice(i, i + CONCURRENCY);
-      await Promise.allSettled(
-        batch.map(async sub => {
-          try {
-            const groupKey = sub.group || 'greenhouse';
-            const groupId  = groupIds[groupKey];
-            const payload  = { email: sub.email };
-            if (sub.name)  payload.fields = { name: sub.name };
-            if (groupId)   payload.groups = [groupId];
-            await ml('POST', '/subscribers', payload);
-            imported++;
-          } catch (err) {
-            log.warn({ module: 'mailerlite', email: sub.email, err }, 'subscriber upsert failed');
-            failed++;
-          }
-        })
-      );
+    // Build CSV
+    const csvLines = ['email,name'];
+    for (const sub of subscribers) {
+      const email = (sub.email || '').replace(/"/g, '""');
+      const name  = (sub.name  || '').replace(/"/g, '""');
+      csvLines.push(`"${email}","${name}"`);
+    }
+    const csvContent = csvLines.join('\n');
+
+    // POST as multipart/form-data — required by Mailerlite batch import endpoint
+    const { default: fetch } = await import('node-fetch');
+    const apiKey = process.env.MAILERLITE_API_KEY;
+    if (!apiKey) throw new Error('MAILERLITE_API_KEY not set');
+
+    const form = new FormData();
+    form.append('file', new Blob([csvContent], { type: 'text/csv' }), 'subscribers.csv');
+    form.append('columns[]', 'email');
+    form.append('columns[]', 'name');
+    if (groupId) form.append('groups[]', groupId);
+
+    const mlRes = await fetch(`${ML_BASE}/subscribers/import`, {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept':        'application/json',
+        // No Content-Type header — let fetch set it with the multipart boundary
+      },
+      body: form,
+    });
+
+    const text = await mlRes.text();
+    let mlData;
+    try { mlData = text ? JSON.parse(text) : {}; } catch (_) { mlData = {}; }
+
+    if (!mlRes.ok) {
+      throw new Error(mlData?.message || mlData?.error || `Mailerlite import failed: ${mlRes.status}`);
     }
 
-    res.json({ ok: true, imported, failed });
+    log.info({ module: 'mailerlite', count: subscribers.length, groupId }, 'Batch import submitted');
+    res.json({ ok: true, imported: subscribers.length, failed: 0 });
   } catch (e) {
     log.error({ module: 'mailerlite', err: e }, 'subscribers/import failed');
     res.status(500).json({ error: e.message });

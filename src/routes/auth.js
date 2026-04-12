@@ -17,7 +17,7 @@ const router = express.Router();
 
 // POST /auth/login
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password, remember } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
   }
@@ -31,6 +31,9 @@ router.post('/login', async (req, res) => {
     req.session.userId   = user.id;
     req.session.username = user.username;
     req.session.role     = user.role;
+
+    // Remember this device = 30-day persistent cookie; otherwise session cookie only
+    if (!remember) req.session.cookie.expires = false;
 
     res.json({ ok: true, username: user.username, role: user.role });
   } catch (err) {

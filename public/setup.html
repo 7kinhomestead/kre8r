@@ -249,7 +249,7 @@
     </div>
 
     <div class="setup-title">Welcome. Let's get you set up.</div>
-    <div class="setup-desc">This only runs once. Create your owner account and connect your AI key to get started.</div>
+    <div class="setup-desc">This only runs once. Create your owner account to get started.</div>
 
     <div class="error" id="err-msg"></div>
 
@@ -272,16 +272,6 @@
 
       <label for="confirm-password">Confirm Password</label>
       <input type="password" id="confirm-password" name="confirmPassword" placeholder="••••••••" autocomplete="new-password" required>
-
-      <!-- AI KEY -->
-      <div class="section-label">AI Connection</div>
-
-      <div class="api-row">
-        <label for="api-key">Anthropic API Key</label>
-        <a class="api-link" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get your key →</a>
-      </div>
-      <input type="password" id="api-key" name="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" required>
-      <p class="hint">Your key is stored locally in your .env file and never sent anywhere except Anthropic.</p>
 
       <!-- FOOTAGE -->
       <div class="section-label">Footage Intake (Optional)</div>
@@ -341,7 +331,6 @@
       const username        = document.getElementById('username').value.trim();
       const password        = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
-      const apiKey          = document.getElementById('api-key').value.trim();
       const intakeFolder    = intakeEl.value.trim();
 
       // Client-side validation
@@ -349,8 +338,6 @@
       if (!password) { showError('Password is required.'); return; }
       if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
       if (password !== confirmPassword) { showError('Passwords do not match.'); return; }
-      if (!apiKey) { showError('Anthropic API key is required.'); return; }
-      if (!apiKey.startsWith('sk-ant-')) { showError('API key must start with sk-ant-'); return; }
 
       submitBtn.disabled    = true;
       submitBtn.textContent = 'Setting up…';
@@ -359,7 +346,7 @@
         const res  = await fetch('/setup-api', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ name, username, password, confirmPassword, apiKey, intakeFolder }),
+          body:    JSON.stringify({ name, username, password, confirmPassword, intakeFolder }),
         });
         const data = await res.json();
 

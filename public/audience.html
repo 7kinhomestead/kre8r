@@ -565,27 +565,78 @@ function handleCsvFile(file) {
   reader.readAsText(file);
 }
 
-function parseCsv(text) {
-  const lines = text.trim().split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) return { headers: [], rows: [] };
+// RFC 4180 CSV parser — handles quoted fields, commas inside quotes, escaped quotes
+function parseCsvLine(line) {
+  const fields = [];
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === '"') {
+      // Quoted field
+      let field = '';
+      i++; // skip opening quote
+      while (i < line.length) {
+        if (line[i] === '"' && line[i + 1] === '"') {
+          field += '"'; i += 2; // escaped quote
+        } else if (line[i] === '"') {
+          i++; break; // closing quote
+        } else {
+          field += line[i++];
+        }
+      }
+      fields.push(field.trim());
+      if (line[i] === ',') i++; // skip comma after closing quote
+    } else {
+      // Unquoted field
+      const end = line.indexOf(',', i);
+      if (end === -1) {
+        fields.push(line.slice(i).trim());
+        break;
+      } else {
+        fields.push(line.slice(i, end).trim());
+        i = end + 1;
+      }
+    }
+  }
+  return fields;
+}
 
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
-  const emailIdx = headers.findIndex(h => h === 'email' || h === 'email address' || h === 'e-mail');
+function parseCsv(text) {
+  // Split on newlines but respect quoted fields that contain newlines
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') { inQuotes = !inQuotes; current += ch; }
+    else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && text[i + 1] === '\n') i++; // CRLF
+      if (current.trim()) rows.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) rows.push(current);
+
+  if (rows.length < 2) return { headers: [], rows: [] };
+
+  const headers = parseCsvLine(rows[0]).map(h => h.toLowerCase());
+  const emailIdx = headers.findIndex(h => h === 'email' || h === 'email address' || h === 'e-mail' || h === 'email (email)');
   const nameIdx  = headers.findIndex(h => h === 'name' || h === 'full name' || h === 'first name');
 
   if (emailIdx === -1) throw new Error('No "email" column found in CSV');
 
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols  = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+  const data = [];
+  for (let i = 1; i < rows.length; i++) {
+    const cols  = parseCsvLine(rows[i]);
     const email = cols[emailIdx];
     if (!email || !email.includes('@')) continue;
     const row = { email };
     if (nameIdx !== -1 && cols[nameIdx]) row.name = cols[nameIdx];
-    rows.push(row);
+    data.push(row);
   }
 
-  return { headers, rows };
+  return { headers, rows: data };
 }
 
 async function runImport() {
@@ -602,9 +653,10 @@ async function runImport() {
   try {
     const subscribers = parsedCsv.rows.map(r => ({ ...r, group }));
 
-    // Split into 1000-subscriber batches, POST each
-    const batchSize = 1000;
+    // Split into 100-subscriber batches, POST each
+    const batchSize = 100;
     let imported = 0;
+    let failed   = 0;
 
     for (let i = 0; i < subscribers.length; i += batchSize) {
       const batch = subscribers.slice(i, i + batchSize);
@@ -615,16 +667,20 @@ async function runImport() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Import failed');
-      imported += data.imported || batch.length;
+      imported += data.imported || 0;
+      failed   += data.failed  || 0;
 
       const pct = Math.round(((i + batch.length) / subscribers.length) * 100);
       document.getElementById('import-progress-bar').style.width = pct + '%';
-      document.getElementById('import-progress-text').textContent = `Imported ${imported} of ${subscribers.length}…`;
+      document.getElementById('import-progress-text').textContent =
+        `Imported ${imported}${failed ? `, ${failed} failed` : ''} of ${subscribers.length}…`;
     }
 
     document.getElementById('import-progress-bar').style.width = '100%';
-    document.getElementById('import-progress-text').textContent = `Done — ${imported} subscribers imported to ${TIER_LABELS[group]}.`;
-    showToast(`${imported} subscribers imported`, 'green');
+
+    document.getElementById('import-progress-text').textContent =
+      `Submitted ${imported} subscribers to ${TIER_LABELS[group]} — Mailerlite is processing. Check the Groups tab in a minute to confirm counts.`;
+    showToast(`${imported} subscribers submitted to Mailerlite`, 'green');
 
     // Reset state
     parsedCsv = null;

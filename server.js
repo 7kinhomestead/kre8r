@@ -236,11 +236,11 @@ app.post('/setup-api', async (req, res) => {
       return res.status(403).json({ error: 'Setup has already been completed. Sign in to continue.' });
     }
 
-    const { name, username, password, confirmPassword, apiKey, intakeFolder } = req.body || {};
+    const { name, username, password, confirmPassword, intakeFolder } = req.body || {};
 
     // Validation
-    if (!username || !password || !confirmPassword || !apiKey) {
-      return res.status(400).json({ error: 'Username, password, and API key are required.' });
+    if (!username || !password || !confirmPassword) {
+      return res.status(400).json({ error: 'Username and password are required.' });
     }
     if (password !== confirmPassword) {
       return res.status(400).json({ error: 'Passwords do not match.' });
@@ -248,48 +248,13 @@ app.post('/setup-api', async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     }
-    if (!apiKey.startsWith('sk-ant-')) {
-      return res.status(400).json({ error: 'API key must start with sk-ant-' });
-    }
 
     // 1. Create owner account
     const hash = await bcrypt.hash(password, 10);
     _db.createUser(username.trim(), hash, 'owner');
     log.info({ module: 'setup', username: username.trim() }, 'Owner account created via setup wizard');
 
-    // 2. Set API key in memory immediately (no restart needed)
-    process.env.ANTHROPIC_API_KEY = apiKey.trim();
-
-    // 3. Write API key to .env file for persistence across restarts
-    try {
-      // Determine .env path: prefer DB_PATH directory (userData in Electron, project root in dev)
-      let envDir;
-      if (process.env.DB_PATH) {
-        envDir = path.dirname(process.env.DB_PATH);
-      } else {
-        envDir = __dirname;
-      }
-      const envPath = path.join(envDir, '.env');
-
-      // Read existing .env if present, then upsert the key
-      let envContent = '';
-      try { envContent = fs.readFileSync(envPath, 'utf8'); } catch (_) { /* new file */ }
-
-      if (envContent.match(/^ANTHROPIC_API_KEY\s*=/m)) {
-        // Replace existing line
-        envContent = envContent.replace(/^ANTHROPIC_API_KEY\s*=.*$/m, `ANTHROPIC_API_KEY=${apiKey.trim()}`);
-      } else {
-        envContent = envContent.trimEnd();
-        envContent += (envContent.length ? '\n' : '') + `ANTHROPIC_API_KEY=${apiKey.trim()}\n`;
-      }
-      fs.writeFileSync(envPath, envContent, 'utf8');
-      log.info({ module: 'setup', envPath }, 'ANTHROPIC_API_KEY written to .env');
-    } catch (envErr) {
-      // Non-fatal — key is already set in process.env
-      log.warn({ module: 'setup', err: envErr }, 'Could not write .env file — API key active in memory only');
-    }
-
-    // 4. Update creator-profile.json if name or intake folder was provided
+    // 2. Update creator-profile.json if name or intake folder was provided
     if (name || intakeFolder) {
       try {
         const profPath = process.env.CREATOR_PROFILE_PATH

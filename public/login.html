@@ -148,6 +148,11 @@
       <label for="password">Password</label>
       <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
 
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <input type="checkbox" id="remember" name="remember" style="width:auto;margin:0;accent-color:var(--teal);">
+        <label for="remember" style="font-size:13px;text-transform:none;letter-spacing:0;color:var(--text-dim);cursor:pointer;margin:0;">Remember this device for 30 days</label>
+      </div>
+
       <button type="submit" class="btn" id="submit-btn">Sign In</button>
     </form>
 
@@ -172,12 +177,13 @@
 
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
+      const remember = document.getElementById('remember').checked;
 
       try {
         const res  = await fetch('/auth/login', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ username, password }),
+          body:    JSON.stringify({ username, password, remember }),
         });
         const data = await res.json();
 
