@@ -1335,7 +1335,8 @@ function buildBothQRs(base, sessionCode) {
 }
 
 function updateQRForSession(code) {
-  const base = `http://${ip}:${port}`;
+  // Use module-level base — already set correctly for both LAN (http://ip:port)
+  // and named domains (https://teleprompter.kre8r.app) by loadNetworkInfo()
   buildBothQRs(base, code);
 }
 
