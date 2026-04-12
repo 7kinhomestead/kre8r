@@ -19,10 +19,14 @@ const log     = require('../utils/logger');
 
 const DOWNLOADS_DIR = path.join(__dirname, '../../public/downloads');
 
-// Ensure downloads dir exists
-if (!fs.existsSync(DOWNLOADS_DIR)) {
-  fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
-}
+// Ensure downloads dir exists — wrapped in try/catch because in a packaged
+// Electron app public/ is inside a read-only asar bundle. The upload endpoint
+// is only used on kre8r.app (server mode), never in the desktop app.
+try {
+  if (!fs.existsSync(DOWNLOADS_DIR)) {
+    fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
+  }
+} catch (_) { /* read-only asar in Electron — safe to ignore */ }
 
 // Multer: save directly to public/downloads with original filename
 const storage = multer.diskStorage({
