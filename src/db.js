@@ -875,6 +875,45 @@ function createProject(title, topic, youtubeUrl, youtubeVideoId) {
   return getProject(projectId);
 }
 
+/** Import a project record from a sync snapshot.
+ *  Preserves the original ID so cross-device references stay consistent.
+ *  Caller is responsible for checking the ID doesn't already exist. */
+function createProjectFromSnapshot(project) {
+  const knownCols = db.pragma('table_info(projects)').map(r => r.name);
+
+  // Build column/value lists dynamically — only include cols that exist in this schema
+  const safe = ['id', 'title', 'topic', 'status', 'current_stage',
+                 'youtube_url', 'youtube_video_id', 'created_at', 'published_at',
+                 'source', 'setup_depth', 'entry_point', 'story_structure',
+                 'content_type', 'high_concept', 'estimated_duration_minutes',
+                 'pipr_complete', 'high_concept_angles', 'research_bundle_json',
+                 'vision_brief_json', 'director_notes'];
+
+  const cols = safe.filter(c => knownCols.includes(c) && project[c] !== undefined);
+  const vals = cols.map(c => project[c]);
+
+  if (cols.length === 0) throw new Error('No valid columns to insert');
+
+  _run(
+    `INSERT INTO projects (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+    vals
+  );
+
+  // Create matching pipeline_state row
+  const psId = project.id;
+  const existing = _get('SELECT id FROM pipeline_state WHERE project_id = ?', [psId]);
+  if (!existing) {
+    _run(`INSERT INTO pipeline_state (project_id, current_stage, gate_a_approved, gate_b_approved, gate_c_approved)
+          VALUES (?, ?, ?, ?, ?)`,
+      [psId,
+       project.current_stage || 'M0.1',
+       project.gate_a_approved || 0,
+       project.gate_b_approved || 0,
+       project.gate_c_approved || 0]);
+  }
+  return getProject(psId);
+}
+
 function getProject(id) {
   return _get(`
     SELECT p.*, ps.gate_a_approved, ps.gate_b_approved, ps.gate_c_approved,
@@ -3107,6 +3146,7 @@ module.exports = {
   logSync,
   // Projects
   createProject,
+  createProjectFromSnapshot,
   getProject,
   getAllProjects,
   getKre8rProjects,
