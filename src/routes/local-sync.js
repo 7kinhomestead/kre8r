@@ -122,9 +122,19 @@ router.get('/test', async (req, res) => {
 // ── POST /api/local-sync/push ──────────────────────────────────────────────────
 router.post('/push', async (req, res) => {
   try {
-    // Build DB export — projects, beats, scripts, selects (no video files)
-    const projects   = db.getAllProjects()  || [];
-    const dbExport   = { projects, exported_at: new Date().toISOString() };
+    // Build DB export — projects + their approved scripts (no video files)
+    const projects = db.getAllProjects() || [];
+
+    // Attach approved writr scripts to each project so teleprompter works on pull
+    const writrScripts = [];
+    for (const p of projects) {
+      try {
+        const scripts = db.getWritrScriptsByProject(p.id) || [];
+        scripts.forEach(s => writrScripts.push(s));
+      } catch (_) {}
+    }
+
+    const dbExport = { projects, writr_scripts: writrScripts, exported_at: new Date().toISOString() };
 
     // Load creator profile
     let profile = null;
@@ -186,7 +196,8 @@ router.post('/import', (req, res) => {
     return res.status(400).json({ error: 'No projects in snapshot' });
   }
 
-  const incoming = snapshot.db_export.projects;
+  const incoming       = snapshot.db_export.projects      || [];
+  const incomingScript = snapshot.db_export.writr_scripts || [];
   let imported = 0;
   let skipped  = 0;
 
@@ -215,6 +226,14 @@ router.post('/import', (req, res) => {
       try {
         db.createProjectFromSnapshot(project);
         imported++;
+
+        // Import associated writr scripts so teleprompter works immediately
+        const scripts = incomingScript.filter(s => s.project_id === project.id);
+        for (const script of scripts) {
+          try {
+            db.insertWritrScript(script);
+          } catch (_) { /* non-fatal — project is imported even if script fails */ }
+        }
       } catch (innerErr) {
         log.warn({ module: 'local-sync', title: project.title, err: innerErr }, 'Skipped project on import');
         skipped++;

@@ -886,7 +886,8 @@ function createProjectFromSnapshot(project) {
                  'youtube_url', 'youtube_video_id', 'created_at', 'published_at',
                  'source', 'setup_depth', 'entry_point', 'story_structure',
                  'content_type', 'high_concept', 'estimated_duration_minutes',
-                 'pipr_complete', 'high_concept_angles', 'research_bundle_json',
+                 'pipr_complete', 'writr_complete', 'active_script_id',
+                 'high_concept_angles', 'research_bundle_json',
                  'vision_brief_json', 'director_notes'];
 
   const cols = safe.filter(c => knownCols.includes(c) && project[c] !== undefined);
