@@ -24,6 +24,9 @@ if (process.env.ELECTRON === 'true') {
   if (!process.env.CREATOR_PROFILE_PATH) {
     process.env.CREATOR_PROFILE_PATH = _path.join(_kre8rHome, 'creator-profile.json');
   }
+  // Reload .env from the user's AppData directory so saved settings
+  // (SYNC_SERVER_URL, SYNC_TOKEN, etc.) survive app restarts.
+  require('dotenv').config({ path: _path.join(_kre8rHome, '.env'), override: true });
 }
 
 // ─────────────────────────────────────────────
