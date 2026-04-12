@@ -238,15 +238,21 @@ router.post('/import', (req, res) => {
       const scripts = incomingScript.filter(s => s.project_id === project.id);
       for (const script of scripts) {
         try {
-          // Check if this script already exists (by project_id + approved + created_at)
-          const existing = db.getWritrScriptsByProject(project.id) || [];
-          const dup = existing.find(e =>
-            e.approved === script.approved &&
-            e.created_at === script.created_at
-          );
+          // Check if this script already exists by created_at timestamp
+          const existingScripts = db.getWritrScriptsByProject(project.id) || [];
+          const dup = existingScripts.find(e => e.created_at === script.created_at);
           if (!dup) {
             db.insertWritrScript(script);
             scriptsImported++;
+          }
+
+          // If this is an approved script, make sure the project knows it's writr_complete.
+          // Projects imported in earlier syncs may have writr_complete=0 even though
+          // the script now exists — this backfills that flag.
+          if (script.approved) {
+            try {
+              db.updateProjectWritr(project.id, { writr_complete: 1 });
+            } catch (_) {}
           }
         } catch (_) { /* non-fatal */ }
       }
