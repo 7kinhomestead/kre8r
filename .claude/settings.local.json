@@ -739,7 +739,8 @@
       "Bash(ls *.bat)",
       "Bash(tasklist /FI \"PID eq 30208\")",
       "Bash(powershell -command \"Get-Process -Id 30208 | Select-Object Name, Id, Path\")",
-      "Bash(powershell -command \"Stop-Process -Id 30208 -Force\")"
+      "Bash(powershell -command \"Stop-Process -Id 30208 -Force\")",
+      "Bash(findstr /i north)"
     ]
   }
 }

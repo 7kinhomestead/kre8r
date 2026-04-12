@@ -131,6 +131,12 @@ app.use('/auth', require('./src/routes/auth'));
 // ─────────────────────────────────────────────
 // KAJABI WEBHOOK — PUBLIC (no auth)
 // Must be mounted BEFORE the auth guard.
+// Tenant-scoped webhooks — public, no auth, slug routes to correct tenant data
+app.use('/api/tenant/:slug/webhook', require('./src/routes/tenant-webhook'));
+
+// Sync API — Bearer token auth per tenant
+app.use('/api/sync', require('./src/routes/sync'));
+
 // Kajabi calls /api/kajabi-webhook/receive from their servers.
 // ─────────────────────────────────────────────
 app.use('/api/kajabi-webhook', require('./src/routes/kajabi-webhook'));
@@ -607,6 +613,34 @@ async function start() {
   } catch (err) {
     console.error('[DB] Failed to initialize database:', err.message);
     process.exit(1);
+  }
+
+  // ── Auto-register first tenant from creator-profile.json ──────────────────
+  // On a fresh install (or first boot after multi-tenancy was added), create a
+  // tenant record for this instance so sync and tenant webhooks work immediately.
+  try {
+    const _db = require('./src/db');
+    const existing = _db.getAllTenants();
+    if (existing.length === 0) {
+      const crypto = require('crypto');
+      let slug = '7kin', name = 'Kre8Ωr Instance';
+      try {
+        const { loadProfile } = require('./src/utils/profile-validator');
+        const pr = loadProfile();
+        if (pr.ok) {
+          const brand = pr.profile?.creator?.brand || pr.profile?.creator?.name || 'instance';
+          slug = brand.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 32);
+          name = pr.profile?.creator?.name || name;
+        }
+      } catch (_) {}
+      const sync_token = crypto.randomBytes(32).toString('hex');
+      _db.createTenant({ tenant_slug: slug, display_name: name, sync_token, plan: 'solo' });
+      console.log(`[Sync] First tenant registered: ${slug}`);
+      console.log(`[Sync] Sync token: ${sync_token}`);
+      console.log(`[Sync] Save this token — it's your desktop app connection key.`);
+    }
+  } catch (tenantErr) {
+    console.warn('[Sync] Could not auto-register tenant (non-fatal):', tenantErr.message);
   }
 
   // Start VaultΩr folder watcher (non-fatal if intake folder missing)

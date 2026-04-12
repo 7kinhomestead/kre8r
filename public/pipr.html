@@ -239,6 +239,9 @@
   .ps-btn { padding: 9px 18px; border-radius: 7px; font-family: var(--font-body);
     font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.12s;
     border: 1px solid; white-space: nowrap; flex-shrink: 0; }
+  .ps-btn-complete { background: rgba(20,184,166,0.1); border-color: rgba(20,184,166,0.35);
+    color: var(--teal); }
+  .ps-btn-complete:hover { background: rgba(20,184,166,0.22); }
   .ps-btn-archive { background: rgba(180,130,20,0.1); border-color: rgba(200,150,40,0.35);
     color: var(--amber); }
   .ps-btn-archive:hover { background: rgba(180,130,20,0.22); }
@@ -265,6 +268,8 @@
     font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.12s; border: 1px solid; }
   .psc-ok.delete  { background: rgba(200,40,40,0.2); border-color: rgba(220,60,60,0.4); color: #f87171; }
   .psc-ok.delete:hover  { background: rgba(200,40,40,0.35); }
+  .psc-ok.complete { background: rgba(20,184,166,0.15); border-color: rgba(20,184,166,0.4); color: var(--teal); }
+  .psc-ok.complete:hover { background: rgba(20,184,166,0.28); }
   .psc-ok.archive { background: rgba(180,130,20,0.15); border-color: rgba(200,150,40,0.4); color: var(--amber); }
   .psc-ok.archive:hover { background: rgba(180,130,20,0.28); }
 </style>
@@ -851,6 +856,14 @@
 
   <div class="ps-section-label">Project</div>
   <div class="ps-card">
+    <div class="ps-card-text">
+      <h4>Mark as Complete</h4>
+      <p>This project is done and posted. Marks it complete across all tools — it won't appear as abandoned or mid-pipeline.</p>
+    </div>
+    <button class="ps-btn ps-btn-complete" onclick="psConfirmComplete()">✅ Mark Complete</button>
+  </div>
+
+  <div class="ps-card" style="margin-top:10px;">
     <div class="ps-card-text">
       <h4>Archive Project</h4>
       <p>Hides this project from the dashboard. Recoverable from the archived list.</p>
@@ -1750,6 +1763,17 @@ let _psCb = null;
     .catch(() => showToast('Could not load project'));
 })();
 
+function psConfirmComplete() {
+  _psCb = psDoComplete;
+  document.getElementById('psc-title').textContent = 'Mark this project complete?';
+  document.getElementById('psc-msg').textContent =
+    'This marks the project as done and posted. All tools will show it as complete — not abandoned. This cannot be undone.';
+  const ok = document.getElementById('psc-ok');
+  ok.className = 'psc-ok complete';
+  ok.textContent = 'Mark Complete';
+  document.getElementById('ps-confirm').classList.add('open');
+}
+
 function psConfirmArchive() {
   _psCb = psDoArchive;
   document.getElementById('psc-title').textContent = 'Archive this project?';
@@ -1782,6 +1806,15 @@ function pscRun() {
   const cb = _psCb;
   pscClose();
   if (cb) cb();
+}
+
+async function psDoComplete() {
+  try {
+    const r = await fetch(`/api/projects/${_psProjectId}/complete`, { method: 'PATCH' });
+    if (!r.ok) throw new Error();
+    showToast('Project marked complete ✅');
+    setTimeout(() => { window.location.href = '/index.html'; }, 900);
+  } catch { showToast('Could not mark complete — try again.'); }
 }
 
 async function psDoArchive() {

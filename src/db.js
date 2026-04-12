@@ -739,6 +739,41 @@ function runMigrations() {
 
   // No automatic seed — fresh installs start with an empty users table.
   // The first-run setup wizard (GET /setup, POST /setup-api) creates the owner account.
+
+  // ── Tenants (multi-tenancy sync + webhook routing) ─────────────────────────
+  // Each tenant = one creator instance. The local desktop install IS a tenant.
+  // On a hosted server, multiple tenants can share the same Express instance.
+  // tenant_slug: URL-safe identifier used in webhook URLs (/api/tenant/:slug/...)
+  // sync_token:  Bearer token the desktop app uses to push/pull data
+  // data_dir:    Absolute path to this tenant's data folder (db, profile, .env)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tenants (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_slug   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+      display_name  TEXT    NOT NULL,
+      sync_token    TEXT    NOT NULL UNIQUE,
+      data_dir      TEXT,
+      plan          TEXT    NOT NULL DEFAULT 'solo',
+      active        INTEGER NOT NULL DEFAULT 1,
+      created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_sync_at  TEXT
+    )
+  `);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_tenants_slug  ON tenants(tenant_slug)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_tenants_token ON tenants(sync_token)');
+
+  // ── Sync log — track push/pull events per tenant ───────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sync_log (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id   INTEGER NOT NULL REFERENCES tenants(id),
+      direction   TEXT    NOT NULL,  -- 'push' | 'pull'
+      payload_kb  REAL,
+      status      TEXT    NOT NULL DEFAULT 'ok',
+      error       TEXT,
+      synced_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -790,6 +825,40 @@ function updateUserPassword(id, passwordHash) {
 
 function deleteUser(id) {
   _run('DELETE FROM users WHERE id = ?', [id]);
+}
+
+// ─────────────────────────────────────────────
+// TENANT HELPERS
+// ─────────────────────────────────────────────
+
+function createTenant({ tenant_slug, display_name, sync_token, data_dir = null, plan = 'solo' }) {
+  return _run(
+    `INSERT INTO tenants (tenant_slug, display_name, sync_token, data_dir, plan) VALUES (?, ?, ?, ?, ?)`,
+    [tenant_slug, display_name, sync_token, data_dir, plan]
+  );
+}
+
+function getTenantBySlug(slug) {
+  return _get('SELECT * FROM tenants WHERE tenant_slug = ? AND active = 1', [slug]);
+}
+
+function getTenantByToken(token) {
+  return _get('SELECT * FROM tenants WHERE sync_token = ? AND active = 1', [token]);
+}
+
+function getAllTenants() {
+  return _all('SELECT * FROM tenants ORDER BY created_at DESC');
+}
+
+function updateTenantLastSync(id) {
+  _run('UPDATE tenants SET last_sync_at = CURRENT_TIMESTAMP WHERE id = ?', [id]);
+}
+
+function logSync(tenant_id, direction, payload_kb, status = 'ok', error = null) {
+  _run(
+    `INSERT INTO sync_log (tenant_id, direction, payload_kb, status, error) VALUES (?, ?, ?, ?, ?)`,
+    [tenant_id, direction, payload_kb || 0, status, error]
+  );
 }
 
 // ─────────────────────────────────────────────
@@ -3029,6 +3098,13 @@ module.exports = {
   createUser,
   updateUserPassword,
   deleteUser,
+  // Tenants
+  createTenant,
+  getTenantBySlug,
+  getTenantByToken,
+  getAllTenants,
+  updateTenantLastSync,
+  logSync,
   // Projects
   createProject,
   getProject,

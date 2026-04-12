@@ -104,9 +104,31 @@ router.patch('/:id/archive', (req, res) => {
 router.patch('/:id/complete', (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    if (!db.getProject(id)) return res.status(404).json({ error: 'Project not found' });
+    const project = db.getProject(id);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
     const { published_at } = req.body || {};
     db.markProjectComplete(id, published_at || null);
+
+    // Dismiss any existing stalled/pipeline alerts for this project
+    try {
+      const alerts = db.getAllAlerts();
+      alerts
+        .filter(a => !a.dismissed && a.message && a.message.includes(project.title))
+        .forEach(a => db.dismissAlert(a.id));
+    } catch (_) {}
+
+    // Create a NorthΩr celebration alert
+    try {
+      db.createAlert({
+        type:         `project_complete_${id}`,
+        severity:     'info',
+        title:        `Well done on completing "${project.title}"`,
+        message:      `That's a wrap. "${project.title}" is marked complete and out of the pipeline. Keep the momentum going — what's next?`,
+        action_url:   `/pipr.html`,
+        action_label: 'Start Next Project',
+      });
+    } catch (_) {}
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

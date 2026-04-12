@@ -861,7 +861,8 @@ function renderProjectsZone() {
 
   recent.forEach((p, i) => {
     const card = buildProjectCard(p, i);
-    if (p.gate_c_approved)          cols.complete.push(card);
+    if (p.current_stage === 'COMPLETE' || p.status === 'published' || p.gate_c_approved)
+                                       cols.complete.push(card);
     else if (projectNeedsAttention(p)) cols.awaiting.push(card);
     else                               cols.progress.push(card);
   });
