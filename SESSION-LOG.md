@@ -1,3 +1,50 @@
+# Session 35 — Cross-Device Sync Complete (2026-04-12)
+
+## Goal
+Complete SyncΩr — cross-device sync between desktop and laptop via kre8r.app.
+
+## What Was Built
+
+### SyncΩr infrastructure
+- `src/routes/local-sync.js` — local proxy route mounted at `/api/local-sync`
+  - GET /config — read stored server URL + token status
+  - POST /config — save to .env (token optional if already stored)
+  - GET /status — live connection test against remote server
+  - POST /push — export all local projects + creator profile → kre8r.app
+  - POST /pull — fetch latest snapshot from kre8r.app
+  - POST /import — non-destructive project import (skips existing IDs)
+- `public/sync.html` — full sync UI: server URL, token, test, push, pull, snapshot viewer, project import
+- `src/db.js` — added `createProjectFromSnapshot`: preserves original IDs, creates pipeline_state rows, handles extended columns safely
+- `server.js` — mounted `/api/local-sync` after auth guard
+- `public/js/nav.js` — added ⟳ Sync link to nav bar
+
+### Sync token recovery endpoint
+- `GET /api/sync/token` — operator endpoint to retrieve real sync tokens (for when startup log is gone)
+- Auth: requires OPERATOR_SECRET if set, open if not set (matches pattern of /register and /tenants)
+
+### Bug fixes
+- POST /config now allows URL-only updates without re-entering the token
+- Token endpoint auth logic fixed (was blocking when OPERATOR_SECRET not set)
+
+## End-to-End Test Results
+- Desktop pushed 320KB snapshot to kre8r.app ✅
+- Laptop installed new Electron build, pulled snapshot ✅
+- 204 projects visible in snapshot (non-archived only — getAllProjects filters archived) ✅
+- Status field preserved on import — archived stays archived, active stays active ✅
+- **Cross-device sync fully operational** ✅
+
+## Commits
+- `7c65eca` — Add SyncΩr — cross-device sync UI and local proxy route
+- `79bb229` — Add /api/sync/token endpoint for operator token recovery
+- `9df4388` — Fix sync/token auth: allow access when OPERATOR_SECRET not set
+
+## Status at End of Session
+- Desktop ↔ kre8r.app ↔ Laptop sync: WORKING ✅
+- Laptop installer built and installed ✅
+- All sync work deployed to kre8r.app ✅
+
+---
+
 # Session 34 — ABI Conflict Attempt, Mailerlite Import Fix (2026-04-11)
 
 ## Goal

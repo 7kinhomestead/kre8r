@@ -28,24 +28,28 @@ Setup wizard on first run (no more hardcoded credentials). Installer: `npm run d
 
 ---
 
-## ✅ Mailerlite Integration — DONE Session 33
+## ✅ Mailerlite Integration — DONE Sessions 33–34
 
 Full email pipeline: AudiencΩr rebuilt, MailΩr send button live, Kajabi webhook receiver built.
-
-**Confirmed working:**
-- `src/routes/mailerlite.js` — status, groups/sync, send, stats endpoints
-- AudiencΩr rebuilt: Groups tab (live counts), Campaigns tab (open/click rates)
-- MailΩr: Mailerlite send button (per-tier audience selection)
-- Kajabi webhook receiver at `/api/kajabi-webhook/receive` (public, always 200)
+CSV import working (RFC 4180 parser, batch upload). 272 Greenhouse members confirmed imported.
 
 **Still needed:**
-- [ ] CSV import broken — Mailerlite `/subscribers/import` needs file upload, switched to `POST /subscribers` individual upserts (Session 34) but not yet confirmed working — needs server restart + retest
-- [ ] CSV parser in audience.html does simple `split(',')` — breaks on Kajabi's quoted fields (addresses, tags with commas). Needs a proper CSV parser.
-- [ ] Webhook localhost detection — AudiencΩr webhook tab should show "use CSV import instead" when running on localhost, not the webhook URL
-- [ ] Webhook group/keyword mapping — discuss with Jason: which Kajabi product names/keywords map to which Mailerlite groups. Currently: "Garden"/"$19" → Garden, "Founding"/"$297" → Founding 50, else Greenhouse.
-- [ ] Deploy Mailerlite + webhook code to DigitalOcean (not yet pushed)
-- [ ] Add Kajabi webhook URL to Kajabi settings (needs DO deploy first)
+- [ ] Webhook localhost detection — AudiencΩr webhook tab should show "use CSV import instead" when running on localhost
 - [ ] Cancel Kajabi API subscription ($25/mo — was only pulling 25 contacts, no broadcast endpoint)
+
+## ✅ Cross-Device Sync — DONE Session 35
+
+SyncΩr fully operational. Desktop pushes to kre8r.app, laptop pulls and imports.
+
+- `src/routes/local-sync.js` — local proxy (config, push, pull, import)
+- `public/sync.html` — full sync UI with snapshot viewer
+- `src/db.js` — createProjectFromSnapshot (non-destructive, ID-preserving)
+- `/api/sync/token` — operator token recovery endpoint
+- Desktop → kre8r.app → Laptop confirmed working end-to-end ✅
+
+**Still needed:**
+- [ ] Build new laptop installer when new features are added (`npm run dist:win`)
+- [ ] Project export between machines (full project package with footage refs) — listed for future
 
 ---
 
