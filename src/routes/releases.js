@@ -83,17 +83,30 @@ router.get('/latest', (req, res) => {
     const raw     = fs.readFileSync(ymlPath, 'utf8');
     const version = (raw.match(/^version:\s*(.+)$/m) || [])[1]?.trim() || 'unknown';
     const date    = (raw.match(/^releaseDate:\s*(.+)$/m) || [])[1]?.trim() || null;
-    // Find filename from the yml
-    const fname   = (raw.match(/url:\s*(.+\.exe)/m) || [])[1]?.trim() || null;
     res.json({
-      available:    true,
+      available:   true,
       version,
-      releaseDate:  date,
-      downloadUrl:  fname ? `/downloads/${fname}` : null,
+      releaseDate: date,
+      // Always use the proxy download endpoint — avoids Unicode/space URL issues
+      downloadUrl: '/api/releases/download',
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── GET /api/releases/download ─────────────────────────────────────────────────
+// Streams the installer file — sidesteps Unicode/space filename URL problems.
+router.get('/download', (req, res) => {
+  const files = fs.readdirSync(DOWNLOADS_DIR);
+  const exe   = files.find(f => f.endsWith('.exe') && !f.endsWith('.blockmap'));
+  if (!exe) {
+    return res.status(404).json({ error: 'No installer available' });
+  }
+  const filePath = path.join(DOWNLOADS_DIR, exe);
+  res.setHeader('Content-Disposition', `attachment; filename="Kre8r-Setup.exe"`);
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.sendFile(filePath);
 });
 
 module.exports = router;
