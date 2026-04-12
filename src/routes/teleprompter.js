@@ -120,6 +120,49 @@ router.get('/network-info', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// FIELD MODE — temporary script store
+// Phone scans QR → fetches script by code → auto-starts solo mode
+// No laptop IP needed — works anywhere with cell data
+// ─────────────────────────────────────────────
+
+const fieldScripts = new Map(); // code → { text, projectName, createdAt }
+
+function generateFieldCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // omit 0/O/1/I for readability
+  let code;
+  do {
+    code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  } while (fieldScripts.has(code));
+  return code;
+}
+
+// Clean up expired field scripts every 30 minutes (TTL = 24h)
+setInterval(() => {
+  const cutoff = Date.now() - 86_400_000;
+  for (const [code, entry] of fieldScripts) {
+    if (entry.createdAt < cutoff) fieldScripts.delete(code);
+  }
+}, 1_800_000);
+
+// POST /api/teleprompter/field-script
+router.post('/field-script', (req, res) => {
+  const { text, projectName } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ ok: false, error: 'text is required' });
+  const code = generateFieldCode();
+  fieldScripts.set(code, { text: text.trim(), projectName: projectName || 'Script', createdAt: Date.now() });
+  console.log(`[TeleprΩmpter] Field script stored: ${code} (${text.length} chars)`);
+  res.json({ ok: true, code });
+});
+
+// GET /api/teleprompter/field-script/:code
+router.get('/field-script/:code', (req, res) => {
+  const code  = (req.params.code || '').toUpperCase();
+  const entry = fieldScripts.get(code);
+  if (!entry) return res.status(404).json({ ok: false, error: 'Field script not found or expired. Generate a new QR from the laptop.' });
+  res.json({ ok: true, text: entry.text, projectName: entry.projectName });
+});
+
+// ─────────────────────────────────────────────
 // WEBSOCKET SESSION STORE
 // Map<sessionCode, { displays, controls, state, title, projectId }>
 // ─────────────────────────────────────────────
