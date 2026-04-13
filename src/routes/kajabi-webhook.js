@@ -457,11 +457,8 @@ Return ONLY valid JSON in this exact shape:
   "body": "<p>...</p><p>...</p>"
 }`;
 
-    const raw     = await callClaude(prompt, 1024);
-    const match   = raw.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('Claude returned no JSON');
-    const parsed  = JSON.parse(match[0]);
-    if (!parsed.subject || !parsed.body) throw new Error('Claude response missing subject or body');
+    const parsed  = await callClaude(prompt, 1024);
+    if (!parsed?.subject || !parsed?.body) throw new Error('Claude response missing subject or body');
 
     res.json({ ok: true, tier, subject: parsed.subject, body: parsed.body });
   } catch (err) {
