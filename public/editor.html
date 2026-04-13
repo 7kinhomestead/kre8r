@@ -542,6 +542,8 @@ async function installWhisper() {
 async function init() {
   checkDeps(); // fire and forget — don't block project load
 
+  await loadProjects();
+
   const params = new URLSearchParams(window.location.search);
   const pid = params.get('project_id');
   if (pid) {
