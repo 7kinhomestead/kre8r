@@ -28,14 +28,19 @@ Setup wizard on first run (no more hardcoded credentials). Installer: `npm run d
 
 ---
 
-## ✅ Mailerlite Integration — DONE Sessions 33–34
+## ✅ Mailerlite Integration — DONE Sessions 33–34, 37
 
 Full email pipeline: AudiencΩr rebuilt, MailΩr send button live, Kajabi webhook receiver built.
 CSV import working (RFC 4180 parser, batch upload). 272 Greenhouse members confirmed imported.
+Kajabi webhook → Mailerlite group add confirmed working on DO server (Session 37).
+Group subscriber counts fixed (active_count not total). Welcome email templates armed.
 
 **Still needed:**
 - [ ] Webhook localhost detection — AudiencΩr webhook tab should show "use CSV import instead" when running on localhost
 - [ ] Cancel Kajabi API subscription ($25/mo — was only pulling 25 contacts, no broadcast endpoint)
+- [ ] Persistent session store — express-session loses sessions on every server restart
+- [ ] Welcome emails — set up Mailerlite automations (trigger: subscriber joins group) for each tier
+- [ ] Test Fire in Welcome Emails tab — currently fails (Mailerlite transactional API not on plan), replace with HTML preview
 
 ## ✅ Cross-Device Sync — DONE Session 35
 
@@ -427,6 +432,19 @@ pm2 logs kre8r          # live server logs
 pm2 restart kre8r       # after pulling code changes
 pm2 save                # save process list after any pm2 changes
 ```
+
+---
+
+## TeleprΩmpter — Known Issues (Session 36)
+
+- [ ] **Solo tab crashes the app** — clicking Cloud Launch from the Solo tab fails and breaks
+      the teleprompter entirely. Requires full app restart to recover. Solo tab needs its own
+      Cloud Launch path or Cloud Launch should be disabled/hidden when Solo tab is active.
+
+- [ ] **No way back from display screen** — once the teleprompter starts there is no back button
+      or escape route. The only option is the "📋 Scripts" button in the controls overlay but
+      controls are hidden by default. Add a persistent back/exit button or make controls always
+      visible for the first few seconds. Closing the app and restarting should not be required.
 
 ---
 

@@ -1,3 +1,48 @@
+# Session 37 — Email Automation + Teleprompter Field Mode (2026-04-13)
+
+## Goal
+Wire Kajabi webhook → Mailerlite group sync, build welcome email automation, fix teleprompter cloud launch for field use without shared WiFi.
+
+## What Was Built
+
+### Teleprompter Field Mode (Cloud Launch)
+- `public/teleprompter.html` — Cloud Launch button replaces "Generate Field QR"
+- `launchViaCloud()` — POSTs script to teleprompter.kre8r.app, sets cloudLaunchActive flag
+- `connectDisplayWS()` — uses `wss://teleprompter.kre8r.app` when cloudLaunchActive
+- `updateQRForSession()` — QR codes now use module-level `base` (cloud domain when cloud active)
+- `VOICE_BASE = 1.5` — independent voice scroll speed constant, decoupled from display speed slider
+- `src/routes/teleprompter.js` — in-memory fieldScripts Map, 6-char code, 24h TTL, auth-bypassed on subdomain
+- Versions 1.0.1–1.0.6 shipped via auto-updater
+
+### Welcome Email Automation
+- `src/routes/kajabi-webhook.js` — `fireWelcomeEmail()` wired into `/receive` after Mailerlite sync
+- Template CRUD: `GET/POST /welcome-email/:tier`, `POST /welcome-email/:tier/generate`, `POST /welcome-email/test`
+- Claude generates tier-specific welcome copy from creator-profile.json voice
+- `public/audience.html` — Welcome Emails tab: per-tier armed/unarmed status, Generate + Edit + Test Fire
+- Note: Mailerlite transactional API not available on current plan — welcome emails via Mailerlite automations instead
+
+### Mailerlite Group Counts Fix
+- `src/routes/mailerlite.js` — fixed `g.total` → `g.active_count` (Mailerlite API returns active_count not total)
+- Group cards in AudiencΩr now show real subscriber counts
+
+### DO Server Configuration
+- `creator-profile.json` created on DO server (was gitignored, never existed there)
+- `MAILERLITE_API_KEY` added to DO server .env
+- Kajabi webhook → Mailerlite group add confirmed working end-to-end
+
+## Bugs Fixed
+- `callClaude` destructure moved to top-level require (not inside async handler)
+- `callClaude` returns parsed object — removed redundant `raw.match()` + `JSON.parse()`
+- Releases endpoint sorted descending so newest installer serves first
+- Voice scroll speed decoupled from display speed slider (VOICE_BASE constant)
+
+## Known Issues (carried forward)
+- Mailerlite transactional API unavailable — Test Fire fails, use Mailerlite automations for welcome emails
+- Session lost on every server restart (express-session in-memory) — needs persistent session store
+- Desktop app shows Mailerlite group counts as 0 until local server restarted after fix deployment
+
+---
+
 # Session 35 — Cross-Device Sync Complete (2026-04-12)
 
 ## Goal
