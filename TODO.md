@@ -58,6 +58,33 @@ SyncΩr fully operational. Desktop pushes to kre8r.app, laptop pulls and imports
 
 ---
 
+## 🔴 V1 MUST-HAVE — Idea Vault (Id8Ωr persistent idea log)
+
+**The gap:** Right now, an idea only survives in the system if it gets taken all the way to a
+PipΩr project. Anything explored in Id8Ωr but not immediately produced gets flushed with the
+session cache. Every serious creator has a notebook or folder full of raw ideas — Kre8Ωr has
+no equivalent. This is a V1 blocker.
+
+**What it is:** A persistent, searchable database of raw ideas that live *before* projects.
+Not a project. Not a brief. Just the seed — a title, a concept, maybe an angle or a hook —
+captured and kept.
+
+**How it should work:**
+- Id8Ωr gets a new mode / sidebar: "Idea Log" — a running list of all saved ideas
+- Creator can say "save this idea" at any point during an Id8Ωr conversation → idea is
+  captured with: title, core concept, content angle, date, optional notes
+- Can also bulk-enter ideas: "I have these 23 ideas" → Id8Ωr parses and logs them all
+- Idea log is viewable as a scrollable list and searchable by keyword / angle / date
+- Any idea in the log can be promoted to a full Id8Ωr deep-dive or directly to a PipΩr project
+  with one click — pulling all the captured context forward
+- Ideas never expire, never flush, never require a project to survive
+
+**DB:** New `ideas` table — id, title, concept, angle, notes, status ('raw'|'in_development'|'produced'), created_at
+**UI:** New panel/tab in Id8Ωr — list view with search, save button in active sessions, bulk entry mode
+**Integration:** "Promote to Project" button on each idea → pre-fills PipΩr with idea context
+
+---
+
 ## PHASE 1 — Feature & Polish (before packaging anything)
 *Get the app right before wrapping it. ~3-4 sessions.*
 
