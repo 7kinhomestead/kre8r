@@ -9,11 +9,12 @@
  * GET  /api/kajabi-webhook/config   — auth-protected config + recent log
  */
 
-const express = require('express');
-const router  = express.Router();
-const fs      = require('fs');
-const path    = require('path');
-const log     = require('../utils/logger');
+const express              = require('express');
+const router               = express.Router();
+const fs                   = require('fs');
+const path                 = require('path');
+const log                  = require('../utils/logger');
+const { callClaude }       = require('../utils/claude');
 
 const ML_BASE = 'https://connect.mailerlite.com/api';
 
@@ -426,7 +427,6 @@ router.post('/welcome-email/:tier/generate', async (req, res) => {
   if (!VALID_TIERS.includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
 
   try {
-    const { callClaude } = require('../utils/claude');
     const profile    = loadProfile();
 
     const tierNames = { greenhouse: 'The Greenhouse (free)', garden: 'The Garden ($19/mo)', founding50: 'The Founding 50 ($297 one-time)' };
