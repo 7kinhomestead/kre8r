@@ -37,9 +37,6 @@ const crypto    = require('crypto');
 const db = require('../db');
 
 const WHISPER_MODEL  = process.env.WHISPER_MODEL  || 'medium';
-// Models dir — in Electron, set to userData/models so models are stored per-user
-// and survive app updates. Falls back to Whisper's default (~/.cache/whisper).
-const WHISPER_MODELS_DIR = process.env.WHISPER_MODELS_DIR || null;
 const TRANSCRIPTS_DIR = path.join(__dirname, '..', '..', 'database', 'transcripts');
 
 // Binary detection — cached after first successful probe
@@ -163,8 +160,6 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
       '--word_timestamps', 'True',
       '--output_dir',      TRANSCRIPTS_DIR,
       '--verbose',         'False',
-      // Store downloaded models in Electron userData/models/ if configured
-      ...(WHISPER_MODELS_DIR ? ['--download_root', WHISPER_MODELS_DIR] : []),
     ];
 
     onProgress?.({ stage: 'whisper_start', model: modelToUse, file: path.basename(filePath) });

@@ -224,7 +224,7 @@ async function buildAssembly(projectId, onProgress) {
   const hasBeatMap = beats.length > 0;
   emit({ event: 'status', message: hasBeatMap
     ? `Beat map loaded: ${beats.length} beats (${piprConfig.story_structure || 'custom'})`
-    : 'No beat map found — will use freeform assembly'
+    : `No beat map found (project ID: ${projectId}) — will use freeform assembly`
   });
 
   // ── 2. Load footage, sorted chronologically ──────────────────────────────
