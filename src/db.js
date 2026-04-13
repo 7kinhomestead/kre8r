@@ -374,6 +374,28 @@ function runMigrations() {
     }
   }
 
+  // Fix: CSV-imported projects that landed with source='kre8r' because createImportProject
+  // didn't set source yet. Identify them by current_stage='PUBLISHED' and no pipr_complete.
+  // Only fix non-YouTube ones (youtube_video_id is null) since YouTube ones are handled above.
+  {
+    const platforms = ['tiktok', 'instagram', 'facebook'];
+    for (const p of platforms) {
+      const fixed = db.prepare(`
+        UPDATE projects
+        SET source = '${p}_import'
+        WHERE current_stage = 'PUBLISHED'
+          AND source = 'kre8r'
+          AND youtube_video_id IS NULL
+          AND id IN (
+            SELECT DISTINCT project_id FROM posts WHERE platform = '${p}'
+          )
+      `).run();
+      if (fixed.changes > 0) {
+        console.log('[DB] Migration: re-stamped ' + fixed.changes + ' ' + p + ' CSV-import projects');
+      }
+    }
+  }
+
   // AnalΩzr: kv_store — generic key/value cache (channel DNA clusters, profiles, etc.)
   db.exec(`CREATE TABLE IF NOT EXISTS kv_store (
     key        TEXT PRIMARY KEY,
@@ -445,6 +467,36 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_token_tool    ON token_usage(tool)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_token_session ON token_usage(session_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_token_created ON token_usage(created_at)');
+
+  // SequenceΩr — email nurture/onboarding sequence builder
+  db.exec(`CREATE TABLE IF NOT EXISTS email_sequences (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    name             TEXT,
+    goal_type        TEXT    NOT NULL DEFAULT 'onboard',
+    goal_description TEXT,
+    audience         TEXT,
+    email_count      INTEGER NOT NULL DEFAULT 5,
+    timeframe_days   INTEGER NOT NULL DEFAULT 14,
+    voice_profile    TEXT,
+    chat_history     TEXT    NOT NULL DEFAULT '[]',
+    plan             TEXT,
+    status           TEXT    NOT NULL DEFAULT 'planning',
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS sequence_emails (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    sequence_id  INTEGER NOT NULL REFERENCES email_sequences(id) ON DELETE CASCADE,
+    position     INTEGER NOT NULL,
+    subject      TEXT,
+    body         TEXT,
+    send_day     INTEGER NOT NULL DEFAULT 0,
+    purpose      TEXT,
+    revised_at   DATETIME,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_seq_emails_seq ON sequence_emails(sequence_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_email_seq_created ON email_sequences(created_at)');
 
   // ShowΩr: shows + show_episodes + show_notifications tables
   db.exec(`CREATE TABLE IF NOT EXISTS shows (
@@ -867,11 +919,11 @@ function logSync(tenant_id, direction, payload_kb, status = 'ok', error = null) 
 
 function createProject(title, topic, youtubeUrl, youtubeVideoId) {
   const result = _run(
-    `INSERT INTO projects (title, topic, youtube_url, youtube_video_id) VALUES (?, ?, ?, ?)`,
+    `INSERT INTO projects (title, topic, youtube_url, youtube_video_id, current_stage) VALUES (?, ?, ?, ?, 'M0.1')`,
     [title || 'Untitled', topic || null, youtubeUrl || null, youtubeVideoId || null]
   );
   const projectId = result.lastInsertRowid;
-  _run(`INSERT INTO pipeline_state (project_id) VALUES (?)`, [projectId]);
+  _run(`INSERT INTO pipeline_state (project_id, current_stage) VALUES (?, 'M0.1')`, [projectId]);
   return getProject(projectId);
 }
 
@@ -943,8 +995,8 @@ function getAllProjects() {
   `);
 }
 
-// Native Kre8Ωr projects only — excludes youtube_import.
-// Use this everywhere EXCEPT MirrΩr which needs the full YouTube history.
+// Native Kre8Ωr projects only — excludes all platform imports (youtube, tiktok, instagram, facebook).
+// Use this everywhere EXCEPT MirrΩr which needs the full import history.
 function getKre8rProjects() {
   return _all(`
     SELECT p.*, ps.gate_a_approved, ps.gate_b_approved, ps.gate_c_approved,
@@ -958,7 +1010,8 @@ function getKre8rProjects() {
            (SELECT COUNT(*) FROM footage WHERE project_id = p.id) as footage_count
     FROM projects p
     LEFT JOIN pipeline_state ps ON ps.project_id = p.id
-    WHERE p.status != 'archived' AND p.source != 'youtube_import'
+    WHERE p.status != 'archived'
+      AND p.source NOT IN ('youtube_import', 'tiktok_import', 'instagram_import', 'facebook_import')
     ORDER BY p.created_at DESC
   `);
 }
@@ -1556,6 +1609,62 @@ function getPostsByProject(projectId) {
   return _all(`SELECT * FROM posts WHERE project_id = ? ORDER BY posted_at DESC, created_at DESC`, [projectId]);
 }
 
+// Analytics CSV import helpers ─────────────────────────────────────────────────
+function getPostByUrl(url) {
+  if (!url) return null;
+  return _get(`SELECT * FROM posts WHERE url = ? LIMIT 1`, [url]);
+}
+
+function getPostByProjectAndPlatform(projectId, platform) {
+  return _get(`SELECT * FROM posts WHERE project_id = ? AND platform = ? LIMIT 1`, [projectId, platform]);
+}
+
+function getProjectByYouTubeVideoId(videoId) {
+  if (!videoId) return null;
+  return _get(`SELECT * FROM projects WHERE youtube_video_id = ? LIMIT 1`, [videoId]);
+}
+
+// Create a lightweight project record for a CSV-imported video.
+// source = 'tiktok_import' | 'instagram_import' | 'facebook_import' | 'youtube_import'
+function createImportProject({ title, platform, published_at, url, youtube_video_id }) {
+  const source = `${platform}_import`;
+  // Truncate title to 200 chars — TikTok captions can be huge
+  const safeTitle = (title || `${platform} import`).slice(0, 200).trim() || `${platform} import`;
+  const result = _run(
+    `INSERT INTO projects (title, status, current_stage, source, published_at, youtube_url, youtube_video_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      safeTitle,
+      'published',
+      'PUBLISHED',
+      source,
+      published_at || null,
+      platform === 'youtube' ? (url || null) : null,
+      youtube_video_id || null,
+    ]
+  );
+  return result.lastInsertRowid;
+}
+
+// Create a post record tied to an import project.
+function createImportPost({ projectId, platform, content, posted_at, url, format, duration_seconds, platform_post_id }) {
+  const result = _run(
+    `INSERT INTO posts (project_id, platform, content, posted_at, url, status, format, duration_seconds, post_id)
+     VALUES (?, ?, ?, ?, ?, 'posted', ?, ?, ?)`,
+    [
+      projectId,
+      platform,
+      (content || '').slice(0, 2000) || null,
+      posted_at  || null,
+      url        || null,
+      format     || null,
+      duration_seconds != null ? duration_seconds : null,
+      platform_post_id || null,
+    ]
+  );
+  return result.lastInsertRowid;
+}
+
 function updatePost(id, fields) {
   const allowed = ['status', 'posted_at', 'post_id', 'url', 'error_message', 'angle', 'content', 'media_path', 'format', 'duration_seconds'];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
@@ -1667,45 +1776,76 @@ function getAnalyticsSummary(projectId) {
 // ANALYTΩR — Global helpers
 // ─────────────────────────────────────────────
 
-function getGlobalChannelHealth() {
-  // All queries exclude archived projects — archived kre8r duplicates must not inflate totals
-  const totalViews = _get(
-    `SELECT COALESCE(SUM(a.metric_value),0) as n
-     FROM analytics a
-     JOIN posts po ON po.id = a.post_id
-     JOIN projects pr ON pr.id = po.project_id
-     WHERE a.metric_name = 'views' AND pr.status != 'archived'`
+// Returns TikTok posts with aggregated metrics, excluding #onthisday reposts.
+// Used by the TikTok Pattern Analysis feature in MirrΩr.
+function getTikTokPostsForAnalysis() {
+  return _all(
+    `SELECT po.id, po.content, po.url, po.posted_at,
+       COALESCE(SUM(CASE WHEN a.metric_name='views'         THEN a.metric_value ELSE 0 END), 0) as views,
+       COALESCE(SUM(CASE WHEN a.metric_name='likes'         THEN a.metric_value ELSE 0 END), 0) as likes,
+       COALESCE(SUM(CASE WHEN a.metric_name='comment_count' THEN a.metric_value ELSE 0 END), 0) as comments,
+       COALESCE(SUM(CASE WHEN a.metric_name='shares'        THEN a.metric_value ELSE 0 END), 0) as shares
+     FROM posts po
+     LEFT JOIN analytics a ON a.post_id = po.id
+     WHERE po.platform = 'tiktok'
+       AND (po.content IS NULL OR LOWER(po.content) NOT LIKE '%#onthisday%')
+     GROUP BY po.id
+     HAVING views > 0 OR po.content IS NOT NULL
+     ORDER BY views DESC`
   );
-  const avgViews = _get(
-    `SELECT COALESCE(AVG(v),0) as n FROM (
-       SELECT SUM(a.metric_value) as v
+}
+
+function getGlobalChannelHealth() {
+  // Per-platform stats — keeps YouTube and TikTok numbers separate so they don't
+  // corrupt each other (TikTok views are 10-100x YouTube, completely different scale).
+  const PLATFORMS = ['youtube', 'tiktok', 'instagram', 'facebook'];
+
+  const byPlatform = {};
+  for (const plat of PLATFORMS) {
+    const total = _get(
+      `SELECT COALESCE(SUM(a.metric_value),0) as n
        FROM analytics a
        JOIN posts po ON po.id = a.post_id
        JOIN projects pr ON pr.id = po.project_id
-       WHERE a.metric_name = 'views' AND pr.status != 'archived'
-       GROUP BY a.project_id
-     )`
-  );
-  const bestVideo = _get(
-    `SELECT pr.id, pr.title, pr.topic, po.platform, po.url, a.metric_value as views
-     FROM analytics a
-     JOIN posts po ON po.id = a.post_id
-     JOIN projects pr ON pr.id = po.project_id
-     WHERE a.metric_name = 'views' AND pr.status != 'archived'
-     ORDER BY a.metric_value DESC LIMIT 1`
-  );
-  const totalVideos = _get(
-    `SELECT COUNT(*) as n FROM projects WHERE status != 'archived'`
-  );
-  const topAngle = _get(
-    `SELECT pr.topic, COUNT(*) as n
-     FROM projects pr
-     JOIN posts po ON po.project_id = pr.id
-     JOIN analytics a ON a.post_id = po.id
-     WHERE a.metric_name = 'views' AND a.metric_value > 0
-       AND pr.topic IS NOT NULL AND pr.status != 'archived'
-     GROUP BY pr.topic ORDER BY SUM(a.metric_value) DESC LIMIT 1`
-  );
+       WHERE a.metric_name = 'views' AND po.platform = ? AND pr.status != 'archived'`,
+      [plat]
+    );
+    const avg = _get(
+      `SELECT COALESCE(AVG(v),0) as n FROM (
+         SELECT SUM(a.metric_value) as v
+         FROM analytics a
+         JOIN posts po ON po.id = a.post_id
+         JOIN projects pr ON pr.id = po.project_id
+         WHERE a.metric_name = 'views' AND po.platform = ? AND pr.status != 'archived'
+         GROUP BY a.project_id
+       )`,
+      [plat]
+    );
+    const best = _get(
+      `SELECT pr.id, pr.title, po.url, a.metric_value as views
+       FROM analytics a
+       JOIN posts po ON po.id = a.post_id
+       JOIN projects pr ON pr.id = po.project_id
+       WHERE a.metric_name = 'views' AND po.platform = ? AND pr.status != 'archived'
+       ORDER BY a.metric_value DESC LIMIT 1`,
+      [plat]
+    );
+    const count = _get(
+      `SELECT COUNT(DISTINCT pr.id) as n
+       FROM projects pr
+       JOIN posts po ON po.project_id = pr.id
+       WHERE po.platform = ? AND pr.status != 'archived'`,
+      [plat]
+    );
+    byPlatform[plat] = {
+      total_views: total?.n || 0,
+      avg_views:   Math.round(avg?.n || 0),
+      best_video:  best || null,
+      count:       count?.n || 0,
+    };
+  }
+
+  // YouTube-specific: longform avg + format breakdown (unchanged — strategy engine uses these)
   const longformAvg = _get(
     `SELECT COALESCE(AVG(a.metric_value), 0) as n
      FROM analytics a
@@ -1726,14 +1866,32 @@ function getGlobalChannelHealth() {
   const fmtBreakdown = { longform: 0, standard: 0, micro: 0, short: 0, live: 0 };
   for (const row of formatCounts) fmtBreakdown[row.fmt] = row.n;
 
+  // Top topic (YouTube only — same query strategy engine already uses)
+  const topAngle = _get(
+    `SELECT pr.topic, COUNT(*) as n
+     FROM projects pr
+     JOIN posts po ON po.project_id = pr.id
+     JOIN analytics a ON a.post_id = po.id
+     WHERE a.metric_name = 'views' AND a.metric_value > 0
+       AND po.platform = 'youtube'
+       AND pr.topic IS NOT NULL AND pr.status != 'archived'
+     GROUP BY pr.topic ORDER BY SUM(a.metric_value) DESC LIMIT 1`
+  );
+
+  // Cross-platform totals (for dashboard headline numbers)
+  const totalVideos = _get(`SELECT COUNT(*) as n FROM projects WHERE status != 'archived'`);
+
   return {
-    total_views:          totalViews?.n  || 0,
-    avg_views:            Math.round(avgViews?.n || 0),
-    longform_avg_views:   Math.round(longformAvg?.n || 0),
-    best_video:           bestVideo      || null,
-    total_videos:         totalVideos?.n || 0,
-    top_topic:            topAngle?.topic || null,
-    format_breakdown:     fmtBreakdown,
+    // Legacy fields — keep for backward compat with strategy engine + existing MirrΩr calls
+    total_views:        byPlatform.youtube.total_views,   // YouTube only (was always YouTube)
+    avg_views:          byPlatform.youtube.avg_views,
+    longform_avg_views: Math.round(longformAvg?.n || 0),
+    best_video:         byPlatform.youtube.best_video,
+    total_videos:       totalVideos?.n || 0,
+    top_topic:          topAngle?.topic || null,
+    format_breakdown:   fmtBreakdown,
+    // New: per-platform breakdown for MirrΩr multi-platform display
+    by_platform:        byPlatform,
   };
 }
 
@@ -1754,6 +1912,7 @@ function getRecentProjectsWithAnalytics(limit = 10) {
         WHERE po.project_id = pr.id AND a.metric_name = 'likes') as total_likes
      FROM projects pr
      WHERE pr.status != 'archived'
+       AND (pr.source IS NULL OR pr.source NOT IN ('youtube_import','tiktok_import','instagram_import','facebook_import'))
      ORDER BY
        (SELECT MAX(po.posted_at) FROM posts po WHERE po.project_id = pr.id) DESC,
        pr.created_at DESC
@@ -2840,7 +2999,7 @@ function getPublishingStats(days = 30) {
     JOIN projects pr ON pr.id = po.project_id
     WHERE po.status = 'posted'
       AND po.posted_at IS NOT NULL
-      AND (pr.source IS NULL OR pr.source != 'youtube_import')
+      AND (pr.source IS NULL OR pr.source NOT IN ('youtube_import','tiktok_import','instagram_import','facebook_import'))
   `);
 
   const daysSinceLastPublish = lastPost?.last_publish
@@ -2874,7 +3033,8 @@ function getPipelineHealth() {
     `SELECT p.id, p.title, p.current_stage, p.created_at, p.status, ps.updated_at, ps.stage_status
      FROM projects p
      LEFT JOIN pipeline_state ps ON ps.project_id = p.id
-     WHERE p.status NOT IN ('published', 'archived') AND p.source != 'youtube_import'
+     WHERE p.status NOT IN ('published', 'archived')
+       AND (p.source IS NULL OR p.source NOT IN ('youtube_import','tiktok_import','instagram_import','facebook_import'))
      ORDER BY p.created_at DESC`
   );
 
@@ -3227,11 +3387,18 @@ module.exports = {
   getYouTubeFormats,
   countImportedProjects,
   upsertMetric,
+  // Analytics CSV import
+  getPostByUrl,
+  getPostByProjectAndPlatform,
+  getProjectByYouTubeVideoId,
+  createImportProject,
+  createImportPost,
   getAnalyticsByPost,
   getAnalyticsByProject,
   getAnalyticsSummary,
   getGlobalChannelHealth,
   getRecentProjectsWithAnalytics,
+  getTikTokPostsForAnalysis,
   // ComposΩr
   insertComposorTrack,
   updateComposorTrack,
@@ -3338,4 +3505,79 @@ module.exports = {
   getVideosByMonth,
   getPublishingStats,
   getPipelineHealth,
+  // SequenceΩr
+  createEmailSequence,
+  getEmailSequence,
+  getAllEmailSequences,
+  updateEmailSequence,
+  deleteEmailSequence,
+  upsertSequenceEmail,
+  getSequenceEmails,
+  deleteSequenceEmails,
 };
+
+// ─────────────────────────────────────────────
+// SequenceΩr — email sequence builder
+// ─────────────────────────────────────────────
+
+function createEmailSequence({ name, goal_type, goal_description, audience, email_count, timeframe_days, voice_profile }) {
+  const result = _run(
+    `INSERT INTO email_sequences (name, goal_type, goal_description, audience, email_count, timeframe_days, voice_profile)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [name || null, goal_type || 'onboard', goal_description || null, audience || null,
+     email_count || 5, timeframe_days || 14, voice_profile || null]
+  );
+  return _get('SELECT * FROM email_sequences WHERE id = ?', [result.lastInsertRowid]);
+}
+
+function getEmailSequence(id) {
+  return _get('SELECT * FROM email_sequences WHERE id = ?', [id]);
+}
+
+function getAllEmailSequences() {
+  return _all('SELECT * FROM email_sequences ORDER BY updated_at DESC');
+}
+
+function updateEmailSequence(id, fields) {
+  const allowed = ['name','goal_type','goal_description','audience','email_count','timeframe_days',
+                   'voice_profile','chat_history','plan','status'];
+  const sets    = [];
+  const vals    = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) { sets.push(`${k} = ?`); vals.push(v); }
+  }
+  if (!sets.length) return;
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  vals.push(id);
+  _run(`UPDATE email_sequences SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+function deleteEmailSequence(id) {
+  _run('DELETE FROM email_sequences WHERE id = ?', [id]);
+}
+
+function upsertSequenceEmail(sequenceId, position, { subject, body, send_day, purpose }) {
+  const existing = _get('SELECT id FROM sequence_emails WHERE sequence_id = ? AND position = ?', [sequenceId, position]);
+  if (existing) {
+    _run(
+      `UPDATE sequence_emails SET subject=?, body=?, send_day=?, purpose=?, revised_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [subject, body, send_day ?? 0, purpose || null, existing.id]
+    );
+    return existing.id;
+  } else {
+    const r = _run(
+      `INSERT INTO sequence_emails (sequence_id, position, subject, body, send_day, purpose) VALUES (?,?,?,?,?,?)`,
+      [sequenceId, position, subject, body, send_day ?? 0, purpose || null]
+    );
+    return r.lastInsertRowid;
+  }
+}
+
+function getSequenceEmails(sequenceId) {
+  return _all('SELECT * FROM sequence_emails WHERE sequence_id = ? ORDER BY position', [sequenceId]);
+}
+
+function deleteSequenceEmails(sequenceId) {
+  _run('DELETE FROM sequence_emails WHERE sequence_id = ?', [sequenceId]);
+}
+

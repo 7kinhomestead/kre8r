@@ -352,6 +352,7 @@ app.use('/api/teleprompter',  teleprompterRouter);
 app.use('/api/shootday',      require('./src/routes/shootday'));
 app.use('/api/voice-library', require('./src/routes/voice-library'));
 app.use('/api/mailor',       require('./src/routes/mailor'));
+app.use('/api/sequences',    require('./src/routes/sequence-builder'));
 app.use('/api/kajabi',       require('./src/routes/kajabi'));
 app.use('/api/mailerlite',   require('./src/routes/mailerlite'));
 app.use('/api/id8r',         require('./src/routes/id8r'));
@@ -363,8 +364,9 @@ app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
 app.use('/api/project-vault', require('./src/routes/project-vault'));
 app.use('/api/northr',        require('./src/routes/northr'));
 app.use('/api/lab',           require('./src/routes/lab'));
-app.use('/api/local-sync',    require('./src/routes/local-sync'));
-app.use('/api/releases',      require('./src/routes/releases'));
+app.use('/api/local-sync',        require('./src/routes/local-sync'));
+app.use('/api/releases',          require('./src/routes/releases'));
+app.use('/api/analytics-import',  require('./src/routes/analytics-import'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

@@ -229,7 +229,102 @@
   @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes toastOut{from{opacity:1}to{opacity:0}}
 
+  /* SequenceΩr */
+  .sq-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start;}
+  .sq-sidebar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
+  .sq-sidebar-title{font-family:var(--font-head);font-size:13px;letter-spacing:1.2px;color:var(--text-dim);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+  .sq-new-btn{background:var(--purple);color:#fff;border:none;border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.5px;}
+  .sq-new-btn:hover{opacity:.85;}
+  .sq-list{display:flex;flex-direction:column;gap:6px;}
+  .sq-list-item{padding:9px 11px;border-radius:var(--radius-sm);cursor:pointer;border:1.5px solid transparent;transition:all 0.15s;}
+  .sq-list-item:hover{background:var(--bg-card-2);}
+  .sq-list-item.active{border-color:var(--purple);background:var(--purple-glow);}
+  .sq-list-item-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sq-list-item-meta{font-size:11px;color:var(--text-dimmer);margin-top:2px;}
+  .sq-empty-state{font-size:13px;color:var(--text-dimmer);text-align:center;padding:20px 0;}
+  .sq-main{display:flex;flex-direction:column;gap:0;}
+
+  /* New sequence form */
+  .sq-new-form{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:14px;}
+  .sq-form-title{font-family:var(--font-head);font-size:16px;letter-spacing:1.5px;margin-bottom:16px;color:var(--purple);}
+  .sq-field{margin-bottom:12px;}
+  .sq-label{font-size:11px;font-weight:700;letter-spacing:0.8px;color:var(--text-dim);text-transform:uppercase;display:block;margin-bottom:5px;}
+  .sq-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:9px 12px;font-family:var(--font-body);}
+  .sq-input:focus{outline:none;border-color:var(--purple);}
+  .sq-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .sq-form-actions{display:flex;gap:10px;margin-top:16px;}
+  .sq-btn{padding:10px 20px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.15s;}
+  .sq-btn.primary{background:var(--purple);color:#fff;}
+  .sq-btn.primary:hover{opacity:.85;}
+  .sq-btn.ghost{background:var(--bg-card-2);color:var(--text-dim);border:1px solid var(--border);}
+  .sq-btn.ghost:hover{color:var(--text);}
+  .sq-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .sq-btn.danger{background:var(--red-glow);color:var(--red);border:1px solid var(--red);}
+
+  /* Chat phase */
+  .sq-phase{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;}
+  .sq-phase-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+  .sq-phase-title{font-family:var(--font-head);font-size:14px;letter-spacing:1.2px;}
+  .sq-phase-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:0.5px;}
+  .sq-badge-chat{background:var(--purple-glow);color:var(--purple);}
+  .sq-badge-plan{background:var(--blue-glow);color:var(--blue);}
+  .sq-badge-write{background:var(--teal-glow);color:var(--teal);}
+  .sq-badge-done{background:var(--green-glow);color:var(--green);}
+
+  /* Chat messages */
+  .sq-chat{padding:16px 18px;display:flex;flex-direction:column;gap:10px;max-height:380px;overflow-y:auto;}
+  .sq-msg{max-width:88%;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;line-height:1.55;}
+  .sq-msg.assistant{background:var(--bg-card-2);color:var(--text);align-self:flex-start;border:1px solid var(--border);}
+  .sq-msg.user{background:var(--purple-glow);color:var(--text);align-self:flex-end;border:1px solid rgba(167,139,250,0.2);}
+  .sq-chat-input-row{display:flex;gap:8px;padding:10px 18px;border-top:1px solid var(--border);}
+  .sq-chat-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:9px 12px;font-family:var(--font-body);resize:none;min-height:40px;max-height:100px;}
+  .sq-chat-input:focus{outline:none;border-color:var(--purple);}
+  .sq-chat-send{background:var(--purple);border:none;color:#fff;border-radius:var(--radius-sm);padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .sq-chat-send:hover{opacity:.85;}
+  .sq-chat-send:disabled{opacity:.4;cursor:not-allowed;}
+  .sq-chat-actions{display:flex;gap:8px;padding:10px 18px;border-top:1px solid var(--border);justify-content:flex-end;}
+
+  /* Plan cards */
+  .sq-plan-grid{display:flex;flex-direction:column;gap:8px;padding:16px 18px;}
+  .sq-plan-card{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 16px;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;}
+  .sq-plan-num{width:28px;height:28px;border-radius:50%;background:var(--purple-glow);border:1.5px solid var(--purple);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--purple);flex-shrink:0;margin-top:1px;}
+  .sq-plan-title{font-size:13px;font-weight:600;margin-bottom:3px;}
+  .sq-plan-day{font-size:11px;color:var(--text-dimmer);margin-bottom:4px;}
+  .sq-plan-purpose{font-size:12px;color:var(--text-dim);line-height:1.5;}
+  .sq-plan-cta{font-size:11px;color:var(--amber);margin-top:4px;}
+  .sq-plan-actions{display:flex;gap:8px;padding:10px 18px;border-top:1px solid var(--border);}
+
+  /* Email cards */
+  .sq-emails{display:flex;flex-direction:column;gap:12px;padding:16px 18px;}
+  .sq-email-card{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+  .sq-email-header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+  .sq-email-num{width:24px;height:24px;border-radius:50%;background:var(--teal-glow);border:1.5px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--teal);flex-shrink:0;}
+  .sq-email-subject{font-size:13px;font-weight:600;flex:1;}
+  .sq-email-day{font-size:11px;color:var(--text-dimmer);white-space:nowrap;}
+  .sq-email-chevron{font-size:10px;color:var(--text-dimmer);}
+  .sq-email-body{padding:14px 16px;display:none;}
+  .sq-email-body.open{display:block;}
+  .sq-email-html{font-size:13px;line-height:1.65;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;}
+  .sq-email-html p{margin-bottom:10px;}
+  .sq-email-html p:last-child{margin-bottom:0;}
+  .sq-revise-row{display:flex;gap:8px;}
+  .sq-revise-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:8px 11px;font-family:var(--font-body);}
+  .sq-revise-input:focus{outline:none;border-color:var(--purple);}
+  .sq-revise-btn{background:var(--purple-glow);border:1px solid rgba(167,139,250,.3);color:var(--purple);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .sq-revise-btn:hover{background:var(--purple);color:#fff;}
+  .sq-copy-email-btn{background:var(--teal-glow);border:1px solid rgba(62,207,178,.25);color:var(--teal);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;}
+  .sq-copy-email-btn:hover{background:var(--teal);color:#000;}
+  .sq-email-actions{display:flex;gap:8px;margin-top:10px;}
+  .sq-progress{padding:14px 18px;font-size:13px;color:var(--text-dim);}
+  .sq-progress-bar{height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;}
+  .sq-progress-fill{height:100%;background:var(--teal);border-radius:2px;transition:width 0.4s ease;}
+
   /* MOBILE */
+  @media(max-width:640px){
+    .sq-layout{grid-template-columns:1fr;}
+    .sq-sidebar{display:none;}
+    .sq-row{grid-template-columns:1fr;}
+  }
   @media(max-width:480px){
     .main{padding:20px 12px 80px;}
     .topbar{padding:0 12px;}
@@ -276,6 +371,7 @@
   <div class="mode-tabs">
     <button class="mode-tab active" id="tab-broadcast" onclick="switchMode('broadcast')">⚡ Broadcast A/B</button>
     <button class="mode-tab" id="tab-sequence" onclick="switchMode('sequence')">📅 Sequence (7 emails)</button>
+    <button class="mode-tab" id="tab-sequencer" onclick="switchMode('sequencer')">✦ SequenceΩr</button>
   </div>
 
   <!-- ═══════════════════════════════════════════
@@ -583,6 +679,157 @@
 
   </div><!-- /mode-sequence -->
 
+  <!-- ═══════════════════════════════════════════
+       SEQUENCEΩR MODE
+  ═══════════════════════════════════════════ -->
+  <div id="mode-sequencer" style="display:none">
+    <div class="sq-layout">
+
+      <!-- SIDEBAR: sequence list -->
+      <div class="sq-sidebar">
+        <div class="sq-sidebar-title">
+          SEQUENCES
+          <button class="sq-new-btn" onclick="sqNewSequence()">+ New</button>
+        </div>
+        <div class="sq-list" id="sq-list">
+          <div class="sq-empty-state">No sequences yet.</div>
+        </div>
+      </div>
+
+      <!-- MAIN PANEL -->
+      <div class="sq-main" id="sq-main">
+
+        <!-- NEW SEQUENCE FORM (shown when creating) -->
+        <div id="sq-new-form" class="sq-new-form" style="display:none">
+          <div class="sq-form-title">NEW SEQUENCE</div>
+
+          <div class="sq-field">
+            <label class="sq-label">Goal</label>
+            <select id="sq-goal-type" class="sq-input" onchange="sqUpdateGoalDesc()">
+              <option value="onboard">Onboard new member</option>
+              <option value="convert">Convert free → paid</option>
+              <option value="reengage">Re-engage cold subscribers</option>
+              <option value="sell">Sell a product or offer</option>
+              <option value="nurture">Nurture long-term relationship</option>
+              <option value="custom">Custom goal</option>
+            </select>
+          </div>
+
+          <div class="sq-field">
+            <label class="sq-label">Goal description <span style="color:var(--text-dimmer)">(optional)</span></label>
+            <input id="sq-goal-desc" class="sq-input" type="text" placeholder="e.g. Get Greenhouse members into The Garden" />
+          </div>
+
+          <div class="sq-field">
+            <label class="sq-label">Audience</label>
+            <input id="sq-audience" class="sq-input" type="text" placeholder="e.g. Greenhouse free members, cold TikTok leads" />
+          </div>
+
+          <div class="sq-row">
+            <div class="sq-field">
+              <label class="sq-label">Number of emails</label>
+              <input id="sq-email-count" class="sq-input" type="number" min="2" max="20" value="5" />
+            </div>
+            <div class="sq-field">
+              <label class="sq-label">Over how many days</label>
+              <input id="sq-timeframe" class="sq-input" type="number" min="1" max="120" value="14" />
+            </div>
+          </div>
+
+          <div class="sq-field">
+            <label class="sq-label">Voice profile</label>
+            <select id="sq-voice-profile" class="sq-input">
+              <option value="">Default creator voice</option>
+            </select>
+          </div>
+
+          <div class="sq-form-actions">
+            <button class="sq-btn primary" id="sq-create-btn" onclick="sqCreateSequence()">Start Strategy Chat →</button>
+            <button class="sq-btn ghost" onclick="sqCancelNew()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- EMPTY STATE (no sequence selected) -->
+        <div id="sq-empty" class="sq-phase" style="padding:40px;text-align:center;">
+          <div style="font-size:32px;margin-bottom:12px;">✦</div>
+          <div style="font-family:var(--font-head);font-size:18px;letter-spacing:1.5px;margin-bottom:8px;">SEQUENCEΩR</div>
+          <div style="font-size:13px;color:var(--text-dim);max-width:320px;margin:0 auto 20px;">Strategy chat → plan approval → Claude writes every email. Built for nurture, onboarding, and conversion sequences.</div>
+          <button class="sq-btn primary" onclick="sqNewSequence()">+ New Sequence</button>
+        </div>
+
+        <!-- ACTIVE SEQUENCE VIEW -->
+        <div id="sq-active" style="display:none">
+
+          <!-- Sequence header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div>
+              <div id="sq-active-name" style="font-family:var(--font-head);font-size:18px;letter-spacing:1.5px;"></div>
+              <div id="sq-active-meta" style="font-size:12px;color:var(--text-dimmer);margin-top:2px;"></div>
+            </div>
+            <button class="sq-btn danger" onclick="sqDeleteSequence()" style="font-size:11px;padding:6px 12px;">Delete</button>
+          </div>
+
+          <!-- PHASE 1: STRATEGY CHAT -->
+          <div class="sq-phase" id="sq-phase-chat">
+            <div class="sq-phase-header">
+              <span class="sq-phase-title">STRATEGY CHAT</span>
+              <span class="sq-phase-badge sq-badge-chat">PHASE 1</span>
+            </div>
+            <div class="sq-chat" id="sq-chat-messages"></div>
+            <div class="sq-chat-input-row">
+              <textarea class="sq-chat-input" id="sq-chat-input" placeholder="Type your reply…" rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sqSendChat();}"></textarea>
+              <button class="sq-chat-send" id="sq-chat-send-btn" onclick="sqSendChat()">Send</button>
+            </div>
+            <div class="sq-chat-actions">
+              <span style="font-size:12px;color:var(--text-dimmer);align-self:center;">Ready to build the plan?</span>
+              <button class="sq-btn primary" id="sq-gen-plan-btn" onclick="sqGeneratePlan()" style="padding:8px 18px;font-size:12px;">Generate Plan →</button>
+            </div>
+          </div>
+
+          <!-- PHASE 2: PLAN APPROVAL -->
+          <div class="sq-phase" id="sq-phase-plan" style="display:none;margin-top:14px;">
+            <div class="sq-phase-header">
+              <span class="sq-phase-title">SEQUENCE PLAN</span>
+              <span class="sq-phase-badge sq-badge-plan">PHASE 2</span>
+            </div>
+            <div class="sq-plan-grid" id="sq-plan-cards"></div>
+            <div class="sq-plan-actions">
+              <button class="sq-btn primary" id="sq-approve-btn" onclick="sqApprovePlan()">Approve Plan — Write All Emails →</button>
+              <button class="sq-btn ghost" onclick="sqGeneratePlan()">Regenerate</button>
+            </div>
+          </div>
+
+          <!-- PHASE 3: WRITING PROGRESS -->
+          <div class="sq-phase" id="sq-phase-writing" style="display:none;margin-top:14px;">
+            <div class="sq-phase-header">
+              <span class="sq-phase-title">WRITING EMAILS</span>
+              <span class="sq-phase-badge sq-badge-write">PHASE 3</span>
+            </div>
+            <div class="sq-progress">
+              <div id="sq-write-status">Starting…</div>
+              <div class="sq-progress-bar"><div class="sq-progress-fill" id="sq-progress-fill" style="width:0%"></div></div>
+            </div>
+          </div>
+
+          <!-- PHASE 4: EMAIL CARDS -->
+          <div class="sq-phase" id="sq-phase-emails" style="display:none;margin-top:14px;">
+            <div class="sq-phase-header">
+              <span class="sq-phase-title">YOUR SEQUENCE</span>
+              <span class="sq-phase-badge sq-badge-done">COMPLETE</span>
+            </div>
+            <div class="sq-emails" id="sq-email-cards"></div>
+            <div style="padding:10px 18px;border-top:1px solid var(--border);">
+              <button class="sq-btn ghost" onclick="sqGeneratePlan()" style="font-size:12px;padding:8px 14px;">↩ Revise Plan + Rewrite</button>
+            </div>
+          </div>
+
+        </div><!-- /sq-active -->
+
+      </div><!-- /sq-main -->
+    </div><!-- /sq-layout -->
+  </div><!-- /mode-sequencer -->
+
 </main>
 
 <div class="toast-wrap" id="toast-wrap"></div>
@@ -785,10 +1032,13 @@ function populateVoiceDropdowns() {
 // ─────────────────────────────────────────────
 function switchMode(mode) {
   currentMode = mode;
-  document.getElementById('mode-broadcast').style.display  = mode === 'broadcast' ? '' : 'none';
-  document.getElementById('mode-sequence').style.display   = mode === 'sequence'  ? '' : 'none';
+  document.getElementById('mode-broadcast').style.display  = mode === 'broadcast'  ? '' : 'none';
+  document.getElementById('mode-sequence').style.display   = mode === 'sequence'   ? '' : 'none';
+  document.getElementById('mode-sequencer').style.display  = mode === 'sequencer'  ? '' : 'none';
   document.getElementById('tab-broadcast').classList.toggle('active', mode === 'broadcast');
   document.getElementById('tab-sequence').classList.toggle('active', mode === 'sequence');
+  document.getElementById('tab-sequencer').classList.toggle('active', mode === 'sequencer');
+  if (mode === 'sequencer') sqInit();
 }
 
 // ─────────────────────────────────────────────
@@ -1294,6 +1544,477 @@ function showToast(msg, type = '') {
   t.textContent = msg;
   wrap.appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════════════════
+// SEQUENCEΩR
+// ═══════════════════════════════════════════════════════
+let sqState = {
+  sequences:    [],
+  activeId:     null,
+  activeSeq:    null,
+  activeEmails: [],
+  activePlan:   null,
+  initialized:  false,
+};
+
+async function sqInit() {
+  if (sqState.initialized) { sqPopulateVoiceSelect(); return; }
+  sqState.initialized = true;
+  sqPopulateVoiceSelect();
+  await sqLoadList();
+}
+
+function sqPopulateVoiceSelect() {
+  const sel = document.getElementById('sq-voice-profile');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Default creator voice</option>';
+  for (const vp of (voiceProfiles || [])) {
+    const opt = document.createElement('option');
+    opt.value = vp.name;
+    opt.textContent = vp.name;
+    if (vp.name === current) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+async function sqLoadList() {
+  try {
+    const res  = await fetch('/api/sequences');
+    const data = await res.json();
+    sqState.sequences = data.sequences || [];
+    sqRenderList();
+  } catch(e) {
+    showToast('Could not load sequences', 'red');
+  }
+}
+
+function sqRenderList() {
+  const list = document.getElementById('sq-list');
+  if (!sqState.sequences.length) {
+    list.innerHTML = '<div class="sq-empty-state">No sequences yet.<br>Click + New to start.</div>';
+    return;
+  }
+  const GOAL_SHORT = {
+    onboard: 'Onboard', convert: 'Convert', reengage: 'Re-engage',
+    sell: 'Sell', nurture: 'Nurture', custom: 'Custom'
+  };
+  list.innerHTML = sqState.sequences.map(s => `
+    <div class="sq-list-item ${s.id === sqState.activeId ? 'active' : ''}" onclick="sqSelectSequence(${s.id})">
+      <div class="sq-list-item-name">${escHtmlSq(s.name || 'Untitled')}</div>
+      <div class="sq-list-item-meta">${GOAL_SHORT[s.goal_type] || s.goal_type} · ${s.email_count} emails · ${s.status}</div>
+    </div>`).join('');
+}
+
+function sqNewSequence() {
+  document.getElementById('sq-new-form').style.display = '';
+  document.getElementById('sq-empty').style.display    = 'none';
+  document.getElementById('sq-active').style.display   = 'none';
+  sqState.activeId = null;
+  sqRenderList();
+}
+
+function sqCancelNew() {
+  document.getElementById('sq-new-form').style.display = 'none';
+  if (sqState.activeId) {
+    document.getElementById('sq-active').style.display = '';
+  } else {
+    document.getElementById('sq-empty').style.display  = '';
+  }
+}
+
+function sqUpdateGoalDesc() {
+  const DEFAULTS = {
+    onboard:  'Walk a new subscriber through what to expect and build trust fast',
+    convert:  'Move free subscribers to a paid tier with value-first, soft-sell energy',
+    reengage: 'Win back cold subscribers who went quiet',
+    sell:     'Build desire and close a specific product or offer',
+    nurture:  'Show up consistently with something worth reading',
+    custom:   '',
+  };
+  const goal = document.getElementById('sq-goal-type').value;
+  const desc = document.getElementById('sq-goal-desc');
+  if (!desc.value) desc.value = DEFAULTS[goal] || '';
+}
+
+async function sqCreateSequence() {
+  const btn = document.getElementById('sq-create-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  const body = {
+    goal_type:        document.getElementById('sq-goal-type').value,
+    goal_description: document.getElementById('sq-goal-desc').value.trim(),
+    audience:         document.getElementById('sq-audience').value.trim(),
+    email_count:      parseInt(document.getElementById('sq-email-count').value) || 5,
+    timeframe_days:   parseInt(document.getElementById('sq-timeframe').value) || 14,
+    voice_profile:    document.getElementById('sq-voice-profile').value || null,
+  };
+
+  try {
+    const res  = await fetch('/api/sequences', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Create failed');
+
+    document.getElementById('sq-new-form').style.display = 'none';
+    sqState.sequences.unshift(data.sequence);
+    sqRenderList();
+    await sqSelectSequence(data.sequence.id);
+    showToast('Sequence created — let\'s plan it', 'teal');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Start Strategy Chat →';
+  }
+}
+
+async function sqSelectSequence(id) {
+  sqState.activeId = id;
+  sqRenderList();
+
+  try {
+    const res  = await fetch(`/api/sequences/${id}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Load failed');
+
+    sqState.activeSeq    = data.sequence;
+    sqState.activeEmails = data.emails || [];
+    sqState.activePlan   = data.sequence.plan;
+
+    document.getElementById('sq-new-form').style.display = 'none';
+    document.getElementById('sq-empty').style.display    = 'none';
+    document.getElementById('sq-active').style.display   = '';
+
+    sqRenderActive();
+  } catch(e) {
+    showToast('Error loading sequence: ' + e.message, 'red');
+  }
+}
+
+function sqRenderActive() {
+  const seq = sqState.activeSeq;
+  if (!seq) return;
+
+  const GOAL_LABELS = {
+    onboard: 'Onboard new member', convert: 'Convert free → paid',
+    reengage: 'Re-engage cold subscribers', sell: 'Sell a product or offer',
+    nurture: 'Nurture long-term relationship', custom: 'Custom goal',
+  };
+
+  document.getElementById('sq-active-name').textContent = seq.name || 'Untitled Sequence';
+  document.getElementById('sq-active-meta').textContent =
+    `${GOAL_LABELS[seq.goal_type] || seq.goal_type} · ${seq.email_count} emails over ${seq.timeframe_days} days${seq.audience ? ' · ' + seq.audience : ''}`;
+
+  // Chat phase — always show
+  document.getElementById('sq-phase-chat').style.display = '';
+  sqRenderChat(seq.chat_history || []);
+
+  // Plan phase
+  const hasPlan = sqState.activePlan && sqState.activePlan.length;
+  document.getElementById('sq-phase-plan').style.display = hasPlan ? '' : 'none';
+  if (hasPlan) sqRenderPlan(sqState.activePlan);
+
+  // Emails phase
+  const hasEmails = sqState.activeEmails.length > 0;
+  document.getElementById('sq-phase-writing').style.display = 'none';
+  document.getElementById('sq-phase-emails').style.display  = hasEmails ? '' : 'none';
+  if (hasEmails) sqRenderEmails(sqState.activeEmails, sqState.activePlan || []);
+}
+
+function sqRenderChat(history) {
+  const el = document.getElementById('sq-chat-messages');
+  el.innerHTML = history.map(m => `
+    <div class="sq-msg ${m.role}">${escHtmlSq(m.content).replace(/\n/g, '<br>')}</div>
+  `).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sqSendChat() {
+  const input = document.getElementById('sq-chat-input');
+  const msg   = input.value.trim();
+  if (!msg || !sqState.activeId) return;
+
+  const btn = document.getElementById('sq-chat-send-btn');
+  btn.disabled = true;
+  input.value  = '';
+
+  // Optimistically add user message
+  const history = sqState.activeSeq?.chat_history || [];
+  history.push({ role: 'user', content: msg });
+  sqRenderChat(history);
+
+  try {
+    const res  = await fetch(`/api/sequences/${sqState.activeId}/chat`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Chat failed');
+
+    sqState.activeSeq.chat_history = data.history;
+    sqRenderChat(data.history);
+  } catch(e) {
+    showToast('Chat error: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    input.focus();
+  }
+}
+
+async function sqGeneratePlan() {
+  const planBtn = document.getElementById('sq-gen-plan-btn');
+  if (planBtn) { planBtn.disabled = true; planBtn.textContent = 'Generating plan…'; }
+
+  document.getElementById('sq-phase-plan').style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/sequences/${sqState.activeId}/plan`, { method: 'POST' });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let plan = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith('data:')) continue;
+        try {
+          const ev = JSON.parse(part.slice(5).trim());
+          if (ev.type === 'plan') plan = ev.plan;
+          if (ev.type === 'error') throw new Error(ev.error);
+        } catch(_) {}
+      }
+    }
+
+    if (!plan) throw new Error('No plan returned');
+
+    sqState.activePlan = plan;
+    sqRenderPlan(plan);
+    document.getElementById('sq-phase-plan').style.display = '';
+    showToast('Plan generated — review and approve', 'teal');
+  } catch(e) {
+    showToast('Plan error: ' + e.message, 'red');
+  } finally {
+    if (planBtn) { planBtn.disabled = false; planBtn.textContent = 'Generate Plan →'; }
+  }
+}
+
+function sqRenderPlan(plan) {
+  const el = document.getElementById('sq-plan-cards');
+  el.innerHTML = plan.map((item, i) => `
+    <div class="sq-plan-card">
+      <div class="sq-plan-num">${item.position || i+1}</div>
+      <div>
+        <div class="sq-plan-title">${escHtmlSq(item.title)}</div>
+        <div class="sq-plan-day">Day ${item.send_day}</div>
+        <div class="sq-plan-purpose">${escHtmlSq(item.purpose)}</div>
+        ${item.angle ? `<div class="sq-plan-purpose" style="color:var(--text-dim);margin-top:3px;">Hook: ${escHtmlSq(item.angle)}</div>` : ''}
+        ${item.cta && item.cta !== 'none' ? `<div class="sq-plan-cta">CTA: ${escHtmlSq(item.cta)}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function sqApprovePlan() {
+  if (!sqState.activePlan || !sqState.activeId) return;
+  const btn = document.getElementById('sq-approve-btn');
+  btn.disabled = true;
+  btn.textContent = 'Approving…';
+
+  try {
+    // Save approved plan
+    await fetch(`/api/sequences/${sqState.activeId}/plan`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: sqState.activePlan }),
+    });
+
+    // Show writing phase
+    document.getElementById('sq-phase-plan').style.display    = 'none';
+    document.getElementById('sq-phase-emails').style.display  = 'none';
+    document.getElementById('sq-phase-writing').style.display = '';
+
+    // Start writing via SSE
+    await sqWriteEmails();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'red');
+    btn.disabled = false;
+    btn.textContent = 'Approve Plan — Write All Emails →';
+  }
+}
+
+async function sqWriteEmails() {
+  const statusEl = document.getElementById('sq-write-status');
+  const fillEl   = document.getElementById('sq-progress-fill');
+
+  sqState.activeEmails = [];
+
+  try {
+    const res     = await fetch(`/api/sequences/${sqState.activeId}/write`, { method: 'POST' });
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const total = sqState.activePlan?.length || sqState.activeSeq?.email_count || 5;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+
+      for (const part of parts) {
+        if (!part.startsWith('data:')) continue;
+        try {
+          const ev = JSON.parse(part.slice(5).trim());
+          if (ev.type === 'status') {
+            statusEl.textContent = ev.message;
+          } else if (ev.type === 'progress') {
+            const pct = Math.round((ev.current / total) * 100);
+            fillEl.style.width = pct + '%';
+            statusEl.textContent = `Writing email ${ev.current} of ${total}: "${ev.title}"`;
+          } else if (ev.type === 'email') {
+            sqState.activeEmails.push(ev.email);
+          } else if (ev.type === 'done') {
+            fillEl.style.width = '100%';
+            statusEl.textContent = `All ${ev.total} emails written.`;
+          } else if (ev.type === 'error') {
+            throw new Error(ev.error);
+          }
+        } catch(_) {}
+      }
+    }
+
+    // Show email cards
+    setTimeout(() => {
+      document.getElementById('sq-phase-writing').style.display = 'none';
+      document.getElementById('sq-phase-emails').style.display  = '';
+      sqRenderEmails(sqState.activeEmails, sqState.activePlan || []);
+      showToast(`${sqState.activeEmails.length} emails written`, 'green');
+      sqLoadList(); // refresh sidebar counts
+    }, 600);
+
+  } catch(e) {
+    document.getElementById('sq-phase-writing').style.display = 'none';
+    showToast('Write error: ' + e.message, 'red');
+  }
+}
+
+function sqRenderEmails(emails, plan) {
+  const el = document.getElementById('sq-email-cards');
+  const planByPos = {};
+  (plan || []).forEach(p => { planByPos[p.position] = p; });
+
+  el.innerHTML = emails.map(email => {
+    const planItem = planByPos[email.position] || {};
+    const id = `sq-email-body-${email.position}`;
+    return `
+    <div class="sq-email-card">
+      <div class="sq-email-header" onclick="sqToggleEmail(${email.position})">
+        <div class="sq-email-num">${email.position}</div>
+        <div>
+          <div class="sq-email-subject">${escHtmlSq(email.subject)}</div>
+          ${planItem.title ? `<div style="font-size:11px;color:var(--text-dimmer);margin-top:1px;">${escHtmlSq(planItem.title)}</div>` : ''}
+        </div>
+        <div class="sq-email-day">Day ${email.send_day}</div>
+        <div class="sq-email-chevron">▼</div>
+      </div>
+      <div class="sq-email-body" id="${id}">
+        <div class="sq-email-html">${email.body || ''}</div>
+        <div class="sq-email-actions">
+          <button class="sq-copy-email-btn" onclick="sqCopyEmail(${email.position})">Copy Email</button>
+        </div>
+        <div class="sq-revise-row" style="margin-top:8px;">
+          <input class="sq-revise-input" id="sq-revise-input-${email.position}" type="text"
+            placeholder="Revision note — e.g. make it shorter, add the pump story, stronger CTA"
+            onkeydown="if(event.key==='Enter')sqReviseEmail(${email.position})"/>
+          <button class="sq-revise-btn" onclick="sqReviseEmail(${email.position})">Revise</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function sqToggleEmail(pos) {
+  const body = document.getElementById(`sq-email-body-${pos}`);
+  if (!body) return;
+  body.classList.toggle('open');
+}
+
+function sqCopyEmail(pos) {
+  const email = sqState.activeEmails.find(e => e.position === pos);
+  if (!email) return;
+  const text = `Subject: ${email.subject}\n\n${email.body.replace(/<[^>]+>/g, '').replace(/\n\n+/g, '\n\n').trim()}`;
+  navigator.clipboard.writeText(text)
+    .then(() => showToast(`Email ${pos} copied`, 'teal'))
+    .catch(() => showToast('Copy failed', 'amber'));
+}
+
+async function sqReviseEmail(pos) {
+  const input = document.getElementById(`sq-revise-input-${pos}`);
+  const instruction = input?.value.trim();
+  if (!instruction) { showToast('Add a revision note first', 'amber'); return; }
+
+  const btn = input.nextElementSibling;
+  btn.disabled = true;
+  btn.textContent = 'Revising…';
+
+  try {
+    const res  = await fetch(`/api/sequences/${sqState.activeId}/emails/${pos}/revise`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instruction }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Revise failed');
+
+    // Update local state
+    const idx = sqState.activeEmails.findIndex(e => e.position === pos);
+    if (idx >= 0) sqState.activeEmails[idx] = { ...sqState.activeEmails[idx], ...data.email };
+
+    sqRenderEmails(sqState.activeEmails, sqState.activePlan || []);
+    // Reopen the card
+    setTimeout(() => {
+      const body = document.getElementById(`sq-email-body-${pos}`);
+      if (body) body.classList.add('open');
+    }, 50);
+
+    input.value = '';
+    showToast(`Email ${pos} revised`, 'purple');
+  } catch(e) {
+    showToast('Revise error: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Revise';
+  }
+}
+
+async function sqDeleteSequence() {
+  if (!sqState.activeId) return;
+  const seq = sqState.activeSeq;
+  if (!confirm(`Delete "${seq?.name || 'this sequence'}"? This cannot be undone.`)) return;
+
+  try {
+    await fetch(`/api/sequences/${sqState.activeId}`, { method: 'DELETE' });
+    sqState.sequences = sqState.sequences.filter(s => s.id !== sqState.activeId);
+    sqState.activeId  = null;
+    sqState.activeSeq = null;
+    sqRenderList();
+    document.getElementById('sq-active').style.display = 'none';
+    document.getElementById('sq-empty').style.display  = '';
+    showToast('Sequence deleted', 'amber');
+  } catch(e) {
+    showToast('Delete failed: ' + e.message, 'red');
+  }
+}
+
+function escHtmlSq(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 
