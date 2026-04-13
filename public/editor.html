@@ -767,7 +767,12 @@ function buildSectionCard(sec) {
   card.dataset.sectionIndex = sec.section_index;
 
   const takes      = sec.takes || [];
-  const winnerTake = takes.find(t => t.footage_id === sec.winner_footage_id) || takes[0];
+  // Use selected_takes[0] as source of truth — identifies winner by both footage_id
+  // AND start time so single-clip shoots (multiple takes in one file) work correctly.
+  const selectedTake = sec.selected_takes?.[0];
+  const winnerTake = selectedTake
+    ? (takes.find(t => t.footage_id === selectedTake.footage_id && t.start === selectedTake.start) || takes[0])
+    : (takes.find(t => t.footage_id === sec.winner_footage_id) || takes[0]);
   const winnerQ    = winnerTake?.quality || '';
 
   card.innerHTML = `
@@ -799,8 +804,11 @@ function buildTakesHTML(sec) {
   const projectId    = currentProjectId;
   const sectionIndex = sec.section_index;
 
+  const selectedTake = sec.selected_takes?.[0];
   const html = takes.map((t, idx) => {
-    const isWinner = t.footage_id === sec.winner_footage_id;
+    const isWinner = selectedTake
+      ? (t.footage_id === selectedTake.footage_id && t.start === selectedTake.start)
+      : (t.footage_id === sec.winner_footage_id);
     const ts = (t.start != null && t.end != null)
       ? `${fmtTs(t.start)} → ${fmtTs(t.end)} (${((t.end - t.start)).toFixed(1)}s)`
       : '';
@@ -838,6 +846,7 @@ async function swapTake(projectId, sectionIndex, takeIndex, el) {
     const sec = currentSelects?.sections?.find(s => s.section_index === sectionIndex);
     if (sec) {
       sec.winner_footage_id = data.chosen.footage_id;
+      sec.selected_takes    = [data.chosen];
       // Rebuild that card
       const list = document.getElementById('sectionsList');
       const cards = list.querySelectorAll('.section-card');
