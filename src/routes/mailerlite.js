@@ -75,7 +75,7 @@ router.get('/status', async (req, res) => {
     const groups     = (data.data || []).map(g => ({
       id:    g.id,
       name:  g.name,
-      total: g.total || 0,
+      total: g.active_count ?? g.total ?? 0,
     }));
     res.json({ connected: true, groupCount: groups.length, groups });
   } catch (e) {
@@ -135,8 +135,7 @@ router.post('/groups/sync', async (req, res) => {
 
 // ── POST /api/mailerlite/subscribers/import ───────────────────────────────────
 // Accepts { subscribers: [{email, name, group}] }
-// group: 'greenhouse' | 'garden' | 'founding50'
-// Uses POST /subscribers (upsert) in parallel batches of 10 — avoids file upload requirement.
+// group: 'greenhouse' | 'garden' | 'founding50' OR a raw Mailerlite group ID
 
 router.post('/subscribers/import', async (req, res) => {
   try {
@@ -145,7 +144,7 @@ router.post('/subscribers/import', async (req, res) => {
       return res.status(400).json({ error: 'subscribers array is required' });
     }
 
-    // Resolve group IDs
+    // Resolve group IDs — support both tier key and raw ML group ID
     let groupIds;
     try {
       const profile = loadProfile();
@@ -154,10 +153,9 @@ router.post('/subscribers/import', async (req, res) => {
       groupIds = {};
     }
 
-    // Use Mailerlite's batch CSV import — one request for all subscribers,
-    // no rate limit issues. Import is async on their end; we report count immediately.
     const groupKey = (subscribers[0]?.group) || 'greenhouse';
-    const groupId  = groupIds[groupKey];
+    // If it looks like a raw ML ID (numeric string), use directly; otherwise look up tier key
+    const groupId  = /^\d+$/.test(groupKey) ? groupKey : (groupIds[groupKey] || null);
 
     // Build CSV
     const csvLines = ['email,name'];
@@ -288,6 +286,112 @@ router.post('/send', async (req, res) => {
   } catch (e) {
     log.error({ module: 'mailerlite', err: e }, 'send failed');
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET /api/mailerlite/groups/:id/subscribers ────────────────────────────────
+// Returns paginated subscriber list for a group.
+// Query: ?limit=25&page=1
+
+router.get('/groups/:id/subscribers', async (req, res) => {
+  try {
+    const { id }   = req.params;
+    const limit    = Math.min(parseInt(req.query.limit) || 25, 100);
+    const page     = parseInt(req.query.page) || 1;
+
+    const data = await ml('GET', `/groups/${id}/subscribers?limit=${limit}&page=${page}&filter[status]=active`);
+
+    const subscribers = (data.data || []).map(s => ({
+      id:         s.id,
+      email:      s.email,
+      name:       s.fields?.name || s.fields?.last_name
+                    ? `${s.fields?.name || ''} ${s.fields?.last_name || ''}`.trim()
+                    : '',
+      status:     s.status,
+      created_at: s.created_at,
+    }));
+
+    res.json({
+      ok:          true,
+      subscribers,
+      total:       data.meta?.total ?? (data.total ?? 0),
+      page:        data.meta?.current_page ?? page,
+      last_page:   data.meta?.last_page ?? 1,
+    });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'groups/subscribers failed');
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── POST /api/mailerlite/groups/create ────────────────────────────────────────
+// Creates a new Mailerlite group and optionally saves a keyword→id mapping.
+// Body: { name, keyword }  (keyword is optional)
+
+router.post('/groups/create', async (req, res) => {
+  try {
+    const { name, keyword } = req.body || {};
+    if (!name) return res.status(400).json({ error: 'name is required' });
+
+    // Check if already exists
+    const existing = (await ml('GET', '/groups?limit=100')).data || [];
+    let group = existing.find(g => g.name === name.trim());
+
+    if (!group) {
+      const created = await ml('POST', '/groups', { name: name.trim() });
+      group = created.data;
+      log.info({ module: 'mailerlite', group: group.name, id: group.id }, 'Custom group created');
+    }
+
+    // Persist keyword mapping if provided
+    if (keyword && keyword.trim()) {
+      try {
+        const profile = loadProfile();
+        if (!profile.integrations) profile.integrations = {};
+        if (!profile.integrations.custom_group_mappings) profile.integrations.custom_group_mappings = {};
+        profile.integrations.custom_group_mappings[keyword.trim().toLowerCase()] = group.id;
+        saveProfile(profile);
+        log.info({ module: 'mailerlite', keyword, id: group.id }, 'Custom group mapping saved');
+      } catch (profErr) {
+        log.warn({ module: 'mailerlite', err: profErr }, 'Could not save mapping to profile');
+      }
+    }
+
+    res.json({ ok: true, group: { id: group.id, name: group.name }, keyword: keyword || null });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'groups/create failed');
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── GET /api/mailerlite/mappings ───────────────────────────────────────────────
+// Returns the current custom keyword→groupId mappings from creator-profile.json.
+
+router.get('/mappings', (req, res) => {
+  try {
+    const profile  = loadProfile();
+    const mappings = profile?.integrations?.custom_group_mappings || {};
+    const groups   = profile?.integrations?.mailerlite_groups || {};
+    res.json({ ok: true, mappings, tier_groups: groups });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── DELETE /api/mailerlite/mappings/:keyword ──────────────────────────────────
+// Removes a custom keyword mapping.
+
+router.delete('/mappings/:keyword', (req, res) => {
+  try {
+    const key = decodeURIComponent(req.params.keyword);
+    const profile = loadProfile();
+    if (profile?.integrations?.custom_group_mappings) {
+      delete profile.integrations.custom_group_mappings[key];
+      saveProfile(profile);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 
