@@ -79,16 +79,18 @@ def get_resolve():
 
 def find_project(project_manager, project_name, project_id):
     """
-    Try to open by exact name first.
-    Fall back to scanning for any project ending with the zero-padded project_id.
+    1. Try exact name match.
+    2. Try any project ending with the zero-padded project_id suffix.
+    3. Fall back to the currently open project in Resolve — the natural creator
+       workflow is to have the right project open in Resolve before pushing from Kre8r.
     """
-    # Try exact name
+    # 1. Try exact name
     p = project_manager.LoadProject(project_name)
     if p:
         print(f"[resolve] Opened project: {project_name}", file=sys.stderr)
         return p
 
-    # Scan for partial match
+    # 2. Scan for suffix match (_288, _022, etc.)
     suffix = f"_{project_id:03d}"
     projects = project_manager.GetProjectListInCurrentFolder() or []
     for name in projects:
@@ -98,10 +100,21 @@ def find_project(project_manager, project_name, project_id):
                 print(f"[resolve] Opened project by suffix match: {name}", file=sys.stderr)
                 return p
 
+    # 3. Fall back to currently open project
+    current = project_manager.GetCurrentProject()
+    if current:
+        current_name = current.GetName() if callable(current.GetName) else str(current)
+        print(
+            f"[resolve] No project matched name '{project_name}' or suffix '{suffix}'. "
+            f"Using currently open project: '{current_name}'",
+            file=sys.stderr
+        )
+        return current
+
     raise RuntimeError(
-        f"Could not find Resolve project for project_id={project_id}. "
-        f"Tried exact name '{project_name}' and suffix '{suffix}'. "
-        f"Available: {projects}"
+        f"Could not find a Resolve project for '{project_name}' (project_id={project_id}) "
+        f"and no project is currently open in Resolve. "
+        f"Open your project in DaVinci Resolve and try again."
     )
 
 
@@ -352,12 +365,20 @@ def run(args):
             file_path = footage_paths[winner_id]
             winner_item, _ = find_clip(path_index, file_path, media_pool, fps)
 
-            # Find timestamps for the winner take
-            for take in (section.get("takes") or []):
-                if take.get("footage_id") == winner_id:
-                    start_ts = take.get("start")
-                    end_ts   = take.get("end")
-                    break
+            # Find timestamps for the winner take.
+            # Use selected_takes[0] as source of truth (has exact start/end for the chosen take).
+            # Falls back to footage_id match for backward compatibility.
+            selected_takes = section.get("selected_takes") or []
+            winner_take    = selected_takes[0] if selected_takes else None
+            if winner_take:
+                start_ts = winner_take.get("start")
+                end_ts   = winner_take.get("end")
+            else:
+                for take in (section.get("takes") or []):
+                    if take.get("footage_id") == winner_id:
+                        start_ts = take.get("start")
+                        end_ts   = take.get("end")
+                        break
 
         section_start_frame = current_frame
 
