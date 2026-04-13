@@ -83,6 +83,18 @@ captured and kept.
 **UI:** New panel/tab in Id8Ωr — list view with search, save button in active sessions, bulk entry mode
 **Integration:** "Promote to Project" button on each idea → pre-fills PipΩr with idea context
 
+**V1.1 — ConstellΩr view (3D idea graph)**
+A second view mode on the Idea Vault: 3D constellation graph, Obsidian-style, similar to MirrΩr's
+cluster visualization but richer. Ideas as nodes in 3D space, connected by shared angles, themes,
+and content type. Claude generates the connection graph on vault load — tags each idea with semantic
+clusters, draws edges between related ideas. Rotate and zoom to explore the creative universe.
+- Toggle between list view and ConstellΩr view
+- Node size = idea strength / development stage
+- Edge thickness = connection strength (shared angle, theme, audience)
+- Click a node → idea detail panel slides in with Promote to Project option
+- Three.js or similar for the 3D render (same pattern as MirrΩr constellation)
+- Color coded by content angle (financial, system, rockrich, howto, viral, etc.)
+
 ---
 
 ## PHASE 1 — Feature & Polish (before packaging anything)
