@@ -12,9 +12,33 @@ function getConfigPath(projectId) {
 
 function readConfig(projectId) {
   const p = getConfigPath(projectId);
-  if (!fs.existsSync(p)) return null;
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
-  catch (_) { return null; }
+  if (fs.existsSync(p)) {
+    try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
+    catch (_) { return null; }
+  }
+
+  // Fallback: the Electron DB and source DB can assign different IDs to the same
+  // project. If the direct path misses, scan all config dirs for a title match.
+  try {
+    const project = db.getProject(projectId);
+    if (!project?.title) return null;
+    const dirs = fs.readdirSync(PROJECTS_DIR);
+    for (const dir of dirs) {
+      const candidate = path.join(PROJECTS_DIR, dir, 'project-config.json');
+      if (!fs.existsSync(candidate)) continue;
+      try {
+        const cfg = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+        if (cfg.title && cfg.title.trim() === project.title.trim()) {
+          // Found a match — also write it to the canonical ID path so future reads are fast
+          writeConfig(projectId, cfg);
+          console.log(`[beat-tracker] Config found via title match: dir ${dir} → project ${projectId}`);
+          return cfg;
+        }
+      } catch (_) { /* skip unparseable files */ }
+    }
+  } catch (_) { /* db or fs error — give up */ }
+
+  return null;
 }
 
 function writeConfig(projectId, config) {
