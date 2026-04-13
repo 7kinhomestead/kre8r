@@ -241,10 +241,64 @@ router.post('/davinci/build/:project_id', (req, res) => {
         allFootage.map(f => [f.id, f.organized_path || f.file_path || ''])
       );
 
-      // Find DaVinci project name — read from projects table
-      // (davinci_timelines has no resolve_project_name column)
-      const davinciName = project.davinci_project_name || project.title;
-      const fps         = project.fps || 24;  // projects table has no fps column — defaults to 24
+      // ── Auto-create DaVinci project if not yet linked ──────────────────
+      // If no davinci_project_name, run create-project.py first (sets up the
+      // project, bin structure, and stores the name back to the DB).
+      let davinciName = project.davinci_project_name;
+      if (!davinciName) {
+        pushEvent(job, { stage: 'davinci_log', line: 'No DaVinci project linked — creating now…' });
+
+        const footageByType = {};
+        for (const f of allFootage) {
+          if (!f.file_path) continue;
+          const k = f.shot_type || 'unclassified';
+          if (!footageByType[k]) footageByType[k] = [];
+          footageByType[k].push(f.file_path);
+        }
+
+        const createScriptPath = path.join(__dirname, '..', '..', 'scripts', 'davinci', 'create-project.py');
+        const createArgs = [
+          createScriptPath,
+          '--project_id',   String(projectId),
+          '--project_name', project.title.replace(/\s+/g, '-'),
+          '--footage_json', JSON.stringify(footageByType),
+          '--content_angle', project.content_angle || '',
+          '--creator_name',  'Kre8r'
+        ];
+
+        await new Promise((resolve, reject) => {
+          const cp = spawn(binary, createArgs, { windowsHide: true, timeout: 300_000 });
+          let cpOut = ''; let cpErr = '';
+          cp.stdout.on('data', d => { cpOut += d.toString(); });
+          cp.stderr.on('data', d => {
+            const line = d.toString().trim();
+            cpErr += line;
+            if (line) pushEvent(job, { stage: 'davinci_log', line });
+          });
+          cp.on('error', reject);
+          cp.on('close', code => {
+            if (code !== 0) return reject(new Error(`create-project.py exited ${code}: ${cpErr.slice(-300)}`));
+            try {
+              const r = JSON.parse(cpOut.trim());
+              if (r.ok && r.project_name) {
+                db.updateProjectDavinciState(projectId, 'created', r.project_name);
+                davinciName = r.project_name;
+                pushEvent(job, { stage: 'davinci_log', line: `DaVinci project created: ${r.project_name}` });
+              } else {
+                pushEvent(job, { stage: 'davinci_log', line: `create-project.py: ${r.error || 'unknown error'} — proceeding with fallback name` });
+                davinciName = project.title;
+              }
+              resolve();
+            } catch (_) {
+              pushEvent(job, { stage: 'davinci_log', line: 'Could not parse create-project result — proceeding with fallback name' });
+              davinciName = project.title;
+              resolve(); // non-fatal — still attempt build
+            }
+          });
+        });
+      }
+
+      const fps = project.fps || 24;
 
       const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'davinci', 'build-selects.py');
 
