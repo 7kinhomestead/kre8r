@@ -850,7 +850,7 @@
   // ── Merge screen ───────────────────────────────────────────────
   async function loadMergeProjects() {
     try {
-      const res = await fetch('/api/projects?source=kre8r');
+      const res = await fetch('/api/projects');
       if (!res.ok) return;
       const projects = await res.json();
       const selA = document.getElementById('merge-project-a');

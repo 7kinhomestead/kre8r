@@ -521,7 +521,7 @@ async function checkSunoKey() {
 }
 
 async function loadProjects() {
-  const r = await fetch('/api/projects?source=kre8r');
+  const r = await fetch('/api/projects');
   const d = await r.json();
   projectSelect.innerHTML = '<option value="">— select a project —</option>';
   (Array.isArray(d) ? d : d.projects || []).forEach(p => {

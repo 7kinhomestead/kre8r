@@ -571,7 +571,7 @@ async function init() {
 
 async function loadProjects() {
   try {
-    const r = await fetch('/api/projects?source=kre8r');
+    const r = await fetch('/api/projects');
     const projects = await r.json();
     const sel = document.getElementById('projectSelect');
     projects.forEach(p => {

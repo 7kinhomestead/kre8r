@@ -432,7 +432,7 @@ function showToast(msg, type = 'ok') {
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadProjects() {
   try {
-    const res = await fetch('/api/projects?source=kre8r');
+    const res = await fetch('/api/projects');
     if (!res.ok) throw new Error('Failed to load projects');
     const projects = await res.json();
     const sel = document.getElementById('project-select');

@@ -1198,7 +1198,7 @@ async function showProjectSelector() {
   listEl.innerHTML = '<div class="selector-loading">Loading projects…</div>';
 
   try {
-    const res  = await fetch('/api/projects?source=kre8r');
+    const res  = await fetch('/api/projects');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const projects = Array.isArray(data) ? data : (data.projects || []);

@@ -2328,8 +2328,11 @@ function getArchivedProjects() {
 // ─────────────────────────────────────────────
 
 function getPipelineSummary(source) {
-  // When source is explicitly 'youtube_import' (MirrΩr) use the full set; otherwise native projects only.
-  const projects = source ? getAllProjectsBySource(source) : getKre8rProjects();
+  // Single source of truth: always use getKre8rProjects() (blacklist approach) for native
+  // projects. Only use getAllProjectsBySource() when explicitly requesting import sets
+  // (e.g. source='youtube_import' for MirrΩr).
+  const isImportSource = source && source.endsWith('_import');
+  const projects = isImportSource ? getAllProjectsBySource(source) : getKre8rProjects();
   return projects.map(p => ({
     ...p,
     needs_attention: !p.gate_a_approved || !p.gate_b_approved || !p.gate_c_approved

@@ -268,7 +268,7 @@ function qualityClass(q) {
 // ─────────────────────────────────────────────
 async function loadProjects() {
   try {
-    const res = await fetch('/api/projects?source=kre8r');
+    const res = await fetch('/api/projects');
     const data = await res.json();
     const sel = document.getElementById('projectSelect');
     (data.projects || data || []).forEach(p => {
