@@ -233,4 +233,193 @@ router.post('/broadcast-tag', async (req, res) => {
   }
 });
 
+// ─── GET  /api/kajabi/webhooks ────────────────────────────────────────────────
+// List registered Kajabi webhooks
+
+router.get('/webhooks', async (req, res) => {
+  try {
+    const data = await kajabi('GET', '/webhooks');
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── POST /api/kajabi/webhooks/register ───────────────────────────────────────
+// Register our webhook endpoint with Kajabi
+// Body: { url } — defaults to https://kre8r.app/api/kajabi-webhook/receive
+
+router.post('/webhooks/register', async (req, res) => {
+  try {
+    const url    = req.body?.url || 'https://kre8r.app/api/kajabi-webhook/receive';
+    const events = req.body?.events || [
+      'member.created',
+      'purchase.created',
+      'offer.purchase',
+      'member.removed',
+    ];
+    const data = await kajabi('POST', '/webhooks', { url, events });
+    res.json({ ok: true, data });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── POST /api/kajabi/bulk-sync-mailerlite ────────────────────────────────────
+// Pulls all Kajabi contacts, determines their community tier from offer membership,
+// and upserts them into the correct MailerLite groups.
+//
+// Tier offer IDs (hardcoded from live Kajabi data, also in req.body.offerMap):
+//   Greenhouse: 2151041075
+//   Garden:     2151041176
+//   Founding50: 2151042381, 2151040759
+//
+// Strategy:
+//   1. Pull contacts for Garden + Founding50 offers (offer filter) → tier map
+//   2. Pull ALL contacts (paginated) → anyone not in a paid tier = Greenhouse
+//   3. Upsert each contact to MailerLite with correct group
+
+const ML_BASE_SYNC = 'https://connect.mailerlite.com/api';
+
+async function mlUpsert(email, name, groupId) {
+  const { default: fetch } = await import('node-fetch');
+  const apiKey = process.env.MAILERLITE_API_KEY;
+  if (!apiKey) throw new Error('MAILERLITE_API_KEY not set');
+  const body = { email, fields: {}, groups: [groupId] };
+  if (name) body.fields.name = name;
+  const res  = await fetch(`${ML_BASE_SYNC}/subscribers`, {
+    method:  'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type':  'application/json',
+      'Accept':        'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = {}; }
+  if (!res.ok && res.status !== 422) { // 422 = already exists, fine
+    throw new Error(data?.message || `MailerLite ${res.status}`);
+  }
+  return data;
+}
+
+// Tag IDs from live Kajabi data — used for tier detection from inline tag relationships
+const KAJABI_TIER_TAGS = {
+  '2150101640': 'founding50',  // Founding 50 - Member
+  '2150101641': 'garden',      // Garden - Member
+  '2150101628': 'greenhouse',  // Greenhouse - Member
+};
+const TIER_PRIORITY = { founding50: 3, garden: 2, greenhouse: 1 };
+
+function detectTierFromContact(contact) {
+  // Tags are inline in relationships.tags.data — no extra API call needed
+  const tagRefs = contact?.relationships?.tags?.data || [];
+  let best = null;
+  for (const ref of tagRefs) {
+    const tier = KAJABI_TIER_TAGS[ref.id];
+    if (tier && (!best || TIER_PRIORITY[tier] > TIER_PRIORITY[best])) {
+      best = tier;
+    }
+  }
+  return best || 'greenhouse'; // default to greenhouse if no tier tag
+}
+
+async function kajabiAllContacts() {
+  // Kajabi includes tag relationships inline — single pass, no extra calls
+  const contacts = [];
+  let pageNum = 1;
+  let hasMore = true;
+  while (hasMore) {
+    const path = `/contacts?page[number]=${pageNum}`;
+    let data;
+    try {
+      data = await kajabi('GET', path);
+    } catch (e) {
+      console.warn('[bulk-sync] Kajabi fetch error:', e.message);
+      break;
+    }
+    const batch = data?.data || [];
+    if (!batch.length) break;
+    contacts.push(...batch);
+    hasMore = !!(data?.links?.next);
+    pageNum++;
+    // brief pause between pages to be kind to Kajabi
+    if (hasMore) await new Promise(r => setTimeout(r, 100));
+  }
+  return contacts;
+}
+
+router.post('/bulk-sync-mailerlite', async (req, res) => {
+  try {
+    const fs   = require('fs');
+    const path = require('path');
+    const profilePath = process.env.CREATOR_PROFILE_PATH
+      || path.join(__dirname, '../../creator-profile.json');
+    const profile  = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+    const groupMap = profile?.integrations?.mailerlite_groups || {};
+
+    if (!groupMap.greenhouse || !groupMap.garden || !groupMap.founding50) {
+      return res.status(400).json({ error: 'MailerLite group IDs not configured — run /api/mailerlite/groups/sync first' });
+    }
+
+    // Pull ALL contacts — tag relationships are inline, no extra API calls
+    console.log('[bulk-sync] Fetching all Kajabi contacts...');
+    const allContacts = await kajabiAllContacts();
+    console.log(`[bulk-sync] Got ${allContacts.length} contacts from Kajabi`);
+
+    // Determine tier for each contact from inline tag data
+    const contactTier = {};
+    for (const c of allContacts) {
+      const email = c?.attributes?.email;
+      if (!email) continue;
+      contactTier[email] = {
+        tier: detectTierFromContact(c),
+        name: c?.attributes?.name || '',
+      };
+    }
+
+    // Upsert to MailerLite — only sync contacts who have a member tag
+    // (don't spam ML with 4k+ general contacts, only actual community members)
+    const memberOnly = req.body?.memberOnly !== false; // default true
+    const results = { greenhouse: 0, garden: 0, founding50: 0, skipped: 0, errors: 0, error_list: [] };
+    const entries = Object.entries(contactTier);
+
+    for (const [email, { tier, name }] of entries) {
+      // If memberOnly, skip contacts with no explicit tier tag (defaulted to greenhouse)
+      if (memberOnly) {
+        const c = allContacts.find(x => x?.attributes?.email === email);
+        const tagRefs = c?.relationships?.tags?.data || [];
+        const hasMemberTag = tagRefs.some(r => KAJABI_TIER_TAGS[r.id]);
+        if (!hasMemberTag) { results.skipped++; continue; }
+      }
+
+      const mlGroupId = groupMap[tier];
+      if (!mlGroupId) continue;
+      try {
+        await mlUpsert(email, name, mlGroupId);
+        results[tier]++;
+      } catch (e) {
+        results.errors++;
+        results.error_list.push({ email, error: e.message });
+        console.warn('[bulk-sync] ML upsert failed:', email, e.message);
+      }
+      await new Promise(r => setTimeout(r, 50));
+    }
+
+    res.json({
+      ok:    true,
+      total: entries.length,
+      synced: results.greenhouse + results.garden + results.founding50,
+      breakdown: { greenhouse: results.greenhouse, garden: results.garden, founding50: results.founding50 },
+      errors: results.errors,
+      error_list: results.error_list.slice(0, 10),
+    });
+  } catch (e) {
+    console.error('[bulk-sync-mailerlite]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

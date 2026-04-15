@@ -67,6 +67,27 @@
   .ml-send-btn:hover{opacity:0.9;transform:translateY(-1px);}
   .ml-send-btn:active{transform:translateY(0);}
   .ml-send-btn:disabled{background:var(--bg-card-2);color:var(--text-dimmer);cursor:not-allowed;transform:none;border:1px solid var(--border);}
+
+  /* WELCOME EMAILS */
+  .wc-card{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
+  .wc-tier-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .wc-tier-name{font-family:var(--font-head);font-size:14px;letter-spacing:1.5px;color:var(--teal);}
+  .wc-tier-badge{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--text-dim);}
+  .wc-tier-badge.configured{border-color:var(--teal);color:var(--teal);}
+  .wc-field{margin-bottom:12px;}
+  .wc-label{font-size:11px;letter-spacing:1px;color:var(--text-dimmer);text-transform:uppercase;margin-bottom:5px;}
+  .wc-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:9px 12px;font-size:13px;box-sizing:border-box;}
+  .wc-input:focus{outline:none;border-color:var(--teal);}
+  .wc-textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:9px 12px;font-size:13px;font-family:monospace;min-height:140px;resize:vertical;box-sizing:border-box;}
+  .wc-textarea:focus{outline:none;border-color:var(--teal);}
+  .wc-actions{display:flex;gap:8px;margin-top:14px;}
+  .wc-btn{padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-head);font-size:12px;letter-spacing:1px;cursor:pointer;border:none;transition:all 0.15s;}
+  .wc-btn-save{background:var(--teal);color:#0a0a0a;}
+  .wc-btn-save:hover{opacity:0.88;}
+  .wc-btn-gen{background:var(--bg);border:1px solid var(--border);color:var(--text-dim);}
+  .wc-btn-gen:hover{border-color:var(--teal);color:var(--teal);}
+  .wc-btn-test{background:var(--bg);border:1px solid var(--border);color:var(--text-dim);}
+  .wc-btn-test:hover{border-color:var(--amber,#f59e0b);color:var(--amber,#f59e0b);}
   .ml-success{background:var(--green-glow);border:1px solid var(--green);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--green);margin-top:10px;display:none;}
   .ml-success.show{display:block;}
 
@@ -372,6 +393,7 @@
     <button class="mode-tab active" id="tab-broadcast" onclick="switchMode('broadcast')">⚡ Broadcast A/B</button>
     <button class="mode-tab" id="tab-sequence" onclick="switchMode('sequence')">📅 Sequence (7 emails)</button>
     <button class="mode-tab" id="tab-sequencer" onclick="switchMode('sequencer')">✦ SequenceΩr</button>
+    <button class="mode-tab" id="tab-welcome" onclick="switchMode('welcome')">📬 Welcome Emails</button>
   </div>
 
   <!-- ═══════════════════════════════════════════
@@ -830,6 +852,26 @@
     </div><!-- /sq-layout -->
   </div><!-- /mode-sequencer -->
 
+  <!-- ═══════════════════════════════════════════
+       WELCOME EMAILS
+  ═══════════════════════════════════════════ -->
+  <div id="mode-welcome" style="display:none">
+    <div class="sq-layout" style="max-width:820px;">
+
+      <p style="color:var(--text-dim);font-size:13px;margin-bottom:20px;line-height:1.6;">
+        These emails fire automatically when someone joins each community tier. Edit the subject and body, then save. Use <code>{{first_name}}</code> to personalise.
+      </p>
+
+      <!-- TIER CARDS -->
+      <div id="welcome-tiers">
+        <!-- injected by JS -->
+      </div>
+
+      <div id="welcome-status" style="margin-top:16px;font-size:13px;color:var(--teal);display:none;"></div>
+
+    </div>
+  </div><!-- /mode-welcome -->
+
 </main>
 
 <div class="toast-wrap" id="toast-wrap"></div>
@@ -1035,10 +1077,116 @@ function switchMode(mode) {
   document.getElementById('mode-broadcast').style.display  = mode === 'broadcast'  ? '' : 'none';
   document.getElementById('mode-sequence').style.display   = mode === 'sequence'   ? '' : 'none';
   document.getElementById('mode-sequencer').style.display  = mode === 'sequencer'  ? '' : 'none';
+  document.getElementById('mode-welcome').style.display    = mode === 'welcome'    ? '' : 'none';
   document.getElementById('tab-broadcast').classList.toggle('active', mode === 'broadcast');
   document.getElementById('tab-sequence').classList.toggle('active', mode === 'sequence');
   document.getElementById('tab-sequencer').classList.toggle('active', mode === 'sequencer');
+  document.getElementById('tab-welcome').classList.toggle('active', mode === 'welcome');
   if (mode === 'sequencer') sqInit();
+  if (mode === 'welcome') wcInit();
+}
+
+// ─────────────────────────────────────────────
+// WELCOME EMAILS
+// ─────────────────────────────────────────────
+const WC_TIERS = [
+  { key: 'greenhouse', label: '🌱 Greenhouse', badge: 'Free' },
+  { key: 'garden',     label: '🌿 Garden',     badge: '$19/mo' },
+  { key: 'founding50', label: '🏆 Founding 50', badge: '$297 one-time' },
+];
+
+async function wcInit() {
+  const container = document.getElementById('welcome-tiers');
+  container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Loading…</div>';
+
+  // Load all 3 tiers in parallel
+  const results = await Promise.all(WC_TIERS.map(t =>
+    fetch(`/api/kajabi-webhook/welcome-email/${t.key}`).then(r => r.json()).catch(() => ({ configured: false }))
+  ));
+
+  container.innerHTML = '';
+  WC_TIERS.forEach((tier, i) => {
+    const data = results[i];
+    const card = document.createElement('div');
+    card.className = 'wc-card';
+    card.id = `wc-card-${tier.key}`;
+    card.innerHTML = `
+      <div class="wc-tier-header">
+        <div class="wc-tier-name">${tier.label}</div>
+        <div class="wc-tier-badge ${data.configured ? 'configured' : ''}" id="wc-badge-${tier.key}">
+          ${data.configured ? '✓ CONFIGURED' : 'NOT SET'}
+        </div>
+      </div>
+      <div class="wc-field">
+        <div class="wc-label">Subject Line</div>
+        <input class="wc-input" id="wc-subject-${tier.key}" value="${(data.subject || '').replace(/"/g,'&quot;')}" placeholder="Subject line…">
+      </div>
+      <div class="wc-field">
+        <div class="wc-label">Email Body (HTML)</div>
+        <textarea class="wc-textarea" id="wc-body-${tier.key}">${data.body || ''}</textarea>
+      </div>
+      <div class="wc-actions">
+        <button class="wc-btn wc-btn-save" onclick="wcSave('${tier.key}')">SAVE</button>
+        <button class="wc-btn wc-btn-gen" onclick="wcGenerate('${tier.key}')">↺ Regenerate</button>
+        <button class="wc-btn wc-btn-test" onclick="wcTest('${tier.key}')">⚡ Test Fire</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+async function wcSave(tierKey) {
+  const subject = document.getElementById(`wc-subject-${tierKey}`).value.trim();
+  const body    = document.getElementById(`wc-body-${tierKey}`).value.trim();
+  if (!subject || !body) { showToast('Subject and body required', 'amber'); return; }
+
+  const r = await fetch(`/api/kajabi-webhook/welcome-email/${tierKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, body }),
+  });
+  const j = await r.json();
+  if (j.ok) {
+    const badge = document.getElementById(`wc-badge-${tierKey}`);
+    badge.textContent = '✓ CONFIGURED';
+    badge.classList.add('configured');
+    showToast('Welcome email saved', 'teal');
+  } else {
+    showToast(j.error || 'Save failed', 'red');
+  }
+}
+
+async function wcGenerate(tierKey) {
+  const btn = document.querySelector(`#wc-card-${tierKey} .wc-btn-gen`);
+  btn.textContent = '↺ Generating…';
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/kajabi-webhook/welcome-email/${tierKey}/generate`, { method: 'POST' });
+    const j = await r.json();
+    if (j.ok) {
+      document.getElementById(`wc-subject-${tierKey}`).value = j.subject;
+      document.getElementById(`wc-body-${tierKey}`).value    = j.body;
+      showToast('Generated — review and save', 'teal');
+    } else {
+      showToast(j.error || 'Generate failed', 'red');
+    }
+  } finally {
+    btn.textContent = '↺ Regenerate';
+    btn.disabled = false;
+  }
+}
+
+async function wcTest(tierKey) {
+  const email = prompt('Send test to which email address?');
+  if (!email) return;
+  const r = await fetch('/api/kajabi-webhook/welcome-email/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier: tierKey, email, first_name: 'Friend' }),
+  });
+  const j = await r.json();
+  if (j.ok) showToast(`Test sent to ${email}`, 'teal');
+  else showToast(j.reason || j.error || 'Test failed', 'red');
 }
 
 // ─────────────────────────────────────────────

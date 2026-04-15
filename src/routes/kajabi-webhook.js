@@ -95,17 +95,34 @@ function appendEventLog(entry) {
 }
 
 // ── Tier resolver ──────────────────────────────────────────────────────────────
-// Given an offer title, return the group key: 'greenhouse' | 'garden' | 'founding50'
+// Tries tag-based detection first (from webhook payload tags array),
+// falls back to offer title matching.
+//
+// Kajabi sends tag IDs in some webhook payloads under data.member.tags or data.tags.
+// Tag IDs from live Kajabi data:
+const TIER_TAG_IDS = {
+  '2150101640': 'founding50',  // Founding 50 - Member
+  '2150101641': 'garden',      // Garden - Member
+  '2150101628': 'greenhouse',  // Greenhouse - Member
+};
 
-function resolveGroupKey(offerTitle) {
+function resolveGroupKey(offerTitle, tagIds = []) {
+  // Tag-based detection (most reliable)
+  const tierPriority = { founding50: 3, garden: 2, greenhouse: 1 };
+  let bestTier = null;
+  for (const id of tagIds) {
+    const tier = TIER_TAG_IDS[String(id)];
+    if (tier && (!bestTier || tierPriority[tier] > tierPriority[bestTier])) {
+      bestTier = tier;
+    }
+  }
+  if (bestTier) return bestTier;
+
+  // Fall back to offer title matching
   if (!offerTitle) return 'greenhouse';
   const t = offerTitle.toLowerCase();
-  if (t.includes('founding') || t.includes('297') || t.includes('founding 50')) {
-    return 'founding50';
-  }
-  if (t.includes('garden') || t.includes('19')) {
-    return 'garden';
-  }
+  if (t.includes('founding') || t.includes('297') || t.includes('founding 50')) return 'founding50';
+  if (t.includes('garden') || t.includes('19')) return 'garden';
   return 'greenhouse';
 }
 

@@ -395,6 +395,85 @@ router.delete('/mappings/:keyword', (req, res) => {
   }
 });
 
+// ── POST /api/mailerlite/groups/:id/reset ─────────────────────────────────────
+// Nuclear option: delete the group and recreate it with the same name.
+// Updates creator-profile.json with the new group ID.
+// Use this when a group has been corrupted with bad data.
+
+router.post('/groups/:id/reset', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Get the group name before deleting
+    const groupData = await ml('GET', `/groups/${id}`);
+    const groupName = groupData?.data?.name;
+    if (!groupName) return res.status(404).json({ error: 'Group not found' });
+
+    // 2. Delete the group (subscribers are NOT deleted, just ungruped)
+    await ml('DELETE', `/groups/${id}`);
+    log.info({ module: 'mailerlite', groupId: id, groupName }, 'Group deleted for reset');
+
+    // 3. Recreate with same name
+    const created    = await ml('POST', '/groups', { name: groupName });
+    const newGroupId = created?.data?.id;
+    if (!newGroupId) throw new Error('MailerLite did not return new group ID');
+    log.info({ module: 'mailerlite', newGroupId, groupName }, 'Group recreated');
+
+    // 4. Update creator-profile.json if this is a known tier group
+    try {
+      const profile  = loadProfile();
+      const groupMap = profile?.integrations?.mailerlite_groups || {};
+      for (const [key, val] of Object.entries(groupMap)) {
+        if (val === id) {
+          groupMap[key] = newGroupId;
+          log.info({ module: 'mailerlite', key, newGroupId }, 'Updated group ID in profile');
+        }
+      }
+      profile.integrations.mailerlite_groups = groupMap;
+      saveProfile(profile);
+    } catch (profErr) {
+      log.warn({ module: 'mailerlite', err: profErr }, 'Could not update profile — update manually');
+    }
+
+    res.json({ ok: true, old_id: id, new_id: newGroupId, name: groupName });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'Group reset failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── DELETE /api/mailerlite/groups/:id/subscribers/all ─────────────────────────
+// Remove ALL subscribers from a group (cleans up bad sync data).
+// Does NOT delete the subscribers themselves — just removes group membership.
+
+router.delete('/groups/:id/subscribers/all', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let removed  = 0;
+    let hasMore  = true;
+
+    // Always fetch page 1 — list shrinks as we remove, so never increment page
+    while (hasMore) {
+      const data = await ml('GET', `/groups/${id}/subscribers?limit=100&filter[status]=active`);
+      const subs = data.data || [];
+      if (!subs.length) { hasMore = false; break; }
+
+      for (const sub of subs) {
+        try {
+          await ml('DELETE', `/subscribers/${sub.id}/groups/${id}`);
+          removed++;
+        } catch (_) {}
+      }
+    }
+
+    log.info({ module: 'mailerlite', groupId: id, removed }, 'Group cleared');
+    res.json({ ok: true, group_id: id, removed });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'Group clear failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── GET /api/mailerlite/stats ──────────────────────────────────────────────────
 // Last 10 campaigns with open/click rates.
 
