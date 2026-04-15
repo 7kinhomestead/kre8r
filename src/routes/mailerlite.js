@@ -63,6 +63,32 @@ async function ml(method, path_, body = null) {
   return data;
 }
 
+// ── GET /api/mailerlite/sender ─────────────────────────────────────────────────
+// Returns the configured from_name and from_email for campaigns.
+
+router.get('/sender', (req, res) => {
+  try {
+    // Env vars take priority — immune to profile overwrites
+    let fromEmail = process.env.MAILERLITE_FROM_EMAIL || '';
+    let fromName  = process.env.MAILERLITE_FROM_NAME  || '';
+
+    // Fall back to profile if env vars not set
+    if (!fromEmail || !fromName) {
+      try {
+        const profile = loadProfile();
+        const creator = profile?.creator || {};
+        if (!fromEmail) fromEmail = creator.email    || '';
+        if (!fromName)  fromName  = creator.from_name || creator.brand || creator.name || '';
+      } catch (_) {}
+    }
+
+    res.json({ ok: true, from_email: fromEmail, from_name: fromName });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'sender endpoint failed');
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ── GET /api/mailerlite/status ─────────────────────────────────────────────────
 
 router.get('/status', async (req, res) => {
@@ -222,45 +248,64 @@ router.post('/send', async (req, res) => {
     if (!subject)   return res.status(400).json({ error: 'subject is required' });
     if (!html_body) return res.status(400).json({ error: 'html_body is required' });
 
+    // Wrap bare HTML in a minimal email-safe container so it renders consistently
+    // across email clients (Outlook, Gmail, Apple Mail, etc.)
+    const wrappedHtml = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;">
+  <tr><td align="center" style="padding:40px 20px;">
+    <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+      <tr><td style="color:#222222;font-family:Georgia,serif;font-size:16px;line-height:1.7;">
+        ${html_body}
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+    // Resolve sender — env vars take priority (immune to profile overwrites)
+    let senderName  = from_name  || process.env.MAILERLITE_FROM_NAME  || '';
+    let senderEmail = from_email || process.env.MAILERLITE_FROM_EMAIL || '';
+
     // Resolve group IDs from creator-profile.json
     let mlGroupIds = [];
+
     try {
       const profile  = loadProfile();
       const groupMap = profile?.integrations?.mailerlite_groups || {};
       const creator  = profile?.creator || {};
 
-      if (group_ids.includes('all')) {
-        // All groups configured
-        mlGroupIds = Object.values(groupMap).filter(Boolean);
-      } else {
+      if (!senderName)  senderName  = creator.from_name || creator.brand || creator.name || '';
+      if (!senderEmail) senderEmail = creator.email || '';
+
+      // 'all' = no group filter (sends to every active subscriber in account)
+      // Only filter by group when specific tier keys are selected
+      if (!group_ids.includes('all')) {
         for (const key of group_ids) {
           if (groupMap[key]) mlGroupIds.push(groupMap[key]);
         }
       }
-
-      // Use profile defaults for from if not passed
-      if (!from_name && creator.brand)  req.body.from_name  = creator.brand;
-      if (!from_email && creator.email) req.body.from_email = creator.email;
-    } catch (_) { /* profile not critical for sending */ }
-
-    const senderName  = from_name  || req.body.from_name  || 'Kre8r';
-    const senderEmail = from_email || req.body.from_email;
-
-    if (!senderEmail) {
-      return res.status(400).json({ error: 'from_email is required (or set creator.email in creator-profile.json)' });
+    } catch (profileErr) {
+      log.warn({ module: 'mailerlite', err: profileErr.message }, 'Could not load profile in /send');
     }
 
-    // 1. Create campaign
+    if (!senderEmail) {
+      return res.status(400).json({ error: 'Sender email not configured — set MAILERLITE_FROM_EMAIL in .env' });
+    }
+    if (!senderName) senderName = 'Kre8r';
+
+    // 1. Create campaign — ML v2: no top-level subject; emails[].from (not from_email)
     const campaignBody = {
-      name:    `${subject} — ${new Date().toISOString().slice(0, 10)}`,
-      subject,
-      type:    'regular',
+      name: `${subject} — ${new Date().toISOString().slice(0, 10)}`,
+      type: 'regular',
       emails: [{
         subject,
-        from_name:  senderName,
-        from_email: senderEmail,
-        content:    html_body,
-        reply_to:   senderEmail,
+        from_name: senderName,
+        from:      senderEmail,
+        reply_to:  senderEmail,
+        content:   wrappedHtml,
       }],
     };
 
@@ -268,17 +313,28 @@ router.post('/send', async (req, res) => {
       campaignBody.groups = mlGroupIds;
     }
 
-    const campaign = await ml('POST', '/campaigns', campaignBody);
+    log.info({ module: 'mailerlite', campaignBody: JSON.stringify(campaignBody) }, 'Creating campaign');
+
+    let campaign;
+    try {
+      campaign = await ml('POST', '/campaigns', campaignBody);
+    } catch (createErr) {
+      throw new Error(`Campaign create failed: ${createErr.message}`);
+    }
     const campaignId = campaign?.data?.id;
 
     if (!campaignId) {
-      throw new Error('Mailerlite did not return a campaign ID');
+      throw new Error('Mailerlite did not return a campaign ID — response: ' + JSON.stringify(campaign));
     }
 
     log.info({ module: 'mailerlite', campaignId, subject }, 'Campaign created');
 
-    // 2. Send immediately
-    await ml('POST', `/campaigns/${campaignId}/actions/send`);
+    // 2. Send immediately — ML v2 uses /schedule with delivery:instant (no /actions/send endpoint)
+    try {
+      await ml('POST', `/campaigns/${campaignId}/schedule`, { delivery: 'instant' });
+    } catch (sendErr) {
+      throw new Error(`Campaign send failed (id=${campaignId}): ${sendErr.message}`);
+    }
 
     log.info({ module: 'mailerlite', campaignId }, 'Campaign sent');
 
@@ -470,6 +526,65 @@ router.delete('/groups/:id/subscribers/all', async (req, res) => {
     res.json({ ok: true, group_id: id, removed });
   } catch (e) {
     log.error({ module: 'mailerlite', err: e }, 'Group clear failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mailerlite/premiere-email ───────────────────────────────────────
+// Generates a video premiere email — mystery/teaser style, drives to YouTube.
+// Body: { title, description, post_url, topic, angle, hook, content_type }
+
+router.post('/premiere-email', async (req, res) => {
+  try {
+    const { title, description, post_url, topic, angle, hook, content_type } = req.body || {};
+    if (!title) return res.status(400).json({ error: 'title is required' });
+
+    const profile      = loadProfile();
+    const creatorName  = profile?.creator?.name || 'Jason';
+    const brandName    = profile?.creator?.brand || '7 Kin Homestead';
+    const voice        = profile?.creator?.voice_summary || 'Straight-talking, warm, funny, never corporate.';
+    const { callClaude } = require('../utils/claude');
+
+    const contextLines = [];
+    if (topic)       contextLines.push(`Topic: ${topic}`);
+    if (angle)       contextLines.push(`Content angle: ${angle}`);
+    if (hook)        contextLines.push(`Hook/opening beat: ${hook}`);
+    if (description) contextLines.push(`Video description: ${description.slice(0, 400)}`);
+    if (post_url)    contextLines.push(`YouTube URL: ${post_url}`);
+
+    const isShort = content_type === 'short';
+
+    const prompt = `You are writing a video premiere email for ${creatorName} from ${brandName}.
+
+A new ${isShort ? 'short-form video' : 'video'} just went live on YouTube. Your job is to write an email that makes the reader feel like ${creatorName} personally tapped them on the shoulder and said "hey, you need to see this."
+
+Creator voice: ${voice}
+
+Video context:
+${contextLines.join('\n')}
+
+RULES:
+- Write in first person as ${creatorName} — "I filmed", "I wasn't sure", "this one surprised me"
+- Create mystery and personal investment WITHOUT being click-baity or fake
+- Do NOT summarise the whole video — tease one tension or unexpected moment
+- The email should feel like a real person sent it, not a marketing blast
+- 2–4 short paragraphs max. Punchy. No fluff.
+- End with a single clear CTA: watch the video (include the URL if provided)
+- Subject line: intriguing, personal, 8 words or fewer
+- Use {$name} once near the top (this is MailerLite's native merge tag for first name)
+
+Return ONLY valid JSON in this exact shape:
+{
+  "subject": "...",
+  "body": "<p>...</p><p>...</p>"
+}`;
+
+    const result = await callClaude(prompt, 1024);
+    if (!result?.subject || !result?.body) throw new Error('Claude response missing subject or body');
+
+    res.json({ ok: true, subject: result.subject, body: result.body });
+  } catch (e) {
+    log.error({ module: 'mailerlite', err: e }, 'premiere-email generate failed');
     res.status(500).json({ error: e.message });
   }
 });

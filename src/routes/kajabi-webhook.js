@@ -212,14 +212,20 @@ async function fireWelcomeEmail(email, firstName, groupKey) {
 
   const profile   = loadProfile();
   const fromEmail = profile?.creator?.email;
-  const fromName  = profile?.creator?.brand || profile?.creator?.name || 'Jason';
+  const fromName  = profile?.creator?.from_name || profile?.creator?.brand || profile?.creator?.name || 'Jason';
 
   if (!fromEmail) return { fired: false, reason: 'creator.email not set in creator-profile.json' };
 
-  // Personalise — replace {{first_name}} with real name
+  // Personalise — replace both legacy {{first_name}} and MailerLite's {subscriber.name}
   const greeting  = firstName || 'there';
-  const subject   = template.subject.replace(/\{\{first_name\}\}/gi, greeting);
-  const html      = template.body.replace(/\{\{first_name\}\}/gi, greeting);
+  const subject   = template.subject
+    .replace(/\{\{first_name\}\}/gi, greeting)
+    .replace(/\{subscriber\.name\}/gi, greeting)
+    .replace(/\{\$name\}/gi, greeting);
+  const html      = template.body
+    .replace(/\{\{first_name\}\}/gi, greeting)
+    .replace(/\{subscriber\.name\}/gi, greeting)
+    .replace(/\{\$name\}/gi, greeting);
 
   await ml('POST', '/transactional/emails', {
     from:    { email: fromEmail, name: fromName },
@@ -461,7 +467,7 @@ Creator voice: ${voice}
 Write a short, personal welcome email for someone who just joined ${tierNames[tier]}.
 - Subject line: punchy, warm, matches the creator's voice
 - Body: 3-5 short paragraphs, conversational, excited but not corporate
-- Include {{first_name}} placeholder once at the start
+- Include {$name} placeholder once at the start (this is MailerLite's native merge tag for first name)
 - DO NOT use emojis
 - Tier context:
   - greenhouse: free tier, they're just exploring, welcome them in, low pressure

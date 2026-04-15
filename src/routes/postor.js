@@ -634,6 +634,47 @@ router.post('/revenue/manual', (req, res) => {
   }
 });
 
+// ─── Premiere Videos — projects available for Video Premiere email in MailΩr ──
+// Returns all active kre8r-created projects (newest first) so the user can pick
+// any video and supply the YouTube URL directly in the MailΩr UI — no pre-linking
+// in MirrΩr required. Also includes any already-linked youtube_video_id so the
+// URL field auto-fills if it was previously linked.
+
+router.get('/premiere-videos', (req, res) => {
+  try {
+    const rawDb = db.getRawDb();
+    const projects = rawDb
+      ? rawDb.prepare(`
+          SELECT p.id, p.title, p.topic, p.content_type,
+                 p.youtube_video_id, p.youtube_url, p.published_at, p.created_at,
+                 p.source, p.high_concept
+          FROM projects p
+          WHERE p.status != 'archived'
+            AND p.source IN ('kre8r', 'youtube_import')
+          ORDER BY COALESCE(p.published_at, p.created_at) DESC
+          LIMIT 100
+        `).all()
+      : [];
+
+    const videos = projects.map(pr => ({
+      project_id:   pr.id,
+      title:        pr.title || 'Untitled',
+      youtube_id:   pr.youtube_video_id || null,
+      youtube_url:  pr.youtube_url || (pr.youtube_video_id
+        ? `https://www.youtube.com/watch?v=${pr.youtube_video_id}` : null),
+      posted_at:    pr.published_at || pr.created_at,
+      topic:        pr.topic || '',
+      hook:         pr.high_concept || '',
+      content_type: pr.content_type || 'long',
+      source:       pr.source,
+    }));
+
+    res.json({ videos });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Post History ─────────────────────────────────────────────────────────────
 
 router.get('/history', (req, res) => {

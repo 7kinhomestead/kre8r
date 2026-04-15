@@ -1,3 +1,32 @@
+# Session 39 — MailΩr Premiere Email end-to-end (2026-04-15)
+
+## Goal
+Get video premiere email Send Now working end-to-end in MailΩr: dropdown, generate, send via MailerLite.
+
+## What Was Built / Fixed
+
+### MailΩr Premiere Email — full send pipeline
+- `src/routes/postor.js` — `GET /premiere-videos` rewritten: returns all active kre8r/youtube_import projects (not just those with youtube_video_id). Fixed `no such column: p.angle` — `angle`/`hook` don't exist on projects table, use `high_concept` as fallback.
+- `public/mailor.html` — Premiere tab: YouTube URL input added (user pastes link); project_id as select value; `pmGenerate()` shows "✦ Writing…" on button; inline error div for persistent feedback; `pmSend()` fetches `/api/mailerlite/sender` first.
+- `src/routes/mailerlite.js` — Multiple fixes in `POST /api/mailerlite/send`:
+  - `from_email` → `from` in emails array (ML v2 field name)
+  - Removed invalid top-level `subject` from campaign body
+  - `'all'` audience now sends to all subscribers (no groups filter) instead of passing stale tier group IDs
+  - Env vars (`MAILERLITE_FROM_EMAIL`, `MAILERLITE_FROM_NAME`) checked first — immune to profile overwrites
+  - Send endpoint: `/campaigns/{id}/actions/send` → `/campaigns/{id}/schedule` with `{delivery:'instant'}` (ML v2 has no `/actions/send`)
+  - Step-specific error messages: "Campaign create failed" vs "Campaign send failed (id=...)"
+- `src/routes/mailerlite.js` — `GET /api/mailerlite/sender` endpoint added (resolves from env → profile)
+- `{$name}` personalization token fixed across all 6 generation prompts (broadcast, sequence, premiere, welcome emails)
+- Morning bulk sync scheduled in `server.js` at 8 AM local time via setInterval tick
+
+## Key API Discovery
+MailerLite v2 (`connect.mailerlite.com`):
+- Campaign emails array: `from` (not `from_email`), `content` (HTML, not `html`)
+- No top-level `subject` on campaign body — only inside `emails[]`
+- Send immediately: `POST /campaigns/{id}/schedule` with `{"delivery":"instant"}` — `/actions/send` does not exist
+
+---
+
 # Session 38 — PostΩr + YouTube Analytics Sync (2026-04-14)
 
 ## Goal

@@ -185,7 +185,8 @@ RULES:
 - Write like a real person sending a personal email, not a newsletter blast.
 - Short, punchy subject lines — no clickbait, no ALL CAPS gimmicks.
 - Every email has one job. One CTA. Don't pile on.
-- A/B means meaningfully different approaches — not just different subject lines. Different angle, different entry point, different emotional hook.`;
+- A/B means meaningfully different approaches — not just different subject lines. Different angle, different entry point, different emotional hook.
+- Use {$name} once near the top of each email as the greeting. This is MailerLite's native merge tag for first name.`;
 
     let userPrompt = `Write an A/B broadcast email pair for this situation:\n\nPrompt: ${prompt}\nSegment: ${segment || 'everyone'}\nGoal: ${goal || 'not specified'}\n`;
 
@@ -407,6 +408,7 @@ EMAIL STRATEGY:
 - Day 7 (Garden): Tease next video. Reinforce they're in the right place.
 - Day 7 (Founding 50): Full insider. What's coming. What they get first.
 
+Use {$name} once near the top of each email as the greeting — this is MailerLite's native merge tag for first name.
 Plain text only. No markdown. No asterisks. No symbols.
 
 OUTPUT: valid JSON only, no preamble:

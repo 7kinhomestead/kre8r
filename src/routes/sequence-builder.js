@@ -402,7 +402,7 @@ ${voiceContext}
 ${priorContext}
 
 WRITING RULES:
-- Use {{first_name}} once near the top as the greeting
+- Use {$name} once near the top as the greeting (MailerLite's native merge tag for first name)
 - Write in ${creatorName}'s voice — warm, direct, never corporate, never stiff
 - Short paragraphs (2-3 sentences max)
 - One clear CTA at the end (match what's specified above)
@@ -413,7 +413,7 @@ WRITING RULES:
 Return ONLY valid JSON:
 {
   "subject": "...",
-  "body": "<p>Hey {{first_name}},</p><p>...</p>"
+  "body": "<p>Hey {$name},</p><p>...</p>"
 }`;
 
       const result = await callClaude(prompt, 1024);

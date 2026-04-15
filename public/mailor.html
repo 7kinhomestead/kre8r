@@ -394,6 +394,7 @@
     <button class="mode-tab" id="tab-sequence" onclick="switchMode('sequence')">📅 Sequence (7 emails)</button>
     <button class="mode-tab" id="tab-sequencer" onclick="switchMode('sequencer')">✦ SequenceΩr</button>
     <button class="mode-tab" id="tab-welcome" onclick="switchMode('welcome')">📬 Welcome Emails</button>
+    <button class="mode-tab" id="tab-premiere" onclick="switchMode('premiere')">📺 Video Premiere</button>
   </div>
 
   <!-- ═══════════════════════════════════════════
@@ -853,13 +854,86 @@
   </div><!-- /mode-sequencer -->
 
   <!-- ═══════════════════════════════════════════
+       VIDEO PREMIERE
+  ═══════════════════════════════════════════ -->
+  <div id="mode-premiere" style="display:none">
+    <div style="max-width:720px;">
+
+      <p style="color:var(--text-dim);font-size:13px;margin-bottom:20px;line-height:1.6;">
+        Pick a published video, generate a mystery/teaser email, edit if needed, and send to your list in one flow.
+      </p>
+
+      <!-- VIDEO PICKER -->
+      <div class="wc-card">
+        <div class="wc-field">
+          <div class="wc-label">Kre8r Project</div>
+          <select class="wc-input" id="pm-video-select" onchange="pmOnVideoSelect()">
+            <option value="">Loading projects…</option>
+          </select>
+        </div>
+        <div class="wc-field" style="margin-top:12px;">
+          <div class="wc-label">YouTube URL <span style="color:var(--text-dimmer);font-weight:400;">(paste the link to your published video)</span></div>
+          <input class="wc-input" id="pm-yt-url" type="url" placeholder="https://www.youtube.com/watch?v=…" oninput="pmOnUrlInput()">
+        </div>
+        <div id="pm-video-meta" style="display:none;margin-top:10px;font-size:12px;color:var(--text-dim);line-height:1.6;"></div>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="wc-btn wc-btn-save" id="pm-gen-btn" onclick="pmGenerate()" disabled>
+            ✦ Generate Premiere Email
+          </button>
+          <span id="pm-loading" style="display:none;color:var(--teal);font-size:13px;letter-spacing:1px;">✦ Writing…</span>
+        </div>
+        <div id="pm-error" style="display:none;margin-top:10px;padding:10px 14px;background:var(--red-glow);border:1px solid var(--red);border-radius:var(--radius-sm);color:var(--red);font-size:13px;"></div>
+      </div>
+
+      <!-- RESULT -->
+      <div id="pm-result" style="display:none;">
+        <div class="wc-card">
+          <div class="wc-field">
+            <div class="wc-label">Subject Line</div>
+            <input class="wc-input" id="pm-subject" value="">
+          </div>
+          <div class="wc-field">
+            <div class="wc-label">Email Body (HTML)</div>
+            <textarea class="wc-textarea" id="pm-body" style="min-height:200px;"></textarea>
+          </div>
+          <div class="wc-field" style="margin-top:6px;">
+            <div class="wc-label">Send To</div>
+            <div class="ml-audience-row" style="margin-bottom:0;">
+              <label class="ml-audience-check" id="pm-grp-all-wrap">
+                <input type="checkbox" id="pm-grp-all" onchange="pmAudienceToggle('all',this.checked)" checked> All Subscribers
+              </label>
+              <label class="ml-audience-check">
+                <input type="checkbox" id="pm-grp-greenhouse" onchange="pmAudienceToggle('greenhouse',this.checked)"> 🌱 Greenhouse
+              </label>
+              <label class="ml-audience-check">
+                <input type="checkbox" id="pm-grp-garden" onchange="pmAudienceToggle('garden',this.checked)"> 🌿 Garden
+              </label>
+              <label class="ml-audience-check">
+                <input type="checkbox" id="pm-grp-founding50" onchange="pmAudienceToggle('founding50',this.checked)"> 🏆 Founding 50
+              </label>
+            </div>
+          </div>
+          <div class="wc-actions" style="margin-top:14px;">
+            <button class="ml-send-btn" id="pm-send-btn" onclick="pmSend()" style="font-size:14px;padding:12px 24px;width:auto;">
+              SEND NOW
+            </button>
+            <button class="wc-btn wc-btn-gen" onclick="pmGenerate()">↺ Regenerate</button>
+          </div>
+          <div class="ml-success" id="pm-success"></div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /mode-premiere -->
+
+  <!-- ═══════════════════════════════════════════
        WELCOME EMAILS
   ═══════════════════════════════════════════ -->
   <div id="mode-welcome" style="display:none">
     <div class="sq-layout" style="max-width:820px;">
 
       <p style="color:var(--text-dim);font-size:13px;margin-bottom:20px;line-height:1.6;">
-        These emails fire automatically when someone joins each community tier. Edit the subject and body, then save. Use <code>{{first_name}}</code> to personalise.
+        These emails fire automatically when someone joins each community tier. Edit the subject and body, then save. Use <code>{$name}</code> to personalise (MailerLite's native merge tag).
       </p>
 
       <!-- TIER CARDS -->
@@ -1078,12 +1152,197 @@ function switchMode(mode) {
   document.getElementById('mode-sequence').style.display   = mode === 'sequence'   ? '' : 'none';
   document.getElementById('mode-sequencer').style.display  = mode === 'sequencer'  ? '' : 'none';
   document.getElementById('mode-welcome').style.display    = mode === 'welcome'    ? '' : 'none';
+  document.getElementById('mode-premiere').style.display   = mode === 'premiere'   ? '' : 'none';
   document.getElementById('tab-broadcast').classList.toggle('active', mode === 'broadcast');
   document.getElementById('tab-sequence').classList.toggle('active', mode === 'sequence');
   document.getElementById('tab-sequencer').classList.toggle('active', mode === 'sequencer');
   document.getElementById('tab-welcome').classList.toggle('active', mode === 'welcome');
+  document.getElementById('tab-premiere').classList.toggle('active', mode === 'premiere');
   if (mode === 'sequencer') sqInit();
   if (mode === 'welcome') wcInit();
+  if (mode === 'premiere') pmInit();
+}
+
+// ─────────────────────────────────────────────
+// VIDEO PREMIERE
+// ─────────────────────────────────────────────
+let pmVideos      = [];
+let pmSelectedVid = null;
+let pmAudience    = ['all'];
+
+async function pmInit() {
+  const sel = document.getElementById('pm-video-select');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  document.getElementById('pm-result').style.display = 'none';
+  document.getElementById('pm-gen-btn').disabled = true;
+  document.getElementById('pm-yt-url').value = '';
+
+  try {
+    const r = await fetch('/api/postor/premiere-videos');
+    const j = await r.json();
+    pmVideos = j.videos || [];
+
+    if (!pmVideos.length) {
+      sel.innerHTML = '<option value="">No projects found — create one in PipΩr first</option>';
+      return;
+    }
+
+    sel.innerHTML = '<option value="">— Pick your project —</option>' +
+      pmVideos.map(v => {
+        const date = v.posted_at ? new Date(v.posted_at).toLocaleDateString() : '';
+        return `<option value="${v.project_id}">${v.title}${date ? ' · ' + date : ''}</option>`;
+      }).join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">Error loading projects</option>';
+  }
+}
+
+function pmOnVideoSelect() {
+  const sel = document.getElementById('pm-video-select');
+  const id  = parseInt(sel.value, 10);
+  pmSelectedVid = pmVideos.find(v => v.project_id === id) || null;
+
+  const urlInput = document.getElementById('pm-yt-url');
+  const metaDiv  = document.getElementById('pm-video-meta');
+
+  if (pmSelectedVid) {
+    // Auto-fill URL if already linked in MirrΩr
+    if (pmSelectedVid.youtube_url && !urlInput.value) {
+      urlInput.value = pmSelectedVid.youtube_url;
+    }
+    const parts = [];
+    if (pmSelectedVid.angle) parts.push(`Angle: ${pmSelectedVid.angle}`);
+    if (pmSelectedVid.topic) parts.push(`Topic: ${pmSelectedVid.topic}`);
+    metaDiv.innerHTML = parts.join(' &nbsp;·&nbsp; ');
+    metaDiv.style.display = parts.length ? 'block' : 'none';
+    document.getElementById('pm-gen-btn').disabled = false;
+  } else {
+    metaDiv.style.display = 'none';
+    document.getElementById('pm-gen-btn').disabled = true;
+  }
+}
+
+function pmOnUrlInput() {
+  // Enable generate as soon as a project is selected, regardless of URL
+  const hasSel = !!document.getElementById('pm-video-select').value;
+  document.getElementById('pm-gen-btn').disabled = !hasSel;
+}
+
+function pmSetError(msg) {
+  const el = document.getElementById('pm-error');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+async function pmGenerate() {
+  if (!pmSelectedVid) return;
+  const postUrl = document.getElementById('pm-yt-url').value.trim();
+  const btn     = document.getElementById('pm-gen-btn');
+  const loading = document.getElementById('pm-loading');
+
+  btn.disabled       = true;
+  btn.textContent    = '✦ Writing…';
+  loading.style.display = 'inline';
+  document.getElementById('pm-result').style.display = 'none';
+  pmSetError('');
+
+  try {
+    const r = await fetch('/api/mailerlite/premiere-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title:        pmSelectedVid.title,
+        description:  pmSelectedVid.description || '',
+        post_url:     postUrl || pmSelectedVid.youtube_url || '',
+        topic:        pmSelectedVid.topic,
+        angle:        pmSelectedVid.angle,
+        hook:         pmSelectedVid.hook,
+        content_type: pmSelectedVid.content_type,
+      }),
+    });
+    const j = await r.json().catch(() => ({ error: `Server error ${r.status}` }));
+    if (!r.ok || !j.ok) {
+      pmSetError(j.error || `Request failed (${r.status}) — Claude may be overloaded, try again in a moment`);
+      return;
+    }
+
+    document.getElementById('pm-subject').value = j.subject;
+    document.getElementById('pm-body').value    = j.body;
+    document.getElementById('pm-result').style.display = 'block';
+    document.getElementById('pm-result').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    pmSetError('Request failed — ' + e.message);
+  } finally {
+    btn.disabled      = false;
+    btn.textContent   = '✦ Generate Premiere Email';
+    loading.style.display = 'none';
+  }
+}
+
+function pmAudienceToggle(key, checked) {
+  if (key === 'all') {
+    pmAudience = checked ? ['all'] : [];
+    ['greenhouse','garden','founding50'].forEach(k => {
+      document.getElementById(`pm-grp-${k}`).checked = false;
+    });
+  } else {
+    document.getElementById('pm-grp-all').checked = false;
+    pmAudience = pmAudience.filter(a => a !== 'all');
+    if (checked) { if (!pmAudience.includes(key)) pmAudience.push(key); }
+    else         { pmAudience = pmAudience.filter(a => a !== key); }
+  }
+}
+
+async function pmSend() {
+  const subject   = document.getElementById('pm-subject').value.trim();
+  const html_body = document.getElementById('pm-body').value.trim();
+  if (!subject || !html_body) { showToast('Subject and body required', 'amber'); return; }
+  if (!pmAudience.length)     { showToast('Select an audience', 'amber'); return; }
+
+  const btn = document.getElementById('pm-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'SENDING…';
+
+  try {
+    // Fetch sender info explicitly — avoids silent profile-lookup failures server-side
+    const senderRes  = await fetch('/api/mailerlite/sender');
+    const senderJson = await senderRes.json().catch(() => ({}));
+    if (!senderRes.ok) {
+      showToast('Could not load sender info: ' + (senderJson.error || `HTTP ${senderRes.status}`), 'red');
+      return;
+    }
+    const sender = senderJson;
+    if (!sender.from_email) {
+      showToast('Sender email not configured — set MAILERLITE_FROM_EMAIL in .env', 'red');
+      return;
+    }
+
+    const r = await fetch('/api/mailerlite/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject,
+        html_body,
+        group_ids:  pmAudience,
+        from_name:  sender.from_name,
+        from_email: sender.from_email,
+      }),
+    });
+    const j = await r.json();
+    if (j.ok) {
+      const suc = document.getElementById('pm-success');
+      suc.textContent = `Sent! Campaign ID: ${j.campaign_id}`;
+      suc.classList.add('show');
+      showToast('Premiere email sent!', 'teal');
+    } else {
+      showToast(j.error || 'Send failed', 'red');
+    }
+  } catch (e) {
+    showToast('Send failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'SEND NOW';
+  }
 }
 
 // ─────────────────────────────────────────────

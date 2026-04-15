@@ -799,7 +799,38 @@ async function start() {
     console.log('');
 
     log.info({ module: 'server', port: PORT, instance: _brand }, 'Kre8Ωr started');
+
+    // ─── Morning Kajabi → MailerLite bulk sync ──────────────────────────────
+    // Runs once every morning at 8:00 AM local time so new members who joined
+    // overnight land in the right MailerLite group before the morning reads.
+    scheduleMorningSync();
   });
+}
+
+function scheduleMorningSync() {
+  const TARGET_HOUR = 8; // 8:00 AM local time
+  const CHECK_INTERVAL_MS = 60 * 1000; // check every minute
+  let lastRunDate = null;
+
+  const tick = async () => {
+    const now = new Date();
+    const today = now.toDateString();
+    if (now.getHours() === TARGET_HOUR && lastRunDate !== today) {
+      lastRunDate = today;
+      log.info({ module: 'scheduler' }, 'Morning bulk sync starting...');
+      try {
+        const { runBulkSync } = require('./src/routes/kajabi');
+        const result = await runBulkSync({ memberOnly: true });
+        log.info({ module: 'scheduler', ...result }, 'Morning bulk sync complete');
+      } catch (e) {
+        log.error({ module: 'scheduler', err: e.message }, 'Morning bulk sync failed');
+      }
+    }
+  };
+
+  const timer = setInterval(tick, CHECK_INTERVAL_MS);
+  if (timer.unref) timer.unref(); // don't keep process alive for this alone
+  log.info({ module: 'scheduler', targetHour: TARGET_HOUR }, 'Morning sync scheduler registered');
 }
 
 start();
