@@ -826,6 +826,63 @@ function runMigrations() {
       synced_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // ── Persistent sessions — survive server restarts ─────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS express_sessions (
+      sid        TEXT PRIMARY KEY,
+      data       TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
+    )
+  `);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_expires ON express_sessions(expires_at)');
+
+  // ── PostΩr — monthly revenue (YouTube Analytics API) ─────────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS monthly_revenue (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    month       TEXT    NOT NULL,
+    platform    TEXT    NOT NULL DEFAULT 'youtube',
+    revenue_usd REAL    NOT NULL DEFAULT 0,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(month, platform)
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_monthly_rev_month ON monthly_revenue(month)');
+
+  // ── PostΩr — platform connections + post history ───────────────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS platform_connections (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform         TEXT    NOT NULL UNIQUE,
+    access_token     TEXT    NOT NULL,
+    refresh_token    TEXT,
+    token_expires_at INTEGER,
+    account_id       TEXT,
+    account_name     TEXT,
+    extra_data       TEXT,
+    connected_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS postor_posts (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id   INTEGER,
+    platform     TEXT    NOT NULL,
+    status       TEXT    NOT NULL DEFAULT 'pending',
+    video_path   TEXT,
+    title        TEXT,
+    description  TEXT,
+    post_url     TEXT,
+    post_id      TEXT,
+    scheduled_at DATETIME,
+    posted_at    DATETIME,
+    error        TEXT,
+    metadata     TEXT,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_project  ON postor_posts(project_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_platform ON postor_posts(platform)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_status   ON postor_posts(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_created  ON postor_posts(created_at)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -3290,9 +3347,77 @@ function checkpoint() {
   try { db.pragma('wal_checkpoint(PASSIVE)'); } catch (_) {}
 }
 
+// ─── Idea Vault (SeedΩr) ──────────────────────────────────────────────────────
+
+function createIdea({ title, concept, angle, hook, notes, source = 'manual' } = {}) {
+  const r = _run(
+    `INSERT INTO ideas (title, concept, angle, hook, notes, source)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [title, concept || null, angle || null, hook || null, notes || null, source]
+  );
+  return r.lastInsertRowid;
+}
+
+function getIdea(id) {
+  return _get('SELECT * FROM ideas WHERE id = ?', [id]);
+}
+
+function getAllIdeas({ status, angle, search } = {}) {
+  let sql = 'SELECT * FROM ideas WHERE 1=1';
+  const params = [];
+  if (status) { sql += ' AND status = ?'; params.push(status); }
+  if (angle)  { sql += ' AND angle = ?';  params.push(angle);  }
+  if (search) {
+    sql += ' AND (title LIKE ? OR concept LIKE ? OR hook LIKE ? OR notes LIKE ?)';
+    const q = `%${search}%`;
+    params.push(q, q, q, q);
+  }
+  sql += ' ORDER BY created_at DESC';
+  return _all(sql, params);
+}
+
+function updateIdea(id, fields) {
+  const allowed = ['title','concept','angle','hook','notes','status','brief_data','cluster','connections','project_id'];
+  const sets    = ['updated_at = CURRENT_TIMESTAMP'];
+  const vals    = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) {
+      sets.push(`${k} = ?`);
+      vals.push(typeof v === 'object' && v !== null ? JSON.stringify(v) : v);
+    }
+  }
+  if (sets.length === 1) return; // nothing to update
+  vals.push(id);
+  _run(`UPDATE ideas SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+function deleteIdea(id) {
+  _run('DELETE FROM ideas WHERE id = ?', [id]);
+}
+
+function bulkCreateIdeas(ideas) {
+  const ids = [];
+  const insert = db.prepare(
+    `INSERT INTO ideas (title, concept, angle, hook, notes, source)
+     VALUES (?, ?, ?, ?, ?, 'bulk')`
+  );
+  const insertMany = db.transaction((rows) => {
+    for (const row of rows) {
+      const r = insert.run(
+        row.title, row.concept || null, row.angle || null,
+        row.hook || null, row.notes || null
+      );
+      ids.push(r.lastInsertRowid);
+    }
+  });
+  insertMany(ideas);
+  return ids;
+}
+
 module.exports = {
   initDb,
   checkpoint,
+  getRawDb: () => db,  // used by session store in server.js
   // Auth
   getUserByUsername,
   getUserById,
@@ -3517,6 +3642,25 @@ module.exports = {
   upsertSequenceEmail,
   getSequenceEmails,
   deleteSequenceEmails,
+  // PostΩr
+  getPostorConnection,
+  getAllPostorConnections,
+  upsertPostorConnection,
+  deletePostorConnection,
+  createPostorPost,
+  updatePostorPost,
+  getPostorPosts,
+  getAllYouTubePosts,
+  upsertMonthlyRevenue,
+  getMonthlyRevenue,
+  getRevenueForMonth,
+  // Idea Vault
+  createIdea,
+  getIdea,
+  getAllIdeas,
+  updateIdea,
+  deleteIdea,
+  bulkCreateIdeas,
 };
 
 // ─────────────────────────────────────────────
@@ -3582,5 +3726,113 @@ function getSequenceEmails(sequenceId) {
 
 function deleteSequenceEmails(sequenceId) {
   _run('DELETE FROM sequence_emails WHERE sequence_id = ?', [sequenceId]);
+}
+
+// ─────────────────────────────────────────────
+// PostΩr — Platform Connections + Post History
+// ─────────────────────────────────────────────
+
+function getPostorConnection(platform) {
+  return _get('SELECT * FROM platform_connections WHERE platform = ?', [platform]);
+}
+
+function getAllPostorConnections() {
+  return _all('SELECT platform, account_id, account_name, extra_data, connected_at, updated_at FROM platform_connections ORDER BY platform');
+}
+
+function upsertPostorConnection(platform, { access_token, refresh_token, token_expires_at, account_id, account_name, extra_data } = {}) {
+  _run(`
+    INSERT INTO platform_connections (platform, access_token, refresh_token, token_expires_at, account_id, account_name, extra_data)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(platform) DO UPDATE SET
+      access_token     = excluded.access_token,
+      refresh_token    = COALESCE(excluded.refresh_token, refresh_token),
+      token_expires_at = excluded.token_expires_at,
+      account_id       = excluded.account_id,
+      account_name     = excluded.account_name,
+      extra_data       = excluded.extra_data,
+      updated_at       = CURRENT_TIMESTAMP
+  `, [
+    platform,
+    access_token,
+    refresh_token    || null,
+    token_expires_at || null,
+    account_id       || null,
+    account_name     || null,
+    extra_data       ? (typeof extra_data === 'string' ? extra_data : JSON.stringify(extra_data)) : null,
+  ]);
+}
+
+function deletePostorConnection(platform) {
+  _run('DELETE FROM platform_connections WHERE platform = ?', [platform]);
+}
+
+function createPostorPost({ project_id, platform, status, video_path, title, description, metadata, scheduled_at } = {}) {
+  const r = _run(`
+    INSERT INTO postor_posts (project_id, platform, status, video_path, title, description, metadata, scheduled_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    project_id   || null,
+    platform,
+    status       || 'pending',
+    video_path   || null,
+    title        || null,
+    description  || null,
+    metadata     ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null,
+    scheduled_at || null,
+  ]);
+  return r.lastInsertRowid;
+}
+
+function updatePostorPost(id, fields) {
+  const allowed = ['status','post_url','post_id','posted_at','error','metadata'];
+  const sets    = [];
+  const vals    = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) { sets.push(`${k} = ?`); vals.push(v); }
+  }
+  if (!sets.length) return;
+  vals.push(id);
+  _run(`UPDATE postor_posts SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+// Get all YouTube posts from the main posts table (CSV imports + MirrΩr)
+function getAllYouTubePosts() {
+  return _all(`SELECT id, project_id, url, platform FROM posts WHERE platform = 'youtube' AND url IS NOT NULL`);
+}
+
+// Monthly revenue store — used by NorthΩr for actual revenue vs. goal
+function upsertMonthlyRevenue(month, platform, revenue) {
+  // month format: YYYY-MM
+  _run(`
+    INSERT INTO monthly_revenue (month, platform, revenue_usd)
+    VALUES (?, ?, ?)
+    ON CONFLICT(month, platform) DO UPDATE SET
+      revenue_usd = excluded.revenue_usd,
+      updated_at  = CURRENT_TIMESTAMP
+  `, [month, platform, revenue]);
+}
+
+function getMonthlyRevenue(year) {
+  if (year) {
+    return _all(`SELECT * FROM monthly_revenue WHERE month LIKE ? ORDER BY month DESC`, [`${year}-%`]);
+  }
+  return _all(`SELECT * FROM monthly_revenue ORDER BY month DESC LIMIT 24`);
+}
+
+function getRevenueForMonth(month) {
+  // month: YYYY-MM
+  const rows = _all(`SELECT SUM(revenue_usd) as total FROM monthly_revenue WHERE month = ?`, [month]);
+  return rows[0]?.total || 0;
+}
+
+function getPostorPosts({ project_id, platform, limit = 50 } = {}) {
+  let sql    = 'SELECT * FROM postor_posts WHERE 1=1';
+  const params = [];
+  if (project_id) { sql += ' AND project_id = ?'; params.push(project_id); }
+  if (platform)   { sql += ' AND platform = ?';   params.push(platform);   }
+  sql += ' ORDER BY created_at DESC';
+  if (limit)      { sql += ' LIMIT ?'; params.push(limit); }
+  return _all(sql, params);
 }
 

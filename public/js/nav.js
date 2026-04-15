@@ -34,6 +34,7 @@
           { label: 'Soul BuildΩr', href: '/soul-buildr.html', soul: true },
           { label: 'Show\u03a9r',  href: '/shows.html' },
           { label: 'Id8Ωr',   href: '/id8r.html' },
+          { label: 'SeedΩr',  href: '/seedr.html' },
           { label: 'PipΩr',   href: '/pipr.html' },
           { label: 'WritΩr',  href: '/writr.html' },
         ]
@@ -67,8 +68,10 @@
           { label: 'CaptionΩr', sublabel: 'M3', href: '/m3-caption-generator.html' },
           { label: 'MailΩr',    sublabel: 'M4', href: '/mailor.html' },
           { label: 'AudiencΩr', sublabel: 'M5', href: '/audience.html' },
+          { label: 'PostΩr',    href: '/postor.html' },
           { label: 'AutomatΩr', href: '/automator.html' },
           { label: 'MirrΩr',    href: '/mirrr.html' },
+          { label: 'Analytics Import', href: '/analytics-import.html' },
         ]
       }
     ]

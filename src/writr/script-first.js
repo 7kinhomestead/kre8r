@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE } = require('./claude');
+const { callClaude, REALITY_RULE, loadTikTokIntelligenceBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -69,6 +69,7 @@ function buildSeasonBlock(seasonContext) {
   return lines.join('\n');
 }
 
+
 function buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock, seasonContext }) {
   const voiceSummary     = buildVoiceSummary(profile, voiceProfiles);
   const beatMapText      = beatMapToText(config?.beats);
@@ -79,6 +80,7 @@ function buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock, sea
   const brand            = profile?.creator?.brand || '7 Kin Homestead';
   const mission          = profile?.creator?.mission || '';
   const seasonBlock      = buildSeasonBlock(seasonContext);
+  const tikTokBlock      = loadTikTokIntelligenceBlock();
 
   return `You are WritΩr — a script development assistant for ${brand}, a homesteading and
 off-grid living creator. Your job is to develop authentic, beat-mapped scripts from
@@ -88,7 +90,7 @@ ${REALITY_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}
-
+${tikTokBlock}
 ## PROJECT CONFIG
 Brand: ${brand}
 Mission: ${mission}

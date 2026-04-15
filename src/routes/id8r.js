@@ -288,6 +288,135 @@ router.post('/respond', async (req, res) => {
   }
 });
 
+// ─── POST /api/id8r/fast-concepts ────────────────────────────────────────────
+// New fast-pass entry point — takes raw input text, skips conversation entirely,
+// returns session_id + 5 concepts in ~10 seconds. The new default Id8Ωr flow.
+
+router.post('/fast-concepts', async (req, res) => {
+  try {
+    const { input, mode = 'shape_it', angle } = req.body;
+    if (!input || !input.trim()) return res.status(400).json({ error: 'input is required' });
+
+    SYSTEM_PROMPTS = buildSystemPrompts();
+
+    const { brand, creatorName, followerSummary, niche, contentAnglesText: anglesText } = getCreatorContext();
+
+    // Build a rich system prompt based on mode
+    const modeIntent = {
+      shape_it    : `${creatorName} has a raw idea and wants 5 concept directions for it.`,
+      find_it     : `${creatorName} is looking for a video idea and described what's on their mind.`,
+      deep_dive   : `${creatorName} has a topic they want to go deep on.`,
+      vault_first : `${creatorName} has footage already shot and needs to find the story in it.`,
+      episodic    : `${creatorName} is planning a new episode and described the situation.`,
+    };
+
+    // Pull intelligence blocks (same as /concepts)
+    let intelligenceBlock = '';
+    try {
+      const { loadProfile } = require('../utils/creator-context');
+      const cp = loadProfile();
+      const ci = cp.content_intelligence;
+      if (ci && Array.isArray(ci.insights) && ci.insights.length) {
+        const top3 = ci.insights.slice(0, 3);
+        intelligenceBlock = `\n\nCONTENT INTELLIGENCE (patterns from all ${creatorName}'s videos):\n`
+          + top3.map((ins, i) =>
+              `${i + 1}. [${(ins.type || 'insight').toUpperCase()}] ${ins.title || ''}: ${ins.insight || ''}`
+            ).join('\n')
+          + '\nUse these to make at least one concept especially sharp — lean into what\'s proven to work.';
+      }
+    } catch (_) {}
+
+    let mirrrBlock = '';
+    try {
+      const _db = require('../db');
+      const evals = _db.getRecentEvaluations(2);
+      if (evals.length) {
+        const lines = evals.map(r => {
+          try {
+            const ev = JSON.parse(r.evaluation);
+            const ups   = (ev.recommendation_accuracy || []).filter(a => a.weight_adjustment === 'UP').map(a => a.recommendation);
+            const downs = (ev.recommendation_accuracy || []).filter(a => a.weight_adjustment === 'DOWN').map(a => a.recommendation);
+            return [
+              `${r.month}/${r.year} (score ${ev.overall_accuracy_score}/10)`,
+              ups.length   ? `  ↑ Overperformed: ${ups.join(', ')}` : '',
+              downs.length ? `  ↓ Underperformed: ${downs.join(', ')}` : '',
+            ].filter(Boolean).join('\n');
+          } catch { return null; }
+        }).filter(Boolean);
+        if (lines.length) {
+          mirrrBlock = `\n\nMIRRΩR DATA (weight concepts toward ↑ angles):\n${lines.join('\n\n')}`;
+        }
+      }
+    } catch (_) {}
+
+    const angleInstruction = angle
+      ? `\nThe creator wants to lean toward the "${angle}" angle — at least 2 concepts should use or riff on it.`
+      : '';
+
+    const systemPrompt = SYSTEM_PROMPTS[mode] || SYSTEM_PROMPTS.shape_it;
+
+    const result = await callClaudeJSON(
+      `You are Id8Ωr, a creative strategist for ${brand} (${followerSummary}, ${niche} content).
+${modeIntent[mode] || modeIntent.shape_it}
+
+Generate exactly 5 concept directions. Rules:
+- Concepts 1–3: use angles from the list below (pick the best fits for what was described)
+- Concepts 4–5: novel angles you invent — creative reframes NOT on the list
+- Each concept must feel meaningfully different — different hook, different emotion, different audience entry
+- Be specific to what was described. Match the creator's real voice: straight-talking, funny, real numbers, never corporate
+- Concept 3 should be the wildcard: the most surprising angle that still makes sense for this audience${angleInstruction}
+
+CONTENT ANGLES:
+${anglesText}${intelligenceBlock}${mirrrBlock}
+
+Return ONLY valid JSON:
+{
+  "concepts": [
+    {
+      "id": 1,
+      "angle": "Label from the angles list",
+      "headline": "one punchy sentence — the video in a nutshell",
+      "why": "one sentence — why this works for this audience specifically",
+      "hook": "the first 1-2 sentences of the video, in the creator's voice",
+      "is_novel": false
+    }
+  ]
+}`,
+      [{
+        role: 'user',
+        content: `Here's what I'm working with:\n\n${input.trim()}\n\nGenerate 5 concept directions.`,
+      }],
+      1500
+    );
+
+    const concepts = result.concepts || [];
+
+    // Create a real session so the rest of the pipeline (choose → research → package → brief) works
+    const sessionId = crypto.randomBytes(8).toString('hex');
+    sessions.set(sessionId, {
+      mode,
+      systemPrompt,
+      messages: [
+        { role: 'user',      content: input.trim() },
+        { role: 'assistant', content: `Here are 5 concept directions based on what you shared.` },
+      ],
+      fastInput       : input.trim(),
+      concepts,
+      chosenConcept   : null,
+      researchResults : null,
+      researchSummary : null,
+      packageData     : null,
+      briefData       : null,
+      createdAt       : Date.now(),
+    });
+
+    res.json({ session_id: sessionId, concepts });
+  } catch (e) {
+    console.error('[id8r/fast-concepts]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── POST /api/id8r/concepts ──────────────────────────────────────────────────
 // Fast pass — no web search, low tokens, immediate
 

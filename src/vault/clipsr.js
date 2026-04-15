@@ -13,9 +13,18 @@
 
 const { callClaude }        = require('../utils/claude');
 const { getCreatorContext } = require('../utils/creator-context');
+const db                    = require('../db');
+
+function loadTikTokPatterns() {
+  try {
+    const stored = db.getKv('tiktok_content_patterns');
+    return stored ? JSON.parse(stored) : null;
+  } catch (_) { return null; }
+}
 
 function buildClipsPrompt({ transcript, footageMeta }) {
   const { brand, followerSummary, niche } = getCreatorContext();
+  const tikTok = loadTikTokPatterns();
 
   const transcriptText = transcript.segments
     .map(s => `[${s.start.toFixed(2)}s → ${s.end.toFixed(2)}s] ${s.text}`)
@@ -25,9 +34,21 @@ function buildClipsPrompt({ transcript, footageMeta }) {
     ? `SOURCE VIDEO: ${footageMeta.filename} | Duration: ${footageMeta.duration}s | Type: ${footageMeta.shot_type || 'completed-video'}\n`
     : '';
 
+  const tiktokBlock = tikTok ? `
+## TIKTOK AUDIENCE INTELLIGENCE (from real performance data — use this to score clips)
+This creator's TikTok audience responds to these proven emotional triggers:
+${(tikTok.what_works || []).map(w => `- ${w}`).join('\n')}
+
+Audience psychology: ${tikTok.audience_psychology || ''}
+
+What underperforms on TikTok: ${(tikTok.what_doesnt || []).join('; ')}
+
+SCORING DIRECTIVE: When ranking clips, heavily favor moments that match the patterns above. A clip that hits the audience psychology (${tikTok.audience_psychology?.slice(0, 80) || 'identity/system critique'}) should rank higher than a technically strong clip that doesn't. Use why_it_works to explicitly note when a clip aligns with or diverges from these proven patterns.
+` : '';
+
   return `You are ClipsΩr, a viral clip extraction AI for ${brand} — a ${niche} channel with ${followerSummary}.
 
-${metaSection}
+${metaSection}${tiktokBlock}
 ## TASK
 
 Analyze this completed video transcript and identify the 3–6 best moments to extract as standalone short-form clips for TikTok, Instagram Reels, and YouTube Shorts.
@@ -38,6 +59,7 @@ A great clip:
 - Is ideally 30–90 seconds (exceptions for very strong 15s or 2min clips)
 - Has a clear arc or punchline — a reason to watch to the end
 - Reflects the creator's authentic voice, not a polished TV moment
+- Hits the audience psychology shown in the TikTok Intelligence section above (when present)
 
 ## TRANSCRIPT
 ${transcriptText}

@@ -321,6 +321,88 @@
   .dupe-archive-btn:hover { border-color: #e05252; color: #e05252; }
   .dupe-archive-group-btn { background: none; border: 1px solid rgba(224,82,82,0.4); border-radius: 6px; color: #e05252; font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer; transition: all 0.15s; }
   .dupe-archive-group-btn:hover { background: rgba(224,82,82,0.1); }
+
+  /* ── DRIVE OPERATIONS ── */
+  .drive-ops-section { margin-bottom: 36px; }
+  .drive-ops-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; user-select: none; transition: border-color 0.15s; }
+  .drive-ops-header:hover { border-color: var(--border-bright); }
+  .drive-ops-header.open { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-color: var(--border-bright); }
+  .drive-ops-arrow { font-size: 10px; color: var(--text-dimmer); transition: transform 0.18s; flex-shrink: 0; }
+  .drive-ops-header.open .drive-ops-arrow { transform: rotate(90deg); }
+  .drive-ops-title { font-family: var(--font-head); font-size: 18px; letter-spacing: 2px; color: var(--text); flex: 1; }
+  .drive-ops-badge { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 10px; background: var(--teal-glow); color: var(--teal); border: 1px solid rgba(62,207,178,0.25); }
+  .drive-ops-body { display: none; border: 1px solid var(--border-bright); border-top: none; border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); padding: 20px; background: var(--bg-card); }
+  .drive-ops-body.open { display: block; }
+
+  /* Phase pills */
+  .scan-phase-pills { display: flex; align-items: center; gap: 0; margin-bottom: 20px; }
+  .scan-phase-pill { display: flex; align-items: center; gap: 6px; padding: 6px 16px; font-size: 12px; font-weight: 600; color: var(--text-dimmer); background: var(--bg-card-2); border: 1px solid var(--border); border-radius: 0; letter-spacing: 0.5px; }
+  .scan-phase-pill:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .scan-phase-pill:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .scan-phase-pill.active { background: var(--teal-glow); color: var(--teal); border-color: rgba(62,207,178,0.4); }
+  .scan-phase-pill.done { background: rgba(92,186,138,0.10); color: var(--green); border-color: rgba(92,186,138,0.3); }
+  .scan-phase-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* Scan input row */
+  .scan-input-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
+  .scan-input-wrap { flex: 1; min-width: 220px; }
+  .scan-input-wrap label { display: block; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .scan-path-input { width: 100%; background: var(--bg-card-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: monospace; font-size: 13px; padding: 9px 12px; outline: none; transition: border 0.15s; }
+  .scan-path-input:focus { border-color: var(--teal-dim); }
+
+  /* Live scan stats */
+  .scan-live { background: var(--bg-card-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 16px; display: none; }
+  .scan-live.visible { display: block; }
+  .scan-live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 10px; }
+  .scan-live-stat { display: flex; flex-direction: column; gap: 2px; }
+  .scan-live-label { font-size: 10px; font-weight: 600; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.5px; }
+  .scan-live-val { font-size: 20px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .scan-live-val.teal { color: var(--teal); }
+  .scan-live-val.amber { color: var(--amber); }
+  .scan-live-val.green { color: var(--green); }
+  .scan-live-val.red { color: var(--red); }
+  .scan-current-path { font-size: 11px; color: var(--text-dimmer); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Summary cards */
+  .scan-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; display: none; }
+  .scan-summary.visible { display: grid; }
+  .scan-card { background: var(--bg-card-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 18px; }
+  .scan-card-num { font-size: 32px; font-weight: 700; color: var(--text); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+  .scan-card-num.teal { color: var(--teal); }
+  .scan-card-num.amber { color: var(--amber); }
+  .scan-card-num.green { color: var(--green); }
+  .scan-card-num.red { color: var(--red); }
+  .scan-card-label { font-size: 11px; font-weight: 600; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Ingest progress */
+  .scan-ingest-wrap { margin-bottom: 16px; display: none; }
+  .scan-ingest-wrap.visible { display: block; }
+  .scan-ingest-bar-outer { background: var(--bg-card-2); border-radius: 4px; height: 8px; margin-bottom: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .scan-ingest-bar-inner { height: 100%; background: var(--teal); border-radius: 4px; width: 0; transition: width 0.3s ease; }
+  .scan-ingest-log { background: var(--bg-card-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; max-height: 140px; overflow-y: auto; font-size: 11px; font-family: monospace; color: var(--text-dim); line-height: 1.6; }
+  .scan-ingest-log .ok { color: var(--green); }
+  .scan-ingest-log .err { color: var(--red); }
+
+  /* Action row */
+  .scan-action-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+
+  /* Junk list */
+  .scan-junk-section { margin-top: 16px; display: none; }
+  .scan-junk-section.visible { display: block; }
+  .scan-junk-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .scan-junk-title { font-size: 13px; font-weight: 600; color: var(--amber); }
+  .scan-junk-list { background: var(--bg-card-2); border: 1px solid var(--border); border-radius: var(--radius-sm); max-height: 240px; overflow-y: auto; }
+  .scan-junk-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .scan-junk-item:last-child { border-bottom: none; }
+  .scan-junk-item input[type=checkbox] { accent-color: var(--teal); cursor: pointer; flex-shrink: 0; }
+  .scan-junk-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .scan-junk-meta { flex-shrink: 0; color: var(--text-dimmer); font-size: 11px; font-family: monospace; white-space: nowrap; }
+  .scan-junk-empty { padding: 16px; color: var(--text-dimmer); font-size: 12px; text-align: center; }
+  .btn-danger { background: transparent; border: 1px solid rgba(224,92,92,0.5); color: var(--red); font-family: var(--font-body); font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; }
+  .btn-danger:hover:not(:disabled) { background: var(--red-glow); border-color: var(--red); }
+  .btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--text-dimmer); font-family: var(--font-body); font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; }
+  .btn-cancel:hover { border-color: var(--amber); color: var(--amber); }
 </style>
 </head>
 <body>
@@ -431,6 +513,124 @@
       </div>
       <div class="upload-bytes" id="uploadBytes"></div>
       <div class="upload-log" id="uploadLog"></div>
+    </div>
+  </div>
+
+  <!-- ── DRIVE OPERATIONS ── -->
+  <div class="drive-ops-section">
+    <div class="drive-ops-header" id="driveOpsHeader" onclick="toggleDriveOps()">
+      <span class="drive-ops-arrow">▶</span>
+      <span class="drive-ops-title">DRIVE OPERATIONS</span>
+      <span class="drive-ops-badge" id="driveOpsBadge">SCANNER</span>
+    </div>
+    <div class="drive-ops-body" id="driveOpsBody">
+
+      <!-- Phase indicator -->
+      <div class="scan-phase-pills">
+        <div class="scan-phase-pill" id="pill-scan">
+          <span class="scan-phase-dot"></span> SCAN
+        </div>
+        <div class="scan-phase-pill" id="pill-review">
+          <span class="scan-phase-dot"></span> REVIEW
+        </div>
+        <div class="scan-phase-pill" id="pill-ingest">
+          <span class="scan-phase-dot"></span> INGEST
+        </div>
+      </div>
+
+      <!-- Root path input + Start Scan -->
+      <div class="scan-input-row">
+        <div class="scan-input-wrap">
+          <label>Root path to scan</label>
+          <input class="scan-path-input" id="scanRootPath" type="text" value="D:\" placeholder="D:\">
+        </div>
+        <button class="btn btn-primary" id="startScanBtn" onclick="startScan()">▶ Start Scan</button>
+        <button class="btn-cancel" id="cancelScanBtn" onclick="cancelOperation()" style="display:none">✕ Cancel</button>
+      </div>
+
+      <!-- Live scan stats (shown during scan) -->
+      <div class="scan-live" id="scanLive">
+        <div class="scan-live-grid">
+          <div class="scan-live-stat">
+            <span class="scan-live-label">Dirs Scanned</span>
+            <span class="scan-live-val" id="statDirs">0</span>
+          </div>
+          <div class="scan-live-stat">
+            <span class="scan-live-label">Files Found</span>
+            <span class="scan-live-val" id="statFiles">0</span>
+          </div>
+          <div class="scan-live-stat">
+            <span class="scan-live-label">Already in DB</span>
+            <span class="scan-live-val green" id="statInDb">0</span>
+          </div>
+          <div class="scan-live-stat">
+            <span class="scan-live-label">To Ingest</span>
+            <span class="scan-live-val teal" id="statToIngest">0</span>
+          </div>
+          <div class="scan-live-stat">
+            <span class="scan-live-label">BRAW Files</span>
+            <span class="scan-live-val amber" id="statBraw">0</span>
+          </div>
+          <div class="scan-live-stat">
+            <span class="scan-live-label">Junk</span>
+            <span class="scan-live-val red" id="statJunk">0</span>
+          </div>
+        </div>
+        <div class="scan-current-path" id="scanCurrentPath">Initialising…</div>
+      </div>
+
+      <!-- Summary cards (shown after scan complete) -->
+      <div class="scan-summary" id="scanSummary">
+        <div class="scan-card">
+          <div class="scan-card-num teal" id="cardToIngest">0</div>
+          <div class="scan-card-label">Files to Ingest</div>
+        </div>
+        <div class="scan-card">
+          <div class="scan-card-num amber" id="cardBraw">0</div>
+          <div class="scan-card-label">BRAW Files</div>
+        </div>
+        <div class="scan-card">
+          <div class="scan-card-num green" id="cardInDb">0</div>
+          <div class="scan-card-label">Already in DB</div>
+        </div>
+        <div class="scan-card">
+          <div class="scan-card-num red" id="cardJunk">0</div>
+          <div class="scan-card-label">Junk Files</div>
+        </div>
+      </div>
+
+      <!-- Action buttons (shown after scan) -->
+      <div class="scan-action-row" id="scanActions" style="display:none">
+        <button class="btn btn-primary" id="startIngestBtn" onclick="startIngest()">▶ Start Ingestion</button>
+        <button class="btn btn-ghost" id="brawStubBtn" onclick="registerBrawStubs()">+ Register BRAW Stubs</button>
+        <button class="btn-cancel" id="cancelIngestBtn" onclick="cancelOperation()" style="display:none">✕ Cancel</button>
+      </div>
+
+      <!-- Ingest progress -->
+      <div class="scan-ingest-wrap" id="ingestWrap">
+        <div class="scan-ingest-bar-outer">
+          <div class="scan-ingest-bar-inner" id="ingestBar"></div>
+        </div>
+        <div class="scan-ingest-log" id="ingestLog"></div>
+      </div>
+
+      <!-- Junk review -->
+      <div class="scan-junk-section" id="junkSection">
+        <div class="scan-junk-header">
+          <span class="scan-junk-title">Junk Files — review before deleting</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="font-size:12px;color:var(--text-dim);cursor:pointer;">
+              <input type="checkbox" id="junkSelectAll" onchange="toggleAllJunk(this.checked)" style="accent-color:var(--teal);margin-right:4px;">
+              Select all
+            </label>
+            <button class="btn-danger" id="deleteJunkBtn" onclick="deleteSelectedJunk()" disabled>Delete Selected</button>
+          </div>
+        </div>
+        <div class="scan-junk-list" id="junkList">
+          <div class="scan-junk-empty">No junk files found.</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1985,6 +2185,371 @@ function showToast(msg, type = 'green') {
   document.getElementById('toastWrap').appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }
+
+// ── DRIVE OPERATIONS ─────────────────────────────────────────────────────────
+
+let scanSse       = null;  // active EventSource for /progress
+let scanPhase     = 'idle'; // local mirror of checkpoint phase
+
+function toggleDriveOps() {
+  const header = document.getElementById('driveOpsHeader');
+  const body   = document.getElementById('driveOpsBody');
+  header.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+// Render phase pills based on current phase string
+function updatePhasePills(phase) {
+  scanPhase = phase;
+  const pills = {
+    scan:   document.getElementById('pill-scan'),
+    review: document.getElementById('pill-review'),
+    ingest: document.getElementById('pill-ingest')
+  };
+  // Reset all
+  Object.values(pills).forEach(p => { p.classList.remove('active', 'done'); });
+
+  if (phase === 'scanning') {
+    pills.scan.classList.add('active');
+  } else if (phase === 'complete') {
+    pills.scan.classList.add('done');
+    pills.review.classList.add('active');
+  } else if (phase === 'ingesting') {
+    pills.scan.classList.add('done');
+    pills.review.classList.add('done');
+    pills.ingest.classList.add('active');
+  }
+}
+
+// Update live stat counters
+function updateLiveStats(stats) {
+  document.getElementById('statDirs').textContent      = (stats.dirs_scanned    || 0).toLocaleString();
+  document.getElementById('statFiles').textContent     = (stats.files_found     || 0).toLocaleString();
+  document.getElementById('statInDb').textContent      = (stats.already_in_db   || 0).toLocaleString();
+  document.getElementById('statToIngest').textContent  = (stats.to_ingest       || 0).toLocaleString();
+  document.getElementById('statBraw').textContent      = (stats.braw_count      || 0).toLocaleString();
+  document.getElementById('statJunk').textContent      = (stats.junk_count      || 0).toLocaleString();
+}
+
+// Render summary cards from stats
+function renderSummaryCards(stats) {
+  document.getElementById('cardToIngest').textContent = (stats.to_ingest     || 0).toLocaleString();
+  document.getElementById('cardBraw').textContent     = (stats.braw_count    || 0).toLocaleString();
+  document.getElementById('cardInDb').textContent     = (stats.already_in_db || 0).toLocaleString();
+  document.getElementById('cardJunk').textContent     = (stats.junk_count    || 0).toLocaleString();
+  document.getElementById('scanSummary').classList.add('visible');
+}
+
+// Render junk file list from checkpoint files.junk
+function renderJunkList(junkFiles) {
+  const list = document.getElementById('junkList');
+  const btn  = document.getElementById('deleteJunkBtn');
+
+  if (!junkFiles || junkFiles.length === 0) {
+    list.innerHTML = '<div class="scan-junk-empty">No junk files found.</div>';
+    btn.disabled = true;
+    document.getElementById('junkSection').classList.remove('visible');
+    return;
+  }
+
+  document.getElementById('junkSection').classList.add('visible');
+
+  list.innerHTML = junkFiles.map((f, i) => {
+    const dur  = f.duration != null ? f.duration.toFixed(1) + 's' : 'no probe';
+    const size = f.size ? (f.size / 1024 / 1024).toFixed(1) + ' MB' : '—';
+    return `<div class="scan-junk-item">
+      <input type="checkbox" class="junk-check" data-path="${escHtml(f.path)}" onchange="onJunkCheck()">
+      <span class="scan-junk-name" title="${escHtml(f.path)}">${escHtml(f.name)}</span>
+      <span class="scan-junk-meta">${dur} · ${size}</span>
+    </div>`;
+  }).join('');
+}
+
+function onJunkCheck() {
+  const checked = document.querySelectorAll('.junk-check:checked').length;
+  document.getElementById('deleteJunkBtn').disabled = checked === 0;
+}
+
+function toggleAllJunk(checked) {
+  document.querySelectorAll('.junk-check').forEach(cb => { cb.checked = checked; });
+  onJunkCheck();
+}
+
+// Apply full checkpoint state to UI
+function applyCheckpoint(cp) {
+  if (!cp) return;
+
+  updatePhasePills(cp.phase);
+  updateLiveStats(cp.stats || {});
+
+  const isBusy = cp.phase === 'scanning' || cp.phase === 'ingesting';
+
+  document.getElementById('startScanBtn').disabled = isBusy;
+  document.getElementById('cancelScanBtn').style.display = isBusy ? '' : 'none';
+
+  if (cp.phase === 'complete' || cp.phase === 'ingesting') {
+    renderSummaryCards(cp.stats || {});
+    document.getElementById('scanActions').style.display = '';
+  }
+
+  if (cp.phase === 'scanning') {
+    document.getElementById('scanLive').classList.add('visible');
+    document.getElementById('scanSummary').classList.remove('visible');
+    document.getElementById('scanActions').style.display = 'none';
+  }
+
+  if (cp.currentPath) {
+    document.getElementById('scanCurrentPath').textContent = cp.currentPath;
+  }
+
+  if (cp.files && cp.files.junk && cp.files.junk.length > 0) {
+    renderJunkList(cp.files.junk);
+  }
+
+  // Re-open section if there's something active
+  if (cp.phase !== 'idle') {
+    document.getElementById('driveOpsHeader').classList.add('open');
+    document.getElementById('driveOpsBody').classList.add('open');
+  }
+}
+
+// Open SSE connection to /progress
+function openScanSse() {
+  if (scanSse) { scanSse.close(); scanSse = null; }
+
+  scanSse = new EventSource('/api/vault/scan/progress');
+
+  scanSse.onmessage = (e) => {
+    let data;
+    try { data = JSON.parse(e.data); } catch (_) { return; }
+
+    if (data.type === 'snapshot') {
+      applyCheckpoint(data.checkpoint);
+      return;
+    }
+
+    if (data.type === 'started') {
+      updatePhasePills('scanning');
+      document.getElementById('scanLive').classList.add('visible');
+      document.getElementById('scanSummary').classList.remove('visible');
+      document.getElementById('scanActions').style.display = 'none';
+      document.getElementById('ingestWrap').classList.remove('visible');
+    }
+
+    if (data.type === 'progress') {
+      updatePhasePills(data.phase);
+      if (data.stats) updateLiveStats(data.stats);
+      if (data.currentPath) document.getElementById('scanCurrentPath').textContent = data.currentPath;
+    }
+
+    if (data.type === 'complete') {
+      updatePhasePills('complete');
+      document.getElementById('scanLive').classList.remove('visible');
+      document.getElementById('startScanBtn').disabled = false;
+      document.getElementById('cancelScanBtn').style.display = 'none';
+      // Fetch full report to get file lists
+      loadReport();
+      showToast('Scan complete', 'green');
+    }
+
+    if (data.type === 'ingest_started') {
+      updatePhasePills('ingesting');
+      document.getElementById('ingestWrap').classList.add('visible');
+      document.getElementById('cancelIngestBtn').style.display = '';
+      document.getElementById('startIngestBtn').disabled = true;
+    }
+
+    if (data.type === 'ingest_file_done') {
+      const log  = document.getElementById('ingestLog');
+      const line = document.createElement('div');
+      line.className = data.ok ? 'ok' : 'err';
+      line.textContent = data.ok
+        ? `✓ ${data.file}`
+        : `✗ ${data.file} — ${data.error || 'error'}`;
+      log.appendChild(line);
+      log.scrollTop = log.scrollHeight;
+
+      const pct = data.total > 0 ? Math.round(((data.i + 1) / data.total) * 100) : 0;
+      document.getElementById('ingestBar').style.width = pct + '%';
+    }
+
+    if (data.type === 'ingest_complete') {
+      const pct = 100;
+      document.getElementById('ingestBar').style.width = pct + '%';
+      document.getElementById('cancelIngestBtn').style.display = 'none';
+      document.getElementById('startIngestBtn').disabled = false;
+      updatePhasePills('complete');
+      if (data.stats) renderSummaryCards(data.stats);
+      showToast('Ingestion complete', 'green');
+    }
+
+    if (data.type === 'cancelled') {
+      updatePhasePills('idle');
+      document.getElementById('startScanBtn').disabled = false;
+      document.getElementById('cancelScanBtn').style.display = 'none';
+      document.getElementById('cancelIngestBtn').style.display = 'none';
+      document.getElementById('startIngestBtn').disabled = false;
+      document.getElementById('scanLive').classList.remove('visible');
+      showToast('Operation cancelled', 'amber');
+    }
+  };
+
+  scanSse.onerror = () => {
+    // SSE disconnected — not a fatal error, just close
+    if (scanSse) { scanSse.close(); scanSse = null; }
+  };
+}
+
+async function loadReport() {
+  try {
+    const res = await fetch('/api/vault/scan/report');
+    const cp  = await res.json();
+    applyCheckpoint(cp);
+  } catch (err) {
+    // No checkpoint yet — ignore
+  }
+}
+
+async function startScan() {
+  const rootPath = document.getElementById('scanRootPath').value.trim();
+  if (!rootPath) { showToast('Enter a root path', 'amber'); return; }
+
+  document.getElementById('startScanBtn').disabled = true;
+  document.getElementById('cancelScanBtn').style.display = '';
+  document.getElementById('scanLive').classList.add('visible');
+  document.getElementById('scanSummary').classList.remove('visible');
+  document.getElementById('scanActions').style.display = 'none';
+  document.getElementById('ingestWrap').classList.remove('visible');
+  document.getElementById('junkSection').classList.remove('visible');
+  document.getElementById('ingestLog').innerHTML = '';
+  document.getElementById('ingestBar').style.width = '0';
+
+  // Reset live stats display
+  updateLiveStats({});
+  document.getElementById('scanCurrentPath').textContent = 'Starting…';
+
+  // Open SSE before POST so we don't miss the first event
+  openScanSse();
+
+  try {
+    const res  = await fetch('/api/vault/scan/start', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ rootPath })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      showToast(data.error || 'Scan failed to start', 'red');
+      document.getElementById('startScanBtn').disabled = false;
+      document.getElementById('cancelScanBtn').style.display = 'none';
+    }
+  } catch (err) {
+    showToast('Network error: ' + err.message, 'red');
+    document.getElementById('startScanBtn').disabled = false;
+    document.getElementById('cancelScanBtn').style.display = 'none';
+  }
+}
+
+async function startIngest() {
+  document.getElementById('startIngestBtn').disabled = true;
+  document.getElementById('cancelIngestBtn').style.display = '';
+  document.getElementById('ingestWrap').classList.add('visible');
+  document.getElementById('ingestLog').innerHTML = '';
+  document.getElementById('ingestBar').style.width = '0';
+
+  // Ensure SSE is open
+  if (!scanSse) openScanSse();
+
+  try {
+    const res  = await fetch('/api/vault/scan/ingest', { method: 'POST' });
+    const data = await res.json();
+    if (!data.ok) {
+      showToast(data.error || 'Ingest failed to start', 'red');
+      document.getElementById('startIngestBtn').disabled = false;
+    }
+  } catch (err) {
+    showToast('Network error: ' + err.message, 'red');
+    document.getElementById('startIngestBtn').disabled = false;
+  }
+}
+
+async function registerBrawStubs() {
+  const btn = document.getElementById('brawStubBtn');
+  btn.disabled = true;
+  btn.textContent = 'Registering…';
+
+  try {
+    const res  = await fetch('/api/vault/scan/ingest-braw', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`BRAW stubs: ${data.stubbed} created, ${data.skipped} already in DB`, 'green');
+    } else {
+      showToast(data.error || 'BRAW stub error', 'red');
+    }
+  } catch (err) {
+    showToast('Network error: ' + err.message, 'red');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '+ Register BRAW Stubs';
+}
+
+async function deleteSelectedJunk() {
+  const checked = [...document.querySelectorAll('.junk-check:checked')];
+  if (checked.length === 0) return;
+
+  const paths = checked.map(cb => cb.dataset.path);
+  const btn   = document.getElementById('deleteJunkBtn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+
+  try {
+    const res  = await fetch('/api/vault/scan/delete-junk', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ paths })
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      // Remove deleted items from UI
+      const deletedSet = new Set(data.deleted || []);
+      checked.forEach(cb => {
+        if (deletedSet.has(cb.dataset.path)) {
+          cb.closest('.scan-junk-item').remove();
+        }
+      });
+      showToast(`Deleted ${data.deleted} file${data.deleted !== 1 ? 's' : ''}`, 'green');
+      if (data.failed && data.failed.length > 0) {
+        showToast(`${data.failed.length} file(s) could not be deleted`, 'amber');
+      }
+
+      // Update junk card count
+      const remaining = document.querySelectorAll('.junk-check').length;
+      document.getElementById('cardJunk').textContent = remaining;
+      if (remaining === 0) {
+        document.getElementById('junkList').innerHTML = '<div class="scan-junk-empty">No junk files found.</div>';
+      }
+    } else {
+      showToast(data.error || 'Delete failed', 'red');
+    }
+  } catch (err) {
+    showToast('Network error: ' + err.message, 'red');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Delete Selected';
+  onJunkCheck();
+}
+
+async function cancelOperation() {
+  try {
+    await fetch('/api/vault/scan/cancel', { method: 'POST' });
+  } catch (_) {}
+}
+
+// Load report on page load to restore any in-progress state
+loadReport();
 
 // ── FIND DUPLICATES ──────────────────────────────────────────────────────────
 

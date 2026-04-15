@@ -356,11 +356,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
   <div class="section-spacer">
     <div class="section-header">
       <div class="section-title">CHANNEL HEALTH</div>
-      <div class="section-sub">All-time stats across all projects</div>
+      <div class="section-sub">YouTube performance — strategy engine benchmarks. Other platforms shown below.</div>
     </div>
     <div class="stat-grid" id="statGrid">
       <div class="stat-card">
-        <div class="stat-label">Total Views</div>
+        <div class="stat-label">▶ YouTube Views</div>
         <div class="stat-value loading" id="statTotalViews">—</div>
         <div class="stat-meta" id="statTotalVideosMeta">loading...</div>
         <div class="stat-breakdown" id="statFormatBreakdown"></div>
@@ -371,7 +371,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         <div class="stat-meta">excl. Shorts</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Best Performing</div>
+        <div class="stat-label">Best YouTube Video</div>
         <div class="stat-value loading" id="statBestViews">—</div>
         <div class="stat-meta" id="statBestTitle">loading...</div>
       </div>
@@ -379,6 +379,69 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         <div class="stat-label">Top Content Topic</div>
         <div class="stat-value loading" id="statTopTopic" style="font-size:22px;letter-spacing:0.5px;">—</div>
         <div class="stat-meta" id="statTopTopicMeta">by total views</div>
+      </div>
+    </div>
+    <!-- Per-platform breakdown — shown when CSV data has been imported -->
+    <div id="platformBreakdown" style="display:none;margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;"></div>
+  </div>
+
+  <!-- ─── 1b. TIKTOK PATTERN ANALYSIS ───────────── -->
+  <div class="section-spacer" id="tiktok-analysis-section" style="display:none;">
+    <div class="section-header">
+      <div class="section-title">🎵 TIKTOK PATTERN ANALYSIS</div>
+      <div class="section-sub" id="tiktokAnalysisSub">Claude reads your original TikTok content (reposts excluded) and identifies what actually works</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <button class="coach-btn" id="tiktokAnalyzeBtn" onclick="analyzeTikTok()" style="margin-bottom:0;">
+        <div class="coach-spinner"></div>
+        <span class="coach-btn-text">Analyze TikTok Patterns</span>
+      </button>
+      <div id="tiktokAnalyzedBadge" style="display:none;font-size:11px;font-weight:700;letter-spacing:0.8px;color:var(--teal);background:var(--teal-glow);border:1px solid var(--teal);padding:4px 10px;border-radius:20px;">✓ ANALYSIS SAVED TO NORTHΩR</div>
+    </div>
+    <div class="coach-status" id="tiktokStatus" style="display:none;"></div>
+    <div class="coach-error" id="tiktokError" style="display:none;"></div>
+
+    <!-- Result card -->
+    <div id="tiktokResultCard" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#010101 0%,#1a0a20 100%);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#fff;">TIKTOK PATTERN REPORT</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);" id="tiktokResultDate"></div>
+      </div>
+      <div style="padding:20px 22px;display:flex;flex-direction:column;gap:18px;">
+
+        <!-- Top patterns -->
+        <div>
+          <div class="coach-section-label" style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1.5px;color:var(--text-dimmer);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--teal);display:inline-block;"></span>
+            WHAT'S WORKING IN ORIGINAL CONTENT
+          </div>
+          <ul class="coach-list" id="tiktokWorking" style="list-style:none;display:flex;flex-direction:column;gap:6px;"></ul>
+        </div>
+
+        <!-- What doesn't work -->
+        <div id="tiktokDoesntWrap">
+          <div class="coach-section-label" style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1.5px;color:var(--text-dimmer);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);display:inline-block;"></span>
+            WHAT UNDERPERFORMS
+          </div>
+          <ul class="coach-list improve" id="tiktokDoesnt" style="list-style:none;display:flex;flex-direction:column;gap:6px;"></ul>
+        </div>
+
+        <!-- Audience psychology -->
+        <div>
+          <div class="coach-section-label" style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1.5px;color:var(--text-dimmer);margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block;"></span>
+            TIKTOK AUDIENCE PSYCHOLOGY
+          </div>
+          <div style="background:var(--bg-card-2);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:12px 14px;font-size:14px;color:var(--text);line-height:1.65;" id="tiktokPsychology"></div>
+        </div>
+
+        <!-- Content direction -->
+        <div style="background:var(--teal-glow);border:1px solid var(--teal);border-radius:6px;padding:14px 16px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin-bottom:6px;">WHAT TO MAKE GOING FORWARD</div>
+          <div style="font-size:14px;color:var(--text);line-height:1.65;" id="tiktokDirection"></div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -760,6 +823,28 @@ async function loadChannelHealth() {
     }
     topicEl.classList.remove('loading');
 
+    // Platform breakdown cards (TikTok, Instagram, Facebook from CSV imports)
+    if (data.by_platform) {
+      const PLAT_ICONS  = { tiktok: '🎵', instagram: '📸', facebook: '👥', youtube: '▶' };
+      const PLAT_LABELS = { tiktok: 'TikTok', instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube' };
+      const nonYT = ['tiktok', 'instagram', 'facebook'].filter(p => (data.by_platform[p]?.count || 0) > 0);
+      const container = document.getElementById('platformBreakdown');
+      if (nonYT.length > 0) {
+        container.style.display = 'grid';
+        container.innerHTML = nonYT.map(p => {
+          const pd = data.by_platform[p];
+          return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:6px;">${PLAT_ICONS[p]} ${PLAT_LABELS[p]}</div>
+            <div style="font-size:22px;font-weight:800;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;color:var(--teal);">${fmtNum(pd.total_views)}</div>
+            <div style="font-size:11px;color:var(--text-dimmer);margin-top:2px;">total views · ${pd.count} videos</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${fmtNum(pd.avg_views)} avg per video</div>
+          </div>`;
+        }).join('');
+      } else {
+        container.style.display = 'none';
+      }
+    }
+
   } catch (err) {
     console.error('Channel health error:', err);
   }
@@ -959,6 +1044,105 @@ function handleCoachEvent(ev, status, errEl, card, btn) {
     btn.classList.remove('loading');
     btn.disabled = false;
   }
+}
+
+// ─── Section 3b: TikTok Pattern Analysis ─────────────────────────────────────
+
+async function loadStoredTikTokPatterns() {
+  try {
+    const res  = await fetch('/api/mirrr/tiktok-patterns');
+    const data = await res.json();
+    if (data.patterns) renderTikTokPatterns(data.patterns, false);
+  } catch (_) {}
+}
+
+async function analyzeTikTok() {
+  const btn    = document.getElementById('tiktokAnalyzeBtn');
+  const status = document.getElementById('tiktokStatus');
+  const errEl  = document.getElementById('tiktokError');
+  const card   = document.getElementById('tiktokResultCard');
+  const badge  = document.getElementById('tiktokAnalyzedBadge');
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+  card.style.display  = 'none';
+  badge.style.display = 'none';
+  errEl.style.display = 'none';
+  status.textContent  = 'Analyzing your original TikTok content…';
+  status.style.display = 'block';
+
+  try {
+    const res    = await fetch('/api/mirrr/tiktok-patterns', { method: 'POST' });
+    const reader = res.body.getReader();
+    const dec    = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const ev = JSON.parse(line.slice(5).trim());
+          if (ev.type === 'status') {
+            status.textContent = ev.message;
+          } else if (ev.type === 'error') {
+            errEl.textContent  = ev.message;
+            errEl.style.display = 'block';
+            status.style.display = 'none';
+            btn.classList.remove('loading');
+            btn.disabled = false;
+          } else if (ev.type === 'patterns') {
+            renderTikTokPatterns(ev.data, true);
+          } else if (ev.type === 'done') {
+            status.style.display = 'none';
+            btn.classList.remove('loading');
+            btn.disabled = false;
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (err) {
+    errEl.textContent  = 'Error: ' + err.message;
+    errEl.style.display = 'block';
+    status.style.display = 'none';
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function renderTikTokPatterns(d, freshRun) {
+  const card     = document.getElementById('tiktokResultCard');
+  const badge    = document.getElementById('tiktokAnalyzedBadge');
+  const dateEl   = document.getElementById('tiktokResultDate');
+  const workEl   = document.getElementById('tiktokWorking');
+  const doesntEl = document.getElementById('tiktokDoesnt');
+  const psychEl  = document.getElementById('tiktokPsychology');
+  const dirEl    = document.getElementById('tiktokDirection');
+  const sub      = document.getElementById('tiktokAnalysisSub');
+
+  const count = d.video_count || '?';
+  const avg   = d.avg_views   ? Number(d.avg_views).toLocaleString() : '—';
+  sub.textContent = `${count} original video${count !== 1 ? 's' : ''} analyzed · ${avg} avg views · reposts excluded`;
+
+  workEl.innerHTML = (d.what_works || []).map(item => `<li style="display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.5;color:var(--text);">${item}</li>`).join('');
+  doesntEl.innerHTML = (d.what_doesnt || []).map(item => `<li style="display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.5;color:var(--text);">${item}</li>`).join('');
+
+  document.getElementById('tiktokDoesntWrap').style.display = (d.what_doesnt || []).length ? 'block' : 'none';
+
+  psychEl.textContent = d.audience_psychology || '';
+  dirEl.textContent   = d.content_direction   || '';
+
+  if (d.analyzed_at) {
+    const dt = new Date(d.analyzed_at);
+    dateEl.textContent = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  card.style.display  = 'block';
+  badge.style.display = freshRun ? 'flex' : 'none';
 }
 
 // ─── Section 4: YouTube Sync — background job system ─────────────────────────
@@ -1454,6 +1638,20 @@ function renderAbResults(data) {
   document.getElementById('abResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// ─── TikTok Section Initialisation ───────────────────────────────────────────
+async function initTikTokSection() {
+  try {
+    // Show the section if we have any TikTok platform data
+    const health = await fetch('/api/mirrr/channel-health').then(r => r.json()).catch(() => null);
+    const tikTokCount = health?.by_platform?.tiktok?.count || 0;
+    if (tikTokCount > 0) {
+      document.getElementById('tiktok-analysis-section').style.display = 'block';
+      // Load any previously stored analysis
+      await loadStoredTikTokPatterns();
+    }
+  } catch (_) {}
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 // Videos section is collapsed by default — loaded lazily on first expand.
 (async () => {
@@ -1465,6 +1663,8 @@ function renderAbResults(data) {
   loadCachedResults();
   // Auto-reconnect to any running sync job
   checkActiveSyncJob();
+  // Show TikTok analysis section if we have TikTok data, and load stored patterns
+  initTikTokSection();
 })();
 
 // ─── Content DNA ──────────────────────────────────────────────────────────────

@@ -820,4 +820,4 @@ async function reclassifyById(footageId) {
   return { id: footageId, ...classification };
 }
 
-module.exports = { ingestFolder, ingestFile, findVideoFiles, checkFfmpeg, reclassifyById };
+module.exports = { ingestFolder, ingestFile, findVideoFiles, checkFfmpeg, reclassifyById, probeFile };

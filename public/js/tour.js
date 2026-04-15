@@ -412,7 +412,13 @@
   }
 
   function finish() {
+    // Persist both locally and server-side so Electron restarts don't reset the tour
     localStorage.setItem(TOUR_KEY, '1');
+    fetch('/api/auth/kv/tour_done', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ value: '1' }),
+    }).catch(function() {});
     close();
   }
 
@@ -427,10 +433,22 @@
   // AUTO-TRIGGER ON FIRST VISIT
   // ─────────────────────────────────────────────
   function maybeAutoStart() {
-    if (!localStorage.getItem(TOUR_KEY)) {
-      // Small delay so the page fully renders first
-      setTimeout(function() { start(0); }, 800);
-    }
+    // Check server-side flag first (persists across Electron restarts),
+    // fall back to localStorage for instant response.
+    if (localStorage.getItem(TOUR_KEY)) return; // fast local check
+    fetch('/api/auth/kv/tour_done')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.value) {
+          localStorage.setItem(TOUR_KEY, '1'); // sync back to local
+        } else {
+          setTimeout(function() { start(0); }, 800);
+        }
+      })
+      .catch(function() {
+        // Server unreachable — fall back to localStorage only
+        setTimeout(function() { start(0); }, 800);
+      });
   }
 
   // ─────────────────────────────────────────────

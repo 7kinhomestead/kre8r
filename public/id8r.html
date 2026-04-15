@@ -65,9 +65,50 @@
   }
   .mode-btn:hover{background:var(--teal-dim);}
 
+  /* ──────────────────────────���──────── */
+  /* SCREEN FAST-INPUT                   */
+  /* ─────────────────────────────────── */
+  .fast-input-wrap{max-width:660px;margin:0 auto;padding:32px 16px 60px;}
+  .fast-input-header{display:flex;align-items:center;gap:14px;margin-bottom:28px;}
+  .fast-back-btn{background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:18px;line-height:1;padding:0;transition:color 0.15s;}
+  .fast-back-btn:hover{color:var(--text-dim);}
+  .fast-mode-badge{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--teal);text-transform:uppercase;}
+  .fast-heading{font-family:var(--font-head);font-size:clamp(30px,7vw,48px);letter-spacing:3px;line-height:1;margin-bottom:8px;}
+  .fast-sub{color:var(--text-dim);font-size:14px;line-height:1.6;margin-bottom:24px;}
+  .fast-textarea{
+    width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.6;
+    padding:16px 18px;resize:vertical;min-height:120px;transition:border-color 0.15s;
+  }
+  .fast-textarea:focus{outline:none;border-color:var(--teal);}
+  .fast-textarea::placeholder{color:var(--text-dimmer);}
+  .fast-options{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .fast-options-label{font-size:12px;color:var(--text-dimmer);white-space:nowrap;}
+  .fast-angle-select{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+    color:var(--text-dim);font-family:var(--font-body);font-size:13px;padding:7px 10px;outline:none;
+    transition:border-color 0.15s;cursor:pointer;
+  }
+  .fast-angle-select:focus{border-color:var(--teal);}
+  .fast-generate-btn{
+    width:100%;margin-top:20px;background:var(--teal);color:#0e0f0e;border:none;
+    border-radius:var(--radius);padding:16px 24px;font-family:var(--font-body);font-size:15px;
+    font-weight:700;cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .fast-generate-btn:hover{background:var(--teal-dim);}
+  .fast-generate-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .fast-spinner{width:16px;height:16px;border:2px solid rgba(14,15,14,0.3);border-top-color:#0e0f0e;border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+  .fast-convo-link{
+    display:block;text-align:center;margin-top:18px;background:none;border:none;
+    color:var(--text-dimmer);font-size:13px;font-family:var(--font-body);cursor:pointer;
+    text-decoration:none;transition:color 0.15s;padding:4px;
+  }
+  .fast-convo-link:hover{color:var(--text-dim);}
+
   /* ─────────────────────────────────── */
   /* SCREEN 2 — Conversation             */
-  /* ─────────────────────────────────── */
+  /* ─────────────────────────────��───── */
   .chat-container{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
     display:flex;flex-direction:column;height:65vh;min-height:400px;
@@ -458,6 +499,45 @@
     </div>
   </div>
 
+  <!-- ─────────────────── SCREEN FAST-INPUT ─────────────────── -->
+  <div id="screen-fast-input" class="screen">
+    <div class="fast-input-wrap">
+      <div class="fast-input-header">
+        <button class="fast-back-btn" title="Back to modes">←</button>
+        <div class="fast-mode-badge" id="fast-mode-badge">SHAPE IT</div>
+      </div>
+
+      <div class="fast-heading" id="fast-heading">WHAT'S THE IDEA?</div>
+      <div class="fast-sub" id="fast-sub">One sentence or a brain dump — anything works. Claude generates 5 concept directions in about 10 seconds.</div>
+
+      <textarea class="fast-textarea" id="fast-input-text" rows="5"
+        placeholder="e.g. 'We built a chicken coop for $47 out of stuff we had laying around'"></textarea>
+
+      <div class="fast-options">
+        <span class="fast-options-label">Lean toward an angle (optional):</span>
+        <select class="fast-angle-select" id="fast-input-angle">
+          <option value="">— let Claude decide —</option>
+          <option value="financial">💰 Financial</option>
+          <option value="system">⚡ System Is Rigged</option>
+          <option value="rockrich">🏆 Rock Rich</option>
+          <option value="howto">🔧 How-To</option>
+          <option value="mistakes">💡 Mistakes / Lessons</option>
+          <option value="lifestyle">🌿 Lifestyle</option>
+          <option value="viral">🔥 Viral</option>
+        </select>
+      </div>
+
+      <button class="fast-generate-btn" id="fast-generate-btn">
+        <div class="fast-spinner" id="fast-spinner"></div>
+        <span id="fast-generate-label">Generate 5 Concepts →</span>
+      </button>
+
+      <button class="fast-convo-link">
+        Want to think this through first? Have a conversation instead →
+      </button>
+    </div>
+  </div>
+
   <!-- ─────────────────── SCREEN 2: Conversation ─────────────────── -->
   <div id="screen-conv" class="screen">
     <div class="chat-container">
@@ -614,7 +694,11 @@
           <div class="spinner-lg"></div>
           <span class="btn-label">Send to WritΩr →</span>
         </button>
+        <button class="btn btn-secondary" id="save-vault-btn" onclick="saveToVault()">
+          <span class="btn-label">💡 Save to Vault</span>
+        </button>
       </div>
+      <div id="vault-save-status" style="display:none;font-size:12px;color:#3ecfb2;margin-top:8px;text-align:center"></div>
     </div>
   </div>
 
@@ -663,15 +747,117 @@
   }
 
   // ── Mode select ────────────────────────────────────────────────
+  // Shape It / Find It / Deep Dive / Vault First → Fast Input first (new default)
+  // Merge / Episodic → keep their special flows
   document.querySelectorAll('.mode-card[data-mode]').forEach(el => {
     el.addEventListener('click', () => {
       const mode = el.dataset.mode;
       if (!mode) return;
-      if (mode === 'merge')     { loadMergeProjects(); showScreen('merge'); }
+      if (mode === 'merge')         { loadMergeProjects(); showScreen('merge'); }
       else if (mode === 'episodic') { loadEpisodicShows(); showScreen('episodic'); }
-      else startSession(mode);
+      else showFastInput(mode);
     });
   });
+
+  // ── Fast Input ─────────────────────────────────────────────────
+  let fastInputMode = 'shape_it';
+
+  const FAST_COPY = {
+    shape_it: {
+      heading:     "WHAT'S THE IDEA?",
+      sub:         "One sentence or a brain dump — anything works. Claude generates 5 concept directions in about 10 seconds.",
+      placeholder: "e.g. \"We built a chicken coop for $47 out of stuff we had laying around\"",
+    },
+    find_it: {
+      heading:     "WHAT'S ON YOUR MIND?",
+      sub:         "Anything — what you've been thinking about lately, what the audience keeps asking, what you've been avoiding making.",
+      placeholder: "e.g. \"I keep getting asked about how we handle winters with the kids\" or just \"I have no idea what to make next\"",
+    },
+    deep_dive: {
+      heading:     "WHAT'S THE TOPIC?",
+      sub:         "Give Claude the topic you want to go deep on. It'll find 5 angles you haven't thought of yet.",
+      placeholder: "e.g. \"solar panels for off-grid — I want to cover the real math, not the marketing\"",
+    },
+    vault_first: {
+      heading:     "WHAT DID YOU SHOOT?",
+      sub:         "Describe the footage. What happened? What went sideways? What surprised you? Claude finds the story.",
+      placeholder: "e.g. \"I shot 3 days of us digging a well by hand — hit rock twice, almost gave up on day 2\"",
+    },
+  };
+
+  function showFastInput(mode) {
+    fastInputMode = mode;
+    const copy = FAST_COPY[mode] || FAST_COPY.shape_it;
+    document.getElementById('fast-mode-badge').textContent     = MODE_LABELS[mode] || mode.toUpperCase().replace(/_/g, ' ');
+    document.getElementById('fast-heading').textContent        = copy.heading;
+    document.getElementById('fast-sub').textContent            = copy.sub;
+    document.getElementById('fast-input-text').placeholder     = copy.placeholder;
+    document.getElementById('fast-input-text').value           = '';
+    document.getElementById('fast-input-angle').value          = '';
+    document.getElementById('fast-generate-label').textContent = 'Generate 5 Concepts →';
+    document.getElementById('fast-generate-btn').disabled      = false;
+    document.getElementById('fast-spinner').style.display      = 'none';
+    showScreen('fast-input');
+    setTimeout(() => document.getElementById('fast-input-text').focus(), 150);
+  }
+
+  async function generateFastConcepts() {
+    const input = (document.getElementById('fast-input-text').value || '').trim();
+    if (!input) { document.getElementById('fast-input-text').focus(); return; }
+
+    const angle   = document.getElementById('fast-input-angle').value;
+    const btn     = document.getElementById('fast-generate-btn');
+    const label   = document.getElementById('fast-generate-label');
+    const spinner = document.getElementById('fast-spinner');
+
+    btn.disabled          = true;
+    label.textContent     = 'Thinking…';
+    spinner.style.display = 'block';
+
+    try {
+      const res  = await fetch('/api/id8r/fast-concepts', {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ input, mode: fastInputMode, angle: angle || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed'); }
+
+      // Wire directly into the existing session + concepts flow
+      sessionId    = data.session_id;
+      conceptsData = data.concepts || [];
+      currentMode  = fastInputMode;
+      localStorage.setItem('id8r_session_id', sessionId);
+      localStorage.setItem('id8r_mode_label', MODE_LABELS[fastInputMode] || 'FAST PASS');
+      localStorage.setItem('id8r_concepts',   JSON.stringify(conceptsData));
+      document.getElementById('chat-mode-display').textContent = MODE_LABELS[fastInputMode] || 'FAST PASS';
+
+      showScreen('concepts');
+      document.getElementById('concepts-generating').style.display = 'none';
+      document.getElementById('concepts-loaded').style.display     = 'block';
+      document.getElementById('concepts-error').classList.remove('visible');
+      renderConceptCards(conceptsData);
+    } catch (e) {
+      label.textContent     = 'Try Again →';
+      btn.disabled          = false;
+      spinner.style.display = 'none';
+      alert('Error: ' + e.message);
+    }
+
+    spinner.style.display = 'none';
+  }
+
+  // Escape hatch — drop into conversation mode, pre-fill with what they already typed
+  function startSessionFromFast() {
+    const input = (document.getElementById('fast-input-text').value || '').trim();
+    startSession(fastInputMode);
+    if (input) {
+      setTimeout(() => {
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) { chatInput.value = input; autoResize(chatInput); }
+      }, 400);
+    }
+  }
 
   // ── Episodic screen ─────────────────────────────────────────────
   function goToNewShow() {
@@ -935,6 +1121,8 @@
 
   // Restore session on load
   (function restoreSession() {
+    // If arriving from SeedΩr with an idea_id, start fresh — don't load old session
+    if (new URLSearchParams(window.location.search).get('idea_id')) return;
     const savedId    = localStorage.getItem('id8r_session_id');
     const savedHtml  = localStorage.getItem('id8r_chat_html');
     const savedLabel = localStorage.getItem('id8r_mode_label');
@@ -1135,6 +1323,14 @@
   });
   sendBtn.addEventListener('click', sendMessage);
   chatInput.addEventListener('input', () => autoResize(chatInput));
+
+  // Fast input — button clicks and keyboard
+  document.getElementById('fast-generate-btn').addEventListener('click', generateFastConcepts);
+  document.querySelector('.fast-convo-link').addEventListener('click', startSessionFromFast);
+  document.querySelector('.fast-back-btn').addEventListener('click', () => showScreen('mode'));
+  document.getElementById('fast-input-text').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); generateFastConcepts(); }
+  });
 
   function autoResize(el) {
     el.style.height = 'auto';
@@ -1669,6 +1865,114 @@
 
   document.getElementById('send-pipr-btn').addEventListener('click',  () => sendToPipeline('pipr'));
   document.getElementById('send-writr-btn').addEventListener('click', () => sendToPipeline('writr'));
+
+  // ── Save to Vault ──────────────────────────────────────────────
+  // Saves the current brief back to an idea in SeedΩr.
+  // If ?idea_id=N was in the URL, updates that idea. Otherwise creates new.
+  async function saveToVault() {
+    const btn    = document.getElementById('save-vault-btn');
+    const status = document.getElementById('vault-save-status');
+    if (!chosenConcept && !sessionId) {
+      status.style.display = '';
+      status.style.color   = '#e05252';
+      status.textContent   = 'Nothing to save yet — develop an idea first.';
+      return;
+    }
+    btn.disabled = true;
+    status.style.display = '';
+    status.style.color   = '#3ecfb2';
+    status.textContent   = 'Saving…';
+
+    // Collect all session data available
+    const briefData = {};
+    try { briefData.chosenConcept   = chosenConcept; } catch {}
+    try {
+      const raw = localStorage.getItem('id8r_episodic_context');
+      if (raw) briefData.episodicContext = JSON.parse(raw);
+    } catch {}
+
+    const ideaPayload = {
+      title:      chosenConcept?.headline || chosenConcept?.title || 'Untitled Idea',
+      concept:    chosenConcept?.why      || '',
+      angle:      chosenConcept?.angle    || '',
+      hook:       chosenConcept?.hook     || '',
+      status:     'in_development',
+      source:     'id8r',
+      brief_data: JSON.stringify(briefData),
+    };
+
+    try {
+      const urlIdeaId = new URLSearchParams(window.location.search).get('idea_id');
+      let res;
+      if (urlIdeaId) {
+        // Update existing vault idea
+        res = await fetch(`/api/ideas/${urlIdeaId}`, {
+          method:  'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(ideaPayload),
+        });
+      } else {
+        // Create new vault idea
+        res = await fetch('/api/ideas', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(ideaPayload),
+        });
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      status.textContent = urlIdeaId ? '✅ Vault updated!' : '✅ Saved to SeedΩr!';
+      btn.textContent    = '💡 Saved ✓';
+      setTimeout(() => {
+        btn.disabled    = false;
+        btn.textContent = '💡 Save to Vault';
+      }, 3000);
+    } catch (e) {
+      status.style.color = '#e05252';
+      status.textContent = 'Save failed: ' + e.message;
+      btn.disabled = false;
+    }
+  }
+
+  // ── Handle ?idea_id= URL param — pre-load seed from Vault ──────
+  (function handleIdeaSeed() {
+    const ideaId = new URLSearchParams(window.location.search).get('idea_id');
+    if (!ideaId) return;
+    fetch(`/api/ideas/${ideaId}`)
+      .then(r => r.json())
+      .then(({ idea }) => {
+        if (!idea) return;
+
+        // Pre-populate chosenConcept so Save to Vault has something to work with
+        chosenConcept = { headline: idea.title, angle: idea.angle, why: idea.concept, hook: idea.hook };
+
+        // Land directly on the fast-input screen with the idea pre-filled
+        showFastInput('shape_it');
+
+        // Build a rich pre-fill from whatever the idea has
+        const parts = [idea.title];
+        if (idea.concept) parts.push(idea.concept);
+        if (idea.hook)    parts.push(`Hook: ${idea.hook}`);
+        document.getElementById('fast-input-text').value = parts.join('\n\n');
+
+        // Set angle if the idea has one
+        if (idea.angle) {
+          const angleEl = document.getElementById('fast-input-angle');
+          if (angleEl) angleEl.value = idea.angle;
+        }
+
+        // Show a subtle vault badge above the textarea
+        const wrap = document.querySelector('.fast-input-wrap');
+        if (wrap) {
+          const badge = document.createElement('div');
+          badge.style.cssText = 'background:rgba(62,207,178,0.08);border:1px solid rgba(62,207,178,0.25);border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:12px;color:#3ecfb2;';
+          badge.innerHTML = `💡 From SeedΩr vault — <strong>${idea.title}</strong>. Develop it below, then Save to Vault when done.`;
+          const textarea = document.getElementById('fast-input-text');
+          if (textarea) wrap.insertBefore(badge, textarea);
+        }
+      })
+      .catch(() => {});
+  })();
 
   // ── SSE POST stream helper ─────────────────────────────────────
   function streamSSE(url, body, onEvent) {

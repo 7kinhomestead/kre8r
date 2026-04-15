@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PostΩr — Kre8Ωr</title>
+  <link rel="icon" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:          #0e0f0e;
+      --bg-card:     #161916;
+      --bg-card-2:   #1c1f1b;
+      --border:      #2a2e28;
+      --border-bright: #3d4439;
+      --text:        #e8ebe6;
+      --text-dim:    #8a9487;
+      --text-dimmer: #4e5349;
+      --teal:        #14b8a6;
+      --teal-glow:   rgba(20,184,166,.12);
+      --teal-border: rgba(20,184,166,.3);
+      --red:         #e05252;
+      --green:       #22c55e;
+      --orange:      #f59e0b;
+      --radius:      10px;
+      --radius-sm:   6px;
+      --font-head:   'Bebas Neue', sans-serif;
+      --font-body:   'DM Sans', sans-serif;
+      --nav-height:  54px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .page { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-family: var(--font-head);
+      font-size: 36px;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+    .page-header h1 span { color: var(--teal); }
+    .page-header p {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    /* ── Section headers ── */
+    .section-label {
+      font-family: var(--font-head);
+      font-size: 13px;
+      letter-spacing: 2px;
+      color: var(--text-dimmer);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    /* ── Platform Cards ── */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 600px) { .platform-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .platform-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color .15s;
+    }
+    .platform-card.is-connected {
+      border-color: var(--teal-border);
+      background: linear-gradient(135deg, var(--bg-card), rgba(20,184,166,.04));
+    }
+    .platform-card.is-soon {
+      opacity: .55;
+    }
+
+    .platform-icon {
+      font-size: 28px;
+      line-height: 1;
+    }
+    .platform-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .platform-status {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dimmer);
+    }
+    .platform-card.is-connected .platform-status { color: var(--teal); }
+    .platform-account {
+      font-size: 11px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-connect {
+      background: var(--teal);
+      color: #0e0f0e;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    .btn-connect:hover { opacity: .85; }
+    .btn-connect.is-disconnect {
+      background: none;
+      border: 1px solid var(--border-bright);
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+    .btn-connect.is-disconnect:hover { border-color: var(--red); color: var(--red); }
+    .btn-connect[disabled] {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    /* ── Credentials setup banner ── */
+    .creds-banner {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--orange);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .creds-banner summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--orange);
+      user-select: none;
+    }
+    .creds-banner-body {
+      margin-top: 14px;
+    }
+    .creds-group { margin-bottom: 18px; }
+    .creds-group h4 {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .creds-group ol {
+      padding-left: 18px;
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+    code {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 12px;
+      color: var(--teal);
+      font-family: 'Consolas', monospace;
+    }
+
+    /* ── Page Picker (Meta multi-page) ── */
+    .page-picker-banner {
+      background: var(--bg-card);
+      border: 1px solid var(--teal-border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .page-picker-banner.is-visible { display: block; }
+    .page-picker-banner h3 {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .page-list { display: flex; flex-direction: column; gap: 8px; }
+    .page-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+    .page-item-ig { font-size: 11px; color: var(--text-dim); }
+    .btn-sm {
+      background: var(--teal);
+      color: #0e0f0e;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font-body);
+    }
+    .btn-sm:hover { opacity: .85; }
+
+    /* ── Composer Form ── */
+    .composer {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .composer-title {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    .form-row { margin-bottom: 16px; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    input[type="text"], input[type="datetime-local"], textarea, select {
+      width: 100%;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input[type="text"]:focus,
+    input[type="datetime-local"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--teal);
+    }
+    textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+    select { appearance: none; cursor: pointer; }
+    input[type="text"]::placeholder, textarea::placeholder { color: var(--text-dimmer); }
+
+    /* Video picker row */
+    .video-picker-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .video-picker-row select { flex: 1; }
+    .video-picker-row input  { flex: 2; }
+    .video-picker-or {
+      font-size: 12px;
+      color: var(--text-dimmer);
+      padding-top: 12px;
+      white-space: nowrap;
+    }
+
+    /* Platform toggles */
+    .platform-toggles {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .platform-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dim);
+      transition: all .15s;
+      user-select: none;
+    }
+    .platform-toggle.is-checked {
+      border-color: var(--teal-border);
+      background: var(--teal-glow);
+      color: var(--teal);
+    }
+    .platform-toggle.is-disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+    .platform-toggle input { display: none; }
+
+    /* Per-platform overrides */
+    .overrides {
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .override-section {
+      display: none;
+    }
+    .override-section.is-visible { display: block; }
+    .override-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .override-header span { font-size: 16px; }
+
+    /* ── Mode Switcher ── */
+    .mode-switcher {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      margin-bottom: 20px;
+      width: fit-content;
+    }
+    .mode-btn {
+      background: none;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: all .15s;
+    }
+    .mode-btn.is-active {
+      background: var(--bg-card);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,.3);
+    }
+
+    /* ── Bulk Queue ── */
+    .queue-table {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .queue-row {
+      display: grid;
+      grid-template-columns: 2fr 2fr 160px 32px;
+      gap: 8px;
+      align-items: center;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    @media (max-width: 640px) {
+      .queue-row { grid-template-columns: 1fr; }
+    }
+    .queue-row-num {
+      font-size: 11px;
+      color: var(--text-dimmer);
+      font-weight: 700;
+      width: 20px;
+      text-align: center;
+    }
+    .btn-remove {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-dimmer);
+      font-size: 14px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+    .btn-remove:hover { border-color: var(--red); color: var(--red); }
+    .btn-add-video {
+      background: none;
+      border: 1px dashed var(--border-bright);
+      border-radius: var(--radius-sm);
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px;
+      cursor: pointer;
+      width: 100%;
+      font-family: var(--font-body);
+      transition: all .15s;
+      text-align: center;
+    }
+    .btn-add-video:hover { border-color: var(--teal); color: var(--teal); }
+
+    /* Bulk progress */
+    .bulk-progress-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .bulk-item-row {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+    .bulk-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .bulk-item-platforms {
+      display: flex;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .bulk-item-stat { display: flex; align-items: center; gap: 4px; }
+    .bulk-item-stat.done  { color: var(--green); }
+    .bulk-item-stat.error { color: var(--red);   }
+
+    /* ── Post Button ── */
+    .post-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .btn-post {
+      background: var(--teal);
+      color: #0e0f0e;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: opacity .15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-post:hover    { opacity: .85; }
+    .btn-post[disabled] { opacity: .4; cursor: not-allowed; }
+    .btn-post .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(0,0,0,.3);
+      border-top-color: #0e0f0e;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .btn-post.is-posting .spinner { display: block; }
+    .btn-post.is-posting .btn-label { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .post-hint { font-size: 12px; color: var(--text-dimmer); }
+
+    /* ── Progress Panel ── */
+    .progress-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .progress-panel.is-visible { display: block; }
+    .progress-panel-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .platform-progress {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pp-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .pp-icon  { font-size: 18px; width: 24px; text-align: center; }
+    .pp-name  { width: 90px; font-size: 13px; font-weight: 600; }
+    .pp-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-card-2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .pp-bar {
+      height: 100%;
+      background: var(--teal);
+      border-radius: 3px;
+      width: 0%;
+      transition: width .4s ease;
+    }
+    .pp-bar.is-error  { background: var(--red); }
+    .pp-bar.is-done   { background: var(--green); }
+    .pp-status {
+      font-size: 11px;
+      color: var(--text-dim);
+      width: 120px;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pp-link {
+      font-size: 11px;
+      color: var(--teal);
+      text-decoration: none;
+    }
+    .pp-link:hover { text-decoration: underline; }
+
+    /* ── History Table ── */
+    .history-section { margin-top: 32px; }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .history-table th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dimmer);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dim);
+      vertical-align: middle;
+    }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr:hover td { background: var(--bg-card-2); }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .status-badge.posted  { background: rgba(34,197,94,.15); color: var(--green); }
+    .status-badge.posting { background: rgba(20,184,166,.15); color: var(--teal); }
+    .status-badge.failed  { background: rgba(224,82,82,.15);  color: var(--red); }
+    .status-badge.pending { background: rgba(255,255,255,.06); color: var(--text-dimmer); }
+    .history-empty {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-dimmer);
+      font-size: 13px;
+    }
+
+    .platform-icon-sm {
+      display: inline-block;
+      width: 18px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text);
+      box-shadow: 0 8px 24px rgba(0,0,0,.5);
+      z-index: 9999;
+      display: none;
+      max-width: 360px;
+    }
+    #toast.is-visible { display: block; animation: fadeInUp .2s ease; }
+    #toast.is-error   { border-color: rgba(224,82,82,.4); color: var(--red); }
+    #toast.is-success { border-color: var(--teal-border); }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div id="kre8r-nav"></div>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <h1>POST<span>Ω</span>R</h1>
+    <p>Connect your platforms, pick your video, hit post. One workflow for everything.</p>
+  </div>
+
+  <!-- Credentials Setup (collapsible) -->
+  <details class="creds-banner" id="creds-details">
+    <summary>⚙️ &nbsp;Platform Setup — add API credentials to .env to unlock connections</summary>
+    <div class="creds-banner-body">
+
+      <div class="creds-group">
+        <h4>YouTube (Google)</h4>
+        <ol>
+          <li>Go to <strong>console.cloud.google.com</strong> → New Project → Enable <strong>YouTube Data API v3</strong></li>
+          <li>APIs &amp; Services → Credentials → Create OAuth 2.0 Client ID (Web application)</li>
+          <li>Add Authorized redirect URIs: <code>http://localhost:3000/api/postor/auth/youtube/callback</code></li>
+          <li>Add to your <code>.env</code>:<br/>
+            <code>GOOGLE_CLIENT_ID=your-client-id</code><br/>
+            <code>GOOGLE_CLIENT_SECRET=your-client-secret</code>
+          </li>
+          <li>Restart server → click Connect YouTube</li>
+        </ol>
+      </div>
+
+      <div class="creds-group">
+        <h4>Instagram + Facebook (Meta)</h4>
+        <ol>
+          <li>Go to <strong>developers.facebook.com</strong> → Create App → Business type</li>
+          <li>Add products: <strong>Facebook Login</strong> + <strong>Instagram Basic Display</strong></li>
+          <li>App Settings → Basic → get App ID &amp; Secret</li>
+          <li>Facebook Login → Settings → add Valid OAuth Redirect URI: <code>http://localhost:3000/api/postor/auth/meta/callback</code></li>
+          <li>Add permissions: <code>instagram_basic</code>, <code>instagram_content_publish</code>, <code>pages_manage_posts</code>, <code>pages_read_engagement</code>, <code>pages_show_list</code>, <code>publish_video</code></li>
+          <li>Add to your <code>.env</code>:<br/>
+            <code>META_APP_ID=your-app-id</code><br/>
+            <code>META_APP_SECRET=your-app-secret</code>
+          </li>
+          <li>Restart server → click Connect Meta (Instagram + Facebook)</li>
+          <li>Note: In Development mode you can only post to accounts you add as Test Users. Submit for Advanced Access before going live.</li>
+        </ol>
+      </div>
+
+    </div>
+  </details>
+
+  <!-- Platform Cards -->
+  <div class="section-label">Platform Connections</div>
+  <div class="platform-grid" id="platform-grid">
+    <!-- Rendered by JS -->
+  </div>
+
+  <!-- Meta Page Picker (shown after Meta auth if multiple pages) -->
+  <div class="page-picker-banner" id="page-picker">
+    <h3>🏷️ Select your Facebook Page</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">Multiple pages found — choose which one to use for posting.</p>
+    <div class="page-list" id="page-list"></div>
+  </div>
+
+  <!-- Post Composer -->
+  <div class="composer">
+    <div class="composer-title">New Post</div>
+
+    <!-- Mode Switcher -->
+    <div class="mode-switcher">
+      <button class="mode-btn is-active" id="mode-single" onclick="setMode('single')">Single Post</button>
+      <button class="mode-btn"           id="mode-bulk"   onclick="setMode('bulk')">Bulk Queue</button>
+    </div>
+
+    <!-- ══ SINGLE MODE ══ -->
+    <div id="single-mode">
+
+    <!-- Video Picker -->
+    <div class="form-row">
+      <label>Video</label>
+      <div class="video-picker-row">
+        <select id="vault-picker" onchange="onVaultPick()">
+          <option value="">— Pick from Vault (completed-video) —</option>
+        </select>
+        <span class="video-picker-or">or</span>
+        <input type="text" id="video-path" placeholder="Paste absolute file path…" oninput="onPathInput()" />
+      </div>
+    </div>
+
+    <!-- Title + Description -->
+    <div class="form-row">
+      <label>Title</label>
+      <input type="text" id="title" placeholder="Video title (used for YouTube and Facebook)" maxlength="200" />
+    </div>
+    <div class="form-row">
+      <label>Description / Caption</label>
+      <textarea id="description" rows="4" placeholder="Write your description. Instagram uses this as the caption (add hashtags here)."></textarea>
+    </div>
+
+    <!-- Platform Toggles -->
+    <div class="form-row">
+      <label>Post To</label>
+      <div class="platform-toggles" id="platform-toggles">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Per-platform overrides -->
+    <div class="overrides" id="overrides">
+
+      <!-- YouTube -->
+      <div class="override-section" id="yt-override">
+        <div class="override-header"><span>▶️</span> YouTube Options</div>
+        <div class="form-row">
+          <label>Privacy</label>
+          <select id="yt-privacy">
+            <option value="public">Public — live immediately</option>
+            <option value="unlisted">Unlisted — anyone with link</option>
+            <option value="private">Private — only you</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Schedule (optional — leave blank to post now)</label>
+          <input type="datetime-local" id="yt-schedule" />
+        </div>
+        <div class="form-row">
+          <label>Tags (comma-separated)</label>
+          <input type="text" id="yt-tags" placeholder="homesteading, off-grid, DIY" />
+        </div>
+        <div class="form-row">
+          <label>Category</label>
+          <select id="yt-category">
+            <option value="22">People &amp; Blogs</option>
+            <option value="26">Howto &amp; Style</option>
+            <option value="28">Science &amp; Technology</option>
+            <option value="24">Entertainment</option>
+            <option value="19">Travel &amp; Events</option>
+            <option value="1">Film &amp; Animation</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Instagram -->
+      <div class="override-section" id="ig-override">
+        <div class="override-header"><span>📸</span> Instagram Caption Override</div>
+        <div class="form-row">
+          <label>Instagram Caption (leave blank to use Description above)</label>
+          <textarea id="ig-caption" rows="3" placeholder="Optional: custom caption + hashtags for Instagram Reels"></textarea>
+        </div>
+      </div>
+
+      <!-- Facebook -->
+      <div class="override-section" id="fb-override">
+        <div class="override-header"><span>👍</span> Facebook Description Override</div>
+        <div class="form-row">
+          <label>Facebook Description (leave blank to use Description above)</label>
+          <textarea id="fb-description" rows="3" placeholder="Optional: custom description for Facebook Page video"></textarea>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Post Button -->
+    <div class="post-actions">
+      <button class="btn-post" id="btn-post" onclick="doPost()" disabled>
+        <div class="spinner"></div>
+        <span class="btn-label">🚀 Post Now</span>
+      </button>
+      <span class="post-hint" id="post-hint">Select a video and at least one connected platform to post.</span>
+    </div>
+
+    </div><!-- /single-mode -->
+
+    <!-- ══ BULK MODE ══ -->
+    <div id="bulk-mode" style="display:none">
+
+      <!-- Platform toggles (shared) -->
+      <div class="form-row">
+        <label>Post All To</label>
+        <div class="platform-toggles" id="bulk-platform-toggles"></div>
+      </div>
+
+      <!-- Shared description -->
+      <div class="form-row">
+        <label>Shared Description / Caption <span style="font-weight:400;text-transform:none;letter-spacing:0">(applies to all — override per video below)</span></label>
+        <textarea id="bulk-description" rows="3" placeholder="Shared description for all videos. Can override per-video below."></textarea>
+      </div>
+
+      <!-- YouTube shared options -->
+      <div class="form-row" id="bulk-yt-opts" style="display:none">
+        <label>YouTube Defaults</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="margin-bottom:4px">Privacy</label>
+            <select id="bulk-yt-privacy">
+              <option value="public">Public</option>
+              <option value="unlisted">Unlisted</option>
+              <option value="private">Private</option>
+            </select>
+          </div>
+          <div>
+            <label style="margin-bottom:4px">Category</label>
+            <select id="bulk-yt-category">
+              <option value="22">People &amp; Blogs</option>
+              <option value="26">Howto &amp; Style</option>
+              <option value="28">Science &amp; Technology</option>
+              <option value="24">Entertainment</option>
+              <option value="19">Travel &amp; Events</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label style="margin-bottom:4px">Shared Tags (comma-separated)</label>
+          <input type="text" id="bulk-yt-tags" placeholder="homesteading, off-grid, DIY" />
+        </div>
+      </div>
+
+      <!-- Queue table -->
+      <div class="form-row">
+        <label>Video Queue</label>
+        <div class="queue-table" id="queue-table">
+          <!-- rows inserted by JS -->
+        </div>
+        <button class="btn-add-video" onclick="addQueueRow()">+ Add Video</button>
+      </div>
+
+      <!-- Bulk Post Button -->
+      <div class="post-actions" style="margin-top:20px">
+        <button class="btn-post" id="btn-bulk-post" onclick="doBulkPost()" disabled>
+          <div class="spinner"></div>
+          <span class="btn-label">🚀 Post Queue</span>
+        </button>
+        <span class="post-hint" id="bulk-hint">Add videos and select platforms to post.</span>
+      </div>
+
+    </div><!-- /bulk-mode -->
+
+  </div><!-- /composer -->
+
+  <!-- Progress Panel -->
+  <div class="progress-panel" id="progress-panel">
+    <div class="progress-panel-title">Posting…</div>
+    <div class="platform-progress" id="platform-progress"></div>
+  </div>
+
+  <!-- Bulk Progress Panel -->
+  <div class="progress-panel" id="bulk-progress-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="progress-panel-title" style="margin:0">Queue Progress</div>
+      <div id="bulk-overall" style="font-size:12px;color:var(--text-dim)"></div>
+    </div>
+    <div class="bulk-progress-list" id="bulk-progress-list"></div>
+  </div>
+
+  <!-- Analytics Sync -->
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;" id="analytics-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">📊 YouTube Analytics Sync</div>
+        <div style="font-size:12px;color:var(--text-dim);" id="analytics-status-text">Connect YouTube to enable live analytics pull into MirrΩr + NorthΩr.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div id="revenue-display" style="display:none;text-align:right;">
+          <div style="font-size:11px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:.4px;">This Month</div>
+          <div style="font-size:20px;font-weight:700;color:var(--teal);" id="revenue-this-month">$0</div>
+        </div>
+        <button class="btn-connect" id="btn-sync-analytics" onclick="doSyncAnalytics()" disabled>
+          ⟳ Sync Analytics
+        </button>
+      </div>
+    </div>
+    <div id="sync-progress-wrap" style="display:none;margin-top:16px;">
+      <div style="background:var(--bg-card-2);border-radius:4px;height:6px;overflow:hidden;">
+        <div id="sync-bar" style="height:100%;background:var(--teal);width:0%;transition:width .4s ease;border-radius:4px;"></div>
+      </div>
+      <div id="sync-status" style="font-size:12px;color:var(--text-dim);margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="section-label">Post History</div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Posted</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr><td colspan="5" class="history-empty">No posts yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<div id="toast"></div>
+
+<div id="kre8r-nav-bottom"></div>
+<script src="/js/nav.js" defer></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// PostΩr — frontend
+// ═══════════════════════════════════════════════════════════════════
+
+const PLATFORM_META = {
+  youtube:   { icon: '▶️',  label: 'YouTube',   color: '#ff0000' },
+  instagram: { icon: '📸',  label: 'Instagram',  color: '#e1306c' },
+  facebook:  { icon: '👍',  label: 'Facebook',   color: '#1877f2' },
+  tiktok:    { icon: '🎵',  label: 'TikTok',     color: '#010101', soon: true },
+};
+
+let connections   = {};
+let progressState = {};
+let currentJobId  = null;
+
+// ── Boot ──────────────────────────────────────────────────────────
+
+window.addEventListener('load', () => {
+  initNav();
+  checkUrlParams();
+  loadConnections();
+  loadVaultVideos();
+  loadHistory();
+  loadAnalyticsStatus();
+});
+
+function checkUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('connected')) {
+    toast(`✅ ${params.get('connected')} connected successfully!`, 'success');
+  }
+  if (params.get('error')) {
+    toast(`❌ ${decodeURIComponent(params.get('error'))}`, 'error', 8000);
+  }
+  if (params.get('meta_setup') === 'select_page') {
+    loadMetaPages();
+  }
+  // Clean URL
+  window.history.replaceState({}, '', '/postor.html');
+}
+
+// ── Connections ───────────────────────────────────────────────────
+
+async function loadConnections() {
+  try {
+    const res  = await fetch('/api/postor/connections');
+    connections = await res.json();
+    renderPlatformCards();
+    renderPlatformToggles();
+  } catch (err) {
+    toast('Failed to load connections: ' + err.message, 'error');
+  }
+}
+
+function renderPlatformCards() {
+  const grid = document.getElementById('platform-grid');
+  grid.innerHTML = Object.entries(PLATFORM_META).map(([platform, meta]) => {
+    const conn = connections[platform] || {};
+    const connected  = conn.connected;
+    const soon       = conn.coming_soon;
+
+    let statusText = connected ? 'Connected' : (soon ? 'Coming Soon' : 'Not connected');
+    let accountHtml = '';
+    if (connected && conn.account_name) {
+      accountHtml = `<div class="platform-account">${esc(conn.account_name)}</div>`;
+    }
+
+    let btnHtml = '';
+    if (soon) {
+      btnHtml = `<button class="btn-connect" disabled>${meta.label} Soon</button>`;
+    } else if (connected) {
+      const disconnectPlatform = (platform === 'instagram' || platform === 'facebook') ? 'facebook' : platform;
+      btnHtml = `<button class="btn-connect is-disconnect" onclick="disconnect('${disconnectPlatform}')">Disconnect</button>`;
+    } else {
+      const authPlatform = (platform === 'instagram' || platform === 'facebook') ? 'meta' : platform;
+      const label = platform === 'facebook' ? 'Connect Meta (IG + FB)' : `Connect ${meta.label}`;
+      btnHtml = `<button class="btn-connect" onclick="connectPlatform('${authPlatform}')">${label}</button>`;
+    }
+
+    return `
+      <div class="platform-card ${connected ? 'is-connected' : ''} ${soon ? 'is-soon' : ''}">
+        <div class="platform-icon">${meta.icon}</div>
+        <div>
+          <div class="platform-name">${meta.label}</div>
+          <div class="platform-status">${statusText}</div>
+          ${accountHtml}
+        </div>
+        ${btnHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPlatformToggles() {
+  const container = document.getElementById('platform-toggles');
+  container.innerHTML = Object.entries(PLATFORM_META).map(([platform, meta]) => {
+    const conn     = connections[platform] || {};
+    const enabled  = conn.connected && !conn.coming_soon;
+    const disabled = !enabled;
+
+    return `
+      <label class="platform-toggle ${disabled ? 'is-disabled' : ''}" id="toggle-${platform}" onclick="${disabled ? '' : `togglePlatform('${platform}')`}">
+        <input type="checkbox" id="chk-${platform}" ${disabled ? 'disabled' : ''} onchange="updatePostButton()" />
+        ${meta.icon} ${meta.label}
+        ${conn.coming_soon ? '<span style="font-size:9px;opacity:.6;margin-left:4px;">SOON</span>' : ''}
+      </label>
+    `;
+  }).join('');
+  updatePostButton();
+}
+
+function togglePlatform(platform) {
+  const chk  = document.getElementById('chk-' + platform);
+  const lbl  = document.getElementById('toggle-' + platform);
+  if (!chk || chk.disabled) return;
+  chk.checked = !chk.checked;
+  lbl.classList.toggle('is-checked', chk.checked);
+  updateOverrideSections();
+  updatePostButton();
+}
+
+function getSelectedPlatforms() {
+  return Object.keys(PLATFORM_META).filter(p => {
+    const chk = document.getElementById('chk-' + p);
+    return chk && chk.checked;
+  });
+}
+
+function updateOverrideSections() {
+  const selected = getSelectedPlatforms();
+  document.getElementById('yt-override').classList.toggle('is-visible', selected.includes('youtube'));
+  document.getElementById('ig-override').classList.toggle('is-visible', selected.includes('instagram'));
+  document.getElementById('fb-override').classList.toggle('is-visible', selected.includes('facebook'));
+}
+
+function updatePostButton() {
+  const btn       = document.getElementById('btn-post');
+  const hint      = document.getElementById('post-hint');
+  const videoPath = getVideoPath();
+  const platforms = getSelectedPlatforms();
+
+  if (!videoPath && platforms.length === 0) {
+    btn.disabled = true;
+    hint.textContent = 'Select a video and at least one connected platform to post.';
+  } else if (!videoPath) {
+    btn.disabled = true;
+    hint.textContent = 'Select or paste a video path.';
+  } else if (platforms.length === 0) {
+    btn.disabled = true;
+    hint.textContent = 'Select at least one connected platform.';
+  } else {
+    btn.disabled = false;
+    const schedule = document.getElementById('yt-schedule')?.value;
+    if (platforms.includes('youtube') && schedule) {
+      hint.textContent = `Will post to ${platforms.join(', ')} — YouTube scheduled for ${new Date(schedule).toLocaleString()}.`;
+    } else {
+      hint.textContent = `Ready to post to: ${platforms.join(', ')}.`;
+    }
+  }
+}
+
+// ── Platform Auth ─────────────────────────────────────────────────
+
+function connectPlatform(platform) {
+  window.location.href = `/api/postor/auth/${platform}`;
+}
+
+async function disconnect(platform) {
+  if (!confirm(`Disconnect ${platform}? You'll need to re-authorize to post again.`)) return;
+  try {
+    await fetch(`/api/postor/connections/${platform}`, { method: 'DELETE' });
+    toast(`${platform} disconnected.`);
+    await loadConnections();
+  } catch (err) {
+    toast('Disconnect failed: ' + err.message, 'error');
+  }
+}
+
+// ── Meta Page Picker ──────────────────────────────────────────────
+
+async function loadMetaPages() {
+  try {
+    const res   = await fetch('/api/postor/auth/meta/pages');
+    const data  = await res.json();
+    if (data.pages.length <= 1) return; // auto-selected
+    showPagePicker(data.pages);
+  } catch (_) {}
+}
+
+function showPagePicker(pages) {
+  const banner   = document.getElementById('page-picker');
+  const listEl   = document.getElementById('page-list');
+  banner.classList.add('is-visible');
+
+  listEl.innerHTML = pages.map(p => `
+    <div class="page-item">
+      <div>
+        <div style="font-weight:600">${esc(p.name)}</div>
+        <div class="page-item-ig">
+          ${p.ig_user_id ? `📸 @${esc(p.ig_username || p.ig_user_id)}` : '❌ No Instagram linked'}
+        </div>
+      </div>
+      <button class="btn-sm" onclick="selectPage('${esc(p.id)}', this)">Use This Page</button>
+    </div>
+  `).join('');
+}
+
+async function selectPage(pageId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Selecting…';
+  try {
+    const res  = await fetch('/api/postor/auth/meta/select-page', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ page_id: pageId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('page-picker').classList.remove('is-visible');
+    toast(`✅ Facebook Page selected: ${data.page_name}`, 'success');
+    await loadConnections();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Use This Page';
+    toast('Page select failed: ' + err.message, 'error');
+  }
+}
+
+// ── Vault Video Picker ────────────────────────────────────────────
+
+async function loadVaultVideos() {
+  try {
+    const res  = await fetch('/api/postor/vault-videos');
+    const data = await res.json();
+    vaultVideos = data.videos || [];
+    const sel  = document.getElementById('vault-picker');
+    if (vaultVideos.length === 0) {
+      sel.innerHTML = '<option value="">No completed-video footage in Vault yet</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— Pick from Vault —</option>' +
+      vaultVideos.map(v => {
+        const dur  = v.duration ? ` (${fmtDur(v.duration)})` : '';
+        const name = v.filename || v.file_path || `Footage #${v.id}`;
+        return `<option value="${esc(v.file_path)}">${esc(name)}${dur}</option>`;
+      }).join('');
+  } catch (_) {}
+}
+
+function onVaultPick() {
+  const val = document.getElementById('vault-picker').value;
+  if (val) {
+    document.getElementById('video-path').value = val;
+  }
+  updatePostButton();
+}
+
+function onPathInput() {
+  document.getElementById('vault-picker').value = '';
+  updatePostButton();
+}
+
+function getVideoPath() {
+  return document.getElementById('video-path').value.trim();
+}
+
+// ── Post ──────────────────────────────────────────────────────────
+
+async function doPost() {
+  const videoPath = getVideoPath();
+  const platforms = getSelectedPlatforms();
+  const title     = document.getElementById('title').value.trim();
+  const desc      = document.getElementById('description').value.trim();
+
+  if (!videoPath)       return toast('Select a video first.', 'error');
+  if (!platforms.length) return toast('Select at least one platform.', 'error');
+  if (!title)            return toast('Enter a title.', 'error');
+
+  const ytTags = document.getElementById('yt-tags').value.trim();
+  const payload = {
+    video_path:      videoPath,
+    platforms,
+    title,
+    description:     desc,
+    yt_privacy:      document.getElementById('yt-privacy').value,
+    yt_scheduled_at: document.getElementById('yt-schedule').value || null,
+    yt_category_id:  parseInt(document.getElementById('yt-category').value, 10),
+    yt_tags:         ytTags ? ytTags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    ig_caption:      document.getElementById('ig-caption').value.trim() || null,
+    fb_description:  document.getElementById('fb-description').value.trim() || null,
+  };
+
+  // Kick off SSE job
+  const btn = document.getElementById('btn-post');
+  btn.classList.add('is-posting');
+  btn.disabled = true;
+
+  showProgressPanel(platforms);
+
+  try {
+    const res  = await fetch('/api/postor/post', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Post failed');
+
+    currentJobId = data.job_id;
+    listenToJob(data.job_id, platforms);
+  } catch (err) {
+    btn.classList.remove('is-posting');
+    btn.disabled = false;
+    toast('Post failed: ' + err.message, 'error');
+  }
+}
+
+// ── SSE Progress ──────────────────────────────────────────────────
+
+function showProgressPanel(platforms) {
+  const panel    = document.getElementById('progress-panel');
+  const progress = document.getElementById('platform-progress');
+  panel.classList.add('is-visible');
+
+  progressState = {};
+  progress.innerHTML = platforms.map(p => {
+    const m = PLATFORM_META[p] || {};
+    progressState[p] = { pct: 0, status: 'Waiting…' };
+    return `
+      <div class="pp-row" id="pp-${p}">
+        <div class="pp-icon">${m.icon || '📡'}</div>
+        <div class="pp-name">${m.label || p}</div>
+        <div class="pp-bar-wrap"><div class="pp-bar" id="bar-${p}" style="width:0%"></div></div>
+        <div class="pp-status" id="pstatus-${p}">Waiting…</div>
+        <div id="plink-${p}"></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateProgress(platform, pct, statusText, barClass) {
+  const bar    = document.getElementById('bar-' + platform);
+  const status = document.getElementById('pstatus-' + platform);
+  if (bar)    { bar.style.width = pct + '%'; if (barClass) bar.className = 'pp-bar ' + barClass; }
+  if (status) status.textContent = statusText || '';
+}
+
+function listenToJob(jobId, platforms) {
+  const es = new EventSource(`/api/postor/status/${jobId}`);
+
+  es.onmessage = (e) => {
+    const ev = JSON.parse(e.data);
+
+    if (ev.stage === 'platform_start') {
+      updateProgress(ev.platform, 5, 'Starting…', '');
+    } else if (ev.stage === 'youtube' || ev.stage === 'instagram' || ev.stage === 'facebook') {
+      const pct    = ev.pct || 10;
+      const labels = { initiating: 'Initiating…', uploading: 'Uploading…', processing: 'Processing…', publishing: 'Publishing…', done: 'Done!' };
+      updateProgress(ev.stage, pct, labels[ev.step] || ev.step, ev.step === 'done' ? 'pp-bar is-done' : '');
+    } else if (ev.stage === 'platform_done') {
+      updateProgress(ev.platform, 100, 'Posted! ✓', 'is-done');
+      if (ev.post_url) {
+        const linkEl = document.getElementById('plink-' + ev.platform);
+        if (linkEl) linkEl.innerHTML = `<a href="${esc(ev.post_url)}" class="pp-link" target="_blank">View →</a>`;
+      }
+    } else if (ev.stage === 'platform_error') {
+      updateProgress(ev.platform, 100, 'Error', 'is-error');
+      const status = document.getElementById('pstatus-' + ev.platform);
+      if (status) status.title = ev.error;
+    } else if (ev.stage === 'skip') {
+      // TikTok skipped
+    } else if (ev.stage === 'done') {
+      es.close();
+      document.getElementById('btn-post').classList.remove('is-posting');
+      document.getElementById('btn-post').disabled = false;
+      const failed = Object.values(ev.result?.results || {}).filter(r => !r.ok);
+      if (failed.length === 0) {
+        toast('🎉 All platforms posted successfully!', 'success', 6000);
+      } else {
+        toast(`⚠️ Posted with ${failed.length} error(s) — check progress panel.`, 'error', 6000);
+      }
+      loadHistory();
+    } else if (ev.stage === 'error') {
+      es.close();
+      document.getElementById('btn-post').classList.remove('is-posting');
+      document.getElementById('btn-post').disabled = false;
+      toast('Post job failed: ' + ev.error, 'error', 8000);
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    document.getElementById('btn-post').classList.remove('is-posting');
+    document.getElementById('btn-post').disabled = false;
+  };
+}
+
+// ── History ───────────────────────────────────────────────────────
+
+async function loadHistory() {
+  try {
+    const res  = await fetch('/api/postor/history?limit=25');
+    const data = await res.json();
+    renderHistory(data.posts || []);
+  } catch (_) {}
+}
+
+function renderHistory(posts) {
+  const tbody = document.getElementById('history-body');
+  if (posts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="history-empty">No posts yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = posts.map(p => {
+    const m      = PLATFORM_META[p.platform] || {};
+    const badge  = `<span class="status-badge ${p.status}">${p.status}</span>`;
+    const link   = p.post_url ? `<a href="${esc(p.post_url)}" class="pp-link" target="_blank">View →</a>` : '—';
+    const posted = p.posted_at ? new Date(p.posted_at).toLocaleDateString() : (p.created_at ? new Date(p.created_at).toLocaleDateString() : '—');
+    return `
+      <tr>
+        <td><span class="platform-icon-sm">${m.icon || '📡'}</span> ${m.label || p.platform}</td>
+        <td style="color:var(--text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.title || '—')}</td>
+        <td>${badge}</td>
+        <td>${posted}</td>
+        <td>${link}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── Mode Switcher ─────────────────────────────────────────────────
+
+let currentMode = 'single';
+let vaultVideos = [];
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('single-mode').style.display = mode === 'single' ? '' : 'none';
+  document.getElementById('bulk-mode').style.display   = mode === 'bulk'   ? '' : 'none';
+  document.getElementById('mode-single').classList.toggle('is-active', mode === 'single');
+  document.getElementById('mode-bulk').classList.toggle('is-active',   mode === 'bulk');
+  if (mode === 'bulk') {
+    renderBulkToggles();
+    if (document.querySelectorAll('.queue-row').length === 0) {
+      addQueueRow();
+      addQueueRow();
+    }
+  }
+}
+
+// ── Bulk Platform Toggles ─────────────────────────────────────────
+
+function renderBulkToggles() {
+  const container = document.getElementById('bulk-platform-toggles');
+  if (!container || container.children.length > 0) return;
+  container.innerHTML = Object.entries(PLATFORM_META).map(([platform, meta]) => {
+    const conn    = connections[platform] || {};
+    const enabled = conn.connected && !conn.coming_soon;
+    return `
+      <label class="platform-toggle ${!enabled ? 'is-disabled' : ''}" id="btoggle-${platform}"
+             onclick="${enabled ? `bulkTogglePlatform('${platform}')` : ''}">
+        <input type="checkbox" id="bchk-${platform}" ${!enabled ? 'disabled' : ''} onchange="updateBulkButton()" />
+        ${meta.icon} ${meta.label}
+        ${conn.coming_soon ? '<span style="font-size:9px;opacity:.6;margin-left:4px">SOON</span>' : ''}
+      </label>
+    `;
+  }).join('');
+}
+
+function bulkTogglePlatform(platform) {
+  const chk = document.getElementById('bchk-' + platform);
+  const lbl = document.getElementById('btoggle-' + platform);
+  if (!chk || chk.disabled) return;
+  chk.checked = !chk.checked;
+  lbl.classList.toggle('is-checked', chk.checked);
+  // show/hide YouTube options
+  const ytSelected = document.getElementById('bchk-youtube')?.checked;
+  const ytOpts     = document.getElementById('bulk-yt-opts');
+  if (ytOpts) ytOpts.style.display = ytSelected ? '' : 'none';
+  updateBulkButton();
+}
+
+function getBulkPlatforms() {
+  return Object.keys(PLATFORM_META).filter(p => {
+    const chk = document.getElementById('bchk-' + p);
+    return chk && chk.checked;
+  });
+}
+
+// ── Queue Rows ────────────────────────────────────────────────────
+
+let queueRowId = 0;
+
+function addQueueRow() {
+  queueRowId++;
+  const id      = queueRowId;
+  const table   = document.getElementById('queue-table');
+  const idx     = table.children.length + 1;
+
+  // Build vault options
+  const vaultOptions = vaultVideos.length
+    ? '<option value="">— Vault —</option>' + vaultVideos.map(v =>
+        `<option value="${esc(v.file_path)}">${esc(v.filename)}${v.duration ? ' (' + fmtDur(v.duration) + ')' : ''}</option>`
+      ).join('')
+    : '<option value="">No vault videos</option>';
+
+  const row = document.createElement('div');
+  row.className    = 'queue-row';
+  row.id           = 'qrow-' + id;
+  row.dataset.rowid = id;
+  row.innerHTML    = `
+    <div>
+      <div style="font-size:10px;color:var(--text-dimmer);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">#${idx} Video</div>
+      <select onchange="onQueueVaultPick(${id}, this)" style="margin-bottom:6px;font-size:12px">
+        ${vaultOptions}
+      </select>
+      <input type="text" id="qpath-${id}" placeholder="or paste file path…" style="font-size:12px" oninput="updateBulkButton()" />
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--text-dimmer);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Title</div>
+      <input type="text" id="qtitle-${id}" placeholder="Video title…" style="font-size:12px" oninput="updateBulkButton()" />
+      <div style="font-size:10px;color:var(--text-dimmer);margin:6px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Description override <span style="font-weight:400;text-transform:none">(optional)</span></div>
+      <input type="text" id="qdesc-${id}" placeholder="Leave blank to use shared description" style="font-size:12px" />
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--text-dimmer);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Schedule (YT only)</div>
+      <input type="datetime-local" id="qschedule-${id}" style="font-size:12px" />
+      <div id="qstatus-${id}" style="font-size:11px;margin-top:6px;color:var(--text-dimmer)"></div>
+    </div>
+    <button class="btn-remove" onclick="removeQueueRow(${id})" title="Remove">✕</button>
+  `;
+  table.appendChild(row);
+  updateBulkButton();
+}
+
+function removeQueueRow(id) {
+  const row = document.getElementById('qrow-' + id);
+  if (row) row.remove();
+  // Re-number
+  document.querySelectorAll('.queue-row').forEach((r, i) => {
+    const numEl = r.querySelector('div > div:first-child');
+    if (numEl) numEl.textContent = `#${i + 1} Video`;
+  });
+  updateBulkButton();
+}
+
+function onQueueVaultPick(id, select) {
+  const pathInput = document.getElementById('qpath-' + id);
+  if (select.value && pathInput) {
+    pathInput.value = select.value;
+    // Auto-fill title from filename if empty
+    const titleInput = document.getElementById('qtitle-' + id);
+    if (titleInput && !titleInput.value.trim()) {
+      const filename = select.value.split(/[\\/]/).pop().replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+      titleInput.value = filename;
+    }
+  }
+  updateBulkButton();
+}
+
+function getQueueItems() {
+  return Array.from(document.querySelectorAll('.queue-row')).map(row => {
+    const id = row.dataset.rowid;
+    return {
+      _id:        id,
+      video_path: document.getElementById('qpath-' + id)?.value.trim()     || '',
+      title:      document.getElementById('qtitle-' + id)?.value.trim()    || '',
+      description: document.getElementById('qdesc-' + id)?.value.trim()    || '',
+      scheduled_at: document.getElementById('qschedule-' + id)?.value      || null,
+    };
+  }).filter(item => item.video_path && item.title);
+}
+
+function updateBulkButton() {
+  const btn      = document.getElementById('btn-bulk-post');
+  const hint     = document.getElementById('bulk-hint');
+  const platforms = getBulkPlatforms();
+  const items    = getQueueItems();
+
+  const totalRows = document.querySelectorAll('.queue-row').length;
+  const ready     = items.length;
+
+  if (platforms.length === 0) {
+    btn.disabled   = true;
+    hint.textContent = 'Select at least one platform.';
+  } else if (ready === 0) {
+    btn.disabled   = true;
+    hint.textContent = 'Add videos and fill in titles to post.';
+  } else {
+    btn.disabled   = false;
+    const skipped  = totalRows - ready;
+    hint.textContent = `${ready} video${ready !== 1 ? 's' : ''} ready to post to ${platforms.join(', ')}.${skipped ? ` (${skipped} incomplete row${skipped !== 1 ? 's' : ''} will be skipped)` : ''}`;
+  }
+}
+
+// ── Bulk Post ─────────────────────────────────────────────────────
+
+async function doBulkPost() {
+  const platforms = getBulkPlatforms();
+  const items     = getQueueItems();
+  if (!platforms.length || !items.length) return;
+
+  const btn = document.getElementById('btn-bulk-post');
+  btn.classList.add('is-posting');
+  btn.disabled = true;
+
+  const sharedDesc = document.getElementById('bulk-description')?.value.trim();
+
+  const payload = {
+    platforms,
+    shared: {
+      description:   sharedDesc || '',
+      yt_privacy:    document.getElementById('bulk-yt-privacy')?.value  || 'public',
+      yt_category_id: parseInt(document.getElementById('bulk-yt-category')?.value || '22', 10),
+      yt_tags:       (document.getElementById('bulk-yt-tags')?.value || '').split(',').map(t => t.trim()).filter(Boolean),
+    },
+    queue: items.map(item => ({
+      video_path:   item.video_path,
+      title:        item.title,
+      description:  item.description || sharedDesc || '',
+      scheduled_at: item.scheduled_at || null,
+    })),
+  };
+
+  showBulkProgress(items);
+
+  try {
+    const res  = await fetch('/api/postor/post-queue', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Queue failed');
+
+    listenToBulkJob(data.job_id, items);
+  } catch (err) {
+    btn.classList.remove('is-posting');
+    btn.disabled = false;
+    toast('Queue post failed: ' + err.message, 'error');
+  }
+}
+
+function showBulkProgress(items) {
+  const panel = document.getElementById('bulk-progress-panel');
+  const list  = document.getElementById('bulk-progress-list');
+  panel.classList.add('is-visible');
+
+  list.innerHTML = items.map((item, i) => `
+    <div class="bulk-item-row" id="bitem-${i}">
+      <div class="bulk-item-header">
+        <span style="color:var(--text)">${esc(item.title)}</span>
+        <span id="bitem-status-${i}" style="color:var(--text-dimmer);font-size:11px">Waiting…</span>
+      </div>
+      <div style="background:var(--bg);border-radius:3px;height:4px;overflow:hidden;margin-bottom:6px;">
+        <div id="bitem-bar-${i}" style="height:100%;background:var(--teal);width:0%;transition:width .3s ease;border-radius:3px;"></div>
+      </div>
+      <div class="bulk-item-platforms" id="bitem-platforms-${i}">
+        ${getBulkPlatforms().map(p => `<span class="bulk-item-stat" id="bstat-${i}-${p}">${PLATFORM_META[p]?.icon || ''} ${PLATFORM_META[p]?.label || p}: waiting</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function listenToBulkJob(jobId, items) {
+  const es = new EventSource(`/api/postor/status/${jobId}`);
+  let doneCount = 0;
+
+  es.onmessage = (e) => {
+    const ev = JSON.parse(e.data);
+    const i  = ev.index ?? 0;
+
+    if (ev.stage === 'queue_item_start') {
+      document.getElementById(`bitem-status-${i}`)?.textContent && (document.getElementById(`bitem-status-${i}`).textContent = 'Starting…');
+      const bar = document.getElementById(`bitem-bar-${i}`);
+      if (bar) bar.style.width = '5%';
+    } else if (ev.stage === 'platform_start') {
+      const el = document.getElementById(`bstat-${i}-${ev.platform}`);
+      if (el) el.textContent = `${PLATFORM_META[ev.platform]?.icon || ''} ${PLATFORM_META[ev.platform]?.label || ev.platform}: uploading…`;
+    } else if (['youtube','instagram','facebook'].includes(ev.stage)) {
+      const bar = document.getElementById(`bitem-bar-${i}`);
+      if (bar) bar.style.width = (ev.pct || 10) + '%';
+      const statusEl = document.getElementById(`bitem-status-${i}`);
+      if (statusEl) statusEl.textContent = ev.step || 'Uploading…';
+    } else if (ev.stage === 'platform_done') {
+      const el = document.getElementById(`bstat-${i}-${ev.platform}`);
+      if (el) {
+        el.className = 'bulk-item-stat done';
+        el.innerHTML = `${PLATFORM_META[ev.platform]?.icon || ''} ${ev.post_url ? `<a href="${esc(ev.post_url)}" target="_blank" class="pp-link">View →</a>` : 'Posted ✓'}`;
+      }
+    } else if (ev.stage === 'platform_error') {
+      const el = document.getElementById(`bstat-${i}-${ev.platform}`);
+      if (el) { el.className = 'bulk-item-stat error'; el.textContent = `${PLATFORM_META[ev.platform]?.icon || ''} Error`; el.title = ev.error; }
+    } else if (ev.stage === 'queue_item_done') {
+      const bar    = document.getElementById(`bitem-bar-${i}`);
+      const status = document.getElementById(`bitem-status-${i}`);
+      const allOk  = Object.values(ev.results || {}).every(r => r.ok);
+      if (bar)    { bar.style.width = '100%'; bar.style.background = allOk ? 'var(--green)' : 'var(--orange)'; }
+      if (status) status.textContent = allOk ? 'Done ✓' : 'Done (with errors)';
+      doneCount++;
+      document.getElementById('bulk-overall').textContent = `${doneCount} / ${items.length} complete`;
+    } else if (ev.stage === 'done') {
+      es.close();
+      document.getElementById('btn-bulk-post').classList.remove('is-posting');
+      document.getElementById('btn-bulk-post').disabled = false;
+      const failed = (ev.result?.results || []).filter(r => Object.values(r.results || {}).some(p => !p.ok));
+      toast(failed.length === 0
+        ? `🎉 All ${items.length} videos posted!`
+        : `⚠️ ${items.length - failed.length} posted, ${failed.length} had errors.`,
+        failed.length === 0 ? 'success' : 'error', 7000);
+      loadHistory();
+    } else if (ev.stage === 'error') {
+      es.close();
+      document.getElementById('btn-bulk-post').classList.remove('is-posting');
+      document.getElementById('btn-bulk-post').disabled = false;
+      toast('Queue failed: ' + ev.error, 'error', 8000);
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    document.getElementById('btn-bulk-post').classList.remove('is-posting');
+    document.getElementById('btn-bulk-post').disabled = false;
+  };
+}
+
+// ── Analytics Sync ────────────────────────────────────────────────
+
+async function loadAnalyticsStatus() {
+  try {
+    const res  = await fetch('/api/postor/analytics-status');
+    const data = await res.json();
+    if (!data.connected) return;
+
+    const btn = document.getElementById('btn-sync-analytics');
+    if (btn) btn.disabled = false;
+
+    const statusEl  = document.getElementById('analytics-status-text');
+    const revenueEl = document.getElementById('revenue-display');
+    const revAmt    = document.getElementById('revenue-this-month');
+
+    if (statusEl) statusEl.textContent = `Connected as ${data.account_name}. Sync pulls views, watch time, retention, revenue and more into MirrΩr.`;
+    if (data.revenue_this_month > 0 && revenueEl) {
+      revenueEl.style.display = 'block';
+      if (revAmt) revAmt.textContent = '$' + data.revenue_this_month.toFixed(2);
+    }
+  } catch (_) {}
+}
+
+async function doSyncAnalytics() {
+  const btn = document.getElementById('btn-sync-analytics');
+  btn.disabled    = true;
+  btn.textContent = '⟳ Syncing…';
+
+  const wrap   = document.getElementById('sync-progress-wrap');
+  const bar    = document.getElementById('sync-bar');
+  const status = document.getElementById('sync-status');
+  wrap.style.display = 'block';
+  bar.style.width    = '5%';
+  status.textContent = 'Starting…';
+
+  try {
+    const res  = await fetch('/api/postor/sync-analytics', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Sync failed');
+
+    const es = new EventSource(`/api/postor/status/${data.job_id}`);
+    es.onmessage = (e) => {
+      const ev = JSON.parse(e.data);
+      if (ev.stage === 'analytics') {
+        bar.style.width    = (ev.pct || 10) + '%';
+        status.textContent = ev.message || '';
+      } else if (ev.stage === 'done') {
+        es.close();
+        bar.style.width    = '100%';
+        bar.style.background = 'var(--green)';
+        const r = ev.result || {};
+        if (r.analytics_a_err) {
+          status.textContent = `✗ Analytics ERR: ${r.analytics_a_err.slice(0,100)}`;
+        } else {
+          const revStr = r.revenue_error
+            ? `revenue unavailable (${r.revenue_error.slice(0,60)})`
+            : `$${(r.revenue_total||0).toFixed(2)} revenue pulled`;
+          status.textContent = `✓ ${r.videos_synced||0} videos synced · ${r.metrics_written||0} metrics written · ${revStr}`;
+          toast('📊 Analytics synced! MirrΩr and NorthΩr now have live data.', 'success', 6000);
+          loadAnalyticsStatus();
+        }
+        btn.disabled    = false;
+        btn.textContent = '⟳ Sync Analytics';
+      } else if (ev.stage === 'error') {
+        es.close();
+        bar.style.background = 'var(--red)';
+        status.textContent   = '✗ ' + ev.error;
+        btn.disabled    = false;
+        btn.textContent = '⟳ Sync Analytics';
+        toast('Analytics sync failed: ' + ev.error, 'error', 8000);
+      }
+    };
+    es.onerror = () => {
+      es.close();
+      btn.disabled    = false;
+      btn.textContent = '⟳ Sync Analytics';
+    };
+  } catch (err) {
+    btn.disabled    = false;
+    btn.textContent = '⟳ Sync Analytics';
+    status.textContent = '✗ ' + err.message;
+    toast('Sync failed: ' + err.message, 'error');
+  }
+}
+
+// ── Utility ───────────────────────────────────────────────────────
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDur(s) {
+  if (!s) return '';
+  const m = Math.floor(s / 60), sec = Math.round(s % 60);
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function toast(msg, type = 'info', duration = 4000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'is-visible' + (type === 'error' ? ' is-error' : type === 'success' ? ' is-success' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = ''; }, duration);
+}
+</script>
+</body>
+</html>

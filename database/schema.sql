@@ -277,3 +277,30 @@ CREATE INDEX IF NOT EXISTS idx_analytics_project ON analytics(project_id);
 CREATE INDEX IF NOT EXISTS idx_davinci_timelines_project ON davinci_timelines(project_id);
 CREATE INDEX IF NOT EXISTS idx_clip_dist_footage  ON clip_distribution(footage_id);
 CREATE INDEX IF NOT EXISTS idx_clip_dist_platform ON clip_distribution(platform);
+
+-- ─────────────────────────────────────────────
+-- IDEA VAULT (SeedΩr)
+-- Persistent idea library. Every seed captured here before it becomes a project.
+-- Status: raw → in_development → produced
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS ideas (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT NOT NULL,
+  concept     TEXT,
+  angle       TEXT,        -- financial | system | rockrich | howto | mistakes | lifestyle | viral
+  hook        TEXT,
+  notes       TEXT,
+  status      TEXT NOT NULL DEFAULT 'raw',     -- raw | in_development | produced
+  source      TEXT NOT NULL DEFAULT 'manual',  -- manual | id8r | bulk
+  brief_data  TEXT,        -- JSON: enriched brief from Id8Ωr session
+  cluster     TEXT,        -- Claude-assigned semantic cluster label
+  connections TEXT,        -- JSON: [{id, weight, reason}] — related idea IDs
+  project_id  INTEGER,     -- set when promoted to a PipΩr project
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ideas_status  ON ideas(status);
+CREATE INDEX IF NOT EXISTS idx_ideas_angle   ON ideas(angle);
+CREATE INDEX IF NOT EXISTS idx_ideas_created ON ideas(created_at);

@@ -114,17 +114,96 @@ app.use((req, res, next) => {
 });
 
 // ─────────────────────────────────────────────
-// SESSION
+// SESSION — SQLite-backed persistent store
+// Sessions survive server restarts. No extra packages needed —
+// we reuse the existing better-sqlite3 DB.
 // ─────────────────────────────────────────────
+
+const { Store } = session;
+
+class SQLiteStore extends Store {
+  constructor(getDb) {
+    super();
+    // getDb is a function — called lazily so initDb() has run by first request
+    this._getDb = getDb;
+    this._pruneTimer = null;
+    // Schedule prune after startup (not immediately — db not ready yet)
+    setTimeout(() => {
+      this._prune();
+      this._pruneTimer = setInterval(() => this._prune(), 15 * 60 * 1000);
+      if (this._pruneTimer.unref) this._pruneTimer.unref();
+    }, 5000).unref();
+  }
+
+  _db() { return this._getDb(); }
+
+  _prune() {
+    try {
+      this._db().prepare('DELETE FROM express_sessions WHERE expires_at <= ?').run(Date.now());
+    } catch (_) {}
+  }
+
+  get(sid, cb) {
+    try {
+      const row = this._db().prepare('SELECT data, expires_at FROM express_sessions WHERE sid = ?').get(sid);
+      if (!row) {
+        console.log(`[session] get sid=${sid.slice(0,8)}… → NOT FOUND`);
+        return cb(null, null);
+      }
+      if (row.expires_at <= Date.now()) {
+        console.log(`[session] get sid=${sid.slice(0,8)}… → EXPIRED`);
+        this.destroy(sid, () => {});
+        return cb(null, null);
+      }
+      console.log(`[session] get sid=${sid.slice(0,8)}… → OK (user=${JSON.parse(row.data)?.username})`);
+      cb(null, JSON.parse(row.data));
+    } catch (e) {
+      console.error('[session] get failed:', e.message);
+      cb(e);
+    }
+  }
+
+  set(sid, session, cb) {
+    try {
+      const expires = session.cookie?.expires
+        ? new Date(session.cookie.expires).getTime()
+        : Date.now() + 30 * 24 * 60 * 60 * 1000;
+      this._db().prepare(
+        'INSERT INTO express_sessions (sid, data, expires_at) VALUES (?, ?, ?) ' +
+        'ON CONFLICT(sid) DO UPDATE SET data = excluded.data, expires_at = excluded.expires_at'
+      ).run(sid, JSON.stringify(session), expires);
+      console.log(`[session] saved sid=${sid.slice(0,8)}… expires=${new Date(expires).toISOString()}`);
+      if (cb) cb(null);
+    } catch (e) {
+      console.error('[session] set failed:', e.message);
+      if (cb) cb(e);
+    }
+  }
+
+  destroy(sid, cb) {
+    try {
+      this._db().prepare('DELETE FROM express_sessions WHERE sid = ?').run(sid);
+      if (cb) cb(null);
+    } catch (e) { if (cb) cb(e); }
+  }
+
+  touch(sid, session, cb) {
+    this.set(sid, session, cb);
+  }
+}
+
+const _dbModule = require('./src/db');
+
 app.use(session({
   name:   'kre8r.sid',
   secret: process.env.SESSION_SECRET || 'kre8r-session-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
+  store:  new SQLiteStore(() => _dbModule.getRawDb()),
   cookie: {
     httpOnly: true,
     secure:   false,   // set true if serving HTTPS directly (nginx handles it here)
-    maxAge:   30 * 24 * 60 * 60 * 1000,  // 30 days
+    maxAge:   30 * 24 * 60 * 60 * 1000,  // 30 days default
   },
 }));
 
@@ -337,6 +416,7 @@ app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/shows',   require('./src/routes/shows'));
 app.use('/api/generate', require('./src/routes/generate'));
 app.use('/api/vault',      require('./src/routes/vault'));
+app.use('/api/vault/scan', require('./src/routes/vault-scan'));
 app.use('/api/cutor',      require('./src/routes/cutor'));
 app.use('/api/analytics',  require('./src/routes/analytics'));
 app.use('/api/operator',   require('./src/routes/operator'));
@@ -367,6 +447,8 @@ app.use('/api/lab',           require('./src/routes/lab'));
 app.use('/api/local-sync',        require('./src/routes/local-sync'));
 app.use('/api/releases',          require('./src/routes/releases'));
 app.use('/api/analytics-import',  require('./src/routes/analytics-import'));
+app.use('/api/postor',            require('./src/routes/postor'));
+app.use('/api/ideas',             require('./src/routes/ideas'));
 
 // Creator profile — served to all tools
 app.get('/api/creator-profile', (req, res) => {

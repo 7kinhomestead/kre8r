@@ -428,6 +428,17 @@
             </div>
           </div>
 
+          <!-- PASTE IN / IMPORT SCRIPT -->
+          <div id="inputPasteIn" style="display:none">
+            <div style="font-size:11px;color:var(--teal);font-weight:700;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">📋 Import Script — No Rewriting</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;">Paste any script here — written on-platform, off-platform, or performed from memory and typed up. Claude maps the beats to it without changing a single word.</div>
+            <div class="field-group">
+              <div class="field-label">Your Script (pasted verbatim)</div>
+              <textarea class="field-input" id="pasteInText" rows="12" style="min-height:280px;font-size:13px;line-height:1.6;"
+                placeholder="Paste your complete script here exactly as written. Nothing will be changed."></textarea>
+            </div>
+          </div>
+
           <!-- VOICE SELECTOR -->
           <div class="voice-selector-bar" id="voiceSelectorBar" style="display:none">
             <div class="voice-selector-row">
@@ -457,6 +468,11 @@
           <button class="btn btn-primary btn-full" id="generateBtn" disabled>
             <span class="spinner" id="generateSpinner" style="display:none"></span>
             <span id="generateBtnLabel">Find the Story →</span>
+          </button>
+
+          <!-- PASTE-IN TOGGLE — always available, overrides entry point -->
+          <button class="btn btn-ghost btn-full" id="pasteInToggle" style="display:none;margin-top:6px;font-size:11px;" onclick="togglePasteInMode()">
+            📋 Import a Script Instead (no rewriting)
           </button>
 
           <!-- REGENERATE BUTTON — shown only when script is approved -->
@@ -577,9 +593,12 @@
           <!-- REGEN notice — shown when script is approved -->
           <div id="regenApprovedRow" style="display:none;padding:10px 0 4px;">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--green);margin-bottom:8px;">✓ Script Approved</div>
-            <div style="font-size:12px;color:var(--text-dimmer);margin-bottom:12px;">This script is locked. Start a fresh draft — the approved version stays on record.</div>
+            <div style="font-size:12px;color:var(--text-dimmer);margin-bottom:12px;">This script is locked. Unlock to revise, or start a fresh draft.</div>
+            <button class="btn btn-ghost btn-full" id="unlockBtn" onclick="onUnlock()" style="margin-bottom:8px;">
+              🔓 Unlock &amp; Revise
+            </button>
             <button class="btn btn-ghost btn-full" onclick="onRegenerate()">
-              ↺ Regenerate with current voice profiles
+              ↺ Start Fresh Draft
             </button>
           </div>
 
@@ -1047,16 +1066,18 @@ function showInputArea(entryPoint, data) {
   document.getElementById('inputScriptFirst').style.display = 'none';
   document.getElementById('inputShootFirst').style.display  = 'none';
   document.getElementById('inputHybrid').style.display      = 'none';
+  document.getElementById('inputPasteIn').style.display     = 'none';
 
   // Show the right one
   if (entryPoint === 'script_first') {
     document.getElementById('inputScriptFirst').style.display = 'block';
-  } else if (entryPoint === 'shoot_first') {
+  } else if (entryPoint === 'shoot_first' || entryPoint === 'vault_first') {
     document.getElementById('inputShootFirst').style.display = 'block';
   } else if (entryPoint === 'hybrid') {
     document.getElementById('inputHybrid').style.display = 'block';
+  } else if (entryPoint === 'paste_in') {
+    document.getElementById('inputPasteIn').style.display = 'block';
   } else {
-    // Default to shoot_first form as fallback
     document.getElementById('inputShootFirst').style.display = 'block';
   }
 
@@ -1066,11 +1087,15 @@ function showInputArea(entryPoint, data) {
     label.textContent = 'Map the Beats →';
   } else if (entryPoint === 'hybrid') {
     label.textContent = 'Reconcile & Write →';
+  } else if (entryPoint === 'paste_in') {
+    label.textContent = '📋 Import — Map Beats Only →';
   } else {
     label.textContent = 'Find the Story →';
   }
 
   document.getElementById('generateBtn').disabled = false;
+  // Always show the paste-in toggle when a project is loaded
+  document.getElementById('pasteInToggle').style.display = 'block';
 
   // If approved script exists, disable generate and show regenerate button instead
   if (data.active_script && data.active_script.approved) {
@@ -1079,6 +1104,35 @@ function showInputArea(entryPoint, data) {
     document.getElementById('regenerateBtn').style.display = 'block';
   } else {
     document.getElementById('regenerateBtn').style.display = 'none';
+  }
+}
+
+let _pasteInActive = false;
+let _savedEntryPoint = null;
+
+function togglePasteInMode() {
+  if (!currentProjectId) return;
+  _pasteInActive = !_pasteInActive;
+  if (_pasteInActive) {
+    _savedEntryPoint = currentEntryPoint;
+    currentEntryPoint = 'paste_in';
+    document.getElementById('pasteInToggle').textContent = '← Back to normal mode';
+    document.getElementById('pasteInToggle').style.borderColor = 'var(--teal)';
+    document.getElementById('pasteInToggle').style.color = 'var(--teal)';
+    document.getElementById('generateBtn').disabled = false;
+    // Show paste-in input, hide others
+    ['inputScriptFirst','inputShootFirst','inputHybrid'].forEach(id =>
+      document.getElementById(id).style.display = 'none'
+    );
+    document.getElementById('inputPasteIn').style.display = 'block';
+    document.getElementById('generateBtnLabel').textContent = '📋 Import — Map Beats Only →';
+  } else {
+    currentEntryPoint = _savedEntryPoint;
+    _savedEntryPoint = null;
+    document.getElementById('pasteInToggle').textContent = '📋 Import a Script Instead (no rewriting)';
+    document.getElementById('pasteInToggle').style.borderColor = '';
+    document.getElementById('pasteInToggle').style.color = '';
+    showInputArea(currentEntryPoint, { active_script: currentScript });
   }
 }
 
@@ -1118,15 +1172,13 @@ async function onLoadTranscripts() {
 
 function getInputText() {
   const ep = currentEntryPoint;
-  if (ep === 'script_first') {
-    return document.getElementById('scriptFirstText').value.trim();
-  }
+  if (ep === 'script_first') return document.getElementById('scriptFirstText').value.trim();
+  if (ep === 'paste_in')    return document.getElementById('pasteInText').value.trim();
   if (ep === 'hybrid') {
     const concept   = document.getElementById('hybridConceptText').value.trim();
     const captured  = document.getElementById('hybridCapturedText').value.trim();
     return [concept, captured].filter(Boolean).join('\n\n---\n\n');
   }
-  // shoot_first or fallback
   return document.getElementById('shootFirstText').value.trim();
 }
 
@@ -1398,6 +1450,43 @@ async function onApprove() {
     if (window.kre8rShowNPS) window.kre8rShowNPS(currentProjectId);
   } catch(e) {
     showToast('Approve failed — ' + e.message, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+// UNLOCK / UNAPPROVE
+// ─────────────────────────────────────────────
+
+async function onUnlock() {
+  if (!currentProjectId || !currentScript) return;
+  try {
+    const r = await fetch(`/api/writr/${currentProjectId}/unapprove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script_id: currentScript.id })
+    });
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      throw new Error(body.error || 'HTTP ' + r.status);
+    }
+
+    // Mark unapproved in local state
+    currentScript.approved = false;
+    if (currentScripts[activeScriptTab]) currentScripts[activeScriptTab].approved = false;
+
+    // Re-render to restore revise controls
+    renderScript(currentScript);
+
+    // Re-enable generate button
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('generateBtnLabel').textContent = 'Generate Script';
+    document.getElementById('regenerateBtn').style.display = 'none';
+    document.getElementById('teleprompterBtn').style.display = 'none';
+
+    showToast('Script unlocked — revise freely, re-approve when ready.', 'success');
+    loadDraftsHistory(currentProjectId);
+  } catch(e) {
+    showToast('Unlock failed — ' + e.message, 'error');
   }
 }
 
@@ -1678,9 +1767,14 @@ function renderScript(script) {
     document.getElementById('reviseInput').disabled  = true;
     document.getElementById('approveBtn').disabled   = true;
     document.getElementById('approveBtn').textContent = '✓ Approved';
+    document.getElementById('approveBtn').style.display = '';
   } else {
     document.getElementById('reviseControls').style.display  = 'block';
     document.getElementById('regenApprovedRow').style.display = 'none';
+    // Always reset approve button — previous renders may have locked it
+    document.getElementById('approveBtn').disabled   = false;
+    document.getElementById('approveBtn').textContent = '✓ Approve Script';
+    document.getElementById('approveBtn').style.display = '';
   }
 }
 
@@ -2010,6 +2104,7 @@ function epLabel(ep) {
   if (ep === 'script_first') return 'SCRIPT FIRST';
   if (ep === 'shoot_first')  return 'SHOOT FIRST';
   if (ep === 'hybrid')       return 'HYBRID';
+  if (ep === 'paste_in')     return '📋 IMPORT SCRIPT';
   return ep || 'Unknown';
 }
 

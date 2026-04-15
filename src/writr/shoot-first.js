@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE } = require('./claude');
+const { callClaude, REALITY_RULE, loadTikTokIntelligenceBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -117,7 +117,8 @@ function buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProf
     ? `## FOOTAGE TRANSCRIPTS\n${transcriptBlock}`
     : '## FOOTAGE TRANSCRIPTS\n(No transcripts available — work from the creator\'s description only)';
 
-  const seasonBlock = buildSeasonBlock(seasonContext);
+  const seasonBlock  = buildSeasonBlock(seasonContext);
+  const tikTokBlock  = loadTikTokIntelligenceBlock();
 
   return `You are WritΩr — a story finder and script developer for ${brand}, a homesteading
 and off-grid living reality content creator.
@@ -126,7 +127,7 @@ ${REALITY_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}
-
+${tikTokBlock}
 ## PROJECT CONFIG
 Brand: ${brand}
 Mission: ${mission}

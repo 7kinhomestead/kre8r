@@ -240,6 +240,18 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 #tp-display.active { display: flex; }
 
+/* Always-visible exit button */
+#tp-exit-btn {
+  position: fixed; top: 12px; right: 14px; z-index: 50;
+  background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.45); font-size: 18px; line-height: 1;
+  width: 36px; height: 36px; border-radius: 50%;
+  cursor: pointer; display: none; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+#tp-exit-btn:hover { background: rgba(224,82,82,0.7); color: #fff; border-color: transparent; }
+#tp-display.active #tp-exit-btn { display: flex; }
+
 /* Scroll container */
 #tp-scroll-wrap {
   flex: 1; overflow-y: scroll; overflow-x: hidden; scroll-behavior: auto;
@@ -940,6 +952,9 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 <div id="tp-display">
   <div id="tp-reading-guide"></div>
 
+  <!-- Always-visible exit button — top-right corner, never hidden -->
+  <button id="tp-exit-btn" onclick="backToSelector()" title="Back to scripts">✕</button>
+
   <!-- Speaker filter pills — floating top-center, shown when multi-speaker script -->
   <div id="tp-display-speaker-filter"></div>
 
@@ -1456,7 +1471,11 @@ async function launchViaCloud() {
     btn.disabled = false;
 
     // Start the display — WebSocket will now go through teleprompter.kre8r.app
-    startTeleprompter();
+    if (activeTab === 'solo') {
+      startSoloMode();
+    } else {
+      startTeleprompter();
+    }
 
   } catch (e) {
     cloudLaunchActive = false;

@@ -1,3 +1,51 @@
+# Session 38 — PostΩr + YouTube Analytics Sync (2026-04-14)
+
+## Goal
+Build PostΩr multi-platform video posting module, wire YouTube Analytics API into MirrΩr and NorthΩr, fix Electron login/tour persistence.
+
+## What Was Built
+
+### PostΩr — Multi-Platform Video Publishing
+- `src/postor/youtube.js` — Google OAuth2 + YouTube Data API v3 resumable upload
+- `src/postor/meta.js` — Meta OAuth2 (Instagram Reels + Facebook video, single auth flow)
+- `src/postor/tiktok.js` — Stub (coming soon, TikTok API not ready)
+- `src/routes/postor.js` — All OAuth endpoints, single post, bulk queue, analytics sync, history
+- `public/postor.html` — Full UI: platform connection cards, single/bulk mode, analytics panel, post history
+- `public/youtube-api-design-doc.html` — YouTube API Services compliance document
+- Nav entry added (Dist section)
+
+### YouTube Analytics Sync (313 videos, 2504 metrics)
+- `src/postor/youtube-analytics.js` — Full channel sync via YouTube Analytics API v2
+- Auto-seeds all channel videos into DB as import projects (createImportProject + createImportPost)
+- Two-pass approach for >200 videos: top 200 by views, then remaining via filters=video==id1,id2,...
+- **Critical API discovery:** `sort` + `maxResults` are REQUIRED for `dimensions=video` (not documented in general params — only in Available Reports section). Without them API returns misleading "query not supported."
+- Uses explicit channel ID (`channel==UCFiYtvJimJzFZLH6rzNkc5Q`) — brand accounts fail with `channel==MINE`
+- Metrics synced: views, watch_time, avg_watch_time, completion_rate, followers_gained, likes, comment_count, shares
+- MirrΩr DNA cache busted after each sync so coaching rebuilds with fresh data
+- **Revenue blocked:** `estimatedRevenue` is explicitly non-functional for channel reports (documented Google restriction). Requires Content Owner / CMS tier (MCN-level access). Standard YPP channels cannot access via API regardless of scope.
+
+### Electron Login + Tour Persistence Fixes
+- `src/routes/auth.js` — Detects Electron User-Agent, forces 30-day persistent cookie on login (previously session-only cookie died on every app quit)
+- `src/routes/auth.js` — Added `GET/POST /auth/kv/:key` per-user KV endpoints (namespaced by userId)
+- `public/js/tour.js` — Tour completion now saved server-side via KV store (survives Electron restarts)
+
+### DB Additions
+- `monthly_revenue` table — month, platform, revenue_usd
+- `platform_connections` table — OAuth tokens per platform
+- `postor_posts` table — PostΩr job tracking
+- `db.getAllYouTubePosts()`, `db.upsertMonthlyRevenue()`, `db.getMonthlyRevenue()` etc.
+
+## Key Technical Findings
+- YouTube Analytics API `dimensions=video` = "Top Videos" report type. `sort` and `maxResults` (≤200) are mandatory. Omitting either returns "The query is not supported" with no indication of what's missing.
+- `estimatedRevenue` with `dimensions=month` rejects all dates for channel-type principals — this is a documented Google restriction, not a scope/date issue.
+- YouTube Data API v3 must be separately enabled in Google Cloud Console (distinct from Analytics API).
+- PostΩr handles both shorts and long-form — YouTube auto-classifies by duration/aspect ratio.
+
+## Result
+MirrΩr now has real retention, watch time, completion rate, and engagement data across 313 videos. Channel DNA analysis significantly more accurate. NorthΩr pipeline health, stalled project alerts, and consistency tracking all working with live data.
+
+---
+
 # Session 37 — Email Automation + Teleprompter Field Mode (2026-04-13)
 
 ## Goal

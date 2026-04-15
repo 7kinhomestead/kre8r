@@ -107,7 +107,32 @@ router.patch('/:id/complete', (req, res) => {
     const project = db.getProject(id);
     if (!project) return res.status(404).json({ error: 'Project not found' });
     const { published_at } = req.body || {};
-    db.markProjectComplete(id, published_at || null);
+    const publishDate = published_at || new Date().toISOString();
+
+    db.markProjectComplete(id, publishDate);
+
+    // ── Wire publishing stats: create/update the post record so NorthΩr cadence tracking works ──
+    // getPublishingStats reads posts.status='posted' + posts.posted_at — project updates alone
+    // are invisible to it. We upsert a YouTube post record as the canonical "published" signal.
+    try {
+      const existingPosts = db.getPostsByProject(id);
+      const ytPost = existingPosts.find(p => p.platform === 'youtube');
+      if (ytPost) {
+        // Already has a YouTube post — stamp it as posted with the publish date
+        db.updatePost(ytPost.id, { status: 'posted', posted_at: publishDate });
+      } else {
+        // No posts yet — create a minimal YouTube post as the publish record
+        db.savePost({
+          project_id:  id,
+          platform:    'youtube',
+          content:     project.title || 'Published video',
+          status:      'posted',
+          posted_at:   publishDate,
+          url:         project.youtube_url || null,
+          format:      'longform',
+        });
+      }
+    } catch (_) {}
 
     // Dismiss any existing stalled/pipeline alerts for this project
     try {

@@ -62,8 +62,11 @@ async function callClaude(prompt, maxTokens = 8192, options = {}) {
 
   for (let attempt = 0; attempt <= BACKOFF.length; attempt++) {
     try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 75000); // 75s server-side timeout
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method  : 'POST',
+        signal  : ac.signal,
         headers : {
           'Content-Type'      : 'application/json',
           'x-api-key'         : apiKey,
@@ -74,7 +77,7 @@ async function callClaude(prompt, maxTokens = 8192, options = {}) {
           max_tokens : maxTokens,
           messages   : [{ role: 'user', content: prompt }],
         }),
-      });
+      }).finally(() => clearTimeout(timer));
 
       // Retryable HTTP status
       if (RETRYABLE_STATUSES.has(response.status)) {
@@ -158,15 +161,18 @@ async function callClaudeMessages(system, messages, maxTokens = 2048, options = 
       const body = { model: MODEL, max_tokens: maxTokens, messages };
       if (system) body.system = system;
 
+      const ac2 = new AbortController();
+      const timer2 = setTimeout(() => ac2.abort(), 75000); // 75s server-side timeout
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method  : 'POST',
+        signal  : ac2.signal,
         headers : {
           'Content-Type'      : 'application/json',
           'x-api-key'         : apiKey,
           'anthropic-version' : ANTHROPIC_VERSION,
         },
         body: JSON.stringify(body),
-      });
+      }).finally(() => clearTimeout(timer2));
 
       if (RETRYABLE_STATUSES.has(response.status)) {
         const delay = BACKOFF[attempt];

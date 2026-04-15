@@ -163,6 +163,13 @@ async function generateMonthlyStrategy(month, year) {
     if (stored) clipsrPatterns = JSON.parse(stored);
   } catch (_) {}
 
+  // Load TikTok pattern analysis — cross-platform audience intelligence
+  let tiktokPatterns = null;
+  try {
+    const stored = db.getKv('tiktok_content_patterns');
+    if (stored) tiktokPatterns = JSON.parse(stored);
+  } catch (_) {}
+
   // Load MirrΩr self-evaluations — calibrate strategy based on what was actually accurate
   let pastEvaluations = [];
   try {
@@ -178,7 +185,7 @@ async function generateMonthlyStrategy(month, year) {
   const prompt = buildStrategyPrompt({
     creatorName, niche, followerSummary, contentAnglesText, profile,
     pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns,
-    pastEvaluations, structurePerf,
+    pastEvaluations, structurePerf, tiktokPatterns,
   });
 
   // callClaude in src/utils/claude.js already strips fences and parses JSON
@@ -199,7 +206,7 @@ async function generateMonthlyStrategy(month, year) {
   return strategy;
 }
 
-function buildStrategyPrompt({ creatorName, niche, followerSummary, contentAnglesText, profile, pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns, pastEvaluations, structurePerf }) {
+function buildStrategyPrompt({ creatorName, niche, followerSummary, contentAnglesText, profile, pipelineData, publishingStats, shows, goals, month, year, clipsrPatterns, pastEvaluations, structurePerf, tiktokPatterns }) {
   const publishing = profile?.publishing || {};
   const cadence    = publishing.cadence || 'weekly';
 
@@ -268,6 +275,17 @@ ${(() => {
 MIRR Ωr SELF-EVALUATION — PAST STRATEGY ACCURACY (use to calibrate this month's recommendations):
 ${lines}
 IMPORTANT: Weight your recommendations based on this evidence. What worked → double down. What missed → reduce or cut. This is the system learning from its own track record.`;
+})()}
+${(() => {
+  if (!tiktokPatterns) return '';
+  const workingList = (tiktokPatterns.what_works || []).slice(0, 3).map(w => `  • ${w}`).join('\n');
+  return `
+TIKTOK AUDIENCE INTELLIGENCE (${tiktokPatterns.video_count || '?'} original videos analyzed — reposts excluded):
+What works:
+${workingList}
+Audience psychology: ${tiktokPatterns.audience_psychology || '(not analyzed)'}
+Content direction: ${tiktokPatterns.content_direction || '(not analyzed)'}
+IMPORTANT: Use this to inform cross-platform strategy. TikTok and YouTube audiences overlap — what emotionally resonates on TikTok is a signal for YouTube topic selection. Do NOT suggest "post this to TikTok" — the creator handles distribution. Use this purely for content angle and topic selection.`;
 })()}
 ${(() => {
   if (!structurePerf?.length) return '';

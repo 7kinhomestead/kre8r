@@ -28,6 +28,24 @@ Setup wizard on first run (no more hardcoded credentials). Installer: `npm run d
 
 ---
 
+## ✅ PostΩr — DONE Session 38
+
+YouTube posting live. Instagram + Facebook built. TikTok stub. Bulk queue. Post history.
+YouTube Analytics sync: 313 videos, 2504 metrics into MirrΩr. Two-pass approach for >200 videos.
+Login/tour persistence fixed in Electron (30-day cookie + server-side KV for tour state).
+
+**Still needed:**
+- [ ] **MailerLite** — upgrade to $50/mo plan, fix verification, wire email metrics into NorthΩr (next session)
+- [ ] **YouTube ad revenue** — blocked by Google (Content Owner tier required, not standard YPP). Manual entry in NorthΩr from YouTube Studio CSV. Add manual revenue entry field to NorthΩr.
+- [ ] **Instagram credentials** — connect Meta OAuth in PostΩr (Facebook Page + Instagram Business account)
+- [ ] **Facebook posting** — same Meta OAuth flow, test video upload
+- [ ] **TikTok** — waiting on TikTok API availability
+- [ ] **PostΩr → test clip upload** — upload a rendered ClipsΩr clip via PostΩr bulk queue
+- [ ] **Analytics re-sync schedule** — add a "last synced" timestamp and prompt to re-sync weekly
+- [ ] **Archive stalled projects** — open each in PipΩr → 📦 Archive (2 projects in pre-production queue)
+
+---
+
 ## ✅ Mailerlite Integration — DONE Sessions 33–34, 37
 
 Full email pipeline: AudiencΩr rebuilt, MailΩr send button live, Kajabi webhook receiver built.
@@ -36,11 +54,15 @@ Kajabi webhook → Mailerlite group add confirmed working on DO server (Session 
 Group subscriber counts fixed (active_count not total). Welcome email templates armed.
 
 **Still needed:**
+- [ ] **NEXT SESSION: Upgrade MailerLite to $50/mo plan** — unlocks broadcast API, email open/click rates
+- [ ] **NEXT SESSION: Fix MailerLite account verification** — verification failed, needs sorting before API access works
+- [ ] **NEXT SESSION: Wire email open rates + click rates into NorthΩr** — email tracking currently shows 0 (MailerLite plan limitation)
+- [ ] **NEXT SESSION: Build welcome sequences in MailΩr** — Greenhouse / Garden / Founding 50 tier automations
+- [ ] **NEXT SESSION: Build broadcast workflow in MailΩr** — send button that hits MailerLite broadcast API directly
 - [ ] Webhook localhost detection — AudiencΩr webhook tab should show "use CSV import instead" when running on localhost
 - [ ] Cancel Kajabi API subscription ($25/mo — was only pulling 25 contacts, no broadcast endpoint)
-- [ ] Persistent session store — express-session loses sessions on every server restart
 - [ ] Welcome emails — set up Mailerlite automations (trigger: subscriber joins group) for each tier
-- [ ] Test Fire in Welcome Emails tab — currently fails (Mailerlite transactional API not on plan), replace with HTML preview
+- [ ] Test Fire in Welcome Emails tab — currently fails (Mailerlite transactional API not on plan), replace with HTML preview once on $50 plan
 
 ## ✅ Cross-Device Sync — DONE Session 35
 

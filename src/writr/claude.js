@@ -88,4 +88,32 @@ could fill this beat]. Do not invent the moment. Do not pretend it happened.
 
 The creator's audience trusts them because everything is real. Fabrication destroys that trust.`;
 
-module.exports = { callClaude, REALITY_RULE };
+// ── TikTok audience intelligence — shared across all WritΩr modes ─────────────
+// Loads the last-saved TikTok pattern analysis from kv_store.
+// Returns a formatted block to inject into any WritΩr prompt, or '' if no data.
+
+function loadTikTokIntelligenceBlock() {
+  try {
+    const db     = require('../db');
+    const stored = db.getKv('tiktok_content_patterns');
+    if (!stored) return '';
+    const p = JSON.parse(stored);
+    if (!p) return '';
+    const works = (p.what_works || []).slice(0, 3).map(w => `- ${w}`).join('\n');
+    return `
+## TIKTOK CLIP INTELLIGENCE (from real audience performance data)
+This creator's short-form audience responds to these proven emotional triggers:
+${works}
+Audience psychology: ${p.audience_psychology || ''}
+Content direction: ${p.content_direction || ''}
+
+CLIP-PLANTING DIRECTIVE: Deliberately plant 1–2 self-contained moments (30–90s) in this script that could be extracted as standalone TikTok clips. Mark each with:
+[● CLIP SEED: brief reason this moment is extractable and which pattern it hits]
+These markers guide ClipsΩr when analyzing the finished video. Place them at high-energy or high-contrast points — NOT the opening or closing.
+`;
+  } catch (_) {
+    return '';
+  }
+}
+
+module.exports = { callClaude, REALITY_RULE, loadTikTokIntelligenceBlock };

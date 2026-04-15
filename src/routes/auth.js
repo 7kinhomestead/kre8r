@@ -32,8 +32,17 @@ router.post('/login', async (req, res) => {
     req.session.username = user.username;
     req.session.role     = user.role;
 
-    // Remember this device = 30-day persistent cookie; otherwise session cookie only
-    if (!remember) req.session.cookie.expires = false;
+    // In Electron the "browser" closes on every quit — always persist 30 days.
+    // For web browser sessions, respect the "remember me" checkbox.
+    const isElectron = /electron/i.test(req.headers['user-agent'] || '');
+    if (remember || isElectron) {
+      // 30-day persistent cookie — survives browser close and server restarts
+      req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
+    } else {
+      // Session cookie — expires when browser closes (no maxAge, no expires)
+      req.session.cookie.expires = false;
+      req.session.cookie.maxAge  = null;
+    }
 
     res.json({ ok: true, username: user.username, role: user.role });
   } catch (err) {
@@ -110,6 +119,33 @@ router.post('/users/:id/password', ownerOnly, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Per-user KV store — lightweight server-side flags (tour_done, etc.) ───────
+// Namespaced under auth so only logged-in users can read/write their own flags.
+// Key is prefixed with userId so each user has isolated state.
+
+// GET /auth/kv/:key
+router.get('/kv/:key', (req, res) => {
+  if (!req.session?.userId) return res.json({ value: null });
+  try {
+    const k = `user_${req.session.userId}_${req.params.key}`;
+    res.json({ value: db.getKv(k) });
+  } catch (_) {
+    res.json({ value: null });
+  }
+});
+
+// POST /auth/kv/:key  { value: '1' }
+router.post('/kv/:key', (req, res) => {
+  if (!req.session?.userId) return res.json({ ok: false });
+  try {
+    const k = `user_${req.session.userId}_${req.params.key}`;
+    db.setKv(k, req.body?.value ?? null);
+    res.json({ ok: true });
+  } catch (_) {
+    res.json({ ok: false });
   }
 });
 

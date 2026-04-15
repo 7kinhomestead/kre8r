@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel='icon' type='image/png' href='/images/kre8r-icon.png'>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics Import — Kre8Ωr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/global.css">
+<style>
+  :root {
+    --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
+    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
+    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
+    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
+    --blue:#5b9cf6; --purple:#a78bfa;
+    --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
+    --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:128px;z-index:1000;}
+
+  .main{max-width:820px;margin:0 auto;padding:32px 16px 100px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+  .page-header{margin-bottom:24px;animation:fadeUp 0.4s ease both;}
+  .page-title{font-family:var(--font-head);font-size:clamp(34px,8vw,54px);letter-spacing:3px;line-height:1;color:var(--text);margin-bottom:8px;}
+  .page-title em{font-style:normal;color:var(--teal);}
+  .page-sub{color:var(--text-dim);font-size:14px;max-width:580px;line-height:1.6;}
+
+  /* PLATFORM TABS */
+  .platform-tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;animation:fadeUp 0.3s ease both;}
+  .ptab{padding:10px 18px;border:1.5px solid var(--border);background:var(--bg-card);border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;color:var(--text-dimmer);display:flex;align-items:center;gap:8px;}
+  .ptab:hover{color:var(--text);border-color:var(--border-bright);}
+  .ptab.active{color:var(--teal);border-color:var(--teal-dim);background:var(--teal-glow);}
+  .ptab .ptab-icon{font-size:18px;}
+
+  /* CARD */
+  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;animation:fadeUp 0.4s ease both;}
+  .card-label{font-family:var(--font-head);font-size:14px;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:12px;}
+  .card-sub{font-size:13px;color:var(--text-dim);margin-bottom:16px;line-height:1.6;}
+
+  /* DROP ZONE */
+  .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:40px 24px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--bg);}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--teal);background:var(--teal-glow);}
+  .drop-zone input[type=file]{display:none;}
+  .drop-icon{font-size:36px;margin-bottom:10px;}
+  .drop-label{font-size:14px;color:var(--text-dim);margin-bottom:4px;}
+  .drop-sub{font-size:12px;color:var(--text-dimmer);}
+
+  /* PREVIEW */
+  .preview{margin-top:14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;}
+  .preview-stat{display:inline-flex;align-items:center;gap:6px;margin-right:16px;color:var(--text-dim);}
+  .preview-stat strong{color:var(--text);}
+  .preview-rows{margin-top:10px;max-height:180px;overflow-y:auto;display:grid;gap:4px;}
+  .preview-row{background:var(--bg-card-2);border-radius:4px;padding:6px 10px;font-size:12px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;}
+  .preview-content{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .preview-metrics{color:var(--teal);font-weight:600;white-space:nowrap;font-size:11px;}
+
+  /* IMPORT BUTTON */
+  .import-btn{width:100%;background:var(--teal);border:none;border-radius:var(--radius-sm);color:#0a0a0a;font-family:var(--font-head);font-size:20px;letter-spacing:2px;padding:16px 24px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;}
+  .import-btn:hover{opacity:0.9;transform:translateY(-1px);}
+  .import-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+  /* RESULT */
+  .result{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 18px;margin-top:12px;display:none;}
+  .result.ok{border-color:rgba(92,186,138,0.4);}
+  .result.err{border-color:rgba(224,92,92,0.4);}
+  .result-stat{font-size:28px;font-weight:800;font-family:var(--font-head);letter-spacing:1px;}
+  .result-stat.green{color:var(--green);}
+  .result-stat.amber{color:var(--amber);}
+  .result-body{font-size:13px;color:var(--text-dim);margin-top:6px;line-height:1.6;}
+
+  /* LAST IMPORT STATUS */
+  .platform-status{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:20px;animation:fadeUp 0.3s 0.05s ease both;}
+  .pstat{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+  .pstat-icon{font-size:20px;margin-bottom:4px;}
+  .pstat-platform{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);}
+  .pstat-date{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .pstat-count{font-size:13px;font-weight:600;color:var(--teal);margin-top:2px;}
+  .pstat.fresh{border-color:rgba(92,186,138,0.3);}
+  .pstat.stale{border-color:rgba(240,185,66,0.25);}
+  .pstat.never{border-color:var(--border);}
+
+  /* INSTRUCTIONS */
+  .instructions{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;animation:fadeUp 0.4s 0.06s ease both;}
+  .instructions h3{font-family:var(--font-head);font-size:14px;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:12px;}
+  .step-list{list-style:none;counter-reset:step;}
+  .step-list li{counter-increment:step;display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text-dim);margin-bottom:8px;line-height:1.5;}
+  .step-list li::before{content:counter(step);flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--bg-card-2);border:1px solid var(--border);color:var(--teal);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .step-list li strong{color:var(--text);}
+  .step-list li code{background:var(--bg-card-2);padding:1px 6px;border-radius:3px;font-size:11px;color:var(--amber);}
+
+  /* PROGRESS */
+  .progress-wrap{background:var(--bg);border-radius:4px;height:5px;margin-top:10px;overflow:hidden;display:none;}
+  .progress-fill{height:100%;background:var(--teal);border-radius:4px;transition:width 0.4s;}
+
+  /* TOAST */
+  .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+  .toast{background:var(--bg-card);border:1px solid var(--border);padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,0.6);animation:toastIn 0.2s ease,toastOut 0.2s ease 2.6s forwards;}
+  .toast.green{border-color:var(--green);color:var(--green);}
+  .toast.amber{border-color:var(--amber);color:var(--amber);}
+  .toast.red{border-color:var(--red);color:var(--red);}
+  .toast.teal{border-color:var(--teal);color:var(--teal);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+  @media(max-width:480px){.main{padding:20px 12px 80px;}}
+</style>
+</head>
+<body>
+<div id="kre8r-nav"></div>
+
+<main class="main">
+
+  <div class="page-header">
+    <div class="page-title">ANALYTICS <em>IMP</em>ΩRT</div>
+    <div class="page-sub">Upload your weekly analytics CSVs from TikTok, Instagram, Facebook, and YouTube. Data flows straight into MirrΩr and NorthΩr automatically.</div>
+  </div>
+
+  <!-- LAST IMPORT STATUS -->
+  <div class="platform-status" id="platform-status">
+    <div class="pstat never"><div class="pstat-icon">⏳</div><div class="pstat-platform">TikTok</div><div class="pstat-date">Never imported</div></div>
+    <div class="pstat never"><div class="pstat-icon">⏳</div><div class="pstat-platform">Instagram</div><div class="pstat-date">Never imported</div></div>
+    <div class="pstat never"><div class="pstat-icon">⏳</div><div class="pstat-platform">Facebook</div><div class="pstat-date">Never imported</div></div>
+    <div class="pstat never"><div class="pstat-icon">⏳</div><div class="pstat-platform">YouTube</div><div class="pstat-date">Never imported</div></div>
+  </div>
+
+  <!-- PLATFORM SELECTOR -->
+  <div class="platform-tabs">
+    <button class="ptab active" onclick="selectPlatform('tiktok')"><span class="ptab-icon">🎵</span> TikTok</button>
+    <button class="ptab" onclick="selectPlatform('instagram')"><span class="ptab-icon">📸</span> Instagram</button>
+    <button class="ptab" onclick="selectPlatform('facebook')"><span class="ptab-icon">👥</span> Facebook</button>
+    <button class="ptab" onclick="selectPlatform('youtube')"><span class="ptab-icon">▶</span> YouTube</button>
+  </div>
+
+  <!-- EXPORT INSTRUCTIONS (per platform) -->
+  <div class="instructions" id="instructions"></div>
+
+  <!-- UPLOAD CARD -->
+  <div class="card">
+    <div class="card-label" id="upload-label">TIKTOK — DROP CSV</div>
+
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('csv-file').click()">
+      <input type="file" id="csv-file" accept=".csv,.tsv,.txt" onchange="handleFile(this.files[0])">
+      <div class="drop-icon">📊</div>
+      <div class="drop-label" id="drop-label">Click to select your CSV file</div>
+      <div class="drop-sub" id="drop-sub">or drag and drop here</div>
+    </div>
+
+    <div class="preview" id="preview" style="display:none;"></div>
+
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <button class="import-btn" id="import-btn" onclick="runImport()" disabled>
+      <span id="import-btn-text">SELECT A CSV FIRST</span>
+    </button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+</main>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let currentPlatform = 'tiktok';
+let parsedData      = null;  // parsed rows from CSV
+
+// ─── Platform config ──────────────────────────────────────────────────────────
+const PLATFORM_CONFIG = {
+  tiktok: {
+    label:    'TIKTOK — DROP CSV',
+    icon:     '🎵',
+    steps: [
+      'Open <strong>TikTok Studio</strong> (studio.tiktok.com) on desktop',
+      'Go to <strong>Analytics → Content</strong> (not Overview)',
+      'Click the <strong>Export data</strong> button (top right of the video table)',
+      'Select your date range — TikTok exports up to 60 days at a time',
+      'Download — you\'ll get a zip with multiple CSVs. Use <code>Content.csv</code> (not Overview.csv)',
+      'Drop <code>Content.csv</code> here',
+    ],
+    keyMetrics: ['total views', 'total likes', 'total shares', 'total comments'],
+  },
+  instagram: {
+    label:    'INSTAGRAM — DROP CSV',
+    icon:     '📸',
+    steps: [
+      'Open <strong>Meta Business Suite</strong> (business.facebook.com) on desktop',
+      'Go to <strong>Insights → Content</strong>',
+      'Set your date range (last 30–90 days)',
+      'Click the <strong>Export</strong> icon (download arrow, top right of the content table)',
+      'Choose <strong>CSV format</strong>',
+      'Download and drop the file here — use the <code>Posts</code> sheet, not the Stories sheet',
+    ],
+    keyMetrics: ['reach', 'views', 'likes', 'saves'],
+  },
+  facebook: {
+    label:    'FACEBOOK — DROP CSV',
+    icon:     '👥',
+    steps: [
+      'Go to your <strong>Facebook Page</strong> → click <strong>Insights</strong> in the left menu',
+      'Click <strong>Export Data</strong> (top right)',
+      'Select <strong>Page Posts</strong> data type',
+      'Set date range and click <strong>Export Data</strong>',
+      'Open the downloaded spreadsheet — save the <strong>Key Metrics</strong> sheet as CSV',
+      'Drop that CSV here',
+    ],
+    keyMetrics: ['lifetime post total reach', 'like', 'share', 'comment'],
+  },
+  youtube: {
+    label:    'YOUTUBE — DROP CSV',
+    icon:     '▶',
+    steps: [
+      'Open <strong>YouTube Studio</strong> → click <strong>Analytics</strong> in the left menu',
+      'Click <strong>See More</strong> under the Overview tab',
+      'Set your date range (last 28–90 days)',
+      'Click <strong>Export current view</strong> (download icon, top right)',
+      'Unzip the downloaded file — drag <code>Table data.csv</code> here',
+      'YouTube also exports <code>Chart data.csv</code> — ignore that one',
+    ],
+    keyMetrics: ['views', 'watch time (hours)', 'impressions click-through rate (%)', 'average view duration'],
+  },
+};
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  selectPlatform('tiktok');
+  loadSummary();
+}
+
+function selectPlatform(platform) {
+  currentPlatform = platform;
+  parsedData = null;
+
+  // Update tabs
+  document.querySelectorAll('.ptab').forEach((t, i) => {
+    const platforms = ['tiktok', 'instagram', 'facebook', 'youtube'];
+    t.classList.toggle('active', platforms[i] === platform);
+  });
+
+  // Update card label
+  const cfg = PLATFORM_CONFIG[platform];
+  document.getElementById('upload-label').textContent = cfg.label;
+
+  // Update instructions
+  const inst = document.getElementById('instructions');
+  inst.innerHTML = `
+    <h3>${cfg.icon} HOW TO EXPORT FROM ${platform.toUpperCase()}</h3>
+    <ol class="step-list">
+      ${cfg.steps.map(s => `<li>${s}</li>`).join('')}
+    </ol>
+  `;
+
+  // Reset upload state
+  resetUploadState();
+}
+
+function resetUploadState() {
+  parsedData = null;
+  document.getElementById('drop-label').textContent = 'Click to select your CSV file';
+  document.getElementById('drop-sub').textContent   = 'or drag and drop here';
+  document.getElementById('preview').style.display  = 'none';
+  document.getElementById('result').style.display   = 'none';
+  document.getElementById('import-btn').disabled    = true;
+  document.getElementById('import-btn-text').textContent = 'SELECT A CSV FIRST';
+  document.getElementById('csv-file').value         = '';
+  document.getElementById('progress-wrap').style.display = 'none';
+}
+
+// ─── File handling ─────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const rows = parseCsv(e.target.result);
+      if (!rows.length) {
+        showToast('CSV appears empty', 'amber');
+        return;
+      }
+      parsedData = rows;
+      renderPreview(file.name, rows);
+    } catch (err) {
+      showToast('Could not parse CSV: ' + err.message, 'red');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderPreview(filename, rows) {
+  const preview = document.getElementById('preview');
+  const cfg     = PLATFORM_CONFIG[currentPlatform];
+
+  // Count rows that have any key metric
+  const keyMetrics = cfg.keyMetrics.map(k => k.toLowerCase());
+  const usableRows = rows.filter(r =>
+    keyMetrics.some(k => {
+      const v = r[k];
+      return v && v !== '' && v !== '-' && v !== 'N/A';
+    })
+  );
+
+  const headers = Object.keys(rows[0] || {});
+
+  document.getElementById('drop-label').textContent = filename;
+  document.getElementById('drop-sub').textContent   = `${rows.length} rows · ${headers.length} columns`;
+
+  // Sample rows
+  const sampleRows = rows.slice(0, 5).map(r => {
+    // Find a label column
+    const labelKey = headers.find(h => ['video caption', 'caption', 'content', 'post text', 'post message', 'video title', 'title'].includes(h.toLowerCase())) || headers[0];
+    const label    = (r[labelKey] || '').slice(0, 60) || '(no title)';
+    // Find views or reach
+    const viewKey  = headers.find(h => ['video views', 'views', 'reach', 'lifetime post total reach'].includes(h.toLowerCase()));
+    const views    = viewKey ? r[viewKey] : '';
+    return { label, views };
+  });
+
+  preview.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <span class="preview-stat"><strong>${rows.length}</strong> total rows</span>
+      <span class="preview-stat"><strong>${usableRows.length}</strong> importable</span>
+      <span class="preview-stat" style="font-size:11px;"><strong>Columns:</strong> ${escHtml(headers.slice(0, 8).join(', '))}${headers.length > 8 ? '…' : ''}</span>
+    </div>
+    <div class="preview-rows">
+      ${sampleRows.map(r => `
+        <div class="preview-row">
+          <div class="preview-content">${escHtml(r.label)}</div>
+          <div class="preview-metrics">${r.views ? escHtml(String(r.views)) + ' views' : ''}</div>
+        </div>`).join('')}
+      ${rows.length > 5 ? `<div style="font-size:11px;color:var(--text-dimmer);padding:4px 10px;">+ ${rows.length - 5} more rows</div>` : ''}
+    </div>
+  `;
+  preview.style.display = 'block';
+
+  if (usableRows.length > 0) {
+    document.getElementById('import-btn').disabled = false;
+    document.getElementById('import-btn-text').textContent = `IMPORT ${usableRows.length} POSTS`;
+  } else {
+    document.getElementById('import-btn-text').textContent = 'NO MATCHING COLUMNS FOUND';
+    showToast(`No ${currentPlatform} metrics found. Check the export format.`, 'amber');
+  }
+}
+
+// ─── Import ───────────────────────────────────────────────────────────────────
+async function runImport() {
+  if (!parsedData) return;
+
+  const btn    = document.getElementById('import-btn');
+  const result = document.getElementById('result');
+  btn.disabled = true;
+  document.getElementById('import-btn-text').textContent = 'IMPORTING…';
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('progress-fill').style.width = '20%';
+  result.style.display = 'none';
+
+  try {
+    // Rebuild CSV from parsed data for upload
+    const headers  = Object.keys(parsedData[0] || {});
+    const csvLines = [headers.join(',')];
+    for (const row of parsedData) {
+      csvLines.push(headers.map(h => {
+        const v = String(row[h] || '').replace(/"/g, '""');
+        return v.includes(',') || v.includes('"') || v.includes('\n') ? `"${v}"` : v;
+      }).join(','));
+    }
+    const csvBlob = new Blob([csvLines.join('\n')], { type: 'text/csv' });
+
+    document.getElementById('progress-fill').style.width = '50%';
+
+    const form = new FormData();
+    form.append('file', csvBlob, `${currentPlatform}-analytics.csv`);
+    form.append('platform', currentPlatform);
+
+    const res  = await fetch('/api/analytics-import/upload', { method: 'POST', body: form });
+    const data = await res.json();
+
+    document.getElementById('progress-fill').style.width = '100%';
+
+    if (!res.ok) throw new Error(data.error || 'Import failed');
+
+    // Show result
+    result.className = 'result ok';
+    result.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:10px;">
+        <div>
+          <div class="result-stat green">${data.imported}</div>
+          <div style="font-size:11px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;">Imported</div>
+        </div>
+        <div>
+          <div class="result-stat" style="color:var(--text-dim)">${data.skipped}</div>
+          <div style="font-size:11px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;">Skipped</div>
+        </div>
+        <div>
+          <div class="result-stat" style="color:var(--teal)">${data.metrics_stored}</div>
+          <div style="font-size:11px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;">Metrics stored</div>
+        </div>
+      </div>
+      <div class="result-body">
+        ${data.imported} posts imported with ${data.metrics_stored} metrics. Data is now available in <strong>MirrΩr</strong> and feeds <strong>NorthΩr's</strong> strategy engine.
+        ${data.skipped > 0 ? `<br><span style="color:var(--text-dimmer)">${data.skipped} rows skipped (missing metrics or parse error).</span>` : ''}
+      </div>
+    `;
+    result.style.display = 'block';
+
+    showToast(`${data.imported} posts imported into MirrΩr`, 'green');
+    resetUploadState();
+    loadSummary();
+
+  } catch(e) {
+    document.getElementById('progress-fill').style.width = '0%';
+    result.className = 'result err';
+    result.innerHTML = `<div style="color:var(--red);font-size:13px;font-weight:600;">${escHtml(e.message)}</div>
+      <div class="result-body">Check that you selected the right platform and that the CSV is an analytics export (not a content schedule).</div>`;
+    result.style.display = 'block';
+    btn.disabled = false;
+    document.getElementById('import-btn-text').textContent = 'RETRY IMPORT';
+    showToast('Import failed: ' + e.message, 'red');
+  }
+}
+
+// ─── Summary (last import dates) ──────────────────────────────────────────────
+async function loadSummary() {
+  try {
+    const res  = await fetch('/api/analytics-import/summary');
+    const data = await res.json();
+    if (!res.ok) return;
+
+    const ICONS = { tiktok: '🎵', instagram: '📸', facebook: '👥', youtube: '▶' };
+    const platforms = ['tiktok', 'instagram', 'facebook', 'youtube'];
+    const container = document.getElementById('platform-status');
+
+    container.innerHTML = platforms.map(p => {
+      const s = data.summary[p] || {};
+      let cls = 'never';
+      let dateStr = 'Never imported';
+      if (s.last_import) {
+        const d    = new Date(s.last_import);
+        const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+        dateStr = days === 0 ? 'Today' : days === 1 ? 'Yesterday' : `${days} days ago`;
+        cls = days <= 7 ? 'fresh' : 'stale';
+      }
+      return `<div class="pstat ${cls}" onclick="selectPlatform('${p}')" style="cursor:pointer;">
+        <div class="pstat-icon">${ICONS[p]}</div>
+        <div class="pstat-platform">${p}</div>
+        <div class="pstat-date">${escHtml(dateStr)}</div>
+        ${s.total_rows ? `<div class="pstat-count">${s.total_rows.toLocaleString()} rows total</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(_) {}
+}
+
+// ─── CSV parser ────────────────────────────────────────────────────────────────
+function parseCsv(text) {
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i+1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && text[i+1] === '\n') i++;
+      if (current.trim()) rows.push(current);
+      current = '';
+    } else { current += ch; }
+  }
+  if (current.trim()) rows.push(current);
+  if (rows.length < 2) return [];
+  const headers = splitLine(rows[0]).map(h => h.trim().toLowerCase());
+  return rows.slice(1).map(row => {
+    const vals = splitLine(row);
+    const obj  = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function splitLine(line) {
+  const fields = [];
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === '"') {
+      let f = ''; i++;
+      while (i < line.length) {
+        if (line[i] === '"' && line[i+1] === '"') { f += '"'; i += 2; }
+        else if (line[i] === '"') { i++; break; }
+        else f += line[i++];
+      }
+      fields.push(f);
+      if (line[i] === ',') i++;
+    } else {
+      const end = line.indexOf(',', i);
+      if (end === -1) { fields.push(line.slice(i)); break; }
+      fields.push(line.slice(i, end));
+      i = end + 1;
+    }
+  }
+  return fields;
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type = '') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+init();
+</script>
+
+<script src="/js/nav.js" defer></script>
+<script>window.addEventListener('load', () => initNav())</script>
+<script src="/js/bug-reporter.js"></script>
+</body>
+</html>

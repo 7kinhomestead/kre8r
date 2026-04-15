@@ -131,48 +131,56 @@ def _walk_folder(folder, depth=0):
 
 def build_path_index(media_pool):
     """
-    Build a dict: file_path (normalised, lowercase) → MediaPoolItem
-    Walks the entire media pool tree.
+    Build a dict: normalised file path (lowercase) → MediaPoolItem.
+    Used only to avoid re-importing a clip that's already in the media pool.
+    VaultΩr is the source of truth for paths — this is just a cache.
     """
-    index = {}
+    path_index = {}
     root = media_pool.GetRootFolder()
     for _folder, clips in _walk_folder(root):
         for clip in clips:
             try:
                 fp = clip.GetClipProperty("File Path") or ""
                 if fp:
-                    index[fp.lower().replace("\\", "/")] = clip
+                    path_index[fp.lower().replace("\\", "/")] = clip
             except Exception:
                 pass
-    return index
+    print(f"[resolve] Media pool has {len(path_index)} clip(s) already imported", file=sys.stderr)
+    return path_index
 
 
-def find_clip(path_index, file_path, media_pool, fps):
+def find_clip(path_index, file_path, media_pool):
     """
-    Look up a MediaPoolItem by file path.
-    If not in the index, import the file from disk.
-    Returns (MediaPoolItem, imported_flag) or (None, False).
+    Return a MediaPoolItem for file_path.
+    Strategy:
+      1. Already in media pool — return it immediately (no re-import).
+      2. Not in pool — import from the VaultΩr-recorded path on disk.
+    VaultΩr is the source of truth. We trust the path it recorded.
     """
     if not file_path:
         return None, False
 
     norm = file_path.lower().replace("\\", "/")
+
+    # 1. Already in pool
     if norm in path_index:
+        print(f"[resolve] Already in pool: {os.path.basename(file_path)}", file=sys.stderr)
         return path_index[norm], False
 
-    # Not indexed — try to import
+    # 2. Import from VaultΩr path
     if not os.path.isfile(file_path):
-        print(f"[warn] File not found on disk: {file_path}", file=sys.stderr)
+        print(f"[warn] VaultΩr path not found on disk: {file_path}", file=sys.stderr)
+        print(f"[warn] Check VaultΩr — is proxy_path set and file accessible?", file=sys.stderr)
         return None, False
 
     items = media_pool.ImportMedia([file_path])
     if items:
         item = items[0]
         path_index[norm] = item
-        print(f"[import] Imported: {os.path.basename(file_path)}", file=sys.stderr)
+        print(f"[import] Imported from VaultΩr path: {os.path.basename(file_path)}", file=sys.stderr)
         return item, True
 
-    print(f"[warn] ImportMedia failed for: {file_path}", file=sys.stderr)
+    print(f"[warn] Resolve ImportMedia failed for: {file_path}", file=sys.stderr)
     return None, False
 
 
@@ -290,9 +298,8 @@ def run(args):
         raise RuntimeError("Could not get MediaPool from project")
 
     # ---- Build media pool path index ----------------------------------------
-    print("[resolve] Building media pool index…", file=sys.stderr)
+    print("[resolve] Checking media pool for already-imported clips…", file=sys.stderr)
     path_index = build_path_index(media_pool)
-    print(f"[resolve] Indexed {len(path_index)} clips in media pool", file=sys.stderr)
 
     # ---- Create or replace 02_SELECTS timeline -------------------------------
     TIMELINE_NAME = "02_SELECTS"
@@ -308,21 +315,38 @@ def run(args):
     except Exception as exc:
         print(f"[warn] Could not enumerate timelines: {exc}", file=sys.stderr)
 
-    # Resolve API doesn't expose DeleteTimeline reliably — create with fresh name
-    # if collision, append _v2, _v3, etc.
-    final_name = TIMELINE_NAME
-    if existing_timelines:
-        count = len(existing_timelines)
-        final_name = f"{TIMELINE_NAME}_v{count + 1}"
-        warnings.append(
-            f"02_SELECTS timeline already exists — creating '{final_name}'. "
-            "Delete old ones manually to keep the project tidy."
-        )
+    # Try to delete existing 02_SELECTS timelines so we can recreate clean.
+    # Resolve 20 exposes DeleteTimeline on the project object.
+    for tl in existing_timelines:
+        try:
+            ok = project.DeleteTimeline(tl)
+            if ok:
+                print(f"[resolve] Deleted existing {TIMELINE_NAME} timeline", file=sys.stderr)
+            else:
+                print(f"[warn] DeleteTimeline returned False — will create alongside existing", file=sys.stderr)
+        except Exception as exc:
+            print(f"[warn] DeleteTimeline failed: {exc} — will create alongside existing", file=sys.stderr)
 
     media_pool.SetCurrentFolder(media_pool.GetRootFolder())
-    timeline = media_pool.CreateEmptyTimeline(final_name)
+
+    # Always create with the canonical name — Resolve allows duplicate timeline names
+    # and the user can clean up old ones manually if needed.
+    timeline = media_pool.CreateEmptyTimeline(TIMELINE_NAME)
     if timeline is None:
-        raise RuntimeError(f"Could not create timeline '{final_name}'")
+        # Last resort: try a timestamped name
+        import time as _time
+        fallback = f"{TIMELINE_NAME}_{int(_time.time())}"
+        print(f"[warn] CreateEmptyTimeline('{TIMELINE_NAME}') returned None — trying '{fallback}'", file=sys.stderr)
+        timeline = media_pool.CreateEmptyTimeline(fallback)
+        if timeline is None:
+            raise RuntimeError(
+                f"Could not create timeline '{TIMELINE_NAME}'. "
+                "Make sure DaVinci Resolve is on the Edit page and the project is open."
+            )
+        warnings.append(f"Could not create '{TIMELINE_NAME}' — created '{fallback}' instead.")
+
+    final_name = timeline.GetName() if callable(timeline.GetName) else TIMELINE_NAME
+    print(f"[resolve] Created timeline: {final_name}", file=sys.stderr)
 
     # Match frame rate of existing project timelines where possible
     try:
@@ -339,119 +363,161 @@ def run(args):
         pass  # may already exist
 
     # ---- Build the timeline -------------------------------------------------
-    current_frame = 0   # running head position in the timeline
+    # APPROACH: full clip(s) placed once each, markers only for beats/quality/gold.
+    # No subclipping. Every frame of every clip makes it to the timeline.
+    #
+    # Phase 1 — place each unique clip ONCE (full duration, no in/out points)
+    # Phase 2 — add beat, quality, and gold markers using take timecodes
+
     clips_placed  = 0
     clips_missing = 0
 
-    # Sort sections by section_index
-    sections_sorted = sorted(sections, key=lambda s: s.get("section_index", 0))
+    # Sort sections by section_index (gold nuggets last so markers go on top)
+    sections_sorted = sorted(sections, key=lambda s: (1 if s.get("gold_nugget") else 0, s.get("section_index", 0)))
 
+    # Diagnostic
+    print(f"[diag] footage_paths keys: {sorted(footage_paths.keys())}", file=sys.stderr)
+    for fid, fp in footage_paths.items():
+        exists = os.path.isfile(fp) if fp else False
+        print(f"[diag] footage {fid}: path={fp!r} exists={exists}", file=sys.stderr)
+
+    # ── Phase 1: place each unique clip once, full extent ─────────────────────
+    # clip_timeline_offset[footage_id] = frame where that clip starts on the timeline
+    clip_timeline_offset = {}
+    current_frame = 0
+
+    # Collect unique footage_ids from non-gold sections (in order of first appearance)
+    seen_fids = []
     for section in sections_sorted:
-        label       = section.get("script_section") or f"Section {section.get('section_index', '?')}"
-        is_gold     = bool(section.get("gold_nugget"))
-        fire_note   = section.get("fire_suggestion") or ""
-        winner_id   = section.get("winner_footage_id")
+        if section.get("gold_nugget"):
+            continue
+        fid = section.get("winner_footage_id")
+        if fid is not None and fid not in seen_fids:
+            seen_fids.append(fid)
 
-        # Gold nugget: add a gap before the section
-        if is_gold:
-            current_frame += GAP_GOLD_FRAMES
-
-        # ── Place the winner clip ────────────────────────────────────────────
-        winner_item = None
-        start_ts = None
-        end_ts   = None
-
-        if winner_id and winner_id in footage_paths:
-            file_path = footage_paths[winner_id]
-            winner_item, _ = find_clip(path_index, file_path, media_pool, fps)
-
-            # Find timestamps for the winner take.
-            # Use selected_takes[0] as source of truth (has exact start/end for the chosen take).
-            # Falls back to footage_id match for backward compatibility.
-            selected_takes = section.get("selected_takes") or []
-            winner_take    = selected_takes[0] if selected_takes else None
-            if winner_take:
-                start_ts = winner_take.get("start")
-                end_ts   = winner_take.get("end")
-            else:
-                for take in (section.get("takes") or []):
-                    if take.get("footage_id") == winner_id:
-                        start_ts = take.get("start")
-                        end_ts   = take.get("end")
-                        break
-
-        section_start_frame = current_frame
-
-        if winner_item:
-            sf, ef, dur_frames = clip_duration_frames(winner_item, start_ts, end_ts, fps)
-
-            clip_dict = {
-                "mediaPoolItem": winner_item,
-                "startFrame":    sf,
-                "endFrame":      ef,
-                # mediaType intentionally omitted — specifying 1 adds video-only
-                # and silences the audio track. Omitting includes all tracks (V+A).
-                "trackIndex":    1
-            }
-
-            result = media_pool.AppendToTimeline([clip_dict])
-            if result:
-                clips_placed += 1
-                current_frame += dur_frames
-            else:
-                errors.append(f"AppendToTimeline failed for section '{label}' (footage_id={winner_id})")
-                current_frame += ts_to_frame(5, fps)  # placeholder gap
-                clips_missing += 1
-        else:
-            # No winner — leave a placeholder gap
-            gap_frames = ts_to_frame(5, fps)
-            current_frame += gap_frames
+    for fid in seen_fids:
+        if fid not in footage_paths:
+            print(f"[warn] footage_id {fid} not in footage_paths — skipped", file=sys.stderr)
             clips_missing += 1
-            warnings.append(f"Section '{label}': no winner clip — placeholder gap inserted")
+            continue
 
-        # ── Add markers ─────────────────────────────────────────────────────
+        file_path = footage_paths[fid]
+        item, _   = find_clip(path_index, file_path, media_pool)
 
-        # Blue: section header
-        add_marker(
-            timeline,
-            max(0, section_start_frame),
-            MARKER_COLORS["section"],
-            label,
-            f"Section {section.get('section_index', '?')}: {label}"
-        )
+        if not item:
+            print(f"[warn] could not resolve clip for footage_id {fid}", file=sys.stderr)
+            clips_missing += 1
+            continue
 
-        # Green: winner marker
-        if winner_item:
+        # Place full clip — no startFrame/endFrame means use the whole thing
+        result = media_pool.AppendToTimeline([{
+            "mediaPoolItem": item,
+            "trackIndex":    1,
+        }])
+
+        if result:
+            clip_timeline_offset[fid] = current_frame
+            # Get actual clip duration in frames to advance current_frame
+            try:
+                dur_str = item.GetClipProperty("Duration") or ""
+                if ":" in dur_str:
+                    parts = [int(x) for x in dur_str.split(":")]
+                    dur_frames = ((parts[0] * 3600 + parts[1] * 60 + parts[2]) * fps) + parts[3]
+                else:
+                    dur_frames = int(dur_str) if dur_str else 0
+            except Exception:
+                dur_frames = 0
+            current_frame += dur_frames
+            clips_placed  += 1
+            print(f"[placed] full clip footage_id={fid} ({dur_frames} frames) at frame {clip_timeline_offset[fid]}", file=sys.stderr)
+        else:
+            print(f"[warn] AppendToTimeline failed for footage_id={fid}", file=sys.stderr)
+            clips_missing += 1
+
+    # ── Phase 2: markers from beat sections ───────────────────────────────────
+    # For each non-gold section: beat header marker + per-take quality markers
+    # For gold sections: red marker at the gold moment timecode
+
+    beat_sections   = [s for s in sections_sorted if not s.get("gold_nugget")]
+    gold_sections   = [s for s in sections_sorted if s.get("gold_nugget")]
+
+    # ── Phase 2a: beat + quality markers ─────────────────────────────────────
+    # For each beat section, add a blue beat-header marker at the first take's
+    # timecode, then per-take quality markers (orange=fumbled, green=strong, cyan=clean).
+    # All frame positions are: clip_timeline_offset[footage_id] + ts_to_frame(take.start)
+
+    for section in beat_sections:
+        label     = section.get("script_section") or f"Section {section.get('section_index', '?')}"
+        fire_note = section.get("fire_suggestion") or ""
+        takes     = section.get("takes") or []
+        fid       = section.get("winner_footage_id")
+
+        if fid not in clip_timeline_offset:
+            warnings.append(f"Section '{label}': footage_id {fid} not placed — markers skipped")
+            continue
+
+        clip_offset = clip_timeline_offset[fid]
+
+        # Blue beat-header at the first take's start
+        if takes:
+            beat_frame = clip_offset + ts_to_frame(takes[0].get("start", 0), fps)
             add_marker(
                 timeline,
-                max(0, section_start_frame),
-                MARKER_COLORS["winner"],
-                f"✓ {label}",
-                f"Winner: footage_id={winner_id}" +
-                (f" | {start_ts:.1f}s – {end_ts:.1f}s" if start_ts is not None and end_ts is not None else ""),
-                duration=ts_to_frame(end_ts - start_ts, fps) if (start_ts is not None and end_ts is not None) else 1
+                max(0, beat_frame),
+                MARKER_COLORS["section"],
+                label,
+                f"{len(takes)} take(s) | {fire_note[:120]}"
             )
 
-        # Red: gold nugget
-        if is_gold:
+        # Per-take quality markers
+        for t_idx, take in enumerate(takes):
+            t_start  = take.get("start", 0)
+            t_end    = take.get("end", t_start)
+            quality  = take.get("quality", "clean")
+            note     = take.get("note", "") or ""
+            t_frame  = clip_offset + ts_to_frame(t_start, fps)
+            dur_f    = max(1, ts_to_frame(t_end - t_start, fps))
+            t_label  = f"Take {t_idx + 1}/{len(takes)}"
+
+            if quality in ("fumbled", "partial"):
+                add_marker(timeline, max(0, t_frame), "Orange",
+                    f"⚠ REVIEW {t_label} [{quality}]",
+                    note[:200] if note else f"{quality} — review and cut if needed",
+                    duration=dur_f)
+            elif quality == "strong":
+                add_marker(timeline, max(0, t_frame), "Green",
+                    f"✓ STRONG {t_label}",
+                    note[:200] if note else "Strong take — likely keeper",
+                    duration=dur_f)
+            else:
+                add_marker(timeline, max(0, t_frame), "Cyan",
+                    f"○ CLEAN {t_label}",
+                    note[:200] if note else "Clean take",
+                    duration=dur_f)
+
+    # ── Phase 2b: gold moment markers ────────────────────────────────────────
+    for section in gold_sections:
+        takes = section.get("takes") or []
+        fid   = section.get("winner_footage_id")
+        note  = section.get("fire_suggestion") or "Off-script gold moment"
+
+        if fid not in clip_timeline_offset:
+            warnings.append(f"Gold moment: footage_id {fid} not placed — marker skipped")
+            continue
+
+        clip_offset = clip_timeline_offset[fid]
+
+        for take in takes:
+            t_start = take.get("start", 0)
+            t_end   = take.get("end", t_start)
+            dur_f   = max(1, ts_to_frame(t_end - t_start, fps))
             add_marker(
                 timeline,
-                max(0, section_start_frame - GAP_GOLD_FRAMES),
+                max(0, clip_offset + ts_to_frame(t_start, fps)),
                 MARKER_COLORS["gold"],
-                f"GOLD: {label}",
-                "Off-script moment with high authenticity — prioritise in final cut"
-            )
-
-        # Orange: fire suggestion
-        if fire_note:
-            is_broll_suggestion = any(kw in fire_note.lower() for kw in ("b-roll", "broll", "b roll", "cutaway"))
-            color = MARKER_COLORS["broll"] if is_broll_suggestion else MARKER_COLORS["fire"]
-            add_marker(
-                timeline,
-                max(0, section_start_frame),
-                color,
-                "FIRE" if not is_broll_suggestion else "B-ROLL",
-                fire_note
+                "🔴 GOLD — OFF-SCRIPT",
+                note[:200],
+                duration=dur_f
             )
 
     # ---- Beat markers from PipΩr project-config.json ----------------------
@@ -509,9 +575,11 @@ def run(args):
         print("[pipr] No project-config.json found — skipping beat markers", file=sys.stderr)
 
     # ---- Summary marker at head --------------------------------------------
+    beat_marker_count  = sum(len(s.get("takes") or []) for s in beat_sections)
+    gold_marker_count  = len(gold_sections)
     summary_note = (
-        f"02_SELECTS — {clips_placed} clips placed, {clips_missing} missing. "
-        f"Built by SelectsΩr from {len(sections_sorted)} script sections."
+        f"02_SELECTS — {clips_placed} full clip(s) placed, {clips_missing} missing. "
+        f"{beat_marker_count} take markers, {gold_marker_count} gold markers."
         + (f" | {beats_placed} PipΩr beat markers." if beats_placed else "")
     )
     add_marker(timeline, 0, "Purple", "SELECTS OVERVIEW", summary_note)

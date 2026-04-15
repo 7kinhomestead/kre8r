@@ -235,11 +235,18 @@ router.post('/davinci/build/:project_id', (req, res) => {
         return failJob(job, 'No selects found for this project. Run Build Selects first.');
       }
 
-      // Build footage_paths_json: { footage_id → file_path }
+      // Build footage_paths_json: { footage_id → best available file path }
+      // Priority: proxy_path (MP4, always readable by DaVinci) → organized_path → file_path
       const allFootage    = db.getAllFootage({ project_id: projectId });
       const footagePaths  = Object.fromEntries(
-        allFootage.map(f => [f.id, f.organized_path || f.file_path || ''])
+        allFootage.map(f => [f.id, f.proxy_path || f.organized_path || f.file_path || ''])
       );
+
+      // Diagnostic: log what paths we're handing to DaVinci
+      const pathDiag = allFootage.map(f => ({
+        id: f.id, proxy: f.proxy_path || null, org: f.organized_path || null, raw: f.file_path || null
+      }));
+      console.log('[davinci] footage paths for project', projectId, JSON.stringify(pathDiag));
 
       // ── Auto-create DaVinci project if not yet linked ──────────────────
       // If no davinci_project_name, run create-project.py first (sets up the
@@ -303,6 +310,11 @@ router.post('/davinci/build/:project_id', (req, res) => {
       const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'davinci', 'build-selects.py');
 
       pushEvent(job, { stage: 'davinci_start', sections: sections.length });
+
+      // Diagnostic — log selected_takes count per section before sending to Python
+      for (const s of sections) {
+        pushEvent(job, { stage: 'davinci_log', line: `[diag] "${s.script_section}": ${(s.selected_takes||[]).length} selected_takes` });
+      }
 
       const proc = spawn(binary, [
         scriptPath,

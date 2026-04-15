@@ -160,6 +160,16 @@ router.post('/create', (req, res) => {
       format:                      format
     });
 
+    // Advance pipeline stage: M0.1 (idea) → M0.2 (planned, ready to shoot)
+    // Only advance if still in pre-production — never regress a project already past pre-prod
+    try {
+      const proj  = db.getProject(projectId);
+      const stage = proj?.current_stage || 'M0.1';
+      if (!stage || stage === 'M0.1') {
+        db.updateProjectStage(projectId, 'M0.2');
+      }
+    } catch (_) {}
+
     // Save collaborators if provided
     if (req.body.collaborators && Array.isArray(req.body.collaborators)) {
       db.updateProjectCollaborators(projectId, req.body.collaborators);

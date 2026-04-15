@@ -909,6 +909,33 @@
     </div>
   </div>
 
+  <!-- ── SECTION 7: Ad Revenue ── -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">💰 AD REVENUE</div>
+      <span style="font-size:12px;color:var(--text-dimmer)">YouTube Studio → Analytics → Revenue → Export CSV, then enter totals below</span>
+    </div>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:14px">ENTER MONTHLY REVENUE</div>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:12px;color:var(--text-dim);font-weight:600">Month</label>
+          <input type="month" id="rev-month" style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:14px;font-family:var(--font-body)">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:12px;color:var(--text-dim);font-weight:600">Revenue ($)</label>
+          <input type="number" id="rev-amount" min="0" step="0.01" placeholder="0.00" style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:14px;font-family:var(--font-body);width:140px">
+        </div>
+        <button class="btn btn-teal" onclick="saveRevenue()" id="rev-save-btn" style="height:38px">Save</button>
+      </div>
+    </div>
+
+    <div id="revenue-history-container">
+      <div class="empty-state">Loading revenue history…</div>
+    </div>
+  </div>
+
 </div><!-- /page -->
 
 <div class="toast" id="toast"></div>
@@ -922,7 +949,17 @@
 let dashData = null;
 
 // ── Init ───────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => { loadDashboard(); loadEvaluations(); loadGrowthPlan(); });
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+  loadEvaluations();
+  loadGrowthPlan();
+  loadRevenue();
+  // Default month picker to current month
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const el = document.getElementById('rev-month');
+  if (el) el.value = `${now.getFullYear()}-${mm}`;
+});
 
 async function loadDashboard() {
   try {
@@ -1568,6 +1605,91 @@ function toggleEval(bodyId, btn) {
   const body = document.getElementById(bodyId);
   const open = body.classList.toggle('open');
   btn.textContent = open ? 'Hide ↑' : 'Details ↓';
+}
+
+// ── Ad Revenue ────────────────────────────────────────────────────────────────
+
+async function loadRevenue() {
+  const container = document.getElementById('revenue-history-container');
+  try {
+    const res  = await fetch('/api/postor/analytics-status');
+    const data = await res.json();
+    if (!data.connected) {
+      container.innerHTML = `<div class="empty-state">YouTube not connected — revenue tracking unavailable</div>`;
+      return;
+    }
+    renderRevenueHistory(data.revenue_history || []);
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state">Could not load revenue history</div>`;
+  }
+}
+
+function renderRevenueHistory(history) {
+  const container = document.getElementById('revenue-history-container');
+  if (!history.length) {
+    container.innerHTML = `<div class="empty-state">No revenue entered yet — add your first month above</div>`;
+    return;
+  }
+
+  const rows = history.map(r => {
+    const [year, month] = r.month.split('-');
+    const label = new Date(parseInt(year), parseInt(month) - 1, 1)
+      .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const amt = Number(r.revenue_usd || 0).toFixed(2);
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)">
+        <span style="font-size:14px;color:var(--text-dim)">${label}</span>
+        <div style="display:flex;align-items:center;gap:14px">
+          <span style="font-size:16px;font-weight:700;color:var(--teal)">$${amt}</span>
+          <button onclick="prefillRevenue('${r.month}', '${amt}')" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;padding:3px 8px;cursor:pointer">Edit</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  const total = history.reduce((s, r) => s + Number(r.revenue_usd || 0), 0);
+  container.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div style="padding:10px 14px;background:var(--bg-deep);border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+        <span style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer)">REVENUE HISTORY</span>
+        <span style="font-size:11px;color:var(--text-dimmer)">Last ${history.length} months · Total: <strong style="color:var(--text-dim)">$${total.toFixed(2)}</strong></span>
+      </div>
+      ${rows}
+    </div>`;
+}
+
+function prefillRevenue(month, amount) {
+  document.getElementById('rev-month').value = month;
+  document.getElementById('rev-amount').value = amount;
+  document.getElementById('rev-month').focus();
+}
+
+async function saveRevenue() {
+  const month  = document.getElementById('rev-month').value;
+  const amount = document.getElementById('rev-amount').value;
+  const btn    = document.getElementById('rev-save-btn');
+
+  if (!month) { toast('Select a month', 'error'); return; }
+  if (amount === '' || isNaN(parseFloat(amount))) { toast('Enter a revenue amount', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const res  = await fetch('/api/postor/revenue/manual', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ month, revenue: parseFloat(amount) }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    renderRevenueHistory(data.history || []);
+    toast(`Revenue saved for ${month}`, 'success');
+    document.getElementById('rev-amount').value = '';
+  } catch (e) {
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
 }
 </script>
 

@@ -67,12 +67,23 @@ async function mlForTenant(tenant, method, endpoint, body = null) {
 
 // ── Resolve Mailerlite group ID from event context ────────────────────────────
 function resolveGroupId(tenant, profile, eventType, payload) {
-  const groups = profile?.integrations?.mailerlite_groups || {};
+  const groups         = profile?.integrations?.mailerlite_groups     || {};
+  const customMappings = profile?.integrations?.custom_group_mappings || {};
 
   if (eventType === 'member.created') return groups.greenhouse;
 
   if (eventType === 'purchase.created' || eventType === 'offer.purchase') {
     const title = (payload?.product?.title || payload?.offer?.title || '').toLowerCase();
+
+    // Check custom keyword mappings first (most specific wins)
+    for (const [keyword, groupId] of Object.entries(customMappings)) {
+      if (title.includes(keyword.toLowerCase())) {
+        log.info({ module: 'tenant-webhook', keyword, groupId }, 'Custom mapping matched');
+        return groupId;
+      }
+    }
+
+    // Fall back to hardcoded tier keywords
     if (title.includes('founding') || title.includes('297')) return groups.founding50;
     if (title.includes('garden')   || title.includes('19'))  return groups.garden;
     return groups.greenhouse;

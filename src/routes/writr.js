@@ -26,6 +26,7 @@ const { generateScriptFirst }        = require('../writr/script-first');
 const { generateShootFirst }         = require('../writr/shoot-first');
 const { generateHybrid }             = require('../writr/hybrid');
 const { iterateScript }              = require('../writr/iterate');
+const { buildPasteIn }               = require('../writr/paste-in');
 const { readConfig, writeConfig }    = require('../pipr/beat-tracker');
 const { listProfiles }               = require('../writr/voice-analyzer');
 const { callClaude, REALITY_RULE }   = require('../writr/claude');
@@ -281,9 +282,12 @@ router.get('/:project_id/config', (req, res) => {
 
   const config  = readConfig(projectId);
   const scripts = db.getWritrScriptsByProject(projectId);
-  const active  = project.active_script_id
-    ? scripts.find(s => s.id === project.active_script_id) || scripts[0] || null
-    : scripts[0] || null;
+
+  // Priority: approved script first, then active_script_id, then most recent
+  const active  = scripts.find(s => s.approved)
+    || (project.active_script_id ? scripts.find(s => s.id === project.active_script_id) : null)
+    || scripts[0]
+    || null;
 
   res.json({
     ok: true,
@@ -490,7 +494,45 @@ This is a SHORT-FORM video (TikTok / Reels / Shorts). These rules override all o
     // emit helper — filters out module 'complete' progress msgs (we send our own at the end)
     const emit = (ev) => { if (ev.stage !== 'complete') write(ev); };
 
-    if (ep === 'script_first') {
+    if (ep === 'paste_in') {
+      // Paste-in mode: script is verbatim, Claude only maps beats — no rewriting
+      result = await buildPasteIn(projectId, input_text || '', emit);
+      if (!result.ok) {
+        write({ stage: 'error', error: result.error || 'Paste-in failed' });
+        finishJob(job, null);
+        return;
+      }
+      // Paste-in skips format variants — store as full mode only, then finish
+      const pasteData = {
+        project_id:        projectId,
+        entry_point:       'paste_in',
+        input_type:        'paste_in',
+        raw_input:         input_text || '',
+        generated_outline: null,
+        generated_script:  result.generated_script,
+        beat_map_json:     result.beat_map_json,
+        hook_variations:   result.hook_variations,
+        story_found:       result.story_found,
+        anchor_moment:     null,
+        missing_beats:     result.missing_beats,
+        iteration_count:   0,
+        approved:          false,
+        mode:              'full',
+        session_id:        null
+      };
+      const pasteId = db.insertWritrScript(pasteData);
+      write({
+        stage:     'complete',
+        script_id: pasteId,
+        script:    result.generated_script,
+        beat_map:  result.beat_map_json,
+        missing_beats: result.missing_beats,
+        mode:      'full',
+        message:   'Script imported — beats mapped. Review and approve when ready.'
+      });
+      finishJob(job, { script_id: pasteId });
+      return;
+    } else if (ep === 'script_first') {
       result = await generateScriptFirst({
         projectId,
         inputText: input_text || '',
@@ -812,6 +854,37 @@ router.post('/:project_id/approve', (req, res) => {
     });
   } catch (err) {
     console.error('[WritΩr] approve error:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/writr/:project_id/unapprove
+// Unlock an approved script so the creator can revise or re-approve
+// Body: { script_id }
+// ─────────────────────────────────────────────
+
+router.post('/:project_id/unapprove', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  const scriptId  = parseInt(req.body.script_id, 10);
+
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  if (!scriptId)  return res.status(400).json({ error: 'script_id required' });
+
+  try {
+    const script = db.getWritrScript(scriptId);
+    if (!script) return res.status(404).json({ error: 'Script not found' });
+    if (script.project_id !== projectId) return res.status(403).json({ error: 'Script does not belong to this project' });
+
+    // Mark the script unapproved directly (SQLite needs 0/1 not boolean)
+    db.updateWritrScript(scriptId, { approved: 0 });
+
+    // Best-effort: clear pipeline flags
+    try { db.updateProjectWritr(projectId, { writr_complete: 0 }); } catch (_) {}
+
+    res.json({ ok: true, script_id: scriptId, message: 'Script unlocked — revise and re-approve when ready.' });
+  } catch (err) {
+    console.error('[WritΩr/unapprove] error:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });

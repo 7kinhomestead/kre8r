@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>YouTube API Services — Implementation &amp; Integration Document | Kre8Ωr</title>
+  <style>
+    @media print {
+      body { font-size: 11pt; }
+      .no-print { display: none; }
+      h1, h2, h3 { page-break-after: avoid; }
+      section { page-break-inside: avoid; }
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.65;
+      color: #1a1a1a;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 40px 48px;
+      background: #fff;
+    }
+
+    .no-print {
+      background: #f0f9f0;
+      border: 1px solid #4caf50;
+      border-radius: 6px;
+      padding: 14px 20px;
+      margin-bottom: 32px;
+      font-size: 13px;
+    }
+    .no-print strong { color: #2e7d32; }
+
+    .cover { border-bottom: 3px solid #ff0000; padding-bottom: 28px; margin-bottom: 32px; }
+    .cover-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .cover h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: #111;
+    }
+    .cover h1 .yt { color: #ff0000; }
+    .cover-sub {
+      font-size: 14px;
+      color: #444;
+      margin-bottom: 18px;
+    }
+    .cover-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 24px;
+      font-size: 12px;
+      color: #555;
+      margin-top: 18px;
+    }
+    .cover-meta span { color: #111; font-weight: 600; }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111;
+      margin: 32px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #333;
+      margin: 20px 0 8px;
+    }
+
+    p { margin: 0 0 10px; }
+    ul, ol { margin: 0 0 12px 20px; }
+    li { margin-bottom: 5px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 12px;
+    }
+    th {
+      background: #f5f5f5;
+      text-align: left;
+      padding: 8px 12px;
+      font-weight: 700;
+      border: 1px solid #ddd;
+      color: #333;
+    }
+    td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      vertical-align: top;
+      color: #222;
+    }
+    tr:nth-child(even) td { background: #fafafa; }
+
+    code {
+      background: #f4f4f4;
+      border: 1px solid #e0e0e0;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 11px;
+      color: #c7254e;
+    }
+
+    .callout {
+      background: #fff8e1;
+      border-left: 4px solid #ffc107;
+      padding: 10px 16px;
+      margin: 12px 0;
+      font-size: 12px;
+    }
+    .callout.blue { background: #e3f2fd; border-color: #1976d2; }
+    .callout.green { background: #e8f5e9; border-color: #388e3c; }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .flow-num {
+      background: #ff0000;
+      color: #fff;
+      font-weight: 700;
+      font-size: 11px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .section { margin-bottom: 28px; }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 16px;
+      border-top: 1px solid #ddd;
+      font-size: 11px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print">
+  <strong>Print to PDF:</strong> Press <strong>Ctrl+P</strong> (Windows) or <strong>Cmd+P</strong> (Mac) → Save as PDF → upload the PDF to the YouTube API compliance form. Keep "Background graphics" checked for best formatting.
+</div>
+
+<!-- ── Cover ── -->
+<div class="cover">
+  <div class="cover-label">YouTube API Services Compliance Document</div>
+  <h1>Kre8<span class="yt">Ω</span>r — API Implementation &amp; Integration Overview</h1>
+  <div class="cover-sub">Technical design document describing the implementation, access, and use of YouTube API Services within the Kre8Ωr content production platform.</div>
+  <div class="cover-meta">
+    <div>Application Name: <span>Kre8Ωr (PostΩr Module)</span></div>
+    <div>Developer: <span>Jason Rutland / 7 Kin Homestead</span></div>
+    <div>API Service Used: <span>YouTube Data API v3</span></div>
+    <div>OAuth Scope(s): <span>youtube.upload, youtube.readonly</span></div>
+    <div>Platform Type: <span>Private desktop + hosted web app (single creator)</span></div>
+    <div>Document Date: <span>April 2026</span></div>
+  </div>
+</div>
+
+<!-- ── 1. Application Overview ── -->
+<div class="section">
+  <h2>1. Application Overview</h2>
+  <p>
+    <strong>Kre8Ωr</strong> is an AI-native content production operating system built for solo video creators. It manages the full creative pipeline — from idea and script generation through production, post-production, and distribution — for a single creator (Jason Rutland, 7 Kin Homestead, a homesteading content creator with channels on YouTube, TikTok, Instagram, and Lemon8).
+  </p>
+  <p>
+    The <strong>PostΩr</strong> module within Kre8Ωr handles multi-platform video distribution. It allows the creator to upload finished video content to YouTube directly from within the Kre8Ωr interface, eliminating the need to switch between tools during the distribution workflow.
+  </p>
+
+  <div class="callout blue">
+    <strong>Single-creator, private use:</strong> Kre8Ωr is a private, password-protected application used exclusively by its developer/owner. It is not a SaaS platform. The YouTube API integration is used solely to publish video content to the creator's own YouTube channel, using credentials belonging to that channel.
+  </div>
+</div>
+
+<!-- ── 2. YouTube API Services Used ── -->
+<div class="section">
+  <h2>2. YouTube API Services Used</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>API Service</th>
+        <th>Endpoint</th>
+        <th>Purpose</th>
+        <th>Required OAuth Scope</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Videos: insert</strong></td>
+        <td><code>POST /upload/youtube/v3/videos</code><br/>(resumable upload)</td>
+        <td>Upload a finished video file from the creator's local storage to their YouTube channel. Sets title, description, tags, category, privacy status, and optional scheduled publish time.</td>
+        <td><code>youtube.upload</code></td>
+      </tr>
+      <tr>
+        <td><strong>Channels: list</strong></td>
+        <td><code>GET /youtube/v3/channels?mine=true</code></td>
+        <td>Retrieve the authenticated user's channel ID and title immediately after OAuth authorization. Used only to display the connected channel name in the UI and store it as the <code>account_name</code> for the connection record.</td>
+        <td><code>youtube.readonly</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Scopes Requested and Justification</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Scope</th>
+        <th>Justification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>https://www.googleapis.com/auth/youtube.upload</code></td>
+        <td>Required to upload video files to the authenticated user's YouTube channel via the <code>videos.insert</code> endpoint. This is the primary function of the integration.</td>
+      </tr>
+      <tr>
+        <td><code>https://www.googleapis.com/auth/youtube.readonly</code></td>
+        <td>Used once post-authorization to fetch the channel's display name via <code>channels.list?mine=true</code>. This name is shown in the PostΩr connection card so the creator can confirm which account is linked. No channel data is stored beyond the channel title and ID.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>No broader scopes requested.</strong> Kre8Ωr does not request access to comments, playlists, subscriptions, analytics, community posts, or any other YouTube resource beyond what is listed above.
+  </div>
+</div>
+
+<!-- ── 3. OAuth 2.0 Implementation ── -->
+<div class="section">
+  <h2>3. OAuth 2.0 Implementation</h2>
+  <p>Kre8Ωr implements the standard Google OAuth 2.0 Authorization Code flow for server-side web applications.</p>
+
+  <h3>Authorization Flow (Step by Step)</h3>
+
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div><strong>Initiate:</strong> The creator clicks "Connect YouTube" in the PostΩr UI. The server generates a cryptographically random <code>state</code> token (16 hex bytes via <code>crypto.randomBytes</code>) and stores it in the server-side Express session. The user is redirected to Google's authorization endpoint (<code>accounts.google.com/o/oauth2/v2/auth</code>) with <code>response_type=code</code>, <code>access_type=offline</code>, and <code>prompt=consent</code>.</div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div><strong>Authorize:</strong> The creator logs in to their Google account on Google's servers and grants the requested permissions. Kre8Ωr never sees, handles, or stores the user's Google password.</div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">3</div>
+    <div><strong>Callback:</strong> Google redirects to <code>/api/postor/auth/youtube/callback</code> with <code>code</code> and <code>state</code>. The server validates the <code>state</code> against the session value to prevent CSRF attacks. If mismatched or missing, the request is rejected.</div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">4</div>
+    <div><strong>Exchange:</strong> The server exchanges the authorization code for an access token and refresh token via a server-to-server POST to <code>oauth2.googleapis.com/token</code>. The exchange includes the <code>client_secret</code>, which is stored only in the server's <code>.env</code> file, never in the browser.</div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">5</div>
+    <div><strong>Channel Lookup:</strong> Using the new access token, the server calls <code>channels.list?mine=true</code> to retrieve the channel ID and display name.</div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">6</div>
+    <div><strong>Storage:</strong> The access token, refresh token, token expiry timestamp, channel ID, and channel name are stored in the local SQLite database (<code>platform_connections</code> table). Tokens are stored server-side only and are never transmitted to the browser.</div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">7</div>
+    <div><strong>Token Refresh:</strong> Before each upload operation, the server checks if the access token expires within 5 minutes. If so, it automatically refreshes using the stored refresh token via <code>oauth2.googleapis.com/token</code> with <code>grant_type=refresh_token</code>.</div>
+  </div>
+
+  <h3>Redirect URI Registration</h3>
+  <table>
+    <thead><tr><th>Environment</th><th>Redirect URI</th></tr></thead>
+    <tbody>
+      <tr><td>Local development</td><td><code>http://localhost:3000/api/postor/auth/youtube/callback</code></td></tr>
+      <tr><td>Hosted (kre8r.app)</td><td><code>https://kre8r.app/api/postor/auth/youtube/callback</code></td></tr>
+    </tbody>
+  </table>
+  <p>Both URIs are registered as Authorized Redirect URIs in the Google Cloud Console OAuth 2.0 client configuration.</p>
+</div>
+
+<!-- ── 4. Video Upload Implementation ── -->
+<div class="section">
+  <h2>4. Video Upload Implementation</h2>
+
+  <h3>Upload Protocol</h3>
+  <p>Kre8Ωr uses the <strong>YouTube resumable upload protocol</strong> (<code>uploadType=resumable</code>) to upload video files. This protocol is recommended by Google for files larger than 5 MB and provides reliable upload behavior for large video files.</p>
+
+  <h3>Upload Flow</h3>
+
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div><strong>Initiate Resumable Session:</strong> A POST request is sent to <code>https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status</code> with the video metadata (title, description, tags, categoryId) in the request body and the file size in <code>X-Upload-Content-Length</code>. The response contains a <code>Location</code> header with the session upload URI.</div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div><strong>Upload File:</strong> The video file is read from the local filesystem and sent as the request body in a single PUT request to the session upload URI. The <code>Content-Type</code> is set to <code>video/*</code>.</div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">3</div>
+    <div><strong>Parse Response:</strong> On success (HTTP 200/201), YouTube returns the created video resource including its <code>id</code>. The video URL is constructed as <code>https://www.youtube.com/watch?v={id}</code> and stored in the local <code>postor_posts</code> database table alongside the post status.</div>
+  </div>
+
+  <h3>Metadata Fields Sent to YouTube</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Part</th>
+        <th>Source in Kre8Ωr</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>snippet.title</code></td>
+        <td>snippet</td>
+        <td>Creator-entered in PostΩr UI</td>
+        <td>Required. Max 200 chars.</td>
+      </tr>
+      <tr>
+        <td><code>snippet.description</code></td>
+        <td>snippet</td>
+        <td>Creator-entered in PostΩr UI</td>
+        <td>Optional.</td>
+      </tr>
+      <tr>
+        <td><code>snippet.tags</code></td>
+        <td>snippet</td>
+        <td>Creator-entered comma-separated list</td>
+        <td>Optional. Parsed into array.</td>
+      </tr>
+      <tr>
+        <td><code>snippet.categoryId</code></td>
+        <td>snippet</td>
+        <td>Creator-selected dropdown</td>
+        <td>Default: 22 (People &amp; Blogs).</td>
+      </tr>
+      <tr>
+        <td><code>status.privacyStatus</code></td>
+        <td>status</td>
+        <td>Creator-selected (Public / Unlisted / Private)</td>
+        <td>Set to <code>private</code> when scheduling.</td>
+      </tr>
+      <tr>
+        <td><code>status.publishAt</code></td>
+        <td>status</td>
+        <td>Creator-entered datetime (optional)</td>
+        <td>ISO 8601 string. Only sent if scheduling.</td>
+      </tr>
+      <tr>
+        <td><code>status.selfDeclaredMadeForKids</code></td>
+        <td>status</td>
+        <td>Hardcoded</td>
+        <td>Always <code>false</code> (content is not for children).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Scheduling</h3>
+  <p>
+    When a creator chooses to schedule a video, Kre8Ωr sets <code>status.privacyStatus</code> to <code>"private"</code> and includes <code>status.publishAt</code> with the creator's chosen datetime as an ISO 8601 string. YouTube then natively handles the transition to public at the scheduled time. No polling or additional API calls are required.
+  </p>
+</div>
+
+<!-- ── 5. YouTube Data Handling ── -->
+<div class="section">
+  <h2>5. YouTube Data — Storage, Use, and Handling</h2>
+
+  <h3>Data Received from YouTube API</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Received From</th>
+        <th>How It Is Stored</th>
+        <th>How It Is Used</th>
+        <th>Shared With Third Parties?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>OAuth Access Token</td>
+        <td>Token exchange endpoint</td>
+        <td>Local SQLite database, server-side only. Never sent to browser.</td>
+        <td>Authorizes upload API calls. Auto-refreshed before expiry.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>OAuth Refresh Token</td>
+        <td>Token exchange endpoint</td>
+        <td>Local SQLite database, server-side only.</td>
+        <td>Used to obtain new access tokens without re-authorization.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Channel ID</td>
+        <td><code>channels.list</code></td>
+        <td>Local SQLite database (<code>platform_connections.account_id</code>).</td>
+        <td>Stored for reference. Not currently used in API calls.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Channel Title</td>
+        <td><code>channels.list</code></td>
+        <td>Local SQLite database (<code>platform_connections.account_name</code>).</td>
+        <td>Displayed in the PostΩr UI connection card ("Connected: [Channel Name]") to confirm the correct account is linked.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Uploaded Video ID</td>
+        <td>Upload response body</td>
+        <td>Local SQLite database (<code>postor_posts.post_id</code>).</td>
+        <td>Used to construct the video URL for display in the Post History UI.</td>
+        <td>No</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Data NOT Accessed or Stored</h3>
+  <p>Kre8Ωr does <strong>not</strong> access, retrieve, or store any of the following YouTube data:</p>
+  <ul>
+    <li>Comments, replies, or comment threads</li>
+    <li>Video analytics or performance metrics via YouTube API (analytics are imported separately via CSV export, not the YouTube Analytics API)</li>
+    <li>Playlists, subscriptions, or channel memberships</li>
+    <li>Other users' channel or video data</li>
+    <li>YouTube search results</li>
+    <li>Live streaming data</li>
+    <li>Caption or subtitle data</li>
+    <li>Community posts</li>
+  </ul>
+
+  <h3>Data Retention</h3>
+  <p>
+    OAuth tokens are retained in the local SQLite database indefinitely until the user explicitly disconnects the YouTube account via the Disconnect button in the PostΩr UI (which deletes the <code>platform_connections</code> row). Post history records (video ID, title, URL, status) are retained in <code>postor_posts</code> as a local reference log for the creator.
+  </p>
+
+  <div class="callout green">
+    <strong>No data leaves the application.</strong> All YouTube API data is stored locally on the creator's machine (or self-hosted server). It is not shared with, transmitted to, or accessible by any third party. The application has no analytics pipeline, telemetry, or external data storage.
+  </div>
+</div>
+
+<!-- ── 6. User Interface Description ── -->
+<div class="section">
+  <h2>6. User Interface — How YouTube Data Is Displayed</h2>
+
+  <h3>Connection Card (PostΩr Page — Platform Connections Section)</h3>
+  <p>After successful authorization, the YouTube platform card displays:</p>
+  <ul>
+    <li><strong>Status badge:</strong> "Connected" (teal color)</li>
+    <li><strong>Account name:</strong> The channel title fetched from <code>channels.list</code> (e.g., "7 Kin Homestead")</li>
+    <li><strong>Disconnect button:</strong> Allows the creator to revoke the stored tokens and remove the connection</li>
+  </ul>
+  <p>No thumbnail images, video listings, subscriber counts, or other YouTube content are fetched or displayed.</p>
+
+  <h3>Post Composer</h3>
+  <p>The creator fills in the following fields before uploading:</p>
+  <ul>
+    <li>Video file path (selected from the Kre8Ωr Vault or entered manually)</li>
+    <li>Title</li>
+    <li>Description</li>
+    <li>Privacy (Public / Unlisted / Private)</li>
+    <li>Optional scheduled publish datetime</li>
+    <li>Optional tags and category</li>
+  </ul>
+  <p>All values are creator-entered. No YouTube data is pre-populated or fetched to fill these fields.</p>
+
+  <h3>Upload Progress (SSE Stream)</h3>
+  <p>During upload, a Server-Sent Events stream delivers progress updates to the browser. A progress bar shows the upload stage (Initiating → Uploading → Done). On completion, a link is displayed: <strong>"View →"</strong> linking to <code>https://www.youtube.com/watch?v={videoId}</code>. This link is constructed locally from the video ID returned in the upload API response.</p>
+
+  <h3>Post History Table</h3>
+  <p>A read-only table displays the creator's recent posts including: platform icon, video title, status (Posted / Failed), post date, and a "View →" link to the YouTube URL. All data is sourced from the local <code>postor_posts</code> database table, not from the YouTube API.</p>
+</div>
+
+<!-- ── 7. Privacy & Security ── -->
+<div class="section">
+  <h2>7. Privacy &amp; Security Practices</h2>
+
+  <table>
+    <thead>
+      <tr><th>Concern</th><th>Implementation</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CSRF Protection</td>
+        <td>OAuth <code>state</code> parameter generated with <code>crypto.randomBytes(16)</code>, validated server-side against the Express session before any token exchange is performed.</td>
+      </tr>
+      <tr>
+        <td>Client Secret Storage</td>
+        <td><code>GOOGLE_CLIENT_SECRET</code> stored only in server-side <code>.env</code> file. Never exposed to the browser or included in frontend code.</td>
+      </tr>
+      <tr>
+        <td>Token Storage</td>
+        <td>Access and refresh tokens stored in server-side SQLite database. Excluded from any browser response. Database file is excluded from version control via <code>.gitignore</code>.</td>
+      </tr>
+      <tr>
+        <td>Authentication Guard</td>
+        <td>All <code>/api/postor/*</code> endpoints are behind the application's session authentication guard. Unauthenticated requests receive HTTP 401. The application requires password login before any YouTube API functionality is accessible.</td>
+      </tr>
+      <tr>
+        <td>Minimum Scope</td>
+        <td>Only <code>youtube.upload</code> and <code>youtube.readonly</code> scopes are requested — the minimum required for the use case. No management, monetization, or analytics scopes are requested.</td>
+      </tr>
+      <tr>
+        <td>Data Isolation</td>
+        <td>No YouTube data is transmitted to external servers, third-party analytics, or logging services. All data remains within the local application environment.</td>
+      </tr>
+      <tr>
+        <td>Revocation</td>
+        <td>The creator can disconnect at any time via the UI, which deletes all stored tokens from the database. Tokens can also be revoked directly at <code>myaccount.google.com/permissions</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── 8. Technical Architecture ── -->
+<div class="section">
+  <h2>8. Technical Architecture Summary</h2>
+
+  <table>
+    <thead><tr><th>Component</th><th>Technology</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Server Runtime</td>
+        <td>Node.js 18+ / Express.js</td>
+        <td>Hosts the API, handles OAuth flow, makes YouTube API requests</td>
+      </tr>
+      <tr>
+        <td>Database</td>
+        <td>SQLite (better-sqlite3, WAL mode)</td>
+        <td>Stores OAuth tokens, connection metadata, post history</td>
+      </tr>
+      <tr>
+        <td>Frontend</td>
+        <td>Vanilla HTML/CSS/JS (no framework)</td>
+        <td>PostΩr UI — displays connection status, post composer, history</td>
+      </tr>
+      <tr>
+        <td>HTTP Client</td>
+        <td>Node.js 18 built-in <code>fetch</code></td>
+        <td>Makes all Google OAuth and YouTube Data API HTTP requests</td>
+      </tr>
+      <tr>
+        <td>Progress Delivery</td>
+        <td>Server-Sent Events (SSE)</td>
+        <td>Streams upload progress to browser in real time</td>
+      </tr>
+      <tr>
+        <td>Deployment</td>
+        <td>DigitalOcean (hosted) + Electron (local desktop)</td>
+        <td>Both deployments are single-creator, password-protected instances</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Key Source Files</h3>
+  <table>
+    <thead><tr><th>File</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>src/postor/youtube.js</code></td>
+        <td>YouTube OAuth flow (getAuthUrl, exchangeCode, refreshToken, getValidToken), channel info fetch, resumable video upload (uploadVideo)</td>
+      </tr>
+      <tr>
+        <td><code>src/routes/postor.js</code></td>
+        <td>Express route handlers: <code>GET /api/postor/auth/youtube</code>, <code>GET /api/postor/auth/youtube/callback</code>, <code>POST /api/postor/post</code>, <code>GET /api/postor/status/:job_id</code> (SSE), <code>DELETE /api/postor/connections/youtube</code></td>
+      </tr>
+      <tr>
+        <td><code>src/db.js</code></td>
+        <td>SQLite schema migrations for <code>platform_connections</code> and <code>postor_posts</code> tables; helper functions: <code>getPostorConnection</code>, <code>upsertPostorConnection</code>, <code>deletePostorConnection</code>, <code>createPostorPost</code>, <code>updatePostorPost</code></td>
+      </tr>
+      <tr>
+        <td><code>public/postor.html</code></td>
+        <td>PostΩr frontend: platform connection cards, post composer form, SSE progress display, post history table</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── 9. Compliance Statement ── -->
+<div class="section">
+  <h2>9. YouTube API Services Terms of Service — Compliance Statement</h2>
+  <p>Kre8Ωr's use of YouTube API Services complies with the <a href="https://developers.google.com/youtube/terms/api-services-terms-of-service">YouTube API Services Terms of Service</a> and the <a href="https://developers.google.com/youtube/terms/developer-policies">YouTube API Services Developer Policies</a> in the following respects:</p>
+  <ul>
+    <li><strong>Authorized use only:</strong> The YouTube API is used exclusively to upload the creator's own original video content to their own channel and to retrieve their own channel information. No third-party content is accessed or uploaded.</li>
+    <li><strong>No circumvention:</strong> The integration does not attempt to circumvent any YouTube functionality, quotas, or access controls. The standard resumable upload protocol is used as documented.</li>
+    <li><strong>Minimum data:</strong> Only the data necessary for the described functionality is accessed. No excess scopes are requested.</li>
+    <li><strong>No unauthorized storage:</strong> YouTube data (channel name, video ID) is stored only to the extent necessary for the creator to see which account is connected and to provide a post history reference. It is not aggregated, sold, or shared.</li>
+    <li><strong>User control:</strong> The creator can disconnect their YouTube account at any time, immediately revoking the application's access to stored tokens.</li>
+    <li><strong>Not used to violate policies:</strong> The upload functionality is used only to distribute the creator's own original content produced with the Kre8Ωr pipeline. The application does not automate uploads without creator intent — every upload requires the creator to manually initiate the post action.</li>
+  </ul>
+</div>
+
+<footer>
+  Kre8Ωr | 7 Kin Homestead | jason@7kinhomestead.com | kre8r.app<br/>
+  This document was prepared for YouTube API Services compliance review. April 2026.
+</footer>
+
+</body>
+</html>

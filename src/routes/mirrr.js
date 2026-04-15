@@ -207,6 +207,110 @@ Respond in exactly this JSON structure (no markdown, no commentary, just JSON):
   }
 });
 
+// ─── TikTok Pattern Analysis (SSE) ───────────────────────────────────────────
+// Reads all non-#onthisday TikTok posts, asks Claude to surface what actually
+// works in original content, and stores the result in kv_store for NorthΩr.
+
+router.post('/tiktok-patterns', async (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+  try {
+    const posts = db.getTikTokPostsForAnalysis();
+
+    if (posts.length < 2) {
+      send({ type: 'error', message: 'Not enough original TikTok content yet. Import a TikTok CSV first.' });
+      res.end();
+      return;
+    }
+
+    send({ type: 'status', message: `Analyzing ${posts.length} original TikTok video${posts.length !== 1 ? 's' : ''}…` });
+
+    const { creatorName, brand, followerSummary, voiceSummary } = getCreatorContext();
+
+    // Build a compact data block for Claude
+    const postLines = posts.map((p, i) => {
+      const caption = (p.content || '').slice(0, 180).replace(/\s+/g, ' ').trim();
+      const shares  = p.shares > 0 ? `, ${Number(p.shares).toLocaleString()} shares` : '';
+      return `${i + 1}. "${caption}" — ${Number(p.views).toLocaleString()} views, ${Number(p.likes).toLocaleString()} likes, ${Number(p.comments).toLocaleString()} comments${shares}`;
+    }).join('\n');
+
+    const totalViews = posts.reduce((s, p) => s + (p.views || 0), 0);
+    const avgViews   = Math.round(totalViews / posts.length);
+    const topVideo   = posts[0];
+
+    const prompt = `You are analyzing the TikTok content library of ${creatorName} at ${brand} — ${followerSummary}.
+
+This is ALL their ORIGINAL TikTok content (reposts/on-this-day content already excluded). You are looking at what actually gets traction in their original work.
+
+ORIGINAL TIKTOK CONTENT (${posts.length} videos, sorted by views):
+${postLines}
+
+Channel average: ${Number(avgViews).toLocaleString()} views per original video
+Best performer: "${(topVideo.content || '').slice(0, 100)}" with ${Number(topVideo.views).toLocaleString()} views
+
+Analyze what patterns make the high-performing videos work versus the lower-performers. Focus on:
+- Topic/angle patterns (what subjects resonate vs what doesn't)
+- Title/caption structure that drives clicks (emotional hook, question, controversy, identity)
+- Audience psychology (what feeling does the content trigger — aspiration, anger, curiosity, relief?)
+- What the data tells us about the TikTok audience specifically vs their YouTube audience
+
+Be specific. Reference actual video captions. Don't recommend generic creator tips.
+
+Return ONLY valid JSON — no markdown, no commentary:
+{
+  "video_count": ${posts.length},
+  "avg_views": ${avgViews},
+  "top_patterns": ["pattern with evidence from titles", "pattern 2", "pattern 3"],
+  "what_works": ["specific thing working with example title", "thing 2 with example"],
+  "what_doesnt": ["specific thing underperforming with evidence"],
+  "audience_psychology": "1-2 sentences on what emotional/identity trigger drives TikTok engagement for this creator specifically",
+  "content_direction": "2-3 sentences: given this data, what original TikTok content should this creator make going forward? Be specific about angle, not just topic.",
+  "analyzed_at": "${new Date().toISOString()}"
+}`;
+
+    const raw = await callClaude(prompt, 1500);
+
+    // callClaude already strips fences — try to parse as JSON
+    let patterns;
+    try {
+      patterns = typeof raw === 'object' ? raw : JSON.parse(raw);
+    } catch {
+      send({ type: 'error', message: 'Claude returned unexpected format. Try again.' });
+      res.end();
+      return;
+    }
+
+    // Persist to kv_store so NorthΩr can use it
+    try { db.setKv('tiktok_content_patterns', JSON.stringify(patterns)); } catch (_) {}
+
+    send({ type: 'patterns', data: patterns });
+    send({ type: 'done' });
+    res.end();
+
+  } catch (err) {
+    send({ type: 'error', message: err.message });
+    res.end();
+  }
+});
+
+// ─── TikTok Pattern Analysis — get stored result ─────────────────────────────
+router.get('/tiktok-patterns', (req, res) => {
+  try {
+    const stored = db.getKv('tiktok_content_patterns');
+    if (!stored) return res.json({ patterns: null });
+    let patterns = null;
+    try { patterns = JSON.parse(stored); } catch (_) {}
+    res.json({ patterns });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── YouTube Sync — background job runner ────────────────────────────────────
 // Runs detached from any HTTP connection. Writes progress to background_jobs table.
 // Client connects to /jobs/:id/stream to watch progress.

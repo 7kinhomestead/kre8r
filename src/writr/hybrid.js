@@ -18,7 +18,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE } = require('./claude');
+const { callClaude, REALITY_RULE, loadTikTokIntelligenceBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -222,6 +222,7 @@ function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, 
   const highConcept  = config?.high_concept    || '(not set)';
   const brand        = profile?.creator?.brand || '7 Kin Homestead';
   const seasonBlock  = buildSeasonBlock(seasonContext);
+  const tikTokBlock  = loadTikTokIntelligenceBlock();
 
   const transcriptSection = transcriptBlock
     ? `## FOOTAGE TRANSCRIPTS\n${transcriptBlock}`
@@ -233,7 +234,7 @@ ${REALITY_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}
-
+${tikTokBlock}
 ## PROJECT CONFIG
 Content type: ${contentType}
 Story structure: ${structure}
