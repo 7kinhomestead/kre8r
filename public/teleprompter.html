@@ -243,13 +243,13 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* Always-visible exit button */
 #tp-exit-btn {
   position: fixed; top: 12px; right: 14px; z-index: 50;
-  background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.45); font-size: 18px; line-height: 1;
-  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(0,0,0,0.72); border: 1px solid rgba(255,255,255,0.28);
+  color: rgba(255,255,255,0.85); font-size: 18px; line-height: 1;
+  width: 42px; height: 42px; border-radius: 50%;
   cursor: pointer; display: none; align-items: center; justify-content: center;
   transition: background 0.15s, color 0.15s;
 }
-#tp-exit-btn:hover { background: rgba(224,82,82,0.7); color: #fff; border-color: transparent; }
+#tp-exit-btn:hover { background: rgba(224,82,82,0.85); color: #fff; border-color: transparent; }
 #tp-display.active #tp-exit-btn { display: flex; }
 
 /* Scroll container */
@@ -1575,6 +1575,8 @@ function switchTab(tab) {
   document.getElementById('tp-solo-hint').style.display = isSolo ? '' : 'none';
   document.getElementById('tp-start-btn').textContent   = isSolo
     ? '🎬 Start Solo →' : 'Start Teleprompter →';
+  // Cloud Launch is for multi-device (laptop + phone). Hide it in Solo mode — one device, no phone needed.
+  document.getElementById('tp-field-qr-btn').style.display = isSolo ? 'none' : '';
   if (tab === 'paste') {
     document.getElementById('tp-start-btn').disabled = false;
     const pasteText = (document.getElementById('tp-paste-text').value || '').trim();

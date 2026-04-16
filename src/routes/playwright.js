@@ -123,7 +123,9 @@ router.get('/status', async (req, res) => {
 
 router.post('/connect', async (req, res) => {
   try {
-    const { chromium } = require('playwright');
+    let chromium;
+    try { ({ chromium } = require('playwright')); }
+    catch (_) { return res.status(503).json({ ok: false, error: 'Playwright not installed. Browser automation is a dev-only feature.' }); }
 
     // Close any existing connection cleanly
     if (browser) {

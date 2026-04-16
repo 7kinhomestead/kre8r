@@ -719,6 +719,9 @@ function renderAttentionZone() {
   const cards = [];
 
   _projects.forEach(p => {
+    // Skip completed/published projects — they don't need attention
+    if (p.status === 'published' || p.current_stage === 'COMPLETE') return;
+
     // No PipΩr setup
     if (!p.pipr_complete) {
       cards.push({

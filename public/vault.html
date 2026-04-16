@@ -1247,7 +1247,7 @@ function renderCard(f) {
     return `<span class="dist-dot${posted ? ' posted' : ''}" title="${p.full}${posted ? ' — posted' : ''}" onclick="toggleDistDot(event,${f.id},'${p.key}')">${p.short}</span>`;
   }).join('');
   const voiceBtnHtml = f.shot_type === 'completed-video'
-    ? `<button class="btn-voice-analyze" onclick="analyzeVoice(${f.id}, '${escAttr(f.original_filename)}', '${escAttr(f.file_path)}')" title="Analyze voice profile">🎤 Voice</button>`
+    ? `<button class="btn-voice-analyze" onclick="event.stopPropagation();analyzeVoice(${f.id}, '${escAttr(f.original_filename)}', '${escAttr(f.file_path)}')" title="Analyze voice profile">🎤 Voice</button>`
     : '';
   const dur = f.duration ? formatDuration(f.duration) : null;
   const isSelected = selectedIds.has(f.id);
@@ -2172,7 +2172,7 @@ async function analyzeVoice(footageId, filename, filePath) {
     body: JSON.stringify({ file_path: filePath, name: profileName, save: true })
   });
   const data = await res.json();
-  if (data.ok) {
+  if (data.job_id) {
     showToast(`Voice analysis started — job ${data.job_id}`, 'green');
   } else {
     showToast(data.error || 'Analysis failed', 'red');
