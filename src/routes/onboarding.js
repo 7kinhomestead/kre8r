@@ -66,7 +66,6 @@ router.post('/save', async (req, res) => {
       content_angles,
       voice_profile,
       community,
-      anthropic_api_key,
       mailerlite_api_key,
       password,
     } = req.body;
@@ -94,7 +93,6 @@ router.post('/save', async (req, res) => {
       content_angles:  content_angles || [],
       voice_profile:   voice_profile || '',
       community:       community || existing.community,
-      anthropic_api_key: anthropic_api_key || '',
       integrations: {
         ...(existing.integrations || {}),
         mailerlite_api_key: mailerlite_api_key || '',

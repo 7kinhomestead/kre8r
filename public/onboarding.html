@@ -574,7 +574,6 @@ const state = {
   mailerlite_key: '',
 
   // Step 6
-  anthropic_key: '',
   password: '',
 };
 
@@ -591,7 +590,7 @@ const state = {
   try {
     const res = await fetch(`/api/onboarding/verify?token=${encodeURIComponent(token)}`);
     const data = await res.json();
-    if (!res.ok || !data.valid) {
+    if (!res.ok || !data.ok) {
       throw new Error(data.error || 'Invalid or expired invite token.');
     }
     creatorName = data.display_name || '';
@@ -889,20 +888,14 @@ function setCommunity(val) {
   if (val) cf.classList.add('visible'); else cf.classList.remove('visible');
 }
 
-// ── STEP 6: API Key + Password ─────────────────────────────────────────
+// ── STEP 6: Password ───────────────────────────────────────────────────
 function renderStep6(content, nextBtn) {
   nextBtn.textContent = 'Complete Setup →';
   content.innerHTML = `
     <div id="step-err" class="step-error"></div>
     <div class="step-label">Step 6 of ${TOTAL_STEPS}</div>
     <div class="step-title">Almost <span>Done</span></div>
-    <p class="step-sub">Last two things — your Anthropic key (so Kre8Ωr can think) and a password for your account.</p>
-
-    <div class="field">
-      <label>Anthropic API Key <span style="color:var(--red)">*</span></label>
-      <input type="password" id="f-api-key" placeholder="sk-ant-…" value="${esc(state.anthropic_key)}" autocomplete="off" spellcheck="false">
-      <div class="field-hint">Get yours at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Never shared with anyone.</div>
-    </div>
+    <p class="step-sub">One last thing — set a password for your Kre8Ωr account.</p>
 
     <div class="field">
       <label>Password <span style="color:var(--red)">*</span></label>
@@ -911,6 +904,10 @@ function renderStep6(content, nextBtn) {
     <div class="field">
       <label>Confirm Password <span style="color:var(--red)">*</span></label>
       <input type="password" id="f-confirm-pw" placeholder="Same password again" autocomplete="new-password">
+    </div>
+
+    <div class="note-box">
+      <strong>AI is included.</strong> During the beta, Kre8Ωr's AI costs are covered — no API key needed from you.
     </div>
   `;
 }
@@ -940,10 +937,8 @@ function validateStep(step) {
     }
     case 5: return null;
     case 6: {
-      const key  = (document.getElementById('f-api-key')   || {}).value || '';
       const pw   = (document.getElementById('f-password')  || {}).value || '';
       const cpw  = (document.getElementById('f-confirm-pw')|| {}).value || '';
-      if (!key.trim())        return 'Anthropic API key is required.';
       if (pw.length < 8)      return 'Password must be at least 8 characters.';
       if (pw !== cpw)         return 'Passwords do not match.';
       return null;
@@ -987,8 +982,7 @@ function collectStep(step) {
       }));
       break;
     case 6:
-      state.anthropic_key = g('f-api-key');
-      state.password      = g('f-password');
+      state.password = g('f-password');
       break;
   }
 }
@@ -1018,7 +1012,6 @@ async function submitOnboarding() {
     community_name:   state.community_name,
     tiers:            state.tiers.filter(t => t.name),
     mailerlite_key:   state.mailerlite_key,
-    anthropic_key:    state.anthropic_key,
     password:         state.password,
   };
 
