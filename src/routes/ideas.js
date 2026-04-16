@@ -159,29 +159,29 @@ ${ideaSummaries}
 
 Your job:
 1. Assign each idea to a semantic cluster (3-7 clusters total). Clusters should reflect thematic content groups, not just angles. Name each cluster memorably (2-4 words max, e.g. "Off-Grid Wins", "System Escape", "Rock Rich DNA").
-2. Find meaningful connections between ideas — ideas that share a theme, tension, audience, or story thread.
+2. Find meaningful connections between ideas — max 2 connections per idea, only strong resonance (weight 0.6-1.0). Keep "reason" under 5 words.
 
-Return ONLY valid JSON:
+BE CONCISE. Short reasons. Only strong connections. Every idea must have a node entry.
+
+Return ONLY valid JSON (no commentary, no markdown):
 {
   "clusters": [
     { "id": "cluster-1", "name": "Cluster Name", "color": "#hex" }
   ],
   "nodes": [
-    { "idea_id": 123, "cluster_id": "cluster-1", "connections": [{"idea_id": 456, "weight": 0.8, "reason": "shared tension"}] }
+    { "idea_id": 123, "cluster_id": "cluster-1", "connections": [{"idea_id": 456, "weight": 0.8, "reason": "opt-out theme"}] }
   ]
 }
 
 Color palette for clusters (assign one per cluster):
-#3ecfb2 (teal), #f59e0b (amber), #e05252 (red), #4ade80 (green), #818cf8 (indigo), #fb923c (orange), #c084fc (purple)
-
-Keep connections meaningful — not everything is connected to everything. Weight 0.5-1.0 only for strong resonance.`;
+#3ecfb2 (teal), #f59e0b (amber), #e05252 (red), #4ade80 (green), #818cf8 (indigo), #fb923c (orange), #c084fc (purple)`;
 
     // Use callClaudeMessages to get raw text — Claude often adds color commentary
     // around the JSON for this kind of creative task. Extract JSON with regex.
     const rawText = await callClaudeMessages(
       'You are a data processor. Return only valid JSON, no commentary.',
       [{ role: 'user', content: prompt }],
-      8192
+      16000
     );
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return res.status(500).json({ error: 'Claude did not return a valid JSON object' });
@@ -251,18 +251,20 @@ ${newSummaries}
 
 For each new idea:
 1. Assign it to the best existing cluster — OR create a new cluster if it genuinely doesn't fit any existing one.
-2. Find meaningful connections to ANY idea (new or existing). Max 3 connections per new idea, weight 0.5-1.0.
+2. Find meaningful connections to ANY idea (new or existing). Max 2 connections per new idea, weight 0.6-1.0. Keep "reason" under 5 words.
+
+BE CONCISE. Every new idea must have a node entry.
 
 New cluster colors to use if needed (pick unused ones):
 #3ecfb2 (teal), #f59e0b (amber), #e05252 (red), #4ade80 (green), #818cf8 (indigo), #fb923c (orange), #c084fc (purple)
 
-Return ONLY valid JSON:
+Return ONLY valid JSON (no commentary, no markdown):
 {
   "newClusters": [
     { "id": "cluster-N", "name": "Cluster Name", "color": "#hex" }
   ],
   "newNodes": [
-    { "idea_id": 123, "cluster_id": "cluster-1", "connections": [{"idea_id": 456, "weight": 0.8, "reason": "shared tension"}] }
+    { "idea_id": 123, "cluster_id": "cluster-1", "connections": [{"idea_id": 456, "weight": 0.8, "reason": "opt-out theme"}] }
   ]
 }
 
@@ -271,7 +273,7 @@ newClusters is empty array if all new ideas fit existing clusters.`;
     const rawText = await callClaudeMessages(
       'You are a data processor. Return only valid JSON, no commentary.',
       [{ role: 'user', content: prompt }],
-      4096
+      8192
     );
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return res.status(500).json({ error: 'Claude did not return valid JSON' });
@@ -334,7 +336,7 @@ router.post('/:id/promote', (req, res) => {
       ideaId: id,
     };
 
-    db.updateProjectMeta(projectId, { id8r_data: JSON.stringify(id8rData) });
+    db.updateProjectId8r(projectId, id8rData);
 
     // Mark idea as in_development and link to project
     db.updateIdea(id, { status: 'in_development', project_id: projectId });

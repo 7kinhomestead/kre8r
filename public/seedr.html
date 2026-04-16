@@ -880,6 +880,15 @@ function initConstellation(data) {
     return;
   }
 
+  // Merge fresh status from allIdeas into constellation nodes — so promoted
+  // ideas show correctly (in_development / produced) without a full regenerate.
+  if (allIdeas && allIdeas.length) {
+    const freshMap = Object.fromEntries(allIdeas.map(i => [i.id, i.status]));
+    (data.nodes || []).forEach(n => {
+      if (freshMap[n.idea_id] !== undefined) n.status = freshMap[n.idea_id];
+    });
+  }
+
   // Tear down previous renderer
   if (_3dAnimId) { cancelAnimationFrame(_3dAnimId); _3dAnimId = null; }
   if (_3dRenderer) { _3dRenderer.dispose(); _3dRenderer = null; }
