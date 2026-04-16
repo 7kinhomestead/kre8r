@@ -17,6 +17,32 @@ const router  = express.Router();
 const db      = require('../db');
 const { checkAllThresholds, generateMonthlyStrategy, currentMonth, currentYear } = require('../utils/strategy-engine');
 
+const ML_BASE = 'https://connect.mailerlite.com/api';
+
+async function fetchMlCampaignStats(limit = 5) {
+  const apiKey = process.env.MAILERLITE_API_KEY;
+  if (!apiKey) return [];
+  try {
+    const { default: fetch } = await import('node-fetch');
+    const res  = await fetch(`${ML_BASE}/campaigns?limit=${limit}&sort=-created_at`, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.data || []).map(c => ({
+      id:         c.id,
+      subject:    c.emails?.[0]?.subject || c.name || '—',
+      status:     c.status,
+      sent_at:    c.sent_at,
+      open_rate:  c.stats?.open_rate  ?? null,
+      click_rate: c.stats?.click_rate ?? null,
+      total_sent: c.stats?.sent       ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ─── GET /alerts ───────────────────────────────────────────────────────────────
 router.get('/alerts', (req, res) => {
   try {
@@ -112,6 +138,7 @@ router.get('/dashboard', async (req, res) => {
     const stats         = db.getPublishingStats(30);
     const goals         = db.getGoal(currentMonth(), currentYear());
     const latest_report = db.getLatestReport(currentMonth(), currentYear());
+    const email_stats   = await fetchMlCampaignStats(5);
 
     let report_content = null;
     if (latest_report?.content) {
@@ -129,6 +156,7 @@ router.get('/dashboard', async (req, res) => {
       pipeline,
       stats,
       goals,
+      email_stats,
       report: report_content ? { ...latest_report, content: report_content } : null,
     });
   } catch (err) {

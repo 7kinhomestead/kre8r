@@ -1099,9 +1099,10 @@ async function sendViaMailerlite() {
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
 
     const successEl = document.getElementById('ml-success');
-    successEl.textContent = `Sent! Campaign ID: ${data.campaign_id}`;
+    const sendsAt = data.sends_at ? new Date(data.sends_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+    successEl.textContent = `Scheduled! Sends at ${sendsAt} — Campaign ID: ${data.campaign_id}`;
     successEl.classList.add('show');
-    showToast('Email sent via Mailerlite', 'green');
+    showToast('Email scheduled — sends in ~10 min', 'green');
   } catch(e) {
     showToast('Send failed: ' + e.message, 'red');
   } finally {
@@ -1331,9 +1332,10 @@ async function pmSend() {
     const j = await r.json();
     if (j.ok) {
       const suc = document.getElementById('pm-success');
-      suc.textContent = `Sent! Campaign ID: ${j.campaign_id}`;
+      const sendsAt = j.sends_at ? new Date(j.sends_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+      suc.textContent = `Scheduled! Sends at ${sendsAt} — Campaign ID: ${j.campaign_id}`;
       suc.classList.add('show');
-      showToast('Premiere email sent!', 'teal');
+      showToast('Premiere email scheduled — sends in ~10 min', 'teal');
     } else {
       showToast(j.error || 'Send failed', 'red');
     }

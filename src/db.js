@@ -3066,12 +3066,20 @@ function getPublishingStats(days = 30) {
     ? Math.floor((Date.now() - new Date(lastPost.last_publish).getTime()) / 86400000)
     : 999;
 
-  // Last email sent (use most recent approved email as proxy)
+  // Last email sent — approved email in project pipeline OR standalone MailerLite send
   const lastEmail = _get(
     `SELECT created_at FROM emails WHERE approved = 1 ORDER BY created_at DESC`
   );
-  const daysSinceLastEmail = lastEmail?.created_at
-    ? Math.floor((Date.now() - new Date(lastEmail.created_at).getTime()) / 86400000)
+  const lastMlSend = _get(
+    `SELECT value FROM kv_store WHERE key = 'last_mailerlite_send'`
+  );
+  const lastMlSendDate = lastMlSend?.value ? new Date(JSON.parse(lastMlSend.value)) : null;
+  const lastEmailDate  = lastEmail?.created_at ? new Date(lastEmail.created_at) : null;
+  const mostRecentEmail = lastMlSendDate && lastEmailDate
+    ? (lastMlSendDate > lastEmailDate ? lastMlSendDate : lastEmailDate)
+    : (lastMlSendDate || lastEmailDate);
+  const daysSinceLastEmail = mostRecentEmail
+    ? Math.floor((Date.now() - mostRecentEmail.getTime()) / 86400000)
     : 999;
 
   // Last MirrΩr sync timestamp (written by analytr sync route)

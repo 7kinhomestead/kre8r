@@ -15,6 +15,7 @@ const router  = express.Router();
 const fs      = require('fs');
 const path    = require('path');
 const log     = require('../utils/logger');
+const db      = require('../db');
 
 const ML_BASE = 'https://connect.mailerlite.com/api';
 
@@ -329,16 +330,28 @@ router.post('/send', async (req, res) => {
 
     log.info({ module: 'mailerlite', campaignId, subject }, 'Campaign created');
 
-    // 2. Send immediately — ML v2 uses /schedule with delivery:instant (no /actions/send endpoint)
+    // 2. Schedule 10 min out — gives MailerLite's review process time to clear
+    const sendAt = new Date(Date.now() + 10 * 60 * 1000);
+    const scheduleBody = {
+      delivery: 'scheduled',
+      schedule: {
+        date:    `${sendAt.getFullYear()}-${String(sendAt.getMonth() + 1).padStart(2, '0')}-${String(sendAt.getDate()).padStart(2, '0')}`,
+        hours:   String(sendAt.getHours()).padStart(2, '0'),
+        minutes: String(sendAt.getMinutes()).padStart(2, '0'),
+      },
+    };
     try {
-      await ml('POST', `/campaigns/${campaignId}/schedule`, { delivery: 'instant' });
+      await ml('POST', `/campaigns/${campaignId}/schedule`, scheduleBody);
     } catch (sendErr) {
-      throw new Error(`Campaign send failed (id=${campaignId}): ${sendErr.message}`);
+      throw new Error(`Campaign schedule failed (id=${campaignId}): ${sendErr.message}`);
     }
 
     log.info({ module: 'mailerlite', campaignId }, 'Campaign sent');
 
-    res.json({ ok: true, campaign_id: campaignId, status: 'sent' });
+    // Tell NorthΩr an email went out — updates days_since_last_email
+    try { db.setKv('last_mailerlite_send', new Date().toISOString()); } catch (_) {}
+
+    res.json({ ok: true, campaign_id: campaignId, status: 'scheduled', sends_at: sendAt.toISOString() });
   } catch (e) {
     log.error({ module: 'mailerlite', err: e }, 'send failed');
     res.status(500).json({ error: e.message });

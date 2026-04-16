@@ -898,6 +898,15 @@
     </div>
   </div>
 
+  <!-- ── SECTION 5b: Email Performance ── -->
+  <div class="section" id="email-perf-section" style="display:none">
+    <div class="section-head">
+      <div class="section-title">✉️ EMAIL PERFORMANCE</div>
+      <span style="font-size:12px;color:var(--text-dimmer)">Last 5 campaigns via MailerLite</span>
+    </div>
+    <div id="email-perf-list"></div>
+  </div>
+
   <!-- ── SECTION 6: Mark Published ── -->
   <div class="section">
     <div class="section-head">
@@ -971,6 +980,7 @@ async function loadDashboard() {
     renderAlerts(data.alerts || []);
     renderPipeline(data.pipeline);
     renderStats(data.stats);
+    renderEmailStats(data.email_stats || []);
     renderGoals(data.goals, data.stats);
     renderCalendar(data.stats);
 
@@ -1273,6 +1283,38 @@ function renderStats(stats) {
   if (typeof emailGap === 'number') {
     emailEl.className = 'pub-stat-value' + (emailGap >= 14 ? ' danger' : emailGap >= 10 ? ' warn' : '');
   }
+}
+
+// ── Email Performance ──────────────────────────────────────────────────────────
+function renderEmailStats(campaigns) {
+  const section = document.getElementById('email-perf-section');
+  const list    = document.getElementById('email-perf-list');
+  if (!campaigns.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const fmt = v => v == null ? '—' : (v * 100).toFixed(1) + '%';
+  const fmtDate = s => s ? new Date(s).toLocaleDateString([], {month:'short', day:'numeric'}) : '—';
+
+  list.innerHTML = campaigns.map(c => {
+    const openPct  = c.open_rate  != null ? Math.round(c.open_rate  * 100) : null;
+    const clickPct = c.click_rate != null ? Math.round(c.click_rate * 100) : null;
+    const openColor  = openPct  == null ? 'var(--text-dimmer)' : openPct  >= 30 ? 'var(--teal)' : openPct  >= 20 ? 'var(--text)' : 'var(--amber,#f59e0b)';
+    const clickColor = clickPct == null ? 'var(--text-dimmer)' : clickPct >= 3  ? 'var(--teal)' : 'var(--text-dim)';
+    return `<div style="display:flex;align-items:center;gap:16px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.subject}</div>
+        <div style="font-size:11px;color:var(--text-dimmer);margin-top:2px">${fmtDate(c.sent_at)} · ${c.total_sent != null ? c.total_sent.toLocaleString() + ' sent' : c.status}</div>
+      </div>
+      <div style="text-align:center;min-width:54px;">
+        <div style="font-size:18px;font-weight:700;color:${openColor}">${fmt(c.open_rate)}</div>
+        <div style="font-size:10px;color:var(--text-dimmer);letter-spacing:0.5px">OPEN</div>
+      </div>
+      <div style="text-align:center;min-width:54px;">
+        <div style="font-size:18px;font-weight:700;color:${clickColor}">${fmt(c.click_rate)}</div>
+        <div style="font-size:10px;color:var(--text-dimmer);letter-spacing:0.5px">CLICK</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Publish Calendar (91-day heatmap) ─────────────────────────────────────────
