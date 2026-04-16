@@ -827,9 +827,9 @@ The creator's voice: ${voiceTraits}
 Return ONLY valid JSON:
 {
   "titles": [
-    { "text": "Title 1", "angle": "Why this works" },
-    { "text": "Title 2", "angle": "Why this works" },
-    { "text": "Title 3", "angle": "Why this works" }
+    { "text": "Title 1", "angle": "Why this works (1 sentence max)" },
+    { "text": "Title 2", "angle": "Why this works (1 sentence max)" },
+    { "text": "Title 3", "angle": "Why this works (1 sentence max)" }
   ],
   "thumbnails": [
     { "concept": "Visual concept description", "text_overlay": "Short text for thumbnail", "emotion": "Curious/Shocked/Inspired" },
@@ -846,7 +846,7 @@ Return ONLY valid JSON:
         role: 'user',
         content: `Conversation:\n${conversationText}${chosenContext}\n\nResearch:\n${researchSummary}\n\nGenerate 3 titles, 3 thumbnails, 3 hooks.`,
       }],
-      1024,
+      2048,
       session_id
     );
 
