@@ -35,7 +35,6 @@ YouTube Analytics sync: 313 videos, 2504 metrics into MirrΩr. Two-pass approach
 Login/tour persistence fixed in Electron (30-day cookie + server-side KV for tour state).
 
 **Still needed:**
-- [ ] **MailerLite** — upgrade to $50/mo plan, fix verification, wire email metrics into NorthΩr (next session)
 - [ ] **YouTube ad revenue** — blocked by Google (Content Owner tier required, not standard YPP). Manual entry in NorthΩr from YouTube Studio CSV. Add manual revenue entry field to NorthΩr.
 - [ ] **Instagram credentials** — connect Meta OAuth in PostΩr (Facebook Page + Instagram Business account)
 - [ ] **Facebook posting** — same Meta OAuth flow, test video upload
@@ -46,23 +45,24 @@ Login/tour persistence fixed in Electron (30-day cookie + server-side KV for tou
 
 ---
 
-## ✅ Mailerlite Integration — DONE Sessions 33–34, 37
+## ✅ Email Pipeline — DONE Sessions 33–34, 37, 39
 
-Full email pipeline: AudiencΩr rebuilt, MailΩr send button live, Kajabi webhook receiver built.
-CSV import working (RFC 4180 parser, batch upload). 272 Greenhouse members confirmed imported.
-Kajabi webhook → Mailerlite group add confirmed working on DO server (Session 37).
-Group subscriber counts fixed (active_count not total). Welcome email templates armed.
+Full email pipeline end-to-end. Session 39 closed the loop:
+- MailΩr premiere email: dropdown fixed, generate + send working, 10-min schedule delay for ML review
+- Broadcast send: ML v2 API wired correctly (from field, schedule endpoint, all-subscribers mode)
+- Welcome emails: ML automations handle sending (3 tiers configured by Jason in ML dashboard)
+- No double emails: removed transactional send from webhook receiver — ML automation is sole sender
+- Morning bulk sync: runs on DO at 12:00 UTC (8 AM Eastern) — catches anyone webhook missed
+- NorthΩr: email performance section (last 5 campaigns, open/click rates, color-coded)
+- NorthΩr: publishing calendar wired to real publish dates
+- NorthΩr: Days Since Last Email pulls from ML sent campaign date
+- Test Fire: in-page preview modal (window.open blocked in Electron)
+- MailerLite on $50/mo plan. Sender config in .env (immune to Electron profile overwrites)
+- Deployed to DO ✅
 
 **Still needed:**
-- [ ] **NEXT SESSION: Upgrade MailerLite to $50/mo plan** — unlocks broadcast API, email open/click rates
-- [ ] **NEXT SESSION: Fix MailerLite account verification** — verification failed, needs sorting before API access works
-- [ ] **NEXT SESSION: Wire email open rates + click rates into NorthΩr** — email tracking currently shows 0 (MailerLite plan limitation)
-- [ ] **NEXT SESSION: Build welcome sequences in MailΩr** — Greenhouse / Garden / Founding 50 tier automations
-- [ ] **NEXT SESSION: Build broadcast workflow in MailΩr** — send button that hits MailerLite broadcast API directly
-- [ ] Webhook localhost detection — AudiencΩr webhook tab should show "use CSV import instead" when running on localhost
-- [ ] Cancel Kajabi API subscription ($25/mo — was only pulling 25 contacts, no broadcast endpoint)
-- [ ] Welcome emails — set up Mailerlite automations (trigger: subscriber joins group) for each tier
-- [ ] Test Fire in Welcome Emails tab — currently fails (Mailerlite transactional API not on plan), replace with HTML preview once on $50 plan
+- [ ] Cancel Kajabi API subscription ($25/mo — no broadcast endpoint, not worth keeping)
+- [ ] Investigate why Kajabi webhook isn't firing new members to DO in real-time (60 members joined, none appeared in ML via webhook)
 
 ## ✅ Cross-Device Sync — DONE Session 35
 
