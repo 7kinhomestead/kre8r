@@ -1714,7 +1714,10 @@
       document.getElementById('package-loading').classList.remove('visible');
       document.getElementById('package-content').style.display = 'block';
       document.getElementById('titles-list').innerHTML =
-        `<p style="color:var(--red);">Error: ${escHtml(e.message)}</p>`;
+        `<div style="padding:20px;text-align:center;">
+          <p style="color:var(--red);margin-bottom:16px;">Error: ${escHtml(e.message)}</p>
+          <button onclick="startPackage()" style="background:var(--teal);color:#0e0f0e;border:none;border-radius:6px;font-family:var(--font-body);font-size:13px;font-weight:700;padding:10px 24px;cursor:pointer;">↺ Retry Package →</button>
+        </div>`;
     }
   }
 
