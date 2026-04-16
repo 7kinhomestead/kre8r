@@ -148,7 +148,16 @@ router.post('/constellation', async (req, res) => {
     const allIdeas = db.getAllIdeas();
     if (!allIdeas.length) return res.json({ nodes: [], clusters: [] });
 
-    const ideaSummaries = allIdeas.map(i =>
+    // Filter to requested ideaIds if provided
+    const { ideaIds } = req.body;
+    let ideas = allIdeas;
+    if (ideaIds && Array.isArray(ideaIds) && ideaIds.length) {
+      const idSet = new Set(ideaIds.map(Number));
+      ideas = allIdeas.filter(i => idSet.has(i.id));
+    }
+    if (!ideas.length) return res.json({ nodes: [], clusters: [] });
+
+    const ideaSummaries = ideas.map(i =>
       `ID:${i.id} | "${i.title}" | angle:${i.angle || 'unknown'} | status:${i.status} | concept:${(i.concept || '').slice(0, 120)}`
     ).join('\n');
 
@@ -159,9 +168,7 @@ ${ideaSummaries}
 
 Your job:
 1. Assign each idea to a semantic cluster (3-7 clusters total). Clusters should reflect thematic content groups, not just angles. Name each cluster memorably (2-4 words max, e.g. "Off-Grid Wins", "System Escape", "Rock Rich DNA").
-2. Find meaningful connections between ideas — max 2 connections per idea, only strong resonance (weight 0.6-1.0). Keep "reason" under 5 words.
-
-BE CONCISE. Short reasons. Only strong connections. Every idea must have a node entry.
+2. Find meaningful connections between ideas — ideas that share a theme, tension, audience, or story thread.
 
 Return ONLY valid JSON (no commentary, no markdown):
 {
@@ -169,12 +176,14 @@ Return ONLY valid JSON (no commentary, no markdown):
     { "id": "cluster-1", "name": "Cluster Name", "color": "#hex" }
   ],
   "nodes": [
-    { "idea_id": 123, "cluster_id": "cluster-1", "connections": [{"idea_id": 456, "weight": 0.8, "reason": "opt-out theme"}] }
+    { "idea_id": 123, "cluster_id": "cluster-1", "connections": [{"idea_id": 456, "weight": 0.8, "reason": "shared tension"}] }
   ]
 }
 
 Color palette for clusters (assign one per cluster):
-#3ecfb2 (teal), #f59e0b (amber), #e05252 (red), #4ade80 (green), #818cf8 (indigo), #fb923c (orange), #c084fc (purple)`;
+#3ecfb2 (teal), #f59e0b (amber), #e05252 (red), #4ade80 (green), #818cf8 (indigo), #fb923c (orange), #c084fc (purple)
+
+Keep connections meaningful — not everything is connected to everything. Weight 0.5-1.0 only for strong resonance. Every idea must have a node entry.`;
 
     // Use callClaudeMessages to get raw text — Claude often adds color commentary
     // around the JSON for this kind of creative task. Extract JSON with regex.
@@ -190,7 +199,7 @@ Color palette for clusters (assign one per cluster):
     catch (e) { return res.status(500).json({ error: 'Could not parse Claude response as JSON: ' + e.message }); }
     if (!graph) return res.status(500).json({ error: 'Claude did not return a valid constellation graph' });
 
-    const ideaMap = Object.fromEntries(allIdeas.map(i => [i.id, i]));
+    const ideaMap = Object.fromEntries(ideas.map(i => [i.id, i]));
 
     // Enrich nodes with idea data
     graph.nodes = (graph.nodes || []).map(n => {
@@ -207,6 +216,7 @@ Color palette for clusters (assign one per cluster):
 
     // Save cluster + connections back to DB (connections already a string from JSON)
     for (const node of graph.nodes) {
+      if (!ideaMap[node.idea_id]) continue; // only save nodes that were in our ideas set
       const clusterObj = (graph.clusters || []).find(c => c.id === node.cluster_id);
       try {
         db.updateIdea(node.idea_id, {
@@ -228,7 +238,7 @@ router.post('/constellation/integrate', async (req, res) => {
     const { existingClusters = [], mappedIds = [] } = req.body;
     const mappedSet = new Set(mappedIds.map(Number));
     const allIdeas  = db.getAllIdeas();
-    const newIdeas  = allIdeas.filter(i => !mappedSet.has(i.id));
+    const newIdeas  = allIdeas.filter(i => !mappedSet.has(i.id)).slice(0, 20);
     if (!newIdeas.length) return res.json({ newClusters: [], newNodes: [] });
 
     const clusterList = existingClusters.map(c => `"${c.id}" = ${c.name}`).join(', ');
@@ -251,9 +261,9 @@ ${newSummaries}
 
 For each new idea:
 1. Assign it to the best existing cluster — OR create a new cluster if it genuinely doesn't fit any existing one.
-2. Find meaningful connections to ANY idea (new or existing). Max 2 connections per new idea, weight 0.6-1.0. Keep "reason" under 5 words.
+2. Find meaningful connections to ANY idea (new or existing) — ideas that share a theme, tension, audience, or story thread. Weight 0.5-1.0 only for strong resonance.
 
-BE CONCISE. Every new idea must have a node entry.
+Every new idea must have a node entry. Only include idea_id values from the "New ideas to place" list above in newNodes.
 
 New cluster colors to use if needed (pick unused ones):
 #3ecfb2 (teal), #f59e0b (amber), #e05252 (red), #4ade80 (green), #818cf8 (indigo), #fb923c (orange), #c084fc (purple)
@@ -264,7 +274,7 @@ Return ONLY valid JSON (no commentary, no markdown):
     { "id": "cluster-N", "name": "Cluster Name", "color": "#hex" }
   ],
   "newNodes": [
-    { "idea_id": 123, "cluster_id": "cluster-1", "connections": [{"idea_id": 456, "weight": 0.8, "reason": "opt-out theme"}] }
+    { "idea_id": 123, "cluster_id": "cluster-1", "connections": [{"idea_id": 456, "weight": 0.8, "reason": "shared tension"}] }
   ]
 }
 
@@ -280,6 +290,10 @@ newClusters is empty array if all new ideas fit existing clusters.`;
     let result;
     try { result = JSON.parse(jsonMatch[0]); }
     catch (e) { return res.status(500).json({ error: 'Could not parse Claude response: ' + e.message }); }
+
+    // Filter newNodes to only include IDs from newIdeas (prevents doubling bug)
+    const newIdeaIds = new Set(newIdeas.map(i => i.id));
+    result.newNodes = (result.newNodes || []).filter(n => newIdeaIds.has(n.idea_id));
 
     // Save cluster + connections to DB for new nodes
     for (const node of (result.newNodes || [])) {
@@ -300,6 +314,19 @@ newClusters is empty array if all new ideas fit existing clusters.`;
     });
 
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/ideas/constellation/reset — clears cluster/connections from all ideas
+router.post('/constellation/reset', (req, res) => {
+  try {
+    const allIdeas = db.getAllIdeas();
+    for (const idea of allIdeas) {
+      db.updateIdea(idea.id, { cluster: null, connections: '[]' });
+    }
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

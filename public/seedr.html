@@ -233,7 +233,7 @@ select.field-input option{background:var(--bg-card);}
     <input type="text" class="toolbar-search" id="searchInput" placeholder="Search ideas…" oninput="renderList()">
     <div class="toolbar-spacer"></div>
     <button class="btn btn-ghost btn-sm" onclick="openBulkModal()">📥 Bulk Import</button>
-    <button class="btn btn-outline btn-sm" id="btnGenerateConstellation" onclick="generateConstellation()">🌌 Generate Constellation</button>
+    <button class="btn btn-outline btn-sm" id="btnGenerateConstellation" onclick="startConstellation()">🌌 Generate Constellation</button>
   </div>
 
   <!-- ─── LIST VIEW ─────────────────────────────────── -->
@@ -247,21 +247,42 @@ select.field-input option{background:var(--bg-card);}
     <div class="constellation-wrap" id="constellationWrap">
       <canvas id="constellationCanvas"></canvas>
       <button class="btn btn-ghost btn-sm constellation-back" onclick="switchView('list')">← Back to List</button>
-      <button class="btn btn-outline btn-sm constellation-generate" id="btnRegenerate" onclick="generateConstellation()">🌌 Regenerate</button>
+      <div class="constellation-controls" id="constellationControls" style="position:absolute;top:16px;right:16px;z-index:10;display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="btnResetMap" onclick="resetConstellation()" style="display:none">🔄 Reset Map</button>
+        <button class="btn btn-outline btn-sm" id="btnAddMore" onclick="integrateNewIdeas()" style="display:none">➕ Add 20 More</button>
+        <button class="btn btn-outline btn-sm" id="btnStartConstellation" onclick="startConstellation()">🌌 Generate Constellation</button>
+      </div>
       <div class="constellation-tooltip" id="constellationTooltip"></div>
-      <div id="constellationNewIdeas" style="display:none;position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;font-size:12px;padding:7px 14px;border-radius:20px;z-index:10;white-space:nowrap;cursor:pointer;" onclick="integrateNewIdeas()"></div>
       <div class="constellation-loading hidden" id="constellationLoading">
         <div class="spinner"></div>
         <p>Claude is mapping your idea universe…</p>
       </div>
       <div class="constellation-empty hidden" id="constellationEmpty">
-        <p>Generate a constellation first to see your ideas in 3D space.</p>
-        <button class="btn btn-outline btn-sm" onclick="generateConstellation()">🌌 Generate Constellation</button>
+        <p>Map your idea universe — up to 20 ideas at a time.</p>
+        <button class="btn btn-outline btn-sm" onclick="startConstellation()">🌌 Generate Constellation</button>
       </div>
     </div>
   </div>
 
 </div><!-- .main -->
+
+<!-- ─── SEED SELECTOR MODAL ───────────────────────── -->
+<div id="seedSelectorModal" style="display:none">
+  <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;">
+    <div style="background:#161916;border:1px solid #2a2e28;border-radius:10px;padding:24px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:#e8ebe6">Choose Your Seed Ideas <span style="color:#3ecfb2">20 max</span></div>
+      <div style="font-size:13px;color:#8a9487">You have more than 20 ideas. Pick which 20 to build your first constellation from. You can add more later.</div>
+      <div id="seedSelectorList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;min-height:200px;max-height:400px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;">
+        <span id="seedCount" style="font-size:13px;color:#8a9487">0 / 20 selected</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="closeSeedSelector()">Cancel</button>
+          <button class="btn btn-outline btn-sm" id="btnSeedGenerate" onclick="generateFromSeed()" disabled>🌌 Map Selected</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ─── DETAIL PANEL ──────────────────────────────── -->
 <div class="detail-panel" id="detailPanel">
@@ -410,6 +431,7 @@ async function init() {
       constellationData = JSON.parse(saved);
     }
   } catch(_) {}
+  updateConstellationButtons();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -691,6 +713,10 @@ async function parseIdeas() {
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || `Server error ${res.status}`); }
     const data = await res.json();
     parsedBulkIdeas = data.ideas || [];
+    if (parsedBulkIdeas.length > 20) {
+      parsedBulkIdeas = parsedBulkIdeas.slice(0, 20);
+      showToast('Trimmed to 20 ideas — import in batches of 20', 'info');
+    }
     renderBulkPreview();
     // Collapse textarea and scroll preview into view
     document.getElementById('bulkText').style.display = 'none';
@@ -770,21 +796,11 @@ function switchView(view) {
   if (view === 'constellation') {
     if (constellationData) {
       initConstellation(constellationData);
-      // Check for ideas added since last constellation
-      const mappedIds = new Set((constellationData.nodes || []).map(n => n.idea_id));
-      const unplaced = allIdeas.filter(i => !mappedIds.has(i.id));
-      const notice = document.getElementById('constellationNewIdeas');
-      if (unplaced.length > 0) {
-        notice.textContent = `⚡ ${unplaced.length} new idea${unplaced.length > 1 ? 's' : ''} not yet mapped — Regenerate to include them`;
-        notice.style.display = 'block';
-      } else {
-        notice.style.display = 'none';
-      }
     } else {
-      // Show empty state until generated
       document.getElementById('constellationLoading').classList.add('hidden');
       document.getElementById('constellationEmpty').classList.remove('hidden');
     }
+    updateConstellationButtons();
   } else {
     // Stop animation loop when switching away
     if (_3dAnimId) {
@@ -795,26 +811,144 @@ function switchView(view) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// CONSTELLATION STATE MACHINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function startConstellation() {
+  if (constellationData) return; // locked — use Add More or Reset
+  if (allIdeas.length <= 20) {
+    generateConstellation(null);
+  } else {
+    openSeedSelector();
+  }
+}
+
+let _selectedSeedIds = new Set();
+
+function openSeedSelector() {
+  _selectedSeedIds = new Set();
+  const modal = document.getElementById('seedSelectorModal');
+  const list  = document.getElementById('seedSelectorList');
+
+  list.innerHTML = allIdeas.map(idea => `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#111311;border:1px solid #2a2e28;border-radius:6px;cursor:pointer;user-select:none;">
+      <input type="checkbox" data-id="${idea.id}" onchange="toggleSeedIdea(${idea.id}, this.checked)"
+        style="accent-color:#3ecfb2;width:14px;height:14px;flex-shrink:0;">
+      <span style="font-size:13px;color:#e8ebe6;flex:1">${escHtml(idea.title)}</span>
+      <span style="font-size:11px;color:#8a9487;white-space:nowrap">${idea.angle || ''}</span>
+    </label>
+  `).join('');
+
+  modal.style.display = 'block';
+  updateSeedCount();
+}
+
+function closeSeedSelector() {
+  document.getElementById('seedSelectorModal').style.display = 'none';
+}
+
+function toggleSeedIdea(id, checked) {
+  if (checked) {
+    if (_selectedSeedIds.size >= 20) {
+      const cb = document.querySelector(`input[data-id="${id}"]`);
+      if (cb) cb.checked = false;
+      showToast('Maximum 20 ideas per constellation', 'error');
+      return;
+    }
+    _selectedSeedIds.add(id);
+  } else {
+    _selectedSeedIds.delete(id);
+  }
+  updateSeedCount();
+}
+
+function updateSeedCount() {
+  const n = _selectedSeedIds.size;
+  document.getElementById('seedCount').textContent = `${n} / 20 selected`;
+  document.getElementById('btnSeedGenerate').disabled = n === 0;
+}
+
+function generateFromSeed() {
+  closeSeedSelector();
+  generateConstellation([..._selectedSeedIds]);
+}
+
+function updateConstellationButtons() {
+  const hasMap = !!constellationData;
+
+  // Toolbar generate button
+  const btnGen = document.getElementById('btnGenerateConstellation');
+  if (btnGen) {
+    btnGen.disabled = hasMap;
+    btnGen.title = hasMap ? 'Reset the constellation first to regenerate' : '';
+    btnGen.style.opacity = hasMap ? '0.4' : '';
+    btnGen.style.cursor = hasMap ? 'not-allowed' : '';
+  }
+
+  // Overlay buttons
+  const btnReset = document.getElementById('btnResetMap');
+  const btnAdd   = document.getElementById('btnAddMore');
+  const btnStart = document.getElementById('btnStartConstellation');
+
+  if (!btnReset || !btnAdd || !btnStart) return;
+
+  if (hasMap) {
+    btnReset.style.display = 'inline-flex';
+    btnStart.style.display = 'none';
+
+    // Check for unplaced ideas
+    const mappedIds = new Set((constellationData.nodes || []).map(n => n.idea_id));
+    const unplaced  = allIdeas.filter(i => !mappedIds.has(i.id));
+    if (unplaced.length > 0) {
+      btnAdd.style.display = 'inline-flex';
+      btnAdd.textContent   = `➕ Add ${Math.min(unplaced.length, 20)} More`;
+      btnAdd.title         = `${unplaced.length} idea${unplaced.length > 1 ? 's' : ''} not yet mapped`;
+    } else {
+      btnAdd.style.display = 'none';
+    }
+  } else {
+    btnReset.style.display = 'none';
+    btnAdd.style.display   = 'none';
+    btnStart.style.display = 'inline-flex';
+  }
+}
+
+function resetConstellation() {
+  if (!confirm('Reset the constellation? This clears the map but keeps all your ideas.')) return;
+  constellationData = null;
+  try { localStorage.removeItem('seedr_constellation'); } catch(_) {}
+  fetch('/api/ideas/constellation/reset', { method: 'POST' }).catch(() => {});
+  switchView('list');
+  updateConstellationButtons();
+  showToast('Constellation reset — ready to remap', 'info');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // GENERATE CONSTELLATION
 // ═══════════════════════════════════════════════════════════════════════════════
-async function generateConstellation() {
+async function generateConstellation(ideaIds = null) {
   constellationData = null;
   switchView('constellation');
+  updateConstellationButtons();
 
   document.getElementById('constellationEmpty').classList.add('hidden');
   document.getElementById('constellationLoading').classList.remove('hidden');
 
-  const btn = document.getElementById('btnGenerateConstellation');
-  const btn2 = document.getElementById('btnRegenerate');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Generating…';
-  btn2.disabled = true;
+  const btnGen   = document.getElementById('btnGenerateConstellation');
+  const btnStart = document.getElementById('btnStartConstellation');
+  if (btnGen)   { btnGen.disabled = true;   btnGen.innerHTML = '<span class="spinner"></span> Mapping…'; }
+  if (btnStart) { btnStart.disabled = true; }
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90000);
-    const res = await fetch('/api/ideas/constellation', { method: 'POST', signal: controller.signal })
-      .finally(() => clearTimeout(timeout));
+    const body = ideaIds ? { ideaIds } : {};
+    const res = await fetch('/api/ideas/constellation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeout));
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || `Server error ${res.status}`);
@@ -824,15 +958,16 @@ async function generateConstellation() {
     try { localStorage.setItem('seedr_constellation', JSON.stringify(data)); } catch(_) {}
     document.getElementById('constellationLoading').classList.add('hidden');
     initConstellation(data);
-    showToast('Constellation generated', 'success');
+    updateConstellationButtons();
+    showToast('Constellation mapped', 'success');
   } catch (err) {
     document.getElementById('constellationLoading').classList.add('hidden');
     document.getElementById('constellationEmpty').classList.remove('hidden');
     showToast('Constellation failed: ' + err.message, 'error');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '🌌 Generate Constellation';
-    btn2.disabled = false;
+    if (btnGen)   { btnGen.disabled = false;   btnGen.innerHTML = '🌌 Generate Constellation'; }
+    if (btnStart) { btnStart.disabled = false; }
+    updateConstellationButtons();
   }
 }
 
@@ -840,10 +975,10 @@ async function generateConstellation() {
 // INTEGRATE NEW IDEAS INTO EXISTING CONSTELLATION
 // ═══════════════════════════════════════════════════════════════════════════════
 async function integrateNewIdeas() {
-  if (!constellationData) { generateConstellation(); return; }
+  if (!constellationData) { startConstellation(); return; }
 
-  const notice = document.getElementById('constellationNewIdeas');
-  notice.textContent = '⏳ Integrating new ideas…';
+  const btnAdd = document.getElementById('btnAddMore');
+  if (btnAdd) { btnAdd.disabled = true; btnAdd.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;margin-right:4px"></span> Mapping…'; }
 
   const mappedIds = (constellationData.nodes || []).map(n => n.idea_id);
 
@@ -856,18 +991,17 @@ async function integrateNewIdeas() {
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || `Server error ${res.status}`); }
     const { newClusters, newNodes } = await res.json();
 
-    // Merge into existing constellation data
     constellationData.clusters = [...(constellationData.clusters || []), ...(newClusters || [])];
     constellationData.nodes    = [...(constellationData.nodes    || []), ...(newNodes    || [])];
-
     try { localStorage.setItem('seedr_constellation', JSON.stringify(constellationData)); } catch(_) {}
 
-    notice.style.display = 'none';
     initConstellation(constellationData);
-    showToast(`Integrated ${newNodes.length} new idea${newNodes.length !== 1 ? 's' : ''}`, 'success');
+    updateConstellationButtons();
+    showToast(`Added ${newNodes.length} idea${newNodes.length !== 1 ? 's' : ''} to the map`, 'success');
   } catch (err) {
-    notice.textContent = `⚡ Integration failed — click to retry`;
     showToast('Integration failed: ' + err.message, 'error');
+  } finally {
+    if (btnAdd) { btnAdd.disabled = false; updateConstellationButtons(); }
   }
 }
 
@@ -1267,6 +1401,7 @@ document.addEventListener('keydown', function(e) {
     closeEditModal();
     closeBulkModal();
     closeDetailPanel();
+    closeSeedSelector();
   }
 });
 
