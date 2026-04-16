@@ -1170,7 +1170,35 @@ router.post('/:project_id/beat/write', async (req, res) => {
     if (!sbBeat) { write({ stage: 'error', error: `Beat ${beatIndex} not found` }); return end(); }
     const voiceProfiles = buildVoiceProfiles(voice_primary, voice_secondary, voice_blend);
     // Pull full project context (brief, research, talking points) — this is the wall material
-    const projectContext = buildWritrPromptContext(projectId) || '';
+    let projectContext = buildWritrPromptContext(projectId) || '';
+    // Fallback: if project-context.json doesn't exist yet, build from raw id8r_data
+    if (!projectContext && project.id8r_data) {
+      try {
+        const d = typeof project.id8r_data === 'string' ? JSON.parse(project.id8r_data) : project.id8r_data;
+        const brief = d.briefData || {};
+        const pb    = brief.pipeline_brief || {};
+        const pkg   = d.packageData || {};
+        const lines = ['## CONTENT INTELLIGENCE FROM ID8ΩR RESEARCH'];
+        if (d.chosenConcept?.headline)  lines.push(`Chosen Concept: ${d.chosenConcept.headline}`);
+        if (d.chosenConcept?.why)       lines.push(`Why this angle: ${d.chosenConcept.why}`);
+        if (d.chosenConcept?.hook)      lines.push(`Opening hook: ${d.chosenConcept.hook}`);
+        if (brief.elevator_pitch)       lines.push(`Elevator pitch: ${brief.elevator_pitch}`);
+        if (brief.audience_insight)     lines.push(`Audience insight: ${brief.audience_insight}`);
+        if (brief.story_angle)          lines.push(`Story angle: ${brief.story_angle}`);
+        if (pb.high_concept)            lines.push(`High concept: ${pb.high_concept}`);
+        if (pb.concept_note)            lines.push(`Concept note: ${pb.concept_note}`);
+        if (d.researchSummary)          lines.push(`Research findings: ${d.researchSummary.slice(0, 800)}`);
+        if (Array.isArray(brief.talking_points) && brief.talking_points.length)
+          lines.push(`Talking points:\n${brief.talking_points.map(p => `- ${p}`).join('\n')}`);
+        if (Array.isArray(brief.what_not_to_do) && brief.what_not_to_do.length)
+          lines.push(`What NOT to do:\n${brief.what_not_to_do.map(p => `- ${p}`).join('\n')}`);
+        if (Array.isArray(pkg.titles) && pkg.titles.length)
+          lines.push(`Title options:\n${pkg.titles.map((t,i) => `${i+1}. ${t.text||t}`).join('\n')}`);
+        if (Array.isArray(pkg.hooks) && pkg.hooks.length)
+          lines.push(`Hook options:\n${pkg.hooks.map((h,i) => `${i+1}. ${h.text||h}`).join('\n')}`);
+        projectContext = lines.join('\n');
+      } catch (_) {}
+    }
     // Build voice block from profile or creator profile fallback
     let voiceBlock = '';
     if (voiceProfiles.length) {
