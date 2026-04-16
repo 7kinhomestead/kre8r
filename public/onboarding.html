@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to Kre8Ωr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f0e;
+    --bg-card: #161916;
+    --bg-card-2: #1c1f1b;
+    --bg-deep: #111311;
+    --border: #2a2e28;
+    --border-bright: #3d4439;
+    --text: #e8ebe6;
+    --text-dim: #8a9487;
+    --text-dimmer: #4e5349;
+    --teal: #3ecfb2;
+    --teal-dark: #2aaa90;
+    --teal-glow: rgba(62,207,178,0.10);
+    --red: #e05252;
+    --red-glow: rgba(224,82,82,0.12);
+    --amber: #f59e0b;
+    --amber-glow: rgba(245,158,11,0.12);
+    --green: #4ade80;
+    --green-glow: rgba(74,222,128,0.10);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --font-head: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px 80px;
+  }
+
+  /* ── Wrapper ── */
+  .wizard-wrap {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  /* ── Logo ── */
+  .wizard-logo {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .wizard-logo-text {
+    font-family: var(--font-head);
+    font-size: 36px;
+    letter-spacing: 4px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .wizard-logo-text span { color: var(--teal); }
+
+  /* ── Error screen ── */
+  #error-screen {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--red);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    text-align: center;
+  }
+  #error-screen h2 {
+    font-family: var(--font-head);
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--red);
+    margin-bottom: 12px;
+  }
+  #error-screen p { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+
+  /* ── Loading screen ── */
+  #loading-screen {
+    text-align: center;
+    padding: 60px 24px;
+  }
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border-bright);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-screen p { font-size: 14px; color: var(--text-dim); }
+
+  /* ── Wizard card ── */
+  #wizard-card {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  /* ── Step indicator ── */
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 24px 0;
+  }
+  .step-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border-bright);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .step-dot.active {
+    background: var(--teal);
+    box-shadow: 0 0 8px rgba(62,207,178,0.4);
+    width: 12px;
+    height: 12px;
+  }
+  .step-dot.done {
+    background: var(--teal-dark);
+    opacity: 0.5;
+  }
+  .step-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 48px;
+  }
+
+  /* ── Step content ── */
+  .step-content {
+    padding: 28px 28px 24px;
+  }
+  .step-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    margin-bottom: 8px;
+  }
+  .step-title {
+    font-family: var(--font-head);
+    font-size: 32px;
+    letter-spacing: 2px;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .step-title span { color: var(--teal); }
+  .step-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  /* ── Form elements ── */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .field label .opt {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11px;
+  }
+  .field input,
+  .field textarea,
+  .field select {
+    width: 100%;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    resize: vertical;
+  }
+  .field input:focus,
+  .field textarea:focus,
+  .field select:focus { border-color: var(--teal); }
+  .field input::placeholder,
+  .field textarea::placeholder { color: var(--text-dimmer); }
+  .field input[type="password"] { letter-spacing: 0.5px; }
+  .field-hint {
+    font-size: 12px;
+    color: var(--text-dimmer);
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  .field-hint a { color: var(--teal); text-decoration: none; }
+  .field-hint a:hover { text-decoration: underline; }
+
+  .field-error {
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 4px;
+    display: none;
+  }
+  .field-error.visible { display: block; }
+
+  /* Platform handles grid */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* ── Checkbox angles ── */
+  .angles-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .angle-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .angle-checkbox:hover { border-color: var(--teal); }
+  .angle-checkbox input[type="checkbox"] { display: none; }
+  .angle-checkbox .check-box {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-bright);
+    border-radius: 3px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .angle-checkbox input:checked + .check-box {
+    background: var(--teal);
+    border-color: var(--teal);
+  }
+  .angle-checkbox input:checked + .check-box::after {
+    content: '';
+    display: block;
+    width: 4px;
+    height: 8px;
+    border: 2px solid #0e0f0e;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg) translateY(-1px);
+  }
+  .angle-label { font-size: 13px; color: var(--text-dim); }
+  .angle-checkbox:has(input:checked) { border-color: var(--teal); background: var(--teal-glow); }
+  .angle-checkbox:has(input:checked) .angle-label { color: var(--text); }
+
+  /* Custom angle add */
+  .custom-angle-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .custom-angle-row input { flex: 1; }
+  .btn-add-angle {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 14px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    background: var(--bg-deep);
+    color: var(--teal);
+    border: 1px solid rgba(62,207,178,0.3);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-add-angle:hover { background: var(--teal-glow); }
+
+  /* Tags */
+  .tags-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 24px;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--teal-glow);
+    border: 1px solid rgba(62,207,178,0.3);
+    border-radius: 20px;
+    padding: 3px 10px 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--teal);
+  }
+  .tag-remove {
+    cursor: pointer;
+    opacity: 0.7;
+    font-size: 14px;
+    line-height: 1;
+    transition: opacity 0.15s;
+    border: none;
+    background: none;
+    color: var(--teal);
+    padding: 0;
+  }
+  .tag-remove:hover { opacity: 1; }
+
+  /* ── Voice textarea ── */
+  .voice-area { min-height: 130px; }
+
+  /* ── Note box ── */
+  .note-box {
+    background: var(--teal-glow);
+    border: 1px solid rgba(62,207,178,0.2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-top: 14px;
+  }
+  .note-box strong { color: var(--teal); }
+
+  /* ── Yes/No toggle ── */
+  .toggle-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .toggle-btn {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-bright);
+    cursor: pointer;
+    background: var(--bg-deep);
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+  .toggle-btn.selected {
+    background: var(--teal-glow);
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+
+  /* Community section (conditional) */
+  #community-fields { display: none; }
+  #community-fields.visible { display: block; }
+
+  /* Tiers */
+  .tier-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .tier-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+  .tier-row input { background: var(--bg-deep); border: 1px solid var(--border-bright); border-radius: var(--radius-sm); padding: 8px 10px; font-family: var(--font-body); font-size: 13px; color: var(--text); outline: none; transition: border-color 0.15s; }
+  .tier-row input:focus { border-color: var(--teal); }
+  .tier-row input::placeholder { color: var(--text-dimmer); }
+  .tier-name { flex: 1; }
+  .tier-price { width: 90px; }
+
+  /* ── Navigation buttons ── */
+  .wizard-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-deep);
+  }
+  .btn-back {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-bright);
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+  .btn-back:hover { background: var(--bg-card-2); color: var(--text); }
+  .btn-back:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .btn-next {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 22px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    background: var(--teal);
+    color: #0e0f0e;
+    transition: background 0.15s;
+  }
+  .btn-next:hover { background: var(--teal-dark); }
+  .btn-next:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-next.full-width { width: 100%; justify-content: center; }
+
+  /* ── Step error (top of content) ── */
+  .step-error {
+    background: var(--red-glow);
+    border: 1px solid rgba(224,82,82,0.3);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--red);
+    margin-bottom: 16px;
+    display: none;
+  }
+  .step-error.visible { display: block; }
+
+  /* ── Success screen ── */
+  #success-screen {
+    display: none;
+    text-align: center;
+    padding: 52px 28px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  #success-screen .success-icon { font-size: 48px; margin-bottom: 16px; }
+  #success-screen h2 {
+    font-family: var(--font-head);
+    font-size: 32px;
+    letter-spacing: 2px;
+    color: var(--teal);
+    margin-bottom: 10px;
+  }
+  #success-screen p { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+  #success-screen .mini-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-bright);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    margin-top: 16px;
+  }
+
+  /* ── Submit spinner ── */
+  .submit-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(14,15,14,0.4);
+    border-top-color: #0e0f0e;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wizard-wrap">
+
+  <div class="wizard-logo">
+    <div class="wizard-logo-text">KRE8<span>Ω</span>R</div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <p>Verifying your invite...</p>
+  </div>
+
+  <!-- Error -->
+  <div id="error-screen">
+    <h2>Invalid Invite</h2>
+    <p id="error-message">This invite link is invalid or has expired. Please contact the person who invited you.</p>
+  </div>
+
+  <!-- Wizard -->
+  <div id="wizard-card">
+
+    <!-- Step indicator -->
+    <div class="step-indicator" id="step-indicator"></div>
+
+    <!-- Step content area -->
+    <div class="step-content" id="step-content">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Navigation -->
+    <div class="wizard-nav" id="wizard-nav">
+      <button class="btn-back" id="btn-back" onclick="goBack()">← Back</button>
+      <button class="btn-next" id="btn-next" onclick="goNext()">Next →</button>
+    </div>
+
+  </div>
+
+  <!-- Success -->
+  <div id="success-screen">
+    <div class="success-icon">🌱</div>
+    <h2>You're All Set!</h2>
+    <p>Loading your Kre8Ωr...</p>
+    <div class="mini-spinner"></div>
+  </div>
+
+</div><!-- /wizard-wrap -->
+
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────────
+let token = '';
+let creatorName = '';
+let currentStep = 1;
+const TOTAL_STEPS = 6;
+
+const state = {
+  // Step 2
+  your_name: '',
+  brand_name: '',
+  email: '',
+  platforms: { tiktok: '', youtube: '', instagram: '', lemon8: '' },
+
+  // Step 3
+  content_angles: [],
+  custom_angles: [],
+
+  // Step 4
+  voice_description: '',
+
+  // Step 5
+  has_community: false,
+  community_platform: '',
+  community_name: '',
+  tiers: [
+    { name: '', price: '' },
+    { name: '', price: '' },
+    { name: '', price: '' }
+  ],
+  mailerlite_key: '',
+
+  // Step 6
+  anthropic_key: '',
+  password: '',
+};
+
+// ── Init ───────────────────────────────────────────────────────────────
+(async function init() {
+  const params = new URLSearchParams(window.location.search);
+  token = params.get('token') || '';
+
+  if (!token) {
+    showError('No invite token found in the URL. Please use the full invite link.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/onboarding/verify?token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if (!res.ok || !data.valid) {
+      throw new Error(data.error || 'Invalid or expired invite token.');
+    }
+    creatorName = data.display_name || '';
+    showWizard();
+    renderStep();
+  } catch (err) {
+    showError(err.message);
+  }
+})();
+
+// ── Screen management ──────────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById('loading-screen').style.display = 'none';
+  const screen = document.getElementById('error-screen');
+  screen.style.display = 'block';
+  document.getElementById('error-message').textContent = msg;
+}
+
+function showWizard() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('wizard-card').style.display = 'block';
+}
+
+function showSuccess() {
+  document.getElementById('wizard-card').style.display = 'none';
+  document.getElementById('success-screen').style.display = 'block';
+  setTimeout(() => { window.location.href = '/'; }, 2800);
+}
+
+// ── Step indicator ─────────────────────────────────────────────────────
+function renderStepIndicator() {
+  const el = document.getElementById('step-indicator');
+  let html = '';
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    if (i > 1) html += '<div class="step-line"></div>';
+    const cls = i === currentStep ? 'active' : i < currentStep ? 'done' : '';
+    html += `<div class="step-dot ${cls}"></div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────
+async function goNext() {
+  const err = validateStep(currentStep);
+  if (err) { showStepError(err); return; }
+  collectStep(currentStep);
+
+  if (currentStep === TOTAL_STEPS) {
+    await submitOnboarding();
+    return;
+  }
+  currentStep++;
+  renderStep();
+}
+
+function goBack() {
+  if (currentStep <= 1) return;
+  collectStep(currentStep); // save partial data
+  currentStep--;
+  renderStep();
+}
+
+// ── Step error ─────────────────────────────────────────────────────────
+function showStepError(msg) {
+  const el = document.getElementById('step-err');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function clearStepError() {
+  const el = document.getElementById('step-err');
+  if (el) el.classList.remove('visible');
+}
+
+// ── Render dispatcher ──────────────────────────────────────────────────
+function renderStep() {
+  renderStepIndicator();
+  clearStepError();
+
+  const content = document.getElementById('step-content');
+  const backBtn = document.getElementById('btn-back');
+  const nextBtn = document.getElementById('btn-next');
+
+  backBtn.disabled = currentStep === 1;
+
+  switch (currentStep) {
+    case 1: renderStep1(content, nextBtn); break;
+    case 2: renderStep2(content, nextBtn); break;
+    case 3: renderStep3(content, nextBtn); break;
+    case 4: renderStep4(content, nextBtn); break;
+    case 5: renderStep5(content, nextBtn); break;
+    case 6: renderStep6(content, nextBtn); break;
+  }
+}
+
+// ── STEP 1: Welcome ────────────────────────────────────────────────────
+function renderStep1(content, nextBtn) {
+  nextBtn.textContent = "Let's Go →";
+  const nameHtml = creatorName
+    ? `<p class="step-sub">Hi <strong style="color:var(--text)">${esc(creatorName)}</strong> — you've been invited to join the beta.</p>`
+    : `<p class="step-sub">You've been invited to join the beta.</p>`;
+  content.innerHTML = `
+    <div id="step-err" class="step-error"></div>
+    <div class="step-label">Step 1 of ${TOTAL_STEPS}</div>
+    <div class="step-title">Welcome to <span>Kre8Ωr</span></div>
+    ${nameHtml}
+    <p class="step-sub" style="margin-top:-10px">This takes about 5 minutes. We'll set up your creative profile so Kre8Ωr can speak in your voice, understand your audience, and keep your content pipeline moving.</p>
+  `;
+}
+
+// ── STEP 2: Your Brand ─────────────────────────────────────────────────
+function renderStep2(content, nextBtn) {
+  nextBtn.textContent = 'Next →';
+  content.innerHTML = `
+    <div id="step-err" class="step-error"></div>
+    <div class="step-label">Step 2 of ${TOTAL_STEPS}</div>
+    <div class="step-title">Your <span>Brand</span></div>
+    <p class="step-sub">Tell us who you are and where you create.</p>
+
+    <div class="field">
+      <label>Your Name <span style="color:var(--red)">*</span></label>
+      <input type="text" id="f-your-name" placeholder="Jason Rutland" value="${esc(state.your_name)}" autocomplete="name">
+    </div>
+    <div class="field">
+      <label>Brand / Channel Name <span style="color:var(--red)">*</span></label>
+      <input type="text" id="f-brand-name" placeholder="7 Kin Homestead" value="${esc(state.brand_name)}">
+    </div>
+    <div class="field">
+      <label>Email <span class="opt">(optional)</span></label>
+      <input type="email" id="f-email" placeholder="you@example.com" value="${esc(state.email)}" autocomplete="email">
+    </div>
+
+    <div class="field">
+      <label>Platform Handles <span class="opt">(optional — include @ if you like)</span></label>
+      <div class="platform-grid">
+        <input type="text" id="f-tiktok" placeholder="TikTok @handle" value="${esc(state.platforms.tiktok)}">
+        <input type="text" id="f-youtube" placeholder="YouTube @handle" value="${esc(state.platforms.youtube)}">
+        <input type="text" id="f-instagram" placeholder="Instagram @handle" value="${esc(state.platforms.instagram)}">
+        <input type="text" id="f-lemon8" placeholder="Lemon8 @handle" value="${esc(state.platforms.lemon8)}">
+      </div>
+    </div>
+  `;
+}
+
+// ── STEP 3: Content Angles ─────────────────────────────────────────────
+const PRESET_ANGLES = [
+  'Financial Freedom',
+  'Homesteading',
+  'How-To & DIY',
+  'Lifestyle',
+  'Mistakes & Lessons',
+  'System Is Rigged',
+  'Viral/Trending',
+  'Rock Rich Episodes',
+];
+
+function renderStep3(content, nextBtn) {
+  nextBtn.textContent = 'Next →';
+  const checkboxes = PRESET_ANGLES.map(a => {
+    const checked = state.content_angles.includes(a) ? 'checked' : '';
+    return `
+<label class="angle-checkbox">
+  <input type="checkbox" name="angle" value="${esc(a)}" ${checked}>
+  <span class="check-box"></span>
+  <span class="angle-label">${esc(a)}</span>
+</label>`;
+  }).join('');
+
+  const customTagsHtml = state.custom_angles.map(a => buildTag(a)).join('');
+
+  content.innerHTML = `
+    <div id="step-err" class="step-error"></div>
+    <div class="step-label">Step 3 of ${TOTAL_STEPS}</div>
+    <div class="step-title">Content <span>Angles</span></div>
+    <p class="step-sub">What do you create content about? Pick everything that fits.</p>
+
+    <div class="angles-grid">${checkboxes}</div>
+
+    <div class="field">
+      <label>Custom angle</label>
+      <div class="custom-angle-row">
+        <input type="text" id="custom-angle-input" placeholder="e.g. Off-grid cooking">
+        <button class="btn-add-angle" onclick="addCustomAngle()">+ Add</button>
+      </div>
+      <div class="tags-wrap" id="custom-tags">${customTagsHtml}</div>
+    </div>
+  `;
+
+  document.getElementById('custom-angle-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addCustomAngle(); }
+  });
+}
+
+function buildTag(label) {
+  return `<span class="tag">${esc(label)}<button class="tag-remove" onclick="removeCustomAngle('${escAttr(label)}')" aria-label="Remove">×</button></span>`;
+}
+
+function addCustomAngle() {
+  const input = document.getElementById('custom-angle-input');
+  const val = (input.value || '').trim();
+  if (!val) return;
+  if (!state.custom_angles.includes(val)) {
+    state.custom_angles.push(val);
+    document.getElementById('custom-tags').insertAdjacentHTML('beforeend', buildTag(val));
+  }
+  input.value = '';
+  input.focus();
+}
+
+function removeCustomAngle(label) {
+  state.custom_angles = state.custom_angles.filter(a => a !== label);
+  const container = document.getElementById('custom-tags');
+  if (container) {
+    container.innerHTML = state.custom_angles.map(a => buildTag(a)).join('');
+  }
+}
+
+// ── STEP 4: Your Voice ─────────────────────────────────────────────────
+function renderStep4(content, nextBtn) {
+  nextBtn.textContent = 'Next →';
+  content.innerHTML = `
+    <div id="step-err" class="step-error"></div>
+    <div class="step-label">Step 4 of ${TOTAL_STEPS}</div>
+    <div class="step-title">Your <span>Voice</span></div>
+    <p class="step-sub">How do you talk on camera? Describe your style in your own words — we use this to write scripts that actually sound like you.</p>
+
+    <div class="field">
+      <label>How you talk on camera</label>
+      <textarea class="voice-area" id="f-voice" rows="5"
+        placeholder="e.g. Straight-talking, a little sarcastic, never corporate. I curse sometimes. I go off on tangents when something surprises me. Think sharp-tongued neighbor talking over a fence — warm but direct."
+      >${esc(state.voice_description)}</textarea>
+    </div>
+
+    <div class="note-box">
+      <strong>Next step after setup:</strong> In VaultΩr, you can analyze up to 3 of your real videos to build an actual voice profile from how you naturally speak on camera. This description gets you started right away.
+    </div>
+  `;
+}
+
+// ── STEP 5: Your Audience ─────────────────────────────────────────────
+function renderStep5(content, nextBtn) {
+  nextBtn.textContent = 'Next →';
+  const yesSelected = state.has_community ? 'selected' : '';
+  const noSelected  = !state.has_community ? 'selected' : '';
+  const tiersHtml = state.tiers.map((t, i) => `
+    <div class="tier-row">
+      <input class="tier-name" type="text" id="tier-name-${i}" placeholder="Tier name (e.g. The Garden)" value="${esc(t.name)}">
+      <input class="tier-price" type="text" id="tier-price-${i}" placeholder="$0/mo" value="${esc(t.price)}">
+    </div>`).join('');
+
+  const communityVis = state.has_community ? 'visible' : '';
+
+  content.innerHTML = `
+    <div id="step-err" class="step-error"></div>
+    <div class="step-label">Step 5 of ${TOTAL_STEPS}</div>
+    <div class="step-title">Your <span>Audience</span></div>
+    <p class="step-sub">Tell us about your community so Kre8Ωr can write to the right people.</p>
+
+    <div class="field">
+      <label>Do you have a paid community?</label>
+      <div class="toggle-row">
+        <button class="toggle-btn ${yesSelected}" id="comm-yes" onclick="setCommunity(true)">Yes</button>
+        <button class="toggle-btn ${noSelected}"  id="comm-no"  onclick="setCommunity(false)">No</button>
+      </div>
+    </div>
+
+    <div id="community-fields" class="${communityVis}">
+      <div class="field">
+        <label>Community Platform</label>
+        <input type="text" id="f-comm-platform" placeholder="Kajabi, Circle, Mighty Networks…" value="${esc(state.community_platform)}">
+      </div>
+      <div class="field">
+        <label>Community Name</label>
+        <input type="text" id="f-comm-name" placeholder="e.g. ROCK RICH" value="${esc(state.community_name)}">
+      </div>
+      <div class="field">
+        <label>Membership Tiers <span class="opt">(up to 3 — optional)</span></label>
+        <div class="tier-list">${tiersHtml}</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>MailerLite API Key <span class="opt">(optional)</span></label>
+      <input type="text" id="f-mailerlite" placeholder="Paste your MailerLite API key" value="${esc(state.mailerlite_key)}" autocomplete="off">
+      <div class="field-hint">Used for email audience analytics inside Kre8Ωr. Leave blank to skip.</div>
+    </div>
+  `;
+}
+
+function setCommunity(val) {
+  state.has_community = val;
+  document.getElementById('comm-yes').classList.toggle('selected', val);
+  document.getElementById('comm-no').classList.toggle('selected', !val);
+  const cf = document.getElementById('community-fields');
+  if (val) cf.classList.add('visible'); else cf.classList.remove('visible');
+}
+
+// ── STEP 6: API Key + Password ─────────────────────────────────────────
+function renderStep6(content, nextBtn) {
+  nextBtn.textContent = 'Complete Setup →';
+  content.innerHTML = `
+    <div id="step-err" class="step-error"></div>
+    <div class="step-label">Step 6 of ${TOTAL_STEPS}</div>
+    <div class="step-title">Almost <span>Done</span></div>
+    <p class="step-sub">Last two things — your Anthropic key (so Kre8Ωr can think) and a password for your account.</p>
+
+    <div class="field">
+      <label>Anthropic API Key <span style="color:var(--red)">*</span></label>
+      <input type="password" id="f-api-key" placeholder="sk-ant-…" value="${esc(state.anthropic_key)}" autocomplete="off" spellcheck="false">
+      <div class="field-hint">Get yours at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Never shared with anyone.</div>
+    </div>
+
+    <div class="field">
+      <label>Password <span style="color:var(--red)">*</span></label>
+      <input type="password" id="f-password" placeholder="Min 8 characters" value="${esc(state.password)}" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label>Confirm Password <span style="color:var(--red)">*</span></label>
+      <input type="password" id="f-confirm-pw" placeholder="Same password again" autocomplete="new-password">
+    </div>
+  `;
+}
+
+// ── Validation ─────────────────────────────────────────────────────────
+function validateStep(step) {
+  switch (step) {
+    case 1: return null;
+    case 2: {
+      const name  = (document.getElementById('f-your-name')  || {}).value || '';
+      const brand = (document.getElementById('f-brand-name') || {}).value || '';
+      if (!name.trim())  return 'Your name is required.';
+      if (!brand.trim()) return 'Brand/channel name is required.';
+      return null;
+    }
+    case 3: {
+      const checked = document.querySelectorAll('input[name="angle"]:checked');
+      if (checked.length === 0 && state.custom_angles.length === 0) {
+        return 'Select at least one content angle.';
+      }
+      return null;
+    }
+    case 4: {
+      const voice = (document.getElementById('f-voice') || {}).value || '';
+      if (!voice.trim()) return 'Please describe how you talk on camera.';
+      return null;
+    }
+    case 5: return null;
+    case 6: {
+      const key  = (document.getElementById('f-api-key')   || {}).value || '';
+      const pw   = (document.getElementById('f-password')  || {}).value || '';
+      const cpw  = (document.getElementById('f-confirm-pw')|| {}).value || '';
+      if (!key.trim())        return 'Anthropic API key is required.';
+      if (pw.length < 8)      return 'Password must be at least 8 characters.';
+      if (pw !== cpw)         return 'Passwords do not match.';
+      return null;
+    }
+    default: return null;
+  }
+}
+
+// ── Collect step data ──────────────────────────────────────────────────
+function collectStep(step) {
+  const g = (id, fallback = '') => { const el = document.getElementById(id); return el ? el.value : fallback; };
+  switch (step) {
+    case 1: break;
+    case 2:
+      state.your_name  = g('f-your-name');
+      state.brand_name = g('f-brand-name');
+      state.email      = g('f-email');
+      state.platforms  = {
+        tiktok:    g('f-tiktok'),
+        youtube:   g('f-youtube'),
+        instagram: g('f-instagram'),
+        lemon8:    g('f-lemon8'),
+      };
+      break;
+    case 3: {
+      const checked = document.querySelectorAll('input[name="angle"]:checked');
+      state.content_angles = Array.from(checked).map(cb => cb.value);
+      // custom_angles already managed live
+      break;
+    }
+    case 4:
+      state.voice_description = g('f-voice');
+      break;
+    case 5:
+      state.community_platform = g('f-comm-platform');
+      state.community_name     = g('f-comm-name');
+      state.mailerlite_key     = g('f-mailerlite');
+      state.tiers = [0, 1, 2].map(i => ({
+        name:  g(`tier-name-${i}`),
+        price: g(`tier-price-${i}`),
+      }));
+      break;
+    case 6:
+      state.anthropic_key = g('f-api-key');
+      state.password      = g('f-password');
+      break;
+  }
+}
+
+// ── Submit ─────────────────────────────────────────────────────────────
+async function submitOnboarding() {
+  collectStep(6);
+
+  const nextBtn = document.getElementById('btn-next');
+  const backBtn = document.getElementById('btn-back');
+  nextBtn.disabled = true;
+  backBtn.disabled = true;
+  nextBtn.innerHTML = '<span class="submit-spinner"></span> Saving…';
+
+  const allAngles = [...state.content_angles, ...state.custom_angles];
+
+  const payload = {
+    token,
+    your_name:        state.your_name,
+    brand_name:       state.brand_name,
+    email:            state.email,
+    platforms:        state.platforms,
+    content_angles:   allAngles,
+    voice_description: state.voice_description,
+    has_community:    state.has_community,
+    community_platform: state.community_platform,
+    community_name:   state.community_name,
+    tiers:            state.tiers.filter(t => t.name),
+    mailerlite_key:   state.mailerlite_key,
+    anthropic_key:    state.anthropic_key,
+    password:         state.password,
+  };
+
+  try {
+    const res = await fetch('/api/onboarding/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+    showSuccess();
+  } catch (err) {
+    nextBtn.disabled = false;
+    backBtn.disabled = false;
+    nextBtn.textContent = 'Complete Setup →';
+    showStepError(err.message);
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+function escAttr(str) {
+  return esc(str).replace(/'/g, '&#39;');
+}
+</script>
+</body>
+</html>

@@ -194,6 +194,50 @@ class SQLiteStore extends Store {
 
 const _dbModule = require('./src/db');
 
+// ─────────────────────────────────────────────
+// TENANT MIDDLEWARE
+// Reads Host header, detects beta creator subdomains (slug.kre8r.app),
+// and activates that tenant's DB + profile transparently via AsyncLocalStorage.
+// Jason's root instance (kre8r.app / localhost) gets no tenant context — uses singleton DB.
+// ─────────────────────────────────────────────
+const tenantContext  = require('./src/utils/tenant-context');
+const tenantDbCache  = require('./src/utils/tenant-db-cache');
+
+const ROOT_HOSTS = new Set([
+  'kre8r.app', 'www.kre8r.app', 'localhost',
+  '127.0.0.1', '0.0.0.0',
+]);
+
+function extractTenantSlug(hostname) {
+  if (!hostname) return null;
+  // strip port
+  const host = hostname.split(':')[0].toLowerCase();
+  if (ROOT_HOSTS.has(host)) return null;
+  // *.kre8r.app → slug
+  if (host.endsWith('.kre8r.app')) {
+    const slug = host.replace('.kre8r.app', '');
+    if (slug && slug !== 'teleprompter' && slug !== 'www') return slug;
+  }
+  return null;
+}
+
+app.use((req, res, next) => {
+  const slug = extractTenantSlug(req.hostname);
+  if (!slug) return next(); // Jason's instance — no tenant context
+
+  const tenantDb = tenantDbCache.getTenantDb(slug);
+  if (!tenantDb) {
+    // Tenant folder exists-check failed — unknown subdomain
+    return res.status(404).send(`Unknown creator instance: ${slug}`);
+  }
+
+  const tenantProfile = tenantDbCache.loadTenantProfile(slug);
+  req.tenantSlug = slug;
+
+  // Activate tenant context — all db._get/_all/_run calls now hit this tenant's DB
+  tenantContext.run({ db: tenantDb, profile: tenantProfile, slug }, next);
+});
+
 app.use(session({
   name:   'kre8r.sid',
   secret: process.env.SESSION_SECRET || 'kre8r-session-secret-change-in-production',
@@ -211,6 +255,12 @@ app.use(session({
 // AUTH ROUTES — before guard so login page works
 // ─────────────────────────────────────────────
 app.use('/auth', require('./src/routes/auth'));
+
+// Onboarding — public (invite token is the auth)
+app.use('/api/onboarding', require('./src/routes/onboarding'));
+
+// Admin panel — owner only (enforced inside route)
+app.use('/api/admin', require('./src/routes/admin'));
 
 // ─────────────────────────────────────────────
 // KAJABI WEBHOOK — PUBLIC (no auth)
@@ -279,6 +329,9 @@ app.use((req, res, next) => {
   // Always public
   if (req.path === '/login' || req.path === '/login.html') return next();
   if (req.path.startsWith('/auth/'))       return next();
+  // Onboarding — invite token is the auth
+  if (req.path === '/onboarding' || req.path === '/onboarding.html') return next();
+  if (req.path.startsWith('/api/onboarding/')) return next();
   if (req.path.startsWith('/api/beta'))              return next();
   if (req.path === '/api/health')                    return next();
   if (req.path.startsWith('/api/releases'))          return next(); // own auth

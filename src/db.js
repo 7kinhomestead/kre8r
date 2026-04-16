@@ -13,6 +13,11 @@ const fs = require('fs');
 const DB_PATH     = process.env.DB_PATH    || path.join(__dirname, '..', 'database', 'kre8r.db');
 const SCHEMA_PATH = path.join(__dirname, '..', 'database', 'schema.sql');
 
+// Tenant context — transparently routes queries to the active tenant's DB.
+// tenantContext.run({ db, profile, slug }, next) in middleware activates a context.
+// Falls back to the owner singleton `db` when no tenant context is active.
+const tenantContext = require('./utils/tenant-context');
+
 let db;
 
 // ─────────────────────────────────────────────
@@ -891,17 +896,21 @@ function runMigrations() {
 // LOW-LEVEL HELPERS — better-sqlite3 API
 // ─────────────────────────────────────────────
 
+function _activeDb() {
+  return tenantContext.getDb() || db;
+}
+
 function _run(sql, params = []) {
-  const result = db.prepare(sql).run(params);
+  const result = _activeDb().prepare(sql).run(params);
   return { lastInsertRowid: result.lastInsertRowid };
 }
 
 function _get(sql, params = []) {
-  return db.prepare(sql).get(params) ?? null;
+  return _activeDb().prepare(sql).get(params) ?? null;
 }
 
 function _all(sql, params = []) {
-  return db.prepare(sql).all(params);
+  return _activeDb().prepare(sql).all(params);
 }
 
 // ─────────────────────────────────────────────

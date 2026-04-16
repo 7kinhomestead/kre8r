@@ -4,10 +4,10 @@
 <link rel='icon' type='image/png' href='/images/kre8r-icon.png'>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kre8Ωr Admin</title>
+  <title>Beta Admin — Kre8Ωr</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -478,17 +478,372 @@
       tbody td { font-size: 12px; padding: 8px 10px; }
       thead th { padding: 8px 10px; }
     }
+
+    /* ── Tenant Management ─────────────────────────────────────── */
+    :root {
+      --bg-card: #161916;
+      --bg-card-2: #1c1f1b;
+      --bg-deep: #111311;
+      --border-std: #2a2e28;
+      --border-bright: #3d4439;
+      --text-full: #e8ebe6;
+      --text-dim: #8a9487;
+      --text-dimmer: #4e5349;
+      --teal-std: #3ecfb2;
+      --teal-dark-std: #2aaa90;
+      --teal-glow: rgba(62,207,178,0.10);
+      --red-std: #e05252;
+      --red-glow: rgba(224,82,82,0.12);
+      --amber-glow: rgba(245,158,11,0.12);
+      --green-std: #4ade80;
+      --green-glow: rgba(74,222,128,0.10);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+      --font-head: 'Bebas Neue', sans-serif;
+    }
+
+    /* Hero for admin */
+    .admin-hero {
+      text-align: center;
+      padding: 32px 20px 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+    .admin-hero-title {
+      font-family: var(--font-head);
+      font-size: 48px;
+      letter-spacing: 4px;
+      color: var(--text);
+      line-height: 1;
+    }
+    .admin-hero-title span { color: var(--teal-std); }
+    .admin-hero-sub {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Tenant section header */
+    .tenant-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tenant-section-title {
+      font-family: var(--font-head);
+      font-size: 22px;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+
+    /* Provision form card */
+    .provision-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      margin-bottom: 16px;
+    }
+    .form-row { margin-bottom: 14px; }
+    .form-row label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text-full);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus { border-color: var(--teal-std); }
+    .form-input::placeholder { color: var(--text-dimmer); }
+    .form-input[readonly] { background: var(--bg-card-2); color: var(--text-dim); cursor: default; }
+    .form-hint { font-size: 12px; color: var(--text-dimmer); margin-top: 4px; }
+
+    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+    .btn-provision {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      background: var(--teal-std);
+      color: #0e0f0e;
+      transition: background 0.15s;
+    }
+    .btn-provision:hover { background: var(--teal-dark-std); }
+    .btn-provision:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-ghost-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 11px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-bright);
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .btn-ghost-sm:hover { background: var(--bg-card-2); color: var(--text-full); }
+
+    .inline-error { font-size: 13px; color: var(--red-std); margin-top: 8px; display: none; }
+    .inline-error.visible { display: block; }
+
+    /* Invite URL row */
+    .invite-url-row {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: var(--teal-glow);
+      border: 1px solid rgba(62,207,178,0.25);
+      border-radius: var(--radius-sm);
+    }
+    .invite-url-row.visible { display: flex; }
+    .invite-url-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--teal-std);
+      outline: none;
+    }
+
+    /* Tenant cards */
+    .tenant-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .tenant-card:hover { border-color: var(--border-bright); }
+    .tenant-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      flex-wrap: wrap;
+    }
+    .slug-badge {
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-bright);
+      border-radius: 4px;
+      padding: 3px 8px;
+      color: var(--teal-std);
+      flex-shrink: 0;
+    }
+    .tenant-display-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text-full);
+      flex: 1;
+      min-width: 120px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .onboard-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+    .onboard-complete { background: var(--green-glow); color: var(--green-std); border: 1px solid rgba(74,222,128,0.2); }
+    .onboard-pending  { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+    .tenant-meta-info { font-size: 12px; color: var(--text-dimmer); flex-shrink: 0; }
+    .tenant-btns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .btn-expand-toggle {
+      background: transparent;
+      border: none;
+      color: var(--text-dimmer);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      transition: color 0.15s;
+      line-height: 1;
+    }
+    .btn-expand-toggle:hover { color: var(--text-full); }
+
+    .tenant-details-panel {
+      display: none;
+      padding: 14px 18px 18px;
+      border-top: 1px solid var(--border);
+    }
+    .tenant-details-panel.open { display: block; }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 2px;
+    }
+    .detail-item {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-std);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .detail-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dimmer);
+      margin-bottom: 5px;
+    }
+    .detail-value { font-size: 13px; color: var(--text-dim); line-height: 1.5; word-break: break-all; }
+    .detail-value.clr-teal { color: var(--teal-std); }
+    .detail-value.clr-green { color: var(--green-std); }
+    .detail-value.clr-red { color: var(--red-std); }
+
+    .tenant-empty-state {
+      text-align: center;
+      padding: 36px 24px;
+      color: var(--text-dimmer);
+      font-size: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .mini-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-bright);
+      border-top-color: var(--teal-std);
+      border-radius: 50%;
+      animation: tspin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    @keyframes tspin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    #admin-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast-item {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.2s;
+      max-width: 320px;
+    }
+    .toast-item.show { opacity: 1; transform: translateY(0); }
+    .toast-item.t-success { background: var(--green-glow); color: var(--green-std); border: 1px solid rgba(74,222,128,0.3); }
+    .toast-item.t-error   { background: var(--red-glow);   color: var(--red-std);   border: 1px solid rgba(224,82,82,0.3); }
+    .toast-item.t-info    { background: var(--teal-glow);  color: var(--teal-std);  border: 1px solid rgba(62,207,178,0.3); }
   </style>
 </head>
 <body>
 
-  <!-- NAV -->
-  <nav class="admin-nav">
+<div id="kre8r-nav"></div>
+
+  <!-- Legacy Admin Nav (hidden when kre8r-nav renders) -->
+  <nav class="admin-nav" id="legacy-nav" style="display:none">
     <div class="admin-nav-logo">KRE8<span>Ω</span>R ADMIN</div>
     <a href="/">← Back to App</a>
   </nav>
 
   <div class="main">
+
+    <!-- Hero -->
+    <div class="admin-hero">
+      <div class="admin-hero-title">Beta <span>Admin</span></div>
+      <div class="admin-hero-sub">Manage creator tenants · bug reports · NPS · token usage</div>
+    </div>
+
+    <!-- SECTION: CREATE TENANT -->
+    <div class="section">
+      <div class="tenant-section-head">
+        <div class="tenant-section-title">Create Tenant</div>
+      </div>
+      <div class="provision-card">
+        <form id="provision-form" onsubmit="createTenant(event)">
+          <div class="form-row">
+            <label for="t-slug">Slug</label>
+            <input class="form-input" type="text" id="t-slug" placeholder="alice-creator"
+              pattern="[a-z0-9\-]+" title="Lowercase letters, numbers, hyphens only"
+              required autocomplete="off" autocapitalize="none" spellcheck="false">
+            <div class="form-hint">Lowercase letters, numbers, hyphens only. Appears in invite URLs.</div>
+          </div>
+          <div class="form-row">
+            <label for="t-name">Display Name</label>
+            <input class="form-input" type="text" id="t-name" placeholder="Alice Creator" required>
+          </div>
+          <div class="form-row">
+            <label for="t-email">Email <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+            <input class="form-input" type="email" id="t-email" placeholder="alice@example.com">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-provision" id="provision-btn">Provision Tenant →</button>
+            <span id="provision-spin" style="display:none"><span class="mini-spinner"></span></span>
+          </div>
+          <div class="inline-error" id="provision-error"></div>
+        </form>
+
+        <div class="invite-url-row" id="invite-url-row">
+          <input class="invite-url-input" type="text" id="invite-url-val" readonly>
+          <button class="btn-ghost-sm" onclick="copyInviteLink()">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION: TENANT LIST -->
+    <div class="section">
+      <div class="tenant-section-head">
+        <div class="tenant-section-title">Tenants</div>
+        <button class="btn-ghost-sm" onclick="loadTenants()">↻ Refresh</button>
+      </div>
+      <div id="tenant-list-container">
+        <div class="tenant-empty-state"><span class="mini-spinner"></span></div>
+      </div>
+    </div>
 
     <!-- SECTION 1: STATS -->
     <div class="section">
@@ -1098,7 +1453,220 @@
         loadNPS(),
         loadTokenStats()
       ]);
+      loadTenants();
     });
   </script>
+
+  <!-- ── Tenant Management JS ─────────────────────────────────────────── -->
+  <script>
+    // ── Toast ──────────────────────────────────────────────────────────
+    function adminToast(msg, type = 'info', duration = 3500) {
+      const container = document.getElementById('admin-toast');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = `toast-item t-${type}`;
+      el.textContent = msg;
+      container.appendChild(el);
+      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+      setTimeout(() => {
+        el.classList.remove('show');
+        setTimeout(() => el.remove(), 250);
+      }, duration);
+    }
+
+    // ── Load Tenants ───────────────────────────────────────────────────
+    async function loadTenants() {
+      const container = document.getElementById('tenant-list-container');
+      if (!container) return;
+      container.innerHTML = '<div class="tenant-empty-state"><span class="mini-spinner"></span></div>';
+      try {
+        const res = await fetch('/api/admin/tenants');
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        const tenants = await res.json();
+        renderTenantList(tenants);
+      } catch (err) {
+        container.innerHTML = `<div class="tenant-empty-state" style="color:var(--red-std)">Failed to load tenants: ${err.message}</div>`;
+      }
+    }
+
+    function renderTenantList(tenants) {
+      const container = document.getElementById('tenant-list-container');
+      if (!tenants || tenants.length === 0) {
+        container.innerHTML = '<div class="tenant-empty-state">No tenants yet. Provision one above.</div>';
+        return;
+      }
+      container.innerHTML = tenants.map(t => buildTenantHTML(t)).join('');
+    }
+
+    function buildTenantHTML(t) {
+      const isComplete = (t.onboarding_status || '').toLowerCase() === 'complete';
+      const statusClass = isComplete ? 'onboard-complete' : 'onboard-pending';
+      const statusLabel = isComplete ? '✅ Complete' : '⏳ Pending';
+      const dbKb = t.db_size_kb != null ? `${t.db_size_kb} KB` : '—';
+      const modified = t.last_modified ? new Date(t.last_modified).toLocaleDateString() : '—';
+
+      let platformsText = '—';
+      if (t.platforms && typeof t.platforms === 'object') {
+        const handles = Object.entries(t.platforms)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ');
+        platformsText = handles || '—';
+      } else if (typeof t.platforms === 'string') {
+        try { platformsText = Object.entries(JSON.parse(t.platforms)).filter(([,v])=>v).map(([k,v])=>`${k}: ${v}`).join(', ') || '—'; } catch {}
+      }
+
+      let anglesText = '—';
+      if (Array.isArray(t.content_angles) && t.content_angles.length) {
+        anglesText = t.content_angles.join(', ');
+      } else if (typeof t.content_angles === 'string') {
+        try { const a = JSON.parse(t.content_angles); anglesText = Array.isArray(a) ? a.join(', ') : t.content_angles; } catch { anglesText = t.content_angles; }
+      }
+
+      const apiKeyVal = t.has_api_key
+        ? '<span class="clr-green">Yes</span>'
+        : '<span class="clr-red">No</span>';
+
+      const slug = tEsc(t.slug);
+      const name = tEsc(t.display_name || t.slug);
+
+      return `
+<div class="tenant-card" id="tc-${slug}">
+  <div class="tenant-row">
+    <span class="slug-badge">${slug}</span>
+    <span class="tenant-display-name">${name}</span>
+    <span class="onboard-badge ${statusClass}">${statusLabel}</span>
+    <span class="tenant-meta-info">${dbKb} · ${modified}</span>
+    <div class="tenant-btns">
+      <button class="btn-ghost-sm" onclick="reinviteTenant('${tEscAttr(t.slug)}')">🔗 Reinvite</button>
+      <button class="btn-expand-toggle" id="tdtoggle-${slug}" onclick="toggleTenantDetails('${tEscAttr(t.slug)}')" title="Toggle details">▾</button>
+    </div>
+  </div>
+  <div class="tenant-details-panel" id="tdpanel-${slug}">
+    <div class="details-grid">
+      <div class="detail-item">
+        <div class="detail-label">Platforms</div>
+        <div class="detail-value">${tEsc(platformsText)}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Content Angles</div>
+        <div class="detail-value">${tEsc(anglesText)}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Has API Key</div>
+        <div class="detail-value">${apiKeyVal}</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+    }
+
+    // ── Create Tenant ──────────────────────────────────────────────────
+    async function createTenant(e) {
+      e.preventDefault();
+      const slug  = (document.getElementById('t-slug').value || '').trim().toLowerCase();
+      const name  = (document.getElementById('t-name').value || '').trim();
+      const email = (document.getElementById('t-email').value || '').trim();
+      const errEl = document.getElementById('provision-error');
+      const btn   = document.getElementById('provision-btn');
+      const spin  = document.getElementById('provision-spin');
+      const row   = document.getElementById('invite-url-row');
+
+      errEl.classList.remove('visible');
+      row.classList.remove('visible');
+
+      if (!slug) { showProvisionError('Slug is required.'); return; }
+      if (!/^[a-z0-9\-]+$/.test(slug)) { showProvisionError('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
+      if (!name) { showProvisionError('Display name is required.'); return; }
+
+      btn.disabled = true;
+      spin.style.display = 'inline-block';
+
+      try {
+        const res = await fetch('/api/admin/tenants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, display_name: name, email: email || undefined })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+
+        const inviteUrl = data.invite_url || `${location.origin}/onboarding.html?token=${data.token}`;
+        document.getElementById('invite-url-val').value = inviteUrl;
+        row.classList.add('visible');
+        adminToast(`Tenant "${slug}" provisioned.`, 'success');
+        document.getElementById('provision-form').reset();
+        loadTenants();
+      } catch (err) {
+        showProvisionError(err.message);
+        adminToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        spin.style.display = 'none';
+      }
+    }
+
+    function showProvisionError(msg) {
+      const el = document.getElementById('provision-error');
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+
+    // ── Copy Invite Link ──────────────────────────────────────────────
+    function copyInviteLink() {
+      const url = (document.getElementById('invite-url-val') || {}).value;
+      if (!url) return;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url)
+          .then(() => adminToast('Invite link copied!', 'success'))
+          .catch(() => fallbackCopy(url));
+      } else {
+        fallbackCopy(url);
+      }
+    }
+    function fallbackCopy(text) {
+      const el = document.getElementById('invite-url-val');
+      if (el) { el.select(); document.execCommand('copy'); }
+      adminToast('Invite link copied!', 'success');
+    }
+
+    // ── Reinvite ──────────────────────────────────────────────────────
+    async function reinviteTenant(slug) {
+      try {
+        const res = await fetch(`/api/admin/tenants/${encodeURIComponent(slug)}/reinvite`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+        const inviteUrl = data.invite_url || `${location.origin}/onboarding.html?token=${data.token}`;
+        document.getElementById('invite-url-val').value = inviteUrl;
+        document.getElementById('invite-url-row').classList.add('visible');
+        adminToast(`Reinvite link generated for "${slug}".`, 'info');
+      } catch (err) {
+        adminToast(err.message, 'error');
+      }
+    }
+
+    // ── Toggle Details ────────────────────────────────────────────────
+    function toggleTenantDetails(slug) {
+      const escapedSlug = CSS.escape(slug);
+      const panel = document.getElementById(`tdpanel-${slug}`);
+      const btn   = document.getElementById(`tdtoggle-${slug}`);
+      if (!panel) return;
+      const isOpen = panel.classList.toggle('open');
+      if (btn) btn.textContent = isOpen ? '▴' : '▾';
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────
+    function tEsc(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function tEscAttr(str) { return tEsc(str).replace(/'/g, '&#39;'); }
+  </script>
+
+<div id="admin-toast"></div>
+
+<script src="/js/nav.js" defer></script>
+<script>window.addEventListener('load', () => { if (typeof initNav === 'function') initNav(); });</script>
 </body>
 </html>
