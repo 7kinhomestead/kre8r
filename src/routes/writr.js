@@ -1086,7 +1086,14 @@ router.post('/:project_id/storyboard', async (req, res) => {
         projectContext = lines.join('\n');
       } catch (_) {}
     }
-    if (!projectContext) { write({ stage: 'error', error: 'No brief found — complete the Id8Ωr brief for this project first' }); return end(); }
+    // Final fallback: build minimal context from the project record itself
+    if (!projectContext) {
+      const lines = [`## PROJECT: ${project.title}`];
+      if (project.high_concept) lines.push(`High concept: ${project.high_concept}`);
+      if (project.content_type) lines.push(`Content angle: ${project.content_type}`);
+      lines.push(`\nNo Id8Ωr brief is attached to this project. Use the beat structure and project title to map specific, concrete story moments. Make educated inferences based on the title — do NOT invent unrelated topics.`);
+      projectContext = lines.join('\n');
+    }
     const beatsFormatted = beats.map((b, i) =>
       `Beat ${i + 1}: "${b.name || b.beat_name}" (${b.target_pct || Math.round(i / beats.length * 100)}% through) — ${b.emotional_function || b.reality_note || ''}`
     ).join('\n');
@@ -1225,6 +1232,14 @@ router.post('/:project_id/beat/write', async (req, res) => {
           lines.push(`Hook options:\n${pkg.hooks.map((h,i) => `${i+1}. ${h.text||h}`).join('\n')}`);
         projectContext = lines.join('\n');
       } catch (_) {}
+    }
+    // Final fallback: use what the project record itself has
+    if (!projectContext) {
+      const lines = [`## PROJECT: ${project.title}`];
+      if (project.high_concept) lines.push(`High concept: ${project.high_concept}`);
+      if (project.content_type) lines.push(`Content angle: ${project.content_type}`);
+      lines.push(`\nNo Id8Ωr brief attached. Write this beat based on the project title and storyboard context. Stay on topic — do NOT invent unrelated subject matter.`);
+      projectContext = lines.join('\n');
     }
     // Build voice block from profile or creator profile fallback
     let voiceBlock = '';
