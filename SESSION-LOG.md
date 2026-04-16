@@ -1,3 +1,52 @@
+# Session 40 — Cleanup Bugs + Beta Architecture Planning (2026-04-15)
+
+## Goal
+Close known cleanup bugs, reduce app size, plan multi-tenant beta architecture.
+
+## What Was Built / Fixed
+
+### VaultΩr — Voice Analyze Button
+- `public/vault.html` — Added `event.stopPropagation()` to voice button onclick — click was bubbling to card and opening tile instead of running analysis
+- `public/vault.html` — Fixed response check: `data.ok` → `data.job_id` (route returns `{job_id}`, not `{ok:true}`) — success toast never fired before this fix
+
+### NorthΩr / Dashboard — Attention Required Zone
+- `public/index.html` — Added early-return in `renderAttentionZone()` for projects with `status === 'published'` or `current_stage === 'COMPLETE'` — completed projects were generating spurious attention cards (PipΩr setup needed, etc.) after being marked done
+
+### TeleprΩmpter — Two Bugs Fixed
+- `public/teleprompter.html` — Hide Cloud Launch button when Solo tab is active. Solo is a one-device mode (no control phone needed). Clicking Cloud Launch from Solo was triggering a cloud WebSocket connection that crashed the app in Electron and required a full restart.
+- `public/teleprompter.html` — Exit button (✕) made significantly more visible: opacity raised from 45% → 85%, border from 12% → 28%, size from 36px → 42px. Button existed but was effectively invisible.
+
+### Playwright → devDependencies
+- `package.json` — Moved `playwright: ^1.59.1` from `dependencies` to `devDependencies`
+- `src/routes/playwright.js` — Added try/catch around `require('playwright')` in /connect route — returns clean 503 if not installed instead of crashing
+- Playwright was the main contributor to 238MB app size. Packaged Electron builds no longer include it. DO production server also stops installing it on `npm install --production`.
+
+### TODO.md
+- Marked Idea Vault / SeedΩr as ✅ DONE (built Session 33 — was never updated in TODO)
+
+## Architecture Planning — Beta Multi-Tenancy
+- Audited all Kajabi API dependencies — only meaningful ones are morning bulk sync + webhook receiver
+- Audited Mac/Linux cross-platform compatibility:
+  - Core app (all AI tools) = cross-platform today
+  - DaVinci Python scripts = Windows default paths only, but env var overrides already exist — 1-2 hour fix to add `sys.platform` detection for Mac/Linux default paths
+  - Camera SSD `H:\` assumptions = minor messaging fix
+  - Mac .dmg build = needs Mac machine or CI (config already in package.json)
+- Decision: Option B (one DO server, per-tenant subdomain + isolated DB/profile per creator) for beta
+- Mac creators use browser (kre8r.app subdomain), Windows creators use Electron app
+- Token costs: ~$30-80 for 30-day beta with 3-5 creators, Jason pays centrally
+
+## Key Decisions Made
+- DaVinci Resolve runs on Mac and Linux — not Windows-only. Fix is platform path detection in Python scripts, not a rewrite.
+- Playwright not needed in packaged app or on DO server — browser automation is a local dev tool
+- Voice library: 3-video analysis cap per tenant for beta
+- Beta data collection: feature usage events + in-app feedback widget + admin panel (all 3 methods)
+- YouTube API compliance: record screencast of PostΩr uploading a video — that's all they need
+
+## Deployed
+All changes pushed to GitHub (`master`) and deployed to DigitalOcean.
+
+---
+
 # Session 39 — MailΩr Premiere Email end-to-end (2026-04-15)
 
 ## Goal

@@ -8,6 +8,40 @@ No PM2. A real app with an icon in the taskbar.
 
 ---
 
+## NEXT SESSION — Top 3 Tasks
+
+### 1. Multi-Tenant Beta Infrastructure (Option B)
+Build per-tenant provisioning so 3-5 beta creators can each get their own isolated instance on kre8r.app.
+
+**What to build:**
+- `src/routes/admin.js` — `/admin` panel (Jason only): create tenant → provisions `data/{slug}/` folder, copies template DB, generates invite token + URL
+- Tenant-aware middleware: reads `Host` header → sets `req.tenant` → loads `data/{slug}/kre8r.db` and `data/{slug}/creator-profile.json`
+- `/onboarding?token=xxx` — multi-step soul setup wizard: brand name, creator name, platform handles, content angles, voice style description, Anthropic API key, set password
+- Voice library capped at 3 analyses per tenant
+- nginx config: `*.kre8r.app` wildcard → same Node process (DO console)
+
+### 2. Token Tracking + Admin Dashboard
+Wire per-tenant token usage into a visible admin panel so Jason can monitor beta costs.
+
+**What to build:**
+- `token_usage` table already exists — add `tenant_slug` column so usage is per-tenant
+- `GET /admin/tenants` — list all tenants with: last-active, 30-day token count, estimated cost ($3/MTok in, $15/MTok out), feature usage heatmap (which tools used and how often)
+- Simple in-app feedback widget (thumbs up/down + optional note) on each tool page → `POST /api/feedback` → stored in `feedback` table
+- `/admin` renders the dashboard (Jason's credentials only)
+
+### 3. DaVinci Mac/Linux Path Fix
+Update the 7 Python scripts so DaVinci integration works on Mac and Linux without needing env var overrides.
+
+**What to fix:**
+- All 7 `scripts/davinci/*.py` files: replace hardcoded `C:\ProgramData\Blackmagic Design\...` defaults with `sys.platform` detection:
+  - `win32` → current Windows paths
+  - `darwin` → `/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/` + `.so` lib
+  - `linux` → `/opt/resolve/Developer/Scripting/` + `.so` lib
+- `server.js` health check: replace `tasklist /FI "IMAGENAME eq Resolve.exe"` with cross-platform process detection (`pgrep` on Mac/Linux)
+- Test: have Charlie run the DaVinci flow on his Mac
+
+---
+
 ## ✅ PHASES 2, 3 & 5 — Electron + Bundling + Packaging — DONE Session 32–33
 
 Desktop app boots on Jason's laptop. Login screen, server starts, DB initialises.
@@ -22,7 +56,7 @@ Setup wizard on first run (no more hardcoded credentials). Installer: `npm run d
 
 **Remaining before wider distribution:**
 - [ ] Remove Anthropic API key field from `public/setup.html` — operator pays API fees, users don't enter their own key
-- [ ] App size: 238MB (playwright is the main culprit — move to devDependencies if not needed in packaged app)
+- [x] App size: 238MB — Playwright moved to devDependencies Session 40. Estimated savings ~100MB.
 - [ ] Mac build: untested (needs Mac machine or CI)
 - [ ] Code signing: self-signed for now, SmartScreen warning on Windows install is expected
 
@@ -80,42 +114,21 @@ SyncΩr fully operational. Desktop pushes to kre8r.app, laptop pulls and imports
 
 ---
 
-## 🔴 V1 MUST-HAVE — Idea Vault (Id8Ωr persistent idea log)
+## ✅ V1 MUST-HAVE — Idea Vault (SeedΩr) — DONE Session 33
 
-**The gap:** Right now, an idea only survives in the system if it gets taken all the way to a
-PipΩr project. Anything explored in Id8Ωr but not immediately produced gets flushed with the
-session cache. Every serious creator has a notebook or folder full of raw ideas — Kre8Ωr has
-no equivalent. This is a V1 blocker.
+Built as standalone `seedr.html`. Full spec delivered:
+- `ideas` table in SQLite: id, title, concept, angle, notes, status, created_at
+- List view with keyword/angle/date search
+- Bulk entry mode (paste 23 ideas → AI parses and logs them all)
+- "Promote to Project" button → pre-fills PipΩr with idea context
+- Ideas persist forever, never tied to a session
 
-**What it is:** A persistent, searchable database of raw ideas that live *before* projects.
-Not a project. Not a brief. Just the seed — a title, a concept, maybe an angle or a hook —
-captured and kept.
-
-**How it should work:**
-- Id8Ωr gets a new mode / sidebar: "Idea Log" — a running list of all saved ideas
-- Creator can say "save this idea" at any point during an Id8Ωr conversation → idea is
-  captured with: title, core concept, content angle, date, optional notes
-- Can also bulk-enter ideas: "I have these 23 ideas" → Id8Ωr parses and logs them all
-- Idea log is viewable as a scrollable list and searchable by keyword / angle / date
-- Any idea in the log can be promoted to a full Id8Ωr deep-dive or directly to a PipΩr project
-  with one click — pulling all the captured context forward
-- Ideas never expire, never flush, never require a project to survive
-
-**DB:** New `ideas` table — id, title, concept, angle, notes, status ('raw'|'in_development'|'produced'), created_at
-**UI:** New panel/tab in Id8Ωr — list view with search, save button in active sessions, bulk entry mode
-**Integration:** "Promote to Project" button on each idea → pre-fills PipΩr with idea context
-
-**V1.1 — ConstellΩr view (3D idea graph)**
-A second view mode on the Idea Vault: 3D constellation graph, Obsidian-style, similar to MirrΩr's
-cluster visualization but richer. Ideas as nodes in 3D space, connected by shared angles, themes,
-and content type. Claude generates the connection graph on vault load — tags each idea with semantic
-clusters, draws edges between related ideas. Rotate and zoom to explore the creative universe.
-- Toggle between list view and ConstellΩr view
-- Node size = idea strength / development stage
-- Edge thickness = connection strength (shared angle, theme, audience)
-- Click a node → idea detail panel slides in with Promote to Project option
-- Three.js or similar for the 3D render (same pattern as MirrΩr constellation)
-- Color coded by content angle (financial, system, rockrich, howto, viral, etc.)
+**V1.1 — ConstellΩr view** — ALSO DONE Session 33
+- 3D constellation graph (Three.js) in SeedΩr, toggle between list and constellation view
+- Claude generates connection graph on vault load — semantic clusters, edges between related ideas
+- Node size = idea strength/development stage; edge thickness = connection strength
+- Click node → idea detail panel slides in with Promote to Project
+- Color coded by content angle
 
 ---
 
