@@ -1438,16 +1438,37 @@ async function wcGenerate(tierKey) {
 }
 
 async function wcTest(tierKey) {
-  const email = prompt('Send test to which email address?');
-  if (!email) return;
-  const r = await fetch('/api/kajabi-webhook/welcome-email/test', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tier: tierKey, email, first_name: 'Friend' }),
-  });
-  const j = await r.json();
-  if (j.ok) showToast(`Test sent to ${email}`, 'teal');
-  else showToast(j.reason || j.error || 'Test failed', 'red');
+  const subject = document.getElementById(`wc-subject-${tierKey}`)?.value || '(no subject)';
+  const body    = document.getElementById(`wc-body-${tierKey}`)?.value || '';
+  if (!body) { showToast('No email body — generate or write one first', 'amber'); return; }
+
+  const email = prompt('Send test to which email address? (leave blank for preview only)');
+
+  // Show in-page preview modal (window.open is blocked in Electron)
+  const previewHtml = body
+    .replace(/\{\$name\}/gi, 'Jason')
+    .replace(/\{\{first_name\}\}/gi, 'Jason')
+    .replace(/\{subscriber\.name\}/gi, 'Jason');
+
+  document.getElementById('wc-preview-subject').textContent = subject;
+  document.getElementById('wc-preview-body').innerHTML = previewHtml;
+  document.getElementById('wc-preview-modal').style.display = 'flex';
+
+  // Also fire real transactional send if email provided
+  if (email && email.trim()) {
+    try {
+      const r = await fetch('/api/kajabi-webhook/welcome-email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier: tierKey, email: email.trim(), first_name: 'Jason' }),
+      });
+      const j = await r.json();
+      if (j.ok) showToast(`Test sent to ${email.trim()}`, 'teal');
+      else showToast(`Preview shown — send failed: ${j.reason || j.error}`, 'amber');
+    } catch (e) {
+      showToast('Preview shown — send failed: ' + e.message, 'amber');
+    }
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -2432,5 +2453,21 @@ function escHtmlSq(str) {
 <script>window.addEventListener('load', () => initNav())</script>
 
 <script src="/js/bug-reporter.js"></script>
+
+<!-- Email Preview Modal -->
+<div id="wc-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;width:680px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #333;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#666;text-transform:uppercase">Email Preview</div>
+        <div id="wc-preview-subject" style="font-size:14px;font-weight:600;color:#14b8a6;margin-top:3px"></div>
+      </div>
+      <button onclick="document.getElementById('wc-preview-modal').style.display='none'" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;padding:4px 8px;">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:24px;background:#f9f9f9;border-radius:0 0 10px 10px;">
+      <div id="wc-preview-body" style="max-width:560px;margin:0 auto;background:#fff;padding:28px 32px;border-radius:6px;font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#222;"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

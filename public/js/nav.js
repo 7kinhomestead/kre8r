@@ -32,11 +32,11 @@
         label: 'Pre',
         items: [
           { label: 'Soul BuildΩr', href: '/soul-buildr.html', soul: true },
+          { label: 'SeedΩr',       href: '/seedr.html' },
+          { label: 'Id8Ωr',        href: '/id8r.html' },
           { label: 'Show\u03a9r',  href: '/shows.html' },
-          { label: 'Id8Ωr',   href: '/id8r.html' },
-          { label: 'SeedΩr',  href: '/seedr.html' },
-          { label: 'PipΩr',   href: '/pipr.html' },
-          { label: 'WritΩr',  href: '/writr.html' },
+          { label: 'PipΩr',        href: '/pipr.html' },
+          { label: 'WritΩr',       href: '/writr.html' },
         ]
       },
       {

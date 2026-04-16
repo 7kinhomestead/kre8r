@@ -808,7 +808,7 @@ async function start() {
 }
 
 function scheduleMorningSync() {
-  const TARGET_HOUR = 8; // 8:00 AM local time
+  const TARGET_HOUR = 12; // 12:00 UTC = 8:00 AM US Eastern (EDT)
   const CHECK_INTERVAL_MS = 60 * 1000; // check every minute
   let lastRunDate = null;
 

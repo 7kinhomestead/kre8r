@@ -210,11 +210,13 @@ async function fireWelcomeEmail(email, firstName, groupKey) {
   try { template = JSON.parse(stored); } catch (_) { return { fired: false, reason: 'Malformed template' }; }
   if (!template.subject || !template.body) return { fired: false, reason: 'Template missing subject or body' };
 
+  // Env vars take priority — immune to Electron profile overwrites
   const profile   = loadProfile();
-  const fromEmail = profile?.creator?.email;
-  const fromName  = profile?.creator?.from_name || profile?.creator?.brand || profile?.creator?.name || 'Jason';
+  const creator   = profile?.creator || {};
+  const fromEmail = process.env.MAILERLITE_FROM_EMAIL || creator.email || '';
+  const fromName  = process.env.MAILERLITE_FROM_NAME  || creator.from_name || creator.brand || creator.name || 'Jason';
 
-  if (!fromEmail) return { fired: false, reason: 'creator.email not set in creator-profile.json' };
+  if (!fromEmail) return { fired: false, reason: 'Sender email not configured — set MAILERLITE_FROM_EMAIL in .env' };
 
   // Personalise — replace both legacy {{first_name}} and MailerLite's {subscriber.name}
   const greeting  = firstName || 'there';
@@ -285,21 +287,9 @@ router.post('/receive', async (req, res) => {
     await addToMailerlite(parsed.email, parsed.first_name, parsed.last_name, parsed.groupId);
 
     logEntry.synced = true;
-    log.info({ module: 'kajabi-webhook', email: parsed.email, groupKey: parsed.groupKey }, 'Subscriber synced to Mailerlite');
-
-    // Fire welcome email — non-blocking, log result but don't throw
-    try {
-      const welcome = await fireWelcomeEmail(parsed.email, parsed.first_name, parsed.groupKey);
-      logEntry.welcome_email = welcome;
-      if (welcome.fired) {
-        log.info({ module: 'kajabi-webhook', email: parsed.email, groupKey: parsed.groupKey }, 'Welcome email fired');
-      } else {
-        log.info({ module: 'kajabi-webhook', reason: welcome.reason }, 'Welcome email skipped');
-      }
-    } catch (wErr) {
-      log.warn({ module: 'kajabi-webhook', err: wErr }, 'Welcome email failed — subscriber still synced');
-      logEntry.welcome_email = { fired: false, reason: wErr.message };
-    }
+    // Welcome email handled by MailerLite automation (trigger: subscriber joins group)
+    logEntry.welcome_email = { fired: false, reason: 'Handled by ML automation' };
+    log.info({ module: 'kajabi-webhook', email: parsed.email, groupKey: parsed.groupKey }, 'Subscriber synced to Mailerlite — welcome email via ML automation');
 
     appendEventLog(logEntry);
 

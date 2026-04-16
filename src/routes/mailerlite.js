@@ -612,7 +612,9 @@ router.get('/stats', async (req, res) => {
       id:         c.id,
       subject:    c.emails?.[0]?.subject || c.name || '—',
       status:     c.status,
-      sent_at:    c.sent_at,
+      // ML v2 uses sent_at for sent campaigns, scheduled_for for scheduled,
+      // fall back to finished_at then updated_at then created_at
+      sent_at:    c.sent_at || c.scheduled_for || c.finished_at || c.updated_at || c.created_at,
       open_rate:  c.stats?.open_rate  ?? null,
       click_rate: c.stats?.click_rate ?? null,
       total_sent: c.stats?.sent       ?? null,

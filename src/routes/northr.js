@@ -24,21 +24,32 @@ async function fetchMlCampaignStats(limit = 5) {
   if (!apiKey) return [];
   try {
     const { default: fetch } = await import('node-fetch');
-    const res  = await fetch(`${ML_BASE}/campaigns?limit=${limit}&sort=-created_at`, {
+    // Fetch all statuses — sent, scheduled, draft — sorted newest first
+    const url = `${ML_BASE}/campaigns?limit=${limit}`;
+    const res  = await fetch(url, {
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
     });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.data || []).map(c => ({
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = {}; }
+    if (!res.ok) {
+      console.error('[northr] ML campaign fetch failed:', res.status, text.slice(0, 200));
+      return [];
+    }
+    const campaigns = data.data || [];
+    // Sort client-side by created_at desc (API default order may vary)
+    campaigns.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return campaigns.slice(0, limit).map(c => ({
       id:         c.id,
       subject:    c.emails?.[0]?.subject || c.name || '—',
       status:     c.status,
-      sent_at:    c.sent_at,
+      sent_at:    c.sent_at || c.scheduled_for || c.created_at,
       open_rate:  c.stats?.open_rate  ?? null,
       click_rate: c.stats?.click_rate ?? null,
       total_sent: c.stats?.sent       ?? null,
     }));
-  } catch {
+  } catch (e) {
+    console.error('[northr] fetchMlCampaignStats error:', e.message);
     return [];
   }
 }
@@ -145,9 +156,17 @@ router.get('/dashboard', async (req, res) => {
       try { report_content = JSON.parse(latest_report.content); } catch { report_content = null; }
     }
 
-    // Build publish calendar (last 90 days)
-    const publishedProjects = db._allRaw
-      ? db._allRaw(`SELECT title, published_at FROM projects WHERE status = 'published' AND published_at IS NOT NULL ORDER BY published_at DESC`)
+    // Build publish calendar (last 91 days)
+    const rawDb = db.getRawDb ? db.getRawDb() : null;
+    const publishedDates = rawDb
+      ? rawDb.prepare(`
+          SELECT DATE(published_at) as date, title
+          FROM projects
+          WHERE status = 'published'
+            AND published_at IS NOT NULL
+            AND published_at >= DATE('now', '-91 days')
+          ORDER BY published_at DESC
+        `).all()
       : [];
 
     res.json({
@@ -157,6 +176,7 @@ router.get('/dashboard', async (req, res) => {
       stats,
       goals,
       email_stats,
+      published_dates: publishedDates,
       report: report_content ? { ...latest_report, content: report_content } : null,
     });
   } catch (err) {

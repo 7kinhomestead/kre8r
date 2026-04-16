@@ -980,9 +980,9 @@ async function loadDashboard() {
     renderAlerts(data.alerts || []);
     renderPipeline(data.pipeline);
     renderStats(data.stats);
-    renderEmailStats(data.email_stats || []);
     renderGoals(data.goals, data.stats);
-    renderCalendar(data.stats);
+    renderCalendar(data.published_dates || []);
+    loadEmailStats();
 
     if (data.report?.content) {
       renderStrategy(data.report.content);
@@ -1286,18 +1286,55 @@ function renderStats(stats) {
 }
 
 // ── Email Performance ──────────────────────────────────────────────────────────
+async function loadEmailStats() {
+  try {
+    const res  = await fetch('/api/mailerlite/stats');
+    const data = await res.json();
+    const campaigns = data.campaigns || [];
+    renderEmailStats(campaigns);
+
+    // Update Days Since Last Email — use most recent sent or scheduled campaign
+    const lastSent = campaigns
+      .filter(c => c.status !== 'draft' && c.sent_at)
+      .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0];
+    if (lastSent) {
+      const days = Math.max(0, Math.floor((Date.now() - new Date(lastSent.sent_at).getTime()) / 86400000));
+      const el = document.getElementById('ps-email');
+      if (el) {
+        el.textContent = days;
+        el.className = 'pub-stat-value' + (days >= 14 ? ' danger' : days >= 10 ? ' warn' : '');
+      }
+    }
+  } catch (e) {
+    console.error('[NorthΩr] Email stats load failed:', e);
+    renderEmailStats([]);
+  }
+}
+
 function renderEmailStats(campaigns) {
   const section = document.getElementById('email-perf-section');
   const list    = document.getElementById('email-perf-list');
-  if (!campaigns.length) { section.style.display = 'none'; return; }
   section.style.display = '';
+  if (!campaigns.length) {
+    list.innerHTML = '<div class="empty-state">No campaigns found — send your first email from MailΩr to see stats here.</div>';
+    return;
+  }
 
-  const fmt = v => v == null ? '—' : (v * 100).toFixed(1) + '%';
+  // ML returns rates as {float: 0.42, string: "42%"} OR plain numbers — handle both
+  const toFloat = v => v == null ? null : (typeof v === 'object' ? (v.float ?? null) : v);
+  const fmt     = v => { const n = toFloat(v); return n == null ? '—' : (n * 100).toFixed(1) + '%'; };
   const fmtDate = s => s ? new Date(s).toLocaleDateString([], {month:'short', day:'numeric'}) : '—';
 
-  list.innerHTML = campaigns.map(c => {
-    const openPct  = c.open_rate  != null ? Math.round(c.open_rate  * 100) : null;
-    const clickPct = c.click_rate != null ? Math.round(c.click_rate * 100) : null;
+  // Only show sent/scheduled — hide drafts from earlier failed attempts
+  const visible = campaigns.filter(c => c.status !== 'draft');
+  if (!visible.length) {
+    list.innerHTML = '<div class="empty-state">No sent campaigns yet — drafts are hidden.</div>';
+    return;
+  }
+
+  list.innerHTML = visible.map(c => {
+    const openPct  = toFloat(c.open_rate)  != null ? Math.round(toFloat(c.open_rate)  * 100) : null;
+    const clickPct = toFloat(c.click_rate) != null ? Math.round(toFloat(c.click_rate) * 100) : null;
     const openColor  = openPct  == null ? 'var(--text-dimmer)' : openPct  >= 30 ? 'var(--teal)' : openPct  >= 20 ? 'var(--text)' : 'var(--amber,#f59e0b)';
     const clickColor = clickPct == null ? 'var(--text-dimmer)' : clickPct >= 3  ? 'var(--teal)' : 'var(--text-dim)';
     return `<div style="display:flex;align-items:center;gap:16px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;">
@@ -1318,17 +1355,21 @@ function renderEmailStats(campaigns) {
 }
 
 // ── Publish Calendar (91-day heatmap) ─────────────────────────────────────────
-function renderCalendar(stats) {
-  // We don't have per-day data from the dashboard endpoint yet, so render placeholder
+function renderCalendar(publishedDates) {
   const grid = document.getElementById('pub-calendar');
   const days  = 91;
   const today = new Date();
+  // Build a Set of published date strings for O(1) lookup
+  const publishedSet = new Set((publishedDates || []).map(p => p.date));
   let html = '';
   for (let i = days - 1; i >= 0; i--) {
-    const d   = new Date(today);
+    const d        = new Date(today);
     d.setDate(d.getDate() - i);
-    const isToday = i === 0;
-    html += `<div class="cal-day${isToday ? ' today' : ''}" title="${d.toISOString().slice(0,10)}"></div>`;
+    const dateStr  = d.toISOString().slice(0, 10);
+    const isToday  = i === 0;
+    const isPublished = publishedSet.has(dateStr);
+    const title    = publishedDates?.find(p => p.date === dateStr)?.title || dateStr;
+    html += `<div class="cal-day${isToday ? ' today' : ''}${isPublished ? ' published' : ''}" title="${title}"></div>`;
   }
   grid.innerHTML = html;
 }
