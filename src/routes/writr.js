@@ -1059,14 +1059,41 @@ router.post('/:project_id/storyboard', async (req, res) => {
     const config = readConfig(projectId) || {};
     const beats = config.beats || [];
     if (!beats.length) { write({ stage: 'error', error: 'No beats found — set up story structure in PipΩr first' }); return end(); }
-    const projectContext = buildWritrPromptContext(projectId);
+    let projectContext = buildWritrPromptContext(projectId) || '';
+    // Fallback: build from raw id8r_data if project-context.json not written yet
+    if (!projectContext && project.id8r_data) {
+      try {
+        const d = typeof project.id8r_data === 'string' ? JSON.parse(project.id8r_data) : project.id8r_data;
+        const brief = d.briefData || {};
+        const pb    = brief.pipeline_brief || {};
+        const pkg   = d.packageData || {};
+        const lines = ['## CONTENT INTELLIGENCE FROM ID8ΩR RESEARCH'];
+        if (d.chosenConcept?.headline)  lines.push(`Chosen Concept: ${d.chosenConcept.headline}`);
+        if (d.chosenConcept?.why)       lines.push(`Why this angle: ${d.chosenConcept.why}`);
+        if (d.chosenConcept?.hook)      lines.push(`Opening hook: ${d.chosenConcept.hook}`);
+        if (brief.elevator_pitch)       lines.push(`Elevator pitch: ${brief.elevator_pitch}`);
+        if (brief.audience_insight)     lines.push(`Audience insight: ${brief.audience_insight}`);
+        if (brief.story_angle)          lines.push(`Story angle: ${brief.story_angle}`);
+        if (pb.high_concept)            lines.push(`High concept: ${pb.high_concept}`);
+        if (pb.concept_note)            lines.push(`Concept note: ${pb.concept_note}`);
+        if (d.researchSummary)          lines.push(`Research findings: ${d.researchSummary.slice(0, 800)}`);
+        if (Array.isArray(brief.talking_points) && brief.talking_points.length)
+          lines.push(`Talking points:\n${brief.talking_points.map(p => `- ${p}`).join('\n')}`);
+        if (Array.isArray(brief.what_not_to_do) && brief.what_not_to_do.length)
+          lines.push(`What NOT to do:\n${brief.what_not_to_do.map(p => `- ${p}`).join('\n')}`);
+        if (Array.isArray(pkg.hooks) && pkg.hooks.length)
+          lines.push(`Hook options:\n${pkg.hooks.map((h,i) => `${i+1}. ${h.text||h}`).join('\n')}`);
+        projectContext = lines.join('\n');
+      } catch (_) {}
+    }
+    if (!projectContext) { write({ stage: 'error', error: 'No brief found — complete the Id8Ωr brief for this project first' }); return end(); }
     const beatsFormatted = beats.map((b, i) =>
       `Beat ${i + 1}: "${b.name || b.beat_name}" (${b.target_pct || Math.round(i / beats.length * 100)}% through) — ${b.emotional_function || b.reality_note || ''}`
     ).join('\n');
     const prompt = `You are mapping research and brief content onto a story beat structure.
 
 FULL PROJECT CONTEXT:
-${projectContext || 'Use the beat structure to infer likely content.'}
+${projectContext}
 
 BEAT STRUCTURE (${config.story_structure || 'custom'}):
 ${beatsFormatted}
