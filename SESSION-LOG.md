@@ -1,3 +1,59 @@
+# Session 41 — Beta Hardening + SeedΩr Fixes + WritΩr Storyboard Pipeline (2026-04-16)
+
+## Goal
+Remove API key from beta onboarding, add per-tenant token tracking, fix SeedΩr constellation bugs, build multi-step storyboard pipeline for WritΩr.
+
+## What Was Built / Fixed
+
+### Beta Onboarding — API Key Removed
+- `public/onboarding.html` — Removed Anthropic API key field from Step 6 (Jason pays centrally during beta). Added "AI is included" note. Fixed verify endpoint check `data.valid` → `data.ok`.
+- `src/routes/onboarding.js` — Removed `anthropic_api_key` from destructuring and profile save.
+
+### Token Tracking — Per-Tenant Cost Visibility
+- `src/db.js` — Migration adds `tenant_slug TEXT` column + index to `token_usage` table. `logTokenUsage()` writes directly to singleton db (bypasses tenant routing), auto-captures current tenant slug. `getTokenStats()` returns `by_tenant` breakdown.
+- `src/utils/claude.js` — Both `callClaude` and `callClaudeMessages` now log every API call with input/output tokens and cost estimate (`$3/M input, $15/M output`).
+- `public/admin.html` — "By Creator" table in token stats renders `by_tenant` field.
+
+### KRE8R-MARKETING.md — Long-Form Narrative Doc
+- Created `KRE8R-MARKETING.md` — ~4,800 word narrative marketing document covering all 15 tools, 10 objections handled, Engine vs Soul architecture, hero story (first Kre8r video = #1/10, 2x Dave Ramsey velocity at 36 hours). Fed into NotebookLM for podcast generation.
+
+### SeedΩr — Constellation Fixes
+- Canvas drag broken by stacked event listeners — fixed with `canvas.cloneNode(false)` to wipe all listeners on reinit.
+- Ideas doubling after integrate — `result.newNodes` filtered to only `newIdeaIds` set after Claude responds.
+- Token overflow with 40 ideas (8192 limit hit) — raised to 16000, then addressed at root by capping all calls at 20 ideas.
+- Status staleness — fresh status merged from `allIdeas` on every `initConstellation`.
+- Promote → PipΩr handoff — `updateProjectMeta()` was silently ignoring `id8r_data`. Fixed to call `updateProjectId8r()`.
+
+### SeedΩr — State Machine Redesign (20-idea rate limiting by design)
+- Bulk import capped at 20 ideas with toast warning if more arrive.
+- Seed selector modal for initial generation when vault has >20 ideas.
+- `generateConstellation(ideaIds)` sends optional `ideaIds` in JSON body.
+- Server `/constellation` endpoint accepts optional `ideaIds` filter array.
+- `updateConstellationButtons()` controls visibility of Reset/Add/Generate based on constellation state.
+- "Regenerate" locked when constellation exists; only "Add 20 More" and "Reset Map" available.
+
+### WritΩr — Multi-Step Storyboard Pipeline
+- `src/routes/writr.js` — 5 new endpoints:
+  - `POST /:id/storyboard` (SSE) — maps Id8Ωr research/brief onto each PipΩr beat. Returns `story_moment`, `source_material`, `jason_direction`, `transition_note` per beat. Saves to project config.
+  - `GET /:id/storyboard` — loads saved storyboard + beat_scripts from config.
+  - `PATCH /:id/storyboard` — saves creator edits to beat assignments.
+  - `POST /:id/beat/write` (SSE) — writes one beat with voice profile, adjacent beat context, word target, and previous beat tail for continuity.
+  - `POST /:id/assemble` (SSE) — assembles all beat scripts, seam-smooth pass, saves as WritrScript record.
+- `public/writr.html` — Full storyboard pipeline UI:
+  - 3-step bar (Storyboard → Write Beats → Assemble) in Panel 1.
+  - Storyboard beat cards in Panel 2: editable story moment, source material, direction, per-beat Write button, written preview.
+  - Write All Beats → sequential per-beat generation with real-time card updates.
+  - Assemble → seam pass → saves to DB → existing approve/revise/iterate flow takes over.
+  - The Room gains 📋 Source Material panel showing storyboard beat assignments.
+  - Quick Script (old one-shot path) fully preserved below "— or —" divider.
+
+## Pending / Next Session
+- DaVinci Mac/Linux path fix (Python scripts — `sys.platform` detection for default paths)
+- Push commits to GitHub + deploy to DigitalOcean
+- WritΩr storyboard UX polish after first real use (tune word targets, voice prompt, seam pass quality)
+
+---
+
 # Session 40 — Cleanup Bugs + Beta Architecture Planning (2026-04-15)
 
 ## Goal
