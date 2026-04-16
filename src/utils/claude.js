@@ -55,7 +55,7 @@ async function callClaude(prompt, maxTokens = 8192, options = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
 
-  const { onRetry } = options;
+  const { onRetry, tool = 'unknown', session_id = null } = options;
   const { default: fetch } = await import('node-fetch');
 
   let lastError;
@@ -102,6 +102,13 @@ async function callClaude(prompt, maxTokens = 8192, options = {}) {
 
       // Success — parse and return
       const data    = await response.json();
+      // Log token usage — never let this break the response
+      try {
+        const inputTok  = data.usage?.input_tokens  || 0;
+        const outputTok = data.usage?.output_tokens || 0;
+        const cost = (inputTok * 0.000003) + (outputTok * 0.000015);
+        require('../db').logTokenUsage({ tool, session_id, input_tokens: inputTok, output_tokens: outputTok, estimated_cost: cost });
+      } catch (_) {}
       const raw     = data.content[0].text.trim();
       const cleaned = raw
         .replace(/^```(?:json)?\s*/i, '')
@@ -151,7 +158,7 @@ async function callClaudeMessages(system, messages, maxTokens = 2048, options = 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
 
-  const { onRetry } = options;
+  const { onRetry, tool = 'unknown', session_id = null } = options;
   const { default: fetch } = await import('node-fetch');
 
   let lastError;
@@ -193,6 +200,13 @@ async function callClaudeMessages(system, messages, maxTokens = 2048, options = 
       }
 
       const data = await response.json();
+      // Log token usage — never let this break the response
+      try {
+        const inputTok  = data.usage?.input_tokens  || 0;
+        const outputTok = data.usage?.output_tokens || 0;
+        const cost = (inputTok * 0.000003) + (outputTok * 0.000015);
+        require('../db').logTokenUsage({ tool, session_id, input_tokens: inputTok, output_tokens: outputTok, estimated_cost: cost });
+      } catch (_) {}
       return data.content[0].text.trim();
 
     } catch (err) {

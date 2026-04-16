@@ -888,6 +888,14 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_platform ON postor_posts(platform)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_status   ON postor_posts(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_created  ON postor_posts(created_at)');
+
+  // Token usage: tenant_slug column for per-creator cost tracking
+  const tokenCols = db.pragma('table_info(token_usage)').map(r => r.name);
+  if (!tokenCols.includes('tenant_slug')) {
+    db.exec('ALTER TABLE token_usage ADD COLUMN tenant_slug TEXT');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_token_tenant ON token_usage(tenant_slug)');
+    console.log('[DB] Migration: added token_usage.tenant_slug');
+  }
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -2425,37 +2433,37 @@ function setKv(key, value) {
 // TOKEN USAGE — helpers
 // ─────────────────────────────────────────────
 
-function logTokenUsage({ tool, session_id, input_tokens, output_tokens, estimated_cost }) {
-  _run(
-    `INSERT INTO token_usage (tool, session_id, input_tokens, output_tokens, estimated_cost)
-     VALUES (?, ?, ?, ?, ?)`,
-    [tool, session_id || null, input_tokens || 0, output_tokens || 0, estimated_cost || 0]
-  );
-  // No persist() needed — better-sqlite3 writes on every operation
+function logTokenUsage({ tool, session_id, input_tokens, output_tokens, estimated_cost, tenant_slug }) {
+  // ALWAYS write to the singleton main DB — never to a tenant DB.
+  // This lets Jason see all API costs centrally regardless of which tenant made the call.
+  const slug = tenant_slug !== undefined ? tenant_slug : (tenantContext.getSlug() || null);
+  db.prepare(
+    `INSERT INTO token_usage (tool, session_id, input_tokens, output_tokens, estimated_cost, tenant_slug)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run([tool, session_id || null, input_tokens || 0, output_tokens || 0, estimated_cost || 0, slug]);
 }
 
 function getTokenStats() {
   const today = new Date().toISOString().split('T')[0];
 
-  const todayTotals = _get(
+  const todayTotals = db.prepare(
     `SELECT
        COALESCE(SUM(input_tokens), 0)   AS input_tokens,
        COALESCE(SUM(output_tokens), 0)  AS output_tokens,
        COALESCE(SUM(estimated_cost), 0) AS estimated_cost
      FROM token_usage
-     WHERE DATE(created_at) = ?`,
-    [today]
-  );
+     WHERE DATE(created_at) = ?`
+  ).get([today]);
 
-  const allTime = _get(
+  const allTime = db.prepare(
     `SELECT
        COALESCE(SUM(input_tokens), 0)   AS input_tokens,
        COALESCE(SUM(output_tokens), 0)  AS output_tokens,
        COALESCE(SUM(estimated_cost), 0) AS estimated_cost
      FROM token_usage`
-  );
+  ).get([]);
 
-  const byTool = _all(
+  const byTool = db.prepare(
     `SELECT tool,
        SUM(input_tokens)   AS input_tokens,
        SUM(output_tokens)  AS output_tokens,
@@ -2464,9 +2472,21 @@ function getTokenStats() {
      FROM token_usage
      GROUP BY tool
      ORDER BY SUM(estimated_cost) DESC`
-  );
+  ).all([]);
 
-  const id8rAvg = _get(
+  const byTenant = db.prepare(
+    `SELECT
+       COALESCE(tenant_slug, 'jason') AS tenant,
+       COALESCE(SUM(input_tokens), 0)   AS input_tokens,
+       COALESCE(SUM(output_tokens), 0)  AS output_tokens,
+       COALESCE(SUM(estimated_cost), 0) AS estimated_cost,
+       COUNT(*) AS call_count
+     FROM token_usage
+     GROUP BY tenant_slug
+     ORDER BY SUM(estimated_cost) DESC`
+  ).all([]);
+
+  const id8rAvg = db.prepare(
     `SELECT
        COALESCE(AVG(session_cost), 0) AS avg_cost,
        COUNT(*)                       AS session_count
@@ -2476,23 +2496,36 @@ function getTokenStats() {
        WHERE tool = 'id8r' AND session_id IS NOT NULL
        GROUP BY session_id
      )`
-  );
+  ).get([]);
 
   return {
     today: {
-      input_tokens:  todayTotals?.input_tokens  || 0,
-      output_tokens: todayTotals?.output_tokens || 0,
+      input_tokens:   todayTotals?.input_tokens   || 0,
+      output_tokens:  todayTotals?.output_tokens  || 0,
       estimated_cost: Math.round((todayTotals?.estimated_cost || 0) * 10000) / 10000
     },
     all_time: {
-      input_tokens:  allTime?.input_tokens  || 0,
-      output_tokens: allTime?.output_tokens || 0,
+      input_tokens:   allTime?.input_tokens   || 0,
+      output_tokens:  allTime?.output_tokens  || 0,
       estimated_cost: Math.round((allTime?.estimated_cost || 0) * 10000) / 10000
     },
-    by_tool: byTool,
-    id8r_avg_cost: Math.round((id8rAvg?.avg_cost || 0) * 10000) / 10000,
+    by_tool:   byTool,
+    by_tenant: byTenant,
+    id8r_avg_cost:      Math.round((id8rAvg?.avg_cost || 0) * 10000) / 10000,
     id8r_session_count: id8rAvg?.session_count || 0
   };
+}
+
+function getTokenUsageByTenant(slug) {
+  return db.prepare(
+    `SELECT
+       COALESCE(SUM(input_tokens), 0)   AS input_tokens,
+       COALESCE(SUM(output_tokens), 0)  AS output_tokens,
+       COALESCE(SUM(estimated_cost), 0) AS estimated_cost,
+       COUNT(*)                          AS call_count
+     FROM token_usage
+     WHERE tenant_slug = ?`
+  ).get([slug]) || { input_tokens: 0, output_tokens: 0, estimated_cost: 0, call_count: 0 };
 }
 
 // ─────────────────────────────────────────────
@@ -3486,6 +3519,7 @@ module.exports = {
   // Token Usage
   logTokenUsage,
   getTokenStats,
+  getTokenUsageByTenant,
   // VaultΩr
   insertFootage,
   updateFootage,

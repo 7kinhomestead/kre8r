@@ -1391,7 +1391,7 @@
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Unknown error');
 
-        const { today, all_time, by_tool, id8r_avg_cost, id8r_session_count } = data;
+        const { today, all_time, by_tool, by_tenant, id8r_avg_cost, id8r_session_count } = data;
 
         const fmtCost = v => `$${Number(v).toFixed(4)}`;
         const fmtNum  = v => Number(v).toLocaleString();
@@ -1399,6 +1399,15 @@
         const toolRows = (by_tool || []).map(t => `
           <tr>
             <td><strong>${t.tool}</strong></td>
+            <td>${fmtNum(t.input_tokens)}</td>
+            <td>${fmtNum(t.output_tokens)}</td>
+            <td>${t.call_count}</td>
+            <td style="color:var(--teal)">${fmtCost(t.estimated_cost)}</td>
+          </tr>`).join('');
+
+        const tenantRows = (by_tenant || []).map(t => `
+          <tr>
+            <td><strong style="color:var(--teal)">${t.tenant}</strong></td>
             <td>${fmtNum(t.input_tokens)}</td>
             <td>${fmtNum(t.output_tokens)}</td>
             <td>${t.call_count}</td>
@@ -1435,7 +1444,21 @@
               </tr>
             </thead>
             <tbody>${toolRows}</tbody>
-          </table>` : '<p style="color:var(--muted);font-size:13px">No token usage recorded yet. Run an Id8Ωr session to start tracking.</p>'}`;
+          </table>` : '<p style="color:var(--muted);font-size:13px">No token usage recorded yet. Run an Id8Ωr session to start tracking.</p>'}
+          ${tenantRows ? `
+          <h4 style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:24px 0 10px">By Creator</h4>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);color:var(--muted)">
+                <th style="text-align:left;padding:6px 8px">Creator</th>
+                <th style="text-align:right;padding:6px 8px">Input Tokens</th>
+                <th style="text-align:right;padding:6px 8px">Output Tokens</th>
+                <th style="text-align:right;padding:6px 8px">Calls</th>
+                <th style="text-align:right;padding:6px 8px">Cost</th>
+              </tr>
+            </thead>
+            <tbody>${tenantRows}</tbody>
+          </table>` : ''}`;
       } catch (e) {
         console.error('loadTokenStats error', e);
         container.innerHTML = `<p class="error-text">Failed to load token stats: ${e.message}</p>`;
