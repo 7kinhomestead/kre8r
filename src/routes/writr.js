@@ -1045,4 +1045,284 @@ router.post('/:project_id/room/approve', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STORYBOARD PIPELINE ENDPOINTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.post('/:project_id/storyboard', async (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  const { write, end } = startSseResponse(req, res);
+  try {
+    const project = db.getProject(projectId);
+    if (!project) { write({ stage: 'error', error: 'Project not found' }); return end(); }
+    const config = readConfig(projectId) || {};
+    const beats = config.beats || [];
+    if (!beats.length) { write({ stage: 'error', error: 'No beats found — set up story structure in PipΩr first' }); return end(); }
+    const projectContext = buildWritrPromptContext(projectId);
+    const beatsFormatted = beats.map((b, i) =>
+      `Beat ${i + 1}: "${b.name || b.beat_name}" (${b.target_pct || Math.round(i / beats.length * 100)}% through) — ${b.emotional_function || b.reality_note || ''}`
+    ).join('\n');
+    const prompt = `You are mapping research and brief content onto a story beat structure.
+
+FULL PROJECT CONTEXT:
+${projectContext || 'Use the beat structure to infer likely content.'}
+
+BEAT STRUCTURE (${config.story_structure || 'custom'}):
+${beatsFormatted}
+
+For each beat, determine exactly what specific content goes there. Think: what moment/event/argument from the research belongs here? What is Jason actually doing in this beat?
+
+Return ONLY valid JSON:
+{
+  "storyboard": [
+    {
+      "beat_index": 0,
+      "beat_name": "name exactly as given",
+      "story_moment": "What specific event or moment happens here — 1-2 sentences, concrete and specific, drawn from the research/brief",
+      "source_material": "Specific data point, quote, or example from the brief/research that supports this beat",
+      "jason_direction": "What Jason should feel/do in this beat — directorial note, not script lines",
+      "transition_note": "One phrase: how this flows into the next beat (leave empty string for last beat)"
+    }
+  ]
+}`;
+    write({ stage: 'analyzing', message: 'Mapping your research onto the story structure…' });
+    const rawText = await callClaudeMessages(
+      'You are a story structure specialist. Return only valid JSON, no commentary.',
+      [{ role: 'user', content: prompt }],
+      6000
+    );
+    write({ stage: 'processing', message: 'Building storyboard…' });
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) { write({ stage: 'error', error: 'Could not extract storyboard from response' }); return end(); }
+    let parsed;
+    try { parsed = JSON.parse(jsonMatch[0]); }
+    catch (e) { write({ stage: 'error', error: 'Could not parse storyboard: ' + e.message }); return end(); }
+    if (!parsed.storyboard?.length) { write({ stage: 'error', error: 'No storyboard beats returned' }); return end(); }
+    const storyboard = beats.map((beat, i) => {
+      const sbBeat = parsed.storyboard.find(s => s.beat_index === i) || parsed.storyboard[i] || {};
+      return {
+        beat_index: i,
+        beat_name: beat.name || beat.beat_name || sbBeat.beat_name || `Beat ${i + 1}`,
+        emotional_function: beat.emotional_function || beat.reality_note || '',
+        target_pct: beat.target_pct || Math.round(i / beats.length * 100),
+        story_moment: sbBeat.story_moment || '',
+        source_material: sbBeat.source_material || '',
+        jason_direction: sbBeat.jason_direction || '',
+        transition_note: sbBeat.transition_note || '',
+      };
+    });
+    config.storyboard = { beats: storyboard, generated_at: new Date().toISOString() };
+    config.beat_scripts = {};
+    writeConfig(projectId, config);
+    write({ stage: 'complete', storyboard });
+    end();
+  } catch (err) {
+    console.error('[WritΩr] storyboard error:', err.message);
+    write({ stage: 'error', error: err.message });
+    end();
+  }
+});
+
+router.get('/:project_id/storyboard', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  try {
+    const config = readConfig(projectId) || {};
+    res.json({ ok: true, storyboard: config.storyboard || null, beat_scripts: config.beat_scripts || {} });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/:project_id/storyboard', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  const { storyboard } = req.body;
+  if (!Array.isArray(storyboard)) return res.status(400).json({ error: 'storyboard array required' });
+  try {
+    const config = readConfig(projectId) || {};
+    config.storyboard = {
+      beats: storyboard,
+      generated_at: config.storyboard?.generated_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    writeConfig(projectId, config);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:project_id/beat/write', async (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  const { beat_index, voice_primary, voice_secondary, voice_blend } = req.body;
+  const beatIndex = parseInt(beat_index, 10);
+  const { write, end } = startSseResponse(req, res);
+  try {
+    const project = db.getProject(projectId);
+    if (!project) { write({ stage: 'error', error: 'Project not found' }); return end(); }
+    const config = readConfig(projectId) || {};
+    const storyboard = config.storyboard?.beats || [];
+    if (!storyboard.length) { write({ stage: 'error', error: 'No storyboard — build storyboard first' }); return end(); }
+    const sbBeat = storyboard[beatIndex];
+    if (!sbBeat) { write({ stage: 'error', error: `Beat ${beatIndex} not found` }); return end(); }
+    const voiceProfiles = buildVoiceProfiles(voice_primary, voice_secondary, voice_blend);
+    // Build voice block from profile or creator profile fallback
+    let voiceBlock = '';
+    if (voiceProfiles.length) {
+      const vp = voiceProfiles[0].profile;
+      const guidelines = (vp.voice?.writing_guidelines || vp.writing_guidelines || []).slice(0, 5).join('\n- ');
+      const phrases = (vp.voice?.signature_phrases || vp.signature_phrases || []).slice(0, 4).join(' | ');
+      const notWrite = (vp.voice?.what_not_to_write || vp.what_not_to_write || []).slice(0, 3).join(', ');
+      voiceBlock = `VOICE — ${vp.creator?.name || 'Jason'}:\n- ${guidelines}\nSignature phrases: ${phrases}\nNOT: ${notWrite}`;
+    } else {
+      try {
+        const _fs = require('fs'), _path = require('path');
+        const profile = JSON.parse(_fs.readFileSync(process.env.CREATOR_PROFILE_PATH || _path.join(__dirname, '..', '..', 'creator-profile.json'), 'utf8'));
+        const guidelines = (profile.voice?.writing_guidelines || []).slice(0, 5).join('\n- ');
+        voiceBlock = `VOICE — ${profile.creator?.name || 'Jason'}:\n- ${guidelines}`;
+      } catch (_) {}
+    }
+    // Adjacent beats for continuity
+    const prevSb = beatIndex > 0 ? storyboard[beatIndex - 1] : null;
+    const nextSb = beatIndex < storyboard.length - 1 ? storyboard[beatIndex + 1] : null;
+    // Previously written beats for continuity
+    const beatScripts = config.beat_scripts || {};
+    const prevBeatScript = beatIndex > 0 ? beatScripts[beatIndex - 1] : null;
+    const prevExcerpt = prevBeatScript
+      ? '\n\nLAST ~50 WORDS OF PREVIOUS BEAT (for continuity):\n' + prevBeatScript.split(/\s+/).slice(-50).join(' ')
+      : '';
+    // Word target proportional to beat span
+    const beats = config.beats || [];
+    const thisTarget = sbBeat.target_pct || (beatIndex / storyboard.length * 100);
+    const nextTarget = (beatIndex + 1 < beats.length ? beats[beatIndex + 1]?.target_pct : 100) || 100;
+    const totalWords = project.format === 'short' ? 200 : 700;
+    const wordTarget = Math.max(30, Math.round(totalWords * ((nextTarget - thisTarget) / 100)));
+    const prompt = `You are writing one beat of a video script for a creator.
+
+${voiceBlock}
+
+THIS BEAT: "${sbBeat.beat_name}"
+Emotional function: ${sbBeat.emotional_function || 'story progression'}
+Position: ${Math.round(thisTarget)}% through the video
+Target: ~${wordTarget} words
+
+WHAT HAPPENS IN THIS BEAT:
+${sbBeat.story_moment}
+
+SOURCE MATERIAL (draw on this):
+${sbBeat.source_material}
+
+DIRECTION:
+${sbBeat.jason_direction}
+
+CONTINUITY:
+${prevSb ? `Previous beat "${prevSb.beat_name}" transitions: ${prevSb.transition_note || prevSb.story_moment?.slice(0, 80)}` : 'This is the opening beat.'}
+${nextSb ? `Next beat "${nextSb.beat_name}" will cover: ${nextSb.story_moment?.slice(0, 80)}` : 'This is the final beat.'}${prevExcerpt}
+
+RULES:
+- Write ONLY this beat — no headers, no labels, no meta-commentary
+- Mark talking-head camera lines with 🎤 at the start
+- Mark b-roll with [B-ROLL: brief description]
+- Stay in the creator's real voice — warm, direct, never corporate
+- Do NOT start with "In this beat" or "So,"
+- End with natural energy flow toward the next beat
+
+Write the beat script now:`;
+    write({ stage: 'writing', message: `Writing "${sbBeat.beat_name}"…`, beat_index: beatIndex });
+    const rawScript = await callClaudeMessages(
+      'You are a script writer. Write natural conversational creator content. Return only the script text, no preamble.',
+      [{ role: 'user', content: prompt }],
+      1200
+    );
+    const beatScript = (rawScript || '').trim();
+    if (!config.beat_scripts) config.beat_scripts = {};
+    config.beat_scripts[beatIndex] = beatScript;
+    writeConfig(projectId, config);
+    write({ stage: 'complete', beat_index: beatIndex, beat_name: sbBeat.beat_name, script: beatScript });
+    end();
+  } catch (err) {
+    console.error('[WritΩr] beat write error:', err.message);
+    write({ stage: 'error', error: err.message });
+    end();
+  }
+});
+
+router.post('/:project_id/assemble', async (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  const { write, end } = startSseResponse(req, res);
+  try {
+    const project = db.getProject(projectId);
+    if (!project) { write({ stage: 'error', error: 'Project not found' }); return end(); }
+    const config = readConfig(projectId) || {};
+    const storyboard = config.storyboard?.beats || [];
+    const beatScripts = config.beat_scripts || {};
+    if (!storyboard.length) { write({ stage: 'error', error: 'No storyboard' }); return end(); }
+    const missing = [];
+    const parts = [];
+    for (let i = 0; i < storyboard.length; i++) {
+      const sb = storyboard[i];
+      const script = beatScripts[i];
+      if (!script?.trim()) {
+        missing.push(sb.beat_name || `Beat ${i + 1}`);
+        parts.push(`[● BEAT: ${sb.beat_name || 'Beat ' + (i + 1)}]\n[BEAT NEEDED: "${sb.beat_name}" — not yet written]`);
+      } else {
+        parts.push(`[● BEAT: ${sb.beat_name}]\n${script}`);
+      }
+    }
+    const assembled = parts.join('\n\n');
+    if (missing.length === storyboard.length) { write({ stage: 'error', error: 'No beats written yet — write at least one beat first' }); return end(); }
+    write({ stage: 'analyzing', message: 'Smoothing transitions between beats…' });
+    let finalScript = assembled;
+    if (missing.length === 0) {
+      const seamPrompt = `You are doing a final seam pass on a multi-beat script written beat-by-beat.
+
+SCRIPT:
+${assembled}
+
+Your ONLY job: smooth the transitions at beat boundaries so it reads as one continuous piece.
+
+DO NOT rewrite beats, change content, change voice, or remove beat headers [● BEAT: ...].
+ONLY: fix abrupt transitions, remove accidental repeated phrases, add a word or two of connective tissue where flow feels mechanical.
+
+Return the complete smoothed script with beat headers intact:`;
+      try {
+        const smoothed = await callClaudeMessages(
+          'You are a script editor. Return only the script, no commentary.',
+          [{ role: 'user', content: seamPrompt }],
+          8000
+        );
+        if (smoothed?.trim()) finalScript = smoothed.trim();
+      } catch (_) { /* fallback to assembled */ }
+    }
+    write({ stage: 'saving', message: 'Saving assembled script…' });
+    const sessionId = crypto.randomUUID();
+    const beatMapJson = storyboard.map(sb => ({
+      name: sb.beat_name, beat_name: sb.beat_name,
+      emotional_function: sb.emotional_function, target_pct: sb.target_pct,
+      story_moment: sb.story_moment,
+    }));
+    const scriptId = db.insertWritrScript({
+      project_id: projectId, entry_point: 'storyboard', input_type: 'storyboard_assembled',
+      raw_input: JSON.stringify({ beats: storyboard.map(sb => sb.beat_name) }),
+      generated_script: finalScript, beat_map_json: beatMapJson,
+      missing_beats: missing, iteration_count: 0, approved: false, mode: 'full', session_id: sessionId,
+    });
+    db.updateProjectWritr(projectId, { active_script_id: scriptId });
+    try {
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      vault.saveVaultData(projectId, `writr/storyboard-assembled-${ts}.txt`, finalScript);
+    } catch (_) {}
+    write({ stage: 'complete', script_id: scriptId, script: finalScript, beat_map: beatMapJson, missing_beats: missing, session_id: sessionId });
+    end();
+  } catch (err) {
+    console.error('[WritΩr] assemble error:', err.message);
+    write({ stage: 'error', error: err.message });
+    end();
+  }
+});
+
 module.exports = router;
