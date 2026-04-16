@@ -894,8 +894,14 @@ function initConstellation(data) {
   if (_3dRenderer) { _3dRenderer.dispose(); _3dRenderer = null; }
   _3dNodeMeshes = [];
 
-  const canvas = document.getElementById('constellationCanvas');
-  const wrap   = document.getElementById('constellationWrap');
+  // Replace canvas with a fresh clone to wipe all accumulated event listeners.
+  // Each call to initConstellation would otherwise stack mousedown/mousemove/mouseup
+  // handlers whose stale closures zeroed out _3dPrevMouse before the current
+  // handler could read the delta — making drag appear broken.
+  const wrap = document.getElementById('constellationWrap');
+  const oldCanvas = document.getElementById('constellationCanvas');
+  const canvas = oldCanvas.cloneNode(false);
+  oldCanvas.parentNode.replaceChild(canvas, oldCanvas);
   const W = wrap.clientWidth  || 960;
   const H = wrap.clientHeight || 600;
 
