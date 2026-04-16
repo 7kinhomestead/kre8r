@@ -1169,6 +1169,8 @@ router.post('/:project_id/beat/write', async (req, res) => {
     const sbBeat = storyboard[beatIndex];
     if (!sbBeat) { write({ stage: 'error', error: `Beat ${beatIndex} not found` }); return end(); }
     const voiceProfiles = buildVoiceProfiles(voice_primary, voice_secondary, voice_blend);
+    // Pull full project context (brief, research, talking points) — this is the wall material
+    const projectContext = buildWritrPromptContext(projectId) || '';
     // Build voice block from profile or creator profile fallback
     let voiceBlock = '';
     if (voiceProfiles.length) {
@@ -1204,6 +1206,9 @@ router.post('/:project_id/beat/write', async (req, res) => {
 
 ${voiceBlock}
 
+FULL PROJECT BRIEF (the wall — everything Claude knows about this video):
+${projectContext || 'See storyboard beat for context.'}
+
 THIS BEAT: "${sbBeat.beat_name}"
 Emotional function: ${sbBeat.emotional_function || 'story progression'}
 Position: ${Math.round(thisTarget)}% through the video
@@ -1235,7 +1240,7 @@ Write the beat script now:`;
     const rawScript = await callClaudeMessages(
       'You are a script writer. Write natural conversational creator content. Return only the script text, no preamble.',
       [{ role: 'user', content: prompt }],
-      1200
+      1800
     );
     const beatScript = (rawScript || '').trim();
     if (!config.beat_scripts) config.beat_scripts = {};
