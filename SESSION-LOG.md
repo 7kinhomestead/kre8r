@@ -1,3 +1,59 @@
+# Session 42 — WritΩr Storyboard Brief Pipeline: Root Cause Diagnosis + Fix (2026-04-17)
+
+## Goal
+Fix the storyboard builder returning "No brief found" even after running the full Id8Ωr pipeline.
+
+## Root Causes Found (3 separate issues)
+
+### 1. Id8Ωr Sessions Were Not Crash-Safe
+- `const sessions = new Map()` — sessions lived only in RAM
+- Every server restart (happened repeatedly during session 41 debugging) wiped all sessions
+- User completed Id8Ωr pipeline → server restarted → session gone → "Send to PipΩr" found no session → project created with empty `id8r_data`
+- **Fix: `src/routes/id8r.js`** — `persistSession(sessionId)` saves full session to `session_checkpoints` table after every key step (start, fast-concepts, choose, research, package, brief). `getOrRestoreSession(sessionId)` replaces all `sessions.get()` calls — tries memory first, falls back to DB checkpoint on miss. Session now survives server restart.
+
+### 2. send-pipeline Now Supports Existing Projects
+- `/api/id8r/send-pipeline` always created a new project — no way to attach a brief to an existing project
+- Added optional `project_id` body param: if provided, updates that project instead of creating a new one
+- Allows retroactively linking an Id8Ωr session to a PipΩr project
+
+### 3. WritΩr Storyboard Wasn't Reading from project-config.json
+- `buildWritrPromptContext()` reads from `vault/project-context.json` — returns `''` if no `concept` field
+- Fallback checked `project.id8r_data` DB column — also empty for session-lost projects
+- **But `project-config.json` had the full brief the whole time** — high_concept, script, talking points, hooks, audience insight, all of it — written by PipΩr when the creator pastes the brief
+- That file was never part of the fallback chain
+- **Fix: `src/routes/writr.js`** — both storyboard and beat/write endpoints now check `config.script` / `config.what_happened` / `config.high_concept` from the already-loaded `readConfig()` result as a third fallback
+
+## Final Fallback Priority (storyboard + beat writer)
+1. `vault/project-context.json` — written by Id8Ωr send-pipeline (ideal)
+2. `projects.id8r_data` DB column — same Id8Ωr data, second copy
+3. **`project-config.json` script/what_happened/high_concept** ← NEW — full brief from PipΩr paste field
+4. Project title + high_concept from DB record (last resort, stays on topic but no talking points)
+
+## Id8Ωr Package Error Fix (from session 41, continued)
+- Token limit raised 1024 → 2048 for package endpoint
+- Angle field constrained to 1 sentence max to prevent token overflow
+- Retry button added to package error screen in `public/id8r.html`
+
+## Commits This Session
+- `6aa849e` fix(id8r): raise package endpoint token limit 1024 → 2048
+- `dc2e401` fix(id8r): add retry button on package error screen
+- `2bde2e9` fix(writr): inject full project brief into beat writer context
+- `af8bbd4` fix(writr): fallback to id8r_data when project-context.json missing
+- `188a921` fix(writr): add id8r_data fallback to storyboard builder
+- `914ef0d` fix(writr): remove hard-fail when no Id8r brief — build from project record
+- `53609bf` fix(id8r): persist sessions to SQLite checkpoints — survives server restart
+- `f9aa46c` fix(writr): read brief from project-config.json when vault context missing
+
+## Status
+All changes committed. Running in `npm run electron:dev`. Project 667 "Why I Chose the Harder Life" now has the full brief available via project-config.json fallback. New Id8Ωr sessions are checkpoint-persisted — server restart no longer loses creative work.
+
+## Pending / Next Session
+- Verify storyboard pipeline end-to-end on project 667 with real brief content
+- Push commits to GitHub + deploy to DigitalOcean
+- DaVinci Mac/Linux path fix (Python scripts — `sys.platform` detection)
+
+---
+
 # Session 41 — Beta Hardening + SeedΩr Fixes + WritΩr Storyboard Pipeline (2026-04-16)
 
 ## Goal

@@ -10,7 +10,22 @@ No PM2. A real app with an icon in the taskbar.
 
 ## NEXT SESSION — Top 3 Tasks
 
-### 1. Multi-Tenant Beta Infrastructure (Option B)
+### 1. Verify Storyboard Pipeline End-to-End + Deploy to DigitalOcean
+Confirm the full Id8Ωr → PipΩr → WritΩr storyboard flow works correctly on a real project
+after the session-persistence and brief-fallback fixes from Session 42.
+
+**What to confirm:**
+- Open project 667 "Why I Chose the Harder Life" in WritΩr → Build Storyboard → verify beats
+  map to real homesteading content (not gym/startup hallucinations)
+- Complete one fresh Id8Ωr session → Send to PipΩr → WritΩr → confirm `id8r_data` is populated
+- Restart Electron mid-session, verify session checkpoint restores and pipeline continues
+- Once confirmed working: `git push origin master` then deploy to DO:
+  ```
+  cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
+  sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
+  ```
+
+### 2. Multi-Tenant Beta Infrastructure (Option B)
 Build per-tenant provisioning so 3-5 beta creators can each get their own isolated instance on kre8r.app.
 
 **What to build:**
@@ -19,15 +34,6 @@ Build per-tenant provisioning so 3-5 beta creators can each get their own isolat
 - `/onboarding?token=xxx` — multi-step soul setup wizard: brand name, creator name, platform handles, content angles, voice style description, Anthropic API key, set password
 - Voice library capped at 3 analyses per tenant
 - nginx config: `*.kre8r.app` wildcard → same Node process (DO console)
-
-### 2. Token Tracking + Admin Dashboard
-Wire per-tenant token usage into a visible admin panel so Jason can monitor beta costs.
-
-**What to build:**
-- `token_usage` table already exists — add `tenant_slug` column so usage is per-tenant
-- `GET /admin/tenants` — list all tenants with: last-active, 30-day token count, estimated cost ($3/MTok in, $15/MTok out), feature usage heatmap (which tools used and how often)
-- Simple in-app feedback widget (thumbs up/down + optional note) on each tool page → `POST /api/feedback` → stored in `feedback` table
-- `/admin` renders the dashboard (Jason's credentials only)
 
 ### 3. DaVinci Mac/Linux Path Fix
 Update the 7 Python scripts so DaVinci integration works on Mac and Linux without needing env var overrides.
