@@ -45,6 +45,48 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
+// ─── Session Persistence (crash-safe) ─────────────────────────────────────────
+// Sessions are in-memory by default. After every key step, we checkpoint to
+// SQLite so a server restart never loses creative work mid-pipeline.
+
+function persistSession(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  const checkpoint = {
+    mode            : session.mode,
+    systemPrompt    : session.systemPrompt,
+    messages        : session.messages || [],
+    fastInput       : session.fastInput || null,
+    concepts        : session.concepts || null,
+    chosenConcept   : session.chosenConcept || null,
+    researchResults : session.researchResults || null,
+    researchSummary : session.researchSummary || null,
+    packageData     : session.packageData || null,
+    briefData       : session.briefData || null,
+    citations       : session.citations || [],
+    collaborators   : session.collaborators || null,
+    _researchVaultData : session._researchVaultData || null,
+    _packageVaultData  : session._packageVaultData  || null,
+    _briefVaultData    : session._briefVaultData    || null,
+    createdAt       : session.createdAt || Date.now(),
+  };
+  try { db.setCheckpoint(sessionId, 'id8r', checkpoint); } catch (_) {}
+}
+
+function getOrRestoreSession(sessionId) {
+  // Try live memory first
+  const live = sessions.get(sessionId);
+  if (live) return live;
+  // Restore from checkpoint (survives server restart)
+  try {
+    const cp = db.getCheckpoint(sessionId);
+    if (!cp || !cp.data) return null;
+    sessions.set(sessionId, { ...cp.data, restoredFromCheckpoint: true });
+    return sessions.get(sessionId);
+  } catch (_) {}
+  return null;
+}
+
 // ─── Mode System Prompts ───────────────────────────────────────────────────────
 // Built at request-time so creator-profile.json changes are picked up live.
 
@@ -249,6 +291,7 @@ Your job: Ask 1-2 targeted questions to sharpen the episode angle before generat
       briefData       : null,
       createdAt       : Date.now(),
     });
+    persistSession(sessionId);
 
     res.json({ session_id: sessionId, message: firstMessage });
   } catch (e) {
@@ -266,7 +309,7 @@ router.post('/respond', async (req, res) => {
       return res.status(400).json({ error: 'session_id and message are required' });
     }
 
-    const session = sessions.get(session_id);
+    const session = getOrRestoreSession(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     session.messages.push({ role: 'user', content: message });
@@ -409,6 +452,7 @@ Return ONLY valid JSON:
       briefData       : null,
       createdAt       : Date.now(),
     });
+    persistSession(sessionId);
 
     res.json({ session_id: sessionId, concepts });
   } catch (e) {
@@ -425,7 +469,7 @@ router.post('/concepts', async (req, res) => {
     const { session_id } = req.body;
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
-    const session = sessions.get(session_id);
+    const session = getOrRestoreSession(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const { brand, creatorName, followerSummary, niche } = getCreatorContext();
@@ -563,7 +607,7 @@ router.post('/choose', async (req, res) => {
     const { session_id, choice } = req.body;
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
-    const session = sessions.get(session_id);
+    const session = getOrRestoreSession(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const choiceNum = parseInt(choice);
@@ -579,6 +623,7 @@ router.post('/choose', async (req, res) => {
       };
     }
 
+    persistSession(session_id);
     res.json({ ok: true, chosen: session.chosenConcept });
   } catch (e) {
     console.error('[id8r/choose]', e);
@@ -634,7 +679,7 @@ router.post('/research', async (req, res) => {
       return res.end();
     }
 
-    const session = sessions.get(session_id);
+    const session = getOrRestoreSession(session_id);
     if (!session) {
       send({ stage: 'error', error: 'SESSION_EXPIRED', message: SESSION_EXPIRED.message });
       cleanup();
@@ -785,6 +830,7 @@ router.post('/research', async (req, res) => {
       researchSummary: session.researchSummary || null,
     };
 
+    persistSession(session_id);
     send({ stage: 'done', message: 'Research complete.' });
     cleanup();
     res.end();
@@ -803,7 +849,7 @@ router.post('/package', async (req, res) => {
     const { session_id } = req.body;
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
-    const session = sessions.get(session_id);
+    const session = getOrRestoreSession(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const { brand: pkgBrand, creatorName: pkgCn, followerSummary: pkgFs, niche: pkgNiche, voiceSummary: pkgVoice, profile: pkgProfile } = getCreatorContext();
@@ -852,6 +898,7 @@ Return ONLY valid JSON:
 
     session.packageData = result;
     session._packageVaultData = { savedAt: new Date().toISOString(), packageData: result };
+    persistSession(session_id);
     res.json(result);
   } catch (e) {
     console.error('[id8r/package]', e);
@@ -866,7 +913,7 @@ router.post('/brief', async (req, res) => {
     const { session_id, selected_title, selected_thumbnail, selected_hook } = req.body;
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
-    const session = sessions.get(session_id);
+    const session = getOrRestoreSession(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const { brand: briefBrand, creatorName: briefCn } = getCreatorContext();
@@ -908,6 +955,7 @@ Return ONLY valid JSON in this exact shape:
 
     session.briefData = result;
     session._briefVaultData = { savedAt: new Date().toISOString(), briefData: result };
+    persistSession(session_id);
     res.json(result);
   } catch (e) {
     console.error('[id8r/brief]', e);
@@ -919,22 +967,29 @@ Return ONLY valid JSON in this exact shape:
 
 router.post('/send-pipeline', async (req, res) => {
   try {
-    const { session_id, destination } = req.body;
+    const { session_id, destination, project_id: existingProjectId } = req.body;
 
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
-    const session = sessions.get(session_id);
+    const session = getOrRestoreSession(session_id);
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
-    if (!session.briefData) return res.status(400).json({ error: 'No brief generated yet — run /brief first' });
+    if (!session.briefData && !session.packageData) return res.status(400).json({ error: 'No brief generated yet — run /brief first' });
 
-    const brief = session.briefData;
+    const brief = session.briefData || {};
     const pb    = brief.pipeline_brief || {};
 
-    const title = pb.title || brief.elevator_pitch || 'Untitled Id8Ωr Project';
-    const topic = [pb.high_concept, pb.content_angle, pb.concept_note].filter(Boolean).join(' | ');
-
-    const project = db.createProject(title, topic, null, null);
+    // If caller passes an existing project_id (e.g. attaching brief to a PipΩr project),
+    // update that project instead of creating a new one
+    let project;
+    if (existingProjectId) {
+      project = db.getProject(parseInt(existingProjectId, 10));
+      if (!project) return res.status(404).json({ error: 'Project not found' });
+    } else {
+      const title = pb.title || brief.elevator_pitch || session.chosenConcept?.headline || 'Untitled Id8Ωr Project';
+      const topic = [pb.high_concept, pb.content_angle, pb.concept_note].filter(Boolean).join(' | ');
+      project = db.createProject(title, topic, null, null);
+    }
 
     // Write brief fields to DB so PipΩr and WritΩr can pre-populate
     db.updateProjectPipr(project.id, {
@@ -990,8 +1045,9 @@ router.post('/send-pipeline', async (req, res) => {
       const brief = session.briefData || {};
       const pb    = brief.pipeline_brief || {};
       const chosen = session.chosenConcept;
+      const projectTitle = project.title || pb.title || brief.elevator_pitch || chosen?.headline || 'Untitled';
       const readme = [
-        `VAULT-README — Project ${project.id}: ${title}`,
+        `VAULT-README — Project ${project.id}: ${projectTitle}`,
         `Created: ${new Date().toISOString()}`,
         '',
         '═══ ID8ΩR SESSION ═══════════════════════════════',
