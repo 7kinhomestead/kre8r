@@ -452,6 +452,8 @@ app.get('/media-kit',        (req, res) => res.sendFile(path.join(__dirname, 'pu
 app.get('/media-kit.html',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
 app.get('/beta-invite',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
 app.get('/beta-invite.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
+app.get('/onboarding',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
+app.get('/onboarding.html',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
 
 // KRE8R website prototype — public, no auth
 app.get('/gate',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'kre8r-gate.html')));
