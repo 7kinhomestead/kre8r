@@ -898,6 +898,508 @@ function runMigrations() {
   }
 }
 
+/**
+ * bootstrapTenantTables(tdb)
+ *
+ * Applies the complete current schema to a fresh tenant DB instance.
+ * Called by tenant-db-cache.js after schema.sql (which only has the base 14 tables).
+ * All statements are idempotent (CREATE TABLE IF NOT EXISTS / ALTER TABLE guarded).
+ * Does NOT run backfill/dedup one-time migrations — those are Jason's-data-only.
+ */
+function bootstrapTenantTables(tdb) {
+  const exec = sql => { try { tdb.exec(sql); } catch (_) {} };
+  const cols = tbl => tdb.pragma(`table_info(${tbl})`).map(r => r.name);
+  const addCol = (tbl, col, def) => { if (!cols(tbl).includes(col)) exec(`ALTER TABLE ${tbl} ADD COLUMN ${col} ${def}`); };
+
+  // ── Column additions to base-schema tables ────────────────────────────────
+  addCol('footage', 'creation_timestamp',  'TEXT');
+  addCol('footage', 'organized_path',      'TEXT');
+  addCol('footage', 'transcript_path',     'TEXT');
+  addCol('footage', 'orientation',         'TEXT');
+  addCol('footage', 'braw_source_path',    'TEXT');
+  addCol('footage', 'is_proxy',            'INTEGER NOT NULL DEFAULT 0');
+  addCol('footage', 'transcript',          'TEXT');
+  addCol('footage', 'proxy_path',          'TEXT');
+  addCol('footage', 'subjects',            'TEXT');
+
+  addCol('cuts', 'reasoning',         'TEXT');
+  addCol('cuts', 'clip_path',         'TEXT');
+  addCol('cuts', 'rank',              'INTEGER');
+  addCol('cuts', 'transcript_excerpt','TEXT');
+  addCol('cuts', 'why_it_matters',    'TEXT');
+  addCol('cuts', 'suggested_use',     'TEXT');
+  addCol('cuts', 'saved_for_later',   'INTEGER NOT NULL DEFAULT 0');
+
+  addCol('posts', 'url',              'TEXT');
+  addCol('posts', 'angle',            'TEXT');
+  addCol('posts', 'thumbnail_url',    'TEXT');
+  addCol('posts', 'format',           'TEXT');
+  addCol('posts', 'duration_seconds', 'INTEGER');
+
+  addCol('projects', 'editor_state',                 'TEXT');
+  addCol('projects', 'composor_state',               'TEXT');
+  addCol('projects', 'id8r_data',                    'TEXT');
+  addCol('projects', 'setup_depth',                  'TEXT');
+  addCol('projects', 'entry_point',                  'TEXT');
+  addCol('projects', 'story_structure',              'TEXT');
+  addCol('projects', 'content_type',                 'TEXT');
+  addCol('projects', 'high_concept',                 'TEXT');
+  addCol('projects', 'estimated_duration_minutes',   'INTEGER');
+  addCol('projects', 'pipr_complete',                'INTEGER NOT NULL DEFAULT 0');
+  addCol('projects', 'writr_complete',               'INTEGER NOT NULL DEFAULT 0');
+  addCol('projects', 'active_script_id',             'INTEGER');
+  addCol('projects', 'source',                       "TEXT NOT NULL DEFAULT 'kre8r'");
+  addCol('projects', 'collaborators',                'TEXT');
+  addCol('projects', 'show_id',                      'INTEGER');
+  addCol('projects', 'episode_number',               'INTEGER');
+  addCol('projects', 'shoot_folder',                 'TEXT');
+  addCol('projects', 'archive_state',                'TEXT');
+  addCol('projects', 'archived_at',                  'DATETIME');
+  addCol('projects', 'format',                       "TEXT NOT NULL DEFAULT 'long'");
+  addCol('projects', 'high_concept_angles',          'TEXT');
+  addCol('projects', 'research_bundle_json',         'TEXT');
+
+  // ── Tables added by migrations (not in base schema.sql) ───────────────────
+  exec(`CREATE TABLE IF NOT EXISTS davinci_timelines (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id     INTEGER NOT NULL,
+    timeline_name  TEXT NOT NULL,
+    timeline_index INTEGER NOT NULL DEFAULT 1,
+    state          TEXT NOT NULL DEFAULT 'pending',
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at   DATETIME,
+    notes          TEXT,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_davinci_tl_project ON davinci_timelines(project_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS clip_distribution (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id      INTEGER NOT NULL,
+    platform        TEXT NOT NULL,
+    posted_at       DATETIME,
+    post_url        TEXT,
+    posted_manually INTEGER NOT NULL DEFAULT 1,
+    notes           TEXT,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(footage_id, platform),
+    FOREIGN KEY (footage_id) REFERENCES footage(id) ON DELETE CASCADE
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_clip_dist_footage  ON clip_distribution(footage_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_clip_dist_platform ON clip_distribution(platform)');
+
+  exec(`CREATE TABLE IF NOT EXISTS composor_tracks (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id        INTEGER NOT NULL,
+    scene_label       TEXT    NOT NULL,
+    scene_index       INTEGER NOT NULL DEFAULT 0,
+    scene_type        TEXT    NOT NULL DEFAULT 'buildup',
+    duration_seconds  REAL,
+    suno_prompt       TEXT,
+    suno_job_id       TEXT,
+    suno_track_url    TEXT,
+    suno_track_path   TEXT,
+    public_path       TEXT,
+    selected          INTEGER NOT NULL DEFAULT 0,
+    generation_index  INTEGER NOT NULL DEFAULT 1,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_composor_project ON composor_tracks(project_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS selects (
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id                INTEGER NOT NULL,
+    script_section            TEXT    NOT NULL,
+    section_index             INTEGER NOT NULL DEFAULT 0,
+    takes                     TEXT    NOT NULL DEFAULT '[]',
+    selected_takes            TEXT    NOT NULL DEFAULT '[]',
+    winner_footage_id         INTEGER,
+    gold_nugget               INTEGER NOT NULL DEFAULT 0,
+    fire_suggestion           TEXT,
+    davinci_timeline_position INTEGER NOT NULL DEFAULT 0,
+    created_at                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_selects_project ON selects(project_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS writr_scripts (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id        INTEGER NOT NULL,
+    entry_point       TEXT    NOT NULL DEFAULT 'shoot_first',
+    input_type        TEXT    NOT NULL DEFAULT 'what_happened',
+    raw_input         TEXT,
+    generated_outline TEXT,
+    generated_script  TEXT,
+    beat_map_json     TEXT,
+    hook_variations   TEXT,
+    story_found       TEXT,
+    anchor_moment     TEXT,
+    missing_beats     TEXT,
+    mode              TEXT    NOT NULL DEFAULT 'full',
+    session_id        TEXT,
+    iteration_count   INTEGER NOT NULL DEFAULT 0,
+    approved          INTEGER NOT NULL DEFAULT 0,
+    approved_at       DATETIME,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_writr_scripts_project ON writr_scripts(project_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS shoot_takes (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id  INTEGER NOT NULL,
+    beat_index  INTEGER NOT NULL,
+    beat_name   TEXT    NOT NULL DEFAULT '',
+    take_number INTEGER NOT NULL DEFAULT 1,
+    status      TEXT    NOT NULL DEFAULT 'needed',
+    note        TEXT,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_shoot_takes_project ON shoot_takes(project_id)');
+  exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_shoot_takes_beat ON shoot_takes(project_id, beat_index)');
+
+  exec(`CREATE TABLE IF NOT EXISTS kv_store (
+    key        TEXT PRIMARY KEY,
+    value      TEXT,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS beta_applications (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    name             TEXT    NOT NULL,
+    channel_url      TEXT    NOT NULL,
+    platform         TEXT,
+    upload_frequency TEXT,
+    why_text         TEXT,
+    status           TEXT    NOT NULL DEFAULT 'pending',
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_beta_status ON beta_applications(status)');
+  exec('CREATE INDEX IF NOT EXISTS idx_beta_created ON beta_applications(created_at)');
+
+  exec(`CREATE TABLE IF NOT EXISTS bug_reports (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    what_tried       TEXT,
+    what_happened    TEXT,
+    severity         TEXT    NOT NULL DEFAULT 'minor',
+    page             TEXT,
+    project_id       INTEGER,
+    browser          TEXT,
+    console_errors   TEXT,
+    timestamp        TEXT,
+    reporter_name    TEXT,
+    status           TEXT    NOT NULL DEFAULT 'open',
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_bugreports_status   ON bug_reports(status)');
+  exec('CREATE INDEX IF NOT EXISTS idx_bugreports_severity ON bug_reports(severity)');
+  exec('CREATE INDEX IF NOT EXISTS idx_bugreports_created  ON bug_reports(created_at)');
+
+  exec(`CREATE TABLE IF NOT EXISTS nps_scores (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    score      INTEGER NOT NULL,
+    comment    TEXT,
+    page       TEXT,
+    project_id INTEGER,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_nps_created ON nps_scores(created_at)');
+
+  exec(`CREATE TABLE IF NOT EXISTS token_usage (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    tool           TEXT    NOT NULL,
+    session_id     TEXT,
+    input_tokens   INTEGER NOT NULL DEFAULT 0,
+    output_tokens  INTEGER NOT NULL DEFAULT 0,
+    estimated_cost REAL    NOT NULL DEFAULT 0,
+    tenant_slug    TEXT,
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_token_tool    ON token_usage(tool)');
+  exec('CREATE INDEX IF NOT EXISTS idx_token_session ON token_usage(session_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_token_created ON token_usage(created_at)');
+  exec('CREATE INDEX IF NOT EXISTS idx_token_tenant  ON token_usage(tenant_slug)');
+
+  exec(`CREATE TABLE IF NOT EXISTS email_sequences (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    name             TEXT,
+    goal_type        TEXT    NOT NULL DEFAULT 'onboard',
+    goal_description TEXT,
+    audience         TEXT,
+    email_count      INTEGER NOT NULL DEFAULT 5,
+    timeframe_days   INTEGER NOT NULL DEFAULT 14,
+    voice_profile    TEXT,
+    chat_history     TEXT    NOT NULL DEFAULT '[]',
+    plan             TEXT,
+    status           TEXT    NOT NULL DEFAULT 'planning',
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec(`CREATE TABLE IF NOT EXISTS sequence_emails (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    sequence_id  INTEGER NOT NULL REFERENCES email_sequences(id) ON DELETE CASCADE,
+    position     INTEGER NOT NULL,
+    subject      TEXT,
+    body         TEXT,
+    send_day     INTEGER NOT NULL DEFAULT 0,
+    purpose      TEXT,
+    revised_at   DATETIME,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_seq_emails_seq  ON sequence_emails(sequence_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_email_seq_created ON email_sequences(created_at)');
+
+  exec(`CREATE TABLE IF NOT EXISTS shows (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                    TEXT    NOT NULL,
+    description             TEXT,
+    show_type               TEXT    NOT NULL DEFAULT 'serialized',
+    season                  INTEGER NOT NULL DEFAULT 1,
+    season_arc              TEXT,
+    central_question        TEXT,
+    finale_answer           TEXT,
+    audience_transformation TEXT,
+    target_episodes         INTEGER NOT NULL DEFAULT 12,
+    arc_position            TEXT    NOT NULL DEFAULT 'pilot',
+    status                  TEXT    NOT NULL DEFAULT 'active',
+    creator_id              TEXT    NOT NULL DEFAULT 'primary',
+    created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_shows_creator ON shows(creator_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_shows_status  ON shows(status)');
+
+  exec(`CREATE TABLE IF NOT EXISTS show_episodes (
+    id                              INTEGER PRIMARY KEY AUTOINCREMENT,
+    show_id                         INTEGER REFERENCES shows(id) ON DELETE CASCADE,
+    project_id                      INTEGER REFERENCES projects(id),
+    episode_number                  INTEGER,
+    season                          INTEGER NOT NULL DEFAULT 1,
+    title                           TEXT,
+    what_was_established            TEXT,
+    seeds_planted                   TEXT,
+    arc_advancement                 TEXT,
+    character_moments               TEXT,
+    central_question_status         TEXT    NOT NULL DEFAULT 'introduced',
+    episode_summary                 TEXT,
+    what_next_episode_should_address TEXT,
+    youtube_url                     TEXT,
+    themes                          TEXT,
+    audience_signals                TEXT,
+    status                          TEXT    NOT NULL DEFAULT 'planned',
+    created_at                      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_show_eps_show    ON show_episodes(show_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_show_eps_project ON show_episodes(project_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS show_notifications (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    show_id    INTEGER REFERENCES shows(id),
+    type       TEXT,
+    message    TEXT,
+    read       INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_show_notif_show ON show_notifications(show_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS content_goals (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    month               TEXT NOT NULL,
+    year                INTEGER NOT NULL,
+    target_videos       INTEGER DEFAULT 0,
+    target_emails       INTEGER DEFAULT 0,
+    target_social_posts INTEGER DEFAULT 0,
+    target_episodes     INTEGER DEFAULT 0,
+    notes               TEXT,
+    created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(month, year)
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS northr_alerts (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    type         TEXT NOT NULL,
+    severity     TEXT DEFAULT 'warning',
+    title        TEXT,
+    message      TEXT,
+    action_url   TEXT,
+    action_label TEXT,
+    read         INTEGER DEFAULT 0,
+    dismissed    INTEGER DEFAULT 0,
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS strategy_reports (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    month         TEXT,
+    year          INTEGER,
+    report_type   TEXT DEFAULT 'monthly',
+    content       TEXT,
+    data_snapshot TEXT,
+    evaluation    TEXT,
+    evaluated_at  DATETIME,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS session_checkpoints (
+    session_id  TEXT    PRIMARY KEY,
+    tool        TEXT    NOT NULL,
+    data        TEXT    NOT NULL,
+    updated_at  INTEGER NOT NULL
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS background_jobs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    type        TEXT    NOT NULL,
+    status      TEXT    NOT NULL DEFAULT 'pending',
+    progress    INTEGER NOT NULL DEFAULT 0,
+    total       INTEGER NOT NULL DEFAULT 0,
+    ok          INTEGER NOT NULL DEFAULT 0,
+    errors      INTEGER NOT NULL DEFAULT 0,
+    result      TEXT,
+    error       TEXT,
+    meta        TEXT,
+    started_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    finished_at DATETIME
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_bgjobs_type   ON background_jobs(type)');
+  exec('CREATE INDEX IF NOT EXISTS idx_bgjobs_status ON background_jobs(status)');
+
+  exec(`CREATE TABLE IF NOT EXISTS writr_room_sessions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id  INTEGER NOT NULL UNIQUE,
+    messages    TEXT    NOT NULL DEFAULT '[]',
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_room_sessions_project ON writr_room_sessions(project_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS viral_clips (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id   INTEGER NOT NULL REFERENCES footage(id) ON DELETE CASCADE,
+    project_id   INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    rank         INTEGER NOT NULL DEFAULT 1,
+    start_time   REAL    NOT NULL,
+    end_time     REAL    NOT NULL,
+    duration     REAL,
+    hook         TEXT,
+    caption      TEXT,
+    hashtags     TEXT,
+    platform_fit TEXT,
+    why_it_works TEXT,
+    clip_type    TEXT    NOT NULL DEFAULT 'social',
+    status       TEXT    NOT NULL DEFAULT 'candidate',
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_viral_clips_footage ON viral_clips(footage_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_viral_clips_status  ON viral_clips(status)');
+
+  exec(`CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+    password_hash TEXT    NOT NULL,
+    role          TEXT    NOT NULL DEFAULT 'owner',
+    created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS tenants (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_slug   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+    display_name  TEXT    NOT NULL,
+    sync_token    TEXT    NOT NULL UNIQUE,
+    data_dir      TEXT,
+    plan          TEXT    NOT NULL DEFAULT 'solo',
+    active        INTEGER NOT NULL DEFAULT 1,
+    created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_sync_at  TEXT
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_tenants_slug  ON tenants(tenant_slug)');
+  exec('CREATE INDEX IF NOT EXISTS idx_tenants_token ON tenants(sync_token)');
+
+  exec(`CREATE TABLE IF NOT EXISTS sync_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id   INTEGER NOT NULL REFERENCES tenants(id),
+    direction   TEXT    NOT NULL,
+    payload_kb  REAL,
+    status      TEXT    NOT NULL DEFAULT 'ok',
+    error       TEXT,
+    synced_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS express_sessions (
+    sid        TEXT PRIMARY KEY,
+    data       TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_sessions_expires ON express_sessions(expires_at)');
+
+  exec(`CREATE TABLE IF NOT EXISTS monthly_revenue (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    month       TEXT    NOT NULL,
+    platform    TEXT    NOT NULL DEFAULT 'youtube',
+    revenue_usd REAL    NOT NULL DEFAULT 0,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(month, platform)
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_monthly_rev_month ON monthly_revenue(month)');
+
+  exec(`CREATE TABLE IF NOT EXISTS platform_connections (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform         TEXT    NOT NULL UNIQUE,
+    access_token     TEXT    NOT NULL,
+    refresh_token    TEXT,
+    token_expires_at INTEGER,
+    account_id       TEXT,
+    account_name     TEXT,
+    extra_data       TEXT,
+    connected_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS postor_posts (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id   INTEGER,
+    platform     TEXT    NOT NULL,
+    status       TEXT    NOT NULL DEFAULT 'pending',
+    video_path   TEXT,
+    title        TEXT,
+    description  TEXT,
+    post_url     TEXT,
+    post_id      TEXT,
+    scheduled_at DATETIME,
+    posted_at    DATETIME,
+    error        TEXT,
+    metadata     TEXT,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_project  ON postor_posts(project_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_platform ON postor_posts(platform)');
+  exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_status   ON postor_posts(status)');
+  exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_created  ON postor_posts(created_at)');
+
+  exec(`CREATE TABLE IF NOT EXISTS ideas (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    title       TEXT    NOT NULL,
+    concept     TEXT,
+    angle       TEXT,
+    hook        TEXT,
+    notes       TEXT,
+    status      TEXT    NOT NULL DEFAULT 'vault',
+    brief_data  TEXT,
+    project_id  INTEGER REFERENCES projects(id),
+    connections TEXT,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_ideas_status  ON ideas(status)');
+  exec('CREATE INDEX IF NOT EXISTS idx_ideas_created ON ideas(created_at)');
+}
+
 // persist() removed — better-sqlite3 writes directly to disk on every operation
 
 // ─────────────────────────────────────────────
@@ -3467,6 +3969,7 @@ function bulkCreateIdeas(ideas) {
 module.exports = {
   initDb,
   checkpoint,
+  bootstrapTenantTables, // used by tenant-db-cache to fully initialise new tenant DBs
   getRawDb: () => db,  // used by session store in server.js
   // Auth
   getUserByUsername,

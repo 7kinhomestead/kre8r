@@ -53,9 +53,18 @@ function openTenantDb(slug) {
   tdb.pragma('foreign_keys = ON');
   tdb.pragma('synchronous = NORMAL');
 
-  // Apply the full schema (CREATE TABLE IF NOT EXISTS is idempotent)
+  // Apply base schema (14 original tables)
   if (fs.existsSync(SCHEMA_PATH)) {
     try { tdb.exec(fs.readFileSync(SCHEMA_PATH, 'utf8')); } catch (_) {}
+  }
+
+  // Apply all migration-added tables and columns so tenant DB is fully up-to-date.
+  // bootstrapTenantTables is idempotent — safe to call on every open.
+  try {
+    const { bootstrapTenantTables } = require('../db');
+    bootstrapTenantTables(tdb);
+  } catch (e) {
+    console.warn('[tenant-db] bootstrapTenantTables failed (non-fatal):', e.message);
   }
 
   return tdb;
