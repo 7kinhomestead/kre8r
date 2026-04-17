@@ -511,7 +511,14 @@ app.use('/api/postor',            require('./src/routes/postor'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 
 // Creator profile — served to all tools
+// On tenant subdomains, return the tenant's profile directly.
+// On the root instance, validate and return Jason's creator-profile.json.
 app.get('/api/creator-profile', (req, res) => {
+  const tenantProfile = tenantContext.getProfile();
+  if (tenantProfile) {
+    return res.json(tenantProfile);
+  }
+
   const { loadProfile } = require('./src/utils/profile-validator');
   const result = loadProfile();
   if (!result.ok) {
