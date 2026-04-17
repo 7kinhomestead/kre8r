@@ -40,7 +40,10 @@ const SCOPES = [
 
 function getCallbackUrl(req) {
   const host = req.get('host') || 'localhost:3000';
-  return `${req.protocol}://${host}/api/postor/auth/meta/callback`;
+  // Trust X-Forwarded-Proto set by nginx — req.protocol is always 'http'
+  // behind a reverse proxy unless Express trust proxy is configured.
+  const proto = req.get('x-forwarded-proto') || req.protocol;
+  return `${proto}://${host}/api/postor/auth/meta/callback`;
 }
 
 function getAuthUrl(req, state) {

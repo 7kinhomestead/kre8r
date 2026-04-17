@@ -341,6 +341,162 @@ router.post('/auth/meta/manual-token', async (req, res) => {
   }
 });
 
+// ─── Link Instagram from stored Page token ───────────────────────────────────
+
+/**
+ * POST /api/postor/auth/meta/link-instagram
+ * Uses the stored Facebook page token to look up the linked Instagram
+ * Business account and store it as the instagram connection.
+ * No new token needed from the user.
+ */
+router.post('/auth/meta/link-instagram', async (req, res) => {
+  const fbConn = db.getPostorConnection('facebook');
+  if (!fbConn) return res.status(400).json({ error: 'Facebook not connected — run manual-token first' });
+
+  const pageId    = fbConn.account_id;
+  const pageToken = fbConn.access_token;
+
+  try {
+    const url  = `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account{id,username,name}&access_token=${pageToken}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error.message);
+
+    const ig = data.instagram_business_account;
+    if (!ig) return res.status(404).json({ error: 'No Instagram Business account linked to this Facebook Page. Make sure your Instagram is a Business/Creator account and connected to the 7 Kin Homestead Facebook Page.' });
+
+    db.upsertPostorConnection('instagram', {
+      access_token:  pageToken,
+      refresh_token: null,
+      account_id:    ig.id,
+      account_name:  ig.username || ig.name || 'Instagram',
+    });
+
+    res.json({ ok: true, ig_user_id: ig.id, ig_username: ig.username });
+  } catch (err) {
+    console.error('[postor] link-instagram error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Instagram Debug — tries every IG field with the stored page token ────────
+
+router.get('/auth/meta/debug-instagram', async (req, res) => {
+  const fbConn = db.getPostorConnection('facebook');
+  if (!fbConn) return res.status(400).json({ error: 'Facebook not connected' });
+
+  const pageId    = fbConn.account_id;
+  const pageToken = fbConn.access_token;
+
+  const results = {};
+
+  const fields = [
+    'instagram_business_account{id,username,name}',
+    'connected_instagram_account{id,username,name}',
+    'instagram_accounts{id,username}',
+  ];
+
+  for (const field of fields) {
+    try {
+      const url  = `https://graph.facebook.com/v21.0/${pageId}?fields=${field}&access_token=${pageToken}`;
+      const resp = await fetch(url);
+      results[field] = await resp.json();
+    } catch (err) {
+      results[field] = { fetch_error: err.message };
+    }
+  }
+
+  // Also try with the long-lived USER token (meta_pages) — different permission set
+  const userConn = db.getPostorConnection('meta_pages');
+  if (userConn) {
+    const userToken = userConn.access_token;
+    try {
+      const url  = `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account{id,username,name}&access_token=${userToken}`;
+      const resp = await fetch(url);
+      results._user_token_ig = await resp.json();
+    } catch (err) {
+      results._user_token_ig = { fetch_error: err.message };
+    }
+
+    // Check what scopes the user token actually has
+    try {
+      const permUrl  = `https://graph.facebook.com/v21.0/me/permissions?access_token=${userToken}`;
+      const permResp = await fetch(permUrl);
+      results._user_token_permissions = await permResp.json();
+    } catch (err) {
+      results._user_token_permissions = { fetch_error: err.message };
+    }
+  }
+
+  res.json({ page_id: pageId, results });
+});
+
+// ─── Hardcode Instagram ID (last-resort dev bypass) ──────────────────────────
+
+/**
+ * POST /api/postor/auth/meta/set-instagram-id
+ * Body: { ig_user_id, ig_username }
+ * Stores the Instagram Business Account ID using the already-connected
+ * Facebook Page token.  Use when Graph API Explorer won't surface the IG actor.
+ */
+router.post('/auth/meta/set-instagram-id', (req, res) => {
+  const { ig_user_id, ig_username } = req.body || {};
+  if (!ig_user_id) return res.status(400).json({ error: 'ig_user_id required' });
+
+  const fbConn = db.getPostorConnection('facebook');
+  if (!fbConn) return res.status(400).json({ error: 'Facebook not connected — need page token for publishing' });
+
+  db.upsertPostorConnection('instagram', {
+    access_token:  fbConn.access_token,
+    refresh_token: null,
+    account_id:    String(ig_user_id),
+    account_name:  ig_username || 'Instagram',
+  });
+
+  console.log(`[postor] Instagram ID manually set: @${ig_username} (${ig_user_id})`);
+  res.json({ ok: true, ig_user_id, ig_username });
+});
+
+// ─── Manual Instagram Token (dev mode) ───────────────────────────────────────
+
+/**
+ * POST /api/postor/auth/meta/manual-instagram-token
+ * Body: { instagram_access_token: string }
+ *
+ * Use when Graph API Explorer has the Instagram Business Account selected
+ * in the top-left actor dropdown.  Calling /me with that token returns the
+ * IG account's own id + username — no instagram_content_publish scope required
+ * for the /me read.  The token is stored for later publishing calls.
+ */
+router.post('/auth/meta/manual-instagram-token', async (req, res) => {
+  const { instagram_access_token } = req.body || {};
+  if (!instagram_access_token) return res.status(400).json({ error: 'instagram_access_token required' });
+
+  try {
+    const url  = `https://graph.facebook.com/v21.0/me?fields=id,username,name&access_token=${instagram_access_token}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (data.error) return res.status(400).json({ error: data.error.message });
+    if (!data.id)   return res.status(400).json({ error: 'Token did not return an Instagram user id — make sure Instagram is selected in Graph API Explorer' });
+
+    db.upsertPostorConnection('instagram', {
+      access_token:  instagram_access_token,
+      refresh_token: null,
+      account_id:    data.id,
+      account_name:  data.username || data.name || 'Instagram',
+      extra_data:    JSON.stringify(data),
+    });
+
+    console.log(`[postor] Instagram manually linked: @${data.username} (${data.id})`);
+    res.json({ ok: true, ig_user_id: data.id, ig_username: data.username });
+  } catch (err) {
+    console.error('[postor] manual-instagram-token error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Disconnect ───────────────────────────────────────────────────────────────
 
 router.delete('/connections/:platform', (req, res) => {
