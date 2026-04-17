@@ -1086,12 +1086,24 @@ router.post('/:project_id/storyboard', async (req, res) => {
         projectContext = lines.join('\n');
       } catch (_) {}
     }
-    // Final fallback: build minimal context from the project record itself
+    // Fallback: PipΩr project-config.json often has the full brief pasted into
+    // config.script or config.what_happened — that's the richest source available
+    // when Id8Ωr data wasn't saved (e.g. server restart mid-session).
+    if (!projectContext && (config.script || config.what_happened || config.high_concept)) {
+      const lines = [`## PROJECT BRIEF: ${project.title}`];
+      if (config.high_concept) lines.push(`High concept: ${config.high_concept}`);
+      if (config.content_type) lines.push(`Content angle: ${config.content_type}`);
+      // script/what_happened often contains the full formatted brief from Id8Ωr
+      const briefText = config.script || config.what_happened || '';
+      if (briefText) lines.push(`\nFull project brief:\n${briefText.slice(0, 2000)}`);
+      projectContext = lines.join('\n');
+    }
+    // Final fallback: use only what the project DB record has
     if (!projectContext) {
       const lines = [`## PROJECT: ${project.title}`];
       if (project.high_concept) lines.push(`High concept: ${project.high_concept}`);
       if (project.content_type) lines.push(`Content angle: ${project.content_type}`);
-      lines.push(`\nNo Id8Ωr brief is attached to this project. Use the beat structure and project title to map specific, concrete story moments. Make educated inferences based on the title — do NOT invent unrelated topics.`);
+      lines.push(`\nNo brief found. Map the beat structure to the project title and stay strictly on topic.`);
       projectContext = lines.join('\n');
     }
     const beatsFormatted = beats.map((b, i) =>
@@ -1233,12 +1245,21 @@ router.post('/:project_id/beat/write', async (req, res) => {
         projectContext = lines.join('\n');
       } catch (_) {}
     }
-    // Final fallback: use what the project record itself has
+    // Fallback: PipΩr config often has the full brief in config.script / config.what_happened
+    if (!projectContext && (config.script || config.what_happened || config.high_concept)) {
+      const lines = [`## PROJECT BRIEF: ${project.title}`];
+      if (config.high_concept) lines.push(`High concept: ${config.high_concept}`);
+      if (config.content_type) lines.push(`Content angle: ${config.content_type}`);
+      const briefText = config.script || config.what_happened || '';
+      if (briefText) lines.push(`\nFull project brief:\n${briefText.slice(0, 2000)}`);
+      projectContext = lines.join('\n');
+    }
+    // Final fallback: use only what the project DB record has
     if (!projectContext) {
       const lines = [`## PROJECT: ${project.title}`];
       if (project.high_concept) lines.push(`High concept: ${project.high_concept}`);
       if (project.content_type) lines.push(`Content angle: ${project.content_type}`);
-      lines.push(`\nNo Id8Ωr brief attached. Write this beat based on the project title and storyboard context. Stay on topic — do NOT invent unrelated subject matter.`);
+      lines.push(`\nNo brief found. Write this beat based on the project title and storyboard context. Stay on topic.`);
       projectContext = lines.join('\n');
     }
     // Build voice block from profile or creator profile fallback
