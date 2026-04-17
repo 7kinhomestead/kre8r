@@ -8,6 +8,38 @@ No PM2. A real app with an icon in the taskbar.
 
 ---
 
+## ⚠️ BEFORE BETA LAUNCH — Desktop-Only Features Need a Gate
+
+Several features only work in the local Electron app. On kre8r.app (the hosted web version),
+these features will fail or look broken for beta tenants. Before onboarding real beta creators,
+decide: **hide them, disable them, or replace them with web-native equivalents.**
+
+### Features that require local/Electron context:
+
+| Feature | Why it breaks on web | Options |
+|---|---|---|
+| **PostΩr — YouTube/Meta upload** | Uses absolute local file paths. OAuth was set up against localhost:3000 redirect URIs. | Option A: hide PostΩr entirely on hosted. Option B: web-upload (S3 staging area). Option C: show "Desktop App only" banner. |
+| **PostΩr — Pipeline prefill** | Works on web (DB read only), but useless without video upload | Same as above — hide with upload |
+| **VaultΩr intake watcher** | Watches `D:\kre8r\intake` — local Windows path, no equivalent on DO | Option A: hide watcher status. Option B: manual upload endpoint (drag-drop to server). |
+| **EditΩr — proxy video playback** | `proxy_path` is a local Windows path, won't play in browser over web | Option A: disable video preview. Option B: upload proxy to server. |
+| **DaVinci integration** | `scripts/davinci/*.py` only runs on local Windows with Resolve installed | Hide entire DaVinci section (already behind a Resolve detection guard). |
+| **Whisper transcription** | Requires local Python + Whisper on PATH | Show "Transcription requires Desktop App" state. |
+| **Teleprompter QR codes** | QRs point to `localhost:3000` — useless on web | Generate QR to tenant subdomain instead. |
+
+### Suggested approach (pick one per session):
+- **Quick gate:** On non-Electron context, detect via `window.__KRE8R_ELECTRON` flag (already set by
+  Electron main.js). Hide or replace with a "🖥️ Desktop App Only" badge on affected UI sections.
+- **Medium lift:** Add `IS_ELECTRON` env var on startup. Expose as `/api/capabilities` endpoint.
+  Frontend reads it on load and conditionally renders/hides sections.
+- **Full web-native:** Replace file-path-dependent flows with cloud upload (multer → temp storage → process).
+  Much bigger lift, but unlocks the full pipeline for web beta users.
+
+**Priority:** Gate first (fastest), replace later if web users need those features.
+**Note:** Pre-production and distribution tools (Id8Ωr, PipΩr, WritΩr, CaptionΩr, MailΩr, NorthΩr)
+all work perfectly on web — only post-production and hardware-adjacent features are affected.
+
+---
+
 ## NEXT SESSION — Top 3 Tasks
 
 ### 1. Verify Storyboard Pipeline End-to-End + Deploy to DigitalOcean

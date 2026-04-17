@@ -281,6 +281,66 @@ router.get('/auth/meta/pages', (req, res) => {
   res.json({ pages });
 });
 
+// ─── Manual Token (dev mode — bypasses OAuth redirect URI requirement) ────────
+
+/**
+ * POST /api/postor/auth/meta/manual-token
+ * Body: { user_access_token: string }
+ * Uses a token from Graph API Explorer to discover pages + store connection.
+ * For development use when localhost redirect URIs won't save in Meta portal.
+ */
+router.post('/auth/meta/manual-token', async (req, res) => {
+  const { user_access_token } = req.body || {};
+  if (!user_access_token) return res.status(400).json({ error: 'user_access_token required' });
+
+  try {
+    // Exchange for long-lived token
+    const longTokenData = await meta.getLongLivedToken(user_access_token);
+    if (longTokenData.error) throw new Error(longTokenData.error_description || longTokenData.error);
+    const longToken = longTokenData.access_token || user_access_token;
+
+    // Get pages
+    const pages = await meta.getPages(longToken);
+    if (!pages.length) return res.status(400).json({ error: 'No Facebook Pages found for this account' });
+
+    // Store user token + page list
+    db.upsertPostorConnection('meta_pages', {
+      access_token:  longToken,
+      refresh_token: null,
+      account_id:    pages[0]?.id    || null,
+      account_name:  pages[0]?.name  || 'Meta',
+      extra_data:    JSON.stringify(pages),
+    });
+
+    // Auto-select first page
+    const firstPage = pages[0];
+    db.upsertPostorConnection('facebook', {
+      access_token:  firstPage.access_token,
+      refresh_token: null,
+      account_id:    firstPage.id,
+      account_name:  firstPage.name,
+    });
+
+    if (firstPage.ig_user_id) {
+      db.upsertPostorConnection('instagram', {
+        access_token:  firstPage.access_token,
+        refresh_token: null,
+        account_id:    firstPage.ig_user_id,
+        account_name:  firstPage.ig_username || firstPage.name,
+      });
+    }
+
+    res.json({
+      ok: true,
+      pages: pages.map(p => ({ id: p.id, name: p.name, ig: p.ig_username || null })),
+      selected: firstPage.name,
+    });
+  } catch (err) {
+    console.error('[postor] manual-token error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Disconnect ───────────────────────────────────────────────────────────────
 
 router.delete('/connections/:platform', (req, res) => {
@@ -309,6 +369,47 @@ router.get('/vault-videos', (req, res) => {
     description: f.description || null,
   }));
   res.json({ videos });
+});
+
+// ─── Project Prefill ─────────────────────────────────────────────────────────
+
+/**
+ * GET /api/postor/project/:id/prefill
+ * Returns pipeline data for a project: selected package title + YouTube description,
+ * per-platform captions (instagram, facebook), and creator tags from profile.
+ * Used by the PostΩr form to auto-populate fields when a project video is picked.
+ */
+router.get('/project/:id/prefill', (req, res) => {
+  const projectId = parseInt(req.params.id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project id' });
+
+  try {
+    const pkg      = db.getSelectedPackage(projectId);
+    const captions = db.getCaptions(projectId);
+
+    // Group captions by platform — join multiple clips with blank line
+    const captionMap = {};
+    for (const row of captions) {
+      const p = (row.platform || '').toLowerCase();
+      captionMap[p] = captionMap[p]
+        ? captionMap[p] + '\n\n' + row.caption_text
+        : row.caption_text;
+    }
+
+    res.json({
+      title:              pkg?.title              || null,
+      youtube_description: pkg?.youtube_description || null,
+      captions: {
+        youtube:   captionMap.youtube   || null,
+        instagram: captionMap.instagram || null,
+        facebook:  captionMap.facebook  || null,
+        tiktok:    captionMap.tiktok    || null,
+      },
+    });
+  } catch (err) {
+    console.error('[postor] prefill error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── POST to Platforms (SSE Job) ──────────────────────────────────────────────

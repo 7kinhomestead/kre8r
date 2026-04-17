@@ -28,12 +28,12 @@ const GRAPH            = 'https://graph.facebook.com/v21.0';
 const GRAPH_VIDEO      = 'https://graph-video.facebook.com/v21.0';
 
 const SCOPES = [
-  'instagram_basic',
-  'instagram_content_publish',
-  'pages_manage_posts',
-  'pages_read_engagement',
-  'pages_show_list',
-  'publish_video',
+  // instagram_basic deprecated May 2024 — removed
+  'instagram_content_publish', // publish Reels via Page-linked Instagram account
+  'pages_manage_posts',        // create/edit/delete Page posts
+  'pages_read_engagement',     // read Page content + follower data
+  'pages_show_list',           // list Pages the user manages
+  'publish_video',             // upload video to Facebook Page
 ].join(',');
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

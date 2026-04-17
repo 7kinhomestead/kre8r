@@ -615,6 +615,26 @@
       font-size: 14px;
     }
 
+    /* ── YouTube Studio Checklist ── */
+    .yt-check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px 0;
+      line-height: 1.4;
+    }
+    .yt-check-row input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      margin-top: 1px;
+      accent-color: var(--teal);
+      flex-shrink: 0;
+    }
+    .yt-check-row:has(input:checked) span { text-decoration: line-through; opacity: .45; }
+
     /* ── Toast ── */
     #toast {
       position: fixed;
@@ -726,6 +746,13 @@
         <span class="video-picker-or">or</span>
         <input type="text" id="video-path" placeholder="Paste absolute file path…" oninput="onPathInput()" />
       </div>
+    </div>
+
+    <!-- Pipeline prefill notice -->
+    <div id="prefill-notice" style="display:none;background:rgba(20,184,166,.08);border:1px solid rgba(20,184,166,.25);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--teal);margin-bottom:14px;align-items:center;gap:8px;">
+      <span>✨</span>
+      <span id="prefill-notice-text">Pipeline data loaded — title, description and captions auto-filled.</span>
+      <button onclick="clearPrefill()" style="margin-left:auto;background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:16px;line-height:1;" title="Clear">×</button>
     </div>
 
     <!-- Title + Description -->
@@ -891,6 +918,32 @@
       <div id="bulk-overall" style="font-size:12px;color:var(--text-dim)"></div>
     </div>
     <div class="bulk-progress-list" id="bulk-progress-list"></div>
+  </div>
+
+  <!-- YouTube Studio Checklist (shown after successful YouTube upload) -->
+  <div id="yt-studio-card" style="display:none;background:var(--bg-card);border:1px solid rgba(255,0,0,.25);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <span style="font-size:20px;">▶️</span>
+      <div>
+        <div style="font-weight:700;font-size:15px;">YouTube Studio — Finish the Upload</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">These steps can't be automated via the API — you need to do them manually in Studio.</div>
+      </div>
+      <a id="yt-studio-link" href="#" target="_blank" rel="noopener"
+         style="margin-left:auto;background:#ff0000;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">
+        Open in Studio →
+      </a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="yt-checklist">
+      <label class="yt-check-row"><input type="checkbox" class="yt-chk"> <span>💰 Monetization — turn on ads (Video details → Monetization tab)</span></label>
+      <label class="yt-check-row"><input type="checkbox" class="yt-chk"> <span>🎯 End Screens — add subscribe button + next video (≥ last 20 sec)</span></label>
+      <label class="yt-check-row"><input type="checkbox" class="yt-chk"> <span>🃏 Cards — link to playlist or related video at key moments</span></label>
+      <label class="yt-check-row"><input type="checkbox" class="yt-chk"> <span>📌 Chapters — add timestamps in the description if the video is long</span></label>
+      <label class="yt-check-row"><input type="checkbox" class="yt-chk"> <span>🖼️ Thumbnail — upload custom thumbnail (not the auto-generated one)</span></label>
+      <label class="yt-check-row"><input type="checkbox" class="yt-chk"> <span>🏷️ Subtitles / CC — confirm auto-captions or upload .srt if available</span></label>
+      <label class="yt-check-row"><input type="checkbox" class="yt-chk"> <span>🌍 Language — set video language to English if not auto-detected</span></label>
+      <label class="yt-check-row"><input type="checkbox" class="yt-chk"> <span>📋 Playlist — add to the right playlist (e.g. Rock Rich Episodes)</span></label>
+    </div>
+    <div id="yt-checklist-done" style="display:none;margin-top:12px;font-size:13px;color:var(--green);font-weight:600;">✅ All steps done — you're live!</div>
   </div>
 
   <!-- Analytics Sync -->
@@ -1196,11 +1249,69 @@ async function loadVaultVideos() {
 }
 
 function onVaultPick() {
-  const val = document.getElementById('vault-picker').value;
+  const sel   = document.getElementById('vault-picker');
+  const val   = sel.value;
   if (val) {
     document.getElementById('video-path').value = val;
+    // Find the vault video record so we can look up the project_id
+    const video = vaultVideos.find(v => (v.file_path || '') === val);
+    if (video?.project_id) {
+      prefillFromProject(video.project_id);
+    } else {
+      hidePrefillNotice();
+    }
+  } else {
+    hidePrefillNotice();
   }
   updatePostButton();
+}
+
+async function prefillFromProject(projectId) {
+  try {
+    const res  = await fetch(`/api/postor/project/${projectId}/prefill`);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    let filled = [];
+
+    if (data.title) {
+      document.getElementById('title').value = data.title;
+      filled.push('title');
+    }
+    if (data.youtube_description) {
+      document.getElementById('description').value = data.youtube_description;
+      filled.push('description');
+    }
+    if (data.captions?.instagram) {
+      document.getElementById('ig-caption').value = data.captions.instagram;
+      filled.push('Instagram caption');
+    }
+    if (data.captions?.facebook) {
+      document.getElementById('fb-description').value = data.captions.facebook;
+      filled.push('Facebook description');
+    }
+
+    if (filled.length > 0) {
+      const notice = document.getElementById('prefill-notice');
+      document.getElementById('prefill-notice-text').textContent =
+        `✨ Pipeline data loaded — ${filled.join(', ')} auto-filled from project #${projectId}.`;
+      notice.style.display = 'flex';
+    }
+  } catch (_) {
+    // Non-fatal — prefill is a convenience, not a blocker
+  }
+}
+
+function hidePrefillNotice() {
+  document.getElementById('prefill-notice').style.display = 'none';
+}
+
+function clearPrefill() {
+  document.getElementById('title').value       = '';
+  document.getElementById('description').value = '';
+  document.getElementById('ig-caption').value  = '';
+  document.getElementById('fb-description').value = '';
+  hidePrefillNotice();
 }
 
 function onPathInput() {
@@ -1311,6 +1422,10 @@ function listenToJob(jobId, platforms) {
         const linkEl = document.getElementById('plink-' + ev.platform);
         if (linkEl) linkEl.innerHTML = `<a href="${esc(ev.post_url)}" class="pp-link" target="_blank">View →</a>`;
       }
+      // YouTube: show Studio checklist so creator can finish the upload manually
+      if (ev.platform === 'youtube') {
+        showYouTubeStudioCard(ev.post_url, ev.post_id);
+      }
     } else if (ev.stage === 'platform_error') {
       updateProgress(ev.platform, 100, 'Error', 'is-error');
       const status = document.getElementById('pstatus-' + ev.platform);
@@ -1341,6 +1456,37 @@ function listenToJob(jobId, platforms) {
     document.getElementById('btn-post').classList.remove('is-posting');
     document.getElementById('btn-post').disabled = false;
   };
+}
+
+// ── YouTube Studio Checklist ──────────────────────────────────────
+
+function showYouTubeStudioCard(postUrl, videoId) {
+  const card = document.getElementById('yt-studio-card');
+  if (!card) return;
+
+  // Build the direct Studio URL for this video
+  // postUrl might be https://www.youtube.com/watch?v=VIDEO_ID
+  // Studio URL:      https://studio.youtube.com/video/VIDEO_ID/edit
+  let studioUrl = 'https://studio.youtube.com/';
+  let vid = videoId || null;
+  if (!vid && postUrl) {
+    try { vid = new URL(postUrl).searchParams.get('v'); } catch (_) {}
+  }
+  if (vid) studioUrl = `https://studio.youtube.com/video/${vid}/edit`;
+
+  document.getElementById('yt-studio-link').href = studioUrl;
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Wire up "all done" detection
+  const checkboxes = card.querySelectorAll('.yt-chk');
+  const doneEl     = document.getElementById('yt-checklist-done');
+  checkboxes.forEach(chk => {
+    chk.addEventListener('change', () => {
+      const allChecked = [...checkboxes].every(c => c.checked);
+      doneEl.style.display = allChecked ? 'block' : 'none';
+    });
+  });
 }
 
 // ── History ───────────────────────────────────────────────────────
