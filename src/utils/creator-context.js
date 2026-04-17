@@ -17,10 +17,19 @@ const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH
 
 /**
  * Load and return the full creator profile object.
- * Fresh read each call so live edits to creator-profile.json are picked up
- * without a server restart (acceptable cost — only called at request time).
+ * On tenant subdomains, returns the tenant's profile from AsyncLocalStorage context.
+ * On the root instance, reads Jason's creator-profile.json from disk.
+ * Fresh read each call so live edits are picked up without a server restart.
  */
 function loadProfile() {
+  // Tenant subdomains: use the profile loaded by the tenant middleware.
+  // Lazy-require to avoid circular dependency at module load time.
+  try {
+    const tenantContext = require('./tenant-context');
+    const tenantProfile = tenantContext.getProfile();
+    if (tenantProfile) return tenantProfile;
+  } catch (_) {}
+  // Root instance — read Jason's profile from disk.
   return JSON.parse(fs.readFileSync(PROFILE_PATH, 'utf8'));
 }
 
@@ -46,25 +55,32 @@ function loadProfile() {
 function getCreatorContext() {
   const profile = loadProfile();
 
-  const brand         = profile?.creator?.brand       || 'Unknown Brand';
-  const creatorName   = profile?.creator?.name        || 'Creator';
-  const partnerName   = profile?.creator?.partner     || null;
-  const voiceSummary  = profile?.voice?.summary       || 'Straight-talking, warm, never corporate.';
-  const communityName = profile?.community?.name      || 'Community';
-  const niche         = profile?.creator?.niche       || 'content creation';
-  const tagline       = profile?.creator?.tagline     || '';
+  // Support both Jason's nested schema (profile.creator.brand) and
+  // the flat tenant onboarding schema (profile.brand / profile.name).
+  const brand         = profile?.creator?.brand    || profile?.brand   || 'Unknown Brand';
+  const creatorName   = profile?.creator?.name     || profile?.name    || 'Creator';
+  const partnerName   = profile?.creator?.partner  || null;
+  const voiceSummary  = profile?.voice?.summary    || profile?.voice_profile || 'Straight-talking, warm, never corporate.';
+  const communityName = profile?.community?.name   || 'Community';
+  const niche         = profile?.creator?.niche    || 'content creation';
+  const tagline       = profile?.creator?.tagline  || '';
 
   // Platform follower summary
+  // Jason's schema: platforms.tiktok = { handle, followers, url }
+  // Tenant schema:  platforms.tiktok = "@handle" (string) — no follower counts yet
   const platforms = profile?.platforms || {};
   const followerParts = [];
-  if (platforms.tiktok?.followers)   followerParts.push(`${fmtFollowers(platforms.tiktok.followers)} TikTok`);
-  if (platforms.youtube?.subscribers) followerParts.push(`${fmtFollowers(platforms.youtube.subscribers)} YouTube`);
-  if (platforms.lemon8?.followers)   followerParts.push(`${fmtFollowers(platforms.lemon8.followers)} Lemon8`);
+  if (typeof platforms.tiktok === 'object' && platforms.tiktok?.followers)
+    followerParts.push(`${fmtFollowers(platforms.tiktok.followers)} TikTok`);
+  if (typeof platforms.youtube === 'object' && platforms.youtube?.subscribers)
+    followerParts.push(`${fmtFollowers(platforms.youtube.subscribers)} YouTube`);
+  if (typeof platforms.lemon8 === 'object' && platforms.lemon8?.followers)
+    followerParts.push(`${fmtFollowers(platforms.lemon8.followers)} Lemon8`);
   const followerSummary = followerParts.join(', ');
 
-  // Handles
-  const tiktokHandle  = platforms.tiktok?.handle  || '';
-  const youtubeHandle = (platforms.youtube?.handle || tiktokHandle || '').replace(/^@/, ''); // no @ for YouTube API
+  // Handles — support both object and string formats
+  const tiktokHandle  = (typeof platforms.tiktok  === 'object' ? platforms.tiktok?.handle  : platforms.tiktok)  || '';
+  const youtubeHandle = ((typeof platforms.youtube === 'object' ? platforms.youtube?.handle : platforms.youtube) || tiktokHandle || '').replace(/^@/, ''); // no @ for YouTube API
 
   // Community tiers
   const tiers = profile?.community?.tiers || {};
@@ -140,13 +156,17 @@ function getSocialLinksBlock() {
   const platforms = profile?.platforms || {};
   const community = profile?.community || {};
 
+  // Handle both object schema (Jason) and string/flat schema (tenants)
+  const getUrl    = p => (typeof p === 'object' ? p?.url    : null) || null;
+  const getHandle = p => (typeof p === 'object' ? (p?.handle || p?.channel || p?.page) : p) || '';
+
   const links = [];
-  if (platforms.youtube?.url)   links.push({ label: 'YouTube',   url: platforms.youtube.url,   handle: platforms.youtube.channel || platforms.youtube.handle || '' });
-  if (platforms.tiktok?.url)    links.push({ label: 'TikTok',    url: platforms.tiktok.url,    handle: platforms.tiktok.handle || '' });
-  if (platforms.instagram?.url) links.push({ label: 'Instagram', url: platforms.instagram.url, handle: platforms.instagram.handle || '' });
-  if (platforms.facebook?.url)  links.push({ label: 'Facebook',  url: platforms.facebook.url,  handle: platforms.facebook.page || '' });
-  if (platforms.lemon8?.url)    links.push({ label: 'Lemon8',    url: platforms.lemon8.url,    handle: platforms.lemon8.handle || '' });
-  if (community.url)            links.push({ label: community.name || 'Community', url: community.url, handle: '' });
+  if (getUrl(platforms.youtube))   links.push({ label: 'YouTube',   url: getUrl(platforms.youtube),   handle: getHandle(platforms.youtube) });
+  if (getUrl(platforms.tiktok))    links.push({ label: 'TikTok',    url: getUrl(platforms.tiktok),    handle: getHandle(platforms.tiktok) });
+  if (getUrl(platforms.instagram)) links.push({ label: 'Instagram', url: getUrl(platforms.instagram), handle: getHandle(platforms.instagram) });
+  if (getUrl(platforms.facebook))  links.push({ label: 'Facebook',  url: getUrl(platforms.facebook),  handle: getHandle(platforms.facebook) });
+  if (getUrl(platforms.lemon8))    links.push({ label: 'Lemon8',    url: getUrl(platforms.lemon8),    handle: getHandle(platforms.lemon8) });
+  if (community.url)               links.push({ label: community.name || 'Community', url: community.url, handle: '' });
 
   const plaintext = links.map(l => `${l.label}: ${l.url}`).join('\n');
   const html      = links.map(l => `<a href="${l.url}">${l.label}${l.handle ? ' (' + l.handle + ')' : ''}</a>`).join(' | ');
