@@ -360,6 +360,14 @@
     cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;
   }
   .session-expired-btn:hover{background:var(--teal-dim);}
+  .session-rescue-btn{
+    background:none;color:var(--text-dim);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:10px 24px;font-family:var(--font-body);font-size:13px;font-weight:600;
+    cursor:pointer;transition:all 0.15s;letter-spacing:0.3px;
+  }
+  .session-rescue-btn:hover{border-color:var(--teal);color:var(--teal);}
+  .session-rescue-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .session-expired-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;}
 </style>
 </head>
 <body>
@@ -708,8 +716,11 @@
 <div class="session-expired-overlay" id="session-expired-overlay">
   <div class="session-expired-icon">⏱</div>
   <div class="session-expired-title">SESSION EXPIRED</div>
-  <div class="session-expired-msg">The server was restarted and your session was cleared. Your conversation is gone, but your next idea will be even better.</div>
-  <button class="session-expired-btn" id="session-expired-btn">Start Over →</button>
+  <div class="session-expired-msg" id="session-expired-msg">The server was restarted mid-session. If you had chosen a concept, it may be recoverable.</div>
+  <div class="session-expired-row">
+    <button class="session-rescue-btn" id="session-rescue-btn">↩ Rescue to PipΩr</button>
+    <button class="session-expired-btn" id="session-expired-btn">Start Over →</button>
+  </div>
 </div>
 
 <script src="/js/nav.js" defer></script>
@@ -2018,6 +2029,60 @@
   document.getElementById('session-expired-btn').addEventListener('click', () => {
     clearSession();
     location.reload();
+  });
+
+  // ── Rescue session → PipΩr ────────────────────────────────────
+  // Reads whatever localStorage still has and posts it to /rescue-session,
+  // which creates a Project record so the work survives even without a running session.
+  document.getElementById('session-rescue-btn').addEventListener('click', async () => {
+    const rescueBtn = document.getElementById('session-rescue-btn');
+    const msgEl     = document.getElementById('session-expired-msg');
+
+    const rawChosen   = localStorage.getItem('id8r_chosen_concept');
+    const rawConcepts = localStorage.getItem('id8r_concepts');
+    const chatHtml    = localStorage.getItem('id8r_chat_html');
+    const savedId     = localStorage.getItem('id8r_session_id');
+
+    let chosen   = null;
+    let concepts = [];
+    try { chosen   = rawChosen   ? JSON.parse(rawChosen)   : null; } catch(_) {}
+    try { concepts = rawConcepts ? JSON.parse(rawConcepts) : [];   } catch(_) {}
+
+    // Derive the best available title
+    const title =
+      chosen?.headline ||
+      (concepts.length ? concepts[0]?.headline : null) ||
+      `Rescued session ${new Date().toLocaleDateString()}`;
+
+    if (!title) {
+      msgEl.textContent = 'Nothing to rescue — no concept was chosen before the session expired.';
+      return;
+    }
+
+    rescueBtn.disabled = true;
+    rescueBtn.textContent = 'Rescuing…';
+    msgEl.textContent = `Saving "${title}" to PipΩr…`;
+
+    try {
+      const res  = await fetch('/api/id8r/rescue-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, chosenConcept: chosen, concepts, chatHtml, sessionId: savedId }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        clearSession();
+        window.location.href = `/pipr.html?project=${data.project_id}`;
+      } else {
+        msgEl.textContent = `Rescue failed: ${data.error || 'unknown error'}. Try Start Over.`;
+        rescueBtn.disabled = false;
+        rescueBtn.textContent = '↩ Rescue to PipΩr';
+      }
+    } catch (err) {
+      msgEl.textContent = `Rescue failed: ${err.message}. Try Start Over.`;
+      rescueBtn.disabled = false;
+      rescueBtn.textContent = '↩ Rescue to PipΩr';
+    }
   });
 
   // ── Utility ────────────────────────────────────────────────────

@@ -81,7 +81,21 @@ function getOrRestoreSession(sessionId) {
   try {
     const cp = db.getCheckpoint(sessionId);
     if (!cp || !cp.data) return null;
-    sessions.set(sessionId, { ...cp.data, restoredFromCheckpoint: true });
+    const data = { ...cp.data };
+
+    // Schema migration: mid-research phase checkpoints used {phase1, phase2, phase3}
+    // instead of the full persistSession shape {researchResults: {youtube, data, vault}}.
+    // Remap so downstream endpoints (/package, /brief, /send-pipeline) can read them.
+    if ((data.phase1 !== undefined || data.phase2 !== undefined || data.phase3 !== undefined)
+        && !data.researchResults) {
+      data.researchResults = {
+        youtube : data.phase1 || null,
+        data    : data.phase2 || null,
+        vault   : data.phase3 || null,
+      };
+    }
+
+    sessions.set(sessionId, { ...data, restoredFromCheckpoint: true });
     return sessions.get(sessionId);
   } catch (_) {}
   return null;
@@ -730,11 +744,11 @@ router.post('/research', async (req, res) => {
       results.youtube = `Error: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 1, label: phase1Label, data: results.youtube });
-    // Checkpoint: phase 1 done — survives server restart
+    // Checkpoint: phase 1 done — use persistSession shape so restore always works
     try {
       db.setCheckpoint(session_id, 'id8r', {
-        phase: 1, chosenConcept: session.chosenConcept || null,
-        phase1: results.youtube, phase2: null, phase3: null,
+        ...session,
+        researchResults: { youtube: results.youtube, data: null, vault: null },
       });
     } catch (_) {}
 
@@ -758,8 +772,8 @@ router.post('/research', async (req, res) => {
     // Checkpoint: phase 2 done
     try {
       db.setCheckpoint(session_id, 'id8r', {
-        phase: 2, chosenConcept: session.chosenConcept || null,
-        phase1: results.youtube, phase2: results.data, phase3: null,
+        ...session,
+        researchResults: { youtube: results.youtube, data: results.data, vault: null },
       });
     } catch (_) {}
 
@@ -795,8 +809,8 @@ router.post('/research', async (req, res) => {
     // Checkpoint: all 3 phases done — full research in DB
     try {
       db.setCheckpoint(session_id, 'id8r', {
-        phase: 3, chosenConcept: session.chosenConcept || null,
-        phase1: results.youtube, phase2: results.data, phase3: results.vault,
+        ...session,
+        researchResults: { youtube: results.youtube, data: results.data, vault: results.vault },
       });
     } catch (_) {}
     // Phase 3 is a local VaultΩr check — no web searches, no delay needed.
