@@ -31,10 +31,23 @@ const {
 } = require('../utils/tenant-db-cache');
 
 // ── Owner-only guard ──────────────────────────────────────────────────────────
+// Blocks tenant users even if they somehow carry a session across to the root host.
+// 'owner' role is reserved for Jason's root account; tenant users get 'creator'.
 function requireOwner(req, res, next) {
   if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
   if (req.session?.role !== 'owner') return res.status(403).json({ error: 'Owner role required' });
+  // Belt-and-suspenders: admin routes must only be reachable on the root host, not tenant subdomains
+  if (req.tenantSlug) return res.status(403).json({ error: 'Admin access not available on tenant subdomains' });
   next();
+}
+
+// ── Slug validation helper ────────────────────────────────────────────────────
+function validateSlug(slug, res) {
+  if (!/^[a-z0-9-]{2,32}$/.test(slug)) {
+    res.status(400).json({ error: 'Invalid slug format' });
+    return false;
+  }
+  return true;
 }
 
 // ─────────────────────────────────────────────
@@ -99,6 +112,7 @@ router.post('/tenants', requireOwner, (req, res) => {
 router.get('/tenants/:slug', requireOwner, (req, res) => {
   try {
     const { slug } = req.params;
+    if (!validateSlug(slug, res)) return;
     const profile  = loadTenantProfile(slug);
     if (!profile) return res.status(404).json({ error: 'Tenant not found' });
 
@@ -131,7 +145,8 @@ router.get('/tenants/:slug', requireOwner, (req, res) => {
 // ─────────────────────────────────────────────
 router.post('/tenants/:slug/reinvite', requireOwner, (req, res) => {
   try {
-    const { slug }   = req.params;
+    const { slug } = req.params;
+    if (!validateSlug(slug, res)) return;
     const profile    = loadTenantProfile(slug);
     if (!profile) return res.status(404).json({ error: 'Tenant not found' });
 
@@ -151,6 +166,7 @@ router.post('/tenants/:slug/reinvite', requireOwner, (req, res) => {
 router.delete('/tenants/:slug', requireOwner, (req, res) => {
   try {
     const { slug } = req.params;
+    if (!validateSlug(slug, res)) return;
     const profile  = loadTenantProfile(slug);
     if (!profile) return res.status(404).json({ error: 'Tenant not found' });
 

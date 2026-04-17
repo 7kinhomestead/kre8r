@@ -42,10 +42,16 @@ function readConfig(projectId) {
 }
 
 function writeConfig(projectId, config) {
-  const dir = path.join(PROJECTS_DIR, String(projectId));
+  const dir      = path.join(PROJECTS_DIR, String(projectId));
   fs.mkdirSync(dir, { recursive: true });
   config.updated_at = new Date().toISOString();
-  fs.writeFileSync(getConfigPath(projectId), JSON.stringify(config, null, 2), 'utf8');
+
+  // Atomic write: write to .tmp then rename so a crash mid-write can never
+  // leave a truncated/partial project-config.json (Prime Directive: never lose creative state).
+  const finalPath = getConfigPath(projectId);
+  const tmpPath   = finalPath + '.tmp';
+  fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), 'utf8');
+  fs.renameSync(tmpPath, finalPath);
 }
 
 /**

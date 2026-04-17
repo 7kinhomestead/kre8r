@@ -28,23 +28,36 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match)  return res.status(401).json({ error: 'Invalid credentials' });
 
-    req.session.userId   = user.id;
-    req.session.username = user.username;
-    req.session.role     = user.role;
-
-    // In Electron the "browser" closes on every quit — always persist 30 days.
-    // For web browser sessions, respect the "remember me" checkbox.
+    // Regenerate session ID after login to prevent session fixation attacks.
+    // Copy needed data first because regenerate() wipes the session store.
     const isElectron = /electron/i.test(req.headers['user-agent'] || '');
-    if (remember || isElectron) {
-      // 30-day persistent cookie — survives browser close and server restarts
-      req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
-    } else {
-      // Session cookie — expires when browser closes (no maxAge, no expires)
-      req.session.cookie.expires = false;
-      req.session.cookie.maxAge  = null;
-    }
+    const wantLong   = !!(remember || isElectron);
+    const { id, username: uname, role } = user;
 
-    res.json({ ok: true, username: user.username, role: user.role });
+    req.session.regenerate((regenErr) => {
+      if (regenErr) return res.status(500).json({ error: 'Session error' });
+
+      req.session.userId   = id;
+      req.session.username = uname;
+      req.session.role     = role;
+
+      // In Electron the "browser" closes on every quit — always persist 30 days.
+      // For web browser sessions, respect the "remember me" checkbox.
+      if (wantLong) {
+        // 30-day persistent cookie — survives browser close and server restarts
+        req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
+      } else {
+        // Session cookie — expires when browser closes (no maxAge, no expires)
+        req.session.cookie.expires = false;
+        req.session.cookie.maxAge  = null;
+      }
+
+      req.session.save((saveErr) => {
+        if (saveErr) return res.status(500).json({ error: 'Session save error' });
+        res.json({ ok: true, username: uname, role });
+      });
+    });
+    return; // response sent inside callbacks above
   } catch (err) {
     console.error('[Auth] Login error:', err.message);
     res.status(500).json({ error: 'Login failed' });

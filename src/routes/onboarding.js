@@ -107,12 +107,13 @@ router.post('/save', async (req, res) => {
     const username      = (email || name).toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30);
 
     // Run the user creation inside the tenant's DB context
+    // NOTE: role is 'creator' for tenant users — 'owner' is reserved for Jason's root account.
     tenantContext.run({ db: tenantDb, profile: profileUpdate, slug }, () => {
       try {
         // Check if a user already exists
         const existingUser = db.getUserByUsername(username);
         if (!existingUser) {
-          db.createUser({ username, password_hash, role: 'owner' });
+          db.createUser(username, password_hash, 'creator');
         }
       } catch (userErr) {
         // Non-fatal — user might already exist from a previous partial attempt

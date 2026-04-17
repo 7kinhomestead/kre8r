@@ -246,7 +246,8 @@ app.use(session({
   store:  new SQLiteStore(() => _dbModule.getRawDb()),
   cookie: {
     httpOnly: true,
-    secure:   false,   // set true if serving HTTPS directly (nginx handles it here)
+    secure:   false,   // nginx handles TLS termination; keep false at Express level
+    sameSite: 'lax',   // prevents CSRF from cross-origin requests
     maxAge:   30 * 24 * 60 * 60 * 1000,  // 30 days default
   },
 }));
@@ -332,7 +333,11 @@ app.use((req, res, next) => {
   // Onboarding — invite token is the auth
   if (req.path === '/onboarding' || req.path === '/onboarding.html') return next();
   if (req.path.startsWith('/api/onboarding/')) return next();
-  if (req.path.startsWith('/api/beta'))              return next();
+  // Beta public endpoints — ONLY the three submission POSTs are open to the world.
+  // Admin reads (GET /applications, /reports, /nps, /funnel, /stats, /token-stats)
+  // and status PATCHes require authentication.
+  const PUBLIC_BETA_PATHS = ['/api/beta/apply', '/api/beta/report', '/api/beta/nps'];
+  if (PUBLIC_BETA_PATHS.includes(req.path) && req.method === 'POST') return next();
   if (req.path === '/api/health')                    return next();
   if (req.path.startsWith('/api/releases'))          return next(); // own auth
   if (['/landing', '/landing.html', '/media-kit', '/media-kit.html',

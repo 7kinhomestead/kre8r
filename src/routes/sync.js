@@ -133,8 +133,9 @@ router.post('/register', (req, res) => {
   const operatorSecret = process.env.OPERATOR_SECRET;
   const { secret, tenant_slug, display_name, plan = 'solo' } = req.body || {};
 
-  // If OPERATOR_SECRET is set, require it. Otherwise open (dev mode).
-  if (operatorSecret && secret !== operatorSecret) {
+  // Fail closed: OPERATOR_SECRET must be configured before this route is usable.
+  if (!operatorSecret) return res.status(503).json({ error: 'Sync registration not configured (OPERATOR_SECRET missing)' });
+  if (secret !== operatorSecret) {
     return res.status(403).json({ error: 'Invalid operator secret' });
   }
 
@@ -175,7 +176,8 @@ router.post('/register', (req, res) => {
 router.get('/tenants', (req, res) => {
   const operatorSecret = process.env.OPERATOR_SECRET;
   const auth = req.headers['x-operator-secret'] || req.query.secret;
-  if (operatorSecret && auth !== operatorSecret) {
+  if (!operatorSecret) return res.status(503).json({ error: 'Sync not configured (OPERATOR_SECRET missing)' });
+  if (auth !== operatorSecret) {
     return res.status(403).json({ error: 'Operator access required' });
   }
   try {
@@ -195,7 +197,8 @@ router.get('/tenants', (req, res) => {
 router.get('/token', (req, res) => {
   const operatorSecret = process.env.OPERATOR_SECRET;
   const auth = req.headers['x-operator-secret'] || req.query.secret;
-  if (operatorSecret && auth !== operatorSecret) {
+  if (!operatorSecret) return res.status(503).json({ error: 'Sync not configured (OPERATOR_SECRET missing)' });
+  if (auth !== operatorSecret) {
     return res.status(403).json({ error: 'Operator access required' });
   }
   try {
