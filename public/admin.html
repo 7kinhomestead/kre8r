@@ -1505,8 +1505,8 @@
       try {
         const res = await fetch('/api/admin/tenants');
         if (!res.ok) throw new Error(`Server returned ${res.status}`);
-        const tenants = await res.json();
-        renderTenantList(tenants);
+        const data = await res.json();
+        renderTenantList(data.tenants || []);
       } catch (err) {
         container.innerHTML = `<div class="tenant-empty-state" style="color:var(--red-std)">Failed to load tenants: ${err.message}</div>`;
       }
