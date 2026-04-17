@@ -28,12 +28,14 @@ const GRAPH            = 'https://graph.facebook.com/v21.0';
 const GRAPH_VIDEO      = 'https://graph-video.facebook.com/v21.0';
 
 const SCOPES = [
-  // instagram_basic deprecated May 2024 — removed
-  'instagram_content_publish', // publish Reels via Page-linked Instagram account
+  // instagram_content_publish — requires "Manage and publish content" use case in Meta app
+  // Removed from OAuth scope until use case is added; Instagram connection handled separately
+  // 'instagram_content_publish',
   'pages_manage_posts',        // create/edit/delete Page posts
   'pages_read_engagement',     // read Page content + follower data
   'pages_show_list',           // list Pages the user manages
-  'publish_video',             // upload video to Facebook Page
+  // publish_video — requires use case; Facebook video upload uses page token directly
+  // 'publish_video',
 ].join(',');
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
