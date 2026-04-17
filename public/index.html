@@ -491,7 +491,7 @@
 
   <!-- HERO -->
   <div class="hero">
-    <div class="hero-eyebrow">7 Kin Homestead</div>
+    <div class="hero-eyebrow" id="hero-brand">7 Kin Homestead</div>
     <div class="hero-title">PIPELINE<br><em>COMMAND</em></div>
     <div class="hero-sub">The heart monitor. One view. Every project. What needs you right now.</div>
   </div>
@@ -628,6 +628,13 @@
 <script src="/js/nav.js"></script>
 <script>
 initNav();
+
+// Update brand eyebrow from creator profile (handles tenant subdomains)
+fetch('/api/creator-profile').then(r => r.ok ? r.json() : null).then(p => {
+  if (!p) return;
+  const brand = p.brand || p.creator?.brand || p.name;
+  if (brand) document.getElementById('hero-brand').textContent = brand;
+}).catch(() => {});
 
 // ─────────────────────────────────────────────
 // STATE
