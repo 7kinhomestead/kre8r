@@ -899,7 +899,26 @@
           progress = 40;
           addLog(`Transcription complete: ${data.segments} segments, ${fmtDuration(data.duration)}`);
         } else if (data.stage === 'transcribe_progress') {
-          addLog(data.message || JSON.stringify(data));
+          const w = data.whisper || {};
+          if (w.stage === 'whisper_model_download') {
+            stageEl && (stageEl.textContent = '⬇️ Downloading Whisper model...');
+            addLog('⬇️ ' + (w.message || 'Downloading model — this only happens once (~1.5 GB)'));
+          } else if (w.stage === 'whisper_start') {
+            stageEl && (stageEl.textContent = `🎙️ Transcribing (${w.model || 'whisper'})…`);
+            addLog(`🎙️ Whisper started — model: ${w.model || '?'}, file: ${w.file || '?'}`);
+          } else if (w.stage === 'whisper_progress') {
+            const line = w.line || '';
+            if (line) addLog(line);
+            // Parse tqdm-style "  x%|..." for sub-progress within the 20–40% transcribe band
+            const pct = line.match(/(\d+)%\s*\|/);
+            if (pct) {
+              progress = 20 + Math.round(parseInt(pct[1]) * 0.2);
+              if (barEl) barEl.style.width = progress + '%';
+            }
+          } else if (w.message) {
+            // Fallback for any other whisper sub-stage that has a message
+            addLog(w.message);
+          }
         } else if (data.stage === 'analyzing') {
           stageEl && (stageEl.textContent = 'Finding the gold…');
           progress = 60;

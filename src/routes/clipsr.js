@@ -136,7 +136,9 @@ router.post('/analyze', async (req, res) => {
         pushEvent(job, { stage: 'transcribing', message: `Transcribing ${footage.original_filename}...` });
         const txResult = await transcribeFile(footage.file_path, {
           footageId: footage.id,
-          onProgress: (p) => pushEvent(job, { stage: 'transcribe_progress', ...p })
+          // Wrap Whisper sub-events under 'transcribe_progress' without clobbering the
+          // outer 'stage' key (spread would override it when p has its own 'stage').
+          onProgress: (p) => pushEvent(job, { stage: 'transcribe_progress', whisper: p })
         });
         if (!txResult.ok) return failJob(job, `Transcription failed: ${txResult.error}`);
         transcript = txResult;

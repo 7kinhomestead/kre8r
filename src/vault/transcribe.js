@@ -182,6 +182,18 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
 
     let stderr = '';
     let stdout = '';
+    let progressReceived = false;
+
+    // On first run Whisper silently downloads the model (~1.5 GB) before any progress
+    // output appears. After 8 s of silence, emit a hint so the UI doesn't look hung.
+    const modelDownloadHint = setTimeout(() => {
+      if (!progressReceived) {
+        onProgress?.({
+          stage:   'whisper_model_download',
+          message: 'Downloading Whisper model for the first time (~1.5 GB). This only happens once — subsequent runs start immediately.'
+        });
+      }
+    }, 8000);
 
     proc.stdout.on('data', (data) => {
       stdout += data.toString();
@@ -192,15 +204,19 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
       stderr += chunk;
       // Whisper logs progress to stderr — surface key lines
       if (chunk.includes('%|') || chunk.includes('Detecting language') || chunk.includes('Transcribing')) {
+        progressReceived = true;
+        clearTimeout(modelDownloadHint);
         onProgress?.({ stage: 'whisper_progress', line: chunk.trim() });
       }
     });
 
     proc.on('error', (err) => {
+      clearTimeout(modelDownloadHint);
       reject(new Error(`Failed to start Whisper: ${err.message}. Check PYTHON_PATH in .env`));
     });
 
     proc.on('close', (code) => {
+      clearTimeout(modelDownloadHint);
       if (code !== 0) {
         return reject(new Error(`Whisper exited with code ${code}: ${stderr.slice(-500)}`));
       }

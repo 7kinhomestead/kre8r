@@ -506,7 +506,9 @@ async function buildAssembly(projectId, onProgress) {
       emit({ event: 'transcribing', message: `Transcribing: ${clip.original_filename || clip.id}` });
       try {
         const result = await transcribeFile(filePath, { footageId: clip.id, onProgress: (p) => {
-          if (p.stage === 'whisper_progress') emit({ event: 'transcribe_progress', message: p.line });
+          if (p.stage === 'whisper_progress')      emit({ event: 'transcribe_progress', message: p.line });
+          if (p.stage === 'whisper_model_download') emit({ event: 'transcribe_progress', message: `⬇️ ${p.message}` });
+          if (p.stage === 'whisper_start')          emit({ event: 'transcribe_progress', message: `🎙️ Whisper started (${p.model})` });
         }});
         if (result.ok) {
           segments = result.segments || [];
