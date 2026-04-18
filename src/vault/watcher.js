@@ -25,6 +25,58 @@ const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv']);
 // Prevents reading a file that is still being copied/written.
 const STABLE_DELAY_MS = 4000;
 
+// ─────────────────────────────────────────────
+// PARSE PROJECT CONTEXT FROM FILE PATH
+//
+// Project folders follow the naming convention: [project_id]_[slug]
+// e.g. D:\kre8r\intake\42_solar-water-heater\clips\clip_001.mp4
+//
+// Subfolders and their meanings:
+//   raw/          → BRAW or proxy (existing BRAW/proxy detection handles shot_type)
+//   raw/proxy/    → DaVinci auto-generated proxy (same — proxy detection handles it)
+//   completed/    → finished long-form → shot_type: 'completed-video'
+//   clips/        → social clips exported for distribution → shot_type: 'social-clip'
+//
+// Returns: { projectId: number, shot_type_override: string|null }
+//          or null if the file is not inside a recognised project folder
+// ─────────────────────────────────────────────
+
+function parseProjectFromPath(filePath, watchPath) {
+  try {
+    // Normalise both paths to forward-slashes for consistent splitting
+    const normalFile  = filePath.replace(/\\/g, '/');
+    const normalWatch = watchPath.replace(/\\/g, '/').replace(/\/$/, '');
+
+    if (!normalFile.startsWith(normalWatch + '/')) return null;
+
+    // Remainder after watchPath: e.g. "42_solar-water-heater/clips/clip_001.mp4"
+    const rel     = normalFile.slice(normalWatch.length + 1);
+    const parts   = rel.split('/');
+    if (parts.length < 2) return null; // file is flat in intake root — legacy behaviour
+
+    const folderName = parts[0]; // e.g. "42_solar-water-heater"
+    const underscoreIdx = folderName.indexOf('_');
+    if (underscoreIdx < 1) return null; // no id prefix
+
+    const projectId = parseInt(folderName.slice(0, underscoreIdx), 10);
+    if (isNaN(projectId) || projectId <= 0) return null;
+
+    // Determine shot_type_override from the immediate subfolder
+    const subfolder = parts[1]?.toLowerCase(); // 'raw', 'completed', 'clips'
+    let shot_type_override = null;
+    if (subfolder === 'completed') {
+      shot_type_override = 'completed-video';
+    } else if (subfolder === 'clips') {
+      shot_type_override = 'social-clip';
+    }
+    // 'raw' and 'raw/proxy' — leave null; BRAW/proxy detection in intake.js handles these
+
+    return { projectId, shot_type_override };
+  } catch (_) {
+    return null;
+  }
+}
+
 let watcher = null;
 let watchPath = null;
 
@@ -114,11 +166,19 @@ function startWatcher(overridePath = null) {
     const ext = path.extname(filePath).toLowerCase();
     if (!SUPPORTED_EXTENSIONS.has(ext)) return; // ignore non-video files
 
-    console.log(`[VaultΩr Watcher] New file detected: ${path.basename(filePath)}`);
+    // Parse project context from folder structure [id]_[slug]/{raw,completed,clips}/
+    const context = parseProjectFromPath(filePath, watchPath);
+    const projectId        = context?.projectId        || null;
+    const shot_type_override = context?.shot_type_override || null;
+
+    if (projectId) {
+      console.log(`[VaultΩr Watcher] New file detected: ${path.basename(filePath)} → project ${projectId}${shot_type_override ? ` (${shot_type_override})` : ''}`);
+    } else {
+      console.log(`[VaultΩr Watcher] New file detected: ${path.basename(filePath)} (no project context)`);
+    }
 
     try {
-      // awaitWriteFinish handles stability, but we do a redundant check as a safety net
-      const result = await ingestFile(filePath);
+      const result = await ingestFile(filePath, { projectId, shot_type_override });
       if (result.ok) {
         console.log(`[VaultΩr Watcher] ✓ Ingested: ${path.basename(filePath)} (id=${result.id}, type=${result.shot_type || 'unclassified'})`);
       } else {

@@ -616,6 +616,86 @@ body {
   border-radius: 20px;
 }
 
+/* ─── Folder paths card ─────────────────────────── */
+#folder-paths-card {
+  display: none;
+  margin: 8px 12px 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+#folder-paths-card.visible { display: block; }
+.folder-paths-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.folder-paths-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+.folder-paths-toggle {
+  font-size: 12px;
+  color: var(--dim);
+  transition: transform 0.2s;
+}
+.folder-paths-toggle.open { transform: rotate(180deg); }
+.folder-paths-body {
+  display: none;
+  padding: 0 14px 12px;
+  border-top: 1px solid var(--border);
+}
+.folder-paths-body.open { display: block; }
+.folder-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.folder-path-row:last-child { border-bottom: none; }
+.folder-path-label {
+  font-size: 11px;
+  color: var(--dim);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+.folder-path-value {
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.folder-copy-btn {
+  background: rgba(0,201,167,0.12);
+  border: 1px solid rgba(0,201,167,0.3);
+  color: var(--teal);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.folder-copy-btn:active { background: rgba(0,201,167,0.25); }
+.folder-copy-btn.copied {
+  background: rgba(74,222,128,0.15);
+  border-color: rgba(74,222,128,0.4);
+  color: var(--green);
+}
+
 /* ─── Project selector ──────────────────────────── */
 #project-selector {
   position: fixed;
@@ -888,6 +968,32 @@ body {
         </div>
       </div>
       <div id="project-title-bar"></div>
+
+      <!-- 📁 Production folder paths — DaVinci export destinations -->
+      <div id="folder-paths-card">
+        <div class="folder-paths-header" onclick="toggleFolderPaths()">
+          <span class="folder-paths-title">📁 DaVinci Export Paths</span>
+          <span class="folder-paths-toggle" id="folder-paths-chevron">▼</span>
+        </div>
+        <div class="folder-paths-body" id="folder-paths-body">
+          <div class="folder-path-row">
+            <span class="folder-path-label">BRAW dest</span>
+            <span class="folder-path-value" id="fp-raw">—</span>
+            <button class="folder-copy-btn" onclick="copyFolderPath('fp-raw', this)">Copy</button>
+          </div>
+          <div class="folder-path-row">
+            <span class="folder-path-label">Render out</span>
+            <span class="folder-path-value" id="fp-completed">—</span>
+            <button class="folder-copy-btn" onclick="copyFolderPath('fp-completed', this)">Copy</button>
+          </div>
+          <div class="folder-path-row">
+            <span class="folder-path-label">Clips out</span>
+            <span class="folder-path-value" id="fp-clips">—</span>
+            <button class="folder-copy-btn" onclick="copyFolderPath('fp-clips', this)">Copy</button>
+          </div>
+        </div>
+      </div>
+
       <div id="shots-list">
         <div class="empty-state">Select a project to begin.</div>
       </div>
@@ -1288,6 +1394,9 @@ async function fetchBeats(silent = false) {
       : '';
     titleBar.style.display = projectTitle ? 'block' : 'none';
   }
+
+  // Update folder paths card
+  updateFolderPathsCard(data.project);
 
   // Merge takes from server into local state
   beats = data.beats || [];
@@ -2027,6 +2136,66 @@ function esc(str) {
 
 function vibrate(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════════════
+//  FOLDER PATHS CARD
+// ════════════════════════════════════════════════════════════════
+
+function updateFolderPathsCard(project) {
+  const card = document.getElementById('folder-paths-card');
+  if (!project?.folder_path) {
+    card.classList.remove('visible');
+    return;
+  }
+  // Normalise to backslashes for Windows display
+  const base = project.folder_path.replace(/\//g, '\\');
+  document.getElementById('fp-raw').textContent       = base + '\\raw\\';
+  document.getElementById('fp-completed').textContent = base + '\\completed\\';
+  document.getElementById('fp-clips').textContent     = base + '\\clips\\';
+  card.classList.add('visible');
+  // Auto-open on first load
+  const body = document.getElementById('folder-paths-body');
+  const chev = document.getElementById('folder-paths-chevron');
+  if (!body.classList.contains('open')) {
+    body.classList.add('open');
+    chev.classList.add('open');
+  }
+}
+
+function toggleFolderPaths() {
+  const body = document.getElementById('folder-paths-body');
+  const chev = document.getElementById('folder-paths-chevron');
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+function copyFolderPath(elementId, btn) {
+  const text = document.getElementById(elementId)?.textContent || '';
+  if (!text || text === '—') return;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    // Fallback for older browsers / Electron
+    try {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+    } catch (_) {}
+  });
 }
 
 // ════════════════════════════════════════════════════════════════

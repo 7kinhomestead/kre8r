@@ -285,6 +285,9 @@ router.get('/:project_id/beats', (req, res) => {
       story_structure: project.story_structure || config?.story_structure || null,
       content_type:   project.content_type || null,
       estimated_duration_minutes: project.estimated_duration_minutes || null,
+      // Production folder paths for DaVinci export dialogs
+      folder_path:    project.folder_path  || null,
+      shoot_folder:   project.shoot_folder || null,
     },
     config: {
       story_structure:  config?.story_structure || null,

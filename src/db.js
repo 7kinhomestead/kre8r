@@ -691,6 +691,10 @@ function runMigrations() {
     db.exec('ALTER TABLE projects ADD COLUMN archived_at DATETIME');
     console.log('[DB] Migration: added projects.archived_at');
   }
+  if (!projectsColsAssemblr.includes('folder_path')) {
+    db.exec('ALTER TABLE projects ADD COLUMN folder_path TEXT');
+    console.log('[DB] Migration: added projects.folder_path (intake project folder)');
+  }
 
   // Short-form pipeline — format flag ('long' | 'short') flows through entire pipeline
   const projectsColsFormat = db.pragma('table_info(projects)').map(r => r.name);
@@ -2759,7 +2763,7 @@ function updateProjectPipr(projectId, fields) {
   const allowed = [
     'setup_depth', 'entry_point', 'story_structure', 'content_type',
     'high_concept', 'estimated_duration_minutes', 'pipr_complete',
-    'shoot_folder', 'archive_state', 'archived_at', 'format'
+    'shoot_folder', 'folder_path', 'archive_state', 'archived_at', 'format'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (!updates.length) return;

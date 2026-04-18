@@ -423,7 +423,10 @@ async function findOrCreateBrawStub(baseNameNoExt, projectId) {
 // ─────────────────────────────────────────────
 
 async function processFile(filePath, options = {}) {
-  const { projectId = null, onProgress = null } = options;
+  // shot_type_override: passed by watcher when file lands in a known subfolder
+  // (e.g. 'completed-video' for completed/, 'social-clip' for clips/).
+  // Vision still runs for description/quality, but shot_type is forced to override.
+  const { projectId = null, onProgress = null, shot_type_override = null } = options;
   const original_filename = path.basename(filePath);
   const ext = path.extname(filePath).toLowerCase();
 
@@ -549,11 +552,18 @@ async function processFile(filePath, options = {}) {
   onProgress?.({ stage: 'classified', file: original_filename, classification });
 
   // ── 4. DB insert ─────────────────────────────
+  // If a shot_type_override was passed (e.g. from watcher based on subfolder),
+  // use it directly instead of Claude's classification. Vision still ran for
+  // description + quality_flag — we just trust the folder over the classifier.
+  const finalShotType = shot_type_override || normalizeShotType(classification.shot_type);
+  if (shot_type_override) {
+    console.log(`[VaultΩr] shot_type forced to '${shot_type_override}' (folder override) for ${original_filename}`);
+  }
   const id = db.insertFootage({
     project_id:         projectId,
     file_path:          filePath,
     original_filename,
-    shot_type:          normalizeShotType(classification.shot_type),
+    shot_type:          finalShotType,
     subcategory:        classification.subcategory  || null,
     description:        classification.description  || null,
     quality_flag:       classification.quality_flag || null,
@@ -577,7 +587,7 @@ async function processFile(filePath, options = {}) {
     id,
     file:         filePath,
     status:       'ok',
-    shot_type:    normalizeShotType(classification.shot_type),
+    shot_type:    finalShotType,
     quality_flag: classification.quality_flag || null,
     orientation:  classification.orientation  || null,
     thumb:        thumbs?.displayUrl || null
@@ -742,6 +752,7 @@ async function ingestFile(filePath, options = {}) {
     return { ok: false, error: `Unsupported file type: ${ext}` };
   }
 
+  // options may include: { projectId, shot_type_override, onProgress }
   const result = await processFile(filePath, options);
   return { ok: result.status === 'ok', ...result };
 }

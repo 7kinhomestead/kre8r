@@ -219,7 +219,42 @@ router.post('/create', (req, res) => {
       console.warn('[PipΩr] Could not create shoot folder (non-fatal):', folderErr.message);
     }
 
-    res.json({ ok: true, project_id: projectId, config, shoot_folder: shootFolder });
+    // ── Create intake project folder ──────────────────────────────────────────
+    // Creates [intake]/[id]_[slug]/{raw,completed,clips} — the production home
+    // for this project. DaVinci proxy generator (watching intake) will auto-generate
+    // proxies into raw/proxy/ when BRAW files land in raw/.
+    let intakeFolder = null;
+    try {
+      const PROFILE_PATH_FOLDER = process.env.CREATOR_PROFILE_PATH
+        || path.join(__dirname, '..', '..', 'creator-profile.json');
+      const profileFolder = JSON.parse(fs.readFileSync(PROFILE_PATH_FOLDER, 'utf8'));
+      const intakeRoot = profileFolder?.vault?.intake_folder;
+      if (intakeRoot) {
+        // Slug: lowercase, hyphens, no special chars, max 50 chars
+        const slug = title.trim()
+          .toLowerCase()
+          .replace(/[<>:"/\\|?*]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 50);
+        const folderName  = `${projectId}_${slug}`;
+        const intakeBase  = path.join(intakeRoot, folderName);
+        // Create the three production subfolders
+        fs.mkdirSync(path.join(intakeBase, 'raw'),       { recursive: true });
+        fs.mkdirSync(path.join(intakeBase, 'completed'), { recursive: true });
+        fs.mkdirSync(path.join(intakeBase, 'clips'),     { recursive: true });
+        // Normalise to forward-slashes for cross-tool consistency
+        intakeFolder = intakeBase.replace(/\\/g, '/');
+        db.updateProjectPipr(projectId, { folder_path: intakeFolder });
+        console.log(`[PipΩr] Intake project folder created: ${intakeFolder}`);
+      }
+    } catch (folderErr) {
+      // Non-fatal — D:\ may not be present, or running on hosted server
+      console.warn('[PipΩr] Could not create intake project folder (non-fatal):', folderErr.message);
+    }
+
+    res.json({ ok: true, project_id: projectId, config, shoot_folder: shootFolder, intake_folder: intakeFolder });
   } catch (err) {
     console.error('[pipr] create error:', err.message);
     res.status(500).json({ ok: false, error: err.message });
