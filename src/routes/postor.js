@@ -1146,4 +1146,21 @@ OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
   })();
 });
 
+// PATCH /api/postor/campaign/captions/:footage_id
+// Body: { captions: { tiktok, instagram, facebook, shorts, lemon8 } }
+// Saves caption package to footage record — callable from any tool (CaptionΩr, Campaign Builder, etc.)
+router.patch('/campaign/captions/:footage_id', (req, res) => {
+  try {
+    const footageId = parseInt(req.params.footage_id, 10);
+    const { captions } = req.body || {};
+    if (!captions || typeof captions !== 'object') {
+      return res.status(400).json({ error: 'captions object required' });
+    }
+    db.updateFootageCaptionPackage(footageId, captions);
+    res.json({ ok: true, footage_id: footageId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

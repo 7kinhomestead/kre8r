@@ -3143,19 +3143,77 @@ async function startBatchCaptions() {
   const capArea   = document.getElementById('camp-caption-area');
   const btn       = document.getElementById('btn-gen-captions');
 
-  btn.disabled    = true;
-  progWrap.style.display = '';
-  capArea.innerHTML      = '';
+  btn.disabled               = true;
+  progWrap.style.display     = '';
+  capArea.innerHTML          = '';
   document.getElementById('sched-board').style.display = 'none';
-  campCaptions           = {};
+  campCaptions               = {};
 
-  let done = 0;
+  // ── Split: clips that already have saved captions vs clips needing generation ──
+  const fromLibrary  = [];  // { clip, captions }
+  const needsGen     = [];  // footage_ids
 
-  const body = JSON.stringify({ footage_ids: ids, caption_direction: direction || undefined });
-  const res  = await fetch('/api/postor/campaign/generate-captions', {
+  ids.forEach(id => {
+    const clip = campClips.find(c => c.id === id);
+    if (clip?.caption_package) {
+      try {
+        const saved = typeof clip.caption_package === 'string'
+          ? JSON.parse(clip.caption_package)
+          : clip.caption_package;
+        fromLibrary.push({ clip, captions: saved });
+      } catch { needsGen.push(id); }
+    } else {
+      needsGen.push(id);
+    }
+  });
+
+  const total = ids.length;
+
+  // ── Render library clips immediately (no API call needed) ──
+  fromLibrary.forEach(({ clip, captions }) => {
+    campCaptions[clip.id] = captions;
+    const statusEl = document.getElementById(`camp-status-${clip.id}`);
+    if (statusEl) statusEl.textContent = '✅';
+    renderCaptionCard({
+      footage_id:     clip.id,
+      captions,
+      filename:       clip.original_filename || clip.file_path?.split(/[/\\]/).pop() || 'Clip',
+      thumbnail_path: clip.thumbnail_path || null,
+      description:    clip.description    || '',
+      file_path:      clip.file_path,
+      from_library:   true,
+    });
+  });
+
+  const libPct = fromLibrary.length > 0
+    ? Math.round((fromLibrary.length / total) * 100) : 0;
+  progFill.style.width = `${libPct}%`;
+
+  if (fromLibrary.length > 0 && needsGen.length === 0) {
+    progLabel.textContent = `${fromLibrary.length} clip${fromLibrary.length !== 1 ? 's' : ''} loaded from caption library — no API calls needed.`;
+    progWrap.style.display = 'none';
+    btn.disabled = false;
+    initScheduleBoard();
+    return;
+  }
+
+  if (needsGen.length === 0) {
+    btn.disabled = false;
+    initScheduleBoard();
+    return;
+  }
+
+  const libNote = fromLibrary.length > 0
+    ? `${fromLibrary.length} from library · ` : '';
+  progLabel.textContent = `${libNote}generating ${needsGen.length} new…`;
+
+  let genDone = 0;
+
+  // ── Stream generation only for clips without saved captions ──
+  const res = await fetch('/api/postor/campaign/generate-captions', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body
+    body:    JSON.stringify({ footage_ids: needsGen, caption_direction: direction || undefined }),
   });
 
   if (!res.ok) {
@@ -3179,37 +3237,36 @@ async function startBatchCaptions() {
       let evt;
       try { evt = JSON.parse(line.slice(6)); } catch { continue; }
 
-      if (evt.stage === 'start') {
-        progLabel.textContent = `Generating captions for ${evt.total} clip${evt.total !== 1 ? 's' : ''}…`;
-      }
-
       if (evt.stage === 'generating') {
         const statusEl = document.getElementById(`camp-status-${evt.footage_id}`);
         if (statusEl) statusEl.textContent = '⏳ generating…';
-        progLabel.textContent = `${evt.index + 1} of ${ids.length}: ${evt.filename}`;
+        progLabel.textContent = `${libNote}${genDone + 1} of ${needsGen.length}: ${evt.filename}`;
       }
 
       if (evt.stage === 'clip_done') {
-        done++;
+        genDone++;
         campCaptions[evt.footage_id] = evt.captions;
-        const pct = Math.round((done / ids.length) * 100);
+        const totalDone = fromLibrary.length + genDone;
+        const pct = Math.round((totalDone / total) * 100);
         progFill.style.width = `${pct}%`;
         const statusEl = document.getElementById(`camp-status-${evt.footage_id}`);
         if (statusEl) statusEl.textContent = '✅';
-        // render caption card
         renderCaptionCard(evt);
       }
 
       if (evt.stage === 'clip_error') {
-        done++;
-        const pct = Math.round((done / ids.length) * 100);
+        genDone++;
+        const totalDone = fromLibrary.length + genDone;
+        const pct = Math.round((totalDone / total) * 100);
         progFill.style.width = `${pct}%`;
         const statusEl = document.getElementById(`camp-status-${evt.footage_id}`);
         if (statusEl) statusEl.textContent = '❌';
       }
 
       if (evt.stage === 'done') {
-        progLabel.textContent = `Done — ${done} clip${done !== 1 ? 's' : ''} captioned.`;
+        const allDone = fromLibrary.length + genDone;
+        const libStr  = fromLibrary.length > 0 ? ` (${fromLibrary.length} from library)` : '';
+        progLabel.textContent = `Done — ${allDone} clip${allDone !== 1 ? 's' : ''} captioned${libStr}.`;
         btn.disabled = false;
         if (Object.keys(campCaptions).length > 0) {
           initScheduleBoard();
@@ -3233,6 +3290,10 @@ function renderCaptionCard(evt) {
     ? `<img src="${evt.thumbnail_path}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.style.display='none'" />`
     : '';
 
+  const libraryBadge = evt.from_library
+    ? `<span style="font-size:10px;font-weight:700;letter-spacing:.5px;background:rgba(20,184,166,.15);border:1px solid var(--teal-border);color:var(--teal);border-radius:20px;padding:2px 8px;">✅ saved captions</span>`
+    : '';
+
   const tabsHtml = platforms.map(p => `
     <button class="cap-tab ${p === firstPlatform ? 'is-active' : ''}"
             id="cap-tab-${evt.footage_id}-${p}"
@@ -3249,8 +3310,11 @@ function renderCaptionCard(evt) {
     <div class="caption-card-header">
       ${thumb}
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${evt.filename || 'Clip'}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">
+            ${evt.filename || 'Clip'}
+          </span>
+          ${libraryBadge}
         </div>
         ${evt.description ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${evt.description.slice(0,60)}…</div>` : ''}
       </div>
@@ -3260,9 +3324,66 @@ function renderCaptionCard(evt) {
       ${textareasHtml}
     </div>
     <div class="caption-card-actions">
+      ${evt.from_library
+        ? `<button class="btn-campaign secondary" onclick="regenOneCaption(${evt.footage_id})" title="Discard saved captions and regenerate fresh from AI">↻ Re-generate</button>`
+        : ''}
       <button class="btn-campaign secondary" onclick="addClipToQueue(${evt.footage_id})">➕ Add to Queue</button>
     </div>`;
   area.appendChild(card);
+}
+
+// Re-generate captions for a single clip that currently has saved captions
+async function regenOneCaption(footageId) {
+  const clip = campClips.find(c => c.id === footageId);
+  if (!clip) return;
+
+  // Remove the existing card
+  const existing = document.getElementById(`cap-card-${footageId}`);
+  if (existing) existing.remove();
+  delete campCaptions[footageId];
+
+  // Update status chip
+  const statusEl = document.getElementById(`camp-status-${footageId}`);
+  if (statusEl) statusEl.textContent = '⏳ re-generating…';
+
+  const direction = document.getElementById('camp-direction').value.trim();
+
+  try {
+    const res = await fetch('/api/postor/campaign/generate-captions', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ footage_ids: [footageId], caption_direction: direction || undefined }),
+    });
+    if (!res.ok) throw new Error('Generation failed');
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let   buffer  = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n'); buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        let evt; try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+        if (evt.stage === 'clip_done') {
+          campCaptions[footageId] = evt.captions;
+          if (statusEl) statusEl.textContent = '✅';
+          renderCaptionCard(evt);  // from_library is undefined → no badge
+          // Also re-init schedule board pool
+          if (typeof buildSchedPool === 'function') buildSchedPool();
+        }
+        if (evt.stage === 'clip_error') {
+          if (statusEl) statusEl.textContent = '❌';
+          toast(`Re-generate failed: ${evt.error}`, 'error');
+        }
+      }
+    }
+  } catch (e) {
+    if (statusEl) statusEl.textContent = '❌';
+    toast('Re-generate failed.', 'error');
+  }
 }
 
 function switchCapTab(footageId, platform) {
