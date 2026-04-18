@@ -692,6 +692,57 @@
   .cal-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
   .check-btn-wrap { text-align: center; margin-top: 12px; }
 
+  /* ── This Week schedule grid ── */
+  .tw-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .tw-day {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 8px;
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .tw-today {
+    border-color: var(--teal);
+    background: var(--teal-glow);
+  }
+  .tw-past { opacity: 0.55; }
+  .tw-day-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+  }
+  .tw-today .tw-day-label { color: var(--teal); }
+  .tw-day-date {
+    font-family: var(--font-head);
+    font-size: 20px;
+    line-height: 1;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+  .tw-today .tw-day-date { color: var(--teal); }
+  .tw-chip {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .tw-chip-time { font-weight: 700; font-size: 9px; letter-spacing: 0.3px; }
+  .tw-chip-plats { font-size: 9px; color: var(--text-dimmer); letter-spacing: 0.5px; margin-top: 1px; }
+  .tw-chip-label { color: var(--text-dim); font-size: 10px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tw-empty { color: var(--text-dimmer); font-size: 12px; margin-top: auto; text-align: center; }
+  .tw-postor-link { font-size: 11px; color: var(--teal); text-decoration: none; }
+  .tw-postor-link:hover { text-decoration: underline; }
+
   /* ── Toast ── */
   .toast {
     position: fixed;
@@ -898,7 +949,17 @@
     </div>
   </div>
 
-  <!-- ── SECTION 5b: Email Performance ── -->
+  <!-- ── SECTION 5b: This Week Schedule ── -->
+  <div class="section" id="this-week-section" style="display:none">
+    <div class="section-head">
+      <div class="section-title">📋 THIS WEEK</div>
+      <span class="this-week-sub" style="font-size:12px;color:var(--text-dimmer)">Loading…</span>
+      <a class="tw-postor-link" href="/postor.html" style="margin-left:auto">PostΩr →</a>
+    </div>
+    <div class="tw-grid" id="this-week-grid"></div>
+  </div>
+
+  <!-- ── SECTION 5c: Email Performance ── -->
   <div class="section" id="email-perf-section" style="display:none">
     <div class="section-head">
       <div class="section-title">✉️ EMAIL PERFORMANCE</div>
@@ -963,6 +1024,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadEvaluations();
   loadGrowthPlan();
   loadRevenue();
+  loadThisWeek();
   // Default month picker to current month
   const now = new Date();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -1282,6 +1344,77 @@ function renderStats(stats) {
   emailEl.textContent = emailGap;
   if (typeof emailGap === 'number') {
     emailEl.className = 'pub-stat-value' + (emailGap >= 14 ? ' danger' : emailGap >= 10 ? ' warn' : '');
+  }
+}
+
+// ── This Week Schedule ─────────────────────────────────────────────────────────
+const TW_PLAT_LABELS = { youtube: 'YT', instagram: 'IG', facebook: 'FB', facebook_post: 'FB', tiktok: 'TT', lemon8: 'LM' };
+
+async function loadThisWeek() {
+  const section = document.getElementById('this-week-section');
+  const grid    = document.getElementById('this-week-grid');
+  if (!section || !grid) return;
+
+  // Compute Mon–Sun of the current week
+  const now = new Date();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  mon.setHours(0, 0, 0, 0);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  sun.setHours(23, 59, 59, 999);
+
+  try {
+    const r     = await fetch(`/api/postor/queue?from=${mon.toISOString()}&to=${sun.toISOString()}`);
+    const { items } = await r.json();
+
+    // Bucket items by day-of-week (0=Mon)
+    const byDay = Array.from({ length: 7 }, () => []);
+    (items || []).forEach(item => {
+      const d = new Date(item.scheduled_at);
+      byDay[(d.getDay() + 6) % 7].push(item);
+    });
+
+    const total = items?.length || 0;
+    const subEl = section.querySelector('.this-week-sub');
+    if (subEl) subEl.textContent = total > 0
+      ? `${total} post${total !== 1 ? 's' : ''} scheduled`
+      : 'Nothing scheduled — plan your week in PostΩr';
+
+    const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    grid.innerHTML = DAY_NAMES.map((name, i) => {
+      const date    = new Date(mon);
+      date.setDate(mon.getDate() + i);
+      const isToday = date.toDateString() === now.toDateString();
+      const isPast  = date < now && !isToday;
+      const cls     = ['tw-day', isToday ? 'tw-today' : '', isPast ? 'tw-past' : ''].filter(Boolean).join(' ');
+
+      const chips = byDay[i].map(item => {
+        const t       = new Date(item.scheduled_at);
+        const hhmm    = t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const plats   = (item.platforms || []).map(p => TW_PLAT_LABELS[p] || p.toUpperCase()).join(' · ');
+        const statusC = item.status === 'posted' ? 'var(--green)'
+                      : item.status === 'failed' ? 'var(--red)'
+                      : item.status === 'posting' ? 'var(--amber)'
+                      : 'var(--teal)';
+        const title   = (item.title || 'Untitled').slice(0, 24);
+        return `<div class="tw-chip" style="border-color:${statusC}30;background:${statusC}08">
+          <div class="tw-chip-time" style="color:${statusC}">${esc(hhmm)}</div>
+          <div class="tw-chip-plats">${esc(plats)}</div>
+          <div class="tw-chip-label">${esc(title)}${(item.title || '').length > 24 ? '…' : ''}</div>
+        </div>`;
+      }).join('');
+
+      return `<div class="${cls}">
+        <div class="tw-day-label">${name}</div>
+        <div class="tw-day-date">${date.getDate()}</div>
+        ${chips || '<div class="tw-empty">—</div>'}
+      </div>`;
+    }).join('');
+
+    section.style.display = 'block';
+  } catch (e) {
+    console.warn('[NorthΩr] This Week load failed:', e);
   }
 }
 

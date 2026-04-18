@@ -2325,6 +2325,10 @@ function renderVoiceLibrary() {
     const prev = primarySel.value;
     primarySel.innerHTML = '<option value="">Default (creator profile)</option>' +
       voiceLibrary.map(p => `<option value="${p.id}"${p.id === prev ? ' selected' : ''}>${escHtml(p.name)}</option>`).join('');
+    // Auto-select first profile if none previously chosen — shows blend col immediately
+    if (!prev && voiceLibrary.length > 0) {
+      primarySel.value = String(voiceLibrary[0].id);
+    }
   }
   if (secondarySel) {
     const prev = secondarySel.value;
@@ -2335,6 +2339,8 @@ function renderVoiceLibrary() {
   // Show voice selector bar only when there's at least one profile
   const bar = document.getElementById('voiceSelectorBar');
   if (bar) bar.style.display = count > 0 ? 'block' : 'none';
+  // Sync blend col visibility with current selection
+  onVoiceChange();
 
   // Render profile cards
   const container = document.getElementById('vlProfiles');

@@ -1074,13 +1074,26 @@ PLATFORM RULES:
 OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
 {"tiktok":"...","instagram":"...","facebook":"...","shorts":"...","lemon8":"..."}`;
 
-      // Inject approved script if project provided
+      // Inject project context (title, high concept, story angle) + approved script if project provided
       let scriptContext = '';
+      let projectContext = '';
       if (project_id) {
+        const pid = parseInt(project_id, 10);
         try {
-          const script = db.getApprovedWritrScript(parseInt(project_id, 10));
+          const proj = db.getProject(pid);
+          if (proj) {
+            const parts = [];
+            if (proj.title)        parts.push(`VIDEO TITLE: ${proj.title}`);
+            if (proj.high_concept) parts.push(`WHAT IT'S ABOUT: ${proj.high_concept}`);
+            if (proj.content_type) parts.push(`CONTENT TYPE: ${proj.content_type.replace(/_/g, ' ')}`);
+            if (proj.story_structure) parts.push(`STRUCTURE: ${proj.story_structure.replace(/_/g, ' ')}`);
+            if (parts.length) projectContext = `\nVIDEO CONTEXT:\n${parts.join('\n')}\n`;
+          }
+        } catch (_) {}
+        try {
+          const script = db.getApprovedWritrScript(pid);
           const scriptText = script?.generated_script || script?.full_script || '';
-          if (scriptText) scriptContext = `\nAPPROVED SCRIPT:\n${scriptText.slice(0, 2000)}\n`;
+          if (scriptText) scriptContext = `\nAPPROVED SCRIPT (excerpt):\n${scriptText.slice(0, 1500)}\n`;
         } catch (_) {}
       }
 
@@ -1101,6 +1114,7 @@ OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
 
           const userPrompt = [
             `Generate platform-native captions for this social clip.`,
+            projectContext,
             scriptContext,
             `Clip filename: ${clip.original_filename || ''}`,
             `Clip description: ${clip.description || 'No description available'}`,
