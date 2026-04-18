@@ -42,7 +42,7 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 
 ## NEXT SESSION — Top Tasks
 
-### 1. ~~Update CLAUDE.md to Reflect Current Build State~~ ✅ DONE Session 46
+### ~~1. Update CLAUDE.md to Reflect Current Build State~~ ✅ DONE Session 46
 All modules documented. PostΩr, SeedΩr, ClipsΩr, MirrΩr, NorthΩr, SyncΩr, Electron, Auth all current.
 
 ### ~~2. Project Folder Architecture — Pipeline-Wide~~ ✅ DONE (prev session)
@@ -53,8 +53,50 @@ shot_type on ingest. ClipsΩr breadcrumb now shows actual project clips/ path.
 ### ~~3. PostΩr Batch Mode — Campaign Builder~~ ✅ DONE Sessions 46+47
 Campaign tab live. caption_package prefill. Schedule board. Lock Schedule → postor_queue.
 
-### 4. TikTok API — Research & Wire
-TikTok posting is the last major platform stub. Research current TikTok Content Posting API status, check if @7.kin.jason account is eligible, and wire if available.
+### ~~4. Workflow audit stragglers~~ ✅ DONE Session 48
+Whisper progress chain, PipΩr structure suggestion, SeedΩr→Id8Ωr dedup, ClipsΩr→PostΩr breadcrumb,
+NorthΩr This Week grid, WritΩr+MailΩr voice defaults, caption voice coherence, TeleprΩmpter Solo crash,
+GateΩr unified review queue — all shipped.
+
+---
+
+### 5. VaultΩr: Subject/Topic Tagging at Ingest
+**Why now:** Vault is growing. Finding the right b-roll for a script requires scrolling through
+thumbnails by memory. Tagging creates the search layer.
+
+**What to build:**
+- At ingest, after thumbnail generation, call Claude Vision on the thumbnail frame
+- Generate `tags: ["outdoor", "chickens", "greenhouse", "solarpanel"]` — 3–8 tags max
+- Store as `tags TEXT` (JSON array) on vault_footage
+- Add tag search to VaultΩr sidebar: text input → filters footage list in real time
+- Optional: tag cloud summary at top of sidebar (top 10 most common tags)
+- DB migration: `tags TEXT` column on vault_footage (nullable, safe to add)
+
+**Scope:** 1 session. Backend: watcher.js + vault route. Frontend: VaultΩr sidebar filter.
+
+---
+
+### 6. MirrΩr: Analytics Re-Sync Schedule
+**Why now:** YouTube sync runs once on setup. Metrics go stale. Creator needs a "last synced"
+indicator and a quick way to re-sync before monthly evaluation or before a campaign decision.
+
+**What to build:**
+- Add `last_synced_at TEXT` column to a settings kv store (or use existing `db.getKv/setKv`)
+- Store timestamp after each successful sync run
+- NorthΩr dashboard: show "YouTube data last synced: 3 days ago" near the MirrΩr stats block
+- Add "🔄 Sync Now" button that calls existing `/api/mirrr/sync` endpoint + updates timestamp
+- Optional: amber warning if last sync > 7 days old ("Data may be stale")
+
+**Scope:** ~2 hours. Touches NorthΩr frontend + small backend timestamp tracking.
+
+---
+
+### 7. TikTok API — Research & Wire
+TikTok posting is the last major platform stub. Research current TikTok Content Posting API
+status, check if @7.kin.jason account is eligible, and wire if available.
+
+**Entry point:** `src/routes/postor.js` — add `tiktok` case alongside instagram/facebook/youtube.
+UI stub already in PostΩr — just needs the backend wired once API access is confirmed.
 
 ---
 

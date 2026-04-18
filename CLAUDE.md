@@ -115,7 +115,8 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    QR codes on setup screen for voice device and control device (deep-link with ?mode=).
    Voice device: mic drives scroll speed. Session code required on voice device load.
    Field workflow: Phone 1 hotspot → teleprompter.kre8r.app for all 3 devices.
-   Known issues: Solo tab crashes app; no back button from display screen.
+   Known issue: No back button from display screen — only exit is "📋 Scripts" button (hidden by default).
+   ~~Solo tab crashes app~~ — FIXED Session 48 (early-return guard + cloudLaunchActive reset).
 
 ### PRODUCTION
 - Blackmagic camera shoots .braw files
@@ -287,9 +288,9 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 6. ~~No automated tests, no error monitoring, no structured logging~~ — FIXED Session 32 (pino logging, test-sse.js, DIAG button)
 7. ~~No backup strategy for SQLite file~~ — Electron 5-min rolling backup to database/kre8r-electron-backup.db
 8. ~~Hardcoded Windows paths~~ — FIXED Session 31 (DB_PATH, FFMPEG_PATH, CREATOR_PROFILE_PATH all env-var driven)
-9. Whisper model download has no progress indicator on first transcription run (looks like hang)
+9. ~~Whisper model download has no progress indicator on first transcription run (looks like hang)~~ — FIXED Session 48 (8s hint timer + spread-clobbers-stage fix + frontend sub-event handler)
 10. ~~MirrΩr: `no such column: pr.angle` and `TypeError: Assignment to constant variable`~~ — FIXED
-11. TeleprΩmpter: Solo tab crashes the app — Solo tab Cloud Launch breaks teleprompter, requires full restart
+11. ~~TeleprΩmpter: Solo tab crashes the app~~ — FIXED Session 48 (early-return guard in launchViaCloud + cloudLaunchActive reset in backToSelector)
 12. TeleprΩmpter: No back button from display screen — only exit is "📋 Scripts" button (hidden by default)
 13. PostΩr: TikTok platform stub — wired in UI but pending TikTok Content Posting API access approval
 

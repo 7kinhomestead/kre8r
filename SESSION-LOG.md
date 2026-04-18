@@ -1,3 +1,108 @@
+# Session 48 — Workflow Audit Polish: Handoffs, Whisper, GateΩr, NorthΩr (2026-04-18)
+
+## Goal
+Complete all outstanding workflow audit stragglers identified by the Opus 4.7 audit: three handoff
+breakdowns, Whisper progress chain, five UX polish items, and GateΩr structural change.
+
+## What Was Built
+
+### Handoff Fix 1: SeedΩr → Id8Ωr (commit `0f4d67b`)
+- Removed duplicate `seedrPrefill` IIFE that was competing with pre-existing `handleIdeaSeed`
+- Updated `handleIdeaSeed` badge to 🌱 styled banner with title + angle pill
+- One handler, one badge, zero double-fires
+
+### Handoff Fix 2: PipΩr Smart Structure Suggestion (commit `0f4d67b`)
+- Added `#struct-suggest-banner` to Screen 2 (appears above structure cards)
+- `STRUCTURE_MAP` constant: deterministic `content_type` → `story_structure` mapping (10 entries)
+  — no Claude API call, zero latency
+- Banner shows when `content_type` is set but `story_structure` is empty
+- "Use This" button calls `selectStructure(key)` and scrolls to the card
+- "Not quite" dismisses — creator chooses manually
+
+### Handoff Fix 3: ClipsΩr → PostΩr Persistent Breadcrumb (commits `0f4d67b`, `1c7d07b`)
+- After successful DaVinci send, `showDaVinciSuccessCard()` renders a persistent teal card below buttons
+- Shows: timeline count, exact clips/ render path (fetched from project record), VaultΩr explanation,
+  "→ Open PostΩr Campaign Builder" link
+- Fetches `folder_path` from `/api/projects/:id` and appends `\clips\` for precise render destination
+- Dismiss button on card; persists until dismissed or page reload
+
+### Caption Voice Coherence (commit `8d19439`)
+**`src/routes/postor.js` — `campaign/generate-captions` endpoint:**
+- Fetches `db.getProject(project_id)` and injects VIDEO CONTEXT block into every caption Claude prompt
+- Context includes: VIDEO TITLE, WHAT IT'S ABOUT, CONTENT TYPE, STRUCTURE
+- Captions now align with the video's actual concept, not just the clip hook text
+
+### NorthΩr "This Week" Schedule Grid (commit `8d19439`)
+**`public/northr.html`:**
+- New section between Publishing Consistency and Email Performance
+- Mon–Sun 7-column grid showing all scheduled + posted items from `postor_queue` for the current week
+- Chips per day: platform badges (TikTok/IG/FB/YT), time, title truncation
+- Empty days show "—" in muted style
+- "→ PostΩr" link on section header
+- Fetches from `GET /api/postor/queue?from=...&to=...`
+
+### WritΩr + MailΩr Voice Defaults (commits `8d19439`, `1c7d07b`)
+**`public/writr.html`:**
+- `renderVoiceLibrary()` auto-selects first profile when no previous selection stored
+- `onVoiceChange()` called after rendering to sync blend column visibility immediately
+
+**`public/mailor.html`:**
+- `populateVoiceDropdowns()` auto-selects first profile when no previous selection stored
+- `onBcVoiceChange()` / `onSeqVoiceChange()` called after to sync blend visibility
+
+### TeleprΩmpter Solo Tab Crash Fix (commit `c3efcd1`)
+**`public/teleprompter.html`:**
+- `launchViaCloud()`: early-return guard at top — if Solo tab active, routes to `startSoloMode()` only
+- `backToSelector()`: resets `cloudLaunchActive = false`, re-enables/relabels Cloud Launch button
+  so a failed/stale cloud session never poisons the next launch
+
+### Whisper Progress Chain Fix (commit `63c6a84`)
+Four-file fix across the full transcription signal path:
+
+**`src/vault/transcribe.js`:**
+- 8-second `modelDownloadHint` timer in `runWhisper()`: if no stderr progress after 8s,
+  emits `{ stage: 'whisper_model_download', message: '...' }` — first run model download is silent
+- `progressReceived` flag: cleared on first real stderr output; timer cancelled immediately
+
+**`src/routes/clipsr.js`:**
+- Fixed spread-clobbers-stage bug: `{ stage: 'transcribe_progress', ...p }` → `{ stage: 'transcribe_progress', whisper: p }`
+- When `p` had its own `stage` key (e.g. `whisper_start`), spread silently overwrote the outer stage,
+  causing the frontend handler to never match `transcribe_progress`
+
+**`src/editor/assemblr.js`:**
+- Added handlers for `whisper_model_download` and `whisper_start` in the `onProgress` callback
+
+**`public/clipsr.html`:**
+- `transcribe_progress` SSE handler now unpacks `data.whisper` sub-object
+- Shows: model download hint with stageEl update, startup line, tqdm % lines
+- Parses `xx%|` from Whisper stderr to drive sub-progress bar within 20–40% transcribe band
+
+### GateΩr Unified Review Queue (commit `66932d1`)
+**`public/m1-approval-dashboard.html`:**
+- Removed three separate Gate A / Gate B / Gate C section headers from `renderDashboard()`
+- Replaced with single `pending` array (projects in natural order, each with a `gate` key)
+- One loop renders all pending items — project-centric, not gate-centric
+- Each block now has an inline gate badge (GATE A · PACKAGES / GATE B · CAPTIONS / GATE C · EMAILS)
+  so gate context is still visible without the fragmentation
+- Button labels updated: → PackageΩr, → CaptionΩr, → MailΩr (consistent tool names throughout)
+- Page subtitle updated to describe the unified inbox mental model
+
+## Commits
+- `0f4d67b` — SeedΩr→Id8Ωr dedup + PipΩr structure suggestion
+- `1c7d07b` — ClipsΩr smart render path + MailΩr voice default + TODO.md
+- `8d19439` — Caption voice coherence + NorthΩr This Week + WritΩr voice default
+- `c3efcd1` — TeleprΩmpter Solo tab crash + cloudLaunchActive reset
+- `63c6a84` — Whisper progress chain (4-file fix)
+- `66932d1` — GateΩr unified review queue
+
+## Status
+All workflow audit stragglers complete. 6 commits, 9 distinct improvements. Pipeline handoffs
+are clean end-to-end. Whisper first-run experience no longer looks like a hang. GateΩr is one
+inbox instead of three separate sections. Captions are voice-coherent with the project they
+belong to. Ready for next filming session.
+
+---
+
 # Session 45 — PostΩr Scheduler + MailΩr Social + CaptionΩr Wiring (2026-04-17)
 
 ## Goal
