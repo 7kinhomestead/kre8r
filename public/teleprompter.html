@@ -1436,6 +1436,14 @@ let cloudLaunchActive = false;
 const CLOUD_WS_HOST   = 'teleprompter.kre8r.app';
 
 async function launchViaCloud() {
+  // Solo mode = single device — cloud launch is irrelevant, just start locally.
+  // Never route solo through the cloud server; the WS connection attempt can
+  // break the Electron window if the DO host is unreachable.
+  if (activeTab === 'solo') {
+    startSoloMode();
+    return;
+  }
+
   let text = null;
   let projectName = 'Script';
   if (activeTab === 'paste') {
@@ -2085,6 +2093,15 @@ function backToSelector() {
   document.getElementById('tp-session-badge').classList.remove('visible');
   currentMode = 'selector';
   localStorage.removeItem('tp_recovery'); // deliberate exit — don't offer recovery
+
+  // Reset cloud state so a failed cloud session doesn't poison the next launch
+  cloudLaunchActive = false;
+  base = location.origin;
+  const btn = document.getElementById('tp-field-qr-btn');
+  if (btn) {
+    btn.disabled    = !loadedScript && activeTab !== 'paste';
+    btn.textContent = '📡 Cloud Launch — phone controls from anywhere, no shared WiFi';
+  }
 }
 
 function doExitFullscreen() {
