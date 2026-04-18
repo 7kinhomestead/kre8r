@@ -465,24 +465,26 @@ async function runMetaSyncJob(jobId) {
         const projectId      = post.project_id || null;
 
         if (post.platform === 'facebook') {
-          // ── Facebook video insights ───────────────────────────────────────
+          // ── Facebook video/post insights ──────────────────────────────────
+          // Use /{post-id}/insights (works on any post type) rather than
+          // /video_insights which only works on pure video objects.
           if (!fbConn) { failed++; continue; }
-          const url  = `${GRAPH}/${post.post_id}/video_insights?metric=total_video_views,total_video_avg_time_watched,total_video_reactions_by_type_total&access_token=${fbConn.access_token}`;
+          const url  = `${GRAPH}/${post.post_id}/insights?metric=post_impressions_unique,post_video_views,post_engaged_users,post_reactions_by_type_total&period=lifetime&access_token=${fbConn.access_token}`;
           const res  = await fetch(url);
           const data = await res.json();
-          if (data.error) throw new Error(`FB video insights: ${data.error.message}`);
+          if (data.error) throw new Error(`FB insights: ${data.error.message}`);
 
           const FB_VIDEO_MAP = {
-            total_video_views:                  'views',
-            total_video_avg_time_watched:        'avg_watch_time',
-            total_video_reactions_by_type_total: 'reactions',
+            post_impressions_unique:      'reach',
+            post_video_views:             'views',
+            post_engaged_users:           'engaged_users',
+            post_reactions_by_type_total: 'reactions',
           };
           for (const metric of (data.data || [])) {
             const name = FB_VIDEO_MAP[metric.name];
             if (!name) continue;
             const raw    = metric.values?.[0]?.value ?? metric.value;
             if (raw == null) continue;
-            // Reaction totals are objects like { LIKE: 5, LOVE: 2 }
             const numVal = typeof raw === 'object'
               ? Object.values(raw).reduce((a, b) => a + (Number(b) || 0), 0)
               : Number(raw);
@@ -526,7 +528,9 @@ async function runMetaSyncJob(jobId) {
             failed++;
             continue;
           }
-          const url  = `${GRAPH}/${post.post_id}/insights?metric=plays,reach,likes,comments,shares,saved&period=lifetime&access_token=${igInsightsToken}`;
+          // graph.instagram.com (same API space as publishing) — the media IDs
+          // from the new Instagram Platform are NOT visible to graph.facebook.com.
+          const url  = `https://graph.instagram.com/${post.post_id}/insights?metric=plays,reach,likes,comments,shares,saved&period=lifetime&access_token=${igInsightsToken}`;
           const res  = await fetch(url);
           const data = await res.json();
 
@@ -637,6 +641,48 @@ router.delete('/ig-insights-token', (req, res) => {
   try {
     db.setKv('ig_insights_token', '');
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /api/mirrr/meta-debug ───────────────────────────────────────────────
+// Hits the Graph API for the first syncable Meta post and returns the raw
+// response so we can see exactly what the API is saying.
+router.get('/meta-debug', async (req, res) => {
+  try {
+    const { default: fetch } = await import('node-fetch');
+    const GRAPH           = 'https://graph.facebook.com/v21.0';
+    const igInsightsToken = db.getKv('ig_insights_token');
+    const fbConn          = db.getPostorConnection('facebook');
+    const posts           = db.getMetaSyncablePosts();
+
+    const results = [];
+    for (const post of posts.slice(0, 3)) {
+      let url, token;
+      if (post.platform === 'instagram') {
+        token = igInsightsToken;
+        url   = `https://graph.instagram.com/${post.post_id}/insights?metric=plays,reach,likes,comments,shares,saved&period=lifetime&access_token=${token || 'NOT_SET'}`;
+      } else if (post.platform === 'facebook') {
+        token = fbConn?.access_token;
+        url   = `${GRAPH}/${post.post_id}/insights?metric=post_impressions_unique,post_video_views,post_engaged_users&period=lifetime&access_token=${token || 'NOT_SET'}`;
+      } else {
+        token = fbConn?.access_token;
+        url   = `${GRAPH}/${post.post_id}/insights?metric=post_impressions_unique,post_engaged_users&period=lifetime&access_token=${token || 'NOT_SET'}`;
+      }
+      const r    = await fetch(url);
+      const data = await r.json();
+      results.push({
+        platform: post.platform,
+        post_id:  post.post_id,
+        title:    post.title || post.description || '(no title)',
+        posted_at: post.posted_at,
+        has_token: !!token,
+        status:   r.status,
+        response: data,
+      });
+    }
+    res.json({ posts_checked: results.length, results });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
