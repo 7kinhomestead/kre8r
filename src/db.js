@@ -709,6 +709,11 @@ function runMigrations() {
     db.exec('ALTER TABLE footage ADD COLUMN proxy_path TEXT');
     console.log('[DB] Migration: added footage.proxy_path');
   }
+  // Campaign Builder — generated caption package per clip (JSON: {tiktok, instagram, facebook, shorts, lemon8})
+  if (!footageColsAssemblr.includes('caption_package')) {
+    db.exec('ALTER TABLE footage ADD COLUMN caption_package TEXT');
+    console.log('[DB] Migration: added footage.caption_package');
+  }
 
   // VaultΩr semantic search — subjects array from Claude Vision
   const footageColsSub = db.pragma('table_info(footage)').map(r => r.name);
@@ -1871,6 +1876,33 @@ function updateFootage(id, fields) {
 
 function getFootageById(id) {
   return _get(`SELECT * FROM footage WHERE id = ?`, [id]);
+}
+
+// Campaign Builder — clips that landed in [project]/clips/ and haven't been queued yet
+function getUnpackagedClips(projectId = null) {
+  const params = [];
+  let sql = `
+    SELECT f.*,
+           p.title AS project_title,
+           p.folder_path AS project_folder_path
+    FROM footage f
+    LEFT JOIN projects p ON p.id = f.project_id
+    WHERE f.shot_type = 'social-clip'
+      AND f.id NOT IN (
+        SELECT footage_id FROM postor_queue
+        WHERE footage_id IS NOT NULL
+      )
+  `;
+  if (projectId) { sql += ` AND f.project_id = ?`; params.push(projectId); }
+  sql += ` ORDER BY f.ingested_at DESC`;
+  return _all(sql, params);
+}
+
+function updateFootageCaptionPackage(footageId, captionPackageJson) {
+  _run(
+    `UPDATE footage SET caption_package = ? WHERE id = ?`,
+    [JSON.stringify(captionPackageJson), footageId]
+  );
 }
 
 function getAllFootage({ shot_type, quality_flag, project_id } = {}) {
@@ -4060,6 +4092,8 @@ module.exports = {
   insertFootage,
   updateFootage,
   getFootageById,
+  getUnpackagedClips,
+  updateFootageCaptionPackage,
   getAllFootage,
   searchFootageByWhere,
   getFootageStats,

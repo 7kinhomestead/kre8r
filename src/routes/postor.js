@@ -1006,4 +1006,144 @@ router.delete('/queue/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CAMPAIGN BUILDER
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { callClaude }       = require('../utils/claude');
+const { getCreatorContext } = require('../utils/creator-context');
+
+// GET /api/postor/campaign/clips?project_id=
+// Returns social-clip footage not yet in the queue
+router.get('/campaign/clips', (req, res) => {
+  try {
+    const projectId = req.query.project_id ? parseInt(req.query.project_id, 10) : null;
+    const clips     = db.getUnpackagedClips(projectId);
+    res.json({ ok: true, clips });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/postor/campaign/projects
+// Returns kre8r native projects that have at least one social-clip
+router.get('/campaign/projects', (req, res) => {
+  try {
+    const projects = db.getKre8rProjects().filter(p => p.title);
+    res.json({ ok: true, projects });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/postor/campaign/generate-captions
+// Body: { footage_ids: [1,2,3], project_id?, caption_direction? }
+// SSE stream: one event per clip as it finishes, final 'done' event
+router.post('/campaign/generate-captions', (req, res) => {
+  const { footage_ids, project_id, caption_direction } = req.body || {};
+  if (!Array.isArray(footage_ids) || footage_ids.length === 0) {
+    return res.status(400).json({ error: 'footage_ids array required' });
+  }
+
+  // Set up SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const send = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  (async () => {
+    try {
+      const { brand, followerSummary, profile } = getCreatorContext();
+      const angles = profile?.content_angles || {};
+
+      const systemPrompt = `You are the social media voice for ${brand} — ${followerSummary}.
+
+CREATOR VOICE: Straight-talking, warm, encouraging, genuinely funny. Never corporate. Slips jokes in. Real numbers always.
+
+PLATFORM RULES:
+- TikTok: Hook in the first line. Punchy, fast, scroll-stopping. 2-3 hashtags max. Under 300 characters total.
+- Instagram Reels: Warm, save-worthy. Ask a question or give a clear CTA. 5-8 hashtags at the end. 150-250 characters.
+- Facebook: Conversational and community-driven. 2-3 short paragraphs. "Comment X for the link" format works well. 0-2 hashtags.
+- YouTube Shorts: Search-aware. Include the main topic keyword naturally in the first sentence. 2-3 sentences + 3-5 hashtags.
+- Lemon8: Visual storytelling and lifestyle vibe. Lists and "here's what I learned" structure. 5-8 hashtags.
+
+OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
+{"tiktok":"...","instagram":"...","facebook":"...","shorts":"...","lemon8":"..."}`;
+
+      // Inject approved script if project provided
+      let scriptContext = '';
+      if (project_id) {
+        try {
+          const script = db.getApprovedWritrScript(parseInt(project_id, 10));
+          const scriptText = script?.generated_script || script?.full_script || '';
+          if (scriptText) scriptContext = `\nAPPROVED SCRIPT:\n${scriptText.slice(0, 2000)}\n`;
+        } catch (_) {}
+      }
+
+      send({ stage: 'start', total: footage_ids.length });
+
+      const results = [];
+      for (let i = 0; i < footage_ids.length; i++) {
+        const footageId = footage_ids[i];
+        try {
+          const clip = db.getFootageById(footageId);
+          if (!clip) {
+            send({ stage: 'skip', footage_id: footageId, index: i, reason: 'not found' });
+            continue;
+          }
+
+          send({ stage: 'generating', footage_id: footageId, index: i, total: footage_ids.length,
+                 filename: clip.original_filename || clip.file_path });
+
+          const userPrompt = [
+            `Generate platform-native captions for this social clip.`,
+            scriptContext,
+            `Clip filename: ${clip.original_filename || ''}`,
+            `Clip description: ${clip.description || 'No description available'}`,
+            caption_direction ? `Creator direction: ${caption_direction}` : '',
+            `\nReturn JSON only — all 5 platforms in one object.`
+          ].filter(Boolean).join('\n');
+
+          const rawText = await callClaude(systemPrompt, userPrompt, 1000);
+
+          // Parse JSON — strip markdown fences if present
+          let captions = {};
+          try {
+            const clean = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            captions = JSON.parse(clean);
+          } catch (_) {
+            // Try to extract JSON object from response
+            const match = rawText.match(/\{[\s\S]*\}/);
+            if (match) captions = JSON.parse(match[0]);
+          }
+
+          // Save to footage record
+          db.updateFootageCaptionPackage(footageId, captions);
+
+          results.push({ footage_id: footageId, captions });
+          send({ stage: 'clip_done', footage_id: footageId, index: i, captions,
+                 filename: clip.original_filename || clip.file_path,
+                 thumbnail_path: clip.thumbnail_path || null,
+                 description: clip.description || '',
+                 file_path: clip.file_path });
+
+        } catch (clipErr) {
+          send({ stage: 'clip_error', footage_id: footageId, index: i, error: clipErr.message });
+        }
+      }
+
+      send({ stage: 'done', total: footage_ids.length, completed: results.length });
+      res.end();
+
+    } catch (err) {
+      send({ stage: 'error', error: err.message });
+      res.end();
+    }
+  })();
+});
+
 module.exports = router;

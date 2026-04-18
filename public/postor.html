@@ -810,6 +810,463 @@
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
+    /* ── Campaign Builder ── */
+    .campaign-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .campaign-toolbar select {
+      flex: 1;
+      min-width: 180px;
+    }
+    .btn-campaign {
+      background: var(--teal);
+      color: #0e0f0e;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font-body);
+      white-space: nowrap;
+      transition: opacity .15s;
+    }
+    .btn-campaign:hover { opacity: .85; }
+    .btn-campaign:disabled { opacity: .35; cursor: not-allowed; }
+    .btn-campaign.secondary {
+      background: none;
+      border: 1px solid var(--border-bright);
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+    .campaign-progress {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      display: none;
+    }
+    .campaign-progress.visible { display: block; }
+    .campaign-progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .campaign-progress-fill {
+      height: 100%;
+      background: var(--teal);
+      border-radius: 3px;
+      transition: width .3s;
+    }
+    /* Clip cards in clips list */
+    .clip-check-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .clip-check-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .clip-check-item:hover { border-color: var(--border-bright); }
+    .clip-check-item.is-selected { border-color: var(--teal-border); background: rgba(20,184,166,.04); }
+    .clip-check-item input[type=checkbox] {
+      width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--teal); cursor: pointer;
+    }
+    .clip-thumb {
+      width: 56px;
+      height: 36px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: var(--bg-card-2);
+      flex-shrink: 0;
+    }
+    .clip-thumb-placeholder {
+      width: 56px;
+      height: 36px;
+      background: var(--bg-card-2);
+      border-radius: 4px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .clip-meta { flex: 1; min-width: 0; }
+    .clip-name {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .clip-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Caption cards generated after batch */
+    .caption-cards { display: flex; flex-direction: column; gap: 16px; }
+    .caption-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .caption-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .caption-card-title { font-weight: 600; font-size: 14px; flex: 1; }
+    .caption-card-body { padding: 14px; }
+    .caption-platform-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .cap-tab {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all .1s;
+    }
+    .cap-tab.active {
+      background: rgba(20,184,166,.12);
+      border-color: var(--teal-border);
+      color: var(--teal);
+    }
+    .cap-textarea {
+      width: 100%;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 10px 12px;
+      resize: vertical;
+      min-height: 80px;
+    }
+    .caption-card-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .cap-platform-pick {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+      flex-wrap: wrap;
+    }
+    .cap-platform-badge {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      user-select: none;
+      transition: all .1s;
+    }
+    .cap-platform-badge.active {
+      background: rgba(20,184,166,.12);
+      border-color: var(--teal-border);
+      color: var(--teal);
+    }
+    .cap-sched-wrap {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .cap-sched-wrap input[type=date],
+    .cap-sched-wrap input[type=time] {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 5px 8px;
+    }
+    .select-all-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .select-all-row label { cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+    /* ── Schedule Board ── */
+    .sched-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0 20px;
+    }
+    .sched-pool-section { margin-bottom: 16px; }
+    .sched-pool {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 52px;
+      background: var(--bg-card-2);
+      border: 1px dashed var(--border-bright);
+      border-radius: var(--radius);
+      padding: 10px;
+    }
+    .sched-pool-empty {
+      font-size: 12px;
+      color: var(--text-dimmer);
+      align-self: center;
+    }
+    .sched-pool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 5px 8px 5px 6px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: grab;
+      user-select: none;
+      transition: border-color .15s, opacity .15s;
+      max-width: 170px;
+    }
+    .sched-pool-card:active { cursor: grabbing; }
+    .sched-pool-card:hover  { border-color: var(--teal); }
+    .sched-pool-card.is-placed { opacity: .38; pointer-events: none; }
+    .sched-card-thumb {
+      width: 28px; height: 28px;
+      object-fit: cover;
+      border-radius: 3px;
+      flex-shrink: 0;
+      background: var(--bg-card-2);
+    }
+    .sched-card-thumb-ph {
+      width: 28px; height: 28px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      background: var(--bg-card-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .sched-card-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .sched-board-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .sched-week-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sched-week-nav button {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 5px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .sched-week-nav button:hover { border-color: var(--teal); }
+    #sched-week-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .sched-grid-wrap { overflow-x: auto; }
+    .sched-grid {
+      display: grid;
+      grid-template-columns: 54px repeat(7, 1fr);
+      gap: 3px;
+      min-width: 540px;
+    }
+    .sched-grid-corner { /* top-left empty cell */ }
+    .sched-grid-head {
+      padding: 5px 3px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      line-height: 1.4;
+    }
+    .sched-day-num {
+      display: block;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .sched-grid-head.is-today .sched-day-num { color: var(--teal); }
+    .sched-grid-head.is-today { color: var(--teal); }
+
+    .sched-time-label {
+      font-size: 10px;
+      color: var(--text-dimmer);
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 6px 5px 0 0;
+      line-height: 1;
+    }
+    .sched-cell {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      min-height: 60px;
+      padding: 3px;
+      position: relative;
+      transition: border-color .1s, background .1s;
+    }
+    .sched-cell.is-empty {
+      border-style: dashed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sched-cell.is-empty::after {
+      content: '+';
+      font-size: 18px;
+      color: var(--text-dimmer);
+      opacity: .3;
+    }
+    .sched-cell.drag-over {
+      border-color: var(--teal) !important;
+      border-style: solid !important;
+      background: var(--teal-glow);
+    }
+    .sched-cell.drag-over::after { display: none; }
+    .sched-cell.is-past { opacity: .45; pointer-events: none; }
+
+    .sched-chip {
+      background: rgba(20,184,166,.1);
+      border: 1px solid var(--teal-border);
+      border-radius: 4px;
+      padding: 3px 5px 3px 5px;
+      font-size: 10px;
+      position: relative;
+    }
+    .sched-chip-name {
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: calc(100% - 14px);
+      font-weight: 600;
+      margin-bottom: 3px;
+      font-size: 10px;
+      display: block;
+    }
+    .sched-chip-remove {
+      position: absolute;
+      top: 2px; right: 3px;
+      background: none;
+      border: none;
+      color: var(--text-dimmer);
+      font-size: 11px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+    .sched-chip-remove:hover { color: var(--red); }
+    .sched-chip-plats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      margin-top: 2px;
+    }
+    .sched-plat-btn {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-size: 9px;
+      cursor: pointer;
+      color: var(--text-dimmer);
+      transition: all .1s;
+      font-family: var(--font-body);
+    }
+    .sched-plat-btn.is-on {
+      background: rgba(20,184,166,.18);
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    #btn-lock-sched {
+      background: var(--teal);
+      color: #0e0f0e;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    #btn-lock-sched:disabled { opacity: .35; cursor: not-allowed; }
+    #btn-lock-sched:not(:disabled):hover { opacity: .85; }
+
+    .sched-lock-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
   </style>
 </head>
 <body>
@@ -881,8 +1338,9 @@
 
     <!-- Mode Switcher -->
     <div class="mode-switcher">
-      <button class="mode-btn is-active" id="mode-single" onclick="setMode('single')">Single Post</button>
-      <button class="mode-btn"           id="mode-bulk"   onclick="setMode('bulk')">Bulk Queue</button>
+      <button class="mode-btn is-active" id="mode-single"    onclick="setMode('single')">Single Post</button>
+      <button class="mode-btn"           id="mode-bulk"      onclick="setMode('bulk')">Bulk Queue</button>
+      <button class="mode-btn"           id="mode-campaign"  onclick="setMode('campaign')">📁 Campaign</button>
     </div>
 
     <!-- ══ SINGLE MODE ══ -->
@@ -1122,6 +1580,84 @@
       </div>
 
     </div><!-- /bulk-mode -->
+
+    <!-- ══ CAMPAIGN MODE ══ -->
+    <div id="campaign-mode" style="display:none">
+
+      <!-- Toolbar row -->
+      <div class="campaign-toolbar">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <select id="camp-project-filter" onchange="loadCampaignClips()" style="background:var(--bg-card-2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;">
+            <option value="">All Projects</option>
+          </select>
+          <span id="camp-clip-count" style="color:var(--text-dim);font-size:13px;"></span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-campaign secondary" onclick="selectAllClips(true)">Select All</button>
+          <button class="btn-campaign secondary" onclick="selectAllClips(false)">Clear</button>
+          <button class="btn-campaign" id="btn-gen-captions" onclick="startBatchCaptions()" disabled>
+            ✨ Generate Captions
+          </button>
+        </div>
+      </div>
+
+      <!-- Caption direction -->
+      <div style="margin-bottom:14px;">
+        <input id="camp-direction" type="text" placeholder="Optional: caption direction or angle (e.g. 'focus on the cost savings')"
+               style="width:100%;background:var(--bg-card-2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;" />
+      </div>
+
+      <!-- Progress bar -->
+      <div class="campaign-progress" id="camp-progress" style="display:none">
+        <div class="campaign-progress-bar">
+          <div class="campaign-progress-fill" id="camp-progress-fill" style="width:0%"></div>
+        </div>
+        <span id="camp-progress-label" style="font-size:12px;color:var(--text-dim);margin-top:6px;display:block;"></span>
+      </div>
+
+      <!-- Clips checklist -->
+      <div class="section-label" style="margin-bottom:10px;">UNPACKAGED CLIPS</div>
+      <div id="camp-clips-loading" style="color:var(--text-dim);font-size:13px;padding:20px 0;">Loading clips…</div>
+      <div class="clip-check-list" id="camp-clip-list"></div>
+
+      <!-- Caption cards rendered after generation -->
+      <div id="camp-caption-area" style="margin-top:24px;"></div>
+
+      <!-- ── Schedule Board (shown after caption generation) ── -->
+      <div id="sched-board" style="display:none;">
+        <hr class="sched-divider" />
+        <div class="section-label" style="margin-bottom:12px;">📅 SCHEDULE</div>
+
+        <!-- Pool of captioned, draggable clips -->
+        <div class="sched-pool-section">
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">
+            Drag clips onto the grid to set their posting date &amp; time
+          </div>
+          <div class="sched-pool" id="sched-pool">
+            <span class="sched-pool-empty">Clips will appear here after caption generation</span>
+          </div>
+        </div>
+
+        <!-- Week nav + Lock button -->
+        <div class="sched-board-header">
+          <div class="sched-week-nav">
+            <button onclick="navSchedWeek(-1)">‹ Prev</button>
+            <span id="sched-week-label"></span>
+            <button onclick="navSchedWeek(1)">Next ›</button>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <button id="btn-lock-sched" onclick="lockSchedule()" disabled>🔒 Lock Schedule</button>
+            <div class="sched-lock-hint" id="sched-lock-hint">Place at least one clip to schedule.</div>
+          </div>
+        </div>
+
+        <!-- 7-day × time-slot grid -->
+        <div class="sched-grid-wrap">
+          <div class="sched-grid" id="sched-grid"></div>
+        </div>
+      </div><!-- /sched-board -->
+
+    </div><!-- /campaign-mode -->
 
   </div><!-- /composer -->
 
@@ -2074,16 +2610,21 @@ let vaultVideos = [];
 
 function setMode(mode) {
   currentMode = mode;
-  document.getElementById('single-mode').style.display = mode === 'single' ? '' : 'none';
-  document.getElementById('bulk-mode').style.display   = mode === 'bulk'   ? '' : 'none';
-  document.getElementById('mode-single').classList.toggle('is-active', mode === 'single');
-  document.getElementById('mode-bulk').classList.toggle('is-active',   mode === 'bulk');
+  document.getElementById('single-mode').style.display    = mode === 'single'   ? '' : 'none';
+  document.getElementById('bulk-mode').style.display      = mode === 'bulk'     ? '' : 'none';
+  document.getElementById('campaign-mode').style.display  = mode === 'campaign' ? '' : 'none';
+  document.getElementById('mode-single').classList.toggle('is-active',   mode === 'single');
+  document.getElementById('mode-bulk').classList.toggle('is-active',     mode === 'bulk');
+  document.getElementById('mode-campaign').classList.toggle('is-active', mode === 'campaign');
   if (mode === 'bulk') {
     renderBulkToggles();
     if (document.querySelectorAll('.queue-row').length === 0) {
       addQueueRow();
       addQueueRow();
     }
+  }
+  if (mode === 'campaign') {
+    initCampaignMode();
   }
 }
 
@@ -2466,6 +3007,622 @@ function toast(msg, type = 'info', duration = 4000) {
   t.className   = 'is-visible' + (type === 'error' ? ' is-error' : type === 'success' ? ' is-success' : '');
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.className = ''; }, duration);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CAMPAIGN BUILDER
+// ═══════════════════════════════════════════════════════════
+
+let campClips       = [];   // all clips returned from API
+let campSelected    = new Set(); // footage_id of checked clips
+let campCaptions    = {};   // { footage_id: { tiktok, instagram, ... } }
+let campInitialized = false;
+
+async function initCampaignMode() {
+  if (campInitialized) return;
+  campInitialized = true;
+  // Load project list for filter
+  try {
+    const res  = await fetch('/api/postor/campaign/projects');
+    const data = await res.json();
+    const sel  = document.getElementById('camp-project-filter');
+    (data.projects || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value       = p.id;
+      opt.textContent = p.title;
+      sel.appendChild(opt);
+    });
+  } catch (e) { console.warn('[Campaign] project list failed', e); }
+  await loadCampaignClips();
+}
+
+async function loadCampaignClips() {
+  const loading = document.getElementById('camp-clips-loading');
+  const list    = document.getElementById('camp-clip-list');
+  const countEl = document.getElementById('camp-clip-count');
+  const projectId = document.getElementById('camp-project-filter').value;
+
+  loading.style.display = '';
+  list.innerHTML        = '';
+  campClips             = [];
+  campSelected.clear();
+  updateGenButton();
+
+  try {
+    const qs  = projectId ? `?project_id=${projectId}` : '';
+    const res = await fetch(`/api/postor/campaign/clips${qs}`);
+    const data = await res.json();
+    campClips  = data.clips || [];
+  } catch (e) {
+    loading.textContent = 'Failed to load clips.';
+    return;
+  }
+
+  loading.style.display = 'none';
+  countEl.textContent   = campClips.length
+    ? `${campClips.length} unpackaged clip${campClips.length !== 1 ? 's' : ''}`
+    : '';
+
+  if (campClips.length === 0) {
+    list.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:20px 0;">
+      No unpackaged social clips found. Clips must have shot_type = social-clip and not yet be in the post queue.
+    </div>`;
+    return;
+  }
+
+  // Select-all row
+  const saRow = document.createElement('div');
+  saRow.className = 'select-all-row';
+  saRow.innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-dim);">
+      <input type="checkbox" id="camp-select-all" onchange="selectAllClips(this.checked)" />
+      Select all ${campClips.length} clips
+    </label>`;
+  list.appendChild(saRow);
+
+  campClips.forEach(clip => {
+    const item = document.createElement('div');
+    item.className  = 'clip-check-item';
+    item.id         = `camp-item-${clip.id}`;
+    const thumb = clip.thumbnail_path
+      ? `<img class="clip-thumb" src="${clip.thumbnail_path}" alt="" onerror="this.style.display='none'" />`
+      : `<div class="clip-thumb" style="background:var(--bg-card-2);display:flex;align-items:center;justify-content:center;color:var(--text-dimmer);font-size:18px;">🎬</div>`;
+    const dur   = clip.duration ? fmtDuration(clip.duration) : '';
+    const proj  = clip.project_title ? `· ${clip.project_title}` : '';
+    item.innerHTML = `
+      <input type="checkbox" class="camp-clip-chk" data-id="${clip.id}"
+             onchange="toggleClipSelect(${clip.id}, this.checked)" />
+      ${thumb}
+      <div class="clip-meta">
+        <div class="clip-name">${clip.original_filename || clip.file_path?.split(/[/\\]/).pop() || 'Clip'}</div>
+        <div class="clip-sub">${dur} ${proj}</div>
+        ${clip.description ? `<div class="clip-sub" style="margin-top:2px;color:var(--text-dimmer);">${clip.description.slice(0,80)}${clip.description.length>80?'…':''}</div>` : ''}
+      </div>
+      <div id="camp-status-${clip.id}" style="margin-left:auto;font-size:12px;color:var(--text-dimmer);white-space:nowrap;"></div>`;
+    list.appendChild(item);
+  });
+}
+
+function toggleClipSelect(id, checked) {
+  if (checked) campSelected.add(id);
+  else         campSelected.delete(id);
+  updateGenButton();
+  // keep select-all in sync
+  const allChk = document.getElementById('camp-select-all');
+  if (allChk) allChk.checked = campSelected.size === campClips.length;
+}
+
+function selectAllClips(checked) {
+  campClips.forEach(c => {
+    if (checked) campSelected.add(c.id);
+    else         campSelected.delete(c.id);
+    const chk = document.querySelector(`.camp-clip-chk[data-id="${c.id}"]`);
+    if (chk) chk.checked = checked;
+  });
+  const allChk = document.getElementById('camp-select-all');
+  if (allChk) allChk.checked = checked;
+  updateGenButton();
+}
+
+function updateGenButton() {
+  const btn = document.getElementById('btn-gen-captions');
+  if (!btn) return;
+  btn.disabled = campSelected.size === 0;
+  btn.textContent = campSelected.size > 0
+    ? `✨ Generate Captions (${campSelected.size})`
+    : '✨ Generate Captions';
+}
+
+async function startBatchCaptions() {
+  if (campSelected.size === 0) return;
+  const ids       = [...campSelected];
+  const direction = document.getElementById('camp-direction').value.trim();
+  const progWrap  = document.getElementById('camp-progress');
+  const progFill  = document.getElementById('camp-progress-fill');
+  const progLabel = document.getElementById('camp-progress-label');
+  const capArea   = document.getElementById('camp-caption-area');
+  const btn       = document.getElementById('btn-gen-captions');
+
+  btn.disabled    = true;
+  progWrap.style.display = '';
+  capArea.innerHTML      = '';
+  document.getElementById('sched-board').style.display = 'none';
+  campCaptions           = {};
+
+  let done = 0;
+
+  const body = JSON.stringify({ footage_ids: ids, caption_direction: direction || undefined });
+  const res  = await fetch('/api/postor/campaign/generate-captions', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body
+  });
+
+  if (!res.ok) {
+    toast('Caption generation failed.', 'error');
+    btn.disabled = false;
+    return;
+  }
+
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let   buffer  = '';
+
+  while (true) {
+    const { done: streamDone, value } = await reader.read();
+    if (streamDone) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      let evt;
+      try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+
+      if (evt.stage === 'start') {
+        progLabel.textContent = `Generating captions for ${evt.total} clip${evt.total !== 1 ? 's' : ''}…`;
+      }
+
+      if (evt.stage === 'generating') {
+        const statusEl = document.getElementById(`camp-status-${evt.footage_id}`);
+        if (statusEl) statusEl.textContent = '⏳ generating…';
+        progLabel.textContent = `${evt.index + 1} of ${ids.length}: ${evt.filename}`;
+      }
+
+      if (evt.stage === 'clip_done') {
+        done++;
+        campCaptions[evt.footage_id] = evt.captions;
+        const pct = Math.round((done / ids.length) * 100);
+        progFill.style.width = `${pct}%`;
+        const statusEl = document.getElementById(`camp-status-${evt.footage_id}`);
+        if (statusEl) statusEl.textContent = '✅';
+        // render caption card
+        renderCaptionCard(evt);
+      }
+
+      if (evt.stage === 'clip_error') {
+        done++;
+        const pct = Math.round((done / ids.length) * 100);
+        progFill.style.width = `${pct}%`;
+        const statusEl = document.getElementById(`camp-status-${evt.footage_id}`);
+        if (statusEl) statusEl.textContent = '❌';
+      }
+
+      if (evt.stage === 'done') {
+        progLabel.textContent = `Done — ${done} clip${done !== 1 ? 's' : ''} captioned.`;
+        btn.disabled = false;
+        if (Object.keys(campCaptions).length > 0) {
+          initScheduleBoard();
+        }
+      }
+    }
+  }
+}
+
+function renderCaptionCard(evt) {
+  const area = document.getElementById('camp-caption-area');
+  const platforms = ['tiktok','instagram','facebook','shorts','lemon8'];
+  const captions  = evt.captions || {};
+  const firstPlatform = platforms.find(p => captions[p]) || platforms[0];
+
+  const card = document.createElement('div');
+  card.className = 'caption-card';
+  card.id        = `cap-card-${evt.footage_id}`;
+
+  const thumb = evt.thumbnail_path
+    ? `<img src="${evt.thumbnail_path}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.style.display='none'" />`
+    : '';
+
+  const tabsHtml = platforms.map(p => `
+    <button class="cap-tab ${p === firstPlatform ? 'is-active' : ''}"
+            id="cap-tab-${evt.footage_id}-${p}"
+            onclick="switchCapTab(${evt.footage_id},'${p}')">
+      ${PLATFORM_META[p]?.emoji || ''} ${p}
+    </button>`).join('');
+
+  const textareasHtml = platforms.map(p => `
+    <textarea class="cap-textarea" id="cap-text-${evt.footage_id}-${p}"
+              style="display:${p === firstPlatform ? '' : 'none'}"
+              rows="5">${captions[p] || ''}</textarea>`).join('');
+
+  card.innerHTML = `
+    <div class="caption-card-header">
+      ${thumb}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${evt.filename || 'Clip'}
+        </div>
+        ${evt.description ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${evt.description.slice(0,60)}…</div>` : ''}
+      </div>
+    </div>
+    <div class="caption-card-body">
+      <div class="caption-platform-tabs">${tabsHtml}</div>
+      ${textareasHtml}
+    </div>
+    <div class="caption-card-actions">
+      <button class="btn-campaign secondary" onclick="addClipToQueue(${evt.footage_id})">➕ Add to Queue</button>
+    </div>`;
+  area.appendChild(card);
+}
+
+function switchCapTab(footageId, platform) {
+  const platforms = ['tiktok','instagram','facebook','shorts','lemon8'];
+  platforms.forEach(p => {
+    const tab  = document.getElementById(`cap-tab-${footageId}-${p}`);
+    const area = document.getElementById(`cap-text-${footageId}-${p}`);
+    if (tab)  tab.classList.toggle('is-active', p === platform);
+    if (area) area.style.display = p === platform ? '' : 'none';
+  });
+}
+
+function addClipToQueue(footageId) {
+  const clip     = campClips.find(c => c.id === footageId);
+  const captions = campCaptions[footageId];
+  if (!clip) return;
+
+  // Read current caption values (user may have edited them)
+  const platforms = ['tiktok','instagram','facebook','shorts','lemon8'];
+  const finalCaps = {};
+  platforms.forEach(p => {
+    const ta = document.getElementById(`cap-text-${footageId}-${p}`);
+    if (ta) finalCaps[p] = ta.value.trim();
+  });
+
+  // Switch to bulk mode and add a queue row pre-filled
+  setMode('bulk');
+  addQueueRow();
+  const rows = document.querySelectorAll('.queue-row');
+  const row  = rows[rows.length - 1];
+  if (!row) return;
+
+  // Set video path
+  const pathInput = row.querySelector('.queue-video-path');
+  if (pathInput) {
+    pathInput.value = clip.file_path || '';
+    pathInput.dispatchEvent(new Event('change'));
+  }
+
+  // Set description (use first non-empty platform caption)
+  const descInput = row.querySelector('.queue-description');
+  if (descInput) {
+    const firstCap = platforms.map(p => finalCaps[p]).find(v => v) || '';
+    descInput.value = firstCap;
+  }
+
+  toast(`"${clip.original_filename || 'Clip'}" added to queue.`, 'success');
+}
+
+function addAllToQueue() {
+  const ids = Object.keys(campCaptions).map(Number);
+  if (ids.length === 0) return;
+  ids.forEach(id => addClipToQueue(id));
+  toast(`${ids.length} clip${ids.length !== 1 ? 's' : ''} added to queue.`, 'success');
+  setMode('bulk');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SCHEDULE BOARD
+// ═══════════════════════════════════════════════════════════
+
+const SCHED_SLOTS = ['6:00 AM','9:00 AM','12:00 PM','3:00 PM','6:00 PM','9:00 PM'];
+const SCHED_SLOT_HOURS = [6, 9, 12, 15, 18, 21];
+const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+let schedWeekOffset = 0;          // weeks from current week
+let schedPlacements = {};          // key: "dayIdx|slotIdx" → { footage_id, platforms:[] }
+let schedDragId     = null;        // footage_id being dragged
+
+// Called when captions are done — show board and populate pool
+function initScheduleBoard() {
+  const board = document.getElementById('sched-board');
+  board.style.display = '';
+  buildSchedPool();
+  buildSchedGrid();
+}
+
+// ── Pool ─────────────────────────────────────────────────────────────────────
+
+function buildSchedPool() {
+  const pool = document.getElementById('sched-pool');
+  pool.innerHTML = '';
+  const ids = Object.keys(campCaptions).map(Number);
+  if (ids.length === 0) {
+    pool.innerHTML = '<span class="sched-pool-empty">No captioned clips yet</span>';
+    return;
+  }
+  ids.forEach(fid => {
+    const clip = campClips.find(c => c.id === fid);
+    if (!clip) return;
+    const placed  = Object.values(schedPlacements).some(p => p.footage_id === fid);
+    const name    = clip.original_filename || clip.file_path?.split(/[/\\]/).pop() || 'Clip';
+    const card    = document.createElement('div');
+    card.className   = 'sched-pool-card' + (placed ? ' is-placed' : '');
+    card.id          = `sched-pool-${fid}`;
+    card.draggable   = true;
+    card.title       = name;
+    card.ondragstart = (e) => onSchedDragStart(e, fid);
+    card.ondragend   = () => { schedDragId = null; };
+    const thumb = clip.thumbnail_path
+      ? `<img class="sched-card-thumb" src="${clip.thumbnail_path}" alt="" onerror="this.style.display='none'" />`
+      : `<div class="sched-card-thumb-ph">🎬</div>`;
+    card.innerHTML = `${thumb}<span class="sched-card-name">${name.slice(0, 22)}${name.length > 22 ? '…' : ''}</span>`;
+    pool.appendChild(card);
+  });
+}
+
+// ── Grid ─────────────────────────────────────────────────────────────────────
+
+function getSchedWeekStart() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - today.getDay() + schedWeekOffset * 7);
+  return sunday;
+}
+
+function buildSchedGrid() {
+  const grid    = document.getElementById('sched-grid');
+  const label   = document.getElementById('sched-week-label');
+  const weekStart = getSchedWeekStart();
+  const weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+
+  label.textContent = `${fmtSchedDate(weekStart)} – ${fmtSchedDate(weekEnd)}`;
+
+  grid.innerHTML = '';
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  // ── Header row ──
+  // Corner
+  const corner = document.createElement('div');
+  corner.className = 'sched-grid-corner';
+  grid.appendChild(corner);
+
+  for (let d = 0; d < 7; d++) {
+    const day = new Date(weekStart); day.setDate(weekStart.getDate() + d);
+    const isToday = day.getTime() === today.getTime();
+    const head = document.createElement('div');
+    head.className = 'sched-grid-head' + (isToday ? ' is-today' : '');
+    head.innerHTML = `${DAYS_SHORT[d]}<span class="sched-day-num">${day.getDate()}</span>`;
+    grid.appendChild(head);
+  }
+
+  // ── Time slot rows ──
+  SCHED_SLOTS.forEach((slot, si) => {
+    // Time label
+    const lbl = document.createElement('div');
+    lbl.className   = 'sched-time-label';
+    lbl.textContent = slot;
+    grid.appendChild(lbl);
+
+    // Day cells
+    for (let d = 0; d < 7; d++) {
+      const day    = new Date(weekStart); day.setDate(weekStart.getDate() + d);
+      const cellDt = new Date(day); cellDt.setHours(SCHED_SLOT_HOURS[si], 0, 0, 0);
+      const isPast = cellDt <= new Date();
+      const key    = `${d}|${si}`;
+
+      const cell = document.createElement('div');
+      cell.className = 'sched-cell' + (isPast ? ' is-past' : ' is-empty');
+      cell.id        = `sched-cell-${key}`;
+      if (!isPast) {
+        cell.ondragover = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
+        cell.ondragleave = ()  => cell.classList.remove('drag-over');
+        cell.ondrop      = (e) => onSchedDrop(e, d, si);
+      }
+      renderSchedCellContent(cell, key);
+      grid.appendChild(cell);
+    }
+  });
+}
+
+function renderSchedCellContent(cell, key) {
+  const placement = schedPlacements[key];
+  cell.innerHTML = '';
+  if (!placement) {
+    cell.classList.add('is-empty');
+    return;
+  }
+  cell.classList.remove('is-empty');
+
+  const clip  = campClips.find(c => c.id === placement.footage_id);
+  const name  = clip ? (clip.original_filename || clip.file_path?.split(/[/\\]/).pop() || 'Clip') : 'Clip';
+  const plats = placement.platforms;
+
+  // Platform toggle buttons — only connected & video-capable platforms
+  const availablePlatforms = Object.entries(PLATFORM_META)
+    .filter(([p]) => {
+      const conn = connections[p] || {};
+      return conn.connected && !conn.coming_soon;
+    });
+
+  const platBtns = availablePlatforms.map(([p, meta]) => {
+    const on = plats.includes(p);
+    return `<button class="sched-plat-btn ${on ? 'is-on' : ''}"
+      onclick="toggleSchedPlatform('${key}','${p}',this)"
+      title="${p}">${meta.emoji || p}</button>`;
+  }).join('');
+
+  cell.innerHTML = `
+    <div class="sched-chip">
+      <button class="sched-chip-remove" onclick="removeSchedItem('${key}')" title="Remove">×</button>
+      <span class="sched-chip-name">${name.slice(0, 18)}${name.length > 18 ? '…' : ''}</span>
+      <div class="sched-chip-plats">${platBtns}</div>
+    </div>`;
+}
+
+// ── Drag events ───────────────────────────────────────────────────────────────
+
+function onSchedDragStart(e, footageId) {
+  schedDragId = footageId;
+  e.dataTransfer.effectAllowed = 'copy';
+  e.dataTransfer.setData('text/plain', String(footageId));
+}
+
+function onSchedDrop(e, dayIdx, slotIdx) {
+  e.preventDefault();
+  const cell = document.getElementById(`sched-cell-${dayIdx}|${slotIdx}`);
+  if (cell) cell.classList.remove('drag-over');
+
+  const fid = schedDragId || parseInt(e.dataTransfer.getData('text/plain'), 10);
+  if (!fid || isNaN(fid)) return;
+
+  // Default platforms: all connected non-coming-soon video platforms
+  const defaultPlats = Object.entries(PLATFORM_META)
+    .filter(([p]) => {
+      const conn = connections[p] || {};
+      return conn.connected && !conn.coming_soon;
+    })
+    .map(([p]) => p);
+
+  const key = `${dayIdx}|${slotIdx}`;
+  schedPlacements[key] = { footage_id: fid, platforms: defaultPlats };
+
+  // Rebuild that cell
+  if (cell) renderSchedCellContent(cell, key);
+
+  // Mark pool card as placed
+  buildSchedPool();
+  updateSchedLockButton();
+}
+
+// ── Cell actions ──────────────────────────────────────────────────────────────
+
+function removeSchedItem(key) {
+  delete schedPlacements[key];
+  const cell = document.getElementById(`sched-cell-${key}`);
+  if (cell) {
+    cell.classList.add('is-empty');
+    cell.innerHTML = '';
+  }
+  buildSchedPool();
+  updateSchedLockButton();
+}
+
+function toggleSchedPlatform(key, platform, btn) {
+  const placement = schedPlacements[key];
+  if (!placement) return;
+  const idx = placement.platforms.indexOf(platform);
+  if (idx === -1) placement.platforms.push(platform);
+  else            placement.platforms.splice(idx, 1);
+  btn.classList.toggle('is-on', placement.platforms.includes(platform));
+}
+
+// ── Week nav ──────────────────────────────────────────────────────────────────
+
+function navSchedWeek(delta) {
+  schedWeekOffset += delta;
+  buildSchedGrid();
+}
+
+// ── Lock Schedule ─────────────────────────────────────────────────────────────
+
+function updateSchedLockButton() {
+  const btn  = document.getElementById('btn-lock-sched');
+  const hint = document.getElementById('sched-lock-hint');
+  const n    = Object.keys(schedPlacements).length;
+  btn.disabled = n === 0;
+  hint.textContent = n > 0
+    ? `${n} post${n !== 1 ? 's' : ''} ready to schedule.`
+    : 'Place at least one clip to schedule.';
+}
+
+async function lockSchedule() {
+  const keys = Object.keys(schedPlacements);
+  if (keys.length === 0) return;
+
+  const btn  = document.getElementById('btn-lock-sched');
+  btn.disabled = true;
+  btn.textContent = '⏳ Scheduling…';
+
+  const weekStart = getSchedWeekStart();
+  let ok = 0, failed = 0;
+
+  for (const key of keys) {
+    const [dayStr, slotStr] = key.split('|');
+    const dayIdx  = parseInt(dayStr, 10);
+    const slotIdx = parseInt(slotStr, 10);
+    const placement = schedPlacements[key];
+
+    if (!placement.platforms.length) { failed++; continue; }
+
+    const day = new Date(weekStart);
+    day.setDate(weekStart.getDate() + dayIdx);
+    day.setHours(SCHED_SLOT_HOURS[slotIdx], 0, 0, 0);
+    const scheduled_at = day.toISOString();
+
+    const clip = campClips.find(c => c.id === placement.footage_id);
+    if (!clip) { failed++; continue; }
+
+    const caps    = campCaptions[placement.footage_id] || {};
+    const name    = clip.original_filename || clip.file_path?.split(/[/\\]/).pop() || 'Clip';
+
+    // Read edited caption values from the UI (user may have changed them)
+    const readCap = (p) => {
+      const ta = document.getElementById(`cap-text-${placement.footage_id}-${p}`);
+      return ta ? ta.value.trim() : (caps[p] || '');
+    };
+
+    try {
+      const res = await fetch('/api/postor/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          video_path:    clip.file_path,
+          platforms:     placement.platforms,
+          title:         name,
+          description:   readCap('shorts') || readCap('instagram') || readCap('tiktok') || '',
+          ig_caption:    readCap('instagram'),
+          fb_description: readCap('facebook'),
+          scheduled_at,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) ok++;
+      else          failed++;
+    } catch { failed++; }
+  }
+
+  btn.textContent = '🔒 Lock Schedule';
+  btn.disabled    = false;
+
+  if (ok > 0) {
+    toast(`${ok} post${ok !== 1 ? 's' : ''} scheduled!`, 'success');
+    // Clear placed cells
+    schedPlacements = {};
+    buildSchedGrid();
+    buildSchedPool();
+    updateSchedLockButton();
+    // Refresh the calendar below if visible
+    if (typeof loadCalendar === 'function') loadCalendar();
+  }
+  if (failed > 0) toast(`${failed} post${failed !== 1 ? 's' : ''} failed to schedule.`, 'error');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmtSchedDate(d) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 </script>
 </body>
