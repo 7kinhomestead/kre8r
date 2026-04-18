@@ -186,6 +186,12 @@
       font-family: 'Consolas', monospace;
     }
 
+    /* ── Facebook page selector ── */
+    #fb-page-select option {
+      background: #1a1f1e;
+      color: #e0e0e0;
+    }
+
     /* ── Page Picker (Meta multi-page) ── */
     .page-picker-banner {
       background: var(--bg-card);
@@ -819,7 +825,22 @@
 
       <!-- Facebook -->
       <div class="override-section" id="fb-override">
-        <div class="override-header"><span>👍</span> Facebook Description Override</div>
+        <div class="override-header"><span>👍</span> Facebook</div>
+
+        <!-- Page Selector -->
+        <div class="form-row" id="fb-page-row" style="display:none">
+          <label>Posting to Page</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <select id="fb-page-select" onchange="onFbPageChange(this)"
+              style="flex:1;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px">
+            </select>
+            <span id="fb-page-saving" style="font-size:12px;color:var(--text-dim);display:none">Saving…</span>
+          </div>
+          <div id="fb-page-warning" style="display:none;margin-top:6px;font-size:12px;color:#f59e0b;background:rgba(245,158,11,.1);border-radius:6px;padding:6px 10px">
+            ⚠️ Not your default page — double-check before posting.
+          </div>
+        </div>
+
         <div class="form-row">
           <label>Facebook Description (leave blank to use Description above)</label>
           <textarea id="fb-description" rows="3" placeholder="Optional: custom description for Facebook Page video"></textarea>
@@ -1048,8 +1069,59 @@ async function loadConnections() {
     connections = await res.json();
     renderPlatformCards();
     renderPlatformToggles();
+    renderFbPageSelector();
   } catch (err) {
     toast('Failed to load connections: ' + err.message, 'error');
+  }
+}
+
+function renderFbPageSelector() {
+  const metaPages = connections._meta_pages;
+  const fbConn    = connections.facebook;
+  if (!metaPages?.connected || !Array.isArray(metaPages.extra_data)) return;
+
+  const pages    = metaPages.extra_data;
+  const activeId = fbConn?.account_id || '';
+
+  const select = document.getElementById('fb-page-select');
+  select.innerHTML = pages.map(p =>
+    `<option value="${p.id}" ${p.id === activeId ? 'selected' : ''}>${p.name}</option>`
+  ).join('');
+
+  // Store the initial page as the "safe" default — warning fires only when you change away from it
+  select.dataset.defaultId = activeId;
+
+  document.getElementById('fb-page-row').style.display = pages.length > 1 ? '' : 'none';
+  updateFbPageWarning(activeId, activeId); // no warning on load
+}
+
+function updateFbPageWarning(selectedId, defaultId) {
+  const warning = document.getElementById('fb-page-warning');
+  if (!warning) return;
+  warning.style.display = (selectedId && defaultId && selectedId !== defaultId) ? '' : 'none';
+}
+
+async function onFbPageChange(select) {
+  const pageId    = select.value;
+  const defaultId = select.dataset.defaultId || '';
+  const saving    = document.getElementById('fb-page-saving');
+  saving.style.display = '';
+  try {
+    const res  = await fetch('/api/postor/auth/meta/select-page', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ page_id: pageId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    connections.facebook = { ...connections.facebook, account_id: pageId,
+      account_name: select.options[select.selectedIndex].text };
+    updateFbPageWarning(pageId, defaultId);
+    toast(`Facebook page set to: ${select.options[select.selectedIndex].text}`, 'success');
+  } catch (err) {
+    toast('Failed to switch page: ' + err.message, 'error');
+  } finally {
+    saving.style.display = 'none';
   }
 }
 
