@@ -774,6 +774,15 @@
       </div>
     </div>
 
+    <!-- Subject tag cloud — aggregated from filtered footage, click any tag to search -->
+    <div id="tag-cloud-section" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+        <span style="font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;">Subjects in view</span>
+        <button id="tag-cloud-toggle" onclick="toggleTagCloud()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-dimmer);padding:0;transition:color 0.12s;" onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color=''">▾ hide</button>
+      </div>
+      <div id="tag-cloud" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+    </div>
+
     <!-- Grid / Folder container -->
     <div class="footage-grid" id="footageGrid">
       <div class="footage-empty">
@@ -924,7 +933,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('searchInput').addEventListener('input', (e) => {
     clearTimeout(searchDebounce);
     const q = e.target.value.trim();
-    if (!q) { renderView(applyFilters(allFootage)); return; }
+    if (!q) {
+      const f = applyFilters(allFootage);
+      renderView(f);
+      renderTagCloud(f);
+      return;
+    }
     searchDebounce = setTimeout(() => runSearch(q), 600);
   });
 
@@ -1068,6 +1082,7 @@ async function loadFootage() {
     buildDistMap(dist);
     filteredFootage = applyFilters(allFootage);
     renderView(filteredFootage);
+    renderTagCloud(filteredFootage);
     updateFootageCount(filteredFootage.length, allFootage.length);
     updateUnorganizedCount();
   } catch(e) {
@@ -1095,6 +1110,7 @@ function setFilter(type, value, el) {
   document.getElementById('searchInput').value = '';
   filteredFootage = applyFilters(allFootage);
   renderView(filteredFootage);
+  renderTagCloud(filteredFootage);
   updateFootageCount(filteredFootage.length, allFootage.length);
   saveSession();
 }
@@ -1132,6 +1148,7 @@ function toggleShowOrganized(checked) {
   showOrganized = checked;
   filteredFootage = applyFilters(allFootage);
   renderView(filteredFootage);
+  renderTagCloud(filteredFootage);
   updateFootageCount(filteredFootage.length, allFootage.length);
   saveSession();
 }
@@ -1143,6 +1160,11 @@ function updateFootageCount(shown, total) {
 
 // ── SEARCH ─────────────────────────────────────────────────────────────────
 async function runSearch(q) {
+  // Hide tag cloud while a text search is active — would be confusing to show
+  // subjects from all footage when results are already filtered by query
+  const tc = document.getElementById('tag-cloud-section');
+  if (tc) tc.style.display = 'none';
+
   document.getElementById('searchSpinner').classList.add('visible');
   try {
     const results = await fetch('/api/vault/search', {
@@ -1153,6 +1175,54 @@ async function runSearch(q) {
     updateFootageCount(results.length, allFootage.length);
   } catch(e) { showToast('Search failed: ' + e.message, 'red'); }
   finally { document.getElementById('searchSpinner').classList.remove('visible'); }
+}
+
+// ── SUBJECT TAG CLOUD ──────────────────────────────────────────────────────
+let tagCloudExpanded = true;
+
+function renderTagCloud(footage) {
+  const section = document.getElementById('tag-cloud-section');
+  const cloud   = document.getElementById('tag-cloud');
+  if (!section || !cloud) return;
+
+  // Aggregate subjects from current footage
+  const counts = {};
+  for (const f of footage) {
+    if (!f.subjects) continue;
+    let subs;
+    try { subs = JSON.parse(f.subjects); } catch (_) { continue; }
+    if (!Array.isArray(subs)) continue;
+    for (const s of subs) {
+      const key = s.toLowerCase().trim();
+      if (key) counts[key] = (counts[key] || 0) + 1;
+    }
+  }
+
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 35);
+
+  if (sorted.length === 0) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  if (!tagCloudExpanded) { cloud.style.display = 'none'; return; }
+
+  const maxCount = sorted[0][1];
+  cloud.style.display = 'flex';
+  cloud.innerHTML = sorted.map(([tag, n]) => {
+    // Subtle size scaling: 11px base → up to 14px for most-frequent tag
+    const size = 11 + Math.round((n / maxCount) * 3);
+    return `<button class="subject-chip" onclick="searchBySubject(event,'${escAttr(tag)}')"
+      style="font-size:${size}px;padding:3px 9px;border-radius:12px;background:var(--bg-card-2);color:var(--text-dim);border:1px solid var(--border);cursor:pointer;font-family:var(--font-body);transition:all 0.12s;"
+    >${escHtml(tag)} <span style="color:var(--text-dimmer);font-size:10px;margin-left:2px;">${n}</span></button>`;
+  }).join('');
+}
+
+function toggleTagCloud() {
+  tagCloudExpanded = !tagCloudExpanded;
+  const cloud  = document.getElementById('tag-cloud');
+  const toggle = document.getElementById('tag-cloud-toggle');
+  if (!cloud || !toggle) return;
+  cloud.style.display = tagCloudExpanded ? 'flex' : 'none';
+  toggle.textContent  = tagCloudExpanded ? '▾ hide' : '▸ show';
 }
 
 function searchBySubject(event, subject) {
