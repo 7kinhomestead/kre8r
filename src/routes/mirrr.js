@@ -422,6 +422,190 @@ router.post('/youtube-sync', (req, res) => {
   }
 });
 
+// ─── Meta Sync — background job runner ───────────────────────────────────────
+// Pulls insights for all published FB/IG posts from the Meta Graph API and
+// stores them in the analytics table (same schema as YouTube metrics).
+//
+// Facebook video: /{video_id}/video_insights → views, avg_watch_time, reactions
+// Facebook post:  /{post_id}/insights        → reach, engaged_users, reactions
+// Instagram Reel: /{media_id}/insights       → views, reach, likes, comment_count,
+//                                              shares, saves
+//
+// Requires instagram_manage_insights permission for IG. If missing, the job
+// continues (Facebook still syncs), sets meta_ig_insights_missing KV flag,
+// and reports the gap in the result.
+
+async function runMetaSyncJob(jobId) {
+  try {
+    const { default: fetch } = await import('node-fetch');
+
+    const fbConn = db.getPostorConnection('facebook');
+    const igConn = db.getPostorConnection('instagram');
+
+    if (!fbConn && !igConn) {
+      db.failJob(jobId, 'No Meta platforms connected — connect Facebook or Instagram in PostΩr first');
+      return;
+    }
+
+    const posts = db.getMetaSyncablePosts();
+    if (posts.length === 0) {
+      db.finishJob(jobId, { ok: 0, errors: 0, total: 0, result: { synced_at: new Date().toISOString(), message: 'No published Meta posts found yet' } });
+      return;
+    }
+
+    const GRAPH     = 'https://graph.facebook.com/v21.0';
+    const GRAPH_IG  = 'https://graph.instagram.com';
+    const total     = posts.length;
+    let synced = 0, failed = 0, igPermError = false;
+
+    for (let i = 0; i < total; i++) {
+      const post = posts[i];
+      db.updateJobProgress(jobId, { progress: i, total, ok: synced, errors: failed });
+      try {
+        const analyticsRowId = db.bridgeMetaPost(post);
+        const projectId      = post.project_id || null;
+
+        if (post.platform === 'facebook') {
+          // ── Facebook video insights ───────────────────────────────────────
+          if (!fbConn) { failed++; continue; }
+          const url  = `${GRAPH}/${post.post_id}/video_insights?metric=total_video_views,total_video_avg_time_watched,total_video_reactions_by_type_total&access_token=${fbConn.access_token}`;
+          const res  = await fetch(url);
+          const data = await res.json();
+          if (data.error) throw new Error(`FB video insights: ${data.error.message}`);
+
+          const FB_VIDEO_MAP = {
+            total_video_views:                  'views',
+            total_video_avg_time_watched:        'avg_watch_time',
+            total_video_reactions_by_type_total: 'reactions',
+          };
+          for (const metric of (data.data || [])) {
+            const name = FB_VIDEO_MAP[metric.name];
+            if (!name) continue;
+            const raw    = metric.values?.[0]?.value ?? metric.value;
+            if (raw == null) continue;
+            // Reaction totals are objects like { LIKE: 5, LOVE: 2 }
+            const numVal = typeof raw === 'object'
+              ? Object.values(raw).reduce((a, b) => a + (Number(b) || 0), 0)
+              : Number(raw);
+            db.upsertMetric(analyticsRowId, projectId, 'facebook', name, numVal);
+          }
+          synced++;
+
+        } else if (post.platform === 'facebook_post') {
+          // ── Facebook feed/image post insights ────────────────────────────
+          if (!fbConn) { failed++; continue; }
+          const url  = `${GRAPH}/${post.post_id}/insights?metric=post_impressions_unique,post_engaged_users,post_reactions_by_type_total&period=lifetime&access_token=${fbConn.access_token}`;
+          const res  = await fetch(url);
+          const data = await res.json();
+          if (data.error) throw new Error(`FB post insights: ${data.error.message}`);
+
+          const FB_POST_MAP = {
+            post_impressions_unique:      'reach',
+            post_engaged_users:           'engaged_users',
+            post_reactions_by_type_total: 'reactions',
+          };
+          for (const metric of (data.data || [])) {
+            const name = FB_POST_MAP[metric.name];
+            if (!name) continue;
+            const raw    = metric.values?.[0]?.value ?? metric.value;
+            if (raw == null) continue;
+            const numVal = typeof raw === 'object'
+              ? Object.values(raw).reduce((a, b) => a + (Number(b) || 0), 0)
+              : Number(raw);
+            db.upsertMetric(analyticsRowId, projectId, 'facebook_post', name, numVal);
+          }
+          synced++;
+
+        } else if (post.platform === 'instagram') {
+          // ── Instagram Reels insights ──────────────────────────────────────
+          if (!igConn) { failed++; continue; }
+          const url  = `${GRAPH_IG}/${post.post_id}/insights?metric=plays,reach,likes,comments,shares,saved&period=lifetime&access_token=${igConn.access_token}`;
+          const res  = await fetch(url);
+          const data = await res.json();
+
+          if (data.error) {
+            // OAuthException code 10 = missing instagram_manage_insights permission
+            if (data.error.type === 'OAuthException' || data.error.code === 10 || data.error.code === 200) {
+              igPermError = true;
+              db.setKv('meta_ig_insights_missing', '1');
+              failed++;
+              continue;
+            }
+            throw new Error(`IG insights: ${data.error.message}`);
+          }
+
+          const IG_MAP = {
+            plays:    'views',
+            reach:    'reach',
+            likes:    'likes',
+            comments: 'comment_count',
+            shares:   'shares',
+            saved:    'saves',
+          };
+          for (const metric of (data.data || [])) {
+            const name   = IG_MAP[metric.name];
+            const raw    = metric.values?.[0]?.value ?? metric.value;
+            if (!name || raw == null) continue;
+            db.upsertMetric(analyticsRowId, projectId, 'instagram', name, Number(raw));
+          }
+          // Clear stale perm-error flag if we got real data
+          db.setKv('meta_ig_insights_missing', '0');
+          synced++;
+        }
+      } catch (err) {
+        const label = post.title || post.description || post.post_id;
+        console.error(`[meta-sync job ${jobId}] "${label}":`, err.message);
+        failed++;
+      }
+      db.updateJobProgress(jobId, { progress: i + 1, total, ok: synced, errors: failed });
+      await new Promise(r => setTimeout(r, 300)); // gentle API pacing
+    }
+
+    const syncedAt = new Date().toISOString();
+    db.setKv('meta_last_sync', syncedAt);
+    db.finishJob(jobId, {
+      ok: synced, errors: failed, total,
+      result: { synced_at: syncedAt, ig_perm_error: igPermError },
+    });
+  } catch (err) {
+    console.error(`[meta-sync job ${jobId}] fatal:`, err.message);
+    db.failJob(jobId, err.message);
+  }
+}
+
+// ─── POST /api/mirrr/meta-sync ───────────────────────────────────────────────
+router.post('/meta-sync', (req, res) => {
+  try {
+    const existing = db.getActiveJobByType('meta-sync');
+    if (existing) return res.json({ job_id: existing.id, resumed: true });
+    const job = db.createJob('meta-sync');
+    runMetaSyncJob(job.id); // fire and forget
+    res.json({ job_id: job.id, resumed: false });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /api/mirrr/meta-status ──────────────────────────────────────────────
+router.get('/meta-status', (req, res) => {
+  try {
+    const fbConn   = db.getPostorConnection('facebook');
+    const igConn   = db.getPostorConnection('instagram');
+    const lastSync = db.getKv('meta_last_sync');
+    const igPerm   = db.getKv('meta_ig_insights_missing');
+    const posts    = db.getMetaSyncablePosts();
+    res.json({
+      last_sync:              lastSync || null,
+      fb_connected:           !!(fbConn?.access_token),
+      ig_connected:           !!(igConn?.access_token),
+      ig_insights_missing:    igPerm === '1',
+      syncable_post_count:    posts.length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── GET /api/mirrr/jobs/active/:type ────────────────────────────────────────
 router.get('/jobs/active/:type', (req, res) => {
   try {

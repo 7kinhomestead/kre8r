@@ -2419,6 +2419,46 @@ function getAnalyticsSummary(projectId) {
 
 // Returns TikTok posts with aggregated metrics, excluding #onthisday reposts.
 // Used by the TikTok Pattern Analysis feature in MirrΩr.
+// ─────────────────────────────────────────────
+// META ANALYTICS HELPERS (MirrΩr)
+// ─────────────────────────────────────────────
+
+// Returns all published FB/IG postor_posts that have a platform post_id — the
+// set we can actually fetch insights for.
+function getMetaSyncablePosts() {
+  return _all(
+    `SELECT * FROM postor_posts
+     WHERE platform IN ('facebook', 'facebook_post', 'instagram')
+       AND status = 'posted'
+       AND post_id IS NOT NULL
+     ORDER BY posted_at DESC`
+  );
+}
+
+// Ensures a row exists in the `posts` analytics table for a given postor_post.
+// Mirrors the bridge pattern used by the YouTube publisher.
+// Returns the posts.id to use with upsertMetric().
+function bridgeMetaPost({ platform, post_id, project_id, posted_at, post_url, description, title }) {
+  const existing = _get(
+    `SELECT id FROM posts WHERE post_id = ? AND platform = ? LIMIT 1`,
+    [post_id, platform]
+  );
+  if (existing) return existing.id;
+  const result = _run(
+    `INSERT INTO posts (project_id, platform, post_id, posted_at, url, status, content)
+     VALUES (?, ?, ?, ?, ?, 'posted', ?)`,
+    [
+      project_id   || null,
+      platform,
+      post_id,
+      posted_at    || null,
+      post_url     || null,
+      (description || title || '').slice(0, 2000) || null,
+    ]
+  );
+  return result.lastInsertRowid;
+}
+
 function getTikTokPostsForAnalysis() {
   return _all(
     `SELECT po.id, po.content, po.url, po.posted_at,
@@ -4148,6 +4188,8 @@ module.exports = {
   getGlobalChannelHealth,
   getRecentProjectsWithAnalytics,
   getTikTokPostsForAnalysis,
+  getMetaSyncablePosts,
+  bridgeMetaPost,
   // ComposΩr
   insertComposorTrack,
   updateComposorTrack,

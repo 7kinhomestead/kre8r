@@ -644,6 +644,31 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
     </div>
   </div>
 
+  <!-- ─── 7b. META SYNC ───────────────────────────── -->
+  <div class="section-spacer" id="meta-sync">
+    <div class="section-header">
+      <div class="section-title">META SYNC</div>
+      <div class="section-sub">Pulls views, reach, and engagement from Facebook &amp; Instagram</div>
+    </div>
+    <div id="meta-connection-status" style="margin-bottom:12px;font-size:12px;color:var(--text-dimmer);display:flex;gap:16px;flex-wrap:wrap;"></div>
+    <div class="sync-wrap">
+      <div class="sync-row">
+        <button class="sync-btn" id="metaSyncBtn" onclick="syncMeta()" style="color:var(--teal);border-color:rgba(62,207,178,0.35);">
+          <div class="sync-spinner" style="border-color:rgba(62,207,178,0.2);border-top-color:var(--teal);"></div>
+          ▶ Sync Meta Analytics
+        </button>
+        <div class="sync-last" id="metaSyncLast">Never synced</div>
+      </div>
+      <div id="meta-ig-perm-warn" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.35);border-radius:6px;font-size:12px;color:#f59e0b;line-height:1.6;">
+        ⚠ Instagram insights require the <strong>instagram_manage_insights</strong> permission.
+        In your <a href="https://developers.facebook.com/apps/" target="_blank" style="color:#f59e0b;text-decoration:underline;">Meta App Dashboard</a>:
+        add the "Instagram Insights" use case → generate a new Instagram token with that scope → reconnect Instagram in PostΩr.
+        Facebook metrics will still sync without it.
+      </div>
+      <div class="sync-log" id="metaSyncLog"></div>
+    </div>
+  </div>
+
   <!-- ─── 8. PATTERN ANALYSIS ───────────────────── -->
   <div class="section-spacer coaching-wrap">
     <div class="section-header">
@@ -1240,6 +1265,118 @@ async function checkActiveSyncJob() {
   } catch (_) {}
 }
 
+// ─── Meta Sync ────────────────────────────────────────────────────────────────
+
+let _metaSyncES = null;
+
+async function loadMetaStatus() {
+  try {
+    const res  = await fetch('/api/mirrr/meta-status');
+    if (!res.ok) return;
+    const d = await res.json();
+
+    // Connection status chips
+    const statusEl = document.getElementById('meta-connection-status');
+    if (statusEl) {
+      const chips = [];
+      chips.push(d.fb_connected
+        ? '<span style="color:var(--teal)">✓ Facebook connected</span>'
+        : '<span style="color:var(--text-dimmer)">✗ Facebook not connected</span>');
+      chips.push(d.ig_connected
+        ? '<span style="color:var(--teal)">✓ Instagram connected</span>'
+        : '<span style="color:var(--text-dimmer)">✗ Instagram not connected</span>');
+      if (d.syncable_post_count > 0)
+        chips.push(`<span style="color:var(--text-dim)">${d.syncable_post_count} post${d.syncable_post_count !== 1 ? 's' : ''} to sync</span>`);
+      statusEl.innerHTML = chips.join('<span style="color:var(--border-bright);margin:0 4px">·</span>');
+    }
+
+    // Last sync timestamp
+    const lastEl = document.getElementById('metaSyncLast');
+    if (lastEl && d.last_sync) lastEl.textContent = 'Last synced: ' + fmtDate(d.last_sync);
+
+    // IG permission warning
+    const warnEl = document.getElementById('meta-ig-perm-warn');
+    if (warnEl) warnEl.style.display = d.ig_insights_missing ? 'block' : 'none';
+
+    // Disable button if nothing to sync
+    const btn = document.getElementById('metaSyncBtn');
+    if (btn && !d.fb_connected && !d.ig_connected) {
+      btn.disabled = true;
+      btn.title = 'Connect Facebook or Instagram in PostΩr first';
+    }
+  } catch (_) {}
+}
+
+function _connectMetaSyncStream(jobId) {
+  if (_metaSyncES) { _metaSyncES.close(); _metaSyncES = null; }
+  const btn  = document.getElementById('metaSyncBtn');
+  const log  = document.getElementById('metaSyncLog');
+  const last = document.getElementById('metaSyncLast');
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+  log.classList.add('visible');
+
+  function appendLog(msg, cls) {
+    const line = document.createElement('div');
+    line.className = cls || '';
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  const es = new EventSource('/api/mirrr/jobs/' + jobId + '/stream');
+  _metaSyncES = es;
+
+  es.onmessage = async (e) => {
+    try {
+      const ev = JSON.parse(e.data);
+      if (ev.type === 'progress') {
+        let existing = log.querySelector('.log-progress');
+        if (!existing) { existing = document.createElement('div'); existing.className = 'log-info log-progress'; log.appendChild(existing); }
+        existing.textContent = ev.message;
+        log.scrollTop = log.scrollHeight;
+      } else if (ev.type === 'done') {
+        const igNote = ev.ig_perm_error ? ' (IG: add instagram_manage_insights — see warning above)' : '';
+        appendLog('✓ ' + ev.message + igNote, 'log-done');
+        if (ev.synced_at) last.textContent = 'Last synced: ' + fmtDate(ev.synced_at);
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        _metaSyncES.close(); _metaSyncES = null;
+        await loadMetaStatus();
+      } else if (ev.type === 'error') {
+        appendLog('✗ ' + ev.message, 'log-err');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        _metaSyncES.close(); _metaSyncES = null;
+      }
+    } catch (_) {}
+  };
+}
+
+async function syncMeta() {
+  const log = document.getElementById('metaSyncLog');
+  log.innerHTML = '';
+  try {
+    const res  = await fetch('/api/mirrr/meta-sync', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to start sync');
+    if (data.resumed) {
+      const line = document.createElement('div');
+      line.className = 'log-info';
+      line.textContent = 'Reconnecting to running sync…';
+      log.appendChild(line);
+    }
+    _connectMetaSyncStream(data.job_id);
+  } catch (err) {
+    const line = document.createElement('div');
+    line.className = 'log-err';
+    line.textContent = 'Error: ' + err.message;
+    log.appendChild(line);
+    log.classList.add('visible');
+  }
+}
+
 // Auto-display cached niche analysis + secrets on load so nothing has to be re-run
 async function loadCachedResults() {
   try {
@@ -1663,6 +1800,8 @@ async function initTikTokSection() {
   loadCachedResults();
   // Auto-reconnect to any running sync job
   checkActiveSyncJob();
+  // Load Meta sync status (connection state, last sync, IG perm warning)
+  loadMetaStatus();
   // Show TikTok analysis section if we have TikTok data, and load stored patterns
   initTikTokSection();
 })();
