@@ -510,6 +510,9 @@ app.use('/api/analytics-import',  require('./src/routes/analytics-import'));
 app.use('/api/postor',            require('./src/routes/postor'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 
+// PostΩr queue processor — starts 60s interval to fire scheduled posts
+require('./src/postor/queue-processor').start();
+
 // Creator profile — served to all tools
 // On tenant subdomains, return the tenant's profile directly.
 // On the root instance, validate and return Jason's creator-profile.json.

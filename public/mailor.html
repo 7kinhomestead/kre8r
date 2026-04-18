@@ -352,6 +352,30 @@
     .nav a{display:none;}
     .nav a.active{display:inline-flex;}
   }
+
+  /* ── FB POST DISTRIBUTION SECTION ── */
+  .fb-post-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:14px;}
+  .fb-post-header{padding:12px 16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,var(--bg-card-2) 0%,rgba(91,156,246,0.06) 100%);border-top:2px solid var(--blue);display:flex;align-items:center;justify-content:space-between;}
+  .fb-post-header-left{display:flex;align-items:center;gap:8px;}
+  .fb-post-title{font-family:var(--font-head);font-size:14px;letter-spacing:1.2px;color:var(--blue);}
+  .fb-post-body{padding:16px;}
+  .fb-post-caption{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;padding:12px 14px;line-height:1.7;resize:vertical;min-height:120px;box-sizing:border-box;}
+  .fb-post-caption:focus{outline:none;border-color:var(--blue);}
+  .fb-distribute{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:12px;}
+  .fb-distribute-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:10px;}
+  .fb-mode-row{display:flex;gap:8px;margin-bottom:10px;}
+  .fb-mode-btn{flex:1;padding:7px 12px;border:1.5px solid var(--border);background:var(--bg);border-radius:var(--radius-sm);color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+  .fb-mode-btn:hover{border-color:var(--blue);color:var(--blue);}
+  .fb-mode-btn.is-active{border-color:var(--blue);color:var(--blue);background:rgba(91,156,246,0.08);}
+  .fb-quick-btn{padding:5px 10px;font-size:11px;border:1px solid var(--border);background:var(--bg);color:var(--text-dim);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;}
+  .fb-quick-btn:hover{border-color:var(--blue);color:var(--blue);}
+  .fb-post-btn{width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#0a0a0a;font-family:var(--font-head);font-size:17px;letter-spacing:1.5px;padding:13px 20px;cursor:pointer;transition:all 0.15s;margin-top:10px;}
+  .fb-post-btn:hover{opacity:0.88;transform:translateY(-1px);}
+  .fb-post-btn:disabled{background:var(--bg-card-2);color:var(--text-dimmer);cursor:not-allowed;transform:none;border:1px solid var(--border);}
+
+  /* ── ML EMAIL SCHEDULE ── */
+  .ml-sched-picker{display:none;margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .ml-sched-picker input[type=date],.ml-sched-picker input[type=time]{background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px;}
 </style>
 </head>
 <body>
@@ -455,6 +479,7 @@
           <label class="output-check"><input type="checkbox" id="gen-email" checked> Email A/B</label>
           <label class="output-check"><input type="checkbox" id="gen-blog"> Blog Post</label>
           <label class="output-check"><input type="checkbox" id="gen-community"> Community Post</label>
+          <label class="output-check"><input type="checkbox" id="gen-fb-post"> 📘 Facebook Post</label>
         </div>
       </div>
       <button class="generate-btn" id="bc-gen-btn" onclick="generateBroadcast()">
@@ -518,7 +543,34 @@
           </label>
         </div>
 
-        <button class="ml-send-btn" id="ml-send-btn" onclick="sendViaMailerlite()">SEND NOW</button>
+        <!-- Send timing -->
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;">When to send?</div>
+        <div class="ml-version-pick" style="margin-bottom:0;">
+          <button class="ml-version-btn active" id="ml-time-now" onclick="setEmailSendMode('now')">⚡ Send in ~10 min</button>
+          <button class="ml-version-btn" id="ml-time-sched" onclick="setEmailSendMode('schedule')">📅 Schedule</button>
+        </div>
+        <div class="ml-sched-picker" id="ml-sched-picker">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div>
+              <label style="font-size:10px;color:var(--text-dimmer);display:block;margin-bottom:3px">DATE</label>
+              <input type="date" id="ml-sched-date">
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--text-dimmer);display:block;margin-bottom:3px">TIME</label>
+              <input type="time" id="ml-sched-time" value="08:00">
+            </div>
+            <div style="display:flex;gap:5px;align-self:flex-end;padding-bottom:2px;">
+              <button class="fb-quick-btn" onclick="mlQuickSchedule(1)">+1d</button>
+              <button class="fb-quick-btn" onclick="mlQuickSchedule(2)">+2d</button>
+              <button class="fb-quick-btn" onclick="mlQuickSchedule(3)">+3d</button>
+              <button class="fb-quick-btn" onclick="mlQuickSchedule(7)">+1wk</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="ml-send-btn" id="ml-send-btn" onclick="sendViaMailerlite()" style="margin-top:12px;">
+          <span id="ml-send-label">SEND NOW</span>
+        </button>
         <div class="ml-success" id="ml-success"></div>
       </div>
     </div>
@@ -1073,6 +1125,26 @@ function mlAudienceToggle(group, checked) {
   }
 }
 
+// ── Email send mode (now / scheduled) ──────────────────────────────────────
+let emailSendMode = 'now';
+
+function setEmailSendMode(mode) {
+  emailSendMode = mode;
+  document.getElementById('ml-time-now').classList.toggle('active', mode === 'now');
+  document.getElementById('ml-time-sched').classList.toggle('active', mode === 'schedule');
+  document.getElementById('ml-sched-picker').style.display = mode === 'schedule' ? 'block' : 'none';
+  document.getElementById('ml-send-label').textContent = mode === 'schedule' ? '📅 SCHEDULE EMAIL' : 'SEND NOW';
+  if (mode === 'schedule' && !document.getElementById('ml-sched-date').value) {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('ml-sched-date').value = tomorrow.toISOString().slice(0, 10);
+  }
+}
+
+function mlQuickSchedule(days) {
+  const d = new Date(); d.setDate(d.getDate() + days);
+  document.getElementById('ml-sched-date').value = d.toISOString().slice(0, 10);
+}
+
 async function sendViaMailerlite() {
   if (!lastBroadcast) { showToast('Generate a broadcast first', 'amber'); return; }
   if (!mlConnected)   { showToast('Mailerlite not connected', 'amber'); return; }
@@ -1080,9 +1152,18 @@ async function sendViaMailerlite() {
   const version = mlPickedVersion === 'a' ? lastBroadcast.version_a : lastBroadcast.version_b;
   if (!version) { showToast('No version available', 'amber'); return; }
 
+  // Build optional sends_at for scheduled mode
+  let sends_at = null;
+  if (emailSendMode === 'schedule') {
+    const dateVal = document.getElementById('ml-sched-date').value;
+    const timeVal = document.getElementById('ml-sched-time').value || '08:00';
+    if (!dateVal) { showToast('Pick a date to schedule.', 'amber'); return; }
+    sends_at = new Date(`${dateVal}T${timeVal}:00`).toISOString();
+  }
+
   const btn = document.getElementById('ml-send-btn');
   btn.disabled = true;
-  btn.textContent = 'SENDING…';
+  document.getElementById('ml-send-label').textContent = 'SENDING…';
   document.getElementById('ml-success').classList.remove('show');
 
   try {
@@ -1093,21 +1174,25 @@ async function sendViaMailerlite() {
         subject:    version.subject,
         html_body:  version.body,
         group_ids:  mlSelectedGroups,
+        sends_at,
       }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
 
     const successEl = document.getElementById('ml-success');
-    const sendsAt = data.sends_at ? new Date(data.sends_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
-    successEl.textContent = `Scheduled! Sends at ${sendsAt} — Campaign ID: ${data.campaign_id}`;
+    const sendsAtDt = data.sends_at ? new Date(data.sends_at) : null;
+    const friendlyTime = sendsAtDt
+      ? sendsAtDt.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
+      : '';
+    successEl.textContent = `Queued! Sends ${friendlyTime} — Campaign ID: ${data.campaign_id}`;
     successEl.classList.add('show');
-    showToast('Email scheduled — sends in ~10 min', 'green');
+    showToast(emailSendMode === 'schedule' ? `Email scheduled for ${friendlyTime}` : 'Email queued — sends in ~10 min', 'green');
   } catch(e) {
     showToast('Send failed: ' + e.message, 'red');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'SEND NOW';
+    document.getElementById('ml-send-label').textContent = emailSendMode === 'schedule' ? '📅 SCHEDULE EMAIL' : 'SEND NOW';
   }
 }
 
@@ -1546,6 +1631,7 @@ async function generateBroadcast() {
       gen_email:      document.getElementById('gen-email').checked,
       gen_blog:       document.getElementById('gen-blog').checked,
       gen_community:  document.getElementById('gen-community').checked,
+      gen_fb_post:    document.getElementById('gen-fb-post').checked,
     };
 
     const res  = await fetch('/api/mailor/broadcast', {
@@ -1560,6 +1646,7 @@ async function generateBroadcast() {
     if (data.broadcast)      renderBroadcastResults(data.broadcast);
     if (data.blog_post)      renderBlogPost(data.blog_post);
     if (data.community_post) renderCommunityPost(data.community_post);
+    if (data.fb_post)        renderFbPost(data.fb_post);
   } catch(e) {
     document.getElementById('bc-error-msg').textContent = e.message;
     document.getElementById('bc-error').classList.add('show');
@@ -1718,6 +1805,177 @@ function renderCommunityPost(post) {
     </div>`;
   el.style.display = 'block';
   el.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Facebook Post Section ────────────────────────────────────────────────────
+let fbPostMode = 'now'; // 'now' | 'schedule'
+
+function renderFbPost(post) {
+  let el = document.getElementById('bc-fb-post-results');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'bc-fb-post-results';
+    document.getElementById('bc-results').after(el);
+  }
+
+  const caption = (post.caption || '').trim();
+  const hashtags = (post.suggested_hashtags || []).map(h => `#${h.replace(/^#/, '')}`).join(' ');
+  const fullCaption = hashtags ? `${caption}\n\n${hashtags}` : caption;
+
+  el.innerHTML = `
+    <div class="fb-post-card">
+      <div class="fb-post-header">
+        <div class="fb-post-header-left">
+          <span style="font-size:16px">📘</span>
+          <span class="fb-post-title">FACEBOOK POST</span>
+        </div>
+        <button class="btn btn-copy" onclick="clipWrite(document.getElementById('fb-caption-ta').value, () => showToast('Caption copied', 'green'))">Copy</button>
+      </div>
+      <div class="fb-post-body">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:6px;">Caption (edit before posting)</div>
+        <textarea class="fb-post-caption" id="fb-caption-ta" rows="6">${escHtml(fullCaption)}</textarea>
+
+        <div class="fb-distribute">
+          <div class="fb-distribute-title">Distribute</div>
+
+          <!-- Optional image path -->
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);display:block;margin-bottom:5px;">Image Path (optional — leave blank for text-only)</label>
+            <input type="text" id="fb-image-path" placeholder="e.g. D:\\kre8r\\vault\\thumbnails\\rootcellar.jpg"
+              style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:7px 10px;box-sizing:border-box;" />
+          </div>
+
+          <!-- Post Now / Schedule tabs -->
+          <div class="fb-mode-row">
+            <button id="fb-mode-now" class="fb-mode-btn is-active" onclick="setFbPostMode('now')">🚀 Post Now</button>
+            <button id="fb-mode-sched" class="fb-mode-btn" onclick="setFbPostMode('schedule')">📅 Schedule</button>
+          </div>
+
+          <!-- Schedule picker (hidden by default) -->
+          <div id="fb-sched-picker" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <div>
+                <label style="font-size:10px;color:var(--text-dimmer);display:block;margin-bottom:3px">DATE</label>
+                <input type="date" id="fb-sched-date" style="background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px;">
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--text-dimmer);display:block;margin-bottom:3px">TIME</label>
+                <input type="time" id="fb-sched-time" value="09:00" style="background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px;">
+              </div>
+              <div style="display:flex;gap:5px;align-self:flex-end;padding-bottom:2px;">
+                <button class="fb-quick-btn" onclick="fbQuickSchedule(1)">+1d</button>
+                <button class="fb-quick-btn" onclick="fbQuickSchedule(2)">+2d</button>
+                <button class="fb-quick-btn" onclick="fbQuickSchedule(3)">+3d</button>
+                <button class="fb-quick-btn" onclick="fbQuickSchedule(7)">+1wk</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="fb-post-btn" id="fb-post-btn" onclick="doFbPost()">
+            <span id="fb-post-label">📘 POST TO FACEBOOK</span>
+          </button>
+          <div id="fb-post-result" style="display:none;margin-top:8px;font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);"></div>
+        </div>
+      </div>
+    </div>`;
+
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function setFbPostMode(mode) {
+  fbPostMode = mode;
+  document.getElementById('fb-mode-now').classList.toggle('is-active', mode === 'now');
+  document.getElementById('fb-mode-sched').classList.toggle('is-active', mode === 'schedule');
+  document.getElementById('fb-sched-picker').style.display = mode === 'schedule' ? 'block' : 'none';
+  document.getElementById('fb-post-label').textContent = mode === 'schedule' ? '📅 ADD TO QUEUE' : '📘 POST TO FACEBOOK';
+  if (mode === 'schedule' && !document.getElementById('fb-sched-date').value) {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    document.getElementById('fb-sched-date').value = d.toISOString().slice(0, 10);
+  }
+}
+
+function fbQuickSchedule(days) {
+  const d = new Date(); d.setDate(d.getDate() + days);
+  document.getElementById('fb-sched-date').value = d.toISOString().slice(0, 10);
+}
+
+async function doFbPost() {
+  const caption   = document.getElementById('fb-caption-ta')?.value.trim() || '';
+  const imagePath = document.getElementById('fb-image-path')?.value.trim() || null;
+
+  if (!caption) { showToast('Add a caption first', 'amber'); return; }
+
+  const btn    = document.getElementById('fb-post-btn');
+  const label  = document.getElementById('fb-post-label');
+  const result = document.getElementById('fb-post-result');
+  btn.disabled = true;
+  label.textContent = 'Posting…';
+  result.style.display = 'none';
+
+  try {
+    if (fbPostMode === 'schedule') {
+      // ── Scheduled via PostΩr queue ──────────────────────────────────
+      const dateVal = document.getElementById('fb-sched-date').value;
+      const timeVal = document.getElementById('fb-sched-time').value || '09:00';
+      if (!dateVal) { showToast('Pick a date to schedule.', 'amber'); btn.disabled = false; label.textContent = '📅 ADD TO QUEUE'; return; }
+      const scheduledAt = new Date(`${dateVal}T${timeVal}:00`).toISOString();
+
+      const res  = await fetch('/api/postor/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platforms:    ['facebook_post'],
+          ig_caption:   caption,
+          image_path:   imagePath || null,
+          video_path:   '',
+          title:        caption.slice(0, 80),
+          scheduled_at: scheduledAt,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Queue failed');
+
+      const friendlyDt = new Date(`${dateVal}T${timeVal}:00`).toLocaleString('en-US', {
+        month:'short', day:'numeric', hour:'numeric', minute:'2-digit',
+      });
+      result.style.display = 'block';
+      result.style.background = 'var(--green-glow)';
+      result.style.border = '1px solid var(--green)';
+      result.style.color = 'var(--green)';
+      result.textContent = `📅 Queued for ${friendlyDt}`;
+      showToast(`Facebook post queued for ${friendlyDt}`, 'green');
+
+    } else {
+      // ── Post Now ──────────────────────────────────────────────────────
+      const res  = await fetch('/api/postor/fb-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caption, image_path: imagePath }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Post failed');
+
+      result.style.display = 'block';
+      result.style.background = 'var(--green-glow)';
+      result.style.border = '1px solid var(--green)';
+      result.style.color = 'var(--green)';
+      result.innerHTML = data.post_url
+        ? `✅ Posted! <a href="${data.post_url}" target="_blank" rel="noopener" style="color:var(--green)">View on Facebook →</a>`
+        : '✅ Posted to Facebook!';
+      showToast('Facebook post is live!', 'green');
+    }
+  } catch(err) {
+    result.style.display = 'block';
+    result.style.background = 'var(--red-glow)';
+    result.style.border = '1px solid var(--red)';
+    result.style.color = 'var(--red)';
+    result.textContent = '❌ ' + err.message;
+    showToast('Post failed: ' + err.message, 'red');
+  } finally {
+    btn.disabled = false;
+    label.textContent = fbPostMode === 'schedule' ? '📅 ADD TO QUEUE' : '📘 POST TO FACEBOOK';
+  }
 }
 
 function copyBothVersions() {

@@ -889,6 +889,35 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_status   ON postor_posts(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_postor_posts_created  ON postor_posts(created_at)');
 
+  // ── PostΩr Queue — scheduled posts ───────────────────────────────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS postor_queue (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_path      TEXT    NOT NULL,
+    platforms       TEXT    NOT NULL,  -- JSON array e.g. ["instagram","facebook"]
+    title           TEXT,
+    description     TEXT,
+    ig_caption      TEXT,
+    fb_description  TEXT,
+    yt_privacy      TEXT    DEFAULT 'public',
+    yt_tags         TEXT,              -- JSON array
+    yt_category_id  INTEGER DEFAULT 22,
+    yt_scheduled_at TEXT,
+    scheduled_at    TEXT    NOT NULL,  -- ISO timestamp (UTC)
+    status          TEXT    NOT NULL DEFAULT 'pending', -- pending|posting|posted|failed
+    result          TEXT,              -- JSON result per platform
+    error           TEXT,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_postor_queue_status       ON postor_queue(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_postor_queue_scheduled_at ON postor_queue(scheduled_at)');
+
+  // image_path column for Facebook photo posts added in MailΩr social distribution
+  const queueCols = db.pragma('table_info(postor_queue)').map(r => r.name);
+  if (!queueCols.includes('image_path')) {
+    db.exec('ALTER TABLE postor_queue ADD COLUMN image_path TEXT');
+    console.log('[DB] Migration: added postor_queue.image_path');
+  }
+
   // Token usage: tenant_slug column for per-creator cost tracking
   const tokenCols = db.pragma('table_info(token_usage)').map(r => r.name);
   if (!tokenCols.includes('tenant_slug')) {
@@ -4205,6 +4234,13 @@ module.exports = {
   updatePostorPost,
   getPostorPosts,
   getAllYouTubePosts,
+  // PostΩr Queue
+  addToPostorQueue,
+  getPostorQueue,
+  getPostorQueueItem,
+  updatePostorQueueItem,
+  cancelPostorQueueItem,
+  getPendingQueueItems,
   upsertMonthlyRevenue,
   getMonthlyRevenue,
   getRevenueForMonth,
@@ -4388,5 +4424,68 @@ function getPostorPosts({ project_id, platform, limit = 50 } = {}) {
   sql += ' ORDER BY created_at DESC';
   if (limit)      { sql += ' LIMIT ?'; params.push(limit); }
   return _all(sql, params);
+}
+
+// ─── PostΩr Queue ─────────────────────────────────────────────────────────────
+
+function addToPostorQueue({ video_path, platforms, title, description, ig_caption,
+  fb_description, yt_privacy, yt_tags, yt_category_id, yt_scheduled_at, scheduled_at,
+  image_path }) {
+  const r = _run(`
+    INSERT INTO postor_queue
+      (video_path, platforms, title, description, ig_caption, fb_description,
+       yt_privacy, yt_tags, yt_category_id, yt_scheduled_at, scheduled_at, image_path)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    video_path    || '',       // empty string for image-only / text-only posts
+    JSON.stringify(platforms || []),
+    title         || null,
+    description   || null,
+    ig_caption    || null,
+    fb_description|| null,
+    yt_privacy    || 'public',
+    yt_tags       ? JSON.stringify(yt_tags) : null,
+    yt_category_id|| 22,
+    yt_scheduled_at || null,
+    scheduled_at,
+    image_path    || null,
+  ]);
+  return r.lastInsertRowid;
+}
+
+function getPostorQueue({ from, to } = {}) {
+  let sql = 'SELECT * FROM postor_queue WHERE 1=1';
+  const params = [];
+  if (from) { sql += ' AND scheduled_at >= ?'; params.push(from); }
+  if (to)   { sql += ' AND scheduled_at <= ?'; params.push(to);   }
+  sql += ' ORDER BY scheduled_at ASC';
+  return _all(sql, params);
+}
+
+function getPostorQueueItem(id) {
+  return _get('SELECT * FROM postor_queue WHERE id = ?', [id]);
+}
+
+function updatePostorQueueItem(id, { status, result, error } = {}) {
+  const sets = [], vals = [];
+  if (status !== undefined) { sets.push('status = ?'); vals.push(status); }
+  if (result !== undefined) { sets.push('result = ?'); vals.push(result); }
+  if (error  !== undefined) { sets.push('error  = ?'); vals.push(error);  }
+  if (!sets.length) return;
+  vals.push(id);
+  _run(`UPDATE postor_queue SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+function cancelPostorQueueItem(id) {
+  _run(`UPDATE postor_queue SET status = 'cancelled' WHERE id = ? AND status = 'pending'`, [id]);
+}
+
+function getPendingQueueItems() {
+  return _all(`
+    SELECT * FROM postor_queue
+    WHERE status = 'pending'
+      AND scheduled_at <= datetime('now')
+    ORDER BY scheduled_at ASC
+  `);
 }
 

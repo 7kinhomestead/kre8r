@@ -1,3 +1,80 @@
+# Session 45 — PostΩr Scheduler + MailΩr Social + CaptionΩr Wiring (2026-04-17)
+
+## Goal
+Wire the full distribution layer end-to-end: scheduled posting from PostΩr, Facebook image/text posts and email scheduling from MailΩr, and one-click caption handoff from CaptionΩr to PostΩr.
+
+## What Was Built
+
+### PostΩr Scheduler — ✅ COMPLETE
+
+**Backend (`src/postor/queue-processor.js` — new module):**
+- `start()` called once from `server.js` after DB init — `setInterval(run, 60_000)`
+- `processItem(item)` loops platforms, calls existing publish functions (meta.publishInstagramReel, meta.publishFacebookVideo, yt.uploadVideo), marks item posted/partial/failed
+- `getPendingQueueItems()` — `WHERE status='pending' AND scheduled_at <= datetime('now')`
+
+**DB (`src/db.js`):**
+- `postor_queue` table: id, video_path, platforms (JSON), title, description, ig_caption, fb_description, yt_privacy, yt_tags, yt_category_id, yt_scheduled_at, scheduled_at, status, result, error, created_at
+- Migration: `image_path` column added (for MailΩr Facebook photo posts)
+- Functions: `addToPostorQueue`, `getPostorQueue`, `getPostorQueueItem`, `updatePostorQueueItem`, `cancelPostorQueueItem`, `getPendingQueueItems`
+
+**Routes (`src/routes/postor.js`):**
+- `GET /api/postor/queue` — returns queue items for calendar date range
+- `POST /api/postor/queue` — adds scheduled post (video_path required only for video platforms)
+- `DELETE /api/postor/queue/:id` — cancels pending item
+
+**Frontend (`public/postor.html`):**
+- Post Now / 📅 Schedule mode tabs — button label updates contextually
+- Schedule date + time picker, +1d/+2d/+3d/+1wk quick buttons
+- `doPost()` branches on `postMode` — schedule mode POSTs to `/api/postor/queue`, instant fires to `/api/postor/post`
+- Collapsible "View Schedule" calendar panel — week view + day view, nav arrows
+- Chips per day: status-coded (pending/posting/posted/failed), click to expand details + cancel option
+- Calendar auto-refreshes after queuing a post
+
+### MailΩr — Facebook Social Post + Email Scheduling — ✅ COMPLETE
+
+**`src/postor/video-tunnel.js` refactor:**
+- `createVideoTunnel` is now an alias for `createFileTunnel` — detects content type from extension
+- Supports images (.jpg/.jpeg/.png/.gif/.webp) as well as video (.mp4/.mov/.avi/.webm)
+
+**`src/postor/meta.js` — `publishFacebookPost` (new function):**
+- Text-only: `POST /{page_id}/feed` with `message` — no ngrok needed
+- Image + caption: `POST /{page_id}/photos` with ngrok tunnel URL + caption
+
+**`src/postor/queue-processor.js` — `facebook_post` platform:**
+- New platform case calls `meta.publishFacebookPost({ caption, imagePath })`
+
+**`src/routes/postor.js` — `POST /api/postor/fb-post`:**
+- Immediate Facebook text/image post (no SSE, no video_path required) — called by MailΩr
+
+**`src/routes/mailerlite.js` — scheduled email send:**
+- `/send` now accepts optional `sends_at` ISO string — defaults to +10 min, enforces 5-min minimum buffer
+
+**`src/routes/mailor.js` — `gen_fb_post` flag:**
+- Accepts `gen_fb_post: true` on `/broadcast` — runs a separate Claude call, returns `fb_post: { caption, suggested_hashtags }`
+
+**`public/mailor.html`:**
+- `📘 Facebook Post` checkbox in Generate section
+- Facebook Post card appears in results: editable caption textarea (AI pre-filled + hashtags), optional image path, Post Now / Schedule tabs, quick buttons, "Post to Facebook" / "Add to Queue" button
+- Email schedule picker in MailerLite send section: "Send in ~10 min" vs "📅 Schedule" tabs, date/time + quick buttons, button label updates contextually
+
+### CaptionΩr → PostΩr One-Click Handoff — ✅ COMPLETE
+
+**`public/m3-caption-generator.html`:**
+- Each clip result card gets a teal **"📤 Send to PostΩr"** button
+- `sendToPostor(clipIndex)` stores `{ ig_caption, fb_caption, description, clip_label }` in `localStorage` then opens PostΩr in a new tab
+- Platform mapping: `ig_caption` ← Instagram caption, `fb_caption` ← Facebook caption, `description` ← TikTok caption (punchy general fallback)
+
+**`public/postor.html`:**
+- `checkCaptionrPrefill()` called on load — reads `localStorage.captionr_prefill`, pre-fills `ig-caption`, `fb-description`, `description` fields, **deletes the entry immediately** (one-shot), shows the existing teal prefill notice with "📋 CaptionΩr (clip desc…) → fields auto-filled. Pick your video and post."
+
+## Commits
+- Prior: `6516ab1` (Facebook page selector)
+
+## Status
+Full distribution layer wired. PostΩr can schedule posts weeks out. MailΩr generates and distributes Facebook posts. CaptionΩr hands captions directly to PostΩr with one click. Zero copy/paste required anywhere in the distribution loop.
+
+---
+
 # Session 44 — Instagram Reels Live (2026-04-18)
 
 ## Goal

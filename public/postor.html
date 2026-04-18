@@ -186,6 +186,152 @@
       font-family: 'Consolas', monospace;
     }
 
+    /* ── Post Mode Tabs ── */
+    .mode-tab {
+      background: var(--bg-card);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .mode-tab.is-active {
+      background: var(--teal);
+      color: #0e0f0e;
+      border-color: var(--teal);
+    }
+
+    /* ── Quick Schedule Buttons ── */
+    .quick-time-btn {
+      background: var(--bg-card);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .quick-time-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+    /* ── Calendar Panel ── */
+    .cal-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cal-toggle:hover { border-color: var(--teal); }
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .cal-nav button {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .cal-nav button:hover { border-color: var(--teal); }
+    .cal-nav-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    #cal-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .cal-view-tabs {
+      display: flex;
+      gap: 4px;
+    }
+    .cal-view-tab {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-dim);
+      padding: 3px 10px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .cal-view-tab.is-active { background: var(--teal); color: #0e0f0e; border-color: var(--teal); }
+
+    /* ── Week View ── */
+    .cal-week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .cal-day-col {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px;
+      min-height: 80px;
+    }
+    .cal-day-col.is-today { border-color: var(--teal); }
+    .cal-day-header {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 600;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .cal-day-header .cal-day-num {
+      display: block;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .cal-day-col.is-today .cal-day-header .cal-day-num { color: var(--teal); }
+
+    /* ── Day View ── */
+    .cal-day-view { display: flex; flex-direction: column; gap: 8px; }
+    .cal-day-view-header {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    /* ── Queue Chips ── */
+    .cal-chip {
+      background: rgba(20,184,166,.12);
+      border: 1px solid rgba(20,184,166,.3);
+      border-radius: 4px;
+      padding: 3px 6px;
+      font-size: 10px;
+      color: var(--teal);
+      cursor: pointer;
+      margin-bottom: 3px;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .cal-chip:hover { background: rgba(20,184,166,.22); }
+    .cal-chip.is-posted  { background: rgba(34,197,94,.1);  border-color: rgba(34,197,94,.3);  color: #4ade80; }
+    .cal-chip.is-failed  { background: rgba(224,82,82,.1);  border-color: rgba(224,82,82,.3);  color: #f87171; }
+    .cal-chip.is-posting { background: rgba(251,191,36,.1); border-color: rgba(251,191,36,.3); color: #fbbf24; }
+    .cal-chip .chip-icons { font-size: 9px; opacity: .7; }
+    .cal-empty { font-size: 11px; color: var(--text-dimmer); text-align: center; padding: 8px 0; }
+
     /* ── Facebook page selector ── */
     #fb-page-select option {
       background: #1a1f1e;
@@ -849,13 +995,66 @@
 
     </div>
 
+    <!-- Post Mode Toggle -->
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="mode-now" class="mode-tab is-active" onclick="setPostMode('now')">🚀 Post Now</button>
+      <button id="mode-schedule" class="mode-tab" onclick="setPostMode('schedule')">📅 Schedule</button>
+    </div>
+
+    <!-- Schedule picker (hidden in Post Now mode) -->
+    <div id="schedule-picker" style="display:none;margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">DATE</label>
+          <input type="date" id="sched-date" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">TIME</label>
+          <input type="time" id="sched-time" value="09:00" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px">
+        </div>
+        <div style="display:flex;gap:6px;align-self:flex-end;padding-bottom:2px">
+          <button class="quick-time-btn" onclick="quickSchedule(1)">+1d</button>
+          <button class="quick-time-btn" onclick="quickSchedule(2)">+2d</button>
+          <button class="quick-time-btn" onclick="quickSchedule(3)">+3d</button>
+          <button class="quick-time-btn" onclick="quickSchedule(7)">+1wk</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Post Button -->
     <div class="post-actions">
       <button class="btn-post" id="btn-post" onclick="doPost()" disabled>
         <div class="spinner"></div>
-        <span class="btn-label">🚀 Post Now</span>
+        <span class="btn-label" id="btn-post-label">🚀 Post Now</span>
       </button>
       <span class="post-hint" id="post-hint">Select a video and at least one connected platform to post.</span>
+    </div>
+
+    <!-- Calendar Panel (collapsible) -->
+    <div style="margin-top:24px">
+      <button class="cal-toggle" id="cal-toggle" onclick="toggleCalendar()">
+        📅 <span id="cal-toggle-label">View Schedule</span>
+        <span id="cal-caret" style="margin-left:auto;font-size:10px">▼</span>
+      </button>
+      <div id="cal-panel" style="display:none;margin-top:12px">
+
+        <!-- Calendar Nav -->
+        <div class="cal-nav">
+          <button onclick="calNav(-1)">◀</button>
+          <div class="cal-nav-center">
+            <span id="cal-title"></span>
+            <div class="cal-view-tabs">
+              <button id="cal-week-btn" class="cal-view-tab is-active" onclick="setCalView('week')">Week</button>
+              <button id="cal-day-btn"  class="cal-view-tab"           onclick="setCalView('day')">Day</button>
+            </div>
+          </div>
+          <button onclick="calNav(1)">▶</button>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div id="cal-grid"></div>
+
+      </div>
     </div>
 
     </div><!-- /single-mode -->
@@ -1040,11 +1239,50 @@ let currentJobId  = null;
 window.addEventListener('load', () => {
   initNav();
   checkUrlParams();
+  checkCaptionrPrefill();  // ← reads localStorage from CaptionΩr handoff
   loadConnections();
   loadVaultVideos();
   loadHistory();
   loadAnalyticsStatus();
 });
+
+// ── CaptionΩr → PostΩr pre-fill ──────────────────────────────────────────────
+function checkCaptionrPrefill() {
+  let raw;
+  try { raw = localStorage.getItem('captionr_prefill'); } catch (_) { return; }
+  if (!raw) return;
+
+  let data;
+  try { data = JSON.parse(raw); } catch (_) { return; }
+
+  // Consume immediately — one-shot
+  try { localStorage.removeItem('captionr_prefill'); } catch (_) {}
+
+  const filled = [];
+
+  if (data.ig_caption) {
+    document.getElementById('ig-caption').value = data.ig_caption;
+    filled.push('Instagram caption');
+  }
+  if (data.fb_caption) {
+    document.getElementById('fb-description').value = data.fb_caption;
+    filled.push('Facebook caption');
+  }
+  if (data.description) {
+    document.getElementById('description').value = data.description;
+    filled.push('description');
+  }
+
+  if (filled.length > 0) {
+    const notice = document.getElementById('prefill-notice');
+    const label  = data.clip_label ? ` (${data.clip_label})` : '';
+    document.getElementById('prefill-notice-text').textContent =
+      `📋 CaptionΩr${label} → ${filled.join(', ')} auto-filled. Pick your video and post.`;
+    notice.style.display = 'flex';
+    // Scroll to the form area
+    setTimeout(() => notice.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+  }
+}
 
 function checkUrlParams() {
   const params = new URLSearchParams(window.location.search);
@@ -1124,6 +1362,198 @@ async function onFbPageChange(select) {
     saving.style.display = 'none';
   }
 }
+
+// ── Post Mode & Scheduler ──────────────────────────────────────────────────
+
+let postMode = 'now'; // 'now' | 'schedule'
+
+function setPostMode(mode) {
+  postMode = mode;
+  document.getElementById('mode-now').classList.toggle('is-active', mode === 'now');
+  document.getElementById('mode-schedule').classList.toggle('is-active', mode === 'schedule');
+  document.getElementById('schedule-picker').style.display = mode === 'schedule' ? '' : 'none';
+  document.getElementById('btn-post-label').textContent = mode === 'schedule' ? '📅 Add to Queue' : '🚀 Post Now';
+  if (mode === 'schedule' && !document.getElementById('sched-date').value) {
+    quickSchedule(1); // default to tomorrow
+  }
+}
+
+function quickSchedule(daysAhead) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  document.getElementById('sched-date').value = d.toISOString().slice(0, 10);
+}
+
+// ── Calendar ───────────────────────────────────────────────────────────────
+
+let calView     = 'week'; // 'week' | 'day'
+let calAnchor   = new Date(); // current nav anchor
+let calOpen     = false;
+let calItems    = [];     // cached queue items
+
+function toggleCalendar() {
+  calOpen = !calOpen;
+  document.getElementById('cal-panel').style.display = calOpen ? '' : 'none';
+  document.getElementById('cal-caret').textContent   = calOpen ? '▲' : '▼';
+  if (calOpen) { calAnchor = new Date(); renderCalendar(); }
+}
+
+function setCalView(view) {
+  calView = view;
+  document.getElementById('cal-week-btn').classList.toggle('is-active', view === 'week');
+  document.getElementById('cal-day-btn').classList.toggle('is-active',  view === 'day');
+  renderCalendar();
+}
+
+function calNav(dir) {
+  if (calView === 'week') {
+    calAnchor = new Date(calAnchor.getTime() + dir * 7 * 86400000);
+  } else {
+    calAnchor = new Date(calAnchor.getTime() + dir * 86400000);
+  }
+  renderCalendar();
+}
+
+async function renderCalendar() {
+  // Fetch queue items for visible range
+  let from, to;
+  if (calView === 'week') {
+    const mon = weekStart(calAnchor);
+    const sun = new Date(mon.getTime() + 6 * 86400000);
+    from = mon.toISOString();
+    to   = new Date(sun.getTime() + 86400000).toISOString();
+  } else {
+    from = new Date(calAnchor.toDateString()).toISOString();
+    to   = new Date(new Date(calAnchor.toDateString()).getTime() + 86400000).toISOString();
+  }
+
+  try {
+    const res = await fetch(`/api/postor/queue?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    const data = await res.json();
+    calItems = data.items || [];
+  } catch (_) { calItems = []; }
+
+  // Update toggle label with pending count
+  const pendingCount = calItems.filter(i => i.status === 'pending').length;
+  document.getElementById('cal-toggle-label').textContent =
+    pendingCount > 0 ? `View Schedule (${pendingCount} queued)` : 'View Schedule';
+
+  calView === 'week' ? renderWeekView() : renderDayView();
+}
+
+function weekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1 - day); // Mon = start
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function renderWeekView() {
+  const mon    = weekStart(calAnchor);
+  const today  = new Date(); today.setHours(0,0,0,0);
+  const days   = Array.from({ length: 7 }, (_, i) => new Date(mon.getTime() + i * 86400000));
+  const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  document.getElementById('cal-title').textContent =
+    `${mon.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${days[6].toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+
+  document.getElementById('cal-grid').innerHTML = `
+    <div class="cal-week-grid">
+      ${days.map((d, i) => {
+        const isToday = d.getTime() === today.getTime();
+        const items   = calItems.filter(it => {
+          const dt = new Date(it.scheduled_at); dt.setHours(0,0,0,0);
+          return dt.getTime() === d.getTime();
+        });
+        return `
+          <div class="cal-day-col ${isToday ? 'is-today' : ''}" onclick="calDayClick('${d.toISOString()}')">
+            <div class="cal-day-header">
+              ${DAY_NAMES[i]}
+              <span class="cal-day-num">${d.getDate()}</span>
+            </div>
+            ${items.length === 0
+              ? '<div class="cal-empty">—</div>'
+              : items.map(it => calChipHtml(it)).join('')}
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderDayView() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d     = new Date(calAnchor); d.setHours(0,0,0,0);
+  const isToday = d.getTime() === today.getTime();
+
+  document.getElementById('cal-title').textContent =
+    calAnchor.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+  const items = calItems.filter(it => {
+    const dt = new Date(it.scheduled_at); dt.setHours(0,0,0,0);
+    return dt.getTime() === d.getTime();
+  }).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+
+  document.getElementById('cal-grid').innerHTML = `
+    <div class="cal-day-view">
+      ${items.length === 0
+        ? '<div class="cal-empty" style="padding:24px">Nothing scheduled for this day.</div>'
+        : items.map(it => `
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:12px;color:var(--text-dim);min-width:48px">
+                ${new Date(it.scheduled_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}
+              </span>
+              ${calChipHtml(it, true)}
+            </div>`).join('')}
+    </div>`;
+}
+
+function calChipHtml(item, expanded = false) {
+  const platforms = tryParseJson(item.platforms) || [];
+  const icons     = platforms.map(p => PLATFORM_META[p]?.icon || p).join('');
+  const cls       = item.status === 'posted'  ? 'is-posted'
+                  : item.status === 'failed'  ? 'is-failed'
+                  : item.status === 'posting' ? 'is-posting' : '';
+  const title     = item.title || item.video_path?.split(/[/\\]/).pop() || 'Post';
+  const time      = expanded ? '' : `<span style="opacity:.6">${new Date(item.scheduled_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span> `;
+  return `<div class="cal-chip ${cls}" onclick="event.stopPropagation();showQueueItem(${item.id})" title="${title}">
+    ${time}<span class="chip-icons">${icons}</span> ${title.slice(0,30)}${title.length>30?'…':''}
+  </div>`;
+}
+
+function calDayClick(isoDate) {
+  calAnchor = new Date(isoDate);
+  calView   = 'day';
+  document.getElementById('cal-week-btn').classList.remove('is-active');
+  document.getElementById('cal-day-btn').classList.add('is-active');
+  renderCalendar();
+}
+
+function showQueueItem(id) {
+  const item = calItems.find(i => i.id === id);
+  if (!item) return;
+  const platforms = tryParseJson(item.platforms) || [];
+  const time      = new Date(item.scheduled_at).toLocaleString();
+  const msg = `📅 ${time}\n📱 ${platforms.join(', ')}\n🎬 ${item.title || '(no title)'}\n\nStatus: ${item.status}${item.error ? '\n\nError: ' + item.error : ''}`;
+  if (item.status === 'pending' && confirm(msg + '\n\nCancel this post?')) {
+    cancelQueueItem(id);
+  } else {
+    alert(msg);
+  }
+}
+
+async function cancelQueueItem(id) {
+  await fetch(`/api/postor/queue/${id}`, { method: 'DELETE' });
+  toast('Post cancelled.', 'success');
+  renderCalendar();
+}
+
+function tryParseJson(val) {
+  if (!val) return null;
+  try { return JSON.parse(val); } catch { return null; }
+}
+
+// ── doPost override — handles both Post Now and Schedule ──────────────────
 
 function renderPlatformCards() {
   const grid = document.getElementById('platform-grid');
@@ -1403,7 +1833,7 @@ async function doPost() {
   const title     = document.getElementById('title').value.trim();
   const desc      = document.getElementById('description').value.trim();
 
-  if (!videoPath)       return toast('Select a video first.', 'error');
+  if (!videoPath)        return toast('Select a video first.', 'error');
   if (!platforms.length) return toast('Select at least one platform.', 'error');
   if (!title)            return toast('Enter a title.', 'error');
 
@@ -1421,7 +1851,50 @@ async function doPost() {
     fb_description:  document.getElementById('fb-description').value.trim() || null,
   };
 
-  // Kick off SSE job
+  // ── Schedule mode ─────────────────────────────────────────────
+  if (postMode === 'schedule') {
+    const dateVal = document.getElementById('sched-date').value;
+    const timeVal = document.getElementById('sched-time').value || '09:00';
+
+    if (!dateVal) return toast('Pick a date to schedule.', 'error');
+
+    // Build ISO timestamp in local time → store as UTC
+    const localDt  = new Date(`${dateVal}T${timeVal}:00`);
+    if (isNaN(localDt.getTime())) return toast('Invalid date/time.', 'error');
+    const scheduled_at = localDt.toISOString();
+
+    const btn = document.getElementById('btn-post');
+    btn.disabled = true;
+    btn.querySelector('.btn-label').textContent = 'Queuing…';
+
+    try {
+      const res  = await fetch('/api/postor/queue', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ ...payload, scheduled_at }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Queue failed');
+
+      const friendlyDt = localDt.toLocaleString('en-US', {
+        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      });
+      toast(`📅 Queued for ${friendlyDt}`, 'success');
+
+      // Refresh calendar if it's open
+      if (document.getElementById('cal-panel').style.display !== 'none') {
+        renderCalendar();
+      }
+    } catch (err) {
+      toast('Queue failed: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.querySelector('.btn-label').textContent = '📅 Add to Queue';
+    }
+    return;
+  }
+
+  // ── Post Now mode ─────────────────────────────────────────────
   const btn = document.getElementById('btn-post');
   btn.classList.add('is-posting');
   btn.disabled = true;

@@ -267,6 +267,61 @@ async function publishFacebookVideo({ videoPath, title, description, onProgress 
   return { ok: true, post_id: uploadData.id, post_url: postUrl };
 }
 
+/**
+ * publishFacebookPost — text-only or image+text feed post to the connected Page.
+ *
+ * No image  → POST /{page_id}/feed  (message only)
+ * With image → POST /{page_id}/photos (caption + public image url via ngrok tunnel)
+ */
+async function publishFacebookPost({ caption, imagePath, onProgress }) {
+  const conn = db.getPostorConnection('facebook');
+  if (!conn?.connected) throw new Error('Facebook not connected');
+
+  const pageId    = conn.account_id;
+  const pageToken = conn.access_token;
+  if (!pageId || !pageToken) throw new Error('Facebook page token missing — reconnect Facebook in PostΩr');
+
+  onProgress?.({ stage: 'facebook_post', step: 'posting', pct: 10 });
+  console.log(`[postor/meta] Publishing Facebook post to page ${pageId}`);
+
+  const { default: fetch } = await import('node-fetch');
+
+  if (imagePath) {
+    // Image + caption via public URL (ngrok tunnel)
+    const { createFileTunnel } = require('./video-tunnel');
+    const { url, cleanup } = await createFileTunnel(imagePath);
+    try {
+      const params = new URLSearchParams({
+        url,
+        caption:      caption || '',
+        access_token: pageToken,
+      });
+      const res  = await fetch(`${GRAPH}/${pageId}/photos`, { method: 'POST', body: params });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error?.message || `Photo post failed: ${res.status}`);
+      onProgress?.({ stage: 'facebook_post', step: 'done', pct: 100 });
+      const postId  = data.post_id || data.id;
+      const postUrl = `https://www.facebook.com/${pageId}/posts/${postId}`;
+      return { ok: true, post_id: postId, post_url: postUrl };
+    } finally {
+      await cleanup();
+    }
+  } else {
+    // Text-only post
+    const params = new URLSearchParams({
+      message:      caption || '',
+      access_token: pageToken,
+    });
+    const res  = await fetch(`${GRAPH}/${pageId}/feed`, { method: 'POST', body: params });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error?.message || `Feed post failed: ${res.status}`);
+    onProgress?.({ stage: 'facebook_post', step: 'done', pct: 100 });
+    const postId  = data.id;
+    const postUrl = `https://www.facebook.com/${pageId}/posts/${postId}`;
+    return { ok: true, post_id: postId, post_url: postUrl };
+  }
+}
+
 module.exports = {
   getAuthUrl,
   exchangeCode,
@@ -274,4 +329,5 @@ module.exports = {
   getPages,
   publishInstagramReel,
   publishFacebookVideo,
+  publishFacebookPost,
 };

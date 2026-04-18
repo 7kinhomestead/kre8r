@@ -638,6 +638,7 @@ function renderResults(results, clips) {
       <div class="copy-all-bar">
         <span style="font-size:12px;color:var(--text-dimmer);">Copy all platforms for this clip:</span>
         <button class="btn btn-copy" onclick="copyClipAll(${ri}, this)">📋 Copy All Platforms</button>
+        <button class="btn btn-primary" onclick="sendToPostor(${ri})" style="background:var(--teal);border-color:var(--teal);">📤 Send to PostΩr</button>
       </div>
     `;
 
@@ -720,6 +721,44 @@ async function copyAllForGateB() {
   } else {
     showToast('No project linked — open M3 from M2 to save Gate B', 'amber');
   }
+}
+
+// ─────────────────────────────────────────────
+// SEND TO POSTOR
+// ─────────────────────────────────────────────
+function sendToPostor(clipIndex) {
+  const result = generatedResults[clipIndex];
+  if (!result) return;
+
+  const captions   = result.captions || {};
+  const videoTitle = document.getElementById('video-title')?.value.trim() || '';
+  const originalClip = document.querySelectorAll('.clip-input-card')[clipIndex];
+  const clipDesc   = originalClip
+    ? (originalClip.querySelector('.clip-desc-input')?.value.trim() || '').slice(0, 60)
+    : '';
+  const clipLabel  = clipDesc ? clipDesc + (clipDesc.length === 60 ? '…' : '') : `Clip ${clipIndex + 1}`;
+
+  // Map CaptionΩr platforms → PostΩr fields
+  // ig_caption   = Instagram Reels caption
+  // fb_caption   = Facebook video description
+  // description  = general description (TikTok copy is punchy — good universal fallback)
+  const payload = {
+    ig_caption:  captions.instagram || '',
+    fb_caption:  captions.facebook  || '',
+    description: captions.tiktok    || captions.instagram || '',
+    clip_label:  clipLabel,
+    video_title: videoTitle,
+  };
+
+  try {
+    localStorage.setItem('captionr_prefill', JSON.stringify(payload));
+  } catch (_) {
+    showToast('Could not save to localStorage — try again', 'amber');
+    return;
+  }
+
+  showToast(`Opening PostΩr with captions for: ${clipLabel}`, 'teal');
+  window.open('/postor.html', '_blank');
 }
 
 // ─────────────────────────────────────────────

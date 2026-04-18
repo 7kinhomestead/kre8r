@@ -656,6 +656,13 @@ router.post('/post', (req, res) => {
             description: fb_description || description || '',
             onProgress:  (p) => pushEvent(job, p),
           });
+        } else if (platform === 'facebook_post') {
+          // Text/image post (no video) — used by MailΩr social distribution
+          result = await meta.publishFacebookPost({
+            caption:    ig_caption || description || '',
+            imagePath:  req.body.image_path || null,
+            onProgress: (p) => pushEvent(job, p),
+          });
         } else {
           throw new Error(`Unknown platform: ${platform}`);
         }
@@ -943,6 +950,60 @@ router.get('/history', (req, res) => {
     limit:      limit      ? parseInt(limit, 10) : 50,
   });
   res.json({ posts });
+});
+
+// ─── Immediate Facebook Post (text/image from MailΩr) ────────────────────────
+
+// POST /api/postor/fb-post — no video, no SSE — just a straight FB text or photo post
+router.post('/fb-post', async (req, res) => {
+  const { caption, image_path } = req.body || {};
+  if (!caption && !image_path) return res.status(400).json({ error: 'caption or image_path required' });
+  try {
+    const result = await meta.publishFacebookPost({
+      caption:   caption   || '',
+      imagePath: image_path || null,
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[postor] fb-post failed:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── PostΩr Queue ─────────────────────────────────────────────────────────────
+
+// GET /api/postor/queue?from=ISO&to=ISO
+router.get('/queue', (req, res) => {
+  const { from, to } = req.query;
+  const items = db.getPostorQueue({ from, to });
+  res.json({ items });
+});
+
+// POST /api/postor/queue — add a scheduled post (video OR facebook_post/image)
+router.post('/queue', (req, res) => {
+  const {
+    video_path, image_path, platforms, title, description, ig_caption, fb_description,
+    yt_privacy, yt_tags, yt_category_id, yt_scheduled_at, scheduled_at,
+  } = req.body || {};
+
+  // video_path required only for video platforms; facebook_post can omit it
+  const needsVideo = (platforms || []).some(p => ['youtube','instagram','facebook'].includes(p));
+  if (needsVideo && !video_path) return res.status(400).json({ error: 'video_path required for video platforms' });
+  if (!platforms?.length)        return res.status(400).json({ error: 'platforms required' });
+  if (!scheduled_at)             return res.status(400).json({ error: 'scheduled_at required' });
+
+  const id = db.addToPostorQueue({
+    video_path, image_path, platforms, title, description, ig_caption, fb_description,
+    yt_privacy, yt_tags, yt_category_id, yt_scheduled_at, scheduled_at,
+  });
+
+  res.json({ ok: true, id });
+});
+
+// DELETE /api/postor/queue/:id — cancel a queued post
+router.delete('/queue/:id', (req, res) => {
+  db.cancelPostorQueueItem(parseInt(req.params.id, 10));
+  res.json({ ok: true });
 });
 
 module.exports = router;

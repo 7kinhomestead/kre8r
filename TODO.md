@@ -40,37 +40,20 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 
 ---
 
-## NEXT SESSION — Top 3 Tasks
+## NEXT SESSION — Top Tasks
 
-### 1. Finish Instagram Connection (30 min if Meta cooperates)
-The path is clear — just needs Instagram browser login to unblock.
+### 1. Update CLAUDE.md to Reflect Current Build State
+CLAUDE.md is several sessions behind. Key gaps:
+- PostΩr: Instagram ✅ live, scheduler ✅ live, MailΩr FB post ✅ live, CaptionΩr handoff ✅ live
+- Mark multi-tenant beta infrastructure complete
+- Update Known Issues (several fixed)
+- Update Full Pipeline section — full distribution loop now automated
 
-**Exact steps:**
-1. Go to instagram.com → Forgot Password → reset via phone SMS → log in on computer
-2. `developers.facebook.com` → SAR Kre8r app (ID: `920653054187075`) → Use Cases → Add use cases → find Instagram/Content Publishing → add it
-3. Still in SAR Kre8r app → assign Kre8r system user (ID: `61567987943128`) as Admin
-4. SAR Business Manager → System Users → Kre8r → Generate Token → select SAR Kre8r app → Never expire → check all Instagram permissions
-5. Run in local browser console: `fetch('/api/postor/auth/meta/manual-token', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_access_token:'TOKEN'})}).then(r=>r.json()).then(console.log)`
-6. Confirm `ig_user_id` is populated → test Reel publish from PostΩr
+### 2. TikTok API — Research & Wire
+TikTok posting is the last major platform stub. Research current TikTok Content Posting API status, check if @7.kin.jason account is eligible, and wire if available.
 
-### 2. PostΩr Pipeline Prefill — End-to-End Verification
-Built this session but not tested with real data.
-
-**What to verify:**
-- Pick a vault video that has a `project_id` in PostΩr
-- Confirm teal prefill notice appears with title from PackageΩr
-- Confirm YouTube description field auto-populates
-- Confirm Instagram caption auto-populates from CaptionΩr
-- Test clearPrefill() resets all fields cleanly
-
-### 3. Update CLAUDE.md to Reflect Current Build State
-CLAUDE.md is several sessions behind — missing PostΩr, multi-tenant, and other shipped features.
-
-**What to update:**
-- PostΩr section: Facebook ✅ working, Instagram blocked path documented
-- Mark multi-tenant beta infrastructure as complete
-- Update Known Issues list (several items fixed)
-- Update Full Pipeline section — distribution tools all live
+### 3. PostΩr → ClipsΩr Wiring
+Direct handoff from ClipsΩr approved clips to PostΩr — select a rendered clip from ClipsΩr and send directly to PostΩr with captions pre-filled (captions already handled by CaptionΩr→PostΩr handoff).
 
 ---
 
@@ -94,25 +77,20 @@ Setup wizard on first run (no more hardcoded credentials). Installer: `npm run d
 
 ---
 
-## ✅ PostΩr — DONE Session 38
+## ✅ PostΩr — DONE Sessions 38 + 44 + 45
 
-YouTube posting live. Instagram + Facebook built. TikTok stub. Bulk queue. Post history.
-YouTube Analytics sync: 313 videos, 2504 metrics into MirrΩr. Two-pass approach for >200 videos.
-Login/tour persistence fixed in Electron (30-day cookie + server-side KV for tour state).
+YouTube, Facebook, Instagram posting all live. Scheduler live. MailΩr FB social post live. CaptionΩr→PostΩr handoff live.
+YouTube Analytics sync: 313 videos, 2504 metrics into MirrΩr.
 
 **Still needed:**
-- [ ] **YouTube ad revenue** — blocked by Google (Content Owner tier required, not standard YPP). Manual entry in NorthΩr from YouTube Studio CSV. Add manual revenue entry field to NorthΩr.
-- [x] **Facebook posting** — working ✅ (manual-token flow, 7 Kin Homestead page connected, test video posted)
-- [ ] **Instagram posting** — BLOCKED by Meta app configuration. Root cause: `instagram_content_publish`
-      and `publish_video` scopes are not available in the Kre8r Business app (ID: 1989481785304507)
-      because the app lives in the Jason Rutland business portfolio and the Instagram @7.kin.jason
-      lives in the Sunburned Ass Ranch portfolio. Fix: move the Kre8r app to Sunburned Ass Ranch
-      portfolio in Meta Business Manager → then re-add use cases → regenerate token via
-      `POST /api/postor/auth/meta/manual-token` → `ig_user_id` will populate.
-      Interim endpoints built: `/auth/meta/set-instagram-id`, `/auth/meta/manual-instagram-token`,
-      `/auth/meta/debug-instagram` (all ready to use once token is sorted).
-- [ ] **TikTok** — waiting on TikTok API availability
-- [ ] **PostΩr → test clip upload** — upload a rendered ClipsΩr clip via PostΩr bulk queue
+- [ ] **YouTube ad revenue** — blocked by Google (Content Owner tier required, not standard YPP). Manual entry in NorthΩr from YouTube Studio CSV.
+- [x] **Facebook video posting** — ✅ working (7 Kin Homestead page connected, page selector built)
+- [x] **Facebook text/image post** — ✅ working (from MailΩr → publishFacebookPost, ngrok tunnel for images)
+- [x] **Instagram Reels** — ✅ LIVE (Session 44). SAR-2 Kre8r-IG app, new Instagram API, ngrok video tunnel, @7.kin.jason confirmed posting
+- [x] **PostΩr Scheduler** — ✅ LIVE (Session 45). Queue table, 60s processor, week/day calendar, Post Now/Schedule toggle
+- [x] **CaptionΩr → PostΩr handoff** — ✅ LIVE (Session 45). One-click "Send to PostΩr", localStorage prefill, zero copy/paste
+- [x] **MailΩr → Facebook post** — ✅ LIVE (Session 45). Gen checkbox, editable caption, Post Now/Schedule
+- [ ] **TikTok** — waiting on TikTok Content Posting API access
 - [ ] **Analytics re-sync schedule** — add a "last synced" timestamp and prompt to re-sync weekly
 - [ ] **Archive stalled projects** — open each in PipΩr → 📦 Archive (2 projects in pre-production queue)
 

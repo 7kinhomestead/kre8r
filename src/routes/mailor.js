@@ -139,6 +139,7 @@ router.post('/broadcast', async (req, res) => {
       gen_email,        // boolean — generate A/B email pair
       gen_blog,         // boolean — generate blog post
       gen_community,    // boolean — generate community post
+      gen_fb_post,      // boolean — generate Facebook text/image post
     } = req.body;
 
     console.log('[mailor/broadcast] flags:', { gen_email, gen_blog, gen_community });
@@ -328,6 +329,28 @@ Return JSON only:
   "body": "full community post as plain text"
 }`;
       response.community_post = await callClaude(systemPrompt, communityPrompt, 2500);
+    }
+
+    if (gen_fb_post) {
+      const fbPrompt = `Write a Facebook Page post based on this situation: ${prompt}
+Goal: ${goal || 'not specified'}
+${projectContextBlock}${researchBlock}${packageBlock}${viralClipsBlock}${socialBlock}
+
+FACEBOOK POST RULES:
+- This posts to the creator's public Facebook page — it is public-facing, not a community post
+- 2–4 short punchy paragraphs. Hook first. Story or insight. CTA at the end.
+- Include relevant emojis naturally (not forced). Facebook audiences respond well to them.
+- End with a link or call to action using the real social URLs from the SOCIAL LINKS block
+- Write in the creator's natural voice — no corporate language, no hashtag spam
+- Max 3 hashtags at the very end if relevant, otherwise skip them
+- If there's a viral hook above, open with energy from that
+
+Return JSON only:
+{
+  "caption": "the full Facebook post text",
+  "suggested_hashtags": ["tag1", "tag2"]
+}`;
+      response.fb_post = await callClaude(systemPrompt, fbPrompt, 1500);
     }
 
     if (project_id) {

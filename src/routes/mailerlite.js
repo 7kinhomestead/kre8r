@@ -244,6 +244,7 @@ router.post('/send', async (req, res) => {
       group_ids = ['all'],
       from_name,
       from_email,
+      sends_at,   // optional ISO string — schedule for this time; defaults to +10 min
     } = req.body;
 
     if (!subject)   return res.status(400).json({ error: 'subject is required' });
@@ -330,8 +331,11 @@ router.post('/send', async (req, res) => {
 
     log.info({ module: 'mailerlite', campaignId, subject }, 'Campaign created');
 
-    // 2. Schedule 10 min out — gives MailerLite's review process time to clear
-    const sendAt = new Date(Date.now() + 10 * 60 * 1000);
+    // 2. Schedule — use provided sends_at or default to +10 min
+    // MailerLite needs a brief buffer to clear its review process.
+    const minBuffer = new Date(Date.now() + 5 * 60 * 1000); // 5-min minimum
+    let sendAt = sends_at ? new Date(sends_at) : new Date(Date.now() + 10 * 60 * 1000);
+    if (sendAt < minBuffer) sendAt = minBuffer; // never schedule in the past or too close
     const scheduleBody = {
       delivery: 'scheduled',
       schedule: {

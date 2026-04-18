@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * video-tunnel.js — Temporary secure video host for Instagram uploads
+ * video-tunnel.js — Temporary secure file host for Instagram/Facebook uploads
  *
  * Spins up a minimal HTTP server on a random local port and tunnels ONLY
  * that port via ngrok (port 443, firewall-safe). The main Kre8r server
@@ -11,10 +11,11 @@
  * Requires: NGROK_AUTHTOKEN in .env
  *
  * Usage:
- *   const { createVideoTunnel } = require('./video-tunnel');
+ *   const { createVideoTunnel, createFileTunnel } = require('./video-tunnel');
  *   const { url, cleanup } = await createVideoTunnel('/path/to/video.mp4');
+ *   const { url, cleanup } = await createFileTunnel('/path/to/image.jpg');
  *   // url = 'https://xxxx.ngrok-free.app/abc123...'
- *   // pass url to Instagram, then call cleanup() when done
+ *   // pass url to Instagram/Facebook, then call cleanup() when done
  */
 
 const http   = require('http');
@@ -22,33 +23,49 @@ const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 
-async function createVideoTunnel(videoPath) {
-  if (!fs.existsSync(videoPath)) throw new Error(`Video not found: ${videoPath}`);
+// Content-type map for common media extensions
+const MIME_TYPES = {
+  '.mp4':  'video/mp4',
+  '.mov':  'video/quicktime',
+  '.avi':  'video/x-msvideo',
+  '.webm': 'video/webm',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png':  'image/png',
+  '.gif':  'image/gif',
+  '.webp': 'image/webp',
+};
+
+/**
+ * Generic file tunnel — detects content-type from extension.
+ * Works for both video (Instagram Reels) and images (Facebook photos).
+ */
+async function createFileTunnel(filePath) {
+  if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
   if (!process.env.NGROK_AUTHTOKEN) throw new Error('NGROK_AUTHTOKEN not set in .env');
 
-  const ngrok    = require('@ngrok/ngrok');
-  const token    = crypto.randomBytes(20).toString('hex'); // one-time URL token
-  const fileName = path.basename(videoPath);
-  const fileSize = fs.statSync(videoPath).size;
+  const ngrok       = require('@ngrok/ngrok');
+  const token       = crypto.randomBytes(20).toString('hex');
+  const fileName    = path.basename(filePath);
+  const fileSize    = fs.statSync(filePath).size;
+  const ext         = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-  // ── Minimal single-file server ────────────────────────────────────────────
   const server = http.createServer((req, res) => {
-    // Only respond to exact token path — everything else 404s
     if (req.url !== `/${token}`) {
       res.writeHead(404).end('Not found');
       return;
     }
-    console.log(`[postor/tunnel] Instagram is downloading video (${Math.round(fileSize / 1024 / 1024)}MB)…`);
+    console.log(`[postor/tunnel] Downloading ${fileName} (${Math.round(fileSize / 1024 / 1024)}MB)…`);
     res.writeHead(200, {
-      'Content-Type':        'video/mp4',
+      'Content-Type':        contentType,
       'Content-Length':      String(fileSize),
       'Content-Disposition': `inline; filename="${fileName}"`,
       'Cache-Control':       'no-store',
     });
-    fs.createReadStream(videoPath).pipe(res);
+    fs.createReadStream(filePath).pipe(res);
   });
 
-  // Listen on any available port (OS assigns)
   await new Promise((resolve, reject) => {
     server.listen(0, '127.0.0.1', resolve);
     server.on('error', reject);
@@ -56,14 +73,13 @@ async function createVideoTunnel(videoPath) {
 
   const port = server.address().port;
 
-  // ngrok — connects via HTTPS/443, works through firewalls
   const listener = await ngrok.forward({
-    addr:     port,
+    addr:      port,
     authtoken: process.env.NGROK_AUTHTOKEN,
   });
 
   const publicUrl = `${listener.url()}/${token}`;
-  console.log(`[postor/tunnel] Secure video tunnel open (ngrok) on port ${port}`);
+  console.log(`[postor/tunnel] Secure tunnel open (ngrok) on port ${port} — ${contentType}`);
 
   const cleanup = async () => {
     try { await ngrok.disconnect(listener.url()); } catch (_) {}
@@ -74,4 +90,7 @@ async function createVideoTunnel(videoPath) {
   return { url: publicUrl, cleanup };
 }
 
-module.exports = { createVideoTunnel };
+/** Convenience alias — createVideoTunnel keeps backward compat */
+const createVideoTunnel = createFileTunnel;
+
+module.exports = { createVideoTunnel, createFileTunnel };
