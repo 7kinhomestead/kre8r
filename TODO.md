@@ -45,11 +45,94 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 ### 1. ~~Update CLAUDE.md to Reflect Current Build State~~ ✅ DONE Session 46
 All modules documented. PostΩr, SeedΩr, ClipsΩr, MirrΩr, NorthΩr, SyncΩr, Electron, Auth all current.
 
-### 2. TikTok API — Research & Wire
-TikTok posting is the last major platform stub. Research current TikTok Content Posting API status, check if @7.kin.jason account is eligible, and wire if available.
+### 2. Project Folder Architecture — Pipeline-Wide (see full spec below)
+PipΩr creates project folder on disk at project creation. ShootDay shows copyable DaVinci paths.
+VaultΩr goes recursive. Campaign Builder reads from project clips/ folder. Full alignment spec below.
 
 ### 3. PostΩr Batch Mode — Campaign Builder (see full spec below)
-The current one-clip-at-a-time flow doesn't scale. Replace with a batch caption + scheduling board workflow.
+Depends on Project Folder Architecture. Build after folders are wired.
+
+### 4. TikTok API — Research & Wire
+TikTok posting is the last major platform stub. Research current TikTok Content Posting API status, check if @7.kin.jason account is eligible, and wire if available.
+
+---
+
+## Project Folder Architecture — Pipeline-Wide Alignment
+
+### The Problem
+VaultΩr watches a flat folder. Footage has no project context on disk. Every DaVinci export path
+requires manual browsing. Clips land anonymously — Campaign Builder has no way to know which
+project they belong to without manual association.
+
+### The Solution — One Folder Per Project, Created at Project Birth
+
+**Folder structure (created by PipΩr at project creation):**
+```
+D:\kre8r\intake\
+  42_solar-water-heater\        ← [id]_[slugified-title] — human readable + machine parseable
+    raw\                        ← BRAW files copied from camera SSD (H:\)
+      proxy\                    ← DaVinci auto-creates + populates this (do not create manually)
+        shot_001_proxy.mp4
+    completed\                  ← DaVinci final render destination
+    clips\                      ← DaVinci social clip export destination → Campaign Builder source
+```
+
+**Naming convention:** `[project_id]_[slug]` e.g. `42_solar-water-heater`
+VaultΩr splits on first `_` to extract project ID. Slug is for human navigation in Explorer.
+
+### One-Time DaVinci Config (Jason does this manually, once)
+In DaVinci Resolve: Preferences → Proxy Media (or Proxy Generator settings)
+- Change watch folder from `D:\1 .braw watch folder` → `D:\kre8r\intake`
+- DaVinci watches 5 levels deep — all project `raw/` subfolders are within range
+- DaVinci auto-creates `raw/proxy/` and generates proxies there unattended
+- Never needs to be changed again — every new project folder is automatically in the watch zone
+
+### Pipeline Touchpoints — What Gets Built
+
+#### PipΩr (project creation route — `src/routes/pipr.js`)
+- On `POST /api/projects` (project creation): generate slug from project title
+- `fs.mkdirSync(path.join(INTAKE_PATH, `${project.id}_${slug}`), { recursive: true })`
+- Create subfolders: `raw/`, `completed/`, `clips/` (do NOT create `raw/proxy/` — DaVinci owns that)
+- Store `folder_path` on the project record: new column `projects.folder_path TEXT`
+- If intake path doesn't exist (DO server, non-Electron): skip silently, log warning
+
+#### ShootDay (`public/shootday.html`)
+- New section: **"📁 Project Folder Paths"** — shown after project select
+- Three rows, each with a path + 📋 copy-to-clipboard button:
+  - **BRAW destination:** `[folder_path]\raw\` — "Copy cards here after shoot"
+  - **Render destination:** `[folder_path]\completed\` — "Paste into DaVinci render output"
+  - **Clips destination:** `[folder_path]\clips\` — "Paste into DaVinci clip export"
+- Clear instruction: "Paste these into DaVinci export dialogs — no browsing required"
+- Fetch paths from `GET /api/projects/:id` (folder_path already on the record)
+
+#### VaultΩr Watcher (`src/vault/watcher.js`)
+- Change chokidar to watch recursively: `chokidar.watch(INTAKE_PATH, { depth: 5 })`
+- On new file detected: parse path to determine context
+  - File in `[id]_[slug]/raw/proxy/` → proxy file → find or create BRAW record, link proxy, set project_id
+  - File in `[id]_[slug]/completed/` → completed-video → auto-set shot_type, set project_id
+  - File in `[id]_[slug]/clips/` → social-clip → auto-set shot_type, set project_id
+  - File directly in `intake/` (flat, legacy) → existing behavior unchanged
+- Helper: `parseProjectFromPath(filePath)` → returns `{ projectId, subfolder }` or null
+
+#### Campaign Builder (PostΩr)
+- "Unpackaged clips" source: `vault_footage WHERE project_id = ? AND shot_type = 'social-clip' AND id NOT IN (SELECT footage_id FROM postor_queue)`
+- No manual association needed — folder path tells VaultΩr everything at ingest
+
+### DB Changes
+- `projects` table: add `folder_path TEXT` — full absolute path to the project folder
+- No changes to `vault_footage` — `project_id` column already exists (confirm) or add it
+
+### Backward Compatibility
+- Existing footage records with no project_id: unaffected, continue to show in VaultΩr normally
+- Flat intake files (no subfolder): existing watcher behavior preserved as fallback
+- Projects created before this feature: no folder_path, ShootDay shows "No folder — project predates folder support" with option to create folder manually
+
+### Build Plan (1 session)
+1. DB migration: `folder_path` on projects
+2. PipΩr route: slug generation + `fs.mkdirSync` on project create
+3. ShootDay: fetch + display 3 paths with copy buttons
+4. VaultΩr watcher: recursive + `parseProjectFromPath` helper + auto project_id + shot_type
+5. Verify: create test project → confirm folders appear → drop a file → confirm VaultΩr associates it
 
 ---
 
@@ -65,9 +148,9 @@ What's missing: a way to feed the queue in bulk and a scheduling board to assign
 
 ### The Workflow
 ```
-DaVinci exports clips → D:\kre8r\intake → VaultΩr picks them up automatically
+DaVinci exports clips → [project_folder]/clips/ → VaultΩr picks up, auto-associates with project
     ↓
-PostΩr "Campaign" tab: "Unpackaged clips" list — clips VaultΩr ingested but not yet queued
+PostΩr "Campaign" tab: "Unpackaged clips" list — shot_type='social-clip', no postor_queue entry
     ↓
 Creator selects clips → "Generate Captions for All" → CaptionΩr runs in batch (one Claude call per clip)
     ↓
