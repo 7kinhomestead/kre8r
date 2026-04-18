@@ -96,7 +96,281 @@ YouTube Analytics sync: 313 videos, 2504 metrics into MirrΩr.
 
 ---
 
-## ✅ Email Pipeline — DONE Sessions 33–34, 37, 39
+## MarkΩr + GuardΩr — Copyright Protection + Community Enforcement
+
+> "The distribution of the defense should match the distribution of the attack."
+> Thieves are everywhere. So is the audience.
+
+### The Problem
+Stolen videos get posted by accounts that block the creator. The creator never sees them.
+The audience does. They want to help but have no tool and no permission structure.
+The creator has no affordable, automated enforcement path. DMCA is manual, per-platform, tedious.
+
+### The Solution — Two Linked Products
+
+**MarkΩr** (inside Kre8r, creator-facing):
+Every video that exits through PostΩr gets an invisible forensic watermark embedded automatically.
+The creator never thinks about it. The watermark encodes creator ID + video ID + date + channel.
+Designed so that a simple color inversion reveals a structured visible pattern — the "GSR test."
+All vault footage gets perceptual-hashed and audio-fingerprinted as a parallel detection layer.
+Incoming fan reports land in a Kre8r inbox. One click → Claude drafts the DMCA notice.
+
+**GuardΩr** (public-facing, fan-facing):
+A standalone page at a creator-controlled URL (e.g. `guard.7kinhomestead.com`).
+Any fan can submit a URL or screenshot of a suspicious video.
+The system checks it against the creator's fingerprint library.
+If it matches: "You caught one. This has been reported to the team."
+A community counter shows total violations caught. Fans have agency. Theft becomes a shared story.
+
+### Why This Matters Beyond Copyright
+The parasocial relationship has a structural imbalance — creators give everything, most fans
+never pay. This creates a non-monetary value exchange:
+- Fan contributes real, tangible value (catching a thief)
+- No money changes hands — the relationship deepens without being commercialized
+- "I protect this creator" is an identity, not a transaction
+- The adversarial shared story ("we caught one") is stronger community glue than merch ever will be
+
+---
+
+### Architecture
+
+#### Detection Layers (strongest to most fragile against attacks)
+
+| Layer | Method | Survives screen recording | Survives re-encoding | Survives heavy compression |
+|---|---|---|---|---|
+| 1 | Perceptual hash (visual) | ✅ | ✅ | ⚠️ partial |
+| 2 | Audio fingerprint | ✅ | ✅ | ✅ |
+| 3 | Invisible spatial watermark | ✅ | ✅ | ⚠️ partial |
+| 4 | "Invert to reveal" visual proof | ✅ | ✅ | ⚠️ if strong enough |
+
+Multiple layers = multiple shots at detection. A video that defeats one layer rarely defeats all three.
+
+#### Database Tables (all added via migration in db.js)
+
+```sql
+-- Watermark registry — one row per watermarked export
+CREATE TABLE watermarks (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  footage_id       INTEGER,        -- FK to vault_footage (nullable for non-vault uploads)
+  video_path       TEXT NOT NULL,  -- original source path
+  watermarked_path TEXT,           -- output path with watermark embedded
+  seed             TEXT NOT NULL,  -- unique random seed for this embed
+  watermark_code   TEXT NOT NULL,  -- encoded payload: creatorId+videoId+date+channel
+  channel          TEXT,           -- 'instagram' | 'facebook' | 'youtube' | 'original'
+  embedded_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Visual fingerprints — keyframes sampled from each vault video
+CREATE TABLE video_fingerprints (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  footage_id       INTEGER,
+  video_path       TEXT NOT NULL,
+  frame_index      INTEGER,        -- which frame (e.g. every 5s)
+  frame_time_s     REAL,
+  phash            TEXT NOT NULL,  -- 64-bit perceptual hash hex string
+  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Audio fingerprints — chromaprint/dejavu style per video
+CREATE TABLE audio_fingerprints (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  footage_id       INTEGER,
+  video_path       TEXT NOT NULL,
+  fingerprint_data TEXT NOT NULL,  -- JSON array of hash offsets
+  duration_s       REAL,
+  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Fan reports — incoming from GuardΩr public site
+CREATE TABLE guard_reports (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  submitted_url        TEXT,
+  submitted_file_path  TEXT,       -- if they uploaded a screenshot/clip
+  submitter_note       TEXT,
+  platform             TEXT,       -- 'tiktok' | 'instagram' | 'facebook' | 'youtube' | 'other'
+  match_type           TEXT,       -- 'watermark' | 'phash' | 'audio' | 'multi' | 'none'
+  match_confidence     REAL,       -- 0–100
+  matched_footage_id   INTEGER,
+  matched_video_title  TEXT,
+  evidence_json        TEXT,       -- full evidence package: matched frames, hashes, watermark decode
+  status               TEXT NOT NULL DEFAULT 'pending', -- pending|confirmed|dismissed|filed|resolved
+  claim_platform       TEXT,       -- which platform the DMCA was filed against
+  claim_reference      TEXT,       -- platform's claim ID or confirmation number
+  created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+#### Watermark Embedding — How It Works
+
+The embed runs as an FFmpeg operation triggered by PostΩr before any upload.
+
+**The pattern:**
+- A unique seed is generated per video export (stored in `watermarks` table)
+- The seed drives a pseudo-random selection of pixel positions across keyframes
+- Each selected pixel's luma value is bumped by ±1 in a structured pattern
+- The pattern encodes the watermark code in a spread-spectrum layout
+
+**The "invert to reveal" mechanism:**
+- Normal view: pixel value 128 → watermarked: 129 (invisible — within just-noticeable-difference)
+- Inverted view: 255-129=126 vs 255-128=127 → the watermarked pixel is now systematically different
+- Thousands of pixels following the same seed pattern → a structured shape emerges when inverted
+- That structure is the visual proof of origin — analogous to GSR on the hands
+
+**What it survives:**
+Screen recording, normal re-encoding (H.264/H.265 at quality ≥ CRF 23), basic color filters,
+speed changes, flipping, clipping/trimming (any surviving frame carries the pattern).
+
+**What defeats it:**
+AI-powered watermark removal (Topaz, etc.) — but these tools leave their own artifacts,
+which become a secondary evidence layer. Perfect removal is a different crime than the original theft.
+
+#### Detection Flow (when a fan submits to GuardΩr)
+
+```
+Submission → (URL or file)
+    ↓
+Extract frames (FFmpeg, every 2s) + extract audio
+    ↓
+Run perceptual hash on each frame → compare against video_fingerprints table
+    ↓
+Run audio fingerprint → compare against audio_fingerprints table
+    ↓
+Run watermark extraction on best-match frames → decode seed → look up in watermarks table
+    ↓
+Aggregate confidence score (weighted: phash 40%, audio 40%, watermark 20%)
+    ↓
+If confidence ≥ 70%: confirmed match → insert guard_reports row → show fan result
+If confidence 40–69%: possible match → ask fan for more info
+If confidence < 40%: no match found
+```
+
+#### GuardΩr Public Site — UI Flow
+
+```
+Landing:  Creator photo + tagline. "Found a stolen video? Report it here."
+          Community counter: "Community has flagged [N] violations"
+
+Submit:   Paste a URL  OR  Upload a screenshot / short clip
+          Optional note: "where did you find this?"
+
+Checking: Animated "investigating…" state (2–5s depending on method)
+
+Results:
+  MATCH   → "🚨 You caught one. This video matches [title], originally posted [date].
+              Your report has been sent to Jason's team."
+              [Show side-by-side: original thumbnail vs submitted content]
+              [Inversion tool: "Click to see the hidden watermark"]
+              [Counter bumps: "You've helped protect Jason 3 times"]
+
+  PARTIAL → "🔍 This looks familiar. Can you tell us more?"
+              [Form for extra context]
+
+  CLEAN   → "✅ We don't see a match. This might be licensed or original content."
+```
+
+**The browser-based inversion tool:**
+Client-side only (Canvas API). No server call needed. Fan uploads frame, clicks "Invert."
+The watermark pattern appears. This is the moment — the GSR on the hands.
+Shareable: "Look what shows up when you invert this stolen video frame."
+That screenshot of the inverted pattern becomes organic content about the theft,
+which is simultaneously evidence AND audience engagement.
+
+#### Claims Engine — DMCA Automation
+
+When a report is confirmed, Jason opens it in his Kre8r GuardΩr inbox and sees:
+- The submitted URL/screenshot
+- The matched original video with timestamp
+- Confidence score + which detection layer triggered
+- Decoded watermark (if applicable)
+
+One click → Claude generates a complete DMCA notice pre-populated with:
+- Original work identification + ownership assertion
+- URL to the infringing copy
+- Watermark evidence summary (confidence score, detection method)
+- Good-faith statement
+- Accuracy statement under penalty of perjury
+- Signature block
+
+**Platform-specific formats stored as Claude prompt templates:**
+- YouTube: references youtube.com/copyright_complaint_form fields
+- Meta (Instagram/Facebook): references Rights Manager
+- TikTok: references tiktok.com/legal/report/copyright
+- Generic: DMCA letter for email/legal use
+
+**NorthΩr integration:**
+New stat block: "Copyright Health"
+- Reports received this month: N
+- Confirmed violations: N
+- Claims filed: N
+- Claims resolved: N
+
+---
+
+### Build Plan — 3 Sessions
+
+#### MarkΩr Session A — Fingerprint Infrastructure
+*Goal: Every vault video is fingerprinted. Every PostΩr export gets watermarked. Detection endpoint exists.*
+
+- DB migrations: `watermarks`, `video_fingerprints`, `audio_fingerprints`, `guard_reports` tables
+- `src/markr/` directory (new module, same pattern as postor/)
+  - `fingerprint.js` — FFmpeg-based pHash extraction per video (keyframes every 5s)
+  - `watermark.js` — FFmpeg-based embed + the inversion-visible pattern
+  - `detect.js` — comparison engine: accepts a file/URL, returns match result
+- `src/routes/markr.js` — API routes
+  - `POST /api/markr/fingerprint-vault` — batch job, fingerprints all vault footage
+  - `POST /api/markr/check` — the detection endpoint (used by GuardΩr)
+  - `GET /api/markr/watermarks` — view watermark registry
+- Hook into PostΩr: watermark embeds automatically before any upload
+- Python subprocess for audio fingerprinting (chromaprint via `fpcalc` binary — small, no GPU)
+
+#### GuardΩr Session B — Public Fan Site
+*Goal: Fans can submit URLs and screenshots. Confirmed matches flow into Kre8r inbox.*
+
+- Public route `/guard` (no auth required) — reads creator-profile.json for branding
+- GuardΩr landing page (`public/guardr.html`) — URL input + file upload
+- Client-side inversion tool (Canvas API, zero server calls for the visual proof)
+- Community counter pulled from `guard_reports` table
+- "You caught one" confirmation state with side-by-side visual
+- Creator-configurable: URL slug, brand colors, creator photo — all from creator-profile.json
+- GuardΩr inbox module in Kre8r (`public/guardr-inbox.html`)
+  - Incoming reports list with confidence scores
+  - Evidence view per report
+  - Confirm / Dismiss / File actions
+
+#### ClaimsΩr Session C — DMCA Automation + NorthΩr Integration
+*Goal: One-click from confirmed report to drafted DMCA notice.*
+
+- Claude generates DMCA notices from evidence package (platform-specific templates)
+- Filed claims tracked in `guard_reports.status` + `claim_reference`
+- Email the notice to platform DMCA agent directly from Kre8r (via MailerLite or raw SMTP)
+- NorthΩr: "Copyright Health" stats block
+- Optional: automatic weekly scan of known offender account URLs (if fan has previously reported them)
+
+---
+
+### Open Questions Before Building
+
+1. **Watermark strength vs invisibility tradeoff** — needs tuning against Jason's actual footage.
+   A 4K HDR video tolerates more embedding than a compressed 1080p. Test before locking algo.
+
+2. **Audio fingerprinting dependency** — `fpcalc` (Chromaprint binary) needs to be bundled in
+   the Electron app the same way FFmpeg is. Confirm binary availability before Session A.
+
+3. **GuardΩr URL** — `guard.7kinhomestead.com` (creator-branded, recommended) or
+   `guard.kre8r.app?creator=7kinhomestead` (platform-branded, multi-creator ready)?
+   Jason's call. The code supports both.
+
+4. **Fan identity** — No account required for submissions (zero friction = more submissions).
+   Return visitor gets a cookie: "You've helped X times." No leaderboard (competitive dynamics
+   would attract trolls submitting false reports to game the count).
+
+5. **False positive rate** — perceptual hashing will occasionally flag similar-looking content
+   from other creators. The confidence threshold (70% default) + human review step in the inbox
+   prevents automated misfires. Claude never auto-files — Jason approves every claim.
+
+---
+
+
 
 Full email pipeline end-to-end. Session 39 closed the loop:
 - MailΩr premiere email: dropdown fixed, generate + send working, 10-min schedule delay for ML review
