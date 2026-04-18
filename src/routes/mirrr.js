@@ -439,11 +439,11 @@ async function runMetaSyncJob(jobId) {
   try {
     const { default: fetch } = await import('node-fetch');
 
-    const fbConn = db.getPostorConnection('facebook');
-    const igConn = db.getPostorConnection('instagram');
+    const fbConn        = db.getPostorConnection('facebook');
+    const igInsightsToken = db.getKv('ig_insights_token'); // Facebook-Login token with instagram_manage_insights
 
-    if (!fbConn && !igConn) {
-      db.failJob(jobId, 'No Meta platforms connected — connect Facebook or Instagram in PostΩr first');
+    if (!fbConn && !igInsightsToken) {
+      db.failJob(jobId, 'No Meta platforms connected — connect Facebook in PostΩr and/or add an Instagram Insights token in MirrΩr');
       return;
     }
 
@@ -453,9 +453,8 @@ async function runMetaSyncJob(jobId) {
       return;
     }
 
-    const GRAPH     = 'https://graph.facebook.com/v21.0';
-    const GRAPH_IG  = 'https://graph.instagram.com';
-    const total     = posts.length;
+    const GRAPH  = 'https://graph.facebook.com/v21.0';
+    const total  = posts.length;
     let synced = 0, failed = 0, igPermError = false;
 
     for (let i = 0; i < total; i++) {
@@ -518,13 +517,20 @@ async function runMetaSyncJob(jobId) {
 
         } else if (post.platform === 'instagram') {
           // ── Instagram Reels insights ──────────────────────────────────────
-          if (!igConn) { failed++; continue; }
-          const url  = `${GRAPH_IG}/${post.post_id}/insights?metric=plays,reach,likes,comments,shares,saved&period=lifetime&access_token=${igConn.access_token}`;
+          // Uses the Facebook-Login token (ig_insights_token KV) which has
+          // instagram_manage_insights. Endpoint is graph.facebook.com — the
+          // Instagram Business Login token (graph.instagram.com) does NOT
+          // support the insights API per Meta's own dashboard notice.
+          if (!igInsightsToken) {
+            igPermError = true;
+            failed++;
+            continue;
+          }
+          const url  = `${GRAPH}/${post.post_id}/insights?metric=plays,reach,likes,comments,shares,saved&period=lifetime&access_token=${igInsightsToken}`;
           const res  = await fetch(url);
           const data = await res.json();
 
           if (data.error) {
-            // OAuthException code 10 = missing instagram_manage_insights permission
             if (data.error.type === 'OAuthException' || data.error.code === 10 || data.error.code === 200) {
               igPermError = true;
               db.setKv('meta_ig_insights_missing', '1');
@@ -589,18 +595,48 @@ router.post('/meta-sync', (req, res) => {
 // ─── GET /api/mirrr/meta-status ──────────────────────────────────────────────
 router.get('/meta-status', (req, res) => {
   try {
-    const fbConn   = db.getPostorConnection('facebook');
-    const igConn   = db.getPostorConnection('instagram');
-    const lastSync = db.getKv('meta_last_sync');
-    const igPerm   = db.getKv('meta_ig_insights_missing');
-    const posts    = db.getMetaSyncablePosts();
+    const fbConn          = db.getPostorConnection('facebook');
+    const igConn          = db.getPostorConnection('instagram');
+    const lastSync        = db.getKv('meta_last_sync');
+    const igPerm          = db.getKv('meta_ig_insights_missing');
+    const igInsightsToken = db.getKv('ig_insights_token');
+    const posts           = db.getMetaSyncablePosts();
     res.json({
       last_sync:              lastSync || null,
       fb_connected:           !!(fbConn?.access_token),
       ig_connected:           !!(igConn?.access_token),
-      ig_insights_missing:    igPerm === '1',
+      ig_insights_token_set:  !!igInsightsToken,
+      ig_insights_missing:    !igInsightsToken || igPerm === '1',
       syncable_post_count:    posts.length,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /api/mirrr/ig-insights-token ───────────────────────────────────────
+// Stores the Facebook-Login access token (with instagram_manage_insights scope)
+// used exclusively for reading Instagram Reels analytics.
+// Body: { token: string }
+router.post('/ig-insights-token', (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token || typeof token !== 'string' || token.trim().length < 10) {
+      return res.status(400).json({ error: 'token required' });
+    }
+    db.setKv('ig_insights_token', token.trim());
+    db.setKv('meta_ig_insights_missing', '0'); // clear the warning flag
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── DELETE /api/mirrr/ig-insights-token ─────────────────────────────────────
+router.delete('/ig-insights-token', (req, res) => {
+  try {
+    db.setKv('ig_insights_token', '');
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

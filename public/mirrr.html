@@ -659,11 +659,23 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
         </button>
         <div class="sync-last" id="metaSyncLast">Never synced</div>
       </div>
-      <div id="meta-ig-perm-warn" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.35);border-radius:6px;font-size:12px;color:#f59e0b;line-height:1.6;">
-        ⚠ Instagram insights require the <strong>instagram_manage_insights</strong> permission.
-        In your <a href="https://developers.facebook.com/apps/" target="_blank" style="color:#f59e0b;text-decoration:underline;">Meta App Dashboard</a>:
-        add the "Instagram Insights" use case → generate a new Instagram token with that scope → reconnect Instagram in PostΩr.
-        Facebook metrics will still sync without it.
+      <!-- Instagram Insights Token (Facebook-Login token with instagram_manage_insights) -->
+      <div style="margin-top:14px;padding:12px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;">
+          Instagram Insights Token
+          <span id="ig-token-status" style="margin-left:8px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;"></span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dimmer);margin-bottom:10px;line-height:1.5;">
+          Paste the Facebook-Login token (from Graph API Explorer with <code style="background:var(--bg-deep);padding:1px 5px;border-radius:3px;">instagram_manage_insights</code> checked). Separate from your publishing token — posting is unaffected.
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="password" id="ig-insights-token-input" placeholder="EAABwzLixnjYBO…"
+            style="flex:1;min-width:200px;background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:13px;font-family:var(--font-body);outline:none;">
+          <button onclick="saveIgInsightsToken()" id="ig-token-save-btn"
+            style="background:var(--teal);color:var(--bg);border:none;border-radius:var(--radius-sm);padding:8px 16px;font-size:13px;font-weight:700;font-family:var(--font-body);cursor:pointer;white-space:nowrap;">
+            Save Token
+          </button>
+        </div>
       </div>
       <div class="sync-log" id="metaSyncLog"></div>
     </div>
@@ -1294,17 +1306,49 @@ async function loadMetaStatus() {
     const lastEl = document.getElementById('metaSyncLast');
     if (lastEl && d.last_sync) lastEl.textContent = 'Last synced: ' + fmtDate(d.last_sync);
 
-    // IG permission warning
-    const warnEl = document.getElementById('meta-ig-perm-warn');
-    if (warnEl) warnEl.style.display = d.ig_insights_missing ? 'block' : 'none';
+    // IG insights token status chip
+    const tokenStatusEl = document.getElementById('ig-token-status');
+    if (tokenStatusEl) {
+      tokenStatusEl.textContent    = d.ig_insights_token_set ? '✓ saved' : '✗ not set';
+      tokenStatusEl.style.color    = d.ig_insights_token_set ? 'var(--teal)' : '#f59e0b';
+    }
 
-    // Disable button if nothing to sync
+    // Disable sync button if nothing at all is connected
     const btn = document.getElementById('metaSyncBtn');
-    if (btn && !d.fb_connected && !d.ig_connected) {
+    if (btn && !d.fb_connected && !d.ig_insights_token_set) {
       btn.disabled = true;
-      btn.title = 'Connect Facebook or Instagram in PostΩr first';
+      btn.title = 'Connect Facebook in PostΩr or add an Instagram Insights token';
+    } else if (btn) {
+      btn.disabled = false;
+      btn.title = '';
     }
   } catch (_) {}
+}
+
+async function saveIgInsightsToken() {
+  const input = document.getElementById('ig-insights-token-input');
+  const btn   = document.getElementById('ig-token-save-btn');
+  const token = input?.value?.trim();
+  if (!token) return;
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/mirrr/ig-insights-token', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+    input.value = '';
+    input.placeholder = 'Token saved ✓';
+    await loadMetaStatus();
+  } catch (e) {
+    alert('Failed to save token: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Token';
+  }
 }
 
 function _connectMetaSyncStream(jobId) {
