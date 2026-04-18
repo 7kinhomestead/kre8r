@@ -1,3 +1,51 @@
+# Session 44 — Instagram Reels Live (2026-04-18)
+
+## Goal
+Get Instagram @7.kin.jason connected and posting Reels from PostΩr.
+
+## What Was Built
+
+### Instagram — ✅ FULLY WORKING (end-to-end live Reel posted)
+
+**Root cause of all previous failures:** Meta's new App Dashboard (2024+) removed Instagram Content Publishing as a selectable use case. None of the 13 available use cases in the new interface expose `instagram_content_publish`. The only working path is creating an app using the legacy "Other (going away soon)" type which preserves the old Products interface.
+
+**App created:** SAR-2 Kre8r-IG (Instagram App ID: 1701682370871590) — "Other" type, Business subtype, Sunburned Ass Ranch portfolio, Instagram product added → `instagram_business_content_publish` permission available.
+
+**Token:** Generated via Instagram API setup page → "Add account" → accepted tester invite on Instagram → one-time token → stored via `manual-instagram-token` endpoint. Instagram user ID: 26555261717467626.
+
+**Video tunnel (new module: `src/postor/video-tunnel.js`):**
+- New Instagram API (`graph.instagram.com`) requires a publicly accessible `video_url` — no resumable upload
+- Spins up a minimal HTTP server on a random local port (not 3000)
+- Only serves one file at one one-time token URL — main Kre8r server never exposed
+- Tunnels via ngrok (port 443, firewall-safe) — requires `NGROK_AUTHTOKEN` in `.env`
+- Auto-cleanup after Instagram downloads the video
+
+**`publishInstagramReel` rewrite (`src/postor/meta.js`):**
+- Switched from `graph.facebook.com` resumable upload to `graph.instagram.com` + `video_url`
+- Added `GRAPH_IG = 'https://graph.instagram.com'` constant
+- All 4 API calls (init, poll, publish, permalink) now use GRAPH_IG
+- Tunnel opens → init container → poll for FINISHED (tunnel stays open during download) → tunnel closes → publish
+
+**`manual-instagram-token` endpoint (`src/routes/postor.js`):**
+- Fixed: was calling `graph.facebook.com/v21.0/me?fields=id,username` — deprecated
+- Now calls `graph.instagram.com/me?fields=id` (unversioned, no username field)
+
+**Packages installed:** `localtunnel` (abandoned — port 7769 blocked by firewall), `@ngrok/ngrok` (final solution — uses port 443)
+
+## Facebook Page Selector — TODO
+`_meta_pages` shows 8 pages including former client "Mastering Modern Selling". Need a page selector dropdown on the Facebook tab in PostΩr so the user explicitly chooses which page to post to and can never accidentally post to the wrong one.
+
+## Scheduler — TODO
+Requested. Queue posts for a future time. Design TBD.
+
+## Commits
+- Previous: `777e2fd`, `20d6f85`, `764a502`
+
+## Status
+Instagram Reels posting confirmed live. First test Reel published to @7.kin.jason. Facebook posting still working. ClipsΩr → PostΩr → Instagram pipeline operational.
+
+---
+
 # Session 43 — PostΩr Meta Integration + Instagram Battle (2026-04-17)
 
 ## Goal

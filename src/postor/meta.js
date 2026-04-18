@@ -18,14 +18,16 @@
 
 'use strict';
 
-const fs   = require('fs');
-const path = require('path');
-const db   = require('../db');
+const fs           = require('fs');
+const path         = require('path');
+const db           = require('../db');
+const { createVideoTunnel } = require('./video-tunnel');
 
 const META_DIALOG_URL  = 'https://www.facebook.com/v21.0/dialog/oauth';
 const META_TOKEN_URL   = 'https://graph.facebook.com/v21.0/oauth/access_token';
 const GRAPH            = 'https://graph.facebook.com/v21.0';
 const GRAPH_VIDEO      = 'https://graph-video.facebook.com/v21.0';
+const GRAPH_IG         = 'https://graph.instagram.com';  // new Instagram API (instagram_business_content_publish)
 
 const SCOPES = [
   // instagram_content_publish — requires "Manage and publish content" use case in Meta app
@@ -111,12 +113,16 @@ async function getPages(userToken) {
 // ─── Instagram Reels Publish ──────────────────────────────────────────────────
 
 /**
- * Publish a Reel to Instagram using the resumable upload flow (local files).
+ * Publish a Reel to Instagram using the new Instagram API (graph.instagram.com).
+ * The new API requires a publicly accessible video_url — Instagram pulls the file
+ * itself. We serve it via a temporary secure tunnel (isolated port, one-time token).
+ *
  * Steps:
- *  1. Initialize upload session → get creation_id + upload URI
- *  2. POST raw video to upload URI
- *  3. Poll creation_id for FINISHED status
- *  4. Publish via media_publish
+ *  1. Open video tunnel → get one-time public URL
+ *  2. Create media container with video_url → get creation_id
+ *  3. Poll creation_id for FINISHED status (tunnel stays open so IG can download)
+ *  4. Close tunnel
+ *  5. Publish via media_publish
  */
 async function publishInstagramReel({ videoPath, caption, onProgress }) {
   const conn = db.getPostorConnection('instagram');
@@ -126,74 +132,60 @@ async function publishInstagramReel({ videoPath, caption, onProgress }) {
   const accessToken = conn.access_token;
 
   if (!fs.existsSync(videoPath)) throw new Error(`Video file not found: ${videoPath}`);
-  const fileSize = fs.statSync(videoPath).size;
 
-  // Step 1 — Initialize resumable upload session
+  // Step 1 — Open secure video tunnel
   onProgress?.({ stage: 'instagram', step: 'initiating', pct: 2 });
+  const { url: videoUrl, cleanup } = await createVideoTunnel(videoPath);
+  console.log(`[postor/meta] Video available for Instagram at: ${videoUrl}`);
 
-  const initUrl = `${GRAPH}/${igUserId}/media`;
-  const initRes = await fetch(initUrl, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({
-      upload_type:   'resumable',
-      media_type:    'REELS',
-      caption:       caption || '',
-      share_to_feed: true,
-      access_token:  accessToken,
-    }),
-  });
+  let creationId;
+  try {
+    // Step 2 — Create media container with public video_url
+    onProgress?.({ stage: 'instagram', step: 'uploading', pct: 10 });
+    const initRes = await fetch(`${GRAPH_IG}/${igUserId}/media`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        media_type:    'REELS',
+        video_url:     videoUrl,
+        caption:       caption || '',
+        share_to_feed: true,
+        access_token:  accessToken,
+      }),
+    });
 
-  const initData = await initRes.json();
-  if (initData.error) throw new Error(`Instagram init failed: ${initData.error.message}`);
+    const initData = await initRes.json();
+    if (initData.error) throw new Error(`Instagram init failed: ${initData.error.message}`);
+    creationId = initData.id;
 
-  const creationId = initData.id;
-  const uploadUri  = initData.uri;
-  if (!uploadUri) throw new Error('Instagram did not return an upload URI — check permissions');
+    // Step 3 — Poll for processing completion
+    // Tunnel stays open so Instagram can download the video during IN_PROGRESS
+    onProgress?.({ stage: 'instagram', step: 'processing', pct: 20 });
+    let status     = 'IN_PROGRESS';
+    let attempts   = 0;
+    const maxAttempts = 36; // 3 minutes max (36 × 5s)
 
-  // Step 2 — Upload raw video bytes
-  onProgress?.({ stage: 'instagram', step: 'uploading', pct: 5 });
-  console.log(`[postor/meta] Uploading ${Math.round(fileSize / 1024 / 1024)}MB → Instagram`);
+    while (status !== 'FINISHED' && status !== 'ERROR' && attempts < maxAttempts) {
+      await new Promise(r => setTimeout(r, 5000));
+      const pollRes  = await fetch(`${GRAPH_IG}/${creationId}?fields=status_code,status,error_message&access_token=${accessToken}`);
+      const pollData = await pollRes.json();
+      status = pollData.status_code;
+      const detail = pollData.error_message ? ` — ${pollData.error_message}` : '';
+      console.log(`[postor/meta] IG processing: ${status}${detail}`);
+      attempts++;
+      onProgress?.({ stage: 'instagram', step: 'processing', pct: Math.min(88, 20 + attempts * 2) });
+    }
 
-  const fileBuffer = fs.readFileSync(videoPath);
+    if (status === 'ERROR')    throw new Error(`Instagram video processing failed — check Electron log for status details`);
+    if (status !== 'FINISHED') throw new Error('Instagram processing timed out (3 min limit) — video may still publish');
 
-  const uploadRes = await fetch(uploadUri, {
-    method:  'POST',
-    headers: {
-      Authorization:  `OAuth ${accessToken}`,
-      'file_size':    String(fileSize),
-      'offset':       '0',
-      'Content-Type': 'application/octet-stream',
-    },
-    body: fileBuffer,
-  });
-
-  const uploadData = await uploadRes.json();
-  if (!uploadRes.ok || uploadData.error) {
-    throw new Error(`Instagram upload failed: ${JSON.stringify(uploadData).slice(0, 300)}`);
+  } finally {
+    await cleanup(); // Always close tunnel — Instagram has the video by now
   }
-
-  // Step 3 — Poll for processing completion
-  onProgress?.({ stage: 'instagram', step: 'processing', pct: 70 });
-  let status   = 'IN_PROGRESS';
-  let attempts = 0;
-  const maxAttempts = 36; // 3 minutes max (36 × 5s)
-
-  while (status !== 'FINISHED' && status !== 'ERROR' && attempts < maxAttempts) {
-    await new Promise(r => setTimeout(r, 5000));
-    const pollRes  = await fetch(`${GRAPH}/${creationId}?fields=status_code&access_token=${accessToken}`);
-    const pollData = await pollRes.json();
-    status = pollData.status_code;
-    attempts++;
-    onProgress?.({ stage: 'instagram', step: 'processing', pct: Math.min(90, 70 + attempts) });
-  }
-
-  if (status === 'ERROR')    throw new Error('Instagram video processing failed on their servers');
-  if (status !== 'FINISHED') throw new Error('Instagram processing timed out (3 min limit) — video may still publish');
 
   // Step 4 — Publish
   onProgress?.({ stage: 'instagram', step: 'publishing', pct: 95 });
-  const pubRes  = await fetch(`${GRAPH}/${igUserId}/media_publish`, {
+  const pubRes  = await fetch(`${GRAPH_IG}/${igUserId}/media_publish`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ creation_id: creationId, access_token: accessToken }),
@@ -204,7 +196,7 @@ async function publishInstagramReel({ videoPath, caption, onProgress }) {
   // Fetch permalink
   let postUrl = `https://www.instagram.com/p/${pubData.id}/`;
   try {
-    const mediaRes  = await fetch(`${GRAPH}/${pubData.id}?fields=permalink&access_token=${accessToken}`);
+    const mediaRes  = await fetch(`${GRAPH_IG}/${pubData.id}?fields=permalink&access_token=${accessToken}`);
     const mediaData = await mediaRes.json();
     if (mediaData.permalink) postUrl = mediaData.permalink;
   } catch (_) {}

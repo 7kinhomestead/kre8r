@@ -474,7 +474,8 @@ router.post('/auth/meta/manual-instagram-token', async (req, res) => {
   if (!instagram_access_token) return res.status(400).json({ error: 'instagram_access_token required' });
 
   try {
-    const url  = `https://graph.facebook.com/v21.0/me?fields=id,username,name&access_token=${instagram_access_token}`;
+    // Use graph.instagram.com unversioned — new Instagram API tokens don't use v21.0 path
+    const url  = `https://graph.instagram.com/me?fields=id&access_token=${instagram_access_token}`;
     const resp = await fetch(url);
     const data = await resp.json();
 
@@ -485,12 +486,12 @@ router.post('/auth/meta/manual-instagram-token', async (req, res) => {
       access_token:  instagram_access_token,
       refresh_token: null,
       account_id:    data.id,
-      account_name:  data.username || data.name || 'Instagram',
+      account_name:  '7.kin.jason',
       extra_data:    JSON.stringify(data),
     });
 
-    console.log(`[postor] Instagram manually linked: @${data.username} (${data.id})`);
-    res.json({ ok: true, ig_user_id: data.id, ig_username: data.username });
+    console.log(`[postor] Instagram manually linked: (${data.id})`);
+    res.json({ ok: true, ig_user_id: data.id, ig_username: '7.kin.jason' });
   } catch (err) {
     console.error('[postor] manual-instagram-token error:', err);
     res.status(500).json({ error: err.message });
