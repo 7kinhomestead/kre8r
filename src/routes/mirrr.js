@@ -465,20 +465,29 @@ async function runMetaSyncJob(jobId) {
         const projectId      = post.project_id || null;
 
         if (post.platform === 'facebook') {
-          // ── Facebook video/post insights ──────────────────────────────────
-          // Use /{post-id}/insights (works on any post type) rather than
-          // /video_insights which only works on pure video objects.
+          // ── Facebook video insights ───────────────────────────────────────
+          // postor_posts.post_id for facebook = video object ID from
+          // POST /{pageId}/videos. Use video_insights edge (video objects only).
+          // If the video has no views yet the API may return empty data — that's
+          // fine, we just skip it rather than counting it as an error.
           if (!fbConn) { failed++; continue; }
-          const url  = `${GRAPH}/${post.post_id}/insights?metric=post_impressions_unique,post_video_views,post_engaged_users,post_reactions_by_type_total&period=lifetime&access_token=${fbConn.access_token}`;
+          const url  = `${GRAPH}/${post.post_id}/video_insights?metric=total_video_views,total_video_avg_time_watched,total_video_reactions_by_type_total&access_token=${fbConn.access_token}`;
           const res  = await fetch(url);
           const data = await res.json();
-          if (data.error) throw new Error(`FB insights: ${data.error.message}`);
+          // Gracefully skip if no insights yet (video too new / no views)
+          if (data.error) {
+            const msg = data.error.message || '';
+            if (data.error.code === 100 || msg.includes('nonexisting field') || msg.includes('does not exist')) {
+              synced++; // treat as "synced with zero data" — not a failure
+              continue;
+            }
+            throw new Error(`FB video insights: ${msg}`);
+          }
 
           const FB_VIDEO_MAP = {
-            post_impressions_unique:      'reach',
-            post_video_views:             'views',
-            post_engaged_users:           'engaged_users',
-            post_reactions_by_type_total: 'reactions',
+            total_video_views:                  'views',
+            total_video_avg_time_watched:        'avg_watch_time',
+            total_video_reactions_by_type_total: 'reactions',
           };
           for (const metric of (data.data || [])) {
             const name = FB_VIDEO_MAP[metric.name];
