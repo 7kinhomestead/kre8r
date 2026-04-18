@@ -46,9 +46,14 @@ of future multi-tenancy. Never hardcode creator-specific data anywhere in the en
 - Transcription: Whisper (local Python)
 - DaVinci integration: Python scripting API (port 9237, Local mode, Windows only)
 - Music: Suno API (when configured) or Prompt Mode
+- Social publishing: Meta Graph API (Instagram/Facebook), YouTube Data API v3
+- ngrok: video/image tunnel for Meta API uploads (NGROK_AUTHTOKEN in .env, required for Instagram + FB image posts)
+- Email: MailerLite v2 API (src/routes/mailerlite.js) — broadcast send + scheduling
 - Audience: Kajabi Public API (OAuth2 client_credentials)
+- Auth: express-session + better-sqlite3 session store, bcrypt password hashing
 - Frontend: Vanilla HTML/CSS/JS, dark theme, teal (#14b8a6) accents
-- Process manager: PM2
+- Desktop: Electron (electron/main.js) — wraps Express server, 5-min rolling SQLite backup
+- Process manager: PM2 (local dev / DigitalOcean)
 
 ## CRITICAL DATABASE RULE
 Kre8Ωr uses better-sqlite3 — synchronous, file-based SQLite with WAL mode.
@@ -65,11 +70,16 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 - `src/composor/` — ComposΩr scene analyzer, Suno client
 - `src/writr/` — WritΩr script generation, voice analyzer
 - `src/pipr/` — PipΩr beat tracker, config
+- `src/postor/` — PostΩr publishing engine: meta.js, youtube.js, queue-processor.js, video-tunnel.js
 - `src/utils/claude.js` — Shared Claude API caller (use this everywhere)
+- `src/utils/sse.js` — SSE helpers (attachSseStream, startSseResponse) — use for all SSE endpoints
+- `src/utils/logger.js` — pino logger — use everywhere, never console.error in new code
+- `src/utils/profile-validator.js` — load/validate creator-profile.json — never raw JSON.parse
 - `scripts/davinci/` — Python scripts for DaVinci Resolve integration
 - `public/` — All frontend HTML files (one per module)
 - `public/js/nav.js` — Shared nav component (kre8r-nav div + initNav())
-- `database/` — SQLite db file
+- `electron/main.js` — Electron main process (wraps Express, opens BrowserWindow)
+- `database/` — SQLite db file + kre8r-electron-backup.db (5-min rolling backup)
 - `creator-profile.json` — Soul config for 7 Kin Homestead instance
 - `DEVNOTES.md` — Critical dev notes including DB write rule
 - `OPUS_REVIEW.md` — First senior architecture review (Sessions 1–24)
@@ -78,18 +88,24 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 ## Full Pipeline (Current Build State)
 
 ### PRE-PRODUCTION
+✅ SeedΩr (`/seedr.html`) — Idea vault. `ideas` table: title, concept, angle, notes, status.
+   Bulk entry mode (paste 23 ideas → AI parses all). "Promote to Project" → pre-fills PipΩr.
+   ConstellΩr view: Three.js 3D constellation graph, semantic clusters, color-coded by angle.
+   Ideas persist forever, never tied to a session.
+
 ✅ Id8Ωr (`/id8r.html`) — Ideation engine. 3 modes: Shape It / Find It / Deep Dive.
-   Conversation → sequential web research (120s between phases) → package
-   (3 titles, 3 thumbnails, 3 hooks) → Vision Brief → pipeline handoff to PipΩr/WritΩr.
+   Conversation → sequential web research → package (3 titles, 3 thumbnails, 3 hooks)
+   → Vision Brief → pipeline handoff to PipΩr/WritΩr.
    Session persisted in sessionStorage. Known issue: rate limiting on research phase.
    REDESIGN PLANNED: cut mind map, add fast concept pass → creator chooses → deep research.
 
 ✅ PipΩr (`/pipr.html`) — Project creation, story structure (Save the Cat / Story Circle
-   / VSL / Freeform), beat map, pipeline state tracking.
+   / VSL / Freeform / SHORT FORM), beat map, pipeline state tracking.
+   Short-form sub-structures: Hook→Tension→Payoff, Open Loop, PAS, Before→Bridge→After, etc.
 
 ✅ WritΩr (`/writr.html`) — Script generation in Jason's actual voice using analyzed
    voice profiles. 3 modes: full script / bullets / hybrid. Voice blend slider.
-   Beat cards show emotional_function descriptions.
+   Beat cards show emotional_function descriptions. Short-form mode: 150–300 words, timing per beat.
 
 ✅ DirectΩr (`/director.html`) — Shot list and crew brief generation.
 
@@ -98,6 +114,8 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 ✅ TeleprΩmpter (`/teleprompter.html`) — 3-device system: display / control / voice.
    QR codes on setup screen for voice device and control device (deep-link with ?mode=).
    Voice device: mic drives scroll speed. Session code required on voice device load.
+   Field workflow: Phone 1 hotspot → teleprompter.kre8r.app for all 3 devices.
+   Known issues: Solo tab crashes app; no back button from display screen.
 
 ### PRODUCTION
 - Blackmagic camera shoots .braw files
@@ -119,20 +137,78 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    Confidence check removed — routes purely on shot_type.
    Known issue: proxy_path must be set before transcription can run.
 
-✅ ReviewΩr (`/reviewr.html`) — Rough cut approval UI.
+✅ ReviewΩr (`/reviewr.html`) — Rough cut approval UI. Pure rough cut approval only.
+   Selects list (approve/skip/reorder), extract approved clips (ffmpeg stream copy).
+   CutΩr removed from ReviewΩr — now lives in ClipsΩr.
 
 ✅ ComposΩr (`/composor.html`) — Scene analysis, Suno prompt generation.
+
+✅ ClipsΩr — Viral clip extraction. Accepts approved cuts from ReviewΩr.
+   For short-form: role flips to validator (checks hook timing, retention arc, CTA, loop-ability).
+   `cuts` table + `/api/cutor/` routes.
+   ClipsΩr → CaptionΩr → PostΩr is the short-form exit path.
 
 ### DISTRIBUTION
 ✅ GateΩr (`/m1-approval-dashboard.html`) — Community gating.
 ✅ PackageΩr (`/m2-package-generator.html`) — Platform packaging.
-✅ CaptionΩr (`/m3-caption-generator.html`) — AI captions per platform.
-✅ MailΩr (`/mailor.html`) — Broadcast A/B emails, blog posts, community posts.
+
+✅ CaptionΩr (`/m3-caption-generator.html`) — AI captions per platform (TikTok, Instagram,
+   Facebook, YouTube, Lemon8). Per-clip results. "📤 Send to PostΩr" button on each clip:
+   writes { ig_caption, fb_caption, description, clip_label } to localStorage → opens PostΩr
+   in new tab → PostΩr reads + clears on load (one-shot prefill, zero copy/paste).
+
+✅ MailΩr (`/mailor.html`) — Broadcast A/B emails, blog posts, community posts, Facebook posts.
    Voice blend slider. Kajabi connection banner. Blog + community post checkboxes.
+   📘 Facebook Post checkbox: Claude generates FB caption + hashtags → editable card with
+   Post Now or Schedule tabs → calls /api/postor/fb-post or /api/postor/queue.
+   Email send: MailerLite v2 API. "Send in ~10 min" or "📅 Schedule" tabs with date/time picker
+   and quick buttons (+1d/+2d/+3d/+1wk). sends_at ISO string passed to /api/mailerlite/send.
    Old M4 page still exists at /m4-email-generator.html (legacy, keep for now).
+
+✅ PostΩr (`/postor.html`) — Multi-platform social publishing.
+   Platforms live: YouTube ✅, Facebook video ✅, Facebook text/image post ✅, Instagram Reels ✅
+   TikTok: pending Content Posting API access.
+   Post Now / 📅 Schedule toggle. Schedule: queue table + 60s processor (setInterval in server.js).
+   Week/day calendar view with status-coded chips (pending/posting/posted/failed). Cancel option.
+   CaptionΩr prefill: reads localStorage.captionr_prefill on load, auto-fills ig-caption,
+   fb-description, description fields, clears entry immediately (one-shot).
+   ngrok tunnel (video-tunnel.js / createFileTunnel): spins up per-upload HTTP server + ngrok
+   tunnel so Meta API can reach local files. Required for Instagram and Facebook image posts.
+   `src/postor/`: meta.js (Instagram + Facebook), youtube.js (YouTube), queue-processor.js,
+   video-tunnel.js (createFileTunnel — supports video + image MIME types).
+   DB: postor_queue table (id, video_path, image_path, platforms JSON, captions, scheduled_at, status).
+   Connections stored in postor_connections table (youtube, facebook, instagram).
+
 ✅ AudiencΩr (`/audience.html`) — Kajabi contacts, tags, offers, broadcast-tag SSE.
    Contacts load via GET /contacts (no pagination params — Kajabi returns all at once).
    Tag filter: known issue, Kajabi 500s on filtered requests.
+
+### ANALYTICS & INTELLIGENCE
+✅ MirrΩr (`/mirrr.html`) — YouTube Analytics. 313 videos, 2504 metrics synced.
+   `viral_clips` table. Click-to-edit on clip cards (hook, why_it_works, caption, hashtags).
+   Auto-save on blur → PATCH /api/mirrr/viral-clips/:id.
+   MirrΩr calibration context injected into WritΩr and Id8Ωr prompts.
+
+✅ NorthΩr (`/northr.html`) — Creator dashboard. Email performance (last 5 campaigns,
+   open/click rates). Publishing calendar (real publish dates). Days Since Last Email.
+   Evaluate Last Month: score + weight badges. Copyright Health stats (planned — MarkΩr/GuardΩr).
+
+### INFRASTRUCTURE
+✅ Auth (`/login`) — Session-based login (express-session + better-sqlite3 store).
+   `users` table (bcrypt passwords), `sessions` table. Owner / viewer roles.
+   First run: seeds default owner from KRE8R_OWNER_PW env var.
+   kre8r.app protected by this auth (replaces old nginx basic auth).
+
+✅ SyncΩr (`/sync.html`) — Cross-device project sync.
+   `src/routes/local-sync.js` — local proxy (config, push, pull, import).
+   createProjectFromSnapshot: non-destructive, ID-preserving import.
+   Desktop → kre8r.app → Laptop confirmed working end-to-end.
+
+✅ Electron Desktop App — `electron/main.js` wraps Express server in BrowserWindow.
+   Setup wizard on first run (getUserCount() === 0 → /setup). Diagnostic error dialog on failure.
+   5-min rolling SQLite backup → database/kre8r-electron-backup.db.
+   Installer: `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.0.exe` (~238MB).
+   `window.__KRE8R_ELECTRON` flag set by main.js — use this to detect Electron context in frontend.
 
 ## Creator Profile
 **Jason Rutland** — 7 Kin Homestead
@@ -212,24 +288,28 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 7. ~~No backup strategy for SQLite file~~ — Electron 5-min rolling backup to database/kre8r-electron-backup.db
 8. ~~Hardcoded Windows paths~~ — FIXED Session 31 (DB_PATH, FFMPEG_PATH, CREATOR_PROFILE_PATH all env-var driven)
 9. Whisper model download has no progress indicator on first transcription run (looks like hang)
-10. ~~MirrΩr: `no such column: pr.angle` and `TypeError: Assignment to constant variable`~~ — FIXED (po.angle + let evalMonth/evalYear)
+10. ~~MirrΩr: `no such column: pr.angle` and `TypeError: Assignment to constant variable`~~ — FIXED
+11. TeleprΩmpter: Solo tab crashes the app — Solo tab Cloud Launch breaks teleprompter, requires full restart
+12. TeleprΩmpter: No back button from display screen — only exit is "📋 Scripts" button (hidden by default)
+13. PostΩr: TikTok platform stub — wired in UI but pending TikTok Content Posting API access approval
 
 ## Planned Features (Not Yet Built)
+- MarkΩr + GuardΩr — Copyright protection + community enforcement (spec in TODO.md, build plan: 3 sessions)
+- TikTok Content Posting API — pending access for @7.kin.jason
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
 - Cari creator profile (second voice profile for Rock Rich Shows)
-- Configurable workflow order (onboarding wizard)
 - RetentΩr — viral clip / retention cut module (post-edit, split from SelectsΩr)
-- CoverageΩr — coverage tracking
-- Affiliate link manager
-- AffiliateΩr (working name) — track links, commissions, video placement, performance
-- NotebookLM/Gamma integration in Id8Ωr research phase
-- VaultΩr subject/topic tagging at ingest
+- AffiliateΩr — track links, commissions, video placement, performance
+- VaultΩr subject/topic tagging at ingest for semantic search
 - Analytics feedback loop (TikTok/YouTube performance → Id8Ωr recommendations)
-- Multi-tenant creator profiles
+- Multi-tenant creator profiles (auth infrastructure in place, tenant isolation not built)
 - Playwright automation for Kajabi (broadcasts, sequences, community posts)
+- Android APK for field TeleprΩmpter (zero-signal fallback, sideload)
+- NotebookLM/Gamma integration in Id8Ωr research phase
+- Configurable workflow order (onboarding wizard)
 
 ## Commercialization Notes
-- kre8r.app — live on DigitalOcean, SSL, nginx, password protected (demo/kre8r2024)
+- kre8r.app — live on DigitalOcean, SSL, nginx, session-based auth (owner login via KRE8R_OWNER_PW)
 - Deploy: cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master &&
   sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
 - DigitalOcean console more reliable than SSH
