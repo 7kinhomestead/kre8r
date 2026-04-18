@@ -42,18 +42,84 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 
 ## NEXT SESSION — Top Tasks
 
-### 1. Update CLAUDE.md to Reflect Current Build State
-CLAUDE.md is several sessions behind. Key gaps:
-- PostΩr: Instagram ✅ live, scheduler ✅ live, MailΩr FB post ✅ live, CaptionΩr handoff ✅ live
-- Mark multi-tenant beta infrastructure complete
-- Update Known Issues (several fixed)
-- Update Full Pipeline section — full distribution loop now automated
+### 1. ~~Update CLAUDE.md to Reflect Current Build State~~ ✅ DONE Session 46
+All modules documented. PostΩr, SeedΩr, ClipsΩr, MirrΩr, NorthΩr, SyncΩr, Electron, Auth all current.
 
 ### 2. TikTok API — Research & Wire
 TikTok posting is the last major platform stub. Research current TikTok Content Posting API status, check if @7.kin.jason account is eligible, and wire if available.
 
-### 3. PostΩr → ClipsΩr Wiring
-Direct handoff from ClipsΩr approved clips to PostΩr — select a rendered clip from ClipsΩr and send directly to PostΩr with captions pre-filled (captions already handled by CaptionΩr→PostΩr handoff).
+### 3. PostΩr Batch Mode — Campaign Builder (see full spec below)
+The current one-clip-at-a-time flow doesn't scale. Replace with a batch caption + scheduling board workflow.
+
+---
+
+## PostΩr Batch Mode — Campaign Builder
+
+### The Problem
+The current flow (CaptionΩr → "Send to PostΩr" → new tab → pick video → schedule) works for one clip.
+For a week of content it's a chore. Six clips = six separate trips through the same loop.
+
+### The Insight
+The queue processor (60s interval) IS already the local clock. Platforms don't need to schedule — Kre8r does.
+What's missing: a way to feed the queue in bulk and a scheduling board to assign clips to time slots.
+
+### The Workflow
+```
+DaVinci exports clips → D:\kre8r\intake → VaultΩr picks them up automatically
+    ↓
+PostΩr "Campaign" tab: "Unpackaged clips" list — clips VaultΩr ingested but not yet queued
+    ↓
+Creator selects clips → "Generate Captions for All" → CaptionΩr runs in batch (one Claude call per clip)
+    ↓
+Scheduling board: week grid (Mon–Sun × time slots). Drag clips into slots. Assign platforms per slot.
+    ↓
+"Lock Schedule" → all slots drop into postor_queue with correct scheduled_at timestamps
+    ↓
+Queue processor fires on Kre8r's clock. Platform scheduling irrelevant.
+```
+
+### Entry Points (two paths, same destination)
+1. **VaultΩr path (primary):** "Unpackaged clips" = vault_footage records with no postor_queue entry.
+   Filter by date range (default: last 7 days). Select all or pick individually.
+2. **Drag-drop path (fast lane):** Drag a folder of .mp4 files directly into the Campaign tab.
+   Kre8r ingests them on the spot (creates vault_footage records if they don't exist) + runs captions.
+   Useful for clips that bypassed the normal VaultΩr intake.
+
+### Scheduling Board UI
+- **Week grid:** 7 columns (days) × time slot rows (configurable: e.g. 7am, 12pm, 5pm, 8pm)
+- **Clip cards:** thumbnail + duration + AI-generated title. Drag from sidebar → drop into slot.
+- **Platform badges:** per slot, toggle which platforms this clip goes to (IG, FB, YT, TikTok)
+- **Caption preview:** hover/click a slot → see the platform-specific captions (editable inline)
+- **Lock Schedule button:** validates all slots have video + at least one platform → batch-insert to postor_queue
+- **Conflicts:** if a slot already has a queued post, show warning before overwriting
+
+### Batch Caption Generation
+- One Claude call per clip (same CaptionΩr prompts, just automated in a loop)
+- SSE progress stream: "Generating captions for clip 3 of 7…"
+- Results stored: either a new `caption_packages` table or as JSON on the vault_footage record
+- Editable after generation — creator can tweak before locking schedule
+
+### DB Changes
+- New column on `vault_footage`: `caption_package TEXT` (JSON: { tiktok, instagram, facebook, youtube, lemon8 })
+  OR a separate `caption_packages` table if we want versioning
+- `postor_queue` already has all needed columns — no changes required
+
+### Build Plan (1–2 sessions)
+**Session A:**
+- "Campaign" tab in postor.html (alongside existing single-post UI — not replacing it)
+- "Unpackaged clips" list from VaultΩr
+- Batch caption generation with SSE progress
+- Caption review/edit UI per clip
+
+**Session B:**
+- Scheduling board (week grid, drag-drop with sortable.js or similar)
+- Platform badges per slot
+- "Lock Schedule" → batch postor_queue insert
+- Drag-drop folder intake (fast-lane path)
+
+### Design Principle
+Single-post mode stays exactly as-is for one-offs. Campaign mode is additive — the tab next to it.
+Creator never loses access to the quick flow. Batch is opt-in, not a replacement.
 
 ---
 
