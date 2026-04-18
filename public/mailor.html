@@ -1225,8 +1225,16 @@ function populateVoiceDropdowns() {
       pSel.add(pOpt);
       sSel.add(sOpt);
     }
-    if (existingPrimary) pSel.value = existingPrimary;
+    // Auto-select first profile if no previous selection
+    if (existingPrimary) {
+      pSel.value = existingPrimary;
+    } else if (voiceProfiles.length > 0) {
+      pSel.value = voiceProfiles[0].name;
+    }
   }
+  // Sync secondary-col visibility for both sections
+  onBcVoiceChange();
+  onSeqVoiceChange();
 }
 
 // ─────────────────────────────────────────────

@@ -1264,8 +1264,17 @@
 
         if (btn) { btn.disabled = false; btn.textContent = `✓ ${n} timelines in Resolve`; }
 
-        // Show persistent breadcrumb card below the button wrap
-        showDaVinciSuccessCard(n, data.project_name);
+            // Show persistent breadcrumb card below the button wrap
+        // Fetch project folder_path so we can point to the exact clips subfolder
+        let projectFolderPath = null;
+        if (currentFootage?.project_id) {
+          try {
+            const pr = await fetch(`/api/projects/${currentFootage.project_id}`);
+            const pd = await pr.json();
+            if (pd?.folder_path) projectFolderPath = pd.folder_path.replace(/\//g, '\\');
+          } catch (_) {}
+        }
+        showDaVinciSuccessCard(n, data.project_name, projectFolderPath);
 
       } catch (e) {
         showToast('Network error: ' + e.message, 'red');
@@ -1276,12 +1285,15 @@
     // ─────────────────────────────────────────────
     // DaVinci success breadcrumb — persistent next-step card
     // ─────────────────────────────────────────────
-    function showDaVinciSuccessCard(timelineCount, projectName) {
+    function showDaVinciSuccessCard(timelineCount, projectName, projectFolderPath) {
       // Remove any previous card
       const existing = document.getElementById('davinci-success-card');
       if (existing) existing.remove();
 
-      const renderPath = 'D:\\kre8r\\intake';
+      // Use project clips subfolder if available, otherwise fall back to intake root
+      const renderPath = projectFolderPath
+        ? projectFolderPath + '\\clips\\'
+        : 'D:\\kre8r\\intake';
       const pid = currentFootage?.project_id;
       const postorUrl = pid
         ? `/postor.html?project_id=${pid}`

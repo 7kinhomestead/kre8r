@@ -45,12 +45,13 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 ### 1. ~~Update CLAUDE.md to Reflect Current Build State~~ ✅ DONE Session 46
 All modules documented. PostΩr, SeedΩr, ClipsΩr, MirrΩr, NorthΩr, SyncΩr, Electron, Auth all current.
 
-### 2. Project Folder Architecture — Pipeline-Wide (see full spec below)
-PipΩr creates project folder on disk at project creation. ShootDay shows copyable DaVinci paths.
-VaultΩr goes recursive. Campaign Builder reads from project clips/ folder. Full alignment spec below.
+### ~~2. Project Folder Architecture — Pipeline-Wide~~ ✅ DONE (prev session)
+PipΩr creates [id]_[slug]/{raw,completed,clips} at project creation. ShootDay shows all 3
+copyable paths. VaultΩr watcher depth:5, parseProjectFromPath auto-assigns project_id +
+shot_type on ingest. ClipsΩr breadcrumb now shows actual project clips/ path.
 
-### 3. PostΩr Batch Mode — Campaign Builder (see full spec below)
-Depends on Project Folder Architecture. Build after folders are wired.
+### ~~3. PostΩr Batch Mode — Campaign Builder~~ ✅ DONE Sessions 46+47
+Campaign tab live. caption_package prefill. Schedule board. Lock Schedule → postor_queue.
 
 ### 4. TikTok API — Research & Wire
 TikTok posting is the last major platform stub. Research current TikTok Content Posting API status, check if @7.kin.jason account is eligible, and wire if available.
