@@ -941,6 +941,13 @@
         <div class="pub-stat-value" id="ps-email">—</div>
         <div class="pub-stat-label">Days Since Last Email</div>
       </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="ps-sync">—</div>
+        <div class="pub-stat-label" style="display:flex;align-items:center;gap:5px;">
+          Days Since MirrΩr Sync
+          <button id="mirrr-sync-btn" onclick="syncMirrrNow()" title="Sync YouTube analytics now" style="background:none;border:none;cursor:pointer;color:var(--teal);font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🔄</button>
+        </div>
+      </div>
     </div>
     <div class="cal-grid" id="pub-calendar"></div>
     <div class="cal-legend">
@@ -1045,6 +1052,7 @@ async function loadDashboard() {
     renderGoals(data.goals, data.stats);
     renderCalendar(data.published_dates || []);
     loadEmailStats();
+    loadMirrrSyncStatus();
 
     if (data.report?.content) {
       renderStrategy(data.report.content);
@@ -1344,6 +1352,59 @@ function renderStats(stats) {
   emailEl.textContent = emailGap;
   if (typeof emailGap === 'number') {
     emailEl.className = 'pub-stat-value' + (emailGap >= 14 ? ' danger' : emailGap >= 10 ? ' warn' : '');
+  }
+}
+
+// ── MirrΩr Sync Status ─────────────────────────────────────────────────────────
+async function loadMirrrSyncStatus() {
+  try {
+    const res  = await fetch('/api/mirrr/cached-results');
+    const data = await res.json();
+    const el   = document.getElementById('ps-sync');
+    if (!el) return;
+    if (!data.last_sync) {
+      el.textContent = '—';
+      el.className   = 'pub-stat-value warn';
+      return;
+    }
+    const days = Math.floor((Date.now() - new Date(data.last_sync).getTime()) / 86400000);
+    el.textContent = days;
+    el.className   = 'pub-stat-value' + (days >= 14 ? ' danger' : days >= 7 ? ' warn' : '');
+  } catch (_) { /* non-critical */ }
+}
+
+let _mirrrSyncStream = null;
+
+async function syncMirrrNow() {
+  const btn = document.getElementById('mirrr-sync-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⟳'; }
+  try {
+    const res  = await fetch('/api/mirrr/youtube-sync', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Sync failed to start');
+    toast('YouTube sync started! Updating analytics in the background…');
+    if (_mirrrSyncStream) { _mirrrSyncStream.close(); _mirrrSyncStream = null; }
+    _mirrrSyncStream = new EventSource(`/api/mirrr/jobs/${data.job_id}/stream`);
+    _mirrrSyncStream.onmessage = async (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'done') {
+        _mirrrSyncStream.close(); _mirrrSyncStream = null;
+        toast(`Sync complete — ${msg.synced} videos updated`, 'success');
+        await loadMirrrSyncStatus();
+        if (btn) { btn.disabled = false; btn.textContent = '🔄'; }
+      } else if (msg.type === 'error') {
+        _mirrrSyncStream.close(); _mirrrSyncStream = null;
+        toast('Sync error: ' + msg.message, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '🔄'; }
+      }
+    };
+    _mirrrSyncStream.onerror = () => {
+      _mirrrSyncStream.close(); _mirrrSyncStream = null;
+      if (btn) { btn.disabled = false; btn.textContent = '🔄'; }
+    };
+  } catch (e) {
+    toast('Failed to start sync: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '🔄'; }
   }
 }
 
