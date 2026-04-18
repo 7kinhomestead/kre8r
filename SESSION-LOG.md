@@ -1,3 +1,64 @@
+# Session 43 — PostΩr Meta Integration + Instagram Battle (2026-04-17)
+
+## Goal
+Connect Facebook and Instagram to PostΩr for direct video publishing. Add pipeline prefill (auto-populate title/captions from PackageΩr/CaptionΩr when a project video is picked). Add YouTube Studio post-upload checklist.
+
+## What Was Built
+
+### PostΩr Pipeline Prefill
+- `GET /api/postor/project/:id/prefill` — when a vault video with a `project_id` is picked in PostΩr, auto-fetches the selected package title, YouTube description, and per-platform captions (instagram, facebook, tiktok, youtube)
+- `postor.html` — `onVaultPick()` calls `prefillFromProject()` on videos with a project_id. Teal notice banner shows what was pre-populated, dismissable. `clearPrefill()` resets all fields.
+
+### YouTube Studio Checklist Card
+- After successful YouTube upload, a checklist card appears with a direct **"Open in Studio →"** link to `studio.youtube.com/video/{VIDEO_ID}/edit`
+- 8 checkboxes: Monetization, End Screens, Cards, Chapters, Thumbnail, Subtitles/CC, Language, Playlist
+- "All steps done ✓" message when all checked
+
+### Meta OAuth — Manual Token Flow (bypass broken redirect URI)
+- `POST /api/postor/auth/meta/manual-token` — accepts a Graph API Explorer user token, exchanges for long-lived token, discovers pages, stores facebook + instagram connections
+- `POST /api/postor/auth/meta/select-page` — stores a specific page from the page list as active Facebook connection
+- `POST /api/postor/auth/meta/link-instagram` — uses stored page token to query `instagram_business_account` field
+- `POST /api/postor/auth/meta/manual-instagram-token` — accepts Instagram token from Graph API Explorer with Instagram actor selected, calls `/me` to get ig_user_id
+- `POST /api/postor/auth/meta/set-instagram-id` — last-resort hardcode: stores ig_user_id directly using existing FB page token
+- `GET /api/postor/auth/meta/debug-instagram` — diagnostic endpoint: tries all IG-related fields on stored page token + user token, reports what permissions are actually granted
+
+### Meta OAuth — HTTPS Fix for kre8r.app
+- `src/postor/meta.js` `getCallbackUrl()` — now reads `X-Forwarded-Proto` header so OAuth behind nginx correctly constructs `https://` redirect URIs instead of `http://`
+
+### TODO.md — Desktop-Only Gate
+- Added full section documenting which features require local Electron context (PostΩr upload, VaultΩr watcher, EditΩr preview, DaVinci, Whisper, Teleprompter QR) with three suggested gating approaches
+
+## Facebook Posting — ✅ WORKING
+- Manually connected 7 Kin Homestead page (ID: 349249388773693) via `manual-token` + `select-page`
+- Tested end-to-end: video posted successfully to Facebook Page
+- Page token stored, `publish_video` scope working
+
+## Instagram Posting — BLOCKED (documented, not abandoned)
+Root cause: Kre8r app (ID: 1989481785304507) lives in Jason Rutland's business portfolio. Instagram @7.kin.jason lives in Sunburned Ass Ranch portfolio. `instagram_content_publish` scope requires the app and IG account to be in the same portfolio.
+
+**Progress made this session:**
+- SAR system user "Kre8r" created (ID: 61567987943128)
+- SAR Kre8r app found (ID: 920653054187075) — has "Manage everything on your Page" use case
+- Instagram use case blocked by requiring Instagram browser login to add
+- User's Instagram password unavailable on computer; phone login not transferable
+
+**To unblock next session:**
+1. Log into Instagram on computer (use Forgot Password → reset via phone SMS)
+2. In developers.facebook.com → SAR Kre8r app (920653054187075) → Add use cases → Instagram
+3. Assign Kre8r system user (61567987943128) as admin on that app
+4. Generate never-expiring system user token → run `POST /api/postor/auth/meta/manual-token` locally
+5. `ig_user_id` will populate → test Reel publish
+
+## Commits
+- `777e2fd` PostΩr: Facebook connected, pipeline prefill, YouTube Studio checklist
+- `20d6f85` PostΩr: fix HTTPS redirect URI for DO, add Instagram debug/manual-link endpoints
+- `764a502` PostΩr: temporarily strip instagram_content_publish from OAuth scopes
+
+## Status
+All changes committed and pushed. Facebook posting live and tested. Instagram unblocked path clearly documented. DO server running (PM2 id 4, port 3000).
+
+---
+
 # Session 42 — WritΩr Storyboard Brief Pipeline: Root Cause Diagnosis + Fix (2026-04-17)
 
 ## Goal

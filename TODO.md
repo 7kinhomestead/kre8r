@@ -42,41 +42,35 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 
 ## NEXT SESSION — Top 3 Tasks
 
-### 1. Verify Storyboard Pipeline End-to-End + Deploy to DigitalOcean
-Confirm the full Id8Ωr → PipΩr → WritΩr storyboard flow works correctly on a real project
-after the session-persistence and brief-fallback fixes from Session 42.
+### 1. Finish Instagram Connection (30 min if Meta cooperates)
+The path is clear — just needs Instagram browser login to unblock.
 
-**What to confirm:**
-- Open project 667 "Why I Chose the Harder Life" in WritΩr → Build Storyboard → verify beats
-  map to real homesteading content (not gym/startup hallucinations)
-- Complete one fresh Id8Ωr session → Send to PipΩr → WritΩr → confirm `id8r_data` is populated
-- Restart Electron mid-session, verify session checkpoint restores and pipeline continues
-- Once confirmed working: `git push origin master` then deploy to DO:
-  ```
-  cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
-  sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
-  ```
+**Exact steps:**
+1. Go to instagram.com → Forgot Password → reset via phone SMS → log in on computer
+2. `developers.facebook.com` → SAR Kre8r app (ID: `920653054187075`) → Use Cases → Add use cases → find Instagram/Content Publishing → add it
+3. Still in SAR Kre8r app → assign Kre8r system user (ID: `61567987943128`) as Admin
+4. SAR Business Manager → System Users → Kre8r → Generate Token → select SAR Kre8r app → Never expire → check all Instagram permissions
+5. Run in local browser console: `fetch('/api/postor/auth/meta/manual-token', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_access_token:'TOKEN'})}).then(r=>r.json()).then(console.log)`
+6. Confirm `ig_user_id` is populated → test Reel publish from PostΩr
 
-### 2. Multi-Tenant Beta Infrastructure (Option B)
-Build per-tenant provisioning so 3-5 beta creators can each get their own isolated instance on kre8r.app.
+### 2. PostΩr Pipeline Prefill — End-to-End Verification
+Built this session but not tested with real data.
 
-**What to build:**
-- `src/routes/admin.js` — `/admin` panel (Jason only): create tenant → provisions `data/{slug}/` folder, copies template DB, generates invite token + URL
-- Tenant-aware middleware: reads `Host` header → sets `req.tenant` → loads `data/{slug}/kre8r.db` and `data/{slug}/creator-profile.json`
-- `/onboarding?token=xxx` — multi-step soul setup wizard: brand name, creator name, platform handles, content angles, voice style description, Anthropic API key, set password
-- Voice library capped at 3 analyses per tenant
-- nginx config: `*.kre8r.app` wildcard → same Node process (DO console)
+**What to verify:**
+- Pick a vault video that has a `project_id` in PostΩr
+- Confirm teal prefill notice appears with title from PackageΩr
+- Confirm YouTube description field auto-populates
+- Confirm Instagram caption auto-populates from CaptionΩr
+- Test clearPrefill() resets all fields cleanly
 
-### 3. DaVinci Mac/Linux Path Fix
-Update the 7 Python scripts so DaVinci integration works on Mac and Linux without needing env var overrides.
+### 3. Update CLAUDE.md to Reflect Current Build State
+CLAUDE.md is several sessions behind — missing PostΩr, multi-tenant, and other shipped features.
 
-**What to fix:**
-- All 7 `scripts/davinci/*.py` files: replace hardcoded `C:\ProgramData\Blackmagic Design\...` defaults with `sys.platform` detection:
-  - `win32` → current Windows paths
-  - `darwin` → `/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/` + `.so` lib
-  - `linux` → `/opt/resolve/Developer/Scripting/` + `.so` lib
-- `server.js` health check: replace `tasklist /FI "IMAGENAME eq Resolve.exe"` with cross-platform process detection (`pgrep` on Mac/Linux)
-- Test: have Charlie run the DaVinci flow on his Mac
+**What to update:**
+- PostΩr section: Facebook ✅ working, Instagram blocked path documented
+- Mark multi-tenant beta infrastructure as complete
+- Update Known Issues list (several items fixed)
+- Update Full Pipeline section — distribution tools all live
 
 ---
 
@@ -108,8 +102,15 @@ Login/tour persistence fixed in Electron (30-day cookie + server-side KV for tou
 
 **Still needed:**
 - [ ] **YouTube ad revenue** — blocked by Google (Content Owner tier required, not standard YPP). Manual entry in NorthΩr from YouTube Studio CSV. Add manual revenue entry field to NorthΩr.
-- [ ] **Instagram credentials** — connect Meta OAuth in PostΩr (Facebook Page + Instagram Business account)
-- [ ] **Facebook posting** — same Meta OAuth flow, test video upload
+- [x] **Facebook posting** — working ✅ (manual-token flow, 7 Kin Homestead page connected, test video posted)
+- [ ] **Instagram posting** — BLOCKED by Meta app configuration. Root cause: `instagram_content_publish`
+      and `publish_video` scopes are not available in the Kre8r Business app (ID: 1989481785304507)
+      because the app lives in the Jason Rutland business portfolio and the Instagram @7.kin.jason
+      lives in the Sunburned Ass Ranch portfolio. Fix: move the Kre8r app to Sunburned Ass Ranch
+      portfolio in Meta Business Manager → then re-add use cases → regenerate token via
+      `POST /api/postor/auth/meta/manual-token` → `ig_user_id` will populate.
+      Interim endpoints built: `/auth/meta/set-instagram-id`, `/auth/meta/manual-instagram-token`,
+      `/auth/meta/debug-instagram` (all ready to use once token is sorted).
 - [ ] **TikTok** — waiting on TikTok API availability
 - [ ] **PostΩr → test clip upload** — upload a rendered ClipsΩr clip via PostΩr bulk queue
 - [ ] **Analytics re-sync schedule** — add a "last synced" timestamp and prompt to re-sync weekly
