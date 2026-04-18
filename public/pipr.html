@@ -428,6 +428,20 @@
 
     <div id="valid-banner-2" class="validation-banner"></div>
 
+    <!-- Smart structure suggestion banner — shown when content_type maps to a known structure -->
+    <div id="struct-suggest-banner" style="display:none;flex-direction:column;gap:8px;background:rgba(20,184,166,0.08);border:1px solid rgba(20,184,166,0.35);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--teal);text-transform:uppercase;margin-bottom:2px;">🎯 Suggested Structure</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <span id="struct-suggest-icon" style="font-size:22px;line-height:1;"></span>
+        <span id="struct-suggest-label" style="font-family:var(--font-head);font-size:16px;letter-spacing:1px;color:var(--text);font-weight:700;"></span>
+      </div>
+      <div id="struct-suggest-why" style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:6px;"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" style="padding:6px 18px;font-size:13px;" onclick="useSuggestedStructure()">Use This →</button>
+        <button class="btn btn-ghost" style="padding:6px 14px;font-size:13px;" onclick="dismissStructureSuggestion()">Browse All</button>
+      </div>
+    </div>
+
     <!-- Id8Ωr concept card — shown only when arriving from Id8Ωr -->
     <div id="id8r-concept-card" style="display:none;background:var(--teal-glow);border:1px solid var(--teal);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
       <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--teal);text-transform:uppercase;margin-bottom:6px;">✨ Id8Ωr Concept</div>
@@ -1039,6 +1053,7 @@ function showScreen(idx) {
   currentStep = idx;
   if (isFromId8r) updateId8rIndicator(idx); else updateStepIndicator(idx);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (idx === 2) showStructureSuggestion();
 }
 
 // ── ID8ΩR FORM HELPERS ──
@@ -1111,6 +1126,52 @@ function selectDepth(val) {
   document.querySelectorAll('.depth-pill').forEach(p => p.classList.remove('selected'));
   const pill = document.getElementById('dpill-' + val);
   if (pill) pill.classList.add('selected');
+}
+
+// ── SMART STRUCTURE SUGGESTION ──
+const STRUCTURE_MAP = {
+  rock_rich_episode: { key: 'rock_rich',               icon: '⛏️',  label: 'ROCK RICH EPISODE',       why: 'Gold Rush meets documentary. The land fights back. Perfect match for this content type.' },
+  educational:       { key: 'myth_buster',              icon: '🔬',  label: 'THE MYTH BUSTER',          why: 'Counterintuitive premise + systematic dismantling = the highest-retention educational format.' },
+  vsl:               { key: 'vsl_arc',                  icon: '📈',  label: 'VSL ARC',                  why: 'Hook → Problem → Agitate → Solve → Offer → CTA. The gold standard for conversion content.' },
+  documentary:       { key: 'documentary_arc',          icon: '🎬',  label: 'DOCUMENTARY ARC',          why: 'Real-time pursuit, crisis, and resolution. Feels cinematic — Discovery Channel DNA.' },
+  day_in_the_life:   { key: 'rock_rich',               icon: '⛏️',  label: 'ROCK RICH EPISODE',       why: 'Day-in-the-life content hits hardest with the Rock Rich format — tension and resolution built in.' },
+  transformation:    { key: 'before_after_bridge',      icon: '🌉',  label: 'BEFORE / AFTER BRIDGE',    why: 'The transformation arc. Painful before, specific bridge, clear after. Built for this.' },
+  adventure:         { key: 'heros_gauntlet',           icon: '⚔️',  label: "THE HERO'S GAUNTLET",     why: 'Three escalating obstacles create three retention peaks. Perfect architecture for adventure.' },
+  emotional_personal:{ key: 'confession_arc',           icon: '🎙️', label: 'THE CONFESSION ARC',       why: 'Admit something uncomfortable first. Vulnerability creates trust that carries the video.' },
+  launch:            { key: 'vsl_arc',                  icon: '📈',  label: 'VSL ARC',                  why: 'The proven conversion framework. Every launch video that works follows this shape.' },
+  short_form:        { key: 'short_hook_tension_payoff',icon: '⚡',  label: 'HOOK → TENSION → PAYOFF',  why: '3 beats. The simplest short-form structure — start here and you can\'t go wrong.' }
+};
+
+function showStructureSuggestion() {
+  const banner = document.getElementById('struct-suggest-banner');
+  if (!banner) return;
+  const ct = form.content_type;
+  const suggestion = ct && STRUCTURE_MAP[ct];
+  // Don't show if no match, or if structure already chosen
+  if (!suggestion || form.story_structure) { banner.style.display = 'none'; return; }
+  document.getElementById('struct-suggest-icon').textContent  = suggestion.icon;
+  document.getElementById('struct-suggest-label').textContent = suggestion.label;
+  document.getElementById('struct-suggest-why').textContent   = suggestion.why;
+  banner.dataset.suggestedKey = suggestion.key;
+  banner.style.display = 'flex';
+}
+
+function useSuggestedStructure() {
+  const banner = document.getElementById('struct-suggest-banner');
+  const key = banner?.dataset.suggestedKey;
+  if (!key) return;
+  banner.style.display = 'none';
+  selectStructure(key);
+  // Scroll to highlight the selected card + depth picker
+  setTimeout(() => {
+    const card = document.getElementById('scard-' + key);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 80);
+}
+
+function dismissStructureSuggestion() {
+  const banner = document.getElementById('struct-suggest-banner');
+  if (banner) banner.style.display = 'none';
 }
 
 // ── SCREEN 3: CONTENT VARIANT ──

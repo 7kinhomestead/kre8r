@@ -1264,10 +1264,77 @@
 
         if (btn) { btn.disabled = false; btn.textContent = `✓ ${n} timelines in Resolve`; }
 
+        // Show persistent breadcrumb card below the button wrap
+        showDaVinciSuccessCard(n, data.project_name);
+
       } catch (e) {
         showToast('Network error: ' + e.message, 'red');
         if (btn) { btn.disabled = false; btn.textContent = '🎬 Send to DaVinci'; }
       }
+    }
+
+    // ─────────────────────────────────────────────
+    // DaVinci success breadcrumb — persistent next-step card
+    // ─────────────────────────────────────────────
+    function showDaVinciSuccessCard(timelineCount, projectName) {
+      // Remove any previous card
+      const existing = document.getElementById('davinci-success-card');
+      if (existing) existing.remove();
+
+      const renderPath = 'D:\\kre8r\\intake';
+      const pid = currentFootage?.project_id;
+      const postorUrl = pid
+        ? `/postor.html?project_id=${pid}`
+        : '/postor.html';
+
+      const card = document.createElement('div');
+      card.id = 'davinci-success-card';
+      card.style.cssText = [
+        'margin-top:16px',
+        'padding:16px 18px',
+        'background:rgba(20,184,166,0.07)',
+        'border:1px solid rgba(20,184,166,0.3)',
+        'border-radius:10px',
+        'font-size:13px',
+        'line-height:1.6',
+        'color:#e5e5e5'
+      ].join(';');
+
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;color:#14b8a6;text-transform:uppercase;">
+            ✅ ${timelineCount} Timeline${timelineCount !== 1 ? 's' : ''} in Resolve${projectName ? ` — "${escHtml(projectName)}"` : ''}
+          </div>
+          <button onclick="this.closest('#davinci-success-card').remove()" style="background:none;border:none;color:#666;font-size:16px;cursor:pointer;line-height:1;flex-shrink:0;" title="Dismiss">✕</button>
+        </div>
+        <div style="color:#aaa;margin-bottom:10px;">
+          When you finish editing in DaVinci, render your vertical clips to:
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <code style="background:#1e1e1e;border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:12px;color:#e5e5e5;letter-spacing:.3px;">${escHtml(renderPath)}</code>
+          <button onclick="copyRenderPath('${renderPath.replace(/\\/g,'\\\\')}')" style="background:#1e1e1e;border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:11px;color:#aaa;cursor:pointer;white-space:nowrap;" id="copy-path-btn">📋 Copy Path</button>
+        </div>
+        <div style="color:#aaa;margin-bottom:10px;font-size:12px;">
+          VaultΩr watches that folder — clips land automatically and appear in <strong style="color:#e5e5e5;">PostΩr → Campaign Builder</strong> once they're tagged as social clips.
+        </div>
+        <a href="${postorUrl}" style="display:inline-block;background:#14b8a6;color:#000;font-weight:700;font-size:12px;border-radius:6px;padding:6px 14px;text-decoration:none;letter-spacing:.3px;">→ Open PostΩr Campaign Builder</a>`;
+
+      // Insert below the davinci-btn-wrap
+      const btnWrap = document.getElementById('davinci-btn-wrap');
+      if (btnWrap && btnWrap.parentNode) {
+        btnWrap.parentNode.insertBefore(card, btnWrap.nextSibling);
+      } else {
+        // Fallback: append to main area
+        const main = document.getElementById('main-area');
+        if (main) main.appendChild(card);
+      }
+    }
+
+    function copyRenderPath(path) {
+      navigator.clipboard.writeText(path).then(() => {
+        const btn = document.getElementById('copy-path-btn');
+        if (btn) { btn.textContent = '✓ Copied'; setTimeout(() => { btn.textContent = '📋 Copy Path'; }, 2000); }
+      }).catch(() => showToast('Copy failed — path: ' + path, 'red'));
     }
 
     // ─────────────────────────────────────────────

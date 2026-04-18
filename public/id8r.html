@@ -1975,14 +1975,19 @@
           if (angleEl) angleEl.value = idea.angle;
         }
 
-        // Show a subtle vault badge above the textarea
-        const wrap = document.querySelector('.fast-input-wrap');
-        if (wrap) {
+        // Show a SeedΩr origin badge above the textarea
+        const textarea = document.getElementById('fast-input-text');
+        if (textarea && textarea.parentNode) {
           const badge = document.createElement('div');
-          badge.style.cssText = 'background:rgba(62,207,178,0.08);border:1px solid rgba(62,207,178,0.25);border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:12px;color:#3ecfb2;';
-          badge.innerHTML = `💡 From SeedΩr vault — <strong>${idea.title}</strong>. Develop it below, then Save to Vault when done.`;
-          const textarea = document.getElementById('fast-input-text');
-          if (textarea) wrap.insertBefore(badge, textarea);
+          badge.style.cssText = [
+            'font-size:12px;color:var(--teal);margin-bottom:12px;',
+            'display:flex;align-items:center;gap:8px;',
+            'background:rgba(62,207,178,0.08);border:1px solid rgba(62,207,178,0.25);',
+            'border-radius:6px;padding:8px 12px;'
+          ].join('');
+          badge.innerHTML = `<span style="font-size:16px">🌱</span>
+            <span>From SeedΩr — <strong style="color:#e5e5e5">${idea.title}</strong>${idea.angle ? `<span style="opacity:.6;margin-left:6px;font-size:11px;">· ${idea.angle}</span>` : ''}</span>`;
+          textarea.parentNode.insertBefore(badge, textarea);
         }
       })
       .catch(() => {});
