@@ -194,7 +194,7 @@
 
   <div class="page-header">
     <div class="page-title">GATE<br><em>APPROVALS</em></div>
-    <div class="page-sub">Every video in the pipeline lands here. Gate A picks the package. Gate B approves captions. Gate C approves emails. One click per gate — then it's done.</div>
+    <div class="page-sub">Every video that needs a decision lands here. One queue — pick a package, approve captions, sign off on emails — all in order, no page-switching.</div>
   </div>
 
   <!-- PENDING GATES -->
@@ -256,16 +256,17 @@ async function loadDashboard() {
 }
 
 function renderDashboard(projects) {
-  // Projects needing Gate A: have packages but gate A not approved
-  const needsA = projects.filter(p => !p.gate_a_approved && p.package_count > 0);
-  // Projects needing Gate B: gate A done, gate B not done, have some content
-  const needsB = projects.filter(p => p.gate_a_approved && !p.gate_b_approved);
-  // Projects needing Gate C: gate B done, gate C not done
-  const needsC = projects.filter(p => p.gate_b_approved && !p.gate_c_approved);
-  // Projects awaiting generation (no packages yet, no gate A)
+  // Build unified pending list in project order — each project appears once,
+  // at whichever gate it currently needs. No separate A/B/C sections.
+  const pending = [];
+  projects.forEach(p => {
+    if (!p.gate_a_approved && p.package_count > 0)    pending.push({ project: p, gate: 'A' });
+    else if (p.gate_a_approved && !p.gate_b_approved) pending.push({ project: p, gate: 'B' });
+    else if (p.gate_b_approved && !p.gate_c_approved) pending.push({ project: p, gate: 'C' });
+  });
   const awaitingGen = projects.filter(p => !p.gate_a_approved && p.package_count === 0);
 
-  const pendingCount = needsA.length + needsB.length + needsC.length;
+  const pendingCount = pending.length;
   document.getElementById('pending-count').textContent =
     pendingCount > 0 ? `${pendingCount} waiting` : '';
 
@@ -277,44 +278,30 @@ function renderDashboard(projects) {
       <div class="empty-state">
         <div class="icon">✓</div>
         <h3>ALL GATES CLEAR</h3>
-        <p>No approvals waiting. Start a new project in M2 to generate packages.</p>
+        <p>No approvals waiting. Start a new project in PackageΩr to generate packages.</p>
         <a href="m2-package-generator.html" class="btn btn-teal" style="margin-top:16px;">→ Generate Packages</a>
       </div>`;
   } else {
-    // Gate A blocks
-    if (needsA.length > 0) {
-      const heading = document.createElement('div');
-      heading.innerHTML = `<div class="gate-header gate-a-style"><div class="gate-badge badge-a">GATE A</div><div class="gate-info"><h2>PACKAGE SELECTION</h2><p>Pick one of five generated packages for each video. One click locks in the entire content angle.</p></div></div>`;
-      container.appendChild(heading);
-      needsA.forEach(p => renderGateABlock(p, container));
-    }
+    // Unified queue — project cards in order, each showing its current gate
+    pending.forEach(({ project, gate }) => {
+      if (gate === 'A')      renderGateABlock(project, container);
+      else if (gate === 'B') renderGateBBlock(project, container);
+      else if (gate === 'C') renderGateCBlock(project, container);
+    });
 
-    // Gate B blocks
-    if (needsB.length > 0) {
-      const heading = document.createElement('div');
-      heading.innerHTML = `<div class="gate-header gate-b-style" style="margin-top:${needsA.length > 0 ? '24px' : '0'}"><div class="gate-badge badge-b">GATE B</div><div class="gate-info"><h2>CAPTION APPROVAL</h2><p>Review platform-native captions for each clip. Approve all to advance to M4 emails.</p></div></div>`;
-      container.appendChild(heading);
-      needsB.forEach(p => renderGateBBlock(p, container));
-    }
-
-    // Gate C blocks
-    if (needsC.length > 0) {
-      const heading = document.createElement('div');
-      heading.innerHTML = `<div class="gate-header gate-c-style" style="margin-top:${(needsA.length + needsB.length) > 0 ? '24px' : '0'}"><div class="gate-badge badge-c">GATE C</div><div class="gate-info"><h2>EMAIL APPROVAL</h2><p>Review the 7-email ROCK RICH sequence. Approve all to mark the video complete.</p></div></div>`;
-      container.appendChild(heading);
-      needsC.forEach(p => renderGateCBlock(p, container));
-    }
-
-    // Awaiting generation
+    // Projects with no packages yet
     if (awaitingGen.length > 0) {
       awaitingGen.forEach(p => {
         const div = document.createElement('div');
         div.className = 'project-block';
         div.innerHTML = `
-          <div class="project-block-title">${escHtml(p.title)}</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+            <div class="project-block-title" style="flex:1">${escHtml(p.title)}</div>
+            <span class="gate-badge badge-a" style="font-size:11px;padding:3px 9px;opacity:0.5">NOT STARTED</span>
+          </div>
           <div class="project-block-meta">No packages generated yet</div>
           <div class="action-row">
-            <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-teal">→ Generate Packages in M2</a>
+            <a href="m2-package-generator.html?project_id=${p.id}" class="btn btn-teal">→ Generate Packages in PackageΩr</a>
           </div>`;
         container.appendChild(div);
       });
@@ -325,7 +312,7 @@ function renderDashboard(projects) {
   const allContainer = document.getElementById('all-container');
   allContainer.innerHTML = '';
   if (projects.length === 0) {
-    allContainer.innerHTML = `<div class="empty-state"><div class="icon">📂</div><h3>NO PROJECTS YET</h3><p>Start in M2 — paste a YouTube URL and generate your first 5 packages.</p></div>`;
+    allContainer.innerHTML = `<div class="empty-state"><div class="icon">📂</div><h3>NO PROJECTS YET</h3><p>Start in PackageΩr — generate your first 5 packages.</p></div>`;
   } else {
     projects.forEach(p => {
       const row = document.createElement('a');
@@ -353,8 +340,11 @@ async function renderGateABlock(project, container) {
   block.className = 'project-block';
   block.id = `gate-a-${project.id}`;
   block.innerHTML = `
-    <div class="project-block-title">${escHtml(project.title)}</div>
-    <div class="project-block-meta">Select one content package to anchor the entire distribution strategy for this video.</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <div class="project-block-title" style="flex:1">${escHtml(project.title)}</div>
+      <span class="gate-badge badge-a" style="font-size:11px;padding:3px 9px">GATE A · PACKAGES</span>
+    </div>
+    <div class="project-block-meta">Pick the content angle that best fits this video. One click locks in the distribution strategy.</div>
     <div class="loading-pill" style="margin-top:12px;"><span class="spin"></span> Loading packages…</div>`;
   container.appendChild(block);
 
@@ -383,8 +373,11 @@ async function renderGateABlock(project, container) {
       </div>`;
 
     block.innerHTML = `
-      <div class="project-block-title">${escHtml(project.title)}</div>
-      <div class="project-block-meta">Select one content package to anchor the entire distribution strategy for this video.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <div class="project-block-title" style="flex:1">${escHtml(project.title)}</div>
+        <span class="gate-badge badge-a" style="font-size:11px;padding:3px 9px">GATE A · PACKAGES</span>
+      </div>
+      <div class="project-block-meta">Pick the content angle that best fits this video. One click locks in the distribution strategy.</div>
       ${gridHtml}
       ${approveBar}`;
 
@@ -440,8 +433,11 @@ async function renderGateBBlock(project, container) {
   block.className = 'project-block';
   block.id = `gate-b-${project.id}`;
   block.innerHTML = `
-    <div class="project-block-title">${escHtml(project.title)}</div>
-    <div class="project-block-meta">Review platform captions for each clip, then approve all for Gate B.</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <div class="project-block-title" style="flex:1">${escHtml(project.title)}</div>
+      <span class="gate-badge badge-b" style="font-size:11px;padding:3px 9px">GATE B · CAPTIONS</span>
+    </div>
+    <div class="project-block-meta">Review platform-native captions for each clip, then approve all to advance to emails.</div>
     <div class="loading-pill" style="margin-top:12px;"><span class="spin"></span> Loading captions…</div>`;
   container.appendChild(block);
 
@@ -451,9 +447,12 @@ async function renderGateBBlock(project, container) {
 
     if (!captions || captions.length === 0) {
       block.innerHTML = `
-        <div class="project-block-title">${escHtml(project.title)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <div class="project-block-title" style="flex:1">${escHtml(project.title)}</div>
+          <span class="gate-badge badge-b" style="font-size:11px;padding:3px 9px">GATE B · CAPTIONS</span>
+        </div>
         <div class="project-block-meta" style="margin-bottom:12px;">Gate A approved. Captions not yet generated.</div>
-        <a href="m3-caption-generator.html?project_id=${project.id}" class="btn btn-teal">→ Generate Captions in M3</a>`;
+        <a href="m3-caption-generator.html?project_id=${project.id}" class="btn btn-teal">→ Generate Captions in CaptionΩr</a>`;
       return;
     }
 
@@ -488,12 +487,15 @@ async function renderGateBBlock(project, container) {
     });
 
     block.innerHTML = `
-      <div class="project-block-title">${escHtml(project.title)}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <div class="project-block-title" style="flex:1">${escHtml(project.title)}</div>
+        <span class="gate-badge badge-b" style="font-size:11px;padding:3px 9px">GATE B · CAPTIONS</span>
+      </div>
       <div class="all-caps-label">${Object.keys(clips).length} clip${Object.keys(clips).length !== 1 ? 's' : ''} · ${captions.length} captions total</div>
       ${clipsHtml}
       <div class="action-row">
-        <button class="btn btn-approve" onclick="approveGateB(${project.id})">✓ APPROVE ALL CAPTIONS — GATE B</button>
-        <a href="m3-caption-generator.html?project_id=${project.id}" class="btn btn-ghost">↻ Regenerate in M3</a>
+        <button class="btn btn-approve" onclick="approveGateB(${project.id})">✓ APPROVE ALL CAPTIONS</button>
+        <a href="m3-caption-generator.html?project_id=${project.id}" class="btn btn-ghost">↻ Regenerate in CaptionΩr</a>
       </div>`;
 
   } catch(e) {
@@ -531,8 +533,11 @@ async function renderGateCBlock(project, container) {
   block.className = 'project-block';
   block.id = `gate-c-${project.id}`;
   block.innerHTML = `
-    <div class="project-block-title">${escHtml(project.title)}</div>
-    <div class="project-block-meta">Review the full email sequence, then approve all for Gate C.</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <div class="project-block-title" style="flex:1">${escHtml(project.title)}</div>
+      <span class="gate-badge badge-c" style="font-size:11px;padding:3px 9px">GATE C · EMAILS</span>
+    </div>
+    <div class="project-block-meta">Review the full email sequence for this video, then approve to mark it complete.</div>
     <div class="loading-pill" style="margin-top:12px;"><span class="spin"></span> Loading emails…</div>`;
   container.appendChild(block);
 
@@ -542,9 +547,12 @@ async function renderGateCBlock(project, container) {
 
     if (!emails || emails.length === 0) {
       block.innerHTML = `
-        <div class="project-block-title">${escHtml(project.title)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <div class="project-block-title" style="flex:1">${escHtml(project.title)}</div>
+          <span class="gate-badge badge-c" style="font-size:11px;padding:3px 9px">GATE C · EMAILS</span>
+        </div>
         <div class="project-block-meta" style="margin-bottom:12px;">Gate B approved. Email sequence not yet generated.</div>
-        <a href="m4-email-generator.html?project_id=${project.id}" class="btn btn-teal">→ Generate Emails in M4</a>`;
+        <a href="m4-email-generator.html?project_id=${project.id}" class="btn btn-teal">→ Generate Emails in MailΩr</a>`;
       return;
     }
 
@@ -594,12 +602,15 @@ async function renderGateCBlock(project, container) {
     });
 
     block.innerHTML = `
-      <div class="project-block-title">${escHtml(project.title)}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <div class="project-block-title" style="flex:1">${escHtml(project.title)}</div>
+        <span class="gate-badge badge-c" style="font-size:11px;padding:3px 9px">GATE C · EMAILS</span>
+      </div>
       <div class="project-block-meta" style="margin-bottom:14px;">${emails.length} emails across all tiers and send days</div>
       ${emailsHtml}
       <div class="action-row">
-        <button class="btn btn-approve" onclick="approveGateC(${project.id})">✓ APPROVE ALL EMAILS — GATE C</button>
-        <a href="m4-email-generator.html?project_id=${project.id}" class="btn btn-ghost">↻ Regenerate in M4</a>
+        <button class="btn btn-approve" onclick="approveGateC(${project.id})">✓ APPROVE ALL EMAILS</button>
+        <a href="m4-email-generator.html?project_id=${project.id}" class="btn btn-ghost">↻ Regenerate in MailΩr</a>
       </div>`;
 
   } catch(e) {
