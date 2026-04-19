@@ -15,20 +15,21 @@
   --teal: #3ecfb2;
   --teal-dim: #2aa893;
   --teal-hover: #4ddfc4;
-  --teal-glow: rgba(62,207,178,0.10);
-  --teal-glow-strong: rgba(62,207,178,0.22);
+  --teal-glow: #1e3330;        /* solid equiv of rgba(62,207,178,0.10) — no hunter green drift */
+  --teal-glow-strong: #25413c; /* solid equiv of rgba(62,207,178,0.22) */
+  --teal-border: #2c4e48;      /* solid teal border — use instead of inline rgba */
 
   /* ── SURFACES ── */
-  --bg: #0e0f0e;
-  --bg-card: #161916;
-  --bg-card-2: #1c1f1b;
-  --surface: #161916;
-  --surface-2: #1c1f1b;
-  --surface-3: #252525;
+  --bg: #0f1010;               /* very slightly cooler — less green cast */
+  --bg-card: #171919;          /* cooler neutral — eliminates green pull on dark surfaces */
+  --bg-card-2: #1d2020;
+  --surface: #171919;
+  --surface-2: #1d2020;
+  --surface-3: #262828;
 
   /* ── BORDERS ── */
-  --border: #2a2e28;
-  --border-bright: #3d4439;
+  --border: #2a2e2e;
+  --border-bright: #3d4444;
 
   /* ── TEXT ── */
   --text: #e8ebe6;
@@ -39,19 +40,19 @@
 
   /* ── STATUS COLORS ── */
   --green: #5cba8a;
-  --green-glow: rgba(92,186,138,0.10);
-  --green-border: rgba(92,186,138,0.30);
+  --green-glow: #1c2e24;       /* solid equiv of rgba(92,186,138,0.10) */
+  --green-border: #2c4838;     /* solid equiv of rgba(92,186,138,0.30) */
   --amber: #f0b942;
-  --amber-glow: rgba(240,185,66,0.10);
-  --amber-border: rgba(240,185,66,0.30);
+  --amber-glow: #2e2618;       /* solid equiv of rgba(240,185,66,0.10) */
+  --amber-border: #4a3c18;     /* solid equiv of rgba(240,185,66,0.30) */
   --red: #e05c5c;
-  --red-glow: rgba(224,92,92,0.10);
-  --red-border: rgba(224,92,92,0.30);
+  --red-glow: #2e1e1e;         /* solid equiv of rgba(224,92,92,0.10) */
+  --red-border: #4a2e2e;       /* solid equiv of rgba(224,92,92,0.30) */
   --blue: #5b9cf6;
-  --blue-glow: rgba(91,156,246,0.10);
+  --blue-glow: #1c2840;        /* solid equiv of rgba(91,156,246,0.10) */
   --purple: #a78bfa;
-  --purple-glow: rgba(167,139,250,0.10);
-  --purple-border: rgba(167,139,250,0.30);
+  --purple-glow: #282040;      /* solid equiv of rgba(167,139,250,0.10) */
+  --purple-border: #3e3060;    /* solid equiv of rgba(167,139,250,0.30) */
 
   /* ── LAYOUT ── */
   --nav-height: 54px;
