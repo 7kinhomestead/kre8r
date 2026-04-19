@@ -12,11 +12,11 @@
 <style>
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
-    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
-    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10); --amber-border:rgba(240,185,66,0.30);
-    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10); --red-border:rgba(224,92,92,0.30);
-    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10); --green-border:rgba(92,186,138,0.30);
-    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10); --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --teal:#3ecfb2; --teal-dim:#2aa893; 
+    --amber:#f0b942; 
+    --red:#e05c5c; 
+    --green:#5cba8a; 
+    --blue:#5b9cf6; --purple:#a78bfa; 
     --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
     --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
     --radius:10px; --radius-sm:6px;
@@ -74,8 +74,8 @@
 
   .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;}
   .badge-gold{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-border);}
-  .badge-beat{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
-  .badge-mixed{background:rgba(240,185,66,0.08);color:var(--amber);border:1px solid var(--amber-border);}
+  .badge-beat{background:var(--teal-glow);color:var(--teal);border:1px solid #2c4e48;}
+  .badge-mixed{background:#1f1c11;color:var(--amber);border:1px solid var(--amber-border);}
   .badge-takes{font-size:11px;color:var(--text-dimmer);}
   .beat-dur{font-size:11px;color:var(--text-dimmer);font-family:monospace;}
 
@@ -93,10 +93,10 @@
   .take-quality{font-weight:600;text-transform:uppercase;letter-spacing:0.4px;}
   .q-clean{color:var(--green);}  .q-good{color:var(--green);}  .q-ok{color:var(--amber);}  .q-rough{color:var(--red);}
   .take-note{color:var(--text-dimmer);flex:1;}
-  .take-winner-badge{font-size:10px;font-weight:700;color:var(--teal);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);border-radius:10px;padding:2px 8px;flex-shrink:0;}
+  .take-winner-badge{font-size:10px;font-weight:700;color:var(--teal);background:var(--teal-glow);border:1px solid #2c4e48;border-radius:10px;padding:2px 8px;flex-shrink:0;}
 
   /* ── ADVANCE BANNER ── */
-  .advance-banner{background:linear-gradient(135deg,rgba(62,207,178,0.08),rgba(92,186,138,0.08));border:1px solid var(--green-border);border-radius:var(--radius);padding:18px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;animation:fadeUp 0.4s ease both;margin-bottom:12px;}
+  .advance-banner{background:linear-gradient(135deg,#151b18,rgba(92,186,138,0.08));border:1px solid var(--green-border);border-radius:var(--radius);padding:18px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;animation:fadeUp 0.4s ease both;margin-bottom:12px;}
   .advance-text{flex:1;min-width:180px;}
   .advance-text h3{font-family:var(--font-head);font-size:18px;letter-spacing:1.5px;color:var(--green);margin-bottom:3px;}
   .advance-text p{font-size:13px;color:var(--text-dim);line-height:1.5;}
@@ -175,7 +175,7 @@
     </div>
 
     <!-- COMPOSΩR ADVANCE -->
-    <div class="advance-banner" style="border-color:rgba(62,207,178,0.25)">
+    <div class="advance-banner" style="border-color:#2c4e48">
       <div class="advance-text">
         <h3>SCORE YOUR EDIT</h3>
         <p>AI film scoring. ComposΩr reads your scene structure and writes music that fits the emotional arc of the video.</p>
@@ -193,12 +193,12 @@
     </div>
 
     <!-- PACKAGEΩR BYPASS -->
-    <div class="advance-banner" style="background:linear-gradient(135deg,rgba(91,156,246,0.06),rgba(91,156,246,0.03));border-color:rgba(91,156,246,0.25)">
+    <div class="advance-banner" style="background:linear-gradient(135deg,#121922,rgba(91,156,246,0.03));border-color:#253560">
       <div class="advance-text">
         <h3 style="color:#5b9cf6">SKIP TO PACKAGING</h3>
         <p>Already have a finished export? Go straight to PackageΩr to create platform-ready packages.</p>
       </div>
-      <a class="btn btn-ghost" id="goPackageBtn" href="/m2-package-generator.html" style="border-color:rgba(91,156,246,0.35);color:#5b9cf6">Go to Package<em style="font-style:normal">Ω</em>r →</a>
+      <a class="btn btn-ghost" id="goPackageBtn" href="/m2-package-generator.html" style="border-color:#253560;color:#5b9cf6">Go to Package<em style="font-style:normal">Ω</em>r →</a>
     </div>
 
   </div>

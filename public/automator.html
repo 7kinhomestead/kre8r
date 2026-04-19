@@ -12,10 +12,10 @@
 <style>
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
-    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
-    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
-    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
-    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
+    --teal:#3ecfb2; --teal-dim:#2aa893; 
+    --amber:#f0b942; 
+    --red:#e05c5c; 
+    --green:#5cba8a; 
     --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
     --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
     --radius:10px; --radius-sm:6px;
@@ -112,8 +112,8 @@
   /* ── Progress / result ── */
   .op-result{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-top:14px;display:none;}
   .op-result.visible{display:block;animation:fadeUp 0.3s ease both;}
-  .op-result.success{border-color:rgba(92,186,138,0.4);background:var(--green-glow);}
-  .op-result.error{border-color:rgba(224,92,92,0.4);background:var(--red-glow);}
+  .op-result.success{border-color:#2c4838;background:var(--green-glow);}
+  .op-result.error{border-color:#4a2e2e;background:var(--red-glow);}
   .op-result-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px;}
   .op-result.success .op-result-label{color:var(--green);}
   .op-result.error .op-result-label{color:var(--red);}
@@ -135,7 +135,7 @@
   .btn:disabled{opacity:0.4;cursor:not-allowed;background:var(--teal);}
   .btn.btn-secondary{background:var(--bg-card-2);color:var(--text);border:1px solid var(--border-bright);}
   .btn.btn-secondary:hover{border-color:var(--teal);color:var(--teal);}
-  .btn.btn-danger{background:none;color:var(--red);border:1px solid rgba(224,92,92,0.3);}
+  .btn.btn-danger{background:none;color:var(--red);border:1px solid #4a2e2e;}
   .btn.btn-danger:hover{background:var(--red-glow);border-color:var(--red);}
   .spinner-sm{width:14px;height:14px;border:2px solid rgba(14,15,14,0.3);border-top-color:#0e0f0e;border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
   .btn.loading .spinner-sm{display:inline-block;}
@@ -237,7 +237,7 @@
 
     <!-- Dry-run confirm panel — shown after preview screenshot -->
     <div id="bc-preview-confirm" style="display:none;">
-      <div class="form-section" style="border-color:rgba(240,185,66,0.4);background:rgba(240,185,66,0.04);">
+      <div class="form-section" style="border-color:#4a3c18;background:rgba(240,185,66,0.04);">
         <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;">👁 Preview Ready</div>
         <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">
           Kajabi has been filled in but nothing was sent yet. A screenshot has been saved so you can verify it looks right.

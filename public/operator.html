@@ -11,11 +11,11 @@
 <style>
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
-    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
-    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
-    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
-    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
-    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10); --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --teal:#3ecfb2; --teal-dim:#2aa893; 
+    --amber:#f0b942; 
+    --red:#e05c5c; 
+    --green:#5cba8a; 
+    --blue:#5b9cf6; --purple:#a78bfa; 
     --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
     --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
     --radius:10px; --radius-sm:6px;
@@ -88,17 +88,17 @@
   .proj-title{font-weight:600;font-size:13px;color:var(--text);margin-bottom:6px;line-height:1.3;}
   .proj-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;}
   .stage-badge{font-size:10px;font-weight:700;letter-spacing:0.5px;padding:2px 8px;border-radius:10px;text-transform:uppercase;}
-  .stage-m2{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
-  .stage-m3{background:var(--amber-glow);color:var(--amber);border:1px solid rgba(240,185,66,0.25);}
+  .stage-m2{background:var(--teal-glow);color:var(--teal);border:1px solid #2c4e48;}
+  .stage-m3{background:var(--amber-glow);color:var(--amber);border:1px solid #3a3015;}
   .stage-m4{background:var(--purple-glow);color:var(--purple);border:1px solid rgba(167,139,250,0.25);}
-  .stage-m5{background:var(--green-glow);color:var(--green);border:1px solid rgba(92,186,138,0.25);}
+  .stage-m5{background:var(--green-glow);color:var(--green);border:1px solid #2a4030;}
   .stage-default{background:var(--bg-card);color:var(--text-dim);border:1px solid var(--border);}
   .proj-days{font-size:11px;color:var(--text-dimmer);}
   .proj-gate{font-size:11px;color:var(--amber);}
 
   /* ── QUICK JUMP LINKS ── */
   .jump-links{display:flex;flex-wrap:wrap;gap:5px;}
-  .jump-link{font-size:11px;font-weight:600;color:var(--teal-dim);text-decoration:none;padding:3px 9px;border-radius:var(--radius-sm);border:1px solid rgba(62,207,178,0.2);background:var(--teal-glow);transition:all 0.15s;white-space:nowrap;}
+  .jump-link{font-size:11px;font-weight:600;color:var(--teal-dim);text-decoration:none;padding:3px 9px;border-radius:var(--radius-sm);border:1px solid #203532;background:var(--teal-glow);transition:all 0.15s;white-space:nowrap;}
   .jump-link:hover{color:var(--teal);border-color:var(--teal);}
 
   /* ── PLATFORM CHECKLIST ── */
@@ -151,7 +151,7 @@
     <a href="m5-analytics.html">AnalytΩr</a>
     <a href="operator.html" class="active">OperatΩr</a>
     <div class="nav-dropdown">
-      <button class="nav-drop-btn m-tag" style="background:rgba(62,207,178,0.08);color:var(--teal-dim);border:1px solid rgba(62,207,178,0.25);">Distribut<span style="color:var(--teal)">Ω</span>r ▾</button>
+      <button class="nav-drop-btn m-tag" style="background:#151b18;color:var(--teal-dim);border:1px solid #2c4e48;">Distribut<span style="color:var(--teal)">Ω</span>r ▾</button>
       <div class="nav-drop-menu">
         <a href="m1-approval-dashboard.html">GateΩr</a>
         <a href="m2-package-generator.html">PackageΩr</a>

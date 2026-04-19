@@ -12,11 +12,11 @@
 <style>
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
-    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
-    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10); --amber-border:rgba(240,185,66,0.30);
-    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10); --red-border:rgba(224,92,92,0.30);
-    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10); --green-border:rgba(92,186,138,0.30);
-    --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --teal:#3ecfb2; --teal-dim:#2aa893; 
+    --amber:#f0b942; 
+    --red:#e05c5c; 
+    --green:#5cba8a; 
+    --purple:#a78bfa; 
     --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
     --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
     --radius:10px; --radius-sm:6px;
@@ -97,8 +97,8 @@
   .collab-check-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--teal);flex-shrink:0;}
   .collab-cbadge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:0.5px;flex-shrink:0;}
   .collab-cbadge-teal{background:rgba(20,184,166,0.1);border:1px solid rgba(20,184,166,0.3);color:#14b8a6;}
-  .collab-cbadge-amber{background:rgba(240,185,66,0.1);border:1px solid rgba(240,185,66,0.3);color:#f0b942;}
-  .collab-cbadge-green{background:rgba(92,186,138,0.1);border:1px solid rgba(92,186,138,0.3);color:#5cba8a;}
+  .collab-cbadge-amber{background:#2e2618;border:1px solid #4a3c18;color:#f0b942;}
+  .collab-cbadge-green{background:#1c2e24;border:1px solid #2c4838;color:#5cba8a;}
   .collab-name-block{display:flex;flex-direction:column;min-width:0;}
   .collab-cname{font-size:13px;font-weight:600;color:var(--text);}
   .collab-crole{font-size:11px;color:var(--text-dim);}
@@ -111,7 +111,7 @@
   .structure-card.selected{border-color:var(--teal);background:var(--teal-glow);box-shadow:0 0 0 1px var(--teal) inset;}
   .structure-card-top{display:flex;align-items:flex-start;gap:8px;}
   .structure-card-icon{font-size:22px;line-height:1;flex-shrink:0;}
-  .structure-card-badge{font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:20px;background:rgba(62,207,178,0.15);border:1px solid rgba(62,207,178,0.4);color:var(--teal);margin-left:auto;flex-shrink:0;align-self:flex-start;}
+  .structure-card-badge{font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:20px;background:#1b2e2b;border:1px solid #2c4e48;color:var(--teal);margin-left:auto;flex-shrink:0;align-self:flex-start;}
   .structure-card-title{font-family:var(--font-head);font-size:15px;letter-spacing:1px;color:var(--text);}
   .structure-card-desc{font-size:12px;color:var(--text-dim);line-height:1.5;}
   .structure-card-meta{font-size:11px;color:var(--text-dimmer);line-height:1.5;}
@@ -121,8 +121,8 @@
   .structure-card-details summary::after{content:'▸';font-size:9px;transition:transform 0.15s;}
   .structure-card-details[open] summary::after{transform:rotate(90deg);}
   .structure-card-retention{margin-top:6px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:5px;color:var(--text-dim);line-height:1.5;font-size:11px;}
-  .structure-perf-badge{margin-top:6px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;border-radius:20px;background:rgba(62,207,178,0.10);border:1px solid rgba(62,207,178,0.2);color:var(--teal);}
-  .structure-perf-badge.perf-top{background:rgba(62,207,178,0.18);border-color:rgba(62,207,178,0.5);}
+  .structure-perf-badge{margin-top:6px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;border-radius:20px;background:#1e3330;border:1px solid #203532;color:var(--teal);}
+  .structure-perf-badge.perf-top{background:#1e3330;border-color:rgba(62,207,178,0.5);}
   .structure-perf-badge.perf-low{background:rgba(139,139,139,0.10);border-color:rgba(139,139,139,0.2);color:var(--text-dimmer);}
   /* Beat preview below grid */
   .structure-beat-preview{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px;}
@@ -174,7 +174,7 @@
   /* ── BEATS LOADING ── */
   .beats-loading{display:flex;align-items:center;justify-content:center;gap:12px;padding:40px;color:var(--text-dim);font-size:14px;}
   .beats-error{background:var(--red-glow);border:1px solid var(--red-border);border-radius:var(--radius-sm);padding:14px 16px;font-size:13px;color:var(--red);margin-bottom:16px;}
-  .note-teal{background:var(--teal-glow);border:1px solid rgba(62,207,178,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--teal);margin-bottom:20px;}
+  .note-teal{background:var(--teal-glow);border:1px solid #203532;border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--teal);margin-bottom:20px;}
 
   /* ── NAV BUTTONS ── */
   .wizard-nav{display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding-top:28px;border-top:1px solid var(--border);}
@@ -201,23 +201,23 @@
   .validation-banner.visible{display:block;}
 
   /* ── ID8ΩR ARRIVAL SUMMARY CARD ── */
-  .id8r-summary-card{background:var(--teal-glow);border:1px solid rgba(62,207,178,0.35);border-radius:var(--radius);padding:22px 24px;margin-bottom:32px;}
+  .id8r-summary-card{background:var(--teal-glow);border:1px solid #2c4e48;border-radius:var(--radius);padding:22px 24px;margin-bottom:32px;}
   .id8r-summary-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin-bottom:12px;}
   .id8r-summary-title{font-family:var(--font-head);font-size:clamp(22px,5vw,34px);letter-spacing:2px;color:var(--text);line-height:1.1;margin-bottom:10px;}
   .id8r-summary-concept{font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;}
   .id8r-summary-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .id8r-ep-pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid rgba(62,207,178,0.4);color:var(--teal);background:rgba(62,207,178,0.1);}
+  .id8r-ep-pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #2c4e48;color:var(--teal);background:#1e3330;}
   .id8r-edit-link{font-size:12px;color:var(--text-dimmer);text-decoration:underline;cursor:pointer;margin-left:auto;}
   .id8r-edit-link:hover{color:var(--text-dim);}
   .id8r-advance-bar{margin-top:16px;display:flex;align-items:center;gap:12px;}
-  .id8r-advance-progress{flex:1;height:3px;background:rgba(62,207,178,0.15);border-radius:2px;overflow:hidden;}
+  .id8r-advance-progress{flex:1;height:3px;background:#1b2e2b;border-radius:2px;overflow:hidden;}
   .id8r-advance-fill{height:100%;background:var(--teal);width:0%;transition:width 1s linear;border-radius:2px;}
 
   /* ── BRIEF READONLY (Screen 3, Id8Ωr mode) ── */
-  .brief-readonly-notice{background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+  .brief-readonly-notice{background:var(--teal-glow);border:1px solid #2c4e48;border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
   .brief-readonly-label{font-size:11px;font-weight:700;letter-spacing:0.8px;color:var(--teal);text-transform:uppercase;}
-  .brief-edit-toggle{font-size:12px;font-weight:600;padding:4px 12px;border-radius:4px;background:none;border:1px solid rgba(62,207,178,0.4);color:var(--teal);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
-  .brief-edit-toggle:hover{background:rgba(62,207,178,0.1);}
+  .brief-edit-toggle{font-size:12px;font-weight:600;padding:4px 12px;border-radius:4px;background:none;border:1px solid #2c4e48;color:var(--teal);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .brief-edit-toggle:hover{background:#1e3330;}
 
   /* ── PROJECT SETTINGS MODE ── */
   #project-settings { display: none; max-width: 560px; padding: 48px 0 80px; }
@@ -616,14 +616,14 @@
     <!-- SHORT FORM DIVIDER -->
     <div style="margin:28px 0 16px;display:flex;align-items:center;gap:12px;">
       <div style="flex:1;height:1px;background:var(--border);"></div>
-      <div style="font-family:var(--font-head);font-size:13px;letter-spacing:2px;color:var(--teal);white-space:nowrap;padding:4px 12px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.3);border-radius:20px;">SHORT FORM — TikTok / Reels / Shorts</div>
+      <div style="font-family:var(--font-head);font-size:13px;letter-spacing:2px;color:var(--teal);white-space:nowrap;padding:4px 12px;background:var(--teal-glow);border:1px solid #2c4e48;border-radius:20px;">SHORT FORM — TikTok / Reels / Shorts</div>
       <div style="flex:1;height:1px;background:var(--border);"></div>
     </div>
     <div style="font-size:12px;color:var(--text-dimmer);margin-bottom:14px;line-height:1.6;">3–7 beats. Each beat has a second-range duration target. Id8Ωr research shifts to scroll-stopping angles. WritΩr caps at 150–300 words.</div>
 
     <div class="structure-grid">
       <div class="structure-card" id="scard-short_hook_tension_payoff" onclick="selectStructure('short_hook_tension_payoff')">
-        <div class="structure-card-top"><div class="structure-card-icon">⚡</div><div class="structure-card-badge" style="background:rgba(62,207,178,0.15);border-color:rgba(62,207,178,0.4);color:var(--teal)">SHORT</div></div>
+        <div class="structure-card-top"><div class="structure-card-icon">⚡</div><div class="structure-card-badge" style="background:#1b2e2b;border-color:#2c4e48;color:var(--teal)">SHORT</div></div>
         <div class="structure-card-title">HOOK → TENSION → PAYOFF</div>
         <div class="structure-card-desc">3 beats. The simplest short-form structure. Every great reel follows this shape.</div>
         <div class="structure-card-meta"><span>Best for:</span> Any short content. Start here if unsure.</div>
@@ -633,7 +633,7 @@
         </details>
       </div>
       <div class="structure-card" id="scard-short_open_loop" onclick="selectStructure('short_open_loop')">
-        <div class="structure-card-top"><div class="structure-card-icon">🔄</div><div class="structure-card-badge" style="background:rgba(62,207,178,0.15);border-color:rgba(62,207,178,0.4);color:var(--teal)">SHORT</div></div>
+        <div class="structure-card-top"><div class="structure-card-icon">🔄</div><div class="structure-card-badge" style="background:#1b2e2b;border-color:#2c4e48;color:var(--teal)">SHORT</div></div>
         <div class="structure-card-title">OPEN LOOP</div>
         <div class="structure-card-desc">4 beats. Ask an irresistible question early, tease the answer, deliver at the end.</div>
         <div class="structure-card-meta"><span>Best for:</span> Curiosity-driven content, reveals, counterintuitive facts</div>
@@ -643,7 +643,7 @@
         </details>
       </div>
       <div class="structure-card" id="scard-short_pas" onclick="selectStructure('short_pas')">
-        <div class="structure-card-top"><div class="structure-card-icon">🎯</div><div class="structure-card-badge" style="background:rgba(62,207,178,0.15);border-color:rgba(62,207,178,0.4);color:var(--teal)">SHORT</div></div>
+        <div class="structure-card-top"><div class="structure-card-icon">🎯</div><div class="structure-card-badge" style="background:#1b2e2b;border-color:#2c4e48;color:var(--teal)">SHORT</div></div>
         <div class="structure-card-title">PAS — PROBLEM / AGITATE / SOLVE</div>
         <div class="structure-card-desc">3 beats. Name the pain, make it urgent, deliver the solution.</div>
         <div class="structure-card-meta"><span>Best for:</span> How-to, financial content, practical advice</div>
@@ -653,7 +653,7 @@
         </details>
       </div>
       <div class="structure-card" id="scard-short_before_after" onclick="selectStructure('short_before_after')">
-        <div class="structure-card-top"><div class="structure-card-icon">🌉</div><div class="structure-card-badge" style="background:rgba(62,207,178,0.15);border-color:rgba(62,207,178,0.4);color:var(--teal)">SHORT</div></div>
+        <div class="structure-card-top"><div class="structure-card-icon">🌉</div><div class="structure-card-badge" style="background:#1b2e2b;border-color:#2c4e48;color:var(--teal)">SHORT</div></div>
         <div class="structure-card-title">BEFORE → BRIDGE → AFTER</div>
         <div class="structure-card-desc">3 beats. The transformation short. Painful before, specific bridge, clear after.</div>
         <div class="structure-card-meta"><span>Best for:</span> Transformations, lifestyle, homestead progress</div>
@@ -663,7 +663,7 @@
         </details>
       </div>
       <div class="structure-card" id="scard-short_list" onclick="selectStructure('short_list')">
-        <div class="structure-card-top"><div class="structure-card-icon">📋</div><div class="structure-card-badge" style="background:rgba(62,207,178,0.15);border-color:rgba(62,207,178,0.4);color:var(--teal)">SHORT</div></div>
+        <div class="structure-card-top"><div class="structure-card-icon">📋</div><div class="structure-card-badge" style="background:#1b2e2b;border-color:#2c4e48;color:var(--teal)">SHORT</div></div>
         <div class="structure-card-title">LIST FORMAT</div>
         <div class="structure-card-desc">6 beats. Hook + 4 punchy points + CTA. Strongest point first.</div>
         <div class="structure-card-meta"><span>Best for:</span> Tips, mistakes, resources, ranked content</div>
@@ -673,7 +673,7 @@
         </details>
       </div>
       <div class="structure-card" id="scard-short_hot_take" onclick="selectStructure('short_hot_take')">
-        <div class="structure-card-top"><div class="structure-card-icon">🔥</div><div class="structure-card-badge" style="background:rgba(62,207,178,0.15);border-color:rgba(62,207,178,0.4);color:var(--teal)">SHORT</div></div>
+        <div class="structure-card-top"><div class="structure-card-icon">🔥</div><div class="structure-card-badge" style="background:#1b2e2b;border-color:#2c4e48;color:var(--teal)">SHORT</div></div>
         <div class="structure-card-title">HOT TAKE</div>
         <div class="structure-card-desc">4 beats. One bold contrarian claim, dismantled, backed up, challenged.</div>
         <div class="structure-card-meta"><span>Best for:</span> Viral opinions, contrarian content, financial system takes</div>
@@ -683,7 +683,7 @@
         </details>
       </div>
       <div class="structure-card" id="scard-short_tutorial" onclick="selectStructure('short_tutorial')">
-        <div class="structure-card-top"><div class="structure-card-icon">🎬</div><div class="structure-card-badge" style="background:rgba(62,207,178,0.15);border-color:rgba(62,207,178,0.4);color:var(--teal)">SHORT</div></div>
+        <div class="structure-card-top"><div class="structure-card-icon">🎬</div><div class="structure-card-badge" style="background:#1b2e2b;border-color:#2c4e48;color:var(--teal)">SHORT</div></div>
         <div class="structure-card-title">SHORT TUTORIAL</div>
         <div class="structure-card-desc">4 beats. Result first, setup fast, steps clean, viewer application at the end.</div>
         <div class="structure-card-meta"><span>Best for:</span> DIY, homestead builds, skill demos</div>

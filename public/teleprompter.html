@@ -19,7 +19,6 @@
 
 :root {
   --teal:       #3ecfb2;
-  --teal-dim:   rgba(62,207,178,0.35);
   --bg:         #000000;
   --bg-sel:     #0e0f0e;
   --bg-card:    #161916;
@@ -55,10 +54,10 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-install-btn {
   color: var(--teal); font-size: 13px; font-family: var(--font); font-weight: 600;
   padding: 6px 12px; border: 1px solid var(--teal-dim); border-radius: 6px;
-  background: rgba(62,207,178,0.06); cursor: pointer; flex-shrink: 0;
+  background: #141916; cursor: pointer; flex-shrink: 0;
   -webkit-tap-highlight-color: transparent; transition: all 0.15s;
 }
-#tp-install-btn:active { background: rgba(62,207,178,0.18); }
+#tp-install-btn:active { background: #1e3330; }
 .tp-sel-title {
   font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 2px;
 }
@@ -73,7 +72,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
 .tp-tab:hover { background: #1c1f1b; color: var(--text); }
-.tp-tab.active { color: var(--teal); border-color: var(--teal-dim); background: rgba(62,207,178,0.06); }
+.tp-tab.active { color: var(--teal); border-color: var(--teal-dim); background: #141916; }
 
 /* Form elements */
 .tp-label {
@@ -132,7 +131,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* ── Field Mode QR ─────────────────────────────────────────── */
 #tp-field-qr-btn {
   width: 100%; margin-top: 10px; padding: 13px;
-  background: rgba(62,207,178,0.07); border: 1px dashed rgba(62,207,178,0.35);
+  background: #141a17; border: 1px dashed #2c4e48;
   border-radius: 10px; color: var(--teal); font-family: var(--font);
   font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
   letter-spacing: 0.3px;
@@ -141,7 +140,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-field-qr-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 #tp-field-section {
   display: none; margin-top: 14px; padding: 18px;
-  background: var(--bg-card); border: 1px solid rgba(62,207,178,0.25);
+  background: var(--bg-card); border: 1px solid #2c4e48;
   border-radius: 10px; flex-direction: column; align-items: center; gap: 14px;
 }
 #tp-field-section.visible { display: flex; }
@@ -181,7 +180,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 .tp-field-load-sub { font-size: 15px; color: rgba(255,255,255,0.55); line-height: 1.6; max-width: 280px; }
 .tp-field-load-spinner {
-  width: 40px; height: 40px; border: 3px solid rgba(62,207,178,0.2);
+  width: 40px; height: 40px; border: 3px solid #203532;
   border-top-color: var(--teal); border-radius: 50%;
   animation: tp-spin 0.8s linear infinite;
 }
@@ -201,7 +200,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   display: none; /* shown when multi-speaker script detected */
   flex-direction: column; gap: 8px; margin-top: 20px;
   padding: 14px 16px; background: rgba(62,207,178,0.05);
-  border: 1px solid rgba(62,207,178,0.15); border-radius: 10px;
+  border: 1px solid #1b2e2b; border-radius: 10px;
 }
 #tp-speaker-filter-label {
   font-size: 10px; font-weight: 700; letter-spacing: 2px;
@@ -209,12 +208,12 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 #tp-speaker-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .tp-speaker-btn {
-  padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(62,207,178,0.25);
+  padding: 7px 14px; border-radius: 8px; border: 1px solid #2c4e48;
   background: transparent; color: var(--teal); font-family: var(--font);
   font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
-.tp-speaker-btn:hover { background: rgba(62,207,178,0.1); }
-.tp-speaker-btn.active { background: rgba(62,207,178,0.2); border-color: var(--teal); }
+.tp-speaker-btn:hover { background: #1e3330; }
+.tp-speaker-btn.active { background: #203532; border-color: var(--teal); }
 
 /* ── Display screen speaker filter pill ────────────────────── */
 #tp-display-speaker-filter {
@@ -223,13 +222,13 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   z-index: 10; flex-direction: row; gap: 6px; align-items: center;
 }
 .tp-disp-spk-btn {
-  padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(62,207,178,0.3);
+  padding: 5px 12px; border-radius: 20px; border: 1px solid #2c4e48;
   background: rgba(0,0,0,0.6); color: var(--teal); font-family: var(--font);
   font-size: 11px; font-weight: 700; letter-spacing: 1px; cursor: pointer;
   text-transform: uppercase; transition: all 0.15s; white-space: nowrap;
 }
-.tp-disp-spk-btn:hover { background: rgba(62,207,178,0.15); }
-.tp-disp-spk-btn.active { background: rgba(62,207,178,0.25); border-color: var(--teal); }
+.tp-disp-spk-btn:hover { background: #1b2e2b; }
+.tp-disp-spk-btn.active { background: #2c4e48; border-color: var(--teal); }
 
 /* ═══════════════════════════════════════
    DISPLAY SCREEN
@@ -343,7 +342,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   cursor: pointer; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
 }
 .tp-ctrl-btn:hover   { background: rgba(255,255,255,0.11); }
-.tp-ctrl-btn.active  { background: rgba(62,207,178,0.15); border-color: var(--teal); color: var(--teal); }
+.tp-ctrl-btn.active  { background: #1b2e2b; border-color: var(--teal); color: var(--teal); }
 #tp-play-pause { font-size: 17px; width: 44px; padding: 8px; text-align: center; }
 
 /* Speed */
@@ -374,7 +373,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* ── Voice Sync ────────────────────────────────────────────── */
 #tp-voice-btn { flex-shrink: 0; }
 #tp-voice-btn.listening {
-  background: rgba(62,207,178,0.15); border-color: var(--teal); color: var(--teal);
+  background: #1b2e2b; border-color: var(--teal); color: var(--teal);
   animation: tp-pulse 1.8s ease-in-out infinite;
 }
 #tp-voice-btn.paused-speech {
@@ -383,7 +382,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 @keyframes tp-pulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(62,207,178,0); }
-  50%      { box-shadow: 0 0 0 5px rgba(62,207,178,0.18); }
+  50%      { box-shadow: 0 0 0 5px #1e3330; }
 }
 
 /* Mic indicator — floats top-left of display, always visible when voice active */
@@ -413,7 +412,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-voice-sense-row.visible { display: flex; }
 #tp-sense-slider {
   -webkit-appearance: none; width: 80px; height: 4px;
-  background: rgba(62,207,178,0.25); border-radius: 2px; outline: none; cursor: pointer;
+  background: #2c4e48; border-radius: 2px; outline: none; cursor: pointer;
 }
 #tp-sense-slider::-webkit-slider-thumb {
   -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
@@ -450,7 +449,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   background: var(--bg-card); cursor: pointer; transition: all 0.15s;
   font-family: var(--font); color: var(--text); text-align: left;
 }
-.tp-join-btn:hover { border-color: var(--teal); background: rgba(62,207,178,0.07); }
+.tp-join-btn:hover { border-color: var(--teal); background: #141a17; }
 .tp-join-btn-icon  { font-size: 30px; line-height: 1; flex-shrink: 0; }
 .tp-join-btn-text  { display: flex; flex-direction: column; gap: 3px; }
 .tp-join-btn-label { font-size: 17px; font-weight: 700; }
@@ -460,7 +459,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-voice-debug {
   position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 55;
   background: rgba(0,0,0,0.78); backdrop-filter: blur(10px);
-  border: 1px solid rgba(62,207,178,0.22); border-radius: 20px;
+  border: 1px solid #25413c; border-radius: 20px;
   padding: 5px 16px; font-size: 12px; color: rgba(255,255,255,0.6);
   display: none; white-space: nowrap; max-width: 80vw;
   overflow: hidden; text-overflow: ellipsis; pointer-events: none;
@@ -508,7 +507,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .tp-rem-beat-pill {
   flex: 1; min-width: 60px; max-width: 120px;
   min-height: 36px; padding: 4px 8px;
-  background: rgba(62,207,178,0.08); border: 1px solid rgba(62,207,178,0.25);
+  background: #151b18; border: 1px solid #2c4e48;
   border-radius: 8px; color: var(--teal); font-family: var(--font);
   font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
   text-transform: uppercase; cursor: pointer; text-align: center;
@@ -516,8 +515,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   line-height: 1.2; transition: all 0.1s;
   -webkit-tap-highlight-color: transparent;
 }
-.tp-rem-beat-pill:active { background: rgba(62,207,178,0.22); transform: scale(0.95); }
-.tp-rem-beat-pill.current { background: rgba(62,207,178,0.2); border-color: var(--teal); }
+.tp-rem-beat-pill:active { background: #25413c; transform: scale(0.95); }
+.tp-rem-beat-pill.current { background: #203532; border-color: var(--teal); }
 
 /* Browser compat warning */
 #tp-voice-warn {
@@ -629,7 +628,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* Play/pause: teal accent */
 #tp-rem-pp {
   flex: 1.4;
-  background: rgba(62,207,178,0.12); border-color: rgba(62,207,178,0.5);
+  background: #1a2c29; border-color: rgba(62,207,178,0.5);
   color: var(--teal); font-size: 22px;
 }
 #tp-rem-pp:active { background: rgba(62,207,178,0.28); }
@@ -720,7 +719,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* Big pause/play button */
 #tp-vd-pp {
   width: 100%; padding: 18px; font-size: 18px; font-weight: 700;
-  background: rgba(62,207,178,0.12); border: 2px solid var(--teal);
+  background: #1a2c29; border: 2px solid var(--teal);
   border-radius: 14px; color: var(--teal); font-family: var(--font);
   cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.12s;
 }
@@ -750,7 +749,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 #tp-vd-sense, #tp-vd-mult {
   -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
-  background: rgba(62,207,178,0.25); border-radius: 2px; outline: none; cursor: pointer;
+  background: #2c4e48; border-radius: 2px; outline: none; cursor: pointer;
 }
 #tp-vd-sense::-webkit-slider-thumb,
 #tp-vd-mult::-webkit-slider-thumb {
@@ -767,14 +766,14 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-vd-beats.live { display: flex; }
 .tp-vd-beat-pill {
   padding: 8px 14px; font-size: 12px; font-weight: 600;
-  background: rgba(62,207,178,0.08); border: 1px solid rgba(62,207,178,0.3);
+  background: #151b18; border: 1px solid #2c4e48;
   border-radius: 20px; color: rgba(62,207,178,0.8); font-family: var(--font);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   transition: all 0.15s; white-space: nowrap;
 }
-.tp-vd-beat-pill:active { background: rgba(62,207,178,0.25); }
+.tp-vd-beat-pill:active { background: #2c4e48; }
 .tp-vd-beat-pill.current {
-  background: rgba(62,207,178,0.2); border-color: var(--teal);
+  background: #203532; border-color: var(--teal);
   color: var(--teal);
 }
 
@@ -800,7 +799,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #tp-cmd-toast.visible { opacity: 1; }
 #tp-vcmd-btn.listening {
   color: var(--teal); border-color: var(--teal);
-  background: rgba(62,207,178,0.12);
+  background: #1a2c29;
   animation: tp-pulse 1s ease-in-out infinite;
 }
 #tp-vcmd-btn.listening::before { content: '🎙 '; }
@@ -938,7 +937,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
       <div id="tp-speaker-btns"></div>
     </div>
 
-    <div id="tp-solo-hint" style="display:none;font-size:12px;color:rgba(62,207,178,0.7);text-align:center;padding:8px 0 2px;letter-spacing:0.5px;">
+    <div id="tp-solo-hint" style="display:none;font-size:12px;color:#3ecfb2;text-align:center;padding:8px 0 2px;letter-spacing:0.5px;">
       🎤 Voice sync auto-starts · Screen stays on · No second phone needed
     </div>
     <button id="tp-start-btn" disabled onclick="activeTab === 'solo' ? startSoloMode() : startTeleprompter()">Start Teleprompter →</button>
@@ -2633,7 +2632,7 @@ function renderRemoteScriptText(rawText, title) {
     if (seg.type === 'beat_marker') {
       html += `<span class="tp-rem-beat-label">${escHtml(seg.beatName)}</span>`;
     } else if (seg.type === 'speaker') {
-      html += `<span class="tp-rem-beat-label" style="color:#f0b942;background:rgba(240,185,66,0.09);">${escHtml(seg.name)}</span>`;
+      html += `<span class="tp-rem-beat-label" style="color:#f0b942;background:#201d12;">${escHtml(seg.name)}</span>`;
     } else if (seg.type === 'text' && seg.content?.trim()) {
       html += `<p class="tp-rem-line">${escHtml(seg.content)}</p>`;
     }
@@ -2659,7 +2658,7 @@ async function loadRemoteScript(projectId) {
       if (seg.type === 'beat_marker') {
         html += `<span class="tp-rem-beat-label">${escHtml(seg.beatName)}</span>`;
       } else if (seg.type === 'speaker') {
-        html += `<span class="tp-rem-beat-label" style="color:#f0b942;background:rgba(240,185,66,0.09);">${escHtml(seg.name)}</span>`;
+        html += `<span class="tp-rem-beat-label" style="color:#f0b942;background:#201d12;">${escHtml(seg.name)}</span>`;
       } else if (seg.type === 'text' && seg.content?.trim()) {
         html += `<p class="tp-rem-line">${escHtml(seg.content)}</p>`;
       }

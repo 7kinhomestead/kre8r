@@ -13,7 +13,7 @@
 :root {
   --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --bg-deep:#111311;
   --border:#2a2e28; --border-bright:#3d4439;
-  --teal:#3ecfb2; --teal-dark:#2aaa90; --teal-glow:rgba(62,207,178,0.10);
+  --teal:#3ecfb2; --teal-dark:#2aaa90; 
   --red:#e05252; --amber:#f59e0b; --green:#4ade80;
   --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
   --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
@@ -79,7 +79,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
 .btn-danger:hover{background:rgba(224,82,82,0.08);}
 .btn:disabled{opacity:0.5;cursor:not-allowed;}
 .btn-sm{padding:5px 10px;font-size:12px;}
-.spinner{width:14px;height:14px;border:2px solid rgba(62,207,178,0.2);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
+.spinner{width:14px;height:14px;border:2px solid #203532;border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
 
 /* ─── IDEA CARD GRID ─────────────────────────── */
 #listView{animation:fadeUp 0.4s 0.1s ease both;}
@@ -1266,7 +1266,7 @@ function initConstellation(data) {
         const conns = Array.isArray(n.connections) ? n.connections : [];
         const connLines = conns.map(c => {
           const t = nodeIndex[c.idea_id] || `#${c.idea_id}`;
-          return `<span style="display:block;margin-top:3px;padding-left:8px;border-left:2px solid rgba(62,207,178,0.4);color:var(--text-dim)">→ <em style="color:var(--text)">${escHtml(t)}</em>${c.reason ? ` — ${escHtml(c.reason)}` : ''}</span>`;
+          return `<span style="display:block;margin-top:3px;padding-left:8px;border-left:2px solid #2c4e48;color:var(--text-dim)">→ <em style="color:var(--text)">${escHtml(t)}</em>${c.reason ? ` — ${escHtml(c.reason)}` : ''}</span>`;
         }).join('');
         const clusterName = (hit.userData.cluster || {}).name || '';
         tooltip.innerHTML = `

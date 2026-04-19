@@ -20,13 +20,9 @@
     --text-dimmer: #4e5349;
     --teal: #3ecfb2;
     --teal-dark: #2aaa90;
-    --teal-glow: rgba(62,207,178,0.10);
     --red: #e05252;
-    --red-glow: rgba(224,82,82,0.12);
     --amber: #f59e0b;
-    --amber-glow: rgba(245,158,11,0.12);
     --green: #4ade80;
-    --green-glow: rgba(74,222,128,0.10);
     --radius: 10px;
     --radius-sm: 6px;
     --font-head: 'Bebas Neue', sans-serif;
@@ -202,7 +198,7 @@
   }
   .top-priority-card {
     background: var(--teal-glow);
-    border: 1px solid rgba(62,207,178,0.3);
+    border: 1px solid #2c4e48;
     border-radius: var(--radius);
     padding: 20px 22px;
     margin-bottom: 20px;
@@ -763,7 +759,7 @@
     white-space: nowrap;
   }
   .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.success { color: var(--teal); border-color: rgba(62,207,178,0.3); }
+  .toast.success { color: var(--teal); border-color: #2c4e48; }
   .toast.error   { color: var(--red);  border-color: rgba(224,82,82,0.3); }
 
   @media (max-width: 600px) {
@@ -1326,7 +1322,7 @@ function renderPipeline(p) {
             <div class="stalled-meta">${s.days_stalled} days in ${esc(s.stage_name)} · stalled since ${s.stalled_since}</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn" style="padding:5px 10px;font-size:11px;color:var(--teal);border-color:rgba(62,207,178,0.3);background:transparent"
+            <button class="btn" style="padding:5px 10px;font-size:11px;color:var(--teal);border-color:#2c4e48;background:transparent"
               onclick="markComplete(${s.id}, '${esc(s.title)}')">✓ Done</button>
             <a href="/${s.stage_url}?project_id=${s.id}" class="stalled-link">Open →</a>
           </div>
@@ -1770,7 +1766,7 @@ function renderGrowthPlan(p) {
     ${targetChips.length ? `
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
         <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dimmer);align-self:center">3-MONTH TARGETS →</div>
-        ${targetChips.map(t => `<div style="font-size:12px;font-weight:700;color:var(--teal);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.3);padding:4px 12px;border-radius:20px">${esc(t)}</div>`).join('')}
+        ${targetChips.map(t => `<div style="font-size:12px;font-weight:700;color:var(--teal);background:var(--teal-glow);border:1px solid #2c4e48;padding:4px 12px;border-radius:20px">${esc(t)}</div>`).join('')}
       </div>` : ''}
     ${p.gap_analysis ? `<div class="gap-analysis">${esc(p.gap_analysis)}</div>` : ''}
     ${nonNeg ? `<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px">NON-NEGOTIABLES EVERY MONTH</div><div class="growth-non-neg">${nonNeg}</div>` : ''}

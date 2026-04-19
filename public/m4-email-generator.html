@@ -12,11 +12,11 @@
 <style>
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
-    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
-    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
-    --red:#e05c5c; --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
-    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10);
-    --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --teal:#3ecfb2; --teal-dim:#2aa893; 
+    --amber:#f0b942; 
+    --red:#e05c5c; --green:#5cba8a; 
+    --blue:#5b9cf6; 
+    --purple:#a78bfa; 
     --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
     --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
     --radius:10px; --radius-sm:6px;
@@ -137,7 +137,7 @@
   /* EMAIL DAY BLOCK */
   .email-day-block{margin-bottom:20px;}
   .email-day-header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:var(--radius) var(--radius) 0 0;border:1px solid var(--border);border-bottom:none;}
-  .email-day-header.day0{background:linear-gradient(135deg,var(--bg-card) 0%,rgba(62,207,178,0.06) 100%);border-top:2px solid var(--teal);}
+  .email-day-header.day0{background:linear-gradient(135deg,var(--bg-card) 0%,#141916 100%);border-top:2px solid var(--teal);}
   .email-day-header.day3{background:linear-gradient(135deg,var(--bg-card) 0%,rgba(240,185,66,0.06) 100%);border-top:2px solid var(--amber);}
   .email-day-header.day7{background:linear-gradient(135deg,var(--bg-card) 0%,rgba(167,139,250,0.06) 100%);border-top:2px solid var(--purple);}
   .email-day-label{font-family:var(--font-head);font-size:22px;letter-spacing:1.5px;}
@@ -146,8 +146,8 @@
   .email-day-header.day7 .email-day-label{color:var(--purple);}
   .email-day-desc{font-size:13px;color:var(--text-dim);}
   .email-day-tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;margin-left:auto;}
-  .tag-everyone{background:rgba(62,207,178,0.15);color:var(--teal);}
-  .tag-segmented{background:rgba(240,185,66,0.15);color:var(--amber);}
+  .tag-everyone{background:#1b2e2b;color:var(--teal);}
+  .tag-segmented{background:#282213;color:var(--amber);}
 
   /* TIER TABS */
   .tier-tabs{display:flex;background:var(--bg-card);border:1px solid var(--border);border-top:none;border-bottom:none;overflow-x:auto;scrollbar-width:none;}

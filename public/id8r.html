@@ -12,12 +12,12 @@
 <style>
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
-    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
-    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
-    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10);
-    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10);
-    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10);
-    --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --teal:#3ecfb2; --teal-dim:#2aa893; 
+    --amber:#f0b942; 
+    --red:#e05c5c; 
+    --green:#5cba8a; 
+    --blue:#5b9cf6; 
+    --purple:#a78bfa; 
     --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
     --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
     --radius:10px; --radius-sm:6px;
@@ -127,7 +127,7 @@
 
   .msg{max-width:85%;padding:12px 14px;border-radius:var(--radius);font-size:14px;line-height:1.6;}
   .msg.assistant{align-self:flex-start;background:var(--bg-card-2);border-left:3px solid var(--teal);border-radius:0 var(--radius) var(--radius) 0;color:var(--text);}
-  .msg.user{align-self:flex-end;background:rgba(62,207,178,0.08);border:1px solid rgba(62,207,178,0.2);color:var(--text);}
+  .msg.user{align-self:flex-end;background:#151b18;border:1px solid #203532;color:var(--text);}
   .msg .msg-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:5px;opacity:0.6;}
   .msg.assistant .msg-label{color:var(--teal);}
   .msg.user .msg-label{color:var(--text-dim);text-align:right;}
@@ -177,7 +177,7 @@
   .novel-badge{font-size:10px;letter-spacing:2px;color:var(--teal);background:rgba(20,184,166,0.1);border:1px solid rgba(20,184,166,0.3);border-radius:4px;padding:2px 8px;display:inline-block;margin-bottom:8px;font-family:'DM Sans',sans-serif;}
   .concept-angle{
     display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
-    color:var(--teal);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);
+    color:var(--teal);background:var(--teal-glow);border:1px solid #2c4e48;
     border-radius:4px;padding:3px 8px;align-self:flex-start;
   }
   .concept-headline{
@@ -230,7 +230,7 @@
   .research-title{font-family:var(--font-head);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;}
   .research-sub{color:var(--text-dim);font-size:13px;}
   .research-chosen-banner{
-    background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius-sm);
+    background:var(--teal-glow);border:1px solid #2c4e48;border-radius:var(--radius-sm);
     padding:10px 14px;margin-bottom:20px;font-size:13px;color:var(--teal);
     display:none;
   }
@@ -455,7 +455,7 @@
           <option value="">— loading shows... —</option>
         </select>
 
-        <div id="episodic-brief-card" style="display:none;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px">
+        <div id="episodic-brief-card" style="display:none;background:var(--teal-glow);border:1px solid #2c4e48;border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px">
           <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin-bottom:6px">NEXT EPISODE BRIEF</div>
           <div id="episodic-brief-text" style="font-size:13px;color:var(--text);line-height:1.6"></div>
           <div id="episodic-ep-label" style="font-size:11px;color:var(--text-dimmer);margin-top:8px"></div>
@@ -1982,7 +1982,7 @@
           badge.style.cssText = [
             'font-size:12px;color:var(--teal);margin-bottom:12px;',
             'display:flex;align-items:center;gap:8px;',
-            'background:rgba(62,207,178,0.08);border:1px solid rgba(62,207,178,0.25);',
+            'background:#151b18;border:1px solid #2c4e48;',
             'border-radius:6px;padding:8px 12px;'
           ].join('');
           badge.innerHTML = `<span style="font-size:16px">🌱</span>

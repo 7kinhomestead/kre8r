@@ -12,11 +12,11 @@
 <style>
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b; --border:#2a2e28; --border-bright:#3d4439;
-    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10); --teal-glow-strong:rgba(62,207,178,0.22);
-    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10); --amber-border:rgba(240,185,66,0.30);
-    --red:#e05c5c; --red-glow:rgba(224,92,92,0.10); --red-border:rgba(224,92,92,0.30);
-    --green:#5cba8a; --green-glow:rgba(92,186,138,0.10); --green-border:rgba(92,186,138,0.30);
-    --blue:#5b9cf6; --blue-glow:rgba(91,156,246,0.10); --purple:#a78bfa; --purple-glow:rgba(167,139,250,0.10);
+    --teal:#3ecfb2; --teal-dim:#2aa893; 
+    --amber:#f0b942; 
+    --red:#e05c5c; 
+    --green:#5cba8a; 
+    --blue:#5b9cf6; --purple:#a78bfa; 
     --text:#e8ebe6; --text-dim:#8a9487; --text-dimmer:#4e5349;
     --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
     --radius:10px; --radius-sm:6px;
@@ -108,7 +108,7 @@
   /* ── SECTION CARD ── */
   .sections-list{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
   .section-card{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
-  .section-card.is-gold{border-color:rgba(240,185,66,0.4);box-shadow:0 0 12px rgba(240,185,66,0.05);}
+  .section-card.is-gold{border-color:#4a3c18;box-shadow:0 0 12px rgba(240,185,66,0.05);}
   .section-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;}
   .section-idx{font-family:var(--font-head);font-size:20px;color:var(--text-dimmer);min-width:28px;}
   .section-info{flex:1;min-width:0;}
@@ -118,11 +118,11 @@
   .badge-gold{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-border);}
   .badge-winner{background:var(--green-glow);color:var(--green);border:1px solid var(--green-border);}
   .badge-fire{background:var(--red-glow);color:var(--red);border:1px solid var(--red-border);}
-  .badge-takes{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
-  .badge-clean{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(91,156,246,0.3);}
+  .badge-takes{background:var(--teal-glow);color:var(--teal);border:1px solid #2c4e48;}
+  .badge-clean{background:var(--blue-glow);color:var(--blue);border:1px solid #253560;}
   .badge-strong{background:var(--green-glow);color:var(--green);border:1px solid var(--green-border);}
   .badge-fumbled{background:var(--red-glow);color:var(--red);border:1px solid var(--red-border);}
-  .badge-ok{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(62,207,178,0.25);}
+  .badge-ok{background:var(--teal-glow);color:var(--teal);border:1px solid #2c4e48;}
   .section-expand{background:none;border:none;color:var(--text-dimmer);font-size:16px;cursor:pointer;transition:transform 0.2s;}
   .section-expand.open{transform:rotate(180deg);}
   .section-body{padding:0 14px 14px;border-top:1px solid var(--border);display:none;}
@@ -136,10 +136,10 @@
   .take-item .take-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .take-winner-tag{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;}
   .take-swap-hint{font-size:10px;color:var(--text-dimmer);margin-left:auto;}
-  .fire-box{background:rgba(224,92,92,0.06);border:1px solid var(--red-border);border-radius:var(--radius-sm);padding:10px 12px;margin-top:12px;font-size:13px;color:var(--text-dim);line-height:1.6;}
+  .fire-box{background:#1d1515;border:1px solid var(--red-border);border-radius:var(--radius-sm);padding:10px 12px;margin-top:12px;font-size:13px;color:var(--text-dim);line-height:1.6;}
   .fire-box strong{color:var(--red);}
   /* ── MISSING BEATS BANNER ── */
-  .missing-banner{background:rgba(240,185,66,0.07);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:10px 14px;margin:0 0 12px;font-size:12px;color:var(--amber);line-height:1.6;display:none;}
+  .missing-banner{background:#1e1c11;border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:10px 14px;margin:0 0 12px;font-size:12px;color:var(--amber);line-height:1.6;display:none;}
   .missing-banner.visible{display:block;}
 
   /* ── BROLL PANEL ── */
@@ -161,7 +161,7 @@
   .empty-sub{font-size:13px;line-height:1.6;}
 
   /* ── ADVANCE BANNER ── */
-  .advance-banner{background:linear-gradient(135deg,var(--teal-glow) 0%,var(--bg-card) 100%);border:1px solid rgba(62,207,178,0.3);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;display:none;animation:fadeUp 0.4s ease both;}
+  .advance-banner{background:linear-gradient(135deg,var(--teal-glow) 0%,var(--bg-card) 100%);border:1px solid #2c4e48;border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;display:none;animation:fadeUp 0.4s ease both;}
   .advance-banner.visible{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
   .advance-text{flex:1;}
   .advance-title{font-family:var(--font-head);font-size:18px;letter-spacing:2px;color:var(--teal);margin-bottom:4px;}

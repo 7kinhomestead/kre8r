@@ -14,8 +14,8 @@
   :root {
     --bg:#0e0f0e; --bg-card:#161916; --bg-card-2:#1c1f1b;
     --border:#2a2e28; --border-bright:#3d4439;
-    --teal:#3ecfb2; --teal-dim:#2aa893; --teal-glow:rgba(62,207,178,0.10);
-    --amber:#f0b942; --amber-glow:rgba(240,185,66,0.10);
+    --teal:#3ecfb2; --teal-dim:#2aa893; 
+    --amber:#f0b942; 
     --green:#5cba8a; --red:#e05c5c;
     --text:#e8ebe6; --text-dim:#8a9487; --text-faint:#4e5349;
     --font-head:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif;
@@ -59,7 +59,7 @@
     display:inline-flex;align-items:center;gap:6px;
     font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
     padding:4px 10px;border-radius:20px;
-    background:var(--teal-glow);border:1px solid rgba(62,207,178,0.25);color:var(--teal);
+    background:var(--teal-glow);border:1px solid #2c4e48;color:var(--teal);
     white-space:nowrap;
   }
 
@@ -84,7 +84,7 @@
     font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;
     background:var(--bg-card-2);border:1px solid var(--border-bright);color:var(--text-dim);
   }
-  .coverage-badge.covered{background:rgba(92,186,138,0.12);border-color:rgba(92,186,138,0.3);color:var(--green);}
+  .coverage-badge.covered{background:#1c2e24;border-color:#2c4838;color:var(--green);}
   .coverage-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
 
   /* ── BTN ── */
@@ -95,7 +95,7 @@
     transition:all 0.15s;text-decoration:none;white-space:nowrap;
   }
   .btn-teal{background:var(--teal);color:#0e0f0e;}
-  .btn-teal:hover{background:var(--teal-dim);transform:translateY(-1px);box-shadow:0 4px 16px rgba(62,207,178,0.25);}
+  .btn-teal:hover{background:var(--teal-dim);transform:translateY(-1px);box-shadow:0 4px 16px #2c4e48;}
   .btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border-bright);}
   .btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
   .btn:disabled{opacity:0.45;cursor:not-allowed;transform:none !important;}
@@ -133,16 +133,16 @@
     font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
     padding:3px 8px;border-radius:20px;white-space:nowrap;
   }
-  .badge-teal{background:rgba(62,207,178,0.12);border:1px solid rgba(62,207,178,0.3);color:var(--teal);}
-  .badge-amber{background:rgba(240,185,66,0.12);border:1px solid rgba(240,185,66,0.3);color:var(--amber);}
-  .badge-green{background:rgba(92,186,138,0.12);border:1px solid rgba(92,186,138,0.3);color:var(--green);}
+  .badge-teal{background:#1a2c29;border:1px solid #2c4e48;color:var(--teal);}
+  .badge-amber{background:#252012;border:1px solid #4a3c18;color:var(--amber);}
+  .badge-green{background:#1c2e24;border:1px solid #2c4838;color:var(--green);}
   .badge-dim{background:var(--bg-card);border:1px solid var(--border);color:var(--text-faint);}
-  .badge-red{background:rgba(224,92,92,0.12);border:1px solid rgba(224,92,92,0.3);color:var(--red);}
+  .badge-red{background:#261a1a;border:1px solid #4a2e2e;color:var(--red);}
   /* ── SPEAKER BADGE ── */
   .speaker-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:0.5px;}
   .speaker-badge-j{background:rgba(20,184,166,0.12);border:1px solid rgba(20,184,166,0.3);color:#14b8a6;}
-  .speaker-badge-c{background:rgba(240,185,66,0.12);border:1px solid rgba(240,185,66,0.3);color:#f0b942;}
-  .speaker-badge-g{background:rgba(92,186,138,0.12);border:1px solid rgba(92,186,138,0.3);color:#5cba8a;}
+  .speaker-badge-c{background:#252012;border:1px solid #4a3c18;color:#f0b942;}
+  .speaker-badge-g{background:#1c2e24;border:1px solid #2c4838;color:#5cba8a;}
   .speaker-badge-other{background:var(--bg-card);border:1px solid var(--border-bright);color:var(--text-dim);}
 
   /* ── SHOT STATUS OVERLAY ── */
@@ -199,7 +199,7 @@
   .mirror-panel{margin-top:16px;}
   .mirror-live-dot{
     width:7px;height:7px;border-radius:50%;
-    background:var(--green);box-shadow:0 0 0 3px rgba(92,186,138,0.2);
+    background:var(--green);box-shadow:0 0 0 3px #233828;
     animation:pulse 2s infinite;
     display:inline-block;flex-shrink:0;
   }
@@ -213,8 +213,8 @@
     background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);
     padding:10px 12px;
   }
-  .mirror-card.good{border-color:rgba(92,186,138,0.35);background:rgba(92,186,138,0.06);}
-  .mirror-card.skip{border-color:rgba(224,92,92,0.25);background:rgba(224,92,92,0.04);opacity:0.7;}
+  .mirror-card.good{border-color:#2c4838;background:#141a16;}
+  .mirror-card.skip{border-color:#3a2222;background:#1c1414;opacity:0.7;}
   .mirror-card.needed{border-color:var(--border);}
   .mirror-card-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mirror-card-status{font-size:11px;font-weight:700;letter-spacing:0.5px;}
@@ -252,8 +252,8 @@
   .selector-info span{color:var(--teal);font-weight:600;}
   .title-nudge{
     display:none;
-    background:rgba(240,185,66,0.08);
-    border:1px solid rgba(240,185,66,0.35);
+    background:#1f1c11;
+    border:1px solid #4a3c18;
     border-radius:var(--radius-sm);
     color:var(--amber);
     font-size:12px;
@@ -275,9 +275,9 @@
     box-shadow:0 8px 24px rgba(0,0,0,0.4);animation:fadeUp 0.2s ease both;
     display:flex;align-items:center;gap:8px;pointer-events:auto;
   }
-  .toast.ok{border-color:rgba(62,207,178,0.4);color:var(--teal);}
-  .toast.err{border-color:rgba(224,92,92,0.4);color:var(--red);}
-  .toast.info{border-color:rgba(240,185,66,0.35);color:var(--amber);}
+  .toast.ok{border-color:#2c4e48;color:var(--teal);}
+  .toast.err{border-color:#4a2e2e;color:var(--red);}
+  .toast.info{border-color:#4a3c18;color:var(--amber);}
 </style>
 </head>
 <body>
@@ -483,7 +483,7 @@ async function onProjectChange(id) {
           <div class="empty-icon">🌱</div>
           <div class="empty-title">PIPR SETUP NEEDED</div>
           <div class="empty-sub">This project doesn't have a story structure or beat map yet. Complete PipΩr setup first, then come back here to build the shot list.</div>
-          <a href="/pipr.html" style="display:inline-block;margin-top:16px;padding:11px 22px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.35);border-radius:var(--radius-sm);color:var(--teal);font-size:13px;font-weight:700;text-decoration:none;">→ Open PipΩr</a>
+          <a href="/pipr.html" style="display:inline-block;margin-top:16px;padding:11px 22px;background:var(--teal-glow);border:1px solid #2c4e48;border-radius:var(--radius-sm);color:var(--teal);font-size:13px;font-weight:700;text-decoration:none;">→ Open PipΩr</a>
         </div>`;
       document.getElementById('crew-brief-body').innerHTML = `
         <div class="empty-state" style="padding:40px 20px;">
