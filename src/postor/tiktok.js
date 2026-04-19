@@ -39,8 +39,9 @@ function generatePkce() {
 // ─── Auth URL ────────────────────────────────────────────────────────────────
 
 function getCallbackUrl(req) {
-  const host = req.get('host') || 'localhost:3000';
-  return `${req.protocol}://${host}/api/postor/auth/tiktok/callback`;
+  const host  = req.get('host') || 'localhost:3000';
+  const proto = req.get('x-forwarded-proto') || (host.startsWith('localhost') ? 'http' : 'https');
+  return `${proto}://${host}/api/postor/auth/tiktok/callback`;
 }
 
 function getAuthUrl(req, state, codeChallenge) {
