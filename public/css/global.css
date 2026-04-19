@@ -15,21 +15,21 @@
   --teal: #3ecfb2;
   --teal-dim: #2aa893;
   --teal-hover: #4ddfc4;
-  --teal-glow: #1e3330;        /* solid equiv of rgba(62,207,178,0.10) — no hunter green drift */
-  --teal-glow-strong: #25413c; /* solid equiv of rgba(62,207,178,0.22) */
-  --teal-border: #2c4e48;      /* solid teal border — use instead of inline rgba */
+  --teal-glow: #1c3234;        /* teal dark — B>G so reads teal, not hunter green */
+  --teal-glow-strong: #223e44; /* teal medium — B>G */
+  --teal-border: #254e52;      /* teal border — B>G so reads teal not hunter green */
 
   /* ── SURFACES ── */
-  --bg: #0f1010;               /* very slightly cooler — less green cast */
-  --bg-card: #171919;          /* cooler neutral — eliminates green pull on dark surfaces */
-  --bg-card-2: #1d2020;
-  --surface: #171919;
-  --surface-2: #1d2020;
-  --surface-3: #262828;
+  --bg: #0f0f0f;               /* true neutral black — R=G=B, zero cast */
+  --bg-card: #181818;          /* true neutral dark — zero green cast */
+  --bg-card-2: #1e1e1e;
+  --surface: #181818;
+  --surface-2: #1e1e1e;
+  --surface-3: #272727;
 
   /* ── BORDERS ── */
-  --border: #2a2e2e;
-  --border-bright: #3d4444;
+  --border: #2c2c2c;           /* true neutral grey — no green tint */
+  --border-bright: #3c3c3c;
 
   /* ── TEXT ── */
   --text: #e8ebe6;

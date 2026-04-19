@@ -9,25 +9,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:          #0e0f0e;
-      --bg-card:     #161916;
-      --bg-card-2:   #1c1f1b;
-      --border:      #2a2e28;
-      --border-bright: #3d4439;
-      --text:        #e8ebe6;
-      --text-dim:    #8a9487;
-      --text-dimmer: #4e5349;
-      --teal:        #14b8a6;
-      --teal-glow:   rgba(20,184,166,.12);
-      --teal-border: rgba(20,184,166,.3);
-      --red:         #e05252;
-      --green:       #22c55e;
-      --orange:      #f59e0b;
-      --radius:      10px;
-      --radius-sm:   6px;
-      --font-head:   'Bebas Neue', sans-serif;
-      --font-body:   'DM Sans', sans-serif;
-      --nav-height:  54px;
+      --bg:               #0f0f0f;   /* true neutral — zero cast */
+      --bg-card:          #181818;
+      --bg-card-2:        #1e1e1e;
+      --border:           #2c2c2c;
+      --border-bright:    #3c3c3c;
+      --text:             #e8ebe6;
+      --text-dim:         #8a9487;
+      --text-dimmer:      #4e5349;
+      --teal:             #14b8a6;
+      --teal-glow:        #1c3234;   /* B>G — reads teal, not hunter green */
+      --teal-glow-strong: #223e44;
+      --teal-border:      #254e52;   /* B>G */
+      --red:              #e05252;
+      --green:            #22c55e;
+      --orange:           #f59e0b;
+      --radius:           10px;
+      --radius-sm:        6px;
+      --font-head:        'Bebas Neue', sans-serif;
+      --font-body:        'DM Sans', sans-serif;
+      --nav-height:       54px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -87,7 +88,7 @@
     }
     .platform-card.is-connected {
       border-color: var(--teal-border);
-      background: linear-gradient(135deg, var(--bg-card), rgba(20,184,166,.04));
+      background: linear-gradient(135deg, var(--bg-card), var(--teal-glow));
     }
     .platform-card.is-soon {
       opacity: .55;
@@ -314,8 +315,8 @@
 
     /* ── Queue Chips ── */
     .cal-chip {
-      background: rgba(20,184,166,.12);
-      border: 1px solid rgba(20,184,166,.3);
+      background: var(--teal-glow);
+      border: 1px solid var(--teal-border);
       border-radius: 4px;
       padding: 3px 6px;
       font-size: 10px;
@@ -325,7 +326,7 @@
       line-height: 1.3;
       word-break: break-word;
     }
-    .cal-chip:hover { background: rgba(20,184,166,.22); }
+    .cal-chip:hover { background: var(--teal-glow-strong); }
     .cal-chip.is-posted  { background: rgba(34,197,94,.1);  border-color: rgba(34,197,94,.3);  color: #4ade80; }
     .cal-chip.is-failed  { background: rgba(224,82,82,.1);  border-color: rgba(224,82,82,.3);  color: #f87171; }
     .cal-chip.is-posting { background: rgba(251,191,36,.1); border-color: rgba(251,191,36,.3); color: #fbbf24; }
@@ -750,7 +751,7 @@
       letter-spacing: .4px;
     }
     .status-badge.posted  { background: rgba(34,197,94,.15); color: var(--green); }
-    .status-badge.posting { background: rgba(20,184,166,.15); color: var(--teal); }
+    .status-badge.posting { background: var(--teal-glow); color: var(--teal); }
     .status-badge.failed  { background: rgba(224,82,82,.15);  color: var(--red); }
     .status-badge.pending { background: rgba(255,255,255,.06); color: var(--text-dimmer); }
     .history-empty {
@@ -887,7 +888,7 @@
       transition: border-color .15s;
     }
     .clip-check-item:hover { border-color: var(--border-bright); }
-    .clip-check-item.is-selected { border-color: var(--teal-border); background: rgba(20,184,166,.04); }
+    .clip-check-item.is-selected { border-color: var(--teal-border); background: var(--teal-glow); }
     .clip-check-item input[type=checkbox] {
       width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--teal); cursor: pointer;
     }
@@ -961,7 +962,7 @@
       transition: all .1s;
     }
     .cap-tab.active {
-      background: rgba(20,184,166,.12);
+      background: var(--teal-glow);
       border-color: var(--teal-border);
       color: var(--teal);
     }
@@ -1005,7 +1006,7 @@
       transition: all .1s;
     }
     .cap-platform-badge.active {
-      background: rgba(20,184,166,.12);
+      background: var(--teal-glow);
       border-color: var(--teal-border);
       color: var(--teal);
     }
@@ -1195,7 +1196,7 @@
     .sched-cell.is-past { opacity: .45; pointer-events: none; }
 
     .sched-chip {
-      background: rgba(20,184,166,.1);
+      background: var(--teal-glow);
       border: 1px solid var(--teal-border);
       border-radius: 4px;
       padding: 3px 5px 3px 5px;
@@ -1243,7 +1244,7 @@
       font-family: var(--font-body);
     }
     .sched-plat-btn.is-on {
-      background: rgba(20,184,166,.18);
+      background: var(--teal-glow-strong);
       border-color: var(--teal);
       color: var(--teal);
     }
@@ -1359,7 +1360,7 @@
     </div>
 
     <!-- Pipeline prefill notice -->
-    <div id="prefill-notice" style="display:none;background:rgba(20,184,166,.08);border:1px solid rgba(20,184,166,.25);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--teal);margin-bottom:14px;align-items:center;gap:8px;">
+    <div id="prefill-notice" style="display:none;background:var(--teal-glow);border:1px solid var(--teal-border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--teal);margin-bottom:14px;align-items:center;gap:8px;">
       <span>✨</span>
       <span id="prefill-notice-text">Pipeline data loaded — title, description and captions auto-filled.</span>
       <button onclick="clearPrefill()" style="margin-left:auto;background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:16px;line-height:1;" title="Clear">×</button>
@@ -3338,7 +3339,7 @@ function renderCaptionCard(evt) {
     : '';
 
   const libraryBadge = evt.from_library
-    ? `<span style="font-size:10px;font-weight:700;letter-spacing:.5px;background:rgba(20,184,166,.15);border:1px solid var(--teal-border);color:var(--teal);border-radius:20px;padding:2px 8px;">✅ saved captions</span>`
+    ? `<span style="font-size:10px;font-weight:700;letter-spacing:.5px;background:var(--teal-glow);border:1px solid var(--teal-border);color:var(--teal);border-radius:20px;padding:2px 8px;">✅ saved captions</span>`
     : '';
 
   const tabsHtml = platforms.map(p => `
