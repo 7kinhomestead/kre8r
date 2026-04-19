@@ -509,6 +509,7 @@ app.use('/api/local-sync',        require('./src/routes/local-sync'));
 app.use('/api/releases',          require('./src/routes/releases'));
 app.use('/api/analytics-import',  require('./src/routes/analytics-import'));
 app.use('/api/postor',            require('./src/routes/postor'));
+app.use('/api/markr',             require('./src/routes/markr'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 
 // PostΩr queue processor — starts 60s interval to fire scheduled posts

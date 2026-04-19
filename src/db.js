@@ -934,6 +934,68 @@ function runMigrations() {
     db.exec('CREATE INDEX IF NOT EXISTS idx_token_tenant ON token_usage(tenant_slug)');
     console.log('[DB] Migration: added token_usage.tenant_slug');
   }
+
+  // ── MarkΩr — copyright protection infrastructure ──────────────────────────
+
+  // Watermark registry — one row per watermarked export
+  db.exec(`CREATE TABLE IF NOT EXISTS watermarks (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id       INTEGER,
+    video_path       TEXT    NOT NULL,
+    watermarked_path TEXT,
+    seed             TEXT    NOT NULL,
+    watermark_code   TEXT    NOT NULL,
+    channel          TEXT    NOT NULL DEFAULT 'original',
+    embedded_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_watermarks_footage ON watermarks(footage_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_watermarks_path    ON watermarks(video_path)');
+
+  // Visual fingerprints — pHash per keyframe from each vault video
+  db.exec(`CREATE TABLE IF NOT EXISTS video_fingerprints (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id   INTEGER,
+    video_path   TEXT    NOT NULL,
+    frame_index  INTEGER,
+    frame_time_s REAL,
+    phash        TEXT    NOT NULL,
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_vfp_footage ON video_fingerprints(footage_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_vfp_path    ON video_fingerprints(video_path)');
+
+  // Audio fingerprints — per-video RMS energy signature
+  db.exec(`CREATE TABLE IF NOT EXISTS audio_fingerprints (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id       INTEGER,
+    video_path       TEXT    NOT NULL UNIQUE,
+    fingerprint_data TEXT    NOT NULL,
+    duration_s       REAL,
+    created_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_afp_footage ON audio_fingerprints(footage_id)');
+
+  // Fan reports — incoming from GuardΩr public site
+  db.exec(`CREATE TABLE IF NOT EXISTS guard_reports (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    submitted_url       TEXT,
+    submitted_file_path TEXT,
+    submitter_note      TEXT,
+    platform            TEXT,
+    match_type          TEXT,
+    match_confidence    REAL,
+    matched_footage_id  INTEGER,
+    matched_video_title TEXT,
+    evidence_json       TEXT,
+    status              TEXT    NOT NULL DEFAULT 'pending',
+    claim_platform      TEXT,
+    claim_reference     TEXT,
+    created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_guard_status  ON guard_reports(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_guard_created ON guard_reports(created_at)');
+
+  console.log('[DB] MarkΩr tables verified');
 }
 
 /**
@@ -1436,6 +1498,61 @@ function bootstrapTenantTables(tdb) {
   )`);
   exec('CREATE INDEX IF NOT EXISTS idx_ideas_status  ON ideas(status)');
   exec('CREATE INDEX IF NOT EXISTS idx_ideas_created ON ideas(created_at)');
+
+  // MarkΩr tables
+  exec(`CREATE TABLE IF NOT EXISTS watermarks (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id       INTEGER,
+    video_path       TEXT    NOT NULL,
+    watermarked_path TEXT,
+    seed             TEXT    NOT NULL,
+    watermark_code   TEXT    NOT NULL,
+    channel          TEXT    NOT NULL DEFAULT 'original',
+    embedded_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_watermarks_footage ON watermarks(footage_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_watermarks_path    ON watermarks(video_path)');
+
+  exec(`CREATE TABLE IF NOT EXISTS video_fingerprints (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id   INTEGER,
+    video_path   TEXT    NOT NULL,
+    frame_index  INTEGER,
+    frame_time_s REAL,
+    phash        TEXT    NOT NULL,
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_vfp_footage ON video_fingerprints(footage_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_vfp_path    ON video_fingerprints(video_path)');
+
+  exec(`CREATE TABLE IF NOT EXISTS audio_fingerprints (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id       INTEGER,
+    video_path       TEXT    NOT NULL UNIQUE,
+    fingerprint_data TEXT    NOT NULL,
+    duration_s       REAL,
+    created_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_afp_footage ON audio_fingerprints(footage_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS guard_reports (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    submitted_url       TEXT,
+    submitted_file_path TEXT,
+    submitter_note      TEXT,
+    platform            TEXT,
+    match_type          TEXT,
+    match_confidence    REAL,
+    matched_footage_id  INTEGER,
+    matched_video_title TEXT,
+    evidence_json       TEXT,
+    status              TEXT    NOT NULL DEFAULT 'pending',
+    claim_platform      TEXT,
+    claim_reference     TEXT,
+    created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_guard_status  ON guard_reports(status)');
+  exec('CREATE INDEX IF NOT EXISTS idx_guard_created ON guard_reports(created_at)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -4331,6 +4448,27 @@ module.exports = {
   updateIdea,
   deleteIdea,
   bulkCreateIdeas,
+  // MarkΩr
+  insertWatermark,
+  getWatermarkByPath,
+  getWatermarkById,
+  getAllWatermarks,
+  getWatermarkStats,
+  insertVideoFingerprint,
+  getVideoFingerprints,
+  getAllVideoFingerprints,
+  getVideoFingerprintStats,
+  deleteVideoFingerprints,
+  insertAudioFingerprint,
+  getAudioFingerprint,
+  getAllAudioFingerprints,
+  getAudioFingerprintStats,
+  insertGuardReport,
+  getGuardReport,
+  getAllGuardReports,
+  updateGuardReport,
+  getGuardReportStats,
+  getUnfingerprintedFootage,
 };
 
 // ─────────────────────────────────────────────
@@ -4566,6 +4704,162 @@ function getPendingQueueItems() {
     WHERE status = 'pending'
       AND scheduled_at <= datetime('now')
     ORDER BY scheduled_at ASC
+  `);
+}
+
+// ─────────────────────────────────────────────
+// MarkΩr HELPERS
+// ─────────────────────────────────────────────
+
+function insertWatermark({ footage_id, video_path, watermarked_path, seed, watermark_code, channel = 'original' }) {
+  return _run(
+    `INSERT INTO watermarks (footage_id, video_path, watermarked_path, seed, watermark_code, channel)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [footage_id || null, video_path, watermarked_path || null, seed, watermark_code, channel]
+  );
+}
+
+function getWatermarkByPath(videoPath) {
+  return _get('SELECT * FROM watermarks WHERE video_path = ? ORDER BY rowid DESC LIMIT 1', [videoPath]);
+}
+
+function getWatermarkById(id) {
+  return _get('SELECT * FROM watermarks WHERE id = ?', [id]);
+}
+
+function getAllWatermarks() {
+  return _all('SELECT * FROM watermarks ORDER BY embedded_at DESC');
+}
+
+function getWatermarkStats() {
+  return _get(`
+    SELECT
+      COUNT(*) as total,
+      COUNT(DISTINCT video_path) as unique_videos,
+      MAX(embedded_at) as last_embedded
+    FROM watermarks
+  `);
+}
+
+// Video fingerprints
+function insertVideoFingerprint({ footage_id, video_path, frame_index, frame_time_s, phash }) {
+  return _run(
+    `INSERT INTO video_fingerprints (footage_id, video_path, frame_index, frame_time_s, phash)
+     VALUES (?, ?, ?, ?, ?)`,
+    [footage_id || null, video_path, frame_index, frame_time_s, phash]
+  );
+}
+
+function getVideoFingerprints(videoPath) {
+  return _all('SELECT * FROM video_fingerprints WHERE video_path = ? ORDER BY frame_index', [videoPath]);
+}
+
+function getAllVideoFingerprints() {
+  return _all('SELECT * FROM video_fingerprints ORDER BY video_path, frame_index');
+}
+
+function getVideoFingerprintStats() {
+  return _get(`
+    SELECT
+      COUNT(DISTINCT video_path) as videos_fingerprinted,
+      COUNT(*) as total_frames
+    FROM video_fingerprints
+  `);
+}
+
+function deleteVideoFingerprints(videoPath) {
+  _run('DELETE FROM video_fingerprints WHERE video_path = ?', [videoPath]);
+}
+
+// Audio fingerprints
+function insertAudioFingerprint({ footage_id, video_path, fingerprint_data, duration_s }) {
+  return _run(
+    `INSERT OR REPLACE INTO audio_fingerprints (footage_id, video_path, fingerprint_data, duration_s)
+     VALUES (?, ?, ?, ?)`,
+    [footage_id || null, video_path, fingerprint_data, duration_s || null]
+  );
+}
+
+function getAudioFingerprint(videoPath) {
+  return _get('SELECT * FROM audio_fingerprints WHERE video_path = ?', [videoPath]);
+}
+
+function getAllAudioFingerprints() {
+  return _all('SELECT * FROM audio_fingerprints ORDER BY created_at');
+}
+
+function getAudioFingerprintStats() {
+  return _get(`
+    SELECT
+      COUNT(*) as videos_fingerprinted,
+      SUM(duration_s) as total_duration_s
+    FROM audio_fingerprints
+  `);
+}
+
+// Guard reports
+function insertGuardReport({ submitted_url, submitted_file_path, submitter_note, platform,
+                              match_type, match_confidence, matched_footage_id, matched_video_title,
+                              evidence_json }) {
+  return _run(
+    `INSERT INTO guard_reports
+       (submitted_url, submitted_file_path, submitter_note, platform,
+        match_type, match_confidence, matched_footage_id, matched_video_title, evidence_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      submitted_url || null, submitted_file_path || null, submitter_note || null, platform || null,
+      match_type || null, match_confidence || null, matched_footage_id || null,
+      matched_video_title || null, evidence_json || null,
+    ]
+  );
+}
+
+function getGuardReport(id) {
+  return _get('SELECT * FROM guard_reports WHERE id = ?', [id]);
+}
+
+function getAllGuardReports({ status } = {}) {
+  const params = [];
+  let sql = 'SELECT * FROM guard_reports WHERE 1=1';
+  if (status) { sql += ' AND status = ?'; params.push(status); }
+  sql += ' ORDER BY created_at DESC';
+  return _all(sql, params);
+}
+
+function updateGuardReport(id, fields) {
+  const sets = [], vals = [];
+  const allowed = ['status', 'claim_platform', 'claim_reference'];
+  for (const k of allowed) {
+    if (fields[k] !== undefined) { sets.push(`${k} = ?`); vals.push(fields[k]); }
+  }
+  if (!sets.length) return;
+  vals.push(id);
+  _run(`UPDATE guard_reports SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+function getGuardReportStats() {
+  return _get(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'pending'   THEN 1 ELSE 0 END) as pending,
+      SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed,
+      SUM(CASE WHEN status = 'filed'     THEN 1 ELSE 0 END) as filed,
+      SUM(CASE WHEN status = 'resolved'  THEN 1 ELSE 0 END) as resolved
+    FROM guard_reports
+  `);
+}
+
+// Vault footage that hasn't been fingerprinted yet
+function getUnfingerprintedFootage() {
+  return _all(`
+    SELECT f.*
+    FROM footage f
+    WHERE f.file_path IS NOT NULL
+      AND f.shot_type NOT IN ('unusable')
+      AND NOT EXISTS (
+        SELECT 1 FROM video_fingerprints vf WHERE vf.footage_id = f.id
+      )
+    ORDER BY f.created_at DESC
   `);
 }
 

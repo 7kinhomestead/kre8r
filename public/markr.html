@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarkΩr — Copyright Protection</title>
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    .page-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px var(--page-padding) 60px;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .page-title {
+      font-family: var(--font-head);
+      font-size: 36px;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+    .page-title span { color: var(--teal); }
+    .page-subtitle {
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    /* ── Stat cards row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      padding: 16px 18px;
+    }
+    .stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: var(--font-head);
+      font-size: 32px;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+    .stat-value.teal  { color: var(--teal); }
+    .stat-value.amber { color: var(--amber); }
+    .stat-value.red   { color: var(--red); }
+    .stat-value.green { color: var(--green); }
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-dimmer);
+      margin-top: 4px;
+    }
+
+    /* ── Two-column layout ── */
+    .main-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 780px) {
+      .main-cols { grid-template-columns: 1fr; }
+    }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 14px 18px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .panel-title {
+      font-family: var(--font-head);
+      font-size: 16px;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+    .panel-body { padding: 18px; }
+
+    /* ── Fingerprint vault section (full-width) ── */
+    .full-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-teal    { background: var(--teal); color: #0f0f0f; }
+    .btn-teal:hover { background: var(--teal-hover); }
+    .btn-ghost   { background: var(--bg-card-2); color: var(--text-dim); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--surface-3); color: var(--text); }
+    .btn-danger  { background: var(--red-glow); color: var(--red); border: 1px solid var(--red-border); }
+    .btn-danger:hover { background: var(--red); color: #fff; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Batch fingerprint ── */
+    .fingerprint-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .type-select {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    .type-select:focus { outline: none; border-color: var(--teal-border); }
+
+    /* ── Progress log ── */
+    .progress-log {
+      margin-top: 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      max-height: 220px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.8;
+      font-family: monospace;
+      display: none;
+    }
+    .progress-log.visible { display: block; }
+    .log-ok    { color: var(--green); }
+    .log-skip  { color: var(--text-dim); }
+    .log-error { color: var(--red); }
+    .log-info  { color: var(--teal); }
+
+    /* ── Progress bar ── */
+    .progress-bar-wrap {
+      display: none;
+      margin-top: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      height: 8px;
+    }
+    .progress-bar-wrap.visible { display: block; }
+    .progress-bar {
+      height: 100%;
+      background: var(--teal);
+      border-radius: 20px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    /* ── Reports table ── */
+    .reports-list { display: flex; flex-direction: column; gap: 10px; }
+    .report-card {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color 0.12s;
+    }
+    .report-card:hover { border-color: var(--teal-border); }
+    .report-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .badge-pending   { background: var(--amber-glow); }
+    .badge-confirmed { background: var(--red-glow); }
+    .badge-filed     { background: var(--blue-glow); }
+    .badge-resolved  { background: var(--green-glow); }
+    .badge-dismissed { background: var(--surface-3); }
+    .report-meta { flex: 1; min-width: 0; }
+    .report-title { font-weight: 600; color: var(--text); margin-bottom: 3px; font-size: 13px; }
+    .report-sub   { color: var(--text-dim); font-size: 12px; }
+    .report-status {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .status-pending   { background: var(--amber-glow); color: var(--amber); border: 1px solid var(--amber-border); }
+    .status-confirmed { background: var(--red-glow);   color: var(--red);   border: 1px solid var(--red-border); }
+    .status-filed     { background: var(--blue-glow);  color: var(--blue);  border: 1px solid #2c4060; }
+    .status-resolved  { background: var(--green-glow); color: var(--green); border: 1px solid var(--green-border); }
+    .status-dismissed { background: var(--surface-3);  color: var(--text-dim); border: 1px solid var(--border); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+    }
+    .empty-icon { font-size: 32px; margin-bottom: 10px; }
+    .empty-label { font-size: 14px; color: var(--text-dimmer); }
+
+    /* ── Watermark registry ── */
+    .watermark-list { display: flex; flex-direction: column; gap: 8px; }
+    .watermark-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+    .wm-icon { font-size: 18px; flex-shrink: 0; }
+    .wm-info { flex: 1; min-width: 0; }
+    .wm-filename { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wm-code { color: var(--text-dim); font-family: monospace; font-size: 11px; }
+    .wm-date { color: var(--text-dimmer); font-size: 11px; flex-shrink: 0; }
+    .wm-channel {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      padding: 2px 6px; border-radius: 10px;
+      background: var(--teal-glow); color: var(--teal); border: 1px solid var(--teal-border);
+      flex-shrink: 0;
+    }
+
+    /* ── Info alert ── */
+    .info-banner {
+      background: var(--teal-glow);
+      border: 1px solid var(--teal-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .info-banner-icon { font-size: 18px; flex-shrink: 0; }
+
+    /* ── Confidence bar ── */
+    .conf-bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .conf-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .conf-bar-fill { height: 100%; border-radius: 10px; transition: width 0.3s; }
+
+    /* ── Section header for watermarks / reports ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: var(--font-head);
+      font-size: 18px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div id="kre8r-nav"></div>
+
+  <div class="page-wrap">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">MARK<span>Ω</span>R</h1>
+        <div class="page-subtitle">Copyright protection — fingerprinting, watermarking, detection</div>
+      </div>
+      <button class="btn btn-ghost" onclick="loadStats()">↻ Refresh</button>
+    </div>
+
+    <!-- Info banner -->
+    <div class="info-banner">
+      <span class="info-banner-icon">🔐</span>
+      <div>
+        <strong>How MarkΩr protects your content:</strong>
+        Every video that leaves through PostΩr gets an invisible watermark embedded automatically.
+        VaultΩr footage is fingerprinted so stolen copies can be detected even after re-encoding.
+        Fan reports from GuardΩr land in the inbox below.
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card">
+        <div class="stat-label">Watermarked</div>
+        <div class="stat-value teal" id="statWatermarks">—</div>
+        <div class="stat-sub">videos protected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Fingerprinted</div>
+        <div class="stat-value teal" id="statFingerprinted">—</div>
+        <div class="stat-sub">vault videos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Frame Hashes</div>
+        <div class="stat-value" id="statFrames">—</div>
+        <div class="stat-sub">pHash records</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Reports</div>
+        <div class="stat-value amber" id="statReports">—</div>
+        <div class="stat-sub" id="statReportSub">pending</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Confirmed</div>
+        <div class="stat-value red" id="statConfirmed">—</div>
+        <div class="stat-sub">violations</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Filed</div>
+        <div class="stat-value green" id="statFiled">—</div>
+        <div class="stat-sub">DMCA claims</div>
+      </div>
+    </div>
+
+    <!-- Fingerprint Vault (full-width) -->
+    <div class="full-panel">
+      <div class="panel-header">
+        <div class="panel-title">🔍 FINGERPRINT VAULT</div>
+        <div style="font-size:12px;color:var(--text-dim)">Run once to fingerprint all existing footage</div>
+      </div>
+      <div class="panel-body">
+        <div class="fingerprint-controls">
+          <select class="type-select" id="fpType">
+            <option value="both">Visual + Audio fingerprint</option>
+            <option value="visual">Visual only (pHash)</option>
+            <option value="audio">Audio only (RMS signature)</option>
+          </select>
+          <button class="btn btn-teal" id="btnFingerprint" onclick="startFingerprintVault()">
+            ⊕ Fingerprint All Unfingerprinted Footage
+          </button>
+          <span id="fpStatus" style="font-size:12px;color:var(--text-dim)"></span>
+        </div>
+        <div class="progress-bar-wrap" id="fpProgressWrap">
+          <div class="progress-bar" id="fpProgressBar"></div>
+        </div>
+        <div class="progress-log" id="fpLog"></div>
+      </div>
+    </div>
+
+    <!-- Two-column main area -->
+    <div class="main-cols">
+
+      <!-- Guard Reports Inbox -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📥 REPORTS INBOX</div>
+          <div style="display:flex;gap:8px;">
+            <select class="type-select" id="reportFilter" style="font-size:12px;padding:5px 8px;" onchange="loadReports()">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="filed">Filed</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="reports-list" id="reportsList">
+            <div class="empty-state">
+              <div class="empty-icon">📭</div>
+              <div class="empty-label">Loading reports…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Watermark Registry -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">💧 WATERMARK REGISTRY</div>
+          <div style="font-size:12px;color:var(--text-dim)" id="wmTotal">—</div>
+        </div>
+        <div class="panel-body">
+          <div class="watermark-list" id="wmList">
+            <div class="empty-state">
+              <div class="empty-icon">🔏</div>
+              <div class="empty-label">Loading watermarks…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main-cols -->
+
+  </div><!-- /page-wrap -->
+
+  <!-- Report Detail Modal -->
+  <div id="reportModal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--card-radius);width:100%;max-width:600px;max-height:80vh;overflow-y:auto;">
+      <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-family:var(--font-head);font-size:18px;letter-spacing:1px;">REPORT DETAIL</div>
+        <button onclick="closeModal()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div id="reportModalBody" style="padding:20px;"></div>
+    </div>
+  </div>
+
+  <div id="kre8r-nav-bottom" style="display:none;"></div>
+  <script src="/js/nav.js" defer></script>
+  <script>
+    window.addEventListener('load', () => initNav());
+  </script>
+
+  <script>
+  // ───────���─────────────────────────────────────
+  // STATE
+  // ───────────────────────────────���─────────────
+  let statsData = null;
+
+  // ───────────���───────────────────────��─────────
+  // INIT
+  // ───────────────────────────────────���─────────
+  document.addEventListener('DOMContentLoaded', () => {
+    loadStats();
+    loadReports();
+    loadWatermarks();
+  });
+
+  // ──────────────────────────────���──────────────
+  // STATS
+  // ──────────────────────────────────────���──────
+  async function loadStats() {
+    try {
+      const r = await fetch('/api/markr/stats');
+      if (!r.ok) return;
+      statsData = await r.json();
+      const { watermarks, fingerprints, reports } = statsData;
+
+      setText('statWatermarks',   watermarks.total);
+      setText('statFingerprinted', fingerprints.videos_visual);
+      setText('statFrames',        fingerprints.frames_total);
+      setText('statReports',       reports.pending);
+      setText('statReportSub',     `${reports.pending} pending`);
+      setText('statConfirmed',     reports.confirmed);
+      setText('statFiled',         reports.filed);
+    } catch (e) {
+      console.error('Failed to load stats', e);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // FINGERPRINT VAULT BATCH JOB
+  // ─────────────────────────────────────────────
+  async function startFingerprintVault() {
+    const type   = document.getElementById('fpType').value;
+    const btn    = document.getElementById('btnFingerprint');
+    const log    = document.getElementById('fpLog');
+    const bar    = document.getElementById('fpProgressBar');
+    const barWrap = document.getElementById('fpProgressWrap');
+    const status = document.getElementById('fpStatus');
+
+    btn.disabled = true;
+    log.innerHTML = '';
+    log.classList.add('visible');
+    barWrap.classList.add('visible');
+    bar.style.width = '0%';
+    status.textContent = 'Starting…';
+
+    appendLog('info', `Starting ${type} fingerprinting of vault footage…`);
+
+    try {
+      const resp = await fetch('/api/markr/fingerprint-vault', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      });
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+            handleFpEvent(evt, bar, status);
+          } catch (_) {}
+        }
+      }
+    } catch (err) {
+      appendLog('error', `Error: ${err.message}`);
+      status.textContent = 'Error — check console';
+    } finally {
+      btn.disabled = false;
+      loadStats();
+    }
+  }
+
+  function handleFpEvent(evt, bar, status) {
+    const { event, data } = evt;
+    if (event === 'start') {
+      appendLog('info', `Found ${data.total} unfingerprinted videos`);
+      status.textContent = `0 / ${data.total}`;
+    } else if (event === 'progress') {
+      const pct = Math.round(((data.index + 1) / data.total) * 100);
+      bar.style.width = pct + '%';
+      status.textContent = `${data.index + 1} / ${data.total}`;
+      if (data.status === 'done') {
+        appendLog('ok', `✓ ${data.filename}`);
+      } else if (data.status === 'error') {
+        appendLog('error', `✗ ${data.filename} — ${data.error}`);
+      } else if (data.status === 'processing') {
+        // no-op — just progress
+      }
+    } else if (event === 'skip') {
+      appendLog('skip', `⊘ ${data.filename} — ${data.reason}`);
+    } else if (event === 'done') {
+      bar.style.width = '100%';
+      appendLog('ok', `Done — ${data.ok} fingerprinted, ${data.failed} failed`);
+      status.textContent = `Complete: ${data.ok} ok`;
+    } else if (event === 'error') {
+      appendLog('error', `Error: ${data.message}`);
+    }
+  }
+
+  function appendLog(type, msg) {
+    const log = document.getElementById('fpLog');
+    const line = document.createElement('div');
+    line.className = `log-${type}`;
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ─────────────────────────────────────────────
+  // REPORTS
+  // ─────────────────────────────────────────────
+  async function loadReports() {
+    const filter = document.getElementById('reportFilter').value;
+    const el = document.getElementById('reportsList');
+    el.innerHTML = '<div class="empty-state"><div class="empty-label">Loading…</div></div>';
+
+    try {
+      const r = await fetch(`/api/markr/reports${filter ? '?status=' + filter : ''}`);
+      const data = await r.json();
+      const reports = data.reports || [];
+
+      if (!reports.length) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <div class="empty-label">No reports yet${filter ? ' with status "' + filter + '"' : ''}</div>
+          </div>`;
+        return;
+      }
+
+      el.innerHTML = reports.map(rp => `
+        <div class="report-card" onclick="openReport(${rp.id})">
+          <div class="report-badge badge-${rp.status}">${reportIcon(rp.status)}</div>
+          <div class="report-meta">
+            <div class="report-title">${escHtml(rp.matched_video_title || rp.submitted_url || 'Unknown video')}</div>
+            <div class="report-sub">
+              ${rp.platform ? escHtml(rp.platform) + ' · ' : ''}
+              ${rp.match_type ? escHtml(rp.match_type) + ' match · ' : ''}
+              ${rp.match_confidence ? Math.round(rp.match_confidence) + '% confidence · ' : ''}
+              ${formatDate(rp.created_at)}
+            </div>
+          </div>
+          <span class="report-status status-${rp.status}">${rp.status}</span>
+        </div>
+      `).join('');
+    } catch (e) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-label">Error loading reports</div></div>`;
+    }
+  }
+
+  async function openReport(id) {
+    const modal = document.getElementById('reportModal');
+    const body  = document.getElementById('reportModalBody');
+    modal.style.display = 'flex';
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)">Loading…</div>';
+
+    try {
+      const r = await fetch(`/api/markr/reports/${id}`);
+      const { report } = await r.json();
+
+      const evidence = report.evidence_json ? JSON.parse(report.evidence_json) : null;
+      const confColor = report.match_confidence >= 70 ? 'var(--red)' :
+                        report.match_confidence >= 40 ? 'var(--amber)' : 'var(--text-dim)';
+
+      body.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <span class="report-status status-${report.status}">${report.status}</span>
+            <div style="display:flex;gap:8px;">
+              ${report.status === 'pending' ? `<button class="btn btn-ghost" style="font-size:12px;" onclick="updateReport(${id},'confirmed')">✓ Confirm</button>` : ''}
+              ${report.status === 'confirmed' ? `<button class="btn btn-ghost" style="font-size:12px;" onclick="updateReport(${id},'filed')">📋 Mark Filed</button>` : ''}
+              ${['pending','confirmed','filed'].includes(report.status) ? `<button class="btn btn-ghost" style="font-size:12px;color:var(--text-dimmer);" onclick="updateReport(${id},'dismissed')">Dismiss</button>` : ''}
+            </div>
+          </div>
+
+          ${report.submitted_url ? `
+            <div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Submitted URL</div>
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:monospace;font-size:12px;word-break:break-all;">${escHtml(report.submitted_url)}</div>
+            </div>
+          ` : ''}
+
+          ${report.matched_video_title ? `
+            <div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Matched Original</div>
+              <div style="font-weight:600;">${escHtml(report.matched_video_title)}</div>
+            </div>
+          ` : ''}
+
+          ${report.match_confidence != null ? `
+            <div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Detection Confidence</div>
+              <div class="conf-bar-wrap">
+                <div class="conf-bar">
+                  <div class="conf-bar-fill" style="width:${report.match_confidence}%;background:${confColor};"></div>
+                </div>
+                <span style="font-size:13px;font-weight:700;color:${confColor};min-width:42px;text-align:right;">${Math.round(report.match_confidence)}%</span>
+              </div>
+              ${report.match_type ? `<div style="font-size:12px;color:var(--text-dim);margin-top:6px;">Detection method: <strong>${report.match_type}</strong></div>` : ''}
+            </div>
+          ` : ''}
+
+          ${report.submitter_note ? `
+            <div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Reporter Note</div>
+              <div style="color:var(--text-dim);font-size:13px;">${escHtml(report.submitter_note)}</div>
+            </div>
+          ` : ''}
+
+          <div style="font-size:12px;color:var(--text-dimmer);">Reported ${formatDate(report.created_at)}</div>
+        </div>
+      `;
+    } catch (e) {
+      body.innerHTML = `<div style="color:var(--red);padding:20px;">Error loading report: ${e.message}</div>`;
+    }
+  }
+
+  async function updateReport(id, status) {
+    await fetch(`/api/markr/reports/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    closeModal();
+    loadReports();
+    loadStats();
+  }
+
+  function closeModal() {
+    document.getElementById('reportModal').style.display = 'none';
+  }
+
+  // ────────────────��────────────────────────────
+  // WATERMARKS
+  // ───────────────────────────────────────��─────
+  async function loadWatermarks() {
+    const el = document.getElementById('wmList');
+    try {
+      const r = await fetch('/api/markr/watermarks');
+      const data = await r.json();
+      const watermarks = data.watermarks || [];
+
+      setText('wmTotal', watermarks.length + ' total');
+
+      if (!watermarks.length) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔏</div>
+            <div class="empty-label">No watermarks yet — watermarks embed automatically when PostΩr fires</div>
+          </div>`;
+        return;
+      }
+
+      // Show most recent 20
+      const recent = watermarks.slice(0, 20);
+      el.innerHTML = recent.map(wm => {
+        const filename = wm.video_path ? wm.video_path.split(/[/\\]/).pop() : 'Unknown';
+        return `
+          <div class="watermark-row">
+            <div class="wm-icon">💧</div>
+            <div class="wm-info">
+              <div class="wm-filename" title="${escHtml(wm.video_path || '')}">${escHtml(filename)}</div>
+              <div class="wm-code">Code: ${escHtml(wm.watermark_code || '')}</div>
+            </div>
+            <span class="wm-channel">${escHtml(wm.channel || 'original')}</span>
+            <div class="wm-date">${formatDate(wm.embedded_at)}</div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-label">Error loading watermarks</div></div>`;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // UTILS
+  // ─────────────────────────────────────────────
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val == null ? '—' : val;
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function formatDate(d) {
+    if (!d) return '';
+    try {
+      const dt = new Date(d);
+      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (_) { return d; }
+  }
+
+  function reportIcon(status) {
+    const icons = { pending: '🔍', confirmed: '🚨', filed: '📋', resolved: '✅', dismissed: '✕' };
+    return icons[status] || '?';
+  }
+  </script>
+</body>
+</html>

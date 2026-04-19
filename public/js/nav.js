@@ -72,6 +72,7 @@
           { label: 'AutomatΩr', href: '/automator.html' },
           { label: 'MirrΩr',    href: '/mirrr.html' },
           { label: 'Analytics Import', href: '/analytics-import.html' },
+          { label: 'MarkΩr',    href: '/markr.html' },
         ]
       }
     ]

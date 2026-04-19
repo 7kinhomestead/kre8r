@@ -1,3 +1,106 @@
+# Session 51 — MarkΩr Session A: Fingerprint Infrastructure (2026-04-19)
+
+## Goal
+Build MarkΩr Session A: perceptual hash fingerprinting, spread-spectrum watermark
+embedding, multi-layer detection engine, admin UI, and auto-watermark hook in PostΩr.
+
+## What Was Built
+
+### src/markr/ (new module)
+- `fingerprint.js`: FFmpeg frame extraction + pHash computation via sharp (32×32 DCT).
+  `fingerprintVideo()` extracts frames every 5s, computes 64-bit pHash per frame.
+  `fingerprintAudio()` extracts raw PCM audio, builds RMS energy signature per second.
+  `hammingDistance()` computes bit-level diff for pHash comparison.
+- `watermark.js`: FFmpeg `geq` filter embeds ±1 luma spread-spectrum pattern driven by
+  a unique per-video seed. `watermarkVideo()` generates seed, embeds, registers in DB.
+  `detectWatermark()` tests hypothesis against a video using pixel correlation.
+  `buildWatermarkCode()` encodes `KRE8R|creatorId|videoId|date|channel` payload.
+- `detect.js`: Multi-layer detection engine.
+  Layer 1: pHash (Hamming distance ≤ 12 = strong match) — 40% weight.
+  Layer 2: Audio RMS cosine correlation — 40% weight.
+  Layer 3: Watermark seed hypothesis test — 20% weight.
+  Thresholds: ≥70 confirmed, 40–69 possible, <40 none.
+
+### src/routes/markr.js (new route)
+- `POST /api/markr/fingerprint-vault` — SSE batch job fingerprinting all vault footage
+- `POST /api/markr/fingerprint/:id` — single footage fingerprint
+- `POST /api/markr/check` — detection endpoint
+- `GET  /api/markr/watermarks` — watermark registry
+- `GET  /api/markr/stats` — dashboard stats
+- `GET/PATCH /api/markr/reports/:id` — guard reports inbox
+
+### DB migrations (src/db.js)
+4 new tables: watermarks, video_fingerprints, audio_fingerprints, guard_reports.
+Added to both `runMigrations()` and `bootstrapTenantTables()` (idempotent).
+20 new helper functions exported: insert/get for all 4 tables + stats helpers.
+
+### PostΩr hook (src/postor/queue-processor.js)
+`maybeWatermark()` fires before any video upload in the queue processor.
+Checks if watermark already embedded; if not, calls `watermarkVideo()`.
+Falls back to original if watermark fails (non-blocking, warns in log).
+All platform uploads now use watermarked `videoPath` instead of raw `item.video_path`.
+
+### Nav + UI
+- `public/js/nav.js`: MarkΩr added to Dist category
+- `public/markr.html`: Full admin dashboard — stat cards, batch fingerprint job with
+  SSE progress log + progress bar, guard reports inbox with status filter + detail modal,
+  watermark registry. Teal/neutral design, global.css tokens throughout.
+
+### server.js
+`/api/markr` route mounted after `/api/postor`.
+
+## Commits
+- Session 51 commit
+
+---
+
+# Session 50 — Design System Color Audit + Hunter Green Fix (2026-04-19)
+
+## Goal
+Fix the hunter green / low-opacity teal color drift affecting all pages, align
+Kre8r's surface tokens with the 7 Kin Homestead design system (neutral matte-black).
+
+## What Was Built
+
+### Global Color Fix — rgba() → Solid Hex Tokens
+- `public/css/global.css`: replaced ALL rgba() glow/border tokens with pre-calculated
+  solid hex equivalents. Teal glow/border tokens flipped from G>B to B>G so they read
+  as teal, not hunter green. Surface tokens changed to true neutral grey (R=G=B).
+- **32 HTML pages**: swept all local `:root` variable redefinitions using rgba(),
+  inline style= attributes, and JS cssText strings. ~160 total replacements.
+- `public/postor.html`: fixed its private `:root` block (wasn't importing global.css),
+  changed surface tokens to neutral, replaced all 12 inline rgba(20,184,166,...) values.
+- **9 more pages** (northr, admin, onboarding, teleprompter, setup, seedr, m5-analytics,
+  operator, soul-buildr): surface tokens neutralised in their local `:root` blocks.
+
+### Design System Alignment
+Reviewed 7 Kin Homestead Design System V3.0 (22-page PDF). Key findings:
+- Same fonts (Bebas Neue + DM Sans) already used in Kre8r ✅
+- Same matte-black dark background ✅
+- Brand accent: red (#E03030) for website/marketing; teal valid as "product context" accent
+- System rule: "accent colors by product context" — Kre8r's teal is legitimate
+- Neutral grey card surfaces now align with the website's dark matte aesthetic
+
+### Final Token Values (global.css)
+- `--bg: #0f0f0f` — true neutral black
+- `--bg-card: #181818` — true neutral dark card
+- `--bg-card-2: #1e1e1e`
+- `--border: #2c2c2c` — true neutral border
+- `--teal-glow: #1c3234` — B>G, reads teal not green
+- `--teal-glow-strong: #223e44`
+- `--teal-border: #254e52` — B>G
+
+## Commits
+- `3e8ae71` — fix: replace rgba() glow tokens with pre-calculated solid colors
+- `9eee819` — fix: sweep all pages for inline rgba() color drift
+- `7c57ff2` — fix: eliminate hunter green cast from all surfaces and teal tokens
+
+## Result
+User confirmed: "That is so much better!! I like it." Cards now read as clean
+neutral dark surfaces with teal as a clear intentional accent, not hunter green drift.
+
+---
+
 # Session 49 — TikTok Content Posting API + Meta Analytics + Privacy/TOS (2026-04-19)
 
 ## Goal

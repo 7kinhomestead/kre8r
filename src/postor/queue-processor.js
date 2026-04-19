@@ -12,6 +12,36 @@
 
 const db   = require('../db');
 const meta = require('./meta');
+const path = require('path');
+const fs   = require('fs');
+
+// ── MarkΩr: watermark before upload ───────────────────────────────────────
+// If the video hasn't been watermarked yet, embed watermark and use the
+// watermarked copy for the upload. Falls back to original if embed fails.
+async function maybeWatermark(item) {
+  if (!item.video_path || !fs.existsSync(item.video_path)) return item.video_path;
+
+  // Check if already watermarked
+  const existing = db.getWatermarkByPath(item.video_path);
+  if (existing && existing.watermarked_path && fs.existsSync(existing.watermarked_path)) {
+    console.log(`[postor/queue] Using existing watermark for item #${item.id}`);
+    return existing.watermarked_path;
+  }
+
+  try {
+    const { watermarkVideo } = require('../markr/watermark');
+    const result = await watermarkVideo(item.video_path, {
+      channel: (item.platforms && JSON.parse(item.platforms || '[]')[0]) || 'original',
+    }, {
+      outputDir: path.dirname(item.video_path),
+    });
+    console.log(`[postor/queue] Watermarked item #${item.id} → ${result.watermarkedPath}`);
+    return result.watermarkedPath;
+  } catch (err) {
+    console.warn(`[postor/queue] Watermark failed for item #${item.id} (continuing without): ${err.message}`);
+    return item.video_path; // fallback to original
+  }
+}
 
 let started = false;
 
@@ -23,18 +53,28 @@ async function processItem(item) {
   const ytTags    = tryParse(item.yt_tags)   || [];
   const results   = {};
 
+  // ── MarkΩr: embed watermark before upload (video posts only) ──────────────
+  const hasVideoUpload = platforms.some(p => ['instagram', 'facebook', 'youtube', 'tiktok'].includes(p));
+  let videoPath = item.video_path;
+  if (hasVideoUpload && videoPath) {
+    videoPath = await maybeWatermark(item).catch(err => {
+      console.warn(`[postor/queue] maybeWatermark threw for item #${item.id}: ${err.message}`);
+      return item.video_path;
+    });
+  }
+
   for (const platform of platforms) {
     try {
       if (platform === 'instagram') {
         const r = await meta.publishInstagramReel({
-          videoPath: item.video_path,
+          videoPath: videoPath,
           caption:   item.ig_caption || item.description || '',
         });
         results.instagram = r;
 
       } else if (platform === 'facebook') {
         const r = await meta.publishFacebookVideo({
-          videoPath:   item.video_path,
+          videoPath:   videoPath,
           title:       item.title       || '',
           description: item.fb_description || item.description || '',
         });
@@ -44,7 +84,7 @@ async function processItem(item) {
         // YouTube requires OAuth refresh — use the existing yt module
         const yt = require('./youtube');
         const r  = await yt.uploadVideo({
-          videoPath:   item.video_path,
+          videoPath:   videoPath,
           title:       item.title       || '',
           description: item.description || '',
           privacy:     item.yt_privacy  || 'public',
@@ -64,7 +104,7 @@ async function processItem(item) {
       } else if (platform === 'tiktok') {
         const tt = require('./tiktok');
         const r  = await tt.uploadVideo({
-          videoPath:          item.video_path,
+          videoPath:          videoPath,
           title:              item.title || item.description || '',
           privacyLevel:       item.tt_privacy        || 'PUBLIC_TO_EVERYONE',
           disableDuet:        !!item.tt_disable_duet,
