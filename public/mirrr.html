@@ -669,7 +669,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:0.025
           Paste the Facebook-Login token (from Graph API Explorer with <code style="background:var(--bg-deep);padding:1px 5px;border-radius:3px;">instagram_manage_insights</code> checked). Separate from your publishing token — posting is unaffected.
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="password" id="ig-insights-token-input" placeholder="EAABwzLixnjYBO…"
+          <input type="text" id="ig-insights-token-input" placeholder="EAABwzLixnjYBO…" autocomplete="off" spellcheck="false"
             style="flex:1;min-width:200px;background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:13px;font-family:var(--font-body);outline:none;">
           <button onclick="saveIgInsightsToken()" id="ig-token-save-btn"
             style="background:var(--teal);color:var(--bg);border:none;border-radius:var(--radius-sm);padding:8px 16px;font-size:13px;font-weight:700;font-family:var(--font-body);cursor:pointer;white-space:nowrap;">

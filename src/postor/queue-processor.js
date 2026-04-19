@@ -60,6 +60,20 @@ async function processItem(item) {
           imagePath: item.image_path || null,
         });
         results.facebook_post = r;
+
+      } else if (platform === 'tiktok') {
+        const tt = require('./tiktok');
+        const r  = await tt.uploadVideo({
+          videoPath:          item.video_path,
+          title:              item.title || item.description || '',
+          privacyLevel:       item.tt_privacy        || 'PUBLIC_TO_EVERYONE',
+          disableDuet:        !!item.tt_disable_duet,
+          disableComment:     !!item.tt_disable_comment,
+          disableStitch:      !!item.tt_disable_stitch,
+          brandContentToggle: !!item.tt_brand_content,
+          brandOrganicToggle: !!item.tt_brand_organic,
+        });
+        results.tiktok = r;
       }
 
     } catch (err) {

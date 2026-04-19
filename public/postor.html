@@ -1451,6 +1451,48 @@
         </div>
       </div>
 
+      <!-- TikTok -->
+      <div class="override-section" id="tt-override">
+        <div class="override-header"><span>🎵</span> TikTok Settings</div>
+        <div class="form-row">
+          <label>Who can watch</label>
+          <select id="tt-privacy" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;width:100%">
+            <option value="PUBLIC_TO_EVERYONE">Public — everyone</option>
+            <option value="MUTUAL_FOLLOW_FRIENDS">Friends only</option>
+            <option value="FOLLOWER_OF_CREATOR">Followers only</option>
+            <option value="SELF_ONLY">Only me (draft)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Interaction</label>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="tt-allow-comment" checked> Allow comments
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="tt-allow-duet" checked> Allow duet
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="tt-allow-stitch" checked> Allow stitch
+            </label>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Content disclosure</label>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="tt-brand-content">
+              <span>Paid partnership / sponsored content (brand_content)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="tt-brand-organic">
+              <span>Promoting own brand / organic branded content (brand_organic)</span>
+            </label>
+          </div>
+          <div style="margin-top:6px;font-size:11px;color:var(--text-dim)">TikTok requires accurate commercial content disclosure. When in doubt, leave unchecked.</div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Post Mode Toggle -->
@@ -1763,7 +1805,7 @@ const PLATFORM_META = {
   youtube:   { icon: '▶️',  label: 'YouTube',   color: '#ff0000' },
   instagram: { icon: '📸',  label: 'Instagram',  color: '#e1306c' },
   facebook:  { icon: '👍',  label: 'Facebook',   color: '#1877f2' },
-  tiktok:    { icon: '🎵',  label: 'TikTok',     color: '#010101', soon: true },
+  tiktok:    { icon: '🎵',  label: 'TikTok',     color: '#010101' },
 };
 
 let connections   = {};
@@ -2095,18 +2137,18 @@ function renderPlatformCards() {
   const grid = document.getElementById('platform-grid');
   grid.innerHTML = Object.entries(PLATFORM_META).map(([platform, meta]) => {
     const conn = connections[platform] || {};
-    const connected  = conn.connected;
-    const soon       = conn.coming_soon;
+    const connected   = conn.connected;
+    const needsSetup  = conn.needs_setup;
 
-    let statusText = connected ? 'Connected' : (soon ? 'Coming Soon' : 'Not connected');
+    let statusText = connected ? 'Connected' : (needsSetup ? 'Setup required' : 'Not connected');
     let accountHtml = '';
     if (connected && conn.account_name) {
       accountHtml = `<div class="platform-account">${esc(conn.account_name)}</div>`;
     }
 
     let btnHtml = '';
-    if (soon) {
-      btnHtml = `<button class="btn-connect" disabled>${meta.label} Soon</button>`;
+    if (needsSetup && !connected) {
+      btnHtml = `<button class="btn-connect" disabled title="${esc(conn.reason || '')}">Needs .env setup</button>`;
     } else if (connected) {
       const disconnectPlatform = (platform === 'instagram' || platform === 'facebook') ? 'facebook' : platform;
       btnHtml = `<button class="btn-connect is-disconnect" onclick="disconnect('${disconnectPlatform}')">Disconnect</button>`;
@@ -2117,7 +2159,7 @@ function renderPlatformCards() {
     }
 
     return `
-      <div class="platform-card ${connected ? 'is-connected' : ''} ${soon ? 'is-soon' : ''}">
+      <div class="platform-card ${connected ? 'is-connected' : ''} ${needsSetup && !connected ? 'is-soon' : ''}">
         <div class="platform-icon">${meta.icon}</div>
         <div>
           <div class="platform-name">${meta.label}</div>
@@ -2134,14 +2176,13 @@ function renderPlatformToggles() {
   const container = document.getElementById('platform-toggles');
   container.innerHTML = Object.entries(PLATFORM_META).map(([platform, meta]) => {
     const conn     = connections[platform] || {};
-    const enabled  = conn.connected && !conn.coming_soon;
+    const enabled  = conn.connected;
     const disabled = !enabled;
 
     return `
       <label class="platform-toggle ${disabled ? 'is-disabled' : ''}" id="toggle-${platform}" onclick="${disabled ? '' : `togglePlatform('${platform}')`}">
         <input type="checkbox" id="chk-${platform}" ${disabled ? 'disabled' : ''} onchange="updatePostButton()" />
         ${meta.icon} ${meta.label}
-        ${conn.coming_soon ? '<span style="font-size:9px;opacity:.6;margin-left:4px;">SOON</span>' : ''}
       </label>
     `;
   }).join('');
@@ -2170,6 +2211,7 @@ function updateOverrideSections() {
   document.getElementById('yt-override').classList.toggle('is-visible', selected.includes('youtube'));
   document.getElementById('ig-override').classList.toggle('is-visible', selected.includes('instagram'));
   document.getElementById('fb-override').classList.toggle('is-visible', selected.includes('facebook'));
+  document.getElementById('tt-override').classList.toggle('is-visible', selected.includes('tiktok'));
 }
 
 function updatePostButton() {
@@ -2385,6 +2427,12 @@ async function doPost() {
     yt_tags:         ytTags ? ytTags.split(',').map(t => t.trim()).filter(Boolean) : [],
     ig_caption:      document.getElementById('ig-caption').value.trim() || null,
     fb_description:  document.getElementById('fb-description').value.trim() || null,
+    tt_privacy:         document.getElementById('tt-privacy').value,
+    tt_disable_comment: !document.getElementById('tt-allow-comment').checked,
+    tt_disable_duet:    !document.getElementById('tt-allow-duet').checked,
+    tt_disable_stitch:  !document.getElementById('tt-allow-stitch').checked,
+    tt_brand_content:   document.getElementById('tt-brand-content').checked,
+    tt_brand_organic:   document.getElementById('tt-brand-organic').checked,
   };
 
   // ── Schedule mode ─────────────────────────────────────────────
@@ -2635,13 +2683,12 @@ function renderBulkToggles() {
   if (!container || container.children.length > 0) return;
   container.innerHTML = Object.entries(PLATFORM_META).map(([platform, meta]) => {
     const conn    = connections[platform] || {};
-    const enabled = conn.connected && !conn.coming_soon;
+    const enabled = conn.connected;
     return `
       <label class="platform-toggle ${!enabled ? 'is-disabled' : ''}" id="btoggle-${platform}"
              onclick="${enabled ? `bulkTogglePlatform('${platform}')` : ''}">
         <input type="checkbox" id="bchk-${platform}" ${!enabled ? 'disabled' : ''} onchange="updateBulkButton()" />
         ${meta.icon} ${meta.label}
-        ${conn.coming_soon ? '<span style="font-size:9px;opacity:.6;margin-left:4px">SOON</span>' : ''}
       </label>
     `;
   }).join('');
@@ -3574,7 +3621,7 @@ function renderSchedCellContent(cell, key) {
   const availablePlatforms = Object.entries(PLATFORM_META)
     .filter(([p]) => {
       const conn = connections[p] || {};
-      return conn.connected && !conn.coming_soon;
+      return conn.connected;
     });
 
   const platBtns = availablePlatforms.map(([p, meta]) => {
@@ -3612,7 +3659,7 @@ function onSchedDrop(e, dayIdx, slotIdx) {
   const defaultPlats = Object.entries(PLATFORM_META)
     .filter(([p]) => {
       const conn = connections[p] || {};
-      return conn.connected && !conn.coming_soon;
+      return conn.connected;
     })
     .map(([p]) => p);
 

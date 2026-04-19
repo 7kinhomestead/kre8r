@@ -88,8 +88,10 @@ router.get('/connections', (req, res) => {
     result[p] = byPlatform[p] || { connected: false };
   }
 
-  // TikTok is always "coming soon"
-  result.tiktok = { connected: false, coming_soon: true, reason: tiktok.COMING_SOON_REASON };
+  // TikTok: live if env vars set, otherwise show setup prompt
+  if (!tiktok.isAvailable()) {
+    result.tiktok = { connected: false, needs_setup: true, reason: 'Add TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET to .env' };
+  }
 
   // Surface which Meta pages are available (if connected)
   if (byPlatform.meta_pages) {
@@ -498,11 +500,80 @@ router.post('/auth/meta/manual-instagram-token', async (req, res) => {
   }
 });
 
+// ─── TikTok OAuth ─────────────────────────────────────────────────────────────
+
+router.get('/auth/tiktok', (req, res) => {
+  if (!process.env.TIKTOK_CLIENT_KEY || !process.env.TIKTOK_CLIENT_SECRET) {
+    return res.status(400).json({
+      error:   'TikTok credentials not configured',
+      details: 'Add TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET to your .env file, then restart the server.',
+    });
+  }
+  const state = crypto.randomBytes(16).toString('hex');
+  const { verifier, challenge } = tiktok.generatePkce();
+
+  req.session.postor_tt_state    = state;
+  req.session.postor_tt_verifier = verifier;
+
+  try {
+    const authUrl = tiktok.getAuthUrl(req, state, challenge);
+    res.redirect(authUrl);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/auth/tiktok/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+
+  if (error) {
+    return res.redirect('/postor.html?error=' + encodeURIComponent('TikTok auth denied: ' + error));
+  }
+  if (!code || state !== req.session.postor_tt_state) {
+    return res.redirect('/postor.html?error=' + encodeURIComponent('Invalid OAuth state — try connecting again'));
+  }
+
+  const verifier = req.session.postor_tt_verifier;
+  delete req.session.postor_tt_state;
+  delete req.session.postor_tt_verifier;
+
+  try {
+    const tokens = await tiktok.exchangeCode(code, verifier, req);
+    if (tokens.error) throw new Error(tokens.error_description || tokens.error);
+
+    const user = await tiktok.getUserInfo(tokens.access_token);
+
+    db.upsertPostorConnection('tiktok', {
+      access_token:     tokens.access_token,
+      refresh_token:    tokens.refresh_token || null,
+      token_expires_at: tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : null,
+      account_id:       user?.open_id      || null,
+      account_name:     user?.display_name || 'TikTok Account',
+    });
+
+    console.log('[postor] TikTok connected:', user?.display_name);
+    res.redirect('/postor.html?connected=tiktok');
+  } catch (err) {
+    console.error('[postor] TikTok callback error:', err);
+    res.redirect('/postor.html?error=' + encodeURIComponent('TikTok connection failed: ' + err.message));
+  }
+});
+
+// GET /api/postor/auth/tiktok/creator-info — returns allowed privacy levels + interaction settings
+router.get('/auth/tiktok/creator-info', async (req, res) => {
+  try {
+    const info = await tiktok.getCreatorInfo();
+    res.json({ ok: true, ...info });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Disconnect ───────────────────────────────────────────────────────────────
 
 router.delete('/connections/:platform', (req, res) => {
   const { platform } = req.params;
-  const allowed = ['youtube', 'instagram', 'facebook', 'meta_pages'];
+  const allowed = ['youtube', 'instagram', 'facebook', 'meta_pages', 'tiktok'];
   if (!allowed.includes(platform)) {
     return res.status(400).json({ error: `Unknown platform: ${platform}` });
   }
@@ -596,6 +667,9 @@ router.post('/post', (req, res) => {
     title, description,
     yt_tags, yt_category_id, yt_privacy, yt_scheduled_at,
     ig_caption, fb_description,
+    // TikTok compliance fields
+    tt_privacy, tt_disable_duet, tt_disable_comment,
+    tt_disable_stitch, tt_brand_content, tt_brand_organic,
   } = req.body || {};
 
   if (!video_path)              return res.status(400).json({ error: 'video_path is required' });
@@ -610,12 +684,6 @@ router.post('/post', (req, res) => {
     const results = {};
 
     for (const platform of platforms) {
-      if (platform === 'tiktok') {
-        // Coming soon — skip gracefully
-        pushEvent(job, { stage: 'skip', platform: 'tiktok', reason: 'TikTok integration coming soon' });
-        continue;
-      }
-
       // Create a pending post record
       const postRowId = db.createPostorPost({
         project_id:  project_id || null,
@@ -662,6 +730,18 @@ router.post('/post', (req, res) => {
             caption:    ig_caption || description || '',
             imagePath:  req.body.image_path || null,
             onProgress: (p) => pushEvent(job, p),
+          });
+        } else if (platform === 'tiktok') {
+          result = await tiktok.uploadVideo({
+            videoPath:          video_path,
+            title:              title || description || '',
+            privacyLevel:       tt_privacy       || 'PUBLIC_TO_EVERYONE',
+            disableDuet:        !!tt_disable_duet,
+            disableComment:     !!tt_disable_comment,
+            disableStitch:      !!tt_disable_stitch,
+            brandContentToggle: !!tt_brand_content,
+            brandOrganicToggle: !!tt_brand_organic,
+            onProgress:         (p) => pushEvent(job, p),
           });
         } else {
           throw new Error(`Unknown platform: ${platform}`);

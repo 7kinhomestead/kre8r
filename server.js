@@ -343,7 +343,8 @@ app.use((req, res, next) => {
   if (['/landing', '/landing.html', '/media-kit', '/media-kit.html',
        '/beta-invite', '/beta-invite.html',
        '/gate', '/kre8r-gate', '/kre8r-gate.html',
-       '/download', '/download.html'].includes(req.path)) return next();
+       '/download', '/download.html',
+       '/privacy', '/privacy.html', '/tos', '/tos.html'].includes(req.path)) return next();
   // Download assets (installer, yml) are public
   if (req.path.startsWith('/downloads/')) return next();
 
