@@ -42,6 +42,17 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 
 ## NEXT SESSION — Top Tasks
 
+### 0. MarkΩr + GuardΩr — Copyright Protection + Community Enforcement
+**Why now:** Creator is actively publishing to TikTok, YouTube, Instagram. Content protection
+and community health are active needs. Spec already in TODO.md (see below). Build plan: 3 sessions.
+- **MarkΩr:** Detect if creator's content is being reposted without credit. Monitor platform search
+  for known video fingerprints/titles. Alert dashboard.
+- **GuardΩr:** Community enforcement for Rock Rich (Kajabi). Flag violating members, automated
+  responses, escalation workflow.
+See full spec below.
+
+---
+
 ### ~~1. Update CLAUDE.md to Reflect Current Build State~~ ✅ DONE Session 46
 All modules documented. PostΩr, SeedΩr, ClipsΩr, MirrΩr, NorthΩr, SyncΩr, Electron, Auth all current.
 
@@ -91,12 +102,11 @@ indicator and a quick way to re-sync before monthly evaluation or before a campa
 
 ---
 
-### 7. TikTok API — Research & Wire
-TikTok posting is the last major platform stub. Research current TikTok Content Posting API
-status, check if @7.kin.jason account is eligible, and wire if available.
-
-**Entry point:** `src/routes/postor.js` — add `tiktok` case alongside instagram/facebook/youtube.
-UI stub already in PostΩr — just needs the backend wired once API access is confirmed.
+### ~~7. TikTok API — Research & Wire~~ ✅ DONE Session 49
+Full OAuth 2.0 + PKCE + FILE_UPLOAD posting built. Compliance UI (privacy, duet/comment/stitch,
+commercial disclosure) live in PostΩr. App submitted for TikTok review April 19 2026.
+**Status: In Review — expected approval 5-10 business days.**
+Once approved, posting works with no code changes needed.
 
 ---
 

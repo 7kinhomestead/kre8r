@@ -167,8 +167,10 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    Old M4 page still exists at /m4-email-generator.html (legacy, keep for now).
 
 ✅ PostΩr (`/postor.html`) — Multi-platform social publishing.
-   Platforms live: YouTube ✅, Facebook video ✅, Facebook text/image post ✅, Instagram Reels ✅
-   TikTok: pending Content Posting API access.
+   Platforms live: YouTube ✅, Facebook video ✅, Facebook text/image post ✅, Instagram Reels ✅, TikTok ✅ (built, pending approval)
+   TikTok: full OAuth 2.0 + PKCE + FILE_UPLOAD posting built. App submitted for review April 19 2026.
+   Compliance UI: privacy level, duet/comment/stitch toggles, brand_content/brand_organic disclosure.
+   NOTE: getCallbackUrl() reads x-forwarded-proto header for https detection behind nginx proxy.
    Post Now / 📅 Schedule toggle. Schedule: queue table + 60s processor (setInterval in server.js).
    Week/day calendar view with status-coded chips (pending/posting/posted/failed). Cancel option.
    CaptionΩr prefill: reads localStorage.captionr_prefill on load, auto-fills ig-caption,
@@ -195,6 +197,10 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    Evaluate Last Month: score + weight badges. Copyright Health stats (planned — MarkΩr/GuardΩr).
 
 ### INFRASTRUCTURE
+✅ Privacy + TOS (`/privacy`, `/tos`) — Public legal pages (no auth required). Required for TikTok
+   app review. Cover TikTok API, Meta API, YouTube, data retention, contact info (7kinmedia@gmail.com).
+   Whitelisted in auth middleware alongside /landing, /download, etc.
+
 ✅ Auth (`/login`) — Session-based login (express-session + better-sqlite3 store).
    `users` table (bcrypt passwords), `sessions` table. Owner / viewer roles.
    First run: seeds default owner from KRE8R_OWNER_PW env var.
@@ -292,7 +298,7 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 10. ~~MirrΩr: `no such column: pr.angle` and `TypeError: Assignment to constant variable`~~ — FIXED
 11. ~~TeleprΩmpter: Solo tab crashes the app~~ — FIXED Session 48 (early-return guard in launchViaCloud + cloudLaunchActive reset in backToSelector)
 12. TeleprΩmpter: No back button from display screen — only exit is "📋 Scripts" button (hidden by default)
-13. PostΩr: TikTok platform stub — wired in UI but pending TikTok Content Posting API access approval
+13. ~~PostΩr: TikTok platform stub~~ — BUILT Session 49. Full OAuth + posting live. App In Review (submitted April 19 2026, ~5-10 days).
 
 ## Planned Features (Not Yet Built)
 - MarkΩr + GuardΩr — Copyright protection + community enforcement (spec in TODO.md, build plan: 3 sessions)

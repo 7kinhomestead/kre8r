@@ -1,3 +1,91 @@
+# Session 49 — TikTok Content Posting API + Meta Analytics + Privacy/TOS (2026-04-19)
+
+## Goal
+Wire TikTok Content Posting API into PostΩr, build Meta analytics sync for MirrΩr,
+and get the TikTok app submitted for review.
+
+## What Was Built
+
+### NorthΩr — MirrΩr Sync Stat (carried from Session 48 end)
+- 5th pub-stat: "Days Since MirrΩr Sync" with inline 🔄 button
+- `loadMirrrSyncStatus()` + `syncMirrrNow()` functions wired into `loadDashboard()`
+
+### Meta Analytics Sync (MirrΩr)
+Built backend + UI for Facebook video insights + Instagram Reels insights. Ultimately
+abandoned Instagram insights (`instagram_manage_insights`) — Meta's API bureaucracy
+makes it inaccessible without a specific Facebook Login product configuration that
+conflicts with the existing publishing setup. Facebook video insights wired and working.
+Code is in place; IG insights can be revisited if Meta ever simplifies their permissioning.
+
+**Files changed:** `src/db.js` (getMetaSyncablePosts, bridgeMetaPost), `src/routes/mirrr.js`
+(runMetaSyncJob, /meta-sync, /meta-status, /ig-insights-token, /meta-debug),
+`public/mirrr.html` (Meta Sync section)
+
+### Privacy Policy + Terms of Service Pages
+- `public/privacy.html` — full privacy policy covering TikTok API, Meta API, YouTube,
+  data retention, PKCE OAuth, contact info
+- `public/tos.html` — TOS covering platform integrations, TikTok-specific terms,
+  content responsibility, commercial disclosure, governing law (Texas)
+- Both pages whitelisted in auth middleware (no login required — needed for TikTok review)
+- Live at `https://kre8r.app/privacy` and `https://kre8r.app/tos`
+
+### TikTok Content Posting API — Full Integration
+**`src/postor/tiktok.js`** — complete rewrite from stub:
+- OAuth 2.0 + PKCE (Login Kit v2): `generatePkce()`, `getAuthUrl()`, `exchangeCode()`
+- Token refresh via `refreshAccessToken()` + `getValidToken()`
+- `getCreatorInfo()` — fetches allowed privacy levels + interaction settings
+- `uploadVideo()` — full FILE_UPLOAD flow: stat → init post → chunked PUT upload (64MB chunks)
+  → poll publish status until PUBLISH_COMPLETE or FAILED
+- `getUserInfo()` — display name + open_id for connection display
+
+**`src/routes/postor.js`:**
+- `GET /api/postor/auth/tiktok` — OAuth start (PKCE state stored in session)
+- `GET /api/postor/auth/tiktok/callback` — token exchange + user info + DB store
+- `GET /api/postor/auth/tiktok/creator-info` — exposes privacy level options to UI
+- Connections endpoint: TikTok now shows Connect button when env vars set, not "coming soon"
+- Post handler: `tiktok` platform case calls `tiktok.uploadVideo()` with full compliance params
+- Disconnect: `tiktok` added to allowed platforms
+
+**`src/postor/queue-processor.js`:**
+- TikTok case added alongside YouTube/Meta for scheduled posts
+- DB startup crash fixed: wrapped `getPendingQueueItems()` in try-catch + 2s delayed first run
+  to prevent unhandled rejection when queue fires before DB is fully initialized
+
+**`public/postor.html`:**
+- TikTok card: "Coming Soon" → live Connect TikTok button
+- TikTok Settings override section (appears when TikTok toggled): privacy level dropdown,
+  allow comments/duet/stitch checkboxes, commercial disclosure (brand_content/brand_organic)
+- `doPost()` payload includes all `tt_*` compliance fields
+- All `coming_soon` checks replaced with `needs_setup` (only shown if env vars missing)
+
+### Critical Bug Fixes
+- **https redirect URI fix:** `getCallbackUrl()` was returning `http://` instead of `https://`
+  because nginx terminates SSL and `req.protocol` returns `http`. Fixed by reading
+  `x-forwarded-proto` header first, falling back to `https` for non-localhost hosts.
+  This was the root cause of the "client_key" rejection from TikTok's auth server.
+- **Queue processor startup crash:** `getPendingQueueItems` called before `initDb()` completes.
+  Fixed with try-catch + 2-second delayed first run.
+
+### TikTok App Review Submitted ✅
+- DNS TXT record added to kre8r.app for site verification
+- App icon, privacy policy URL, TOS URL, redirect URI (Web tab) all configured
+- Demo video recorded showing: OAuth connect flow + PostΩr TikTok settings UI + post attempt
+- Submitted to TikTok for review — **status: In Review** as of April 19, 2026
+- Expected approval: 5-10 business days
+
+## Commits
+- `220be45` — TikTok integration + Privacy/TOS pages + auth whitelist
+- `2b21bba` — Queue-processor startup crash fix + TikTok client key update
+- `f401783` — TikTok auth URL debug log
+- `0f09751` — Fix TikTok OAuth redirect_uri http→https (nginx proxy fix)
+
+## Status
+TikTok is In Review. All other platforms (YouTube, Instagram, Facebook) unaffected.
+Once approved (5-10 days), posting to TikTok will work end-to-end with no code changes needed.
+Next session: MarkΩr + GuardΩr (copyright protection + community enforcement).
+
+---
+
 # Session 48 — Workflow Audit Polish: Handoffs, Whisper, GateΩr, NorthΩr (2026-04-18)
 
 ## Goal
