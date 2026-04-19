@@ -25,6 +25,8 @@ const TIKTOK_TOKEN_URL  = 'https://open.tiktokapis.com/v2/oauth/token/';
 const TIKTOK_API_BASE   = 'https://open.tiktokapis.com/v2';
 
 const SCOPES = 'user.info.basic,video.publish,video.upload';
+// Temp test scope — swap to SCOPES once Content Posting API is approved:
+// const SCOPES_TEST = 'user.info.basic';
 
 // ─── PKCE helpers ────────────────────────────────────────────────────────────
 

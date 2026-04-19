@@ -108,7 +108,13 @@ function start() {
   started = true;
 
   const run = async () => {
-    const items = db.getPendingQueueItems();
+    let items;
+    try {
+      items = db.getPendingQueueItems();
+    } catch (err) {
+      console.error('[postor/queue] DB not ready yet:', err.message);
+      return;
+    }
     for (const item of items) {
       await processItem(item).catch(err =>
         console.error(`[postor/queue] Unhandled error on item #${item.id}:`, err.message)
@@ -116,9 +122,9 @@ function start() {
     }
   };
 
-  // Run immediately on start, then every 60 seconds
-  run();
-  setInterval(run, 60_000);
+  // Delay first run 2s to ensure DB is fully initialized, then every 60 seconds
+  setTimeout(() => run().catch(err => console.error('[postor/queue] Initial run error:', err.message)), 2000);
+  setInterval(() => run().catch(err => console.error('[postor/queue] Run error:', err.message)), 60_000);
   console.log('[postor/queue] Queue processor started (60s interval)');
 }
 
