@@ -302,4 +302,132 @@ router.post('/watermark', async (req, res) => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────
+// DMCA notice generator
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/markr/generate-dmca/:reportId
+ * Streams a Claude-generated DMCA notice based on the report evidence.
+ * Uses SSE (text/event-stream) — client reads with fetch + ReadableStream.
+ *
+ * Query param: ?platform=youtube|tiktok|instagram|facebook|generic
+ */
+router.post('/generate-dmca/:reportId', async (req, res) => {
+  const reportId = parseInt(req.params.reportId, 10);
+  const platform = req.query.platform || req.body?.platform || 'generic';
+
+  let report;
+  try {
+    report = db.getGuardReport(reportId);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+  if (!report) return res.status(404).json({ error: 'Report not found' });
+
+  // Load creator profile for ownership fields
+  const { loadProfile } = require('../utils/profile-validator');
+  let creatorName  = '7 Kin Homestead';
+  let creatorEmail = '7kinmedia@gmail.com';
+  try {
+    const { profile } = loadProfile();
+    creatorName  = profile.creator?.name  || creatorName;
+    creatorEmail = profile.creator?.email || creatorEmail;
+  } catch (_) {}
+
+  // Build evidence summary
+  let evidenceSummary = '';
+  if (report.match_confidence) {
+    const pct = Math.round(report.match_confidence * 100);
+    evidenceSummary += `Detection confidence: ${pct}%.\n`;
+  }
+  if (report.match_type) {
+    evidenceSummary += `Detection method: ${report.match_type}.\n`;
+  }
+  if (report.matched_video_title) {
+    evidenceSummary += `Matched original video: "${report.matched_video_title}".\n`;
+  }
+
+  // Platform-specific filing instructions
+  const platformInstructions = {
+    youtube:   'The infringing content should be reported via youtube.com/copyright_complaint_form. Reference the Video ID and use the "It uses my copyrighted content" option.',
+    instagram: 'File via Meta\'s Rights Manager at business.facebook.com/creatorstudio or via the in-app "Report" > "Intellectual property" > "Copyright" flow on the specific post.',
+    facebook:  'File via Meta\'s Rights Manager at business.facebook.com/creatorstudio or via facebook.com/help/contact/1408150095888978.',
+    tiktok:    'Submit via tiktok.com/legal/report/copyright or through the in-app "Report" > "Intellectual property infringement" option on the specific video.',
+    generic:   'Send this notice to the platform\'s designated DMCA agent. Most platforms have a copyright/legal contact listed in their Terms of Service.',
+  };
+
+  const filingNote = platformInstructions[platform] || platformInstructions.generic;
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const prompt = `You are drafting a formal DMCA takedown notice on behalf of a content creator. Write a complete, professional, legally-formatted DMCA notice.
+
+CREATOR INFORMATION:
+- Name / Channel: ${creatorName}
+- Contact email: ${creatorEmail}
+- Platform where original content was published: YouTube (@7KinHomestead), TikTok (@7.kin.jason), Instagram (@7.kin.jason)
+
+INFRINGING CONTENT:
+- Platform: ${platform}
+- URL / Reference: ${report.submitted_url || report.claim_reference || 'See attached evidence'}
+- Report type: ${report.report_type || 'direct_repost'}
+
+ORIGINAL WORK:
+- Title: ${report.matched_video_title || 'Original video content by ' + creatorName}
+- Published by: ${creatorName}
+- Evidence: ${evidenceSummary || 'Visual and audio fingerprint match confirmed by automated detection system.'}
+
+PLATFORM FILING NOTE:
+${filingNote}
+
+Write the complete DMCA notice with these sections:
+1. Identification of the copyrighted work
+2. Identification of the infringing material (URL/location)
+3. Contact information for the complainant
+4. Statement of good faith belief
+5. Statement of accuracy under penalty of perjury
+6. Electronic signature block
+
+Use formal legal language. Include the date: ${today}. Make it ready to copy and submit directly. Do not include any preamble or explanation — just the notice itself.`;
+
+  // SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const sendSse = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const stream = await anthropic.messages.stream({
+      model:      'claude-sonnet-4-6',
+      max_tokens: 2000,
+      messages:   [{ role: 'user', content: prompt }],
+    });
+
+    sendSse('start', { report_id: reportId, platform });
+
+    for await (const chunk of stream) {
+      if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+        sendSse('token', { text: chunk.delta.text });
+      }
+    }
+
+    const final = await stream.finalMessage();
+    const fullText = final.content?.[0]?.text || '';
+    sendSse('done', { full_text: fullText });
+
+  } catch (err) {
+    log.error({ err, reportId }, '[markr/generate-dmca] Claude error');
+    sendSse('error', { message: err.message });
+  } finally {
+    res.end();
+  }
+});
+
 module.exports = router;

@@ -21,6 +21,115 @@
       --amber-border:#4a3c18;
     }
 
+    /* ── DMCA generator ── */
+    .dmca-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .dmca-modal-overlay.is-open { display: flex; }
+    .dmca-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    }
+    .dmca-modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .dmca-modal-title {
+      font-family: var(--font-head);
+      font-size: 20px;
+      letter-spacing: 1px;
+      color: var(--red);
+    }
+    .dmca-platform-row {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .platform-chip {
+      background: none;
+      border: 1px solid var(--border-bright);
+      border-radius: 20px;
+      color: var(--text-dim);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 14px;
+      cursor: pointer;
+      transition: all 0.13s;
+    }
+    .platform-chip:hover { border-color: var(--red-border); color: var(--red); }
+    .platform-chip.selected { background: var(--red-glow); border-color: var(--red-border); color: var(--red); }
+    .dmca-notice-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+    .dmca-notice-text {
+      font-family: 'DM Mono', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-mid);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 200px;
+    }
+    .dmca-notice-text .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--red);
+      animation: blink 0.8s step-end infinite;
+      vertical-align: text-bottom;
+      margin-left: 1px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .dmca-modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .dmca-generating-msg {
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .dmca-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; }
 
     /* ── Page header ── */
@@ -594,7 +703,7 @@
 
       <!-- DMCA prep -->
       <div class="dmca-section" id="dmca-prep" style="display:none">
-        <div class="section-label">DMCA Takedown Prep <span style="font-size:10px;color:var(--text-dim);letter-spacing:0;text-transform:none;margin-left:6px;">(Session C — automated filing coming)</span></div>
+        <div class="section-label">DMCA Takedown</div>
         <div class="dmca-fields">
           <div class="dmca-field-row">
             <div class="field-group">
@@ -603,21 +712,22 @@
                 <option value="">Select platform…</option>
                 <option value="youtube">YouTube</option>
                 <option value="tiktok">TikTok</option>
-                <option value="instagram">Instagram / Meta</option>
-                <option value="facebook">Facebook / Meta</option>
-                <option value="lemon8">Lemon8</option>
-                <option value="twitter">Twitter / X</option>
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
                 <option value="other">Other</option>
               </select>
             </div>
             <div class="field-group">
-              <div class="field-label">Infringing URL / Reference</div>
+              <div class="field-label">Infringing URL</div>
               <input class="field-input" id="dmca-ref" type="url" placeholder="https://…">
             </div>
           </div>
-          <button class="btn btn-red btn-full" onclick="fileClaim()">📤 File Claim &amp; Mark as Filed</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-amber" style="flex:1" onclick="openDmcaGenerator()">📋 Generate DMCA Notice</button>
+            <button class="btn btn-red" style="flex:1" onclick="fileClaim()">📤 Mark as Filed</button>
+          </div>
           <div style="font-size:11px;color:var(--text-dim);text-align:center;padding:4px 0;">
-            Saves platform + URL to this report, moves status to "filed"
+            Generate drafts the notice with Claude · Mark as Filed saves the record
           </div>
         </div>
       </div>
@@ -630,6 +740,37 @@
     </div>
   </div>
 
+</div>
+
+<!-- DMCA Generator Modal -->
+<div class="dmca-modal-overlay" id="dmca-modal-overlay" onclick="closeDmcaModal(event)">
+  <div class="dmca-modal" onclick="event.stopPropagation()">
+    <div class="dmca-modal-header">
+      <div class="dmca-modal-title">DMCA NOTICE GENERATOR</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeDmcaModal()">✕ Close</button>
+    </div>
+    <div class="dmca-platform-row">
+      <span style="font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-right:4px;">Platform:</span>
+      <button class="platform-chip selected" data-platform="generic" onclick="selectDmcaPlatform(this)">Generic</button>
+      <button class="platform-chip" data-platform="youtube"   onclick="selectDmcaPlatform(this)">YouTube</button>
+      <button class="platform-chip" data-platform="tiktok"    onclick="selectDmcaPlatform(this)">TikTok</button>
+      <button class="platform-chip" data-platform="instagram" onclick="selectDmcaPlatform(this)">Instagram</button>
+      <button class="platform-chip" data-platform="facebook"  onclick="selectDmcaPlatform(this)">Facebook</button>
+    </div>
+    <div class="dmca-notice-area">
+      <div class="dmca-notice-text" id="dmca-notice-text">
+        <span style="color:var(--text-dim)">Select a platform and click Generate to draft your DMCA notice…</span>
+      </div>
+    </div>
+    <div class="dmca-modal-footer">
+      <button class="btn btn-red" id="dmca-generate-btn" onclick="generateDmca()">⚡ Generate Notice</button>
+      <button class="btn btn-ghost" id="dmca-copy-btn" onclick="copyDmcaNotice()" style="display:none">📋 Copy Notice</button>
+      <div class="dmca-generating-msg" id="dmca-generating-msg" style="display:none">
+        <div class="dmca-spinner"></div>
+        <span>Claude is drafting…</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -1027,6 +1168,136 @@ function showToast(msg, type = '') {
 function escHtml(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────────────
+// DMCA Generator
+// ─────────────────────────────────────────────────────
+let _dmcaPlatform  = 'generic';
+let _dmcaFullText  = '';
+let _dmcaGenerating = false;
+
+function openDmcaGenerator() {
+  if (!selectedId) return;
+
+  // Pre-select platform from the prep form if set
+  const platformSel = document.getElementById('dmca-platform');
+  if (platformSel && platformSel.value) {
+    _dmcaPlatform = platformSel.value;
+    document.querySelectorAll('.platform-chip').forEach(c => {
+      c.classList.toggle('selected', c.dataset.platform === _dmcaPlatform);
+    });
+  }
+
+  // Reset state
+  _dmcaFullText = '';
+  document.getElementById('dmca-notice-text').innerHTML = '<span style="color:var(--text-dim)">Click Generate to draft the notice for this report…</span>';
+  document.getElementById('dmca-copy-btn').style.display = 'none';
+  document.getElementById('dmca-generating-msg').style.display = 'none';
+  document.getElementById('dmca-generate-btn').disabled = false;
+  document.getElementById('dmca-modal-overlay').classList.add('is-open');
+}
+
+function closeDmcaModal(e) {
+  if (e && e.target !== document.getElementById('dmca-modal-overlay')) return;
+  if (_dmcaGenerating) return; // don't close while generating
+  document.getElementById('dmca-modal-overlay').classList.remove('is-open');
+}
+
+function selectDmcaPlatform(btn) {
+  document.querySelectorAll('.platform-chip').forEach(c => c.classList.remove('selected'));
+  btn.classList.add('selected');
+  _dmcaPlatform = btn.dataset.platform;
+}
+
+async function generateDmca() {
+  if (!selectedId || _dmcaGenerating) return;
+
+  _dmcaGenerating = true;
+  _dmcaFullText   = '';
+
+  const noticeEl  = document.getElementById('dmca-notice-text');
+  const generateBtn = document.getElementById('dmca-generate-btn');
+  const copyBtn   = document.getElementById('dmca-copy-btn');
+  const genMsg    = document.getElementById('dmca-generating-msg');
+
+  generateBtn.disabled = true;
+  copyBtn.style.display = 'none';
+  genMsg.style.display = 'flex';
+  noticeEl.innerHTML = '<span class="cursor"></span>';
+
+  try {
+    const res = await fetch(`/api/markr/generate-dmca/${selectedId}?platform=${_dmcaPlatform}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let   buffer  = '';
+
+    noticeEl.textContent = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // last partial line
+
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const payload = JSON.parse(line.slice(5).trim());
+          if (payload.text) {
+            _dmcaFullText += payload.text;
+            noticeEl.textContent = _dmcaFullText;
+            // Auto-scroll
+            noticeEl.closest('.dmca-notice-area').scrollTop = 99999;
+          }
+          if (payload.full_text) {
+            _dmcaFullText = payload.full_text;
+            noticeEl.textContent = _dmcaFullText;
+          }
+        } catch (_) {}
+      }
+    }
+
+    copyBtn.style.display = '';
+    showToast('DMCA notice generated', 'green');
+
+  } catch (err) {
+    noticeEl.textContent = `Error generating notice: ${err.message}`;
+    showToast('Generation failed: ' + err.message, 'red');
+  } finally {
+    _dmcaGenerating = false;
+    generateBtn.disabled = false;
+    genMsg.style.display = 'none';
+  }
+}
+
+function copyDmcaNotice() {
+  if (!_dmcaFullText) return;
+  navigator.clipboard.writeText(_dmcaFullText)
+    .then(() => showToast('Notice copied to clipboard', 'green'))
+    .catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = _dmcaFullText;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Notice copied to clipboard', 'green');
+    });
 }
 </script>
 </body>

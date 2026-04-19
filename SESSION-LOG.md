@@ -1,3 +1,66 @@
+# Session 54 — ClaimsΩr Session C: DMCA Engine + NorthΩr Copyright Health (2026-04-19)
+
+## Goal
+Complete the MarkΩr/GuardΩr trilogy: DMCA notice generator, NorthΩr copyright health
+stats block, GuardΩr inbox upgrade with full generation flow, nginx config for
+guard.kre8r.app subdomain.
+
+## What Was Built
+
+### DMCA Notice Generator (src/routes/markr.js)
+`POST /api/markr/generate-dmca/:reportId?platform=youtube|tiktok|instagram|facebook|generic`
+- Loads report + creator profile for ownership fields
+- Platform-specific filing instructions injected per platform (YouTube copyright form,
+  Meta Rights Manager, TikTok copyright report, generic DMCA letter)
+- Streams Claude-generated notice via SSE — token events during generation, done event with full_text
+- Returns complete formal DMCA notice ready to copy and submit
+
+### GuardΩr Inbox (public/guardr-inbox.html) — upgraded
+DMCA generator modal with streaming UI:
+- Platform selector chips: Generic / YouTube / TikTok / Instagram / Facebook
+- Generate → streams Claude output token by token into monospace text area
+- Animated cursor during generation, auto-scroll as text streams in
+- Copy Notice button (clipboard API + execCommand fallback)
+- "Mark as Filed" records platform + URL without requiring generation
+- Modal blocked from closing during generation (prevents lost work)
+
+### NorthΩr Copyright Health (public/northr.html)
+New section at bottom of dashboard:
+- 5 stat cells: Total Reports / Pending / Confirmed Theft / Filed / Resolved
+- Status bar: 🚨 red if confirmed theft, ⏳ amber if pending, ✅ green if clear
+- "Open GuardΩr Inbox →" quick link in section header
+- Calls /api/markr/stats — silently hides if MarkΩr not set up yet
+
+### nginx config (nginx-guard-subdomain.conf)
+Deployment-ready nginx config for guard.kre8r.app subdomain.
+proxy_pass rewrites guard.kre8r.app/[slug] → localhost:3000/guard/[slug]
+SSE support: proxy_buffering off + chunked_transfer_encoding on
+Full step-by-step deployment instructions in file comments.
+
+## Commits
+- Session 54 commit
+
+---
+
+# Session 53 — OrgΩr: Standalone Org Board Builder (2026-04-19)
+
+## Goal
+Build OrgΩr — a standalone companion tool to Kre8Ωr for designing and auditing
+organizations. Separate repo at C:\Users\18054\orgboard, port 3002.
+
+## What Was Built
+Full foundation: Express + better-sqlite3 v12 (Node 24 compatible) + 6-table
+schema. Dashboard (index.html) + full board editor (board.html) with division
+color cascade, job card drawer, flowchart SVG mode, Claude streaming analysis,
+and browser-print PDF. See C:\Users\18054\orgboard\SESSION-LOG.md for full detail.
+
+## Notes
+- This is a separate project with its own CLAUDE.md, SESSION-LOG.md, TODO.md.
+- Start: cd C:\Users\18054\orgboard && node server.js → http://localhost:3002
+- better-sqlite3 MUST be v12+ for Node 24 (v9 has no prebuilt ABI 137 binary).
+
+---
+
 # Session 52 — GuardΩr Session B: Public Fan Page + Creator Inbox (2026-04-19)
 
 ## Goal

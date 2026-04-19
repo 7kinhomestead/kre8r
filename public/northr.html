@@ -1009,6 +1009,40 @@
     </div>
   </div>
 
+  <!-- ── Copyright Health ── -->
+  <div class="section" id="copyright-health-section">
+    <div class="section-head">
+      <div class="section-title">🛡️ COPYRIGHT HEALTH</div>
+      <a href="/guardr-inbox.html" style="font-size:12px;color:var(--teal);text-decoration:none;font-weight:600;">Open GuardΩr Inbox →</a>
+    </div>
+    <div class="pub-stats" id="copyright-stats">
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cr-total">—</div>
+        <div class="pub-stat-label">Reports Received</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cr-pending" style="color:var(--amber)">—</div>
+        <div class="pub-stat-label">Pending Review</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cr-confirmed" style="color:var(--red)">—</div>
+        <div class="pub-stat-label">Confirmed Theft</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cr-filed" style="color:var(--teal)">—</div>
+        <div class="pub-stat-label">Claims Filed</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cr-resolved" style="color:var(--green)">—</div>
+        <div class="pub-stat-label">Resolved</div>
+      </div>
+    </div>
+    <div id="copyright-status-bar" style="display:none;margin-top:10px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:8px;">
+      <span id="copyright-status-icon"></span>
+      <span id="copyright-status-msg"></span>
+    </div>
+  </div>
+
 </div><!-- /page -->
 
 <div class="toast" id="toast"></div>
@@ -1028,6 +1062,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadGrowthPlan();
   loadRevenue();
   loadThisWeek();
+  loadCopyrightHealth();
   // Default month picker to current month
   const now = new Date();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -1962,6 +1997,59 @@ async function saveRevenue() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Save';
+  }
+}
+
+// ── Copyright Health ──────────────────────────────────────────────
+async function loadCopyrightHealth() {
+  try {
+    const res  = await fetch('/api/markr/stats');
+    const data = await res.json();
+    if (!data.ok) return;
+
+    const rp = data.reports || {};
+    const total     = rp.total     || 0;
+    const pending   = rp.pending   || 0;
+    const confirmed = rp.confirmed || 0;
+    const filed     = rp.filed     || 0;
+    const resolved  = rp.resolved  || 0;
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('cr-total',     total);
+    set('cr-pending',   pending);
+    set('cr-confirmed', confirmed);
+    set('cr-filed',     filed);
+    set('cr-resolved',  resolved);
+
+    // Status bar
+    const bar  = document.getElementById('copyright-status-bar');
+    const icon = document.getElementById('copyright-status-icon');
+    const msg  = document.getElementById('copyright-status-msg');
+    if (bar && icon && msg) {
+      bar.style.display = 'flex';
+      if (confirmed > 0) {
+        bar.style.borderColor = 'var(--red-border, #4a2020)';
+        icon.textContent = '🚨';
+        msg.textContent  = `${confirmed} confirmed theft${confirmed > 1 ? 's' : ''} — open GuardΩr inbox to take action`;
+        msg.style.color  = '#E03030';
+      } else if (pending > 0) {
+        bar.style.borderColor = 'var(--amber-border, #4a3c18)';
+        icon.textContent = '⏳';
+        msg.textContent  = `${pending} report${pending > 1 ? 's' : ''} pending review`;
+        msg.style.color  = 'var(--amber)';
+      } else if (total === 0) {
+        icon.textContent = '🛡️';
+        msg.textContent  = 'No reports yet — share guard.kre8r.app/7kinhomestead with your community';
+      } else {
+        icon.textContent = '✅';
+        msg.textContent  = 'All reports reviewed — no open threats';
+        msg.style.color  = 'var(--green)';
+      }
+    }
+  } catch (e) {
+    // MarkΩr not set up yet — silently hide the section
+    const section = document.getElementById('copyright-health-section');
+    if (section) section.style.display = 'none';
   }
 }
 </script>
