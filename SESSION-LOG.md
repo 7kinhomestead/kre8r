@@ -1,3 +1,79 @@
+# Session 52 — GuardΩr Session B: Public Fan Page + Creator Inbox (2026-04-19)
+
+## Goal
+Build GuardΩr Session B: public fan-facing report page (`/guard/:slug`) and
+creator-facing inbox (`/guardr-inbox.html`). GuardΩr is the community copyright
+enforcement layer — fans report stolen videos, MarkΩr detection runs automatically
+on uploaded files, creator reviews in the inbox.
+
+## Key Design Decisions
+- URL structure: `/guard/[slug]` path-based, multi-tenant ready. Slug derives from
+  `profile.instance.replace(/-/g, '')` → e.g. "7kinhomestead". No DNS config
+  needed per creator. Future nginx subdomain routes same Express server.
+- Brand identity: Red `#E03030` — only tool in the suite where red is correct.
+  "Stop Piracy." Public page has no kre8r-nav (fan-facing, external).
+- Stitch/duet/reaction auto-flag: `report_type` field added to distinguish legitimate
+  uses from actual theft. `LEGIT_TYPES = ['stitch_duet', 'reaction', 'licensed']`
+  routes to amber "LOGGED FOR REVIEW" instead of "YOU CAUGHT ONE".
+- Detection: runs multi-layer (pHash + audio + watermark) on uploaded files only.
+  URL submission is evidence-logging only — can't scrape external URLs.
+
+## What Was Built
+
+### src/routes/guard.js (new)
+Public fan-facing API routes — auth whitelisted in server.js.
+- `GET  /api/guard/:slug/info`    — creator branding + community counter
+- `POST /api/guard/:slug/submit`  — fan report (multer 100MB, images + video)
+  Runs `detectInVideo()` on uploaded file. Auto-flags legit use types.
+- `GET  /api/guard/:slug/counter` — live violation counter for embeds
+`resolveCreator(slug)` maps URL slug → creator-profile.json via `getGuardSlug()`.
+
+### public/guardr.html (new — PUBLIC, no auth)
+Full fan-facing report page. 5 UI states managed by `showState()`:
+- **stateForm**: report type radio grid (direct_repost, repurposed, stitch_duet,
+  reaction), legit-use notice for stitch/reaction, file drop zone, URL input,
+  platform select, note textarea.
+- **stateInvestigating**: animated scan ring + 3-step progress log
+  (visual fingerprints → audio → watermark).
+- **stateMatch** (≥70%): 🚨 YOU CAUGHT ONE — confidence meter + canvas inversion
+  tool (client-side only — inverts RGB pixels for watermark reveal).
+- **statePossible** (40–69%): amber similarity meter.
+- **stateLegit**: amber "LOGGED FOR REVIEW" for stitch/duet reports.
+- **stateClean** (<40%): green ✅ no match.
+Community counter animates from 0. Creator branding loaded from info endpoint.
+
+### public/guardr-inbox.html (new — creator auth)
+Creator-facing enforcement inbox. Red brand identity.
+- Stats row: Total / Pending / Confirmed Theft / Claims Filed / Resolved.
+- Filter tabs with counts: All | Pending | Confirmed | Filed | Dismissed | Legit Use.
+- Report list: type badge, status badge, platform, URL/filename, confidence bar.
+- Detail panel (right column): detection layer breakdown, matched video name,
+  evidence (URL + uploaded file), fan note, action buttons.
+- Actions: Confirm Theft (→ confirmed), Dismiss (→ dismissed), Resolve (→ resolved).
+- DMCA prep form: platform select + infringing URL → fires PATCH to status=filed,
+  stores `claim_platform` + `claim_reference` on report.
+- Session C note: automated DMCA filing endpoint planned for Session C.
+
+### DB migrations (src/db.js)
+`guard_reports` table: added `report_type` (TEXT, default 'unknown') and
+`is_likely_legitimate` (INTEGER, default 0) columns via ALTER TABLE IF NOT EXISTS.
+`insertGuardReport()` now accepts `report_type` and auto-computes `is_likely_legitimate`.
+Same schema added to `bootstrapTenantTables()` for future multi-tenant.
+
+### server.js
+Auth whitelist additions: `/guard/`, `/api/guard/` routes public.
+Route mounts: `/api/markr`, `/api/guard` registered.
+Static serve: `GET /guard/:slug` + `GET /guard` → `public/guardr.html`.
+
+### public/js/nav.js
+GuardΩr added to Dist category (alongside MarkΩr):
+`{ label: 'GuardΩr', href: '/guardr-inbox.html' }`
+
+## Commits
+- Session 52 commit
+
+---
+
 # Session 51 — MarkΩr Session A: Fingerprint Infrastructure (2026-04-19)
 
 ## Goal

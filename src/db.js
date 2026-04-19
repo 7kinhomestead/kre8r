@@ -977,23 +977,36 @@ function runMigrations() {
 
   // Fan reports — incoming from GuardΩr public site
   db.exec(`CREATE TABLE IF NOT EXISTS guard_reports (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    submitted_url       TEXT,
-    submitted_file_path TEXT,
-    submitter_note      TEXT,
-    platform            TEXT,
-    match_type          TEXT,
-    match_confidence    REAL,
-    matched_footage_id  INTEGER,
-    matched_video_title TEXT,
-    evidence_json       TEXT,
-    status              TEXT    NOT NULL DEFAULT 'pending',
-    claim_platform      TEXT,
-    claim_reference     TEXT,
-    created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    submitted_url        TEXT,
+    submitted_file_path  TEXT,
+    submitter_note       TEXT,
+    platform             TEXT,
+    report_type          TEXT    NOT NULL DEFAULT 'unknown',
+    is_likely_legitimate INTEGER NOT NULL DEFAULT 0,
+    match_type           TEXT,
+    match_confidence     REAL,
+    matched_footage_id   INTEGER,
+    matched_video_title  TEXT,
+    evidence_json        TEXT,
+    status               TEXT    NOT NULL DEFAULT 'pending',
+    claim_platform       TEXT,
+    claim_reference      TEXT,
+    created_at           TEXT    NOT NULL DEFAULT (datetime('now'))
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_guard_status  ON guard_reports(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_guard_created ON guard_reports(created_at)');
+
+  // Add report_type + is_likely_legitimate to existing guard_reports tables (safe migration)
+  const guardCols = db.pragma('table_info(guard_reports)').map(r => r.name);
+  if (!guardCols.includes('report_type')) {
+    db.exec("ALTER TABLE guard_reports ADD COLUMN report_type TEXT NOT NULL DEFAULT 'unknown'");
+    console.log('[DB] Migration: added guard_reports.report_type');
+  }
+  if (!guardCols.includes('is_likely_legitimate')) {
+    db.exec('ALTER TABLE guard_reports ADD COLUMN is_likely_legitimate INTEGER NOT NULL DEFAULT 0');
+    console.log('[DB] Migration: added guard_reports.is_likely_legitimate');
+  }
 
   console.log('[DB] MarkΩr tables verified');
 }
@@ -1536,20 +1549,22 @@ function bootstrapTenantTables(tdb) {
   exec('CREATE INDEX IF NOT EXISTS idx_afp_footage ON audio_fingerprints(footage_id)');
 
   exec(`CREATE TABLE IF NOT EXISTS guard_reports (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    submitted_url       TEXT,
-    submitted_file_path TEXT,
-    submitter_note      TEXT,
-    platform            TEXT,
-    match_type          TEXT,
-    match_confidence    REAL,
-    matched_footage_id  INTEGER,
-    matched_video_title TEXT,
-    evidence_json       TEXT,
-    status              TEXT    NOT NULL DEFAULT 'pending',
-    claim_platform      TEXT,
-    claim_reference     TEXT,
-    created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    submitted_url        TEXT,
+    submitted_file_path  TEXT,
+    submitter_note       TEXT,
+    platform             TEXT,
+    report_type          TEXT    NOT NULL DEFAULT 'unknown',
+    is_likely_legitimate INTEGER NOT NULL DEFAULT 0,
+    match_type           TEXT,
+    match_confidence     REAL,
+    matched_footage_id   INTEGER,
+    matched_video_title  TEXT,
+    evidence_json        TEXT,
+    status               TEXT    NOT NULL DEFAULT 'pending',
+    claim_platform       TEXT,
+    claim_reference      TEXT,
+    created_at           TEXT    NOT NULL DEFAULT (datetime('now'))
   )`);
   exec('CREATE INDEX IF NOT EXISTS idx_guard_status  ON guard_reports(status)');
   exec('CREATE INDEX IF NOT EXISTS idx_guard_created ON guard_reports(created_at)');
@@ -4798,16 +4813,23 @@ function getAudioFingerprintStats() {
 }
 
 // Guard reports
+// Report types where the content is likely legitimate use, not theft
+const LEGITIMATE_REPORT_TYPES = ['stitch_duet', 'reaction', 'licensed'];
+
 function insertGuardReport({ submitted_url, submitted_file_path, submitter_note, platform,
-                              match_type, match_confidence, matched_footage_id, matched_video_title,
-                              evidence_json }) {
+                              report_type, match_type, match_confidence, matched_footage_id,
+                              matched_video_title, evidence_json }) {
+  const rtype = report_type || 'unknown';
+  const isLegit = LEGITIMATE_REPORT_TYPES.includes(rtype) ? 1 : 0;
   return _run(
     `INSERT INTO guard_reports
        (submitted_url, submitted_file_path, submitter_note, platform,
+        report_type, is_likely_legitimate,
         match_type, match_confidence, matched_footage_id, matched_video_title, evidence_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       submitted_url || null, submitted_file_path || null, submitter_note || null, platform || null,
+      rtype, isLegit,
       match_type || null, match_confidence || null, matched_footage_id || null,
       matched_video_title || null, evidence_json || null,
     ]
@@ -4828,7 +4850,7 @@ function getAllGuardReports({ status } = {}) {
 
 function updateGuardReport(id, fields) {
   const sets = [], vals = [];
-  const allowed = ['status', 'claim_platform', 'claim_reference'];
+  const allowed = ['status', 'claim_platform', 'claim_reference', 'is_likely_legitimate'];
   for (const k of allowed) {
     if (fields[k] !== undefined) { sets.push(`${k} = ?`); vals.push(fields[k]); }
   }

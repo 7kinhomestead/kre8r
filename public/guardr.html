@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GuardΩr — Protect 7 Kin Homestead</title>
+  <meta name="description" content="Found a stolen video? Report it here. The community protects the creator.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f0f0f;
+      --bg-card:     #181818;
+      --bg-card-2:   #1e1e1e;
+      --border:      #2c2c2c;
+      --text:        #e8ebe6;
+      --text-mid:    #8a9487;
+      --text-dim:    #5a5e58;
+      --red:         #E03030;
+      --red-dim:     #b82424;
+      --red-hover:   #f04040;
+      --red-glow:    #2e1616;
+      --red-border:  #4a2020;
+      --green:       #5cba8a;
+      --green-glow:  #1c2e24;
+      --amber:       #f0b942;
+      --amber-glow:  #2e2618;
+      --font-head:   'Bebas Neue', sans-serif;
+      --font-body:   'DM Sans', sans-serif;
+      --radius:      10px;
+      --radius-sm:   6px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: #0a0a0a;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topbar-brand {
+      font-family: var(--font-head);
+      font-size: 20px;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+    .topbar-brand span { color: var(--red); }
+    .topbar-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 56px 24px 40px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      font-family: var(--font-head);
+      font-size: 13px;
+      letter-spacing: 4px;
+      color: var(--red);
+      opacity: 0.8;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+    .hero-title {
+      font-family: var(--font-head);
+      font-size: clamp(48px, 10vw, 80px);
+      letter-spacing: 3px;
+      line-height: 0.95;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .hero-title em {
+      color: var(--red);
+      font-style: normal;
+    }
+    .hero-sub {
+      font-size: 16px;
+      color: var(--text-mid);
+      line-height: 1.6;
+      max-width: 480px;
+      margin: 0 auto 32px;
+    }
+
+    /* ── Community counter ── */
+    .counter-block {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--red-glow);
+      border: 1px solid var(--red-border);
+      border-radius: var(--radius);
+      padding: 14px 24px;
+      margin-bottom: 48px;
+    }
+    .counter-num {
+      font-family: var(--font-head);
+      font-size: 44px;
+      letter-spacing: 2px;
+      color: var(--red);
+      line-height: 1;
+    }
+    .counter-label {
+      text-align: left;
+    }
+    .counter-label-top {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.3px;
+    }
+    .counter-label-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* ── Main card ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 560px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    /* ── State panels ── */
+    .state { display: none; }
+    .state.active { display: block; }
+
+    /* ── Form ── */
+    .form-wrap { padding: 28px 28px 24px; }
+    .form-section { margin-bottom: 22px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-mid);
+      margin-bottom: 8px;
+    }
+    .form-label.required::after { content: ' *'; color: var(--red); }
+    .form-input,
+    .form-textarea,
+    .form-select {
+      width: 100%;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 10px 13px;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus,
+    .form-textarea:focus,
+    .form-select:focus { outline: none; border-color: var(--red-border); }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .form-select { cursor: pointer; }
+    .form-select option { background: var(--bg-card-2); }
+
+    /* Report type radio cards */
+    .report-type-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .rtype-card {
+      position: relative;
+      cursor: pointer;
+    }
+    .rtype-card input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .rtype-label {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 10px 12px;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .rtype-card input:checked + .rtype-label {
+      border-color: var(--red-border);
+      background: var(--red-glow);
+    }
+    .rtype-label:hover { border-color: #444; }
+    .rtype-icon { font-size: 18px; }
+    .rtype-name { font-size: 12px; font-weight: 700; color: var(--text); }
+    .rtype-desc { font-size: 11px; color: var(--text-dim); line-height: 1.3; }
+
+    /* Legit-use notice — shown when stitch/duet/reaction selected */
+    .legit-notice {
+      display: none;
+      background: var(--amber-glow);
+      border: 1px solid #4a3c18;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--amber);
+      margin-top: 10px;
+    }
+    .legit-notice.visible { display: block; }
+
+    /* File drop zone */
+    .file-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 24px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .file-zone:hover, .file-zone.dragover { border-color: var(--red-border); background: var(--red-glow); }
+    .file-zone-icon { font-size: 28px; margin-bottom: 8px; }
+    .file-zone-text { font-size: 13px; color: var(--text-mid); }
+    .file-zone-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+    .file-zone-name { font-size: 13px; color: var(--text); font-weight: 600; margin-top: 6px; display: none; }
+    #fileInput { display: none; }
+
+    /* Or divider */
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-dim);
+      font-size: 12px;
+      margin: 12px 0;
+    }
+    .or-divider::before, .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Submit button */
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-head);
+      font-size: 20px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: 6px;
+    }
+    .btn-submit:hover { background: var(--red-hover); }
+    .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .form-note {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    /* ── Investigating state ── */
+    .investigating {
+      padding: 56px 28px;
+      text-align: center;
+    }
+    .scan-ring {
+      width: 72px;
+      height: 72px;
+      border: 3px solid var(--border);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .investigating-title {
+      font-family: var(--font-head);
+      font-size: 28px;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+    .investigating-sub { color: var(--text-mid); font-size: 14px; }
+    .scan-steps {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 280px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+    }
+    .scan-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .scan-step.active { color: var(--text); }
+    .scan-step.done { color: var(--green); }
+    .scan-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .scan-step.active .scan-dot { background: var(--red); animation: pulse 1s ease-in-out infinite; }
+    .scan-step.done .scan-dot { background: var(--green); animation: none; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* ── Result states ── */
+    .result-wrap { padding: 36px 28px; text-align: center; }
+
+    /* MATCH */
+    .result-match-icon { font-size: 52px; margin-bottom: 16px; }
+    .result-title {
+      font-family: var(--font-head);
+      font-size: 40px;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .result-title.red   { color: var(--red); }
+    .result-title.green { color: var(--green); }
+    .result-title.amber { color: var(--amber); }
+    .result-sub { font-size: 15px; color: var(--text-mid); margin-bottom: 24px; line-height: 1.5; }
+
+    .match-detail {
+      background: var(--red-glow);
+      border: 1px solid var(--red-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .match-detail-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--red); margin-bottom: 4px; }
+    .match-detail-value { font-size: 14px; color: var(--text); font-weight: 600; }
+    .match-detail-sub   { font-size: 12px; color: var(--text-mid); margin-top: 3px; }
+
+    /* Confidence meter */
+    .conf-meter { margin: 16px 0; }
+    .conf-meter-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-mid); margin-bottom: 6px; }
+    .conf-bar-wrap { height: 8px; background: var(--border); border-radius: 20px; overflow: hidden; }
+    .conf-bar-fill { height: 100%; border-radius: 20px; transition: width 0.8s ease; }
+
+    /* Legit-use result */
+    .legit-result {
+      background: var(--amber-glow);
+      border: 1px solid #4a3c18;
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    /* Inversion tool */
+    .inversion-tool {
+      margin-top: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .inversion-header {
+      padding: 12px 16px;
+      background: var(--bg-card-2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .inversion-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .inversion-body { padding: 16px; }
+    .inversion-canvases {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .canvas-wrap { position: relative; }
+    .canvas-label {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+    }
+    .inversion-canvas {
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      display: block;
+    }
+    .inversion-upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-mid);
+    }
+    .inversion-upload-zone:hover { border-color: var(--red-border); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.15s;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn-red   { background: var(--red);   color: #fff; }
+    .btn-red:hover { background: var(--red-hover); }
+    .btn-ghost { background: var(--bg-card-2); color: var(--text-mid); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); }
+
+    .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+    .footer a { color: var(--text-dim); }
+    .footer strong { color: var(--text-mid); }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .hero { padding: 40px 16px 28px; }
+      .hero-title { font-size: 52px; }
+      .report-type-grid { grid-template-columns: 1fr; }
+      .form-wrap { padding: 20px 16px; }
+      .inversion-canvases { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-brand" id="brandName">7 KIN <span>HOMESTEAD</span></div>
+    </div>
+    <div class="topbar-sub">GUARDR · Content Protection</div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">Community Protection</div>
+    <h1 class="hero-title">FOUND A <em>STOLEN</em> VIDEO?</h1>
+    <p class="hero-sub" id="heroSub">
+      The community fights back. Submit the URL or upload a clip and
+      we'll run it through our detection system. Real violations get logged,
+      investigated, and actioned.
+    </p>
+
+    <!-- Community counter -->
+    <div class="counter-block">
+      <div class="counter-num" id="counterNum">—</div>
+      <div class="counter-label">
+        <div class="counter-label-top">Violations caught</div>
+        <div class="counter-label-sub">by the community</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main card -->
+  <div class="card" style="margin: 0 auto 48px; max-width: 560px; padding: 0 24px;">
+
+    <!-- STATE: FORM -->
+    <div id="stateForm" class="state active">
+      <div class="form-wrap">
+
+        <!-- Report type -->
+        <div class="form-section">
+          <label class="form-label required">What type of content is this?</label>
+          <div class="report-type-grid">
+            <label class="rtype-card">
+              <input type="radio" name="report_type" value="direct_repost" checked onchange="onReportTypeChange(this)">
+              <div class="rtype-label">
+                <span class="rtype-icon">📋</span>
+                <span class="rtype-name">Direct repost</span>
+                <span class="rtype-desc">Re-uploaded video with no credit</span>
+              </div>
+            </label>
+            <label class="rtype-card">
+              <input type="radio" name="report_type" value="repurposed" onchange="onReportTypeChange(this)">
+              <div class="rtype-label">
+                <span class="rtype-icon">✂️</span>
+                <span class="rtype-name">Repurposed / edited</span>
+                <span class="rtype-desc">Cropped, re-edited, or rebranded</span>
+              </div>
+            </label>
+            <label class="rtype-card">
+              <input type="radio" name="report_type" value="stitch_duet" onchange="onReportTypeChange(this)">
+              <div class="rtype-label">
+                <span class="rtype-icon">🔀</span>
+                <span class="rtype-name">Stitch / duet</span>
+                <span class="rtype-desc">Platform collaboration feature</span>
+              </div>
+            </label>
+            <label class="rtype-card">
+              <input type="radio" name="report_type" value="reaction" onchange="onReportTypeChange(this)">
+              <div class="rtype-label">
+                <span class="rtype-icon">🎥</span>
+                <span class="rtype-name">Reaction video</span>
+                <span class="rtype-desc">Someone reacting to the content</span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Legit-use notice -->
+          <div class="legit-notice" id="legitNotice">
+            ⚠️ <strong>Heads up:</strong> Stitches, duets, and reaction videos are often
+            legitimate uses of content. Your report will still be logged and reviewed —
+            we'll confirm whether it crosses the line.
+          </div>
+        </div>
+
+        <!-- Platform -->
+        <div class="form-section">
+          <label class="form-label">Where did you find it?</label>
+          <select class="form-select" id="platform">
+            <option value="">Select platform…</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram</option>
+            <option value="youtube">YouTube</option>
+            <option value="facebook">Facebook</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- URL -->
+        <div class="form-section">
+          <label class="form-label">Link to the video</label>
+          <input class="form-input" type="url" id="submittedUrl"
+            placeholder="https://www.tiktok.com/@..." autocomplete="off">
+        </div>
+
+        <!-- File upload -->
+        <div class="form-section">
+          <label class="form-label">Upload a screenshot or short clip <span style="font-weight:400;text-transform:none;letter-spacing:0;">(for detection)</span></label>
+          <div class="file-zone" id="fileZone" onclick="document.getElementById('fileInput').click()"
+               ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <div class="file-zone-icon">📎</div>
+            <div class="file-zone-text">Click to upload or drag &amp; drop</div>
+            <div class="file-zone-sub">Images (JPG, PNG) or video clips (MP4, MOV) — max 100MB</div>
+            <div class="file-zone-name" id="fileZoneName"></div>
+          </div>
+          <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelected(event)">
+        </div>
+
+        <!-- Note -->
+        <div class="form-section">
+          <label class="form-label">Anything else to add?</label>
+          <textarea class="form-textarea" id="submitterNote"
+            placeholder="Context, account name, when you found it, anything that helps…"></textarea>
+        </div>
+
+        <button class="btn-submit" id="btnSubmit" onclick="submitReport()">
+          SUBMIT REPORT
+        </button>
+
+        <div class="form-note">
+          Reports are reviewed by Jason's team. False positives (stitches, duets, licensed use)
+          are filtered automatically — no action will be taken on legitimate content.
+        </div>
+      </div>
+    </div><!-- /stateForm -->
+
+    <!-- STATE: INVESTIGATING -->
+    <div id="stateInvestigating" class="state">
+      <div class="investigating">
+        <div class="scan-ring"></div>
+        <div class="investigating-title">INVESTIGATING…</div>
+        <div class="investigating-sub">Running forensic analysis on your submission</div>
+        <div class="scan-steps">
+          <div class="scan-step active" id="step1">
+            <div class="scan-dot"></div>
+            Checking visual fingerprints…
+          </div>
+          <div class="scan-step" id="step2">
+            <div class="scan-dot"></div>
+            Matching audio signature…
+          </div>
+          <div class="scan-step" id="step3">
+            <div class="scan-dot"></div>
+            Decoding watermark…
+          </div>
+        </div>
+      </div>
+    </div><!-- /stateInvestigating -->
+
+    <!-- STATE: MATCH (confirmed theft) -->
+    <div id="stateMatch" class="state">
+      <div class="result-wrap">
+        <div class="result-match-icon">🚨</div>
+        <div class="result-title red">YOU CAUGHT ONE.</div>
+        <p class="result-sub">
+          This video matches content from <strong id="matchBrand">7 Kin Homestead</strong>.
+          Your report has been sent to Jason's team.
+        </p>
+
+        <div class="match-detail" id="matchDetail">
+          <div class="match-detail-label">Matched original</div>
+          <div class="match-detail-value" id="matchTitle">—</div>
+          <div class="match-detail-sub" id="matchMethod">—</div>
+        </div>
+
+        <div class="conf-meter">
+          <div class="conf-meter-label">
+            <span>Detection confidence</span>
+            <span id="matchConfPct" style="color:var(--red);font-weight:700;">—%</span>
+          </div>
+          <div class="conf-bar-wrap">
+            <div class="conf-bar-fill" id="matchConfBar" style="background:var(--red);width:0%;"></div>
+          </div>
+        </div>
+
+        <!-- Inversion tool -->
+        <div class="inversion-tool" id="inversionTool">
+          <div class="inversion-header">
+            <div class="inversion-title">🔬 Reveal the Hidden Watermark</div>
+            <div style="font-size:11px;color:var(--text-dim)">Client-side only — nothing uploaded</div>
+          </div>
+          <div class="inversion-body">
+            <p style="font-size:13px;color:var(--text-mid);margin-bottom:12px;">
+              Upload a frame from the suspected stolen video. Color inversion reveals
+              a structured pattern invisible to the naked eye — the forensic signature embedded
+              by Jason's content protection system.
+            </p>
+            <div id="inversionUploadZone" class="inversion-upload-zone"
+                 onclick="document.getElementById('inversionFileInput').click()">
+              📷 Upload a screenshot or frame to reveal watermark
+            </div>
+            <input type="file" id="inversionFileInput" accept="image/*" style="display:none" onchange="loadInversionImage(event)">
+            <div class="inversion-canvases" id="inversionCanvases" style="display:none;margin-top:12px;">
+              <div class="canvas-wrap">
+                <div class="canvas-label">Original</div>
+                <canvas id="canvasOriginal" class="inversion-canvas"></canvas>
+              </div>
+              <div class="canvas-wrap">
+                <div class="canvas-label" style="background:rgba(224,48,48,0.85);">Inverted</div>
+                <canvas id="canvasInverted" class="inversion-canvas"></canvas>
+              </div>
+            </div>
+            <p id="inversionHint" style="font-size:12px;color:var(--text-dim);margin-top:8px;display:none;">
+              If the watermark is present, the inverted image will show a subtle structured
+              pattern across the frame — not random noise, but a systematic grid.
+              That structure is the forensic proof of original ownership.
+            </p>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn btn-ghost" onclick="resetForm()">Submit another report</button>
+        </div>
+      </div>
+    </div><!-- /stateMatch -->
+
+    <!-- STATE: POSSIBLE match -->
+    <div id="statePossible" class="state">
+      <div class="result-wrap">
+        <div class="result-match-icon">🔍</div>
+        <div class="result-title amber">LOOKS FAMILIAR.</div>
+        <p class="result-sub">
+          This video has some similarities to content from <strong id="possibleBrand">7 Kin Homestead</strong>
+          but we need more to confirm. Your report has been logged.
+        </p>
+
+        <div class="conf-meter">
+          <div class="conf-meter-label">
+            <span>Similarity</span>
+            <span id="possibleConfPct" style="color:var(--amber);font-weight:700;">—%</span>
+          </div>
+          <div class="conf-bar-wrap">
+            <div class="conf-bar-fill" id="possibleConfBar" style="background:var(--amber);width:0%;"></div>
+          </div>
+        </div>
+
+        <p style="font-size:13px;color:var(--text-mid);margin-top:16px;">
+          If you can find a clearer clip or screenshot, submit another report with more detail.
+          The team will review what you've sent.
+        </p>
+
+        <div class="result-actions">
+          <button class="btn btn-ghost" onclick="resetForm()">Submit more detail</button>
+        </div>
+      </div>
+    </div><!-- /statePossible -->
+
+    <!-- STATE: LEGITIMATE use -->
+    <div id="stateLegit" class="state">
+      <div class="result-wrap">
+        <div class="result-match-icon">⚠️</div>
+        <div class="result-title amber">LOGGED FOR REVIEW.</div>
+        <p class="result-sub">
+          You indicated this might be a stitch, duet, or reaction. Your report has been
+          logged and Jason's team will verify whether it crosses the line.
+        </p>
+        <div class="legit-result">
+          <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:6px;">What happens next</div>
+          <div style="font-size:13px;color:var(--text-mid);line-height:1.6;">
+            Platform collaborations (stitches, duets, reactions) are often legitimate.
+            The team will review the submission and confirm before any action is taken.
+            No report is dismissed — every one is checked.
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="btn btn-ghost" onclick="resetForm()">Submit another report</button>
+        </div>
+      </div>
+    </div><!-- /stateLegit -->
+
+    <!-- STATE: NO MATCH -->
+    <div id="stateClean" class="state">
+      <div class="result-wrap">
+        <div class="result-match-icon">✅</div>
+        <div class="result-title green">NO MATCH FOUND.</div>
+        <p class="result-sub">
+          We don't see a match against the content library. This is likely original or
+          licensed content. If you think this is wrong, submit again with more detail.
+        </p>
+        <div class="result-actions">
+          <button class="btn btn-ghost" onclick="resetForm()">Submit with more detail</button>
+        </div>
+      </div>
+    </div><!-- /stateClean -->
+
+  </div><!-- /card -->
+
+  <!-- Footer -->
+  <div class="footer">
+    <strong id="footerBrand">7 Kin Homestead</strong> · Content protection powered by
+    <a href="https://kre8r.app" target="_blank" rel="noopener">Kre8Ωr</a><br>
+    Reports are reviewed by the creator's team. No automated action is taken without human review.<br>
+    <a href="/privacy">Privacy Policy</a> · <a href="/tos">Terms of Service</a>
+  </div>
+
+  <script>
+  // ─────────────────────────────────────────────
+  // STATE
+  // ─────────────────────────────────────────────
+  const SLUG = window.location.pathname.split('/').filter(Boolean)[1] || '';
+  let selectedFile = null;
+  let creatorInfo  = null;
+
+  // ─────────────────────────────────────────────
+  // INIT
+  // ─────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    loadCreatorInfo();
+  });
+
+  async function loadCreatorInfo() {
+    if (!SLUG) return;
+    try {
+      const r    = await fetch(`/api/guard/${SLUG}/info`);
+      if (!r.ok) return;
+      creatorInfo = await r.json();
+
+      // Brand
+      const brand = creatorInfo.brand || creatorInfo.creator_name || '7 Kin Homestead';
+      const brandEl = document.getElementById('brandName');
+      // Split last word for red accent
+      const words = brand.split(' ');
+      const last  = words.pop();
+      if (brandEl) brandEl.innerHTML = words.join(' ') + ' <span>' + last + '</span>';
+
+      // Tagline
+      if (creatorInfo.tagline) {
+        const subEl = document.getElementById('heroSub');
+        if (subEl) subEl.textContent = 'The ' + brand + ' community fights back. Submit the URL or ' +
+          'upload a clip and we\'ll run forensic detection. Real violations get logged and actioned.';
+      }
+
+      // Counter
+      setCounter(creatorInfo.community?.violations || 0);
+
+      // Footer
+      const footerEl = document.getElementById('footerBrand');
+      if (footerEl) footerEl.textContent = brand;
+
+      // Match state brands
+      ['matchBrand', 'possibleBrand'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = brand;
+      });
+
+      document.title = 'GuardΩr — Protect ' + brand;
+    } catch (e) {
+      console.warn('Failed to load creator info', e);
+    }
+  }
+
+  function setCounter(n) {
+    const el = document.getElementById('counterNum');
+    if (!el) return;
+    // Animate up from 0
+    let current = 0;
+    const target = parseInt(n, 10) || 0;
+    if (target === 0) { el.textContent = '0'; return; }
+    const step = Math.max(1, Math.floor(target / 40));
+    const interval = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = current.toLocaleString();
+      if (current >= target) clearInterval(interval);
+    }, 30);
+  }
+
+  // ─────────────────────────────────────────────
+  // REPORT TYPE
+  // ─────────────────────────────────────────────
+  const LEGIT_TYPES = ['stitch_duet', 'reaction', 'licensed'];
+
+  function onReportTypeChange(radio) {
+    const notice = document.getElementById('legitNotice');
+    if (LEGIT_TYPES.includes(radio.value)) {
+      notice.classList.add('visible');
+    } else {
+      notice.classList.remove('visible');
+    }
+  }
+
+  function getReportType() {
+    const sel = document.querySelector('input[name="report_type"]:checked');
+    return sel ? sel.value : 'direct_repost';
+  }
+
+  // ─────────────────────────────────────────────
+  // FILE HANDLING
+  // ─────────────────────────────────────────────
+  function onFileSelected(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFile(file);
+  }
+
+  function onDragOver(e) {
+    e.preventDefault();
+    document.getElementById('fileZone').classList.add('dragover');
+  }
+  function onDragLeave() {
+    document.getElementById('fileZone').classList.remove('dragover');
+  }
+  function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('fileZone').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  }
+
+  function setFile(file) {
+    selectedFile = file;
+    const nameEl = document.getElementById('fileZoneName');
+    nameEl.textContent = '📎 ' + file.name + ' (' + formatBytes(file.size) + ')';
+    nameEl.style.display = 'block';
+  }
+
+  function formatBytes(b) {
+    if (b < 1024)        return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+    return (b / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  // ─────────────────────────────────────────────
+  // SUBMIT
+  // ─────────────────────────────────────────────
+  async function submitReport() {
+    const url  = document.getElementById('submittedUrl').value.trim();
+    const note = document.getElementById('submitterNote').value.trim();
+    const platform = document.getElementById('platform').value;
+    const reportType = getReportType();
+
+    if (!url && !selectedFile) {
+      alert('Please provide a URL or upload a file.');
+      return;
+    }
+
+    document.getElementById('btnSubmit').disabled = true;
+    showState('stateInvestigating');
+    animateScanSteps();
+
+    // Build form data
+    const formData = new FormData();
+    if (url)          formData.append('submitted_url',  url);
+    if (note)         formData.append('submitter_note', note);
+    if (platform)     formData.append('platform',       platform);
+    formData.append('report_type', reportType);
+    if (selectedFile) formData.append('file', selectedFile);
+
+    try {
+      const resp = await fetch(`/api/guard/${SLUG}/submit`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data.error || 'Submission failed');
+      }
+
+      // Route to correct result state
+      const isLegit = data.is_likely_legitimate || LEGIT_TYPES.includes(data.report_type);
+
+      if (isLegit) {
+        showState('stateLegit');
+      } else if (data.verdict === 'confirmed') {
+        showMatchState(data);
+      } else if (data.verdict === 'possible') {
+        showPossibleState(data);
+      } else {
+        showState('stateClean');
+      }
+
+      // Refresh counter
+      await loadCreatorInfo();
+
+    } catch (err) {
+      showState('stateForm');
+      document.getElementById('btnSubmit').disabled = false;
+      alert('Something went wrong: ' + err.message);
+    }
+  }
+
+  function showState(id) {
+    document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo({ top: document.querySelector('.hero').offsetTop, behavior: 'smooth' });
+  }
+
+  function showMatchState(data) {
+    if (data.matched_video_title) {
+      document.getElementById('matchTitle').textContent = data.matched_video_title;
+    }
+    const method = data.match_type
+      ? 'Detected via ' + data.match_type.replace(/_/g, ' + ') + ' analysis'
+      : 'Detected via forensic fingerprint analysis';
+    document.getElementById('matchMethod').textContent = method;
+
+    const pct = Math.round(data.confidence || 0);
+    document.getElementById('matchConfPct').textContent = pct + '%';
+    setTimeout(() => {
+      document.getElementById('matchConfBar').style.width = pct + '%';
+    }, 300);
+
+    showState('stateMatch');
+  }
+
+  function showPossibleState(data) {
+    const pct = Math.round(data.confidence || 0);
+    document.getElementById('possibleConfPct').textContent = pct + '%';
+    setTimeout(() => {
+      document.getElementById('possibleConfBar').style.width = pct + '%';
+    }, 300);
+    showState('statePossible');
+  }
+
+  function animateScanSteps() {
+    const steps = ['step1', 'step2', 'step3'];
+    let i = 0;
+    const advance = setInterval(() => {
+      if (i > 0) {
+        document.getElementById(steps[i - 1]).classList.remove('active');
+        document.getElementById(steps[i - 1]).classList.add('done');
+      }
+      if (i < steps.length) {
+        document.getElementById(steps[i]).classList.add('active');
+        i++;
+      } else {
+        clearInterval(advance);
+      }
+    }, 900);
+  }
+
+  function resetForm() {
+    selectedFile = null;
+    document.getElementById('submittedUrl').value  = '';
+    document.getElementById('submitterNote').value = '';
+    document.getElementById('platform').value      = '';
+    document.getElementById('fileZoneName').style.display = 'none';
+    document.getElementById('fileZoneName').textContent = '';
+    document.getElementById('fileInput').value = '';
+    document.getElementById('btnSubmit').disabled = false;
+    document.querySelectorAll('input[name="report_type"]')[0].checked = true;
+    document.getElementById('legitNotice').classList.remove('visible');
+    // Reset scan steps
+    ['step1','step2','step3'].forEach((id, idx) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active','done');
+      if (idx === 0) el.classList.add('active');
+    });
+    // Reset confidence bars
+    ['matchConfBar','possibleConfBar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.width = '0%';
+    });
+    // Reset inversion tool
+    document.getElementById('inversionCanvases').style.display = 'none';
+    document.getElementById('inversionUploadZone').style.display = 'block';
+    document.getElementById('inversionHint').style.display = 'none';
+    showState('stateForm');
+  }
+
+  // ─────────────────────────────────────────────
+  // INVERSION TOOL — pure Canvas API, no server
+  // ─────────────────────────────────────────────
+  function loadInversionImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onload = function() {
+        const orig     = document.getElementById('canvasOriginal');
+        const inverted = document.getElementById('canvasInverted');
+        const MAX_W    = 400;
+        const scale    = Math.min(1, MAX_W / img.width);
+        const W = Math.round(img.width  * scale);
+        const H = Math.round(img.height * scale);
+
+        // Draw original
+        orig.width  = W; orig.height  = H;
+        const ctxO  = orig.getContext('2d');
+        ctxO.drawImage(img, 0, 0, W, H);
+
+        // Draw inverted
+        inverted.width  = W; inverted.height = H;
+        const ctxI  = inverted.getContext('2d');
+        ctxI.drawImage(img, 0, 0, W, H);
+        const imgData = ctxI.getImageData(0, 0, W, H);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          d[i]     = 255 - d[i];     // R
+          d[i + 1] = 255 - d[i + 1]; // G
+          d[i + 2] = 255 - d[i + 2]; // B
+          // alpha unchanged
+        }
+        ctxI.putImageData(imgData, 0, 0);
+
+        // Show results
+        document.getElementById('inversionUploadZone').style.display = 'none';
+        document.getElementById('inversionCanvases').style.display   = 'grid';
+        document.getElementById('inversionHint').style.display       = 'block';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  </script>
+</body>
+</html>

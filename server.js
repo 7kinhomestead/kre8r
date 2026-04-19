@@ -347,6 +347,9 @@ app.use((req, res, next) => {
        '/privacy', '/privacy.html', '/tos', '/tos.html'].includes(req.path)) return next();
   // Download assets (installer, yml) are public
   if (req.path.startsWith('/downloads/')) return next();
+  // GuardΩr — public fan-facing pages, no auth
+  if (req.path.startsWith('/guard/') || req.path === '/guard') return next();
+  if (req.path.startsWith('/api/guard/')) return next();
 
   // Logged in — allow
   if (req.session?.userId) return next();
@@ -449,6 +452,9 @@ app.post('/setup-api', async (req, res) => {
 app.get('/download',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'download.html')));
 app.get('/landing',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/landing.html',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
+// GuardΩr — public fan page (no auth). Serves for any /guard/:slug path.
+app.get('/guard/:slug',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'guardr.html')));
+app.get('/guard',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'guardr.html')));
 app.get('/media-kit',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
 app.get('/media-kit.html',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
 app.get('/beta-invite',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
@@ -510,6 +516,7 @@ app.use('/api/releases',          require('./src/routes/releases'));
 app.use('/api/analytics-import',  require('./src/routes/analytics-import'));
 app.use('/api/postor',            require('./src/routes/postor'));
 app.use('/api/markr',             require('./src/routes/markr'));
+app.use('/api/guard',             require('./src/routes/guard'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 
 // PostΩr queue processor — starts 60s interval to fire scheduled posts
