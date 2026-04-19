@@ -517,6 +517,7 @@ router.get('/auth/tiktok', (req, res) => {
 
   try {
     const authUrl = tiktok.getAuthUrl(req, state, challenge);
+    console.log('[tiktok] auth redirect →', authUrl);
     res.redirect(authUrl);
   } catch (err) {
     res.status(500).json({ error: err.message });
