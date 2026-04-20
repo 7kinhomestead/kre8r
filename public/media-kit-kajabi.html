@@ -16,7 +16,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
-body{background:var(--black);color:var(--white);font-family:var(--f-b);font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased;}
+body{background:var(--black);color:var(--white);font-family:var(--f-b);font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 a{color:var(--acc);text-decoration:none;}
 a:hover{text-decoration:underline;}
 
@@ -210,6 +210,9 @@ footer .b .sub{display:block;font-family:var(--f-b);font-size:11px;letter-spacin
 footer .right{text-align:right;font-size:12px;color:var(--muted);letter-spacing:.04em;line-height:1.8;}
 
 /* ── RESPONSIVE ── */
+@media (max-width:1100px){
+  .stats .inner{grid-template-columns:repeat(3,1fr);}
+}
 @media (max-width:960px){
   .hero{grid-template-columns:1fr;padding:64px 32px 48px;gap:40px;}
   .story-grid,.philosophy-grid,.audience-grid,.contact{grid-template-columns:1fr;gap:40px;}
