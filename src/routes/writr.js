@@ -455,6 +455,22 @@ router.post('/generate', async (req, res) => {
 
   } catch (_) {}
 
+  // ── VectΩr Strategic Brief — inject active direction into all script generation ──
+  try {
+    const activeBrief = require('../db').getActiveBrief();
+    if (activeBrief?.brief_json) {
+      const b = activeBrief.brief_json;
+      let vBlock = '\n\n## STRATEGIC DIRECTION (locked in last VectΩr session)';
+      if (b.vector)      vBlock += `\nVector: ${b.vector}`;
+      if (b.focus)       vBlock += `\nFocus: ${b.focus}`;
+      if (b.constraints) vBlock += `\nConstraints: ${b.constraints}`;
+      if (b.avoid)       vBlock += `\nAvoid: ${b.avoid}`;
+      if (b.locked_date) vBlock += `\n(Locked ${b.locked_date})`;
+      vBlock += '\nAllow this to shape script tone, angle emphasis, and story entry point — but never override the creator\'s stated concept.';
+      id8rBlock += vBlock;
+    }
+  } catch (_) {}
+
   // Short-form format constraint — injected into every prompt when project.format = 'short'
   if (project.format === 'short') {
     id8rBlock += `\n\n## SHORT-FORM FORMAT — STRICT CONSTRAINTS

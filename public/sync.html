@@ -291,7 +291,13 @@
     <div class="sync-card" id="snapshot-card" style="display:none; margin-top:20px;">
       <h3>Pulled Snapshot <span id="snapshot-badge" class="device-badge"></span></h3>
       <div id="snapshot-summary" style="font-size:0.85rem; color:#aaa; line-height:1.6;"></div>
-      <div class="btn-row" style="margin-top:14px;">
+      <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="chk-overwrite" style="width:15px; height:15px; accent-color:#f59e0b; cursor:pointer;">
+        <label for="chk-overwrite" style="font-size:0.82rem; color:#f59e0b; cursor:pointer; user-select:none;">
+          Overwrite existing projects (use on teleprompter / read-only devices)
+        </label>
+      </div>
+      <div class="btn-row" style="margin-top:10px;">
         <button class="btn btn-primary" id="btn-import-snapshot">Import Projects</button>
         <button class="btn btn-muted"   id="btn-dismiss-snapshot">Dismiss</button>
       </div>
@@ -346,6 +352,7 @@
   const elBtnImport    = document.getElementById('btn-import-snapshot');
   const elBtnDismiss   = document.getElementById('btn-dismiss-snapshot');
   const elImportResult = document.getElementById('import-result');
+  const elChkOverwrite = document.getElementById('chk-overwrite');
 
   // ── Toast ──────────────────────────────────────────────────
   let _toastTimer;
@@ -600,23 +607,29 @@
       return;
     }
 
+    const overwrite = elChkOverwrite.checked;
+
     clearMsg(elImportResult);
     elBtnImport.disabled = true;
-    elBtnImport.textContent = 'Importing…';
+    elBtnImport.textContent = overwrite ? 'Importing (overwrite)…' : 'Importing…';
 
     try {
       const r = await fetch('/api/local-sync/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshot: _snapshot }),
+        body: JSON.stringify({ snapshot: _snapshot, overwrite }),
       });
       const d = await r.json();
       if (!r.ok || !d.ok) throw new Error(d.error || 'Import failed');
 
-      showMsg(elImportResult,
-        `✓ Imported ${d.imported} project${d.imported !== 1 ? 's' : ''} (${d.skipped} skipped — already exist)`,
-        'ok');
-      toast(`Imported ${d.imported} projects ✓`, 'ok');
+      const parts = [];
+      if (d.imported   > 0) parts.push(`${d.imported} new`);
+      if (d.overwritten> 0) parts.push(`${d.overwritten} overwritten`);
+      if (d.skipped    > 0) parts.push(`${d.skipped} skipped`);
+      const summary = parts.join(', ') || 'nothing changed';
+
+      showMsg(elImportResult, `✓ Import complete — ${summary}`, 'ok');
+      toast(`Import complete ✓`, 'ok');
     } catch (e) {
       showMsg(elImportResult, e.message, 'err');
     } finally {

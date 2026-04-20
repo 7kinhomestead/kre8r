@@ -1568,6 +1568,19 @@ function bootstrapTenantTables(tdb) {
   )`);
   exec('CREATE INDEX IF NOT EXISTS idx_guard_status  ON guard_reports(status)');
   exec('CREATE INDEX IF NOT EXISTS idx_guard_created ON guard_reports(created_at)');
+
+  // ─── VectΩr — Strategic Briefs ────────────────────────────────────────────
+  exec(`CREATE TABLE IF NOT EXISTS strategic_briefs (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform_context  TEXT,
+    conversation_json TEXT,
+    brief_json        TEXT NOT NULL,
+    locked_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    status            TEXT NOT NULL DEFAULT 'active',
+    superseded_at     TEXT
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_brief_status ON strategic_briefs(status)');
+  exec('CREATE INDEX IF NOT EXISTS idx_brief_locked ON strategic_briefs(locked_at)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -1676,6 +1689,18 @@ function createProject(title, topic, youtubeUrl, youtubeVideoId) {
 /** Import a project record from a sync snapshot.
  *  Preserves the original ID so cross-device references stay consistent.
  *  Caller is responsible for checking the ID doesn't already exist. */
+// Overwrite-import: wipe the existing local row and re-insert from snapshot.
+// Safe for devices like the teleprompter laptop that don't own any local data —
+// the project on disk is just a stale copy from a previous sync.
+function replaceProjectFromSnapshot(project) {
+  const id = project.id;
+  // Remove pipeline_state first (FK child), then projects
+  _run(`DELETE FROM pipeline_state WHERE project_id = ?`, [id]);
+  _run(`DELETE FROM projects WHERE id = ?`,               [id]);
+  // Re-insert via the normal snapshot function
+  return createProjectFromSnapshot(project);
+}
+
 function createProjectFromSnapshot(project) {
   const knownCols = db.pragma('table_info(projects)').map(r => r.name);
 
@@ -4226,6 +4251,7 @@ module.exports = {
   // Projects
   createProject,
   createProjectFromSnapshot,
+  replaceProjectFromSnapshot,
   getProject,
   getAllProjects,
   getKre8rProjects,
@@ -4484,6 +4510,15 @@ module.exports = {
   updateGuardReport,
   getGuardReportStats,
   getUnfingerprintedFootage,
+  // VectΩr
+  insertStrategicBrief,
+  getActiveBrief,
+  getAllStrategicBriefs,
+  getVectrSession,
+  setVectrSession,
+  clearVectrSession,
+  getVectrSyncCache,
+  setVectrSyncCache,
 };
 
 // ─────────────────────────────────────────────
@@ -4883,5 +4918,79 @@ function getUnfingerprintedFootage() {
       )
     ORDER BY f.created_at DESC
   `);
+}
+
+// ─────────────────────────────────────────────
+// VectΩr — Strategic Briefs + Session
+// ─────────────────────────────────────────────
+
+function insertStrategicBrief({ platform_context, conversation_json, brief_json }) {
+  // Supersede all existing active briefs first
+  _run(`UPDATE strategic_briefs SET status = 'superseded', superseded_at = CURRENT_TIMESTAMP WHERE status = 'active'`);
+  const result = _run(
+    `INSERT INTO strategic_briefs (platform_context, conversation_json, brief_json, status)
+     VALUES (?, ?, ?, 'active')`,
+    [
+      platform_context ? JSON.stringify(platform_context) : null,
+      conversation_json ? JSON.stringify(conversation_json) : null,
+      JSON.stringify(brief_json),
+    ]
+  );
+  return result.lastInsertRowid;
+}
+
+function getActiveBrief() {
+  const row = _get(`SELECT * FROM strategic_briefs WHERE status = 'active' ORDER BY locked_at DESC LIMIT 1`);
+  if (!row) return null;
+  try {
+    return {
+      ...row,
+      brief_json:        row.brief_json        ? JSON.parse(row.brief_json)        : null,
+      platform_context:  row.platform_context  ? JSON.parse(row.platform_context)  : null,
+      conversation_json: row.conversation_json ? JSON.parse(row.conversation_json) : null,
+    };
+  } catch (_) { return row; }
+}
+
+function getAllStrategicBriefs(limit = 10) {
+  return _all(
+    `SELECT id, status, locked_at, superseded_at, brief_json FROM strategic_briefs ORDER BY locked_at DESC LIMIT ?`,
+    [limit]
+  ).map(r => ({
+    ...r,
+    brief_json: r.brief_json ? (() => { try { return JSON.parse(r.brief_json); } catch (_) { return null; } })() : null,
+  }));
+}
+
+// VectΩr session — stored in kv_store as 'vectr_session' (JSON array of messages)
+function getVectrSession() {
+  const row = _get(`SELECT value FROM kv_store WHERE key = 'vectr_session'`);
+  if (!row?.value) return [];
+  try { return JSON.parse(row.value); } catch (_) { return []; }
+}
+
+function setVectrSession(messages) {
+  _run(
+    `INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES ('vectr_session', ?, CURRENT_TIMESTAMP)`,
+    [JSON.stringify(messages || [])]
+  );
+}
+
+function clearVectrSession() {
+  _run(`DELETE FROM kv_store WHERE key = 'vectr_session'`);
+}
+
+// VectΩr sync cache — stored in kv_store as 'vectr_sync_cache'
+function getVectrSyncCache() {
+  const row = _get(`SELECT value, updated_at FROM kv_store WHERE key = 'vectr_sync_cache'`);
+  if (!row?.value) return null;
+  try { return { data: JSON.parse(row.value), updated_at: row.updated_at }; } catch (_) { return null; }
+}
+
+function setVectrSyncCache(data) {
+  _run(
+    `INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES ('vectr_sync_cache', ?, CURRENT_TIMESTAMP)`,
+    [JSON.stringify(data)]
+  );
 }
 

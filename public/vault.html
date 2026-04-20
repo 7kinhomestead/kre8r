@@ -774,6 +774,9 @@
       </div>
     </div>
 
+    <!-- Active tag filter pill -->
+    <div id="active-tag-filter" style="display:none;align-items:center;gap:8px;padding:6px 12px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.2);border-radius:var(--radius-sm);margin-bottom:8px;"></div>
+
     <!-- Subject tag cloud — aggregated from filtered footage, click any tag to search -->
     <div id="tag-cloud-section" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
@@ -913,7 +916,7 @@ const PLATFORMS = [
 let allFootage      = [];
 let filteredFootage = [];
 let distMap         = {};   // { [footage_id]: { [platform]: record } }
-let activeFilters   = { shot: 'all', quality: 'all', orientation: 'all', platform: 'all', braw: 'all' };
+let activeFilters   = { shot: 'all', quality: 'all', orientation: 'all', platform: 'all', braw: 'all', tag: null };
 let searchDebounce  = null;
 let currentClip     = null;
 let viewMode        = 'grid';
@@ -953,7 +956,7 @@ function saveSession() {
     localStorage.setItem('vault_state', JSON.stringify({
       shot: activeFilters.shot, quality: activeFilters.quality,
       orientation: activeFilters.orientation, platform: activeFilters.platform,
-      braw: activeFilters.braw, viewMode, showOrganized
+      braw: activeFilters.braw, tag: activeFilters.tag, viewMode, showOrganized
     }));
   } catch(e) {}
 }
@@ -967,12 +970,14 @@ function restoreSession() {
     if (s.orientation)  activeFilters.orientation = s.orientation;
     if (s.platform)     activeFilters.platform    = s.platform;
     if (s.braw)         activeFilters.braw        = s.braw;
+    if (s.tag !== undefined) activeFilters.tag    = s.tag || null;
     if (s.viewMode)     viewMode                  = s.viewMode;
     if (s.showOrganized !== undefined) showOrganized = !!s.showOrganized;
   } catch(e) {}
   applyFilterChipUI();
   applyViewToggleUI();
   document.getElementById('showOrganizedCheck').checked = showOrganized;
+  renderActiveTagPill();
 }
 
 function applyFilterChipUI() {
@@ -1112,6 +1117,7 @@ function setFilter(type, value, el) {
   renderView(filteredFootage);
   renderTagCloud(filteredFootage);
   updateFootageCount(filteredFootage.length, allFootage.length);
+  renderActiveTagPill();
   saveSession();
 }
 
@@ -1132,6 +1138,11 @@ function applyFilters(footage) {
       if (activeFilters.braw === 'needs_proxy' && !(isBraw && !hasProxy)) return false;
       if (activeFilters.braw === 'has_proxy'   && !hasProxy)              return false;
       if (activeFilters.braw === 'no_braw'     && isBraw)                 return false;
+    }
+    if (activeFilters.tag) {
+      let subs = [];
+      try { subs = f.subjects ? JSON.parse(f.subjects) : []; } catch(_) {}
+      if (!subs.some(s => s.toLowerCase() === activeFilters.tag)) return false;
     }
     return true;
   });
@@ -1160,6 +1171,9 @@ function updateFootageCount(shown, total) {
 
 // ── SEARCH ─────────────────────────────────────────────────────────────────
 async function runSearch(q) {
+  // Clear tag filter when text search runs — they'd conflict
+  activeFilters.tag = null;
+  renderActiveTagPill();
   // Hide tag cloud while a text search is active — would be confusing to show
   // subjects from all footage when results are already filtered by query
   const tc = document.getElementById('tag-cloud-section');
@@ -1209,9 +1223,13 @@ function renderTagCloud(footage) {
   cloud.style.display = 'flex';
   cloud.innerHTML = sorted.map(([tag, n]) => {
     // Subtle size scaling: 11px base → up to 14px for most-frequent tag
-    const size = 11 + Math.round((n / maxCount) * 3);
+    const size    = 11 + Math.round((n / maxCount) * 3);
+    const isActive = activeFilters.tag === tag;
+    const bg    = isActive ? 'var(--teal-glow)'                 : 'var(--bg-card-2)';
+    const color = isActive ? 'var(--teal)'                      : 'var(--text-dim)';
+    const bdr   = isActive ? '1px solid rgba(62,207,178,0.4)'  : '1px solid var(--border)';
     return `<button class="subject-chip" onclick="searchBySubject(event,'${escAttr(tag)}')"
-      style="font-size:${size}px;padding:3px 9px;border-radius:12px;background:var(--bg-card-2);color:var(--text-dim);border:1px solid var(--border);cursor:pointer;font-family:var(--font-body);transition:all 0.12s;"
+      style="font-size:${size}px;padding:3px 9px;border-radius:12px;background:${bg};color:${color};border:${bdr};cursor:pointer;font-family:var(--font-body);transition:all 0.12s;"
     >${escHtml(tag)} <span style="color:var(--text-dimmer);font-size:10px;margin-left:2px;">${n}</span></button>`;
   }).join('');
 }
@@ -1227,11 +1245,40 @@ function toggleTagCloud() {
 
 function searchBySubject(event, subject) {
   event.stopPropagation(); // prevent modal from opening
-  const input = document.getElementById('searchInput');
-  input.value = subject;
-  input.focus();
-  clearTimeout(searchDebounce);
-  runSearch(subject);
+  const key = subject.toLowerCase();
+  // Toggle: clicking the active tag clears it
+  activeFilters.tag = (activeFilters.tag === key) ? null : key;
+  // Clear text search if a tag is being set (they'd conflict)
+  if (activeFilters.tag) {
+    document.getElementById('searchInput').value = '';
+    clearTimeout(searchDebounce);
+  }
+  filteredFootage = applyFilters(allFootage);
+  renderView(filteredFootage);
+  renderTagCloud(filteredFootage);
+  updateFootageCount(filteredFootage.length, allFootage.length);
+  renderActiveTagPill();
+  saveSession();
+}
+
+function renderActiveTagPill() {
+  const el = document.getElementById('active-tag-filter');
+  if (!el) return;
+  if (!activeFilters.tag) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.innerHTML = `<span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dimmer);">Tag:</span>
+    <span style="font-size:12px;font-weight:700;color:var(--teal);background:var(--teal-glow);border:1px solid rgba(62,207,178,0.3);padding:2px 10px;border-radius:12px;">${escHtml(activeFilters.tag)}</span>
+    <button onclick="clearTagFilter()" title="Clear tag filter" style="background:none;border:none;cursor:pointer;color:var(--text-dimmer);font-size:14px;padding:0 4px;line-height:1;transition:color 0.12s;" onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color=''">✕</button>`;
+}
+
+function clearTagFilter() {
+  activeFilters.tag = null;
+  filteredFootage = applyFilters(allFootage);
+  renderView(filteredFootage);
+  renderTagCloud(filteredFootage);
+  updateFootageCount(filteredFootage.length, allFootage.length);
+  renderActiveTagPill();
+  saveSession();
 }
 
 // ── RENDER DISPATCH ────────────────────────────────────────────────────────

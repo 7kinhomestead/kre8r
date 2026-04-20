@@ -768,6 +768,395 @@
     .pipeline-funnel { grid-template-columns: repeat(2, 1fr); }
     .cal-grid { grid-template-columns: repeat(9, 1fr); }
   }
+
+  /* ── VectΩr ────────────────────────────────────── */
+  :root {
+    --vectr: #d97706;
+    --vectr-bright: #f59e0b;
+    --vectr-dim: rgba(217,119,6,0.18);
+    --vectr-border: rgba(217,119,6,0.35);
+    --vectr-glow: rgba(217,119,6,0.07);
+  }
+  .vectr-btn {
+    background: var(--vectr-dim);
+    color: var(--vectr-bright);
+    border: 1px solid var(--vectr-border);
+    font-family: var(--font-head);
+    font-size: 15px;
+    letter-spacing: 2px;
+    padding: 9px 22px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .vectr-btn:hover { background: rgba(217,119,6,0.28); }
+
+  /* Active brief banner */
+  .active-brief-banner {
+    max-width: 900px;
+    margin: 0 auto 0;
+    padding: 0 20px;
+  }
+  .active-brief-card {
+    background: var(--vectr-glow);
+    border: 1px solid var(--vectr-border);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .brief-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .brief-body { flex: 1; min-width: 0; }
+  .brief-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--vectr);
+    margin-bottom: 4px;
+  }
+  .brief-vector {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  .brief-focus {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .brief-date {
+    font-size: 11px;
+    color: var(--text-dimmer);
+    margin-left: auto;
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+
+  /* Panel overlay */
+  .vectr-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1100;
+    backdrop-filter: blur(1px);
+  }
+  .vectr-overlay.open { display: block; }
+
+  /* Slide-out panel */
+  .vectr-panel {
+    position: fixed;
+    top: var(--nav-height, 54px);
+    right: 0;
+    width: 460px;
+    height: calc(100vh - var(--nav-height, 54px));
+    background: var(--bg-card);
+    border-left: 2px solid var(--vectr-border);
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .vectr-panel.open { transform: translateX(0); }
+
+  .vectr-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--vectr-border);
+    flex-shrink: 0;
+    background: var(--vectr-glow);
+  }
+  .vectr-title {
+    font-family: var(--font-head);
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: var(--vectr-bright);
+    flex: 1;
+  }
+  .vectr-close {
+    background: transparent;
+    border: none;
+    color: var(--text-dimmer);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 6px;
+    line-height: 1;
+    border-radius: 4px;
+  }
+  .vectr-close:hover { color: var(--text); background: var(--bg-card-2); }
+
+  /* Sync phase */
+  .vectr-sync-bar {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .vectr-sync-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .vectr-sync-status {
+    font-size: 12px;
+    color: var(--text-dimmer);
+    font-style: italic;
+  }
+  .vectr-sync-btn {
+    background: transparent;
+    border: 1px solid var(--vectr-border);
+    color: var(--vectr-bright);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .vectr-sync-btn:hover { background: var(--vectr-dim); }
+  .vectr-sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Messages */
+  .vectr-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+  .vectr-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    color: var(--text-dimmer);
+    font-size: 14px;
+    padding: 40px 20px;
+  }
+  .vectr-empty-icon { font-size: 32px; }
+  .vectr-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .vectr-msg.user { align-items: flex-end; }
+  .vectr-msg.assistant { align-items: flex-start; }
+  .vectr-bubble {
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .vectr-msg.user .vectr-bubble {
+    background: var(--vectr-dim);
+    border: 1px solid var(--vectr-border);
+    color: var(--text);
+    border-radius: 10px 10px 2px 10px;
+  }
+  .vectr-msg.assistant .vectr-bubble {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 2px 10px 10px 10px;
+  }
+  .vectr-role {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    padding: 0 4px;
+  }
+  .vectr-msg.user .vectr-role { color: var(--vectr); }
+
+  /* Input area */
+  .vectr-input-area {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg-card);
+  }
+  .vectr-textarea {
+    width: 100%;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 10px 12px;
+    resize: none;
+    outline: none;
+    min-height: 64px;
+    max-height: 140px;
+    line-height: 1.5;
+    transition: border-color 0.15s;
+  }
+  .vectr-textarea:focus { border-color: var(--vectr-border); }
+  .vectr-textarea::placeholder { color: var(--text-dimmer); }
+  .vectr-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .vectr-send {
+    background: var(--vectr);
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .vectr-send:hover { background: var(--vectr-bright); }
+  .vectr-send:disabled { opacity: 0.5; cursor: not-allowed; }
+  .vectr-lock {
+    background: transparent;
+    border: 1px solid var(--vectr-border);
+    color: var(--vectr-bright);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-left: auto;
+  }
+  .vectr-lock:hover { background: var(--vectr-dim); }
+  .vectr-lock:disabled { opacity: 0.4; cursor: not-allowed; }
+  .vectr-clear {
+    background: transparent;
+    border: none;
+    color: var(--text-dimmer);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+  }
+  .vectr-clear:hover { color: var(--text); background: var(--bg-card-2); }
+
+  /* Lock modal */
+  .vectr-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1400;
+    align-items: center;
+    justify-content: center;
+  }
+  .vectr-modal-overlay.open { display: flex; }
+  .vectr-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--vectr-border);
+    border-radius: var(--radius);
+    padding: 28px 28px 24px;
+    width: 460px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .vectr-modal-title {
+    font-family: var(--font-head);
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--vectr-bright);
+    margin-bottom: 8px;
+  }
+  .vectr-modal-sub {
+    font-size: 13px;
+    color: var(--text-dimmer);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .vectr-field {
+    margin-bottom: 16px;
+  }
+  .vectr-field label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--vectr);
+    margin-bottom: 6px;
+  }
+  .vectr-field input,
+  .vectr-field textarea {
+    width: 100%;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    resize: none;
+    line-height: 1.5;
+  }
+  .vectr-field input:focus,
+  .vectr-field textarea:focus { border-color: var(--vectr-border); }
+  .vectr-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+  }
+  .vectr-modal-cancel {
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .vectr-modal-confirm {
+    background: var(--vectr);
+    color: #fff;
+    border: none;
+    padding: 8px 22px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .vectr-modal-confirm:hover { background: var(--vectr-bright); }
 </style>
 </head>
 <body>
@@ -779,7 +1168,13 @@
   <div class="hero-sub">Your creative compass. It yells when you need it.</div>
   <div class="hero-tagline">The ship stays off the rocks, so long as someone yells.</div>
   <div id="hero-badge"></div>
+  <div style="margin-top:18px;">
+    <button class="vectr-btn" onclick="openVectr()" id="vectr-open-btn">⬡ VectΩr</button>
+  </div>
 </div>
+
+<!-- Active Brief Banner -->
+<div class="active-brief-banner" id="active-brief-banner" style="display:none"></div>
 
 <div class="page">
 
@@ -1047,6 +1442,78 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- VectΩr overlay + panel -->
+<div class="vectr-overlay" id="vectr-overlay" onclick="closeVectr()"></div>
+
+<div class="vectr-panel" id="vectr-panel">
+
+  <!-- Header -->
+  <div class="vectr-header">
+    <div class="vectr-title">⬡ VECTΩR</div>
+    <span id="vectr-session-indicator" style="font-size:11px;color:var(--text-dimmer);font-style:italic"></span>
+    <button class="vectr-close" onclick="closeVectr()">✕</button>
+  </div>
+
+  <!-- Sync bar -->
+  <div class="vectr-sync-bar">
+    <div class="vectr-sync-row">
+      <span class="vectr-sync-status" id="vectr-sync-status">Pull fresh data before starting</span>
+      <button class="vectr-sync-btn" id="vectr-sync-btn" onclick="vectrSync()">
+        <span id="vectr-sync-icon">⟳</span> Sync Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="vectr-messages" id="vectr-messages">
+    <div class="vectr-empty" id="vectr-empty">
+      <div class="vectr-empty-icon">⬡</div>
+      <div>Sync fresh data, then start the conversation.</div>
+      <div style="font-size:12px;color:var(--text-dimmer);line-height:1.6">Claude will open with a read of the current situation.<br>Push back. Debate. Lock a direction when it's right.</div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="vectr-input-area">
+    <textarea class="vectr-textarea" id="vectr-input" placeholder="Your response…" rows="3"
+      onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))vectrSend()"></textarea>
+    <div class="vectr-actions">
+      <button class="vectr-send" id="vectr-send-btn" onclick="vectrSend()">Send →</button>
+      <button class="vectr-clear" onclick="vectrClearSession()" title="Clear conversation">Clear</button>
+      <button class="vectr-lock" id="vectr-lock-btn" onclick="openLockModal()" disabled>⬡ Lock Vector</button>
+    </div>
+  </div>
+
+</div><!-- /vectr-panel -->
+
+<!-- Lock Vector modal -->
+<div class="vectr-modal-overlay" id="vectr-modal-overlay">
+  <div class="vectr-modal">
+    <div class="vectr-modal-title">⬡ LOCK VECTOR</div>
+    <div class="vectr-modal-sub">Capture what was decided. This brief injects into Id8Ωr and WritΩr until the next session.</div>
+    <div class="vectr-field">
+      <label>Vector — the direction (1 sentence)</label>
+      <input type="text" id="brief-vector" placeholder="e.g. Double down on financial escape cluster for next 4 weeks">
+    </div>
+    <div class="vectr-field">
+      <label>Focus — what to make</label>
+      <textarea id="brief-focus" rows="2" placeholder="e.g. One land acquisition video + one solar cost breakdown"></textarea>
+    </div>
+    <div class="vectr-field">
+      <label>Constraints — what to hold back</label>
+      <textarea id="brief-constraints" rows="2" placeholder="e.g. No lifestyle content this cycle — wait for a Rock Rich shoot"></textarea>
+    </div>
+    <div class="vectr-field">
+      <label>Avoid — angles or patterns to skip</label>
+      <input type="text" id="brief-avoid" placeholder="e.g. Avoid aspirational framing — stay loss-coded">
+    </div>
+    <div class="vectr-modal-actions">
+      <button class="vectr-modal-cancel" onclick="closeLockModal()">Cancel</button>
+      <button class="vectr-modal-confirm" onclick="confirmLockBrief()">⬡ Lock It</button>
+    </div>
+  </div>
+</div>
+
 <div id="kre8r-nav"></div>
 <script src="/js/nav.js" defer></script>
 <script>window.addEventListener('load', () => initNav());</script>
@@ -1063,6 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadRevenue();
   loadThisWeek();
   loadCopyrightHealth();
+  loadActiveBrief();
   // Default month picker to current month
   const now = new Date();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -2050,6 +2518,331 @@ async function loadCopyrightHealth() {
     // MarkΩr not set up yet — silently hide the section
     const section = document.getElementById('copyright-health-section');
     if (section) section.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VectΩr — Strategic Session
+// ═══════════════════════════════════════════════════════════════
+
+// State
+let vectrMessages  = [];  // [{role, content}]
+let vectrStreaming  = false;
+let vectrSynced     = false;
+
+// ── Open / Close ──────────────────────────────────────────────
+function openVectr() {
+  document.getElementById('vectr-panel').classList.add('open');
+  document.getElementById('vectr-overlay').classList.add('open');
+  vectrLoadSession();
+}
+
+function closeVectr() {
+  document.getElementById('vectr-panel').classList.remove('open');
+  document.getElementById('vectr-overlay').classList.remove('open');
+}
+
+// ── Session persistence ───────────────────────────────────────
+async function vectrLoadSession() {
+  try {
+    const res  = await fetch('/api/vectr/session');
+    const data = await res.json();
+    if (data.messages?.length) {
+      vectrMessages = data.messages;
+      renderVectrMessages();
+      document.getElementById('vectr-lock-btn').disabled = false;
+    }
+    // Load sync cache status
+    const syncRes  = await fetch('/api/vectr/brief/active');
+    const syncData = await syncRes.json();
+    if (syncData.brief?.brief_json?.locked_date) {
+      vectrSynced = true;
+      document.getElementById('vectr-sync-status').textContent =
+        `Last session: ${syncData.brief.brief_json.locked_date}`;
+    }
+  } catch (_) {}
+}
+
+async function vectrSaveSession() {
+  try {
+    await fetch('/api/vectr/session', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ messages: vectrMessages }),
+    });
+  } catch (_) {}
+}
+
+async function vectrClearSession() {
+  if (vectrMessages.length && !confirm('Clear the current VectΩr conversation?')) return;
+  try {
+    await fetch('/api/vectr/session', { method: 'DELETE' });
+  } catch (_) {}
+  vectrMessages = [];
+  vectrSynced   = false;
+  renderVectrMessages();
+  document.getElementById('vectr-lock-btn').disabled = true;
+  document.getElementById('vectr-sync-status').textContent = 'Pull fresh data before starting';
+}
+
+// ── Sync ──────────────────────────────────────────────────────
+async function vectrSync() {
+  const btn  = document.getElementById('vectr-sync-btn');
+  const icon = document.getElementById('vectr-sync-icon');
+  const stat = document.getElementById('vectr-sync-status');
+  btn.disabled = true;
+  icon.textContent = '⏳';
+  stat.textContent = 'Syncing…';
+  try {
+    const res  = await fetch('/api/vectr/sync', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      const yt    = data.sync?.youtube;
+      const email = data.sync?.email;
+      const parts = [];
+      if (yt?.video_count)           parts.push(`${yt.video_count} videos`);
+      if (yt?.avg_views)             parts.push(`${Number(yt.avg_views).toLocaleString()} avg views`);
+      if (email?.campaigns?.length)  parts.push(`${email.campaigns.length} email campaigns`);
+      stat.textContent = parts.length ? `✓ Synced — ${parts.join(' · ')}` : '✓ Synced';
+      vectrSynced = true;
+      icon.textContent = '✓';
+      // If this is the first open with no messages, send an opening message from Claude
+      if (vectrMessages.length === 0) {
+        vectrAutoOpen();
+      }
+    } else {
+      stat.textContent = 'Sync failed — check console';
+      icon.textContent = '⟳';
+    }
+  } catch (e) {
+    stat.textContent = 'Sync error: ' + e.message;
+    icon.textContent = '⟳';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// After sync with no existing conversation, kick off Claude's opening read
+async function vectrAutoOpen() {
+  vectrMessages.push({
+    role: 'user',
+    content: "I just synced the latest data. Give me your read of the current situation \u2014 what's working, what isn't, and where you think the focus should be this week. Don't ask me anything yet. Just give me your take."
+  });
+  // Silently — don't show the auto-message as a user bubble, show it as a "system kickoff"
+  // Actually let's show it as a user msg for transparency
+  renderVectrMessages();
+  await vectrStreamResponse();
+}
+
+// ── Send ──────────────────────────────────────────────────────
+async function vectrSend() {
+  const input = document.getElementById('vectr-input');
+  const text  = (input?.value || '').trim();
+  if (!text || vectrStreaming) return;
+  input.value = '';
+  vectrMessages.push({ role: 'user', content: text });
+  renderVectrMessages();
+  await vectrStreamResponse();
+}
+
+async function vectrStreamResponse() {
+  if (vectrStreaming) return;
+  vectrStreaming = true;
+  document.getElementById('vectr-send-btn').disabled = true;
+
+  // Add placeholder assistant bubble
+  const msgId = 'vectr-streaming-' + Date.now();
+  vectrMessages.push({ role: 'assistant', content: '' });
+  const msgIndex = vectrMessages.length - 1;
+  renderVectrMessages(msgId);
+
+  try {
+    const res = await fetch('/api/vectr/chat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ messages: vectrMessages.slice(0, -1) }), // exclude the empty placeholder
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      vectrMessages[msgIndex].content = '⚠ ' + (err.error || 'API error');
+      renderVectrMessages();
+      return;
+    }
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer    = '';
+    let assembled = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const evt = JSON.parse(line.slice(6));
+          if (evt.type === 'token') {
+            assembled += evt.text;
+            vectrMessages[msgIndex].content = assembled;
+            renderVectrMessages(null, true); // soft re-render: update last bubble only
+            scrollVectrToBottom();
+          } else if (evt.type === 'done') {
+            break;
+          } else if (evt.type === 'error') {
+            vectrMessages[msgIndex].content = '⚠ ' + evt.error;
+            renderVectrMessages();
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Finalize
+    vectrMessages[msgIndex].content = assembled;
+    renderVectrMessages();
+    await vectrSaveSession();
+    document.getElementById('vectr-lock-btn').disabled = false;
+  } catch (e) {
+    vectrMessages[msgIndex].content = '⚠ ' + e.message;
+    renderVectrMessages();
+  } finally {
+    vectrStreaming = false;
+    document.getElementById('vectr-send-btn').disabled = false;
+    scrollVectrToBottom();
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────
+function renderVectrMessages(streamingId = null, softUpdate = false) {
+  const container = document.getElementById('vectr-messages');
+  const emptyEl   = document.getElementById('vectr-empty');
+
+  if (!vectrMessages.length) {
+    if (emptyEl) emptyEl.style.display = 'flex';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  if (softUpdate) {
+    // Just update the last assistant bubble content
+    const lastBubble = container.querySelector('.vectr-msg.assistant:last-child .vectr-bubble');
+    if (lastBubble) {
+      lastBubble.textContent = vectrMessages[vectrMessages.length - 1].content;
+    }
+    return;
+  }
+
+  container.innerHTML = vectrMessages.map((m, i) => {
+    const isUser = m.role === 'user';
+    // Skip auto-open user message from display (it's a hidden kick-off)
+    if (isUser && i === 0 && m.content.startsWith('I just synced')) {
+      return ''; // hide the auto-kickoff user message
+    }
+    const role   = isUser ? 'You' : 'VectΩr';
+    return `
+      <div class="vectr-msg ${isUser ? 'user' : 'assistant'}">
+        <div class="vectr-role">${esc(role)}</div>
+        <div class="vectr-bubble">${esc(m.content)}</div>
+      </div>`;
+  }).join('');
+
+  // Re-append empty if needed (shouldn't be needed here but safety)
+  scrollVectrToBottom();
+}
+
+function scrollVectrToBottom() {
+  const container = document.getElementById('vectr-messages');
+  if (container) container.scrollTop = container.scrollHeight;
+}
+
+// ── Active Brief Banner ───────────────────────────────────────
+async function loadActiveBrief() {
+  try {
+    const res  = await fetch('/api/vectr/brief/active');
+    const data = await res.json();
+    const banner = document.getElementById('active-brief-banner');
+    if (!banner) return;
+    if (!data.brief?.brief_json) {
+      banner.style.display = 'none';
+      return;
+    }
+    const b = data.brief.brief_json;
+    banner.style.display = 'block';
+    banner.innerHTML = `
+      <div class="active-brief-card">
+        <div class="brief-icon">⬡</div>
+        <div class="brief-body">
+          <div class="brief-label">Active Vector</div>
+          ${b.vector ? `<div class="brief-vector">${esc(b.vector)}</div>` : ''}
+          ${b.focus  ? `<div class="brief-focus">${esc(b.focus)}</div>`  : ''}
+        </div>
+        ${b.locked_date ? `<div class="brief-date">${esc(b.locked_date)}</div>` : ''}
+      </div>`;
+  } catch (_) {}
+}
+
+// ── Lock Vector ───────────────────────────────────────────────
+function openLockModal() {
+  document.getElementById('vectr-modal-overlay').classList.add('open');
+  // Pre-fill from the last assistant message as a hint
+  const lastAssistant = [...vectrMessages].reverse().find(m => m.role === 'assistant');
+  if (lastAssistant) {
+    // Try to extract direction from last message — just leave fields blank for user to fill
+  }
+}
+
+function closeLockModal() {
+  document.getElementById('vectr-modal-overlay').classList.remove('open');
+}
+
+async function confirmLockBrief() {
+  const vector      = document.getElementById('brief-vector').value.trim();
+  const focus       = document.getElementById('brief-focus').value.trim();
+  const constraints = document.getElementById('brief-constraints').value.trim();
+  const avoid       = document.getElementById('brief-avoid').value.trim();
+
+  if (!vector) {
+    alert('A vector is required — at minimum write the one-sentence direction.');
+    return;
+  }
+
+  const brief_json = {
+    vector,
+    focus,
+    constraints,
+    avoid,
+    locked_date: new Date().toISOString().slice(0, 10),
+  };
+
+  try {
+    const res  = await fetch('/api/vectr/brief', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ brief_json }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      closeLockModal();
+      toast('⬡ Vector locked — brief is now active', 'success');
+      loadActiveBrief();
+      // Clear the session after locking
+      vectrMessages = [];
+      await fetch('/api/vectr/session', { method: 'DELETE' });
+      renderVectrMessages();
+      document.getElementById('vectr-lock-btn').disabled = true;
+      // Clear modal fields
+      ['brief-vector','brief-focus','brief-constraints','brief-avoid'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+    } else {
+      toast('Lock failed: ' + (data.error || 'unknown error'), 'error');
+    }
+  } catch (e) {
+    toast('Lock error: ' + e.message, 'error');
   }
 }
 </script>

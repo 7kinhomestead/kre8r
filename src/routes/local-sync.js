@@ -188,10 +188,11 @@ router.get('/status', async (req, res) => {
 
 // ── POST /api/local-sync/import ────────────────────────────────────────────────
 // Merges projects from a pulled snapshot into the local DB.
-// Skips projects that already exist (matched by id or title+stage).
-// Does NOT overwrite local data — non-destructive import only.
+// Default: skips projects that already exist (non-destructive).
+// With overwrite:true: replaces existing projects by ID (delete + re-insert).
+// Use overwrite on devices like the teleprompter laptop that only consume synced data.
 router.post('/import', (req, res) => {
-  const { snapshot } = req.body || {};
+  const { snapshot, overwrite = false } = req.body || {};
   if (!snapshot?.db_export?.projects) {
     return res.status(400).json({ error: 'No projects in snapshot' });
   }
@@ -199,6 +200,7 @@ router.post('/import', (req, res) => {
   const incoming       = snapshot.db_export.projects      || [];
   const incomingScript = snapshot.db_export.writr_scripts || [];
   let imported        = 0;
+  let overwritten     = 0;
   let skipped         = 0;
   let scriptsImported = 0;
 
@@ -211,7 +213,7 @@ router.post('/import', (req, res) => {
       const alreadyExists = existingIds.has(project.id);
 
       if (!alreadyExists) {
-        // Check title+stage duplicate
+        // Check title+stage duplicate (even on fresh installs)
         const titleMatch = existing.find(
           p => p.title === project.title && p.current_stage === project.current_stage
         );
@@ -229,7 +231,18 @@ router.post('/import', (req, res) => {
           skipped++;
           continue;
         }
+      } else if (overwrite) {
+        // Overwrite mode: replace stale local copy with the incoming snapshot version
+        try {
+          db.replaceProjectFromSnapshot(project);
+          overwritten++;
+        } catch (innerErr) {
+          log.warn({ module: 'local-sync', title: project.title, err: innerErr }, 'Overwrite failed, skipping');
+          skipped++;
+          continue;
+        }
       } else {
+        // Default: skip existing projects
         skipped++;
       }
 
@@ -258,8 +271,8 @@ router.post('/import', (req, res) => {
       }
     }
 
-    log.info({ module: 'local-sync', imported, skipped, scriptsImported }, 'Snapshot import complete');
-    res.json({ ok: true, imported, skipped, scripts_imported: scriptsImported });
+    log.info({ module: 'local-sync', imported, overwritten, skipped, scriptsImported }, 'Snapshot import complete');
+    res.json({ ok: true, imported, overwritten, skipped, scripts_imported: scriptsImported });
   } catch (err) {
     log.error({ module: 'local-sync', err }, 'Import failed');
     res.status(500).json({ ok: false, error: err.message });

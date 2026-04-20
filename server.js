@@ -518,6 +518,7 @@ app.use('/api/postor',            require('./src/routes/postor'));
 app.use('/api/markr',             require('./src/routes/markr'));
 app.use('/api/guard',             require('./src/routes/guard'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
+app.use('/api/vectr',             require('./src/routes/vectr'));
 
 // PostΩr queue processor — starts 60s interval to fire scheduled posts
 require('./src/postor/queue-processor').start();

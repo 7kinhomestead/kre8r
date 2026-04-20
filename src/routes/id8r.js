@@ -406,6 +406,22 @@ router.post('/fast-concepts', async (req, res) => {
       }
     } catch (_) {}
 
+    // ── VectΩr Strategic Brief — inject active direction if one exists ────────
+    try {
+      const activeBrief = require('../db').getActiveBrief();
+      if (activeBrief?.brief_json) {
+        const b = activeBrief.brief_json;
+        let vBlock = '\n\n## STRATEGIC DIRECTION (locked in last VectΩr session)';
+        if (b.vector)      vBlock += `\nVector: ${b.vector}`;
+        if (b.focus)       vBlock += `\nFocus: ${b.focus}`;
+        if (b.constraints) vBlock += `\nConstraints: ${b.constraints}`;
+        if (b.avoid)       vBlock += `\nAvoid: ${b.avoid}`;
+        if (b.locked_date) vBlock += `\n(Locked ${b.locked_date})`;
+        vBlock += '\nBias concept generation toward this direction unless the creator signals a different intent.';
+        mirrrBlock += vBlock;
+      }
+    } catch (_) {}
+
     const angleInstruction = angle
       ? `\nThe creator wants to lean toward the "${angle}" angle — at least 2 concepts should use or riff on it.`
       : '';

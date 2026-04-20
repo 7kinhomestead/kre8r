@@ -42,7 +42,225 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 
 ## NEXT SESSION — Top Tasks
 
-### 0. MarkΩr + GuardΩr — Copyright Protection + Community Enforcement
+### 0. VectΩr — Weekly Strategic Session (NorthΩr slide-out panel)
+
+**What it is:** A weekly debrief with Claude inside NorthΩr. Reviews all fresh platform data,
+surfaces what the data is actually saying, makes a recommendation, debates it with Jason, and
+locks a Strategic Brief that injects into every downstream AI call for the next N weeks.
+Named for the Scientology usage: get on the same vector before heading into the next cycle.
+
+**Why this is the most important feature in the system right now:**
+It closes the feedback loop. Right now Kre8r is a pipeline — content goes in one end and
+gets published out the other. Nothing from the audience response systematically re-enters the
+system and consciously directs what gets made next. VectΩr creates the human decision node
+that was missing. After this, Kre8r is not just a production efficiency tool — it's a creative
+operating system with a strategic intelligence layer.
+
+**The pushback mechanic is load-bearing.** Claude is not a yes-man in this session. It holds
+a position based on data and brand principles, argues for it, and only yields when Jason gives
+it a reason to. "That would perform but it's not a 7 Kin video" is a valid response. The
+debate is the point — the decision that comes out the other side is better than either party
+would have made alone.
+
+---
+
+#### Phase 1 — Opening sequence (sync + context assembly)
+
+When Jason clicks "⬡ VectΩr" in NorthΩr, two things happen in sequence:
+
+**Sync phase** (shows live progress in the panel before the chat loads):
+- Pull fresh YouTube analytics (MirrΩr sync — same endpoint as manual sync button)
+- Pull fresh MailerLite email performance (last 5 campaigns + rates)
+- Pull fresh Kajabi community counts (tier distribution)
+- Pull fresh GuardΩr copyright health stats
+- Pull SeedΩr pending ideas inventory
+- Pull PipΩr active projects + pipeline stage
+
+**Context assembly** (assembled server-side, never shown to Jason raw):
+```
+VECΩR CONTEXT — [date/time]
+
+YOUTUBE COACHING REPORT (last sync: [timestamp]):
+  Working well: [3 points from /api/analytr/coach]
+  Improve: [3 points]
+  Focus this week: [1 point]
+  Trending topics: [3 topics]
+  Coaching note: [2-3 sentences]
+  On-camera performance: [director-level note]
+  Channel avg views: [N] | Best video: "[title]" ([N] views)
+
+EMAIL (MailerLite — last 30 days):
+  Last broadcast: "[subject]" — [open]% open, [click]% click
+  30-day avg: [open]% open / [click]% click
+  Days since last broadcast: [N]
+
+COMMUNITY (ROCK RICH — Kajabi):
+  Total members: [N] | Garden ($19/mo): [N] | Founding 50: [N]
+
+PUBLISHING CADENCE (last 30 days):
+  Videos published: [N] | Days since last publish: [N]
+
+COPYRIGHT HEALTH:
+  Reports received: [N] | Confirmed violations: [N] | Filed: [N]
+
+PIPELINE:
+  Ideas pending in SeedΩr: [list of titles + angles]
+  Projects in flight: [title — stage — format]
+
+LAST STRATEGIC BRIEF ([date] — [N] weeks ago):
+  Direction: [angle] | Platform: [priority] | Format: [priority]
+  Rationale: [why it was set]
+  What was debated: [what Claude pushed back on]
+  Expires: [date]
+```
+
+---
+
+#### Phase 2 — The session
+
+Claude receives the full context package + the strategic principles doc + the system prompt.
+Streams an opening message: 2-3 paragraph strategic picture, one clear recommendation, and
+a position it will defend.
+
+**System prompt core:**
+> You are Jason Rutland's strategic advisor. You are not a yes-man. You have all current
+> performance data, the brand principles, the intellectual consistency framework, and the
+> history of what directions have been set and why. Your job is to make a recommendation and
+> defend it. When Jason proposes something that contradicts the data or his brand identity,
+> push back with reasoning. Hold your position until he gives you a real reason to yield.
+> When he overrides with lived experience or creative judgment, yield gracefully but note
+> what you disagreed on. This conversation ends with a locked direction.
+
+**Pushback trigger examples:**
+- "The last 4 times you pivoted off [angle] after one underperformer, the next 3 videos recovered"
+- "That angle would perform but it puts you in the same lane as [creator type] — here's what that does to the Rock Rich conversion"
+- "Your email list responds to [angle] at 2x the click rate of [angle] — worth factoring in"
+- "That contradicts the [principle] you've built the brand on — do you want to revisit the principle or hold it?"
+
+---
+
+#### Phase 3 — Set the vector
+
+When Jason says "let's go with that" or equivalent, a **"⬡ Lock Vector"** button activates.
+Claude formats the decision into a structured Strategic Brief, Jason reviews it, clicks Lock.
+
+**Strategic Brief structure (saved to DB):**
+```json
+{
+  "focus_angle": "financial",
+  "platform_priority": "youtube",
+  "format_priority": "longform",
+  "duration_weeks": 4,
+  "expires_at": "2026-05-19",
+  "rationale": "Why this direction was chosen — the data case.",
+  "what_was_debated": "What Claude pushed back on, and how it resolved.",
+  "full_conversation": [...messages]
+}
+```
+
+---
+
+#### Injection into downstream tools
+
+The active Strategic Brief travels into every AI call that matters:
+
+- **Id8Ωr** — injected into the research prompt alongside MirrΩr calibration:
+  `"Current vector: [angle] angle, [platform]-first, [format]. Set [N] days ago. [rationale excerpt]"`
+- **WritΩr** — injected into the calibration context block, same position as MirrΩr block
+- **SeedΩr** — "🧭 Current Vector" card in the sidebar (angle + platform + expires in N days + "Update in NorthΩr →" link)
+- **NorthΩr** — shown at top of dashboard: current vector + days remaining + "⬡ VectΩr" button
+
+**Event trigger:** When a video performs at 2x or 0.5x the channel average, NorthΩr shows
+an amber banner: `"'[title]' [outperformed/underperformed] significantly. Ready to debrief?"` → opens VectΩr panel.
+
+---
+
+#### Strategic Principles doc
+
+The coaching framework Claude holds during every session. Separate from creator-profile.json
+(which is operational data). Lives as `strategic_principles` key added to creator-profile.json.
+
+Must include:
+- Brand identity: what 7 Kin Homestead stands for at the identity level
+- Intellectual consistency: the worldview that must be consistent (system is rigged, opt-out, self-sufficiency as proof-of-concept)
+- Creative consistency: voice, format DNA, storytelling approach
+- Brand limits: what Jason won't do even if it would perform
+- Long-term vision: what kind of creator he wants to be in 3 years
+
+**First VectΩr session can build this live** — open the session without a principles doc,
+have Claude ask the right questions, and end with both a direction AND a locked principles
+doc that all future sessions inherit.
+
+---
+
+#### DB
+
+```sql
+CREATE TABLE strategic_briefs (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at       TEXT DEFAULT (datetime('now')),
+  focus_angle      TEXT,
+  platform_priority TEXT,
+  format_priority  TEXT,
+  duration_weeks   INTEGER,
+  expires_at       TEXT,
+  rationale        TEXT,
+  what_was_debated TEXT,
+  full_conversation TEXT,   -- JSON array of messages
+  status           TEXT DEFAULT 'active'  -- 'active' | 'superseded'
+);
+
+-- kv store entry: 'vectr_session' → JSON array of current panel messages
+-- (same pattern as writr room session — server-persisted, survives refresh)
+```
+
+#### Backend routes (`src/routes/northr.js` or new `src/routes/vectr.js`)
+
+```
+POST /api/vectr/sync          — chain all platform data pulls, return assembled context
+POST /api/vectr/chat          — SSE streaming chat (full context + principles + history injected)
+GET  /api/vectr/session       — load current panel conversation
+POST /api/vectr/session       — save panel conversation
+DELETE /api/vectr/session     — clear conversation
+POST /api/vectr/brief         — save locked Strategic Brief, mark previous as 'superseded'
+GET  /api/vectr/brief/active  — get active brief (used by Id8Ωr, WritΩr, SeedΩr injection)
+```
+
+#### Frontend (`public/northr.html`)
+
+- `⬡ VectΩr` button in NorthΩr header (amber/gold color — distinct from teal tools and purple Room)
+- Slide-out panel: `position:fixed; right:0; top:54px; width:460px; height:calc(100vh - 54px)`
+  `transform:translateX(100%)` → `.open` class removes transform (same as Writer's Room)
+- Panel border: `2px solid rgba(245,158,11,0.3)` (amber, not purple)
+- Sync phase: progress list with live checkmarks before chat loads
+- Chat messages: same `.room-msg` pattern, assistant color = amber instead of purple
+- `⬡ Lock Vector` button: appears after first Claude response, activates when Jason confirms direction
+- Brief review modal: shows structured brief before locking
+
+#### Build plan — 2 sessions
+
+**Session A (backend + injection):**
+- DB migration: `strategic_briefs` table
+- `strategic_principles` added to creator-profile.json
+- `/api/vectr/sync` — chain MirrΩr + MailerLite + Kajabi + GuardΩr pulls
+- `/api/vectr/chat` — SSE stream, full context assembly, pushback system prompt
+- `/api/vectr/session` — GET/POST/DELETE (server-persisted conversation)
+- `/api/vectr/brief` — POST (lock) + GET active
+- Id8Ωr injection: read active brief, prepend to research prompt
+- WritΩr injection: read active brief, add to calibration context block
+
+**Session B (frontend):**
+- NorthΩr: `⬡ VectΩr` button + panel HTML/CSS (Writer's Room as template)
+- Sync phase: progress list UI + `/api/vectr/sync` call
+- Chat interface: messages, input, streaming, send
+- `⬡ Lock Vector` button + brief review modal
+- SeedΩr: "🧭 Current Vector" sidebar card
+- NorthΩr dashboard: active vector display at top
+- Event trigger: over/underperformance amber banner
+
+---
+
+### 0b. MarkΩr + GuardΩr — Copyright Protection + Community Enforcement
 **Why now:** Creator is actively publishing to TikTok, YouTube, Instagram. Content protection
 and community health are active needs. Spec already in TODO.md (see below). Build plan: 3 sessions.
 - **MarkΩr:** Detect if creator's content is being reposted without credit. Monitor platform search
@@ -107,6 +325,54 @@ Full OAuth 2.0 + PKCE + FILE_UPLOAD posting built. Compliance UI (privacy, duet/
 commercial disclosure) live in PostΩr. App submitted for TikTok review April 19 2026.
 **Status: In Review — expected approval 5-10 business days.**
 Once approved, posting works with no code changes needed.
+
+---
+
+### 8. TikTok Analytics — Separate Module, Not Mixed With MirrΩr
+
+**The decision:** TikTok analytics must be its own module — never mixed into MirrΩr.
+
+**Why they can't share a data store or calibration context:**
+- Audience is fundamentally different: TikTok skews significantly younger, different
+  psychographics, different content expectations, different virality mechanics
+- Scale is incomparable: 725k TikTok vs 54k YouTube — raw view counts in the same
+  table would distort every average, benchmark, and calibration signal
+- Platform algorithms are different: what performs on TikTok (scroll-stop hooks, loop-ability,
+  sound-on) does not map to YouTube (retention curves, click-through, watch time)
+- Calibrating WritΩr/Id8Ωr on mixed data would pull in two directions simultaneously.
+  YouTube informs long-form story and voice. TikTok informs short-form hook and pacing.
+  These should be separate context injections, not blended
+
+**MirrΩr stays YouTube-only.** Its calibration context (viral patterns, voice fingerprint)
+feeds WritΩr and Id8Ωr for long-form and written voice. That relationship stays clean.
+
+**What to build:**
+
+#### TikTΩkr (or TikTok tab inside a future AnalytΩr module)
+- Separate DB tables: `tiktok_videos`, `tiktok_metrics` — no shared table with YouTube
+- TikTok Display API (analytics endpoint) — wire the OAuth + data pull same pattern as MirrΩr
+- **Status: TikTok posting app in review. Wire architecture now. Can't test until approved (~5-10 days).**
+- Key metrics to pull: views, likes, shares, comments, average watch time, completion rate
+- Short-form-specific calibration context: hook retention (first 3s), loop rate, share rate
+- This context feeds WritΩr SHORT FORM mode only — not the long-form voice profiles
+
+#### ConstellΩr — Choosable Platform Views
+SeedΩr's ConstellΩr (3D idea constellation) currently clusters ideas by content angle using
+YouTube performance as calibration signal. With TikTok as a distinct audience and signal:
+
+- Add a **platform selector** at the top of ConstellΩr: `[YouTube] [TikTok] [All Ideas]`
+- **YouTube view**: constellation calibrated on MirrΩr data — node size/brightness reflects
+  YouTube performance signal. Best for long-form ideation.
+- **TikTok view**: constellation calibrated on TikTok analytics data — node size/brightness
+  reflects short-form performance signal (hook score, completion rate). Best for short-form ideation.
+- **All Ideas view**: shows every idea, no performance weighting — pure creative inventory
+- The two views will show different clusters because what performs on each platform differs.
+  A financial angle might be a large node in YouTube view and a small one in TikTok view
+  (or vice versa). That discrepancy is useful signal, not noise.
+- Platform selector persists in localStorage across sessions
+
+**Scope:** 2 sessions. Session A: TikTok analytics backend + DB. Session B: ConstellΩr selector.
+**Dependency:** TikTok API approval (posting app in review). Architecture can be wired now.
 
 ---
 
