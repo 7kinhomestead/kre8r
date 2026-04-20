@@ -129,7 +129,10 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    BRAW proxy workflow: BRAW record created → DaVinci exports proxy → proxy links back
    to BRAW record via _proxy.mp4 naming convention (findBrawByBasename).
    Voice analysis button on completed-video cards → feeds WritΩr voice library.
-   Subject/topic search not yet implemented (planned).
+   Tag chip filtering: clicking a subject tag does instant client-side filtering (activeFilters.tag).
+   Active tag pill shown below filter bar. Filter persists in session. Tag cloud highlights active.
+   NOTE: subject tags generated at ingest via Claude Vision — ingest-time tagging is live,
+   client-side filter is live. Semantic search across all tags is a future TODO item.
 
 ✅ EditΩr (`/editor.html`) — SelectsΩr v2 engine (selects-new.js).
    Three shoot modes: SCRIPTED / HYBRID / FREEFORM.
@@ -194,7 +197,17 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 
 ✅ NorthΩr (`/northr.html`) — Creator dashboard. Email performance (last 5 campaigns,
    open/click rates). Publishing calendar (real publish dates). Days Since Last Email.
-   Evaluate Last Month: score + weight badges. Copyright Health stats (planned — MarkΩr/GuardΩr).
+   Evaluate Last Month: score + weight badges. Copyright Health stats (live — MarkΩr/GuardΩr).
+   VectΩr panel: amber ⬡ button in hero opens 460px slide-out strategic session. Syncs all
+   platform data (YouTube, MailerLite, Kajabi, pipeline health), streams Claude strategic
+   debrief, locks a Strategic Brief that injects into Id8Ωr and WritΩr for next N weeks.
+   Active brief banner shows current vector + direction on dashboard.
+
+✅ VectΩr (`/northr.html` slide-out panel) — Weekly strategic session with pushback mechanic.
+   `src/routes/vectr.js`: sync, SSE chat, session persistence (kv_store), brief lock/history.
+   `strategic_briefs` table. Active brief auto-injected into Id8Ωr mirrrBlock and WritΩr id8rBlock.
+   System prompt holds strategic_principles from creator-profile.json + pushback_triggers.
+   Claude holds positions based on data/brand, only yields with documented reasoning.
 
 ### INFRASTRUCTURE
 ✅ Privacy + TOS (`/privacy`, `/tos`) — Public legal pages (no auth required). Required for TikTok
@@ -209,13 +222,17 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 ✅ SyncΩr (`/sync.html`) — Cross-device project sync.
    `src/routes/local-sync.js` — local proxy (config, push, pull, import).
    createProjectFromSnapshot: non-destructive, ID-preserving import.
+   replaceProjectFromSnapshot: overwrite mode — deletes FK children + re-inserts from snapshot.
+   Import accepts `overwrite: true` param. Amber checkbox in UI for teleprompter/read-only devices.
    Desktop → kre8r.app → Laptop confirmed working end-to-end.
 
 ✅ Electron Desktop App — `electron/main.js` wraps Express server in BrowserWindow.
    Setup wizard on first run (getUserCount() === 0 → /setup). Diagnostic error dialog on failure.
    5-min rolling SQLite backup → database/kre8r-electron-backup.db.
-   Installer: `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.0.exe` (~238MB).
+   Installer: `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.7.exe` (~238MB).
+   Latest installer live at kre8r.app/download — served via /api/releases/upload pipeline.
    `window.__KRE8R_ELECTRON` flag set by main.js — use this to detect Electron context in frontend.
+   DB stored at app.getPath('userData') (AppData) — reinstalling never overwrites the database.
 
 ## Creator Profile
 **Jason Rutland** — 7 Kin Homestead
@@ -287,7 +304,7 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 
 ## Known Issues / Technical Debt (Priority Order)
 1. Id8Ωr redesign: cut mind map, add fast concept pass → choose → deep research
-2. VaultΩr subject/topic tagging for semantic search
+2. VaultΩr semantic search across all tags (ingest tagging ✅, chip filter ✅, full-text tag search: TODO)
 3. AudiencΩr tag filter (Kajabi 500 on filtered requests)
 4. BRAW proxy timeout — 30min per job too short for large files
 5. Project resolution defaults to 4K DCI instead of reading footage resolution
@@ -299,21 +316,26 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 11. ~~TeleprΩmpter: Solo tab crashes the app~~ — FIXED Session 48 (early-return guard in launchViaCloud + cloudLaunchActive reset in backToSelector)
 12. TeleprΩmpter: No back button from display screen — only exit is "📋 Scripts" button (hidden by default)
 13. ~~PostΩr: TikTok platform stub~~ — BUILT Session 49. Full OAuth + posting live. App In Review (submitted April 19 2026, ~5-10 days).
+14. MirrΩr: no "last synced" indicator — YouTube data can go stale silently. Sync Now button needed.
 
 ## Planned Features (Not Yet Built)
-- MarkΩr + GuardΩr — Copyright protection + community enforcement (spec in TODO.md, build plan: 3 sessions)
-- TikTok Content Posting API — pending access for @7.kin.jason
+- ~~VectΩr — Weekly strategic session~~ — BUILT Session 55. Live on NorthΩr.
+- ~~MarkΩr + GuardΩr — Copyright protection + community enforcement~~ — BUILT Sessions 51-54. Live.
+- TikTok Content Posting API — app in review, expected approval ~5-10 days from April 19 2026
+- TikTok Analytics module (TikTΩkr) — separate from MirrΩr. Wire after TikTok app approved.
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
 - Cari creator profile (second voice profile for Rock Rich Shows)
 - RetentΩr — viral clip / retention cut module (post-edit, split from SelectsΩr)
 - AffiliateΩr — track links, commissions, video placement, performance
-- VaultΩr subject/topic tagging at ingest for semantic search
+- VaultΩr full-text tag search across vault (ingest tagging + chip filter already live)
 - Analytics feedback loop (TikTok/YouTube performance → Id8Ωr recommendations)
 - Multi-tenant creator profiles (auth infrastructure in place, tenant isolation not built)
 - Playwright automation for Kajabi (broadcasts, sequences, community posts)
 - Android APK for field TeleprΩmpter (zero-signal fallback, sideload)
 - NotebookLM/Gamma integration in Id8Ωr research phase
 - Configurable workflow order (onboarding wizard)
+- Desktop-only feature gates (PostΩr upload, VaultΩr watcher, DaVinci) need "Desktop App Only"
+  banners before beta launch on web version (detect via window.__KRE8R_ELECTRON)
 
 ## Commercialization Notes
 - kre8r.app — live on DigitalOcean, SSL, nginx, session-based auth (owner login via KRE8R_OWNER_PW)

@@ -42,7 +42,37 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 
 ## NEXT SESSION — Top Tasks
 
-### 0. VectΩr — Weekly Strategic Session (NorthΩr slide-out panel)
+### ~~0. VectΩr — Weekly Strategic Session (NorthΩr slide-out panel)~~ ✅ DONE Session 55
+Full build: backend (vectr.js, strategic_briefs table, kv_store session/cache), frontend
+(amber slide-out panel in NorthΩr, sync phase, SSE chat, lock brief modal), active brief
+injection into Id8Ωr and WritΩr. Proven in use — directly improved a script tied to a
+125k-view video. Creator quote: "this tool is amazing."
+
+---
+
+### NEXT PRIORITY QUEUE
+
+### A. MirrΩr: Last Synced Indicator + Sync Now Button (~2 hrs)
+YouTube data has no freshness signal. Creator can't tell if analytics are stale.
+- Add `last_synced_at` to kv_store, update after each successful MirrΩr sync
+- NorthΩr: "YouTube data last synced: X days ago" near MirrΩr stats block
+- Add "🔄 Sync Now" button → calls existing `/api/mirrr/sync` + updates timestamp
+- Amber warning if last sync > 7 days old
+
+### B. Desktop-Only Feature Gates (before beta launch)
+Features that silently break on the web version need banners. Detect via `window.__KRE8R_ELECTRON`.
+Quick approach: "🖥️ Desktop App Only" badge on affected sections.
+Affected: PostΩr upload, VaultΩr watcher, EditΩr proxy playback, DaVinci, Whisper, TeleprΩmpter QR codes.
+
+### C. TikTok Analytics Module (after TikTok app approval ~April 28-30)
+Separate from MirrΩr. Own DB tables. Short-form-specific calibration context feeds WritΩr SHORT FORM only.
+Architecture can be wired before approval.
+
+---
+
+### 0b (legacy label). VectΩr — DONE above.
+
+### (was 0b). MarkΩr + GuardΩr — Copyright Protection + Community Enforcement
 
 **What it is:** A weekly debrief with Claude inside NorthΩr. Reviews all fresh platform data,
 surfaces what the data is actually saying, makes a recommendation, debates it with Jason, and
@@ -289,19 +319,18 @@ GateΩr unified review queue — all shipped.
 
 ---
 
-### 5. VaultΩr: Subject/Topic Tagging at Ingest
-**Why now:** Vault is growing. Finding the right b-roll for a script requires scrolling through
-thumbnails by memory. Tagging creates the search layer.
+### ~~5. VaultΩr: Subject/Topic Tagging at Ingest~~ — PARTIALLY DONE Session 55
+**What's live:**
+- DB column `subjects TEXT` (JSON array) on vault_footage ✅ (prior session)
+- Claude Vision generates subjects at ingest ✅ (prior session)
+- Tag cloud rendered in VaultΩr sidebar ✅ (prior session)
+- Tag chip click → instant client-side filter (activeFilters.tag) ✅ Session 55
+- Active tag pill shown below filter bar ✅ Session 55
+- Tag filter persists in session ✅ Session 55
 
-**What to build:**
-- At ingest, after thumbnail generation, call Claude Vision on the thumbnail frame
-- Generate `tags: ["outdoor", "chickens", "greenhouse", "solarpanel"]` — 3–8 tags max
-- Store as `tags TEXT` (JSON array) on vault_footage
-- Add tag search to VaultΩr sidebar: text input → filters footage list in real time
-- Optional: tag cloud summary at top of sidebar (top 10 most common tags)
-- DB migration: `tags TEXT` column on vault_footage (nullable, safe to add)
-
-**Scope:** 1 session. Backend: watcher.js + vault route. Frontend: VaultΩr sidebar filter.
+**Still TODO:**
+- Full-text tag search input (text field → filter in real time across all tags, not just tag cloud clicks)
+- This is a minor scope item, ~1 hour if needed
 
 ---
 

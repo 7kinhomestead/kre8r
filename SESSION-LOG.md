@@ -1,3 +1,101 @@
+# Session 55 — VectΩr + VaultΩr Tag Filter + SyncΩr Overwrite + v1.0.7 (2026-04-20)
+
+## Goal
+VectΩr weekly strategic session (Sessions A + B — full build), VaultΩr tag chip client-side
+filtering, SyncΩr overwrite import for teleprompter laptop, new Electron installer v1.0.7.
+
+## What Was Built
+
+### VectΩr — Weekly Strategic Session (NorthΩr slide-out panel)
+Complete build across two sessions (A = backend, B = frontend).
+
+**Backend (`src/routes/vectr.js` — new file)**
+7 endpoints:
+- `POST /api/vectr/sync` — pulls YouTube health, MailerLite last 5 campaigns, Kajabi member
+  count, pipeline health. Caches result in kv_store as `vectr_sync_cache`.
+- `GET/POST/DELETE /api/vectr/session` — server-persisted conversation (kv_store `vectr_session`)
+- `POST /api/vectr/chat` (SSE) — assembles full context (platform data, MirrΩr channel
+  performance, strategic_principles all 5 sub-keys, previous brief, pushback triggers) into
+  system prompt. Streams Claude response. Pushback mechanic: Claude holds positions based on
+  `vectr_session_conduct.pushback_triggers` in creator-profile.json, only yields with reasoning.
+- `POST /api/vectr/brief` — locks brief, supersedes all previous active briefs
+- `GET /api/vectr/brief/active` — returns active brief (injected downstream)
+- `GET /api/vectr/briefs` — brief history
+
+**DB (`src/db.js`)**
+- `strategic_briefs` table with indexes (status, locked_at)
+- 8 new functions: insertStrategicBrief, getActiveBrief, getAllStrategicBriefs,
+  getVectrSession, setVectrSession, clearVectrSession, getVectrSyncCache, setVectrSyncCache
+- All exported
+
+**Active brief injection**
+- `src/routes/id8r.js` — brief appended to `mirrrBlock` before angle instruction.
+  Biases concept generation toward current direction.
+- `src/routes/writr.js` — brief appended to `id8rBlock`. Shapes tone, angle emphasis,
+  and story entry point without overriding creator's stated concept.
+
+**Frontend (`public/northr.html`)**
+- `⬡ VectΩr` button in hero section (amber/gold color — distinct from teal and purple)
+- Active brief banner shows current vector direction when a brief is locked
+- 460px fixed slide-out panel (right edge, same CSS pattern as Writer's Room)
+- Panel: header + sync bar (live progress checkmarks) + message thread + input area
+- Sync phase: pulls all platform data before chat opens, shows live progress
+- Chat: server-persisted session, streams Claude responses token by token (amber color)
+- `⬡ Lock Vector` button → brief review modal (4 fields: vector, focus, constraints, avoid)
+- Syntax error fixed: unescaped apostrophe in single-quoted JS string (northr.html:2629)
+  caused entire script block to crash. Fixed by switching to double-quoted string.
+
+**Proven in use:** Jason ran a full VectΩr session, landed a strategic direction,
+identified and fixed a script problem tied to a 125k-view / 5k-like / 525-comment video.
+Creator quote: "this tool is amazing."
+
+---
+
+### VaultΩr Tag Chip Client-Side Filtering (`public/vault.html`)
+Backend, DB column, Vision generation, tag cloud, and card display were already built in a
+prior session. Only the filter routing was broken — clicking a tag chip routed through the
+Claude AI search API instead of filtering locally.
+
+**Fix:** 8 targeted edits to vault.html:
+- `activeFilters.tag: null` added to filter state
+- `applyFilters()` — checks `subjects` JSON array for tag match
+- `searchBySubject()` — replaced AI search call with `activeFilters.tag` toggle
+- `renderActiveTagPill()` + `clearTagFilter()` — active tag indicator below filter bar
+- Session save/restore — tag filter persists across page refreshes
+- `renderTagCloud()` — highlights active chip in teal
+Tag filtering is now instant, zero API calls.
+
+---
+
+### SyncΩr Overwrite Import
+**Problem:** Import silently skipped any project whose ID already existed locally.
+Teleprompter laptop had stale copies of projects that never updated on pull.
+
+**Fix:**
+- `replaceProjectFromSnapshot(project)` added to `src/db.js` — deletes `pipeline_state`
+  (FK child) first, then `projects`, then calls `createProjectFromSnapshot` to re-insert clean.
+  Exported in module.exports.
+- `src/routes/local-sync.js` `/import` endpoint — accepts `overwrite: true` in request body.
+  When set, calls `replaceProjectFromSnapshot` instead of skipping on ID conflict.
+  Response now includes `overwritten` count alongside `imported` / `skipped`.
+- `public/sync.html` — amber "Overwrite existing projects (use on teleprompter / read-only
+  devices)" checkbox added above Import button. Import result shows new/overwritten/skipped.
+
+---
+
+### Electron v1.0.7 + kre8r.app/download
+- `package.json` version bumped to 1.0.7
+- `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.7.exe` built successfully
+- Old v1.0.6 installer removed from dist/ before deploy
+- `node scripts/deploy-update.js` uploaded installer + latest.yml + blockmap to
+  kre8r.app/downloads/ — download page live at kre8r.app/download
+- Code pushed to GitHub, deployed to DigitalOcean (PM2 restart confirmed online)
+
+## Commits
+- Session 55 commit: `390cc86` — 12 files, 1964 insertions
+
+---
+
 # Session 54 — ClaimsΩr Session C: DMCA Engine + NorthΩr Copyright Health (2026-04-19)
 
 ## Goal
