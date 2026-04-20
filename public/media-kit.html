@@ -15,7 +15,7 @@
   --f-b:'DM Sans',-apple-system,Segoe UI,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
+html{scroll-behavior:smooth;overflow-x:hidden;}
 body{background:var(--black);color:var(--white);font-family:var(--f-b);font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 a{color:var(--acc);text-decoration:none;}
 a:hover{text-decoration:underline;}
@@ -45,7 +45,7 @@ a:hover{text-decoration:underline;}
 .hero .meta dt{font-family:var(--f-d);font-size:11px;letter-spacing:.3em;color:var(--muted);margin-bottom:6px;}
 .hero .meta dd{font-family:var(--f-d);font-size:16px;letter-spacing:.04em;color:var(--white);line-height:1.25;}
 .hero-portrait{aspect-ratio:4/5;background:var(--card);border:1px solid var(--border);border-radius:6px;position:relative;overflow:hidden;}
-.hero-portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:right top;}
+.hero-portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:left top;}
 .hero-portrait::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,8,.72));pointer-events:none;}
 .hero-portrait .corner{position:absolute;top:18px;left:18px;font-family:var(--f-d);font-size:10px;letter-spacing:.28em;color:var(--acc);z-index:2;background:rgba(8,8,8,.5);padding:4px 8px;border-radius:2px;}
 .hero-portrait .caption{position:absolute;bottom:20px;left:20px;right:20px;font-family:var(--f-d);font-size:15px;letter-spacing:.14em;color:var(--white);z-index:2;}
@@ -139,6 +139,7 @@ section.s.alt{background:var(--dark);}
 .kit .tile .lbl{font-family:var(--f-d);font-size:11px;letter-spacing:.3em;color:var(--acc);margin-bottom:18px;}
 .logo-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
 .logo-cell{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:20px;}
+.logo-cell img{width:100%;height:100%;object-fit:contain;display:block;}
 .logo-cell.dk{background:var(--black);border:1px solid var(--border2);}
 .logo-cell.lt{background:#f4f2ee;}
 .logo-cell.ac{background:var(--acc);}
