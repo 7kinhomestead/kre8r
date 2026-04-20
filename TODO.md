@@ -52,6 +52,17 @@ injection into Id8Ωr and WritΩr. Proven in use — directly improved a script 
 
 ### NEXT PRIORITY QUEUE
 
+### ⚡ MEDIA KIT — Press Email Setup
+The media kit at kre8r.app/media-kit uses press@7kinhomestead.com as the contact address.
+That address needs to exist before the kit goes public.
+- Set up press@7kinhomestead.com (Google Workspace, Zoho, or forward from existing Gmail)
+- Optional: booking@7kinhomestead.com as a second address (currently not in the kit)
+- Domain: you own 7kinhomestead.com — any email host that supports custom domains will work
+- Google Workspace: $6/mo per mailbox. Zoho: free tier supports custom domain.
+- Simplest path: set up a forward from press@7kinhomestead.com → 7kinmedia@gmail.com
+
+---
+
 ### A. MirrΩr: Last Synced Indicator + Sync Now Button (~2 hrs)
 YouTube data has no freshness signal. Creator can't tell if analytics are stale.
 - Add `last_synced_at` to kv_store, update after each successful MirrΩr sync
