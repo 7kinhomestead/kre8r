@@ -347,6 +347,8 @@ app.use((req, res, next) => {
        '/privacy', '/privacy.html', '/tos', '/tos.html'].includes(req.path)) return next();
   // Download assets (installer, yml) are public
   if (req.path.startsWith('/downloads/')) return next();
+  // Media kit photography (public, no auth required)
+  if (req.path.startsWith('/media-kit-images/')) return next();
   // GuardΩr — public fan-facing pages, no auth
   if (req.path.startsWith('/guard/') || req.path === '/guard') return next();
   if (req.path.startsWith('/api/guard/')) return next();

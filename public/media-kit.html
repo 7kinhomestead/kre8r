@@ -1,996 +1,828 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel='icon' type='image/png' href='/images/kre8r-icon.png'>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kre8ΩR — Media Kit 2026</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0e0f0e;
-      --card: #141614;
-      --border: #1e2120;
-      --teal: #00c2a8;
-      --amber: #f0b942;
-      --text: #e8e8e8;
-      --muted: #888;
-      --cover-bg: #0a0d0c;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 16px;
-      line-height: 1.7;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
-
-    .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.02em; }
-
-    .teal { color: var(--teal); }
-    .amber { color: var(--amber); }
-    .muted { color: var(--muted); }
-
-    /* NAV */
-    .site-nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      background: rgba(14, 15, 14, 0.92);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 48px;
-      height: 56px;
-    }
-
-    .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 24px;
-      color: var(--text);
-      text-decoration: none;
-      letter-spacing: 0.02em;
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 32px;
-      list-style: none;
-    }
-
-    .nav-links a {
-      color: var(--muted);
-      text-decoration: none;
-      font-size: 13px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-    }
-
-    .nav-links a:hover { color: var(--teal); }
-
-    /* SECTIONS */
-    section { padding: 100px 48px; max-width: 1100px; margin: 0 auto; }
-
-    .section-label {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 13px;
-      letter-spacing: 0.2em;
-      color: var(--teal);
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-
-    .section-heading {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 64px;
-      line-height: 1;
-      color: var(--text);
-      margin-bottom: 48px;
-    }
-
-    .divider {
-      width: 64px;
-      height: 2px;
-      background: var(--teal);
-      margin: 24px 0 48px;
-    }
-
-    /* COVER */
-    #cover {
-      min-height: 100vh;
-      background: var(--cover-bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 80px 48px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    #cover::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 50% 40%, rgba(0,194,168,0.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .cover-wordmark {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(64px, 12vw, 96px);
-      line-height: 1;
-      letter-spacing: 0.04em;
-      color: var(--text);
-      margin-bottom: 20px;
-      animation: fadeUp 0.8s ease both;
-    }
-
-    .cover-sub {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(18px, 3vw, 28px);
-      color: var(--teal);
-      letter-spacing: 0.15em;
-      margin-bottom: 32px;
-      animation: fadeUp 0.8s 0.15s ease both;
-    }
-
-    .cover-tagline {
-      font-size: 20px;
-      color: var(--text);
-      margin-bottom: 8px;
-      animation: fadeUp 0.8s 0.25s ease both;
-    }
-
-    .cover-latin {
-      font-size: 14px;
-      color: var(--muted);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      margin-bottom: 48px;
-      animation: fadeUp 0.8s 0.35s ease both;
-    }
-
-    .cover-date {
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing: 0.1em;
-      margin-bottom: 24px;
-      animation: fadeUp 0.8s 0.4s ease both;
-    }
-
-    .cover-link {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px;
-      color: var(--teal);
-      text-decoration: none;
-      letter-spacing: 0.1em;
-      border-bottom: 1px solid rgba(0,194,168,0.3);
-      padding-bottom: 2px;
-      transition: border-color 0.2s;
-      animation: fadeUp 0.8s 0.5s ease both;
-    }
-
-    .cover-link:hover { border-color: var(--teal); }
-
-    /* BRAND STORY */
-    #brand-story p {
-      font-size: 18px;
-      color: #c8c8c8;
-      line-height: 1.85;
-      max-width: 720px;
-      margin-bottom: 28px;
-    }
-
-    /* PROBLEM / SOLUTION */
-    #problem-solution .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 48px;
-      align-items: start;
-    }
-
-    .problem-card, .solution-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 40px;
-    }
-
-    .problem-card { border-top: 3px solid var(--amber); }
-    .solution-card { border-top: 3px solid var(--teal); }
-
-    .card-heading {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 28px;
-      letter-spacing: 0.08em;
-      margin-bottom: 24px;
-    }
-
-    .problem-card .card-heading { color: var(--amber); }
-    .solution-card .card-heading { color: var(--teal); }
-
-    .problem-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .problem-list li {
-      color: #c0c0c0;
-      padding-left: 20px;
-      position: relative;
-      font-size: 15px;
-    }
-
-    .problem-list li::before {
-      content: '×';
-      position: absolute;
-      left: 0;
-      color: var(--amber);
-      font-weight: 700;
-    }
-
-    .solution-card p {
-      font-size: 17px;
-      color: #c0c0c0;
-      line-height: 1.75;
-    }
-
-    /* PRODUCT */
-    #product .phase-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-    }
-
-    .phase-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 36px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .phase-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-    }
-
-    .phase-card.plan::before { background: var(--teal); }
-    .phase-card.make::before { background: linear-gradient(90deg, var(--teal), var(--amber)); }
-    .phase-card.distribute::before { background: var(--amber); }
-    .phase-card.mirror::before { background: linear-gradient(90deg, var(--amber), #e879f9); }
-
-    .phase-num {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 13px;
-      letter-spacing: 0.2em;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .phase-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 36px;
-      color: var(--text);
-      margin-bottom: 16px;
-    }
-
-    .phase-tools {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.8;
-    }
-
-    .phase-tools span {
-      color: var(--teal);
-    }
-
-    /* CASE STUDY */
-    #case-study .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 2px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      margin-bottom: 56px;
-    }
-
-    .stat-cell {
-      background: var(--card);
-      padding: 32px 24px;
-      text-align: center;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-
-    .stat-value {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 36px;
-      color: var(--text);
-      letter-spacing: 0.02em;
-    }
-
-    .stat-value.highlight { color: var(--teal); }
-
-    #case-study .story-block {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--teal);
-      border-radius: 0 8px 8px 0;
-      padding: 40px 48px;
-    }
-
-    #case-study .story-block p {
-      font-size: 17px;
-      color: #c0c0c0;
-      line-height: 1.85;
-    }
-
-    #case-study .insight {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px;
-      color: var(--teal);
-      margin-top: 20px;
-      letter-spacing: 0.04em;
-    }
-
-    /* PHILOSOPHY */
-    #philosophy {
-      text-align: center;
-      padding: 120px 48px;
-    }
-
-    #philosophy .big-quote {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(36px, 5vw, 64px);
-      color: var(--text);
-      line-height: 1.1;
-      max-width: 800px;
-      margin: 0 auto 48px;
-      position: relative;
-    }
-
-    #philosophy .big-quote::before,
-    #philosophy .big-quote::after {
-      content: '"';
-      color: var(--teal);
-      font-size: 0.9em;
-    }
-
-    #philosophy p {
-      font-size: 17px;
-      color: #c0c0c0;
-      max-width: 640px;
-      margin: 0 auto;
-      line-height: 1.85;
-    }
-
-    /* BRAND ASSETS */
-    #brand-assets .swatches {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 64px;
-    }
-
-    .swatch-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .swatch-color {
-      height: 100px;
-    }
-
-    .swatch-info {
-      padding: 16px;
-    }
-
-    .swatch-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 18px;
-      color: var(--text);
-      margin-bottom: 4px;
-      letter-spacing: 0.04em;
-    }
-
-    .swatch-hex {
-      font-family: monospace;
-      font-size: 13px;
-      color: var(--teal);
-      margin-bottom: 6px;
-    }
-
-    .swatch-use {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .assets-subheading {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 28px;
-      color: var(--text);
-      letter-spacing: 0.06em;
-      margin-bottom: 24px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .type-sample {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 32px;
-      margin-bottom: 16px;
-    }
-
-    .type-label {
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 12px;
-    }
-
-    .type-display {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 32px;
-      color: var(--text);
-      letter-spacing: 0.05em;
-    }
-
-    .type-body-sample {
-      font-size: 18px;
-      color: var(--text);
-      line-height: 1.6;
-    }
-
-    .wordmark-row {
-      display: flex;
-      align-items: baseline;
-      gap: 48px;
-      flex-wrap: wrap;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 40px;
-      margin-bottom: 16px;
-    }
-
-    .wordmark-note {
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: 8px;
-    }
-
-    .voice-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-      margin-top: 24px;
-    }
-
-    .voice-rule {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--teal);
-      border-radius: 0 8px 8px 0;
-      padding: 20px 24px;
-      font-size: 15px;
-      color: #c0c0c0;
-      font-style: italic;
-    }
-
-    /* BETA */
-    #beta-access {
-      text-align: center;
-      padding: 100px 48px;
-    }
-
-    .beta-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 80px 64px;
-      max-width: 680px;
-      margin: 0 auto;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .beta-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 50% 0%, rgba(0,194,168,0.08) 0%, transparent 60%);
-      pointer-events: none;
-    }
-
-    .beta-card p {
-      font-size: 17px;
-      color: #c0c0c0;
-      line-height: 1.75;
-      margin-bottom: 40px;
-    }
-
-    .btn-primary {
-      display: inline-block;
-      background: var(--teal);
-      color: #0a0d0c;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px;
-      letter-spacing: 0.12em;
-      padding: 16px 48px;
-      border-radius: 6px;
-      text-decoration: none;
-      transition: background 0.2s, transform 0.15s;
-    }
-
-    .btn-primary:hover {
-      background: #00d4b8;
-      transform: translateY(-1px);
-    }
-
-    /* CONTACT */
-    #contact {
-      padding: 80px 48px;
-      text-align: center;
-    }
-
-    #contact p {
-      font-size: 17px;
-      color: #c0c0c0;
-      margin-bottom: 24px;
-    }
-
-    .contact-links {
-      display: flex;
-      gap: 48px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .contact-item {
-      text-align: left;
-    }
-
-    .contact-item-label {
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .contact-item a {
-      color: var(--teal);
-      text-decoration: none;
-      font-size: 17px;
-      border-bottom: 1px solid rgba(0,194,168,0.3);
-      padding-bottom: 1px;
-      transition: border-color 0.2s;
-    }
-
-    .contact-item a:hover { border-color: var(--teal); }
-
-    /* FOOTER */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 48px;
-      text-align: center;
-    }
-
-    .footer-wordmark {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 32px;
-      color: var(--text);
-      letter-spacing: 0.08em;
-      margin-bottom: 8px;
-    }
-
-    .footer-latin {
-      font-size: 12px;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .footer-copy {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    /* ANIMATIONS */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .fade-in {
-      animation: fadeUp 0.7s ease both;
-    }
-
-    /* SCROLL REVEAL — handled via IntersectionObserver */
-    .reveal {
-      opacity: 0;
-      transform: translateY(24px);
-      transition: opacity 0.7s ease, transform 0.7s ease;
-    }
-
-    .reveal.visible {
-      opacity: 1;
-      transform: none;
-    }
-
-    /* PRINT */
-    @media print {
-      body { background: #fff !important; color: #111 !important; font-size: 12pt; }
-      .site-nav, .btn-primary { display: none !important; }
-      section { padding: 48pt 0; max-width: 100%; page-break-before: always; }
-      #cover { page-break-before: avoid; background: #fff !important; min-height: auto; padding: 48pt 0; }
-      .cover-wordmark { font-size: 72pt; color: #111 !important; }
-      .cover-sub, .cover-link, .teal, .section-label, .phase-card.plan::before { color: #000 !important; }
-      .cover-link { color: #000 !important; border-color: #999 !important; }
-      .card-heading, .stat-value.highlight, .swatch-hex { color: #111 !important; }
-      .problem-card, .solution-card, .phase-card, .swatch-card, .type-sample, .wordmark-row, .beta-card, .story-block, .voice-rule {
-        background: #f9f9f9 !important;
-        border: 1pt solid #ccc !important;
-      }
-      #philosophy .big-quote::before, #philosophy .big-quote::after { color: #444 !important; }
-      .muted, .phase-tools, .swatch-use, #brand-story p, .solution-card p, #case-study .story-block p,
-      #philosophy p, .beta-card p, #contact p { color: #333 !important; }
-      .phase-card::before { display: none; }
-      .stats-grid { background: #ccc !important; }
-      .stat-cell { background: #fff !important; border: 1pt solid #ccc; }
-      footer { border-top: 1pt solid #ccc; }
-      .footer-wordmark, .footer-latin, .footer-copy { color: #333 !important; }
-      .divider { background: #333 !important; }
-      .voice-rule { border-left-color: #333 !important; }
-    }
-
-    @media (max-width: 800px) {
-      section { padding: 64px 24px; }
-      #problem-solution .two-col { grid-template-columns: 1fr; }
-      #product .phase-grid { grid-template-columns: 1fr; }
-      #case-study .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      #brand-assets .swatches { grid-template-columns: repeat(2, 1fr); }
-      .voice-grid { grid-template-columns: 1fr; }
-      .site-nav { padding: 0 24px; }
-      .nav-links { display: none; }
-    }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>7 Kin Homestead — Media Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --black:#080808; --dark:#0f0f0f; --card:#161616; --card2:#1e1e1e;
+  --border:#252525; --border2:#333;
+  --white:#fff; --off:rgba(255,255,255,.82); --muted:rgba(255,255,255,.45); --faint:rgba(255,255,255,.12);
+  --acc:#E03030; --acc-dim:rgba(224,48,48,.10); --acc-rule:rgba(224,48,48,.30);
+  --f-d:'Bebas Neue',Impact,sans-serif;
+  --f-b:'DM Sans',-apple-system,Segoe UI,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--white);font-family:var(--f-b);font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased;}
+a{color:var(--acc);text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+/* ── TOP BAR ── */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(8,8,8,.93);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+.topbar .inner{max-width:1280px;margin:0 auto;padding:16px 48px;display:flex;align-items:center;justify-content:space-between;}
+.topbar .brand{display:flex;align-items:center;gap:14px;font-family:var(--f-d);letter-spacing:.28em;font-size:15px;}
+.topbar .brand .tag{color:var(--acc);margin-left:8px;padding:4px 10px;border:1px solid var(--acc-rule);border-radius:3px;font-size:11px;letter-spacing:.3em;}
+.topbar nav{display:flex;gap:28px;font-family:var(--f-d);font-size:12px;letter-spacing:.25em;}
+.topbar nav a{color:var(--muted);}
+.topbar nav a:hover{color:var(--white);text-decoration:none;}
+.topbar .cta{display:flex;gap:10px;}
+.btn{font-family:var(--f-d);font-size:12px;letter-spacing:.22em;padding:9px 18px;border:1px solid var(--border2);color:var(--white);background:transparent;border-radius:4px;cursor:pointer;transition:.2s;display:inline-block;}
+.btn:hover{border-color:var(--acc);color:var(--acc);text-decoration:none;}
+.btn.p{background:var(--acc);color:var(--black);border-color:var(--acc);}
+.btn.p:hover{background:#c82020;color:var(--white);text-decoration:none;}
+
+/* ── HERO ── */
+.hero{padding:112px 48px 96px;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1.2fr 1fr;gap:80px;align-items:center;}
+.hero .eb{font-family:var(--f-d);font-size:13px;letter-spacing:.32em;color:var(--acc);margin-bottom:26px;display:inline-flex;align-items:center;gap:14px;}
+.hero .eb .dot{width:8px;height:8px;border-radius:50%;background:var(--acc);}
+.hero h1{font-family:var(--f-d);font-size:clamp(60px,7.5vw,108px);line-height:.92;letter-spacing:.02em;margin-bottom:28px;}
+.hero h1 .acc{color:var(--acc);}
+.hero .lede{font-size:19px;line-height:1.6;color:var(--off);max-width:600px;margin-bottom:36px;}
+.hero .meta{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:40px;padding-top:32px;border-top:1px solid var(--border);}
+.hero .meta dt{font-family:var(--f-d);font-size:11px;letter-spacing:.3em;color:var(--muted);margin-bottom:6px;}
+.hero .meta dd{font-family:var(--f-d);font-size:16px;letter-spacing:.04em;color:var(--white);line-height:1.25;}
+.hero-portrait{aspect-ratio:4/5;background:var(--card);border:1px solid var(--border);border-radius:6px;position:relative;overflow:hidden;}
+.hero-portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;}
+.hero-portrait::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,8,.72));pointer-events:none;}
+.hero-portrait .corner{position:absolute;top:18px;left:18px;font-family:var(--f-d);font-size:10px;letter-spacing:.28em;color:var(--acc);z-index:2;background:rgba(8,8,8,.5);padding:4px 8px;border-radius:2px;}
+.hero-portrait .caption{position:absolute;bottom:20px;left:20px;right:20px;font-family:var(--f-d);font-size:15px;letter-spacing:.14em;color:var(--white);z-index:2;}
+.hero-portrait .caption span{display:block;font-size:10px;letter-spacing:.28em;color:var(--muted);margin-top:3px;font-family:var(--f-d);}
+
+/* ── STAT BAND ── */
+.stats{background:var(--dark);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:52px 48px;}
+.stats .inner{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:40px;}
+.stat .n{font-family:var(--f-d);font-size:clamp(48px,5vw,68px);line-height:.95;color:var(--acc);letter-spacing:.01em;}
+.stat .n .unit{font-size:28px;color:var(--muted);letter-spacing:.1em;margin-left:3px;}
+.stat .l{font-family:var(--f-d);font-size:12px;letter-spacing:.28em;color:var(--muted);margin-top:10px;}
+.stat .s{font-size:13px;color:var(--off);margin-top:5px;line-height:1.5;}
+
+/* ── SECTION BASICS ── */
+section.s{padding:96px 48px;border-top:1px solid var(--border);}
+section.s.alt{background:var(--dark);}
+.wrap{max-width:1280px;margin:0 auto;}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:56px;gap:40px;flex-wrap:wrap;}
+.sec-head .num{font-family:var(--f-d);font-size:13px;letter-spacing:.35em;color:var(--acc);margin-bottom:16px;display:block;}
+.sec-head h2{font-family:var(--f-d);font-size:clamp(38px,5vw,68px);line-height:1;letter-spacing:.02em;max-width:760px;}
+.sec-head h2 .acc{color:var(--acc);}
+.sec-head p.kicker{max-width:420px;font-size:15px;color:var(--muted);line-height:1.65;}
+
+/* ── THE STORY ── */
+.story-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:72px;align-items:start;}
+.story-body p{font-size:16px;line-height:1.75;color:var(--off);margin-bottom:20px;}
+.story-body p:last-child{margin-bottom:0;}
+.story-pullquote{border-left:3px solid var(--acc);padding:18px 0 18px 28px;margin:32px 0;}
+.story-pullquote p{font-family:var(--f-d);font-size:clamp(22px,2.5vw,30px);line-height:1.2;letter-spacing:.02em;color:var(--white);margin:0;}
+.story-img{border-radius:8px;overflow:hidden;border:1px solid var(--border);position:relative;}
+.story-img img{width:100%;display:block;object-fit:cover;}
+.story-img .img-cap{padding:14px 18px;font-family:var(--f-d);font-size:10px;letter-spacing:.28em;color:var(--muted);background:var(--card);border-top:1px solid var(--border);}
+
+/* ── ROCK RICH PHILOSOPHY ── */
+.philosophy-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:64px;align-items:center;}
+.philosophy-img{border-radius:8px;overflow:hidden;border:1px solid var(--border);position:relative;}
+.philosophy-img img{width:100%;display:block;object-fit:cover;}
+.philosophy-img .img-cap{padding:14px 18px;font-family:var(--f-d);font-size:10px;letter-spacing:.28em;color:var(--muted);background:var(--card2);border-top:1px solid var(--border);}
+.philosophy-pill{display:inline-block;font-family:var(--f-d);font-size:11px;letter-spacing:.3em;color:var(--acc);border:1px solid var(--acc-rule);border-radius:3px;padding:4px 10px;margin-bottom:20px;}
+.philosophy-quote{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:36px 32px;border-left:3px solid var(--acc);margin-bottom:28px;}
+.philosophy-quote blockquote{font-family:var(--f-d);font-size:clamp(20px,2.2vw,28px);line-height:1.25;letter-spacing:.015em;color:var(--white);}
+.philosophy-body p{font-size:15px;line-height:1.72;color:var(--off);margin-bottom:16px;}
+.philosophy-body p:last-child{margin-bottom:0;}
+
+/* ── BIO GRID ── */
+.bios{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;}
+.bio{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:36px 30px;display:flex;flex-direction:column;border-top:3px solid var(--acc);}
+.bio .lbl{font-family:var(--f-d);font-size:12px;letter-spacing:.3em;color:var(--acc);margin-bottom:12px;}
+.bio .wc{font-family:var(--f-d);font-size:16px;letter-spacing:.15em;color:var(--muted);margin-bottom:16px;}
+.bio p{font-size:14px;line-height:1.72;color:var(--off);flex:1;margin-bottom:10px;}
+.bio p:last-of-type{margin-bottom:0;}
+.copy-btn{margin-top:22px;align-self:flex-start;font-family:var(--f-d);font-size:11px;letter-spacing:.3em;padding:8px 14px;border:1px solid var(--border2);background:transparent;color:var(--off);border-radius:3px;cursor:pointer;transition:.2s;}
+.copy-btn:hover{border-color:var(--acc);color:var(--acc);}
+.copy-btn.done{color:var(--acc);border-color:var(--acc);}
+
+/* ── TOPICS ── */
+.topics{display:grid;grid-template-columns:repeat(2,1fr);gap:0 40px;}
+.topic{display:grid;grid-template-columns:52px 1fr;gap:20px;align-items:baseline;padding:22px 0;border-bottom:1px solid var(--border);}
+.topic .n{font-family:var(--f-d);font-size:32px;color:var(--acc);line-height:1;letter-spacing:.04em;}
+.topic h4{font-family:var(--f-d);font-size:20px;letter-spacing:.04em;color:var(--white);margin-bottom:6px;line-height:1.2;}
+.topic p{font-size:14px;color:var(--off);line-height:1.55;}
+
+/* ── QUESTIONS ── */
+.qs{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.q{display:grid;grid-template-columns:48px 1fr;gap:18px;padding:18px 22px;background:var(--card);border:1px solid var(--border);border-radius:8px;align-items:baseline;}
+.q .n{font-family:var(--f-d);font-size:20px;color:var(--acc);letter-spacing:.05em;}
+.q p{font-size:15px;color:var(--off);line-height:1.6;}
+
+/* ── THE AUDIENCE ── */
+.audience-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:72px;align-items:start;}
+.audience-body p{font-size:16px;line-height:1.75;color:var(--off);margin-bottom:18px;}
+.audience-body p:last-child{margin-bottom:0;}
+.audience-portrait{border-radius:8px;overflow:hidden;border:1px solid var(--border);position:relative;}
+.audience-portrait img{width:100%;display:block;object-fit:cover;}
+.audience-portrait .img-cap{padding:14px 18px;font-family:var(--f-d);font-size:10px;letter-spacing:.28em;color:var(--muted);background:var(--card2);border-top:1px solid var(--border);}
+.audience-pills{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0;}
+.a-pill{font-family:var(--f-d);font-size:10px;letter-spacing:.24em;padding:5px 12px;border:1px solid var(--border2);border-radius:999px;color:var(--muted);}
+
+/* ── PHOTOS GRID ── */
+.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.photo{aspect-ratio:1;background:var(--card);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(8,8,8,.55));pointer-events:none;}
+.photo .tag{position:absolute;top:10px;left:12px;font-family:var(--f-d);font-size:9px;letter-spacing:.25em;color:var(--acc);z-index:2;background:rgba(8,8,8,.6);padding:3px 7px;border-radius:2px;}
+.photo .photo-cap{position:absolute;bottom:11px;left:12px;right:12px;font-family:var(--f-d);font-size:10px;letter-spacing:.18em;color:rgba(255,255,255,.75);z-index:2;}
+.photo.wide{grid-column:span 2;aspect-ratio:2/1;}
+
+/* ── ASSETS GRID ── */
+.kit{display:grid;grid-template-columns:2fr 1fr 1fr;gap:24px;}
+.kit .tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:34px 30px;}
+.kit .tile .lbl{font-family:var(--f-d);font-size:11px;letter-spacing:.3em;color:var(--acc);margin-bottom:18px;}
+.logo-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.logo-cell{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:20px;}
+.logo-cell.dk{background:var(--black);border:1px solid var(--border2);}
+.logo-cell.lt{background:#f4f2ee;}
+.logo-cell.ac{background:var(--acc);}
+.logo-cell.card{background:var(--card);border:1px solid var(--border);}
+.logo-cell .t{position:absolute;top:10px;left:12px;font-family:var(--f-d);font-size:9px;letter-spacing:.25em;color:rgba(0,0,0,.4);}
+.logo-cell.dk .t,.logo-cell.ac .t,.logo-cell.card .t{color:rgba(255,255,255,.5);}
+.logo-placeholder{font-family:var(--f-d);font-size:11px;letter-spacing:.25em;color:var(--faint);text-align:center;}
+.dl-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.dl-chip{font-family:var(--f-d);font-size:10px;letter-spacing:.22em;padding:6px 11px;border:1px solid var(--border2);border-radius:3px;color:var(--off);background:transparent;}
+
+.palette{display:flex;flex-direction:column;gap:10px;}
+.sw{display:grid;grid-template-columns:48px 1fr auto;gap:14px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
+.sw .chip{width:48px;height:48px;border-radius:5px;border:1px solid rgba(255,255,255,.1);}
+.sw .nm{font-family:var(--f-d);font-size:13px;letter-spacing:.15em;}
+.sw .hex{font-family:var(--f-b);font-size:11px;color:var(--muted);letter-spacing:.05em;}
+
+.type{display:flex;flex-direction:column;gap:24px;}
+.t-specimen .t-name{font-family:var(--f-d);font-size:11px;letter-spacing:.3em;color:var(--acc);margin-bottom:8px;}
+.t-specimen .t-big-d{font-family:var(--f-d);font-size:46px;line-height:.95;letter-spacing:.02em;}
+.t-specimen .t-big-b{font-family:var(--f-b);font-size:20px;font-weight:300;line-height:1.3;}
+.t-specimen .t-use{font-size:11px;color:var(--muted);margin-top:5px;letter-spacing:.03em;}
+
+/* ── PRESS QUOTES ── */
+.press{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.press .quote{padding:30px;background:var(--card);border:1px solid var(--border);border-radius:10px;position:relative;}
+.press .quote::before{content:"\201C";position:absolute;top:14px;left:18px;font-family:var(--f-d);font-size:64px;color:var(--acc);opacity:.25;line-height:1;}
+.press .quote blockquote{font-family:var(--f-d);font-size:19px;line-height:1.35;letter-spacing:.015em;margin:38px 0 18px;}
+.press .quote cite{font-family:var(--f-d);font-style:normal;font-size:11px;letter-spacing:.28em;color:var(--muted);}
+
+/* ── PARTNERSHIPS ── */
+.partner-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:28px;}
+.partner-cat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:28px 22px;}
+.partner-cat .picon{font-size:22px;margin-bottom:12px;display:block;}
+.partner-cat h4{font-family:var(--f-d);font-size:16px;letter-spacing:.18em;color:var(--white);margin-bottom:10px;}
+.partner-cat ul{list-style:none;display:flex;flex-direction:column;gap:7px;}
+.partner-cat li{font-size:13px;color:var(--off);line-height:1.55;padding-left:18px;position:relative;}
+.partner-cat li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:1px;background:var(--acc);}
+.partner-note{background:var(--acc-dim);border:1px solid var(--acc-rule);border-radius:8px;padding:22px 26px;font-size:14px;line-height:1.68;color:var(--off);}
+.partner-note strong{color:var(--white);font-weight:500;}
+.partner-no{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:22px 26px;margin-top:16px;font-size:14px;line-height:1.68;color:var(--off);}
+.partner-no .lbl{font-family:var(--f-d);font-size:11px;letter-spacing:.28em;color:#E03030;margin-bottom:8px;}
+
+/* ── USAGE NOTE ── */
+.usage{display:grid;grid-template-columns:1fr 1fr;gap:28px;}
+.usage .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:32px;}
+.usage .card .lbl{font-family:var(--f-d);font-size:11px;letter-spacing:.3em;color:var(--acc);margin-bottom:12px;}
+.usage .card h3{font-family:var(--f-d);font-size:24px;letter-spacing:.025em;margin-bottom:16px;line-height:1.15;}
+.usage .card ul{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.usage .card li{font-size:14px;line-height:1.6;color:var(--off);padding-left:20px;position:relative;}
+.usage .card li::before{content:"";position:absolute;left:0;top:10px;width:10px;height:1px;background:var(--acc);}
+.usage .card.dont .lbl{color:#E03030;}
+.usage .card.dont li::before{background:#E03030;}
+
+/* ── CONTACT ── */
+.contact{background:linear-gradient(135deg,#220808 0%,#160404 100%);border:1px solid var(--acc-rule);border-radius:16px;padding:68px 60px;display:grid;grid-template-columns:1.4fr 1fr;gap:52px;align-items:center;}
+.contact h2{font-family:var(--f-d);font-size:52px;line-height:1.05;letter-spacing:.015em;margin-bottom:18px;}
+.contact h2 .acc{color:var(--acc);}
+.contact p{color:var(--off);font-size:16px;margin-bottom:26px;max-width:520px;line-height:1.65;}
+.contact .lines{display:flex;flex-direction:column;gap:0;}
+.contact .lines .row{display:grid;grid-template-columns:110px 1fr;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.07);}
+.contact .lines dt{font-family:var(--f-d);font-size:11px;letter-spacing:.28em;color:var(--muted);}
+.contact .lines dd{font-family:var(--f-d);font-size:16px;letter-spacing:.04em;color:var(--white);}
+
+/* ── FOOTER ── */
+footer{background:var(--dark);padding:52px 48px 44px;border-top:1px solid var(--border);}
+footer .inner{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:end;}
+footer .b{font-family:var(--f-d);font-size:15px;letter-spacing:.28em;}
+footer .b .sub{display:block;font-family:var(--f-b);font-size:11px;letter-spacing:.08em;color:var(--muted);margin-top:5px;text-transform:none;font-weight:300;}
+footer .right{text-align:right;font-size:12px;color:var(--muted);letter-spacing:.04em;line-height:1.8;}
+
+/* ── RESPONSIVE ── */
+@media (max-width:960px){
+  .hero{grid-template-columns:1fr;padding:64px 32px 48px;gap:40px;}
+  .story-grid,.philosophy-grid,.audience-grid,.contact{grid-template-columns:1fr;gap:40px;}
+  .stats .inner{grid-template-columns:1fr 1fr;gap:28px;}
+  .bios,.topics,.kit,.photos,.press,.usage,.partner-grid{grid-template-columns:1fr;}
+  .qs{grid-template-columns:1fr;}
+  .photo.wide{grid-column:span 1;aspect-ratio:1;}
+  .topbar nav{display:none;}
+  section.s{padding:64px 32px;}
+  .topbar .inner,.stats,.contact{padding-left:24px;padding-right:24px;}
+  footer .inner{grid-template-columns:1fr;}
+  footer .right{text-align:left;}
+}
+</style>
 </head>
 <body>
 
-  <nav class="site-nav">
-    <a href="/" class="nav-logo">KRE8<span class="teal">Ω</span>R</a>
-    <ul class="nav-links">
-      <li><a href="#brand-story">Story</a></li>
-      <li><a href="#product">Product</a></li>
-      <li><a href="#case-study">Case Study</a></li>
-      <li><a href="#brand-assets">Brand Assets</a></li>
-      <li><a href="#beta-access">Beta</a></li>
-      <li><a href="#contact">Contact</a></li>
-    </ul>
-  </nav>
-
-  <!-- COVER -->
-  <section id="cover">
-    <div class="cover-wordmark">KRE8<span class="teal">Ω</span>R</div>
-    <div class="cover-sub">AI-NATIVE CONTENT PRODUCTION OS</div>
-    <p class="cover-tagline">Create without limit. Distribute without resistance.</p>
-    <p class="cover-latin">Sine Resistentia</p>
-    <p class="cover-date">Media Kit — April 2026</p>
-    <a href="https://kre8r.app" class="cover-link">kre8r.app</a>
-  </section>
-
-  <!-- BRAND STORY -->
-  <section id="brand-story">
-    <div class="reveal">
-      <div class="section-label">Origin</div>
-      <h2 class="section-heading">The Origin</h2>
-      <div class="divider"></div>
-      <p>Kre8<span class="teal">Ω</span>r was born from a problem without a solution. Jason Rutland, creator of 7 Kin Homestead, was building a life on 3 acres from -$27 when he realized the content tools available to him were built for corporations, not creators. Research took hours. Structure took days. Distribution was a second full-time job. So he built a better system.</p>
-      <p>The name carries the philosophy in every character. KRE comes from Jaffa — the warrior language of the Goa'uld in Stargate — meaning 'Go' or 'Do Something.' The 8 is infinity rotated: boundless, without limit. The <span class="teal">Ω</span> (Omega) is the unit of electrical resistance — and its removal. Sine Resistentia: without resistance. Latin. The name isn't branding. It's a mission statement.</p>
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <div class="inner">
+    <div class="brand">
+      7 KIN HOMESTEAD
+      <span class="tag">MEDIA KIT</span>
     </div>
-  </section>
-
-  <!-- PROBLEM / SOLUTION -->
-  <section id="problem-solution">
-    <div class="reveal">
-      <div class="section-label">The Case for Change</div>
-      <h2 class="section-heading">Problem &amp; Solution</h2>
-      <div class="divider"></div>
-      <div class="two-col">
-        <div class="problem-card">
-          <div class="card-heading">The Problem</div>
-          <ul class="problem-list">
-            <li>80% of creative time is administrative</li>
-            <li>12+ disconnected tools to publish one video</li>
-            <li>No tool connects production to distribution to intelligence</li>
-            <li>Creators quit before year 2 — not from lack of talent, from exhaustion</li>
-          </ul>
-        </div>
-        <div class="solution-card">
-          <div class="card-heading">The Solution</div>
-          <p>A single operating system that takes a creator from raw idea to published video to performance intelligence — with AI handling every step that doesn't require a human.</p>
-        </div>
-      </div>
+    <nav>
+      <a href="#story">Story</a>
+      <a href="#bio">Bio</a>
+      <a href="#topics">Topics</a>
+      <a href="#photos">Photos</a>
+      <a href="#audience">Audience</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="cta">
+      <a class="btn p" href="mailto:press@7kin.com">Book Jason →</a>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- PRODUCT OVERVIEW -->
-  <section id="product">
-    <div class="reveal">
-      <div class="section-label">Product</div>
-      <h2 class="section-heading">The Full Pipeline</h2>
-      <div class="divider"></div>
-      <div class="phase-grid">
+<!-- ── HERO ── -->
+<section style="padding:0;">
+<div class="hero">
+  <div>
+    <div class="eb"><span class="dot"></span>PRESS · PODCAST · PARTNER KIT</div>
+    <h1>OFF-GRID ON<br>A <span class="acc">SHOESTRING</span><br>BUDGET.</h1>
+    <p class="lede">Jason Rutland built a full off-grid homestead — land, house, a $20K solar array for $4,500, and the shop where he teaches — for $45,000 total. Fourteen years. Five kids. No inheritance. He shows people who work for a living how to own land without waiting to be rich.</p>
+    <dl class="meta">
+      <div><dt>BASED IN</dt><dd>RURAL HIGH DESERT, U.S.</dd></div>
+      <div><dt>AVAILABLE FOR</dt><dd>PODCASTS · FEATURES · PANELS</dd></div>
+      <div><dt>BOOK</dt><dd>OFF-GRID ON A SHOESTRING BUDGET</dd></div>
+      <div><dt>COMMUNITY</dt><dd>ROCK RICH COMMUNITY</dd></div>
+    </dl>
+  </div>
+  <div class="hero-portrait">
+    <img src="/media-kit-images/1.jpg" alt="Jason Rutland, founder of 7 Kin Homestead">
+    <span class="corner">PORTRAIT</span>
+    <span class="caption">JASON RUTLAND<span>FOUNDER · 7 KIN HOMESTEAD</span></span>
+  </div>
+</div>
+</section>
 
-        <div class="phase-card plan">
-          <div class="phase-num">PHASE 01</div>
-          <div class="phase-name">Plan</div>
-          <div class="phase-tools">
-            <span>Soul BuildΩr</span> — creator DNA &amp; voice profile<br>
-            <span>Id8Ωr</span> — AI-powered ideation engine<br>
-            <span>PipΩr</span> — story structure &amp; beat mapping
-          </div>
-        </div>
-
-        <div class="phase-card make">
-          <div class="phase-num">PHASE 02</div>
-          <div class="phase-name">Make</div>
-          <div class="phase-tools">
-            <span>WritΩr</span> — scripting in your voice<br>
-            <span>DirectΩr</span> — shot lists &amp; crew briefs<br>
-            <span>ShootDay</span> — day-of checklist<br>
-            <span>TeleprΩmpter</span> — 3-device voice-driven system<br>
-            <span>VaultΩr</span> — footage intelligence database<br>
-            <span>EditΩr</span> — AI selects engine<br>
-            <span>ReviewΩr</span> — rough cut approval<br>
-            <span>ComposΩr</span> — scene analysis &amp; music
-          </div>
-        </div>
-
-        <div class="phase-card distribute">
-          <div class="phase-num">PHASE 03</div>
-          <div class="phase-name">Distribute</div>
-          <div class="phase-tools">
-            <span>GateΩr</span> — community gating<br>
-            <span>PackageΩr</span> — platform packaging<br>
-            <span>CaptionΩr</span> — AI captions per platform<br>
-            <span>MailΩr</span> — broadcast emails &amp; community posts<br>
-            <span>AutomatΩr</span> — scheduled distribution
-          </div>
-        </div>
-
-        <div class="phase-card mirror">
-          <div class="phase-num">INTELLIGENCE</div>
-          <div class="phase-name">MirrΩr</div>
-          <div class="phase-tools">
-            <span>Channel DNA</span> — deep content analysis<br>
-            <span>Constellation View</span> — 3D content universe<br>
-            <span>AI Coaching</span> — pattern-based strategy<br>
-            <span>Cross-Platform Intelligence</span> — unified insight
-          </div>
-        </div>
-
-      </div>
+<!-- ── STATS ── -->
+<div class="stats">
+  <div class="inner">
+    <div class="stat">
+      <div class="n">730K<span class="unit">+</span></div>
+      <div class="l">TIKTOK FOLLOWERS</div>
+      <div class="s">Largest homesteading creator on the platform. Organic, no paid growth.</div>
     </div>
-  </section>
-
-  <!-- CASE STUDY -->
-  <section id="case-study">
-    <div class="reveal">
-      <div class="section-label">Proof of Concept</div>
-      <h2 class="section-heading">7 Kin Homestead</h2>
-      <div class="divider"></div>
-
-      <div class="stats-grid">
-        <div class="stat-cell">
-          <div class="stat-label">Channel</div>
-          <div class="stat-value" style="font-size:22px;">7 Kin Homestead</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Total Views</div>
-          <div class="stat-value highlight">2.2M</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Best Video</div>
-          <div class="stat-value highlight">421K</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Email List</div>
-          <div class="stat-value">4,300</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">TikTok</div>
-          <div class="stat-value highlight">725K</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">YouTube</div>
-          <div class="stat-value">54K</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Lemon8</div>
-          <div class="stat-value">80K</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Paid Community</div>
-          <div class="stat-value" style="font-size:20px;">Rock Rich</div>
-        </div>
-      </div>
-
-      <div class="story-block">
-        <p>Jason built Kre8<span class="teal">Ω</span>r on his own channel first. In Session 18, after analyzing 263 videos through MirrΩr, the AI identified a pattern Jason hadn't consciously named: his audience wasn't coming for homesteading content. They were coming for financial rebellion content dressed in homesteading clothing.</p>
-        <div class="insight">"Financial rebellion channel dressed in homesteading clothing."</div>
-        <p style="margin-top:20px;">That eight-word insight reoriented the entire content strategy. That's what a system built for intelligence does — it sees what the creator can't.</p>
-      </div>
+    <div class="stat">
+      <div class="n">80K</div>
+      <div class="l">LEMON8 FOLLOWERS</div>
+      <div class="s">Fastest-growing platform presence. Community skews highly engaged.</div>
     </div>
-  </section>
-
-  <!-- PHILOSOPHY -->
-  <section id="philosophy">
-    <div class="reveal">
-      <div class="section-label">Philosophy</div>
-      <div class="big-quote">The tool is the support structure. You are the art.</div>
-      <p>Kre8<span class="teal">Ω</span>r exists at the intersection of creative freedom and production discipline. It removes the resistance between having an idea and that idea reaching an audience. Every feature is evaluated against a single question: does this reduce decisions for the creator, or add one? If it adds one — it gets redesigned.</p>
+    <div class="stat">
+      <div class="n">57K</div>
+      <div class="l">YOUTUBE SUBSCRIBERS</div>
+      <div class="s">Long-form builds, walkthroughs, and real cost breakdowns.</div>
     </div>
-  </section>
-
-  <!-- BRAND ASSETS -->
-  <section id="brand-assets">
-    <div class="reveal">
-      <div class="section-label">Identity System</div>
-      <h2 class="section-heading">Brand Assets</h2>
-      <div class="divider"></div>
-
-      <div class="assets-subheading">Color Palette</div>
-      <div class="swatches">
-        <div class="swatch-card">
-          <div class="swatch-color" style="background:#00c2a8;"></div>
-          <div class="swatch-info">
-            <div class="swatch-name">Kre8<span class="teal">Ω</span>r Teal</div>
-            <div class="swatch-hex">#00c2a8</div>
-            <div class="swatch-use">Primary accent, CTAs, <span class="teal">Ω</span> character</div>
-          </div>
-        </div>
-        <div class="swatch-card">
-          <div class="swatch-color" style="background:#0e0f0e; border-bottom:1px solid #2a2e2a;"></div>
-          <div class="swatch-info">
-            <div class="swatch-name">Void</div>
-            <div class="swatch-hex">#0e0f0e</div>
-            <div class="swatch-use">Page background</div>
-          </div>
-        </div>
-        <div class="swatch-card">
-          <div class="swatch-color" style="background:#f0b942;"></div>
-          <div class="swatch-info">
-            <div class="swatch-name">Signal Amber</div>
-            <div class="swatch-hex">#f0b942</div>
-            <div class="swatch-use">Warnings, collaborator badges</div>
-          </div>
-        </div>
-        <div class="swatch-card">
-          <div class="swatch-color" style="background:#e8e8e8;"></div>
-          <div class="swatch-info">
-            <div class="swatch-name">Creator White</div>
-            <div class="swatch-hex">#e8e8e8</div>
-            <div class="swatch-use">Primary text</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="assets-subheading">Typography</div>
-      <div class="type-sample">
-        <div class="type-label">Display — Bebas Neue</div>
-        <div class="type-display">KRE8<span class="teal">Ω</span>R ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789</div>
-      </div>
-      <div class="type-sample">
-        <div class="type-label">Body — System Sans (system-ui)</div>
-        <div class="type-body-sample">The quick brown fox jumps over the lazy dog.</div>
-      </div>
-
-      <div class="assets-subheading" style="margin-top:48px;">Wordmark</div>
-      <div class="wordmark-row">
-        <span class="bebas teal" style="font-size:72px; color:var(--text);">KRE8<span class="teal">Ω</span>R</span>
-        <span class="bebas" style="font-size:48px; color:var(--text);">KRE8<span class="teal">Ω</span>R</span>
-        <span class="bebas" style="font-size:24px; color:var(--text);">KRE8<span class="teal">Ω</span>R</span>
-      </div>
-      <p class="wordmark-note"><span class="teal">Ω</span> (Omega) always renders in Kre8<span class="teal">Ω</span>r Teal (#00c2a8). Never deviate from this rule in any context.</p>
-
-      <div class="assets-subheading" style="margin-top:48px;">Voice Guidelines</div>
-      <div class="voice-grid">
-        <div class="voice-rule">"Straight-talking, warm, never corporate."</div>
-        <div class="voice-rule">"The sharp-tongued neighbor talking over a fence."</div>
-        <div class="voice-rule">"Goes off-script — those moments are frequently better."</div>
-        <div class="voice-rule">"No jargon. No fluff. Real numbers, real results."</div>
-      </div>
+    <div class="stat">
+      <div class="n">$45K</div>
+      <div class="l">TOTAL HOMESTEAD SPEND</div>
+      <div class="s">Land, house, solar array, and shop. Full receipts on request.</div>
     </div>
-  </section>
-
-  <!-- BETA ACCESS -->
-  <section id="beta-access">
-    <div class="reveal">
-      <div class="beta-card">
-        <div class="section-label" style="margin-bottom:16px;">Private Beta</div>
-        <h2 class="bebas" style="font-size:48px; margin-bottom:24px;">Join the Beta</h2>
-        <p>Kre8<span class="teal">Ω</span>r is currently in private beta. We are onboarding serious creators who treat content like a business.</p>
-        <a href="/landing.html#beta" class="btn-primary">Request Beta Access</a>
-      </div>
+    <div class="stat">
+      <div class="n">14<span class="unit">YR</span></div>
+      <div class="l">LIVING FULL-TIME OFF-GRID</div>
+      <div class="s">Not a weekend homesteader. Fourteen years, continuous, full-time.</div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- CONTACT -->
-  <section id="contact">
-    <div class="reveal">
-      <div class="section-label">Get in Touch</div>
-      <h2 class="section-heading">Contact</h2>
-      <div class="divider" style="margin:0 auto 32px;"></div>
-      <p>For media inquiries, partnership discussions, or beta access:</p>
-      <div class="contact-links">
-        <div class="contact-item">
-          <div class="contact-item-label">Email</div>
-          <a href="mailto:hello@kre8r.app">hello@kre8r.app</a>
+<!-- ── THE STORY ── -->
+<section class="s" id="story">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">01 · THE STORY</span>
+        <h2>STARTED WITH<br><span class="acc">$300.</span></h2>
+      </div>
+      <p class="kicker">Not a retreat from a bad career. Not a lifestyle experiment. A conviction, two babies, and a 22-foot trailer.</p>
+    </div>
+
+    <div class="story-grid">
+      <div class="story-body">
+        <p>Jason grew up in California watching his father — an electrician — build things with his hands and get paid for what he could do, not what he had. That part stuck. The path home didn't include land.</p>
+
+        <p>He moved to rural high desert with his wife Cari, two babies, $300, and a 22-foot trailer. No backup plan. No land. No mentor who had done this before. The trailer was home base while they figured the rest out.</p>
+
+        <div class="story-pullquote">
+          <p>"I treated it like a trade, not a dream. Trades have steps. Dreams have vibes."</p>
         </div>
-        <div class="contact-item">
-          <div class="contact-item-label">Web</div>
-          <a href="https://kre8r.app">kre8r.app</a>
+
+        <p>The first property came through a deal most buyers would have walked away from. The seller needed out fast. Jason had no cash — but he had time, skills, and a particular kind of stubbornness. He built a bathroom for $200 using materials he sourced and bartered. He wired his own solar array instead of paying the $20,000 installer quote — total cost: $4,500. He moved rocks by hand, laid pipe, poured concrete, and built a shop where he now teaches thousands of others to do the same.</p>
+
+        <p>Fourteen years later: five kids. A full off-grid homestead. A total lifetime spend of $45,000 — land, house, solar, and shop all included. Monthly bills: $212.</p>
+      </div>
+      <div>
+        <div class="story-img">
+          <img src="/media-kit-images/7.jpg" alt="Jason rigging equipment on the rocky homestead, mountain backdrop">
+          <div class="img-cap">ROCKY RIDGE · YEAR TWO · HIGH DESERT</div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- FOOTER -->
-  <footer>
-    <div class="footer-wordmark">KRE8<span class="teal">Ω</span>R</div>
-    <div class="footer-latin">Sine Resistentia</div>
-    <div class="footer-copy">&copy; 2026 Kre8<span class="teal">Ω</span>r. All rights reserved.</div>
-  </footer>
+<!-- ── ROCK RICH PHILOSOPHY ── -->
+<section class="s alt" id="philosophy">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">02 · THE PHILOSOPHY</span>
+        <h2>WHAT ROCK <span class="acc">RICH MEANS.</span></h2>
+      </div>
+      <p class="kicker">The name started as a joke. The property was basically just rocks. It became something more.</p>
+    </div>
 
-  <script>
-    // Scroll reveal
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.08 });
+    <div class="philosophy-grid">
+      <div>
+        <div class="philosophy-img">
+          <img src="/media-kit-images/3.jpg" alt="Jason holding a rock on the homestead, pointing to camera, high desert background">
+          <div class="img-cap">THE ORIGINAL ASSETS · "WE'RE ROCK RICH"</div>
+        </div>
+      </div>
+      <div class="philosophy-content">
+        <div class="philosophy-pill">ROCK RICH</div>
+        <div class="philosophy-quote">
+          <blockquote>"Rock Rich is getting everything you want out of life with very little. It's not about being broke. It's about realizing that most of what the world calls a problem, you can solve with your hands."</blockquote>
+        </div>
+        <div class="philosophy-body">
+          <p>When Jason first broke ground, the land was mostly rocks. Dense, immovable, inconvenient rocks — the kind that make conventional agriculture impossible and most buyers walk away. He and Cari made a joke about it: "At least we're Rock Rich." And the joke became the framework.</p>
+          <p>Rock Rich isn't poverty mindset. It's the opposite — it's the recognition that resourcefulness is a superpower most people never develop because they keep trying to solve problems with money before they've tried solving them with skill, time, and creativity.</p>
+          <p>The Rock Rich Community applies that framework to land ownership, off-grid living, and financial independence. It teaches the numbers, the legal moves, and the sequencing that separates people who dream about land from people who stand on it. The community reached 500+ members in its first three weeks.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-  </script>
+<!-- ── BIO ── -->
+<section class="s" id="bio">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">03 · ABOUT</span>
+        <h2>BIOS — <span class="acc">SHORT,<br>MEDIUM, LONG.</span></h2>
+      </div>
+      <p class="kicker">Drop-in copy for show notes, press releases, and event programs. Click to copy to clipboard.</p>
+    </div>
 
+    <div class="bios">
+      <div class="bio">
+        <div class="lbl">SHORT BIO</div>
+        <div class="wc">50 WORDS</div>
+        <p>Jason Rutland is the founder of 7 Kin Homestead and the author of <em>Off-Grid on a Shoestring Budget</em>. For 14 years he has lived and taught off-grid — building a full homestead, including a DIY solar array, for $45,000 all-in. He helps working-class families own land without going broke.</p>
+        <button class="copy-btn" data-copy="short">COPY</button>
+      </div>
+      <div class="bio">
+        <div class="lbl">MEDIUM BIO</div>
+        <div class="wc">150 WORDS</div>
+        <p>Jason Rutland spent 14 years proving a thesis most people don't believe: that a working-class family can own land, build a house, and live off-grid on a shoestring. He did it on $45,000 — total. That figure includes the land, the house, a 20-kilowatt-equivalent solar array he wired himself for $4,500 when installers quoted $20,000, and the shop where he now teaches.</p>
+        <p>Today, his 7 Kin Homestead reaches 730,000 people on TikTok, 80,000 on Lemon8, and 57,000 on YouTube. His book <em>Off-Grid on a Shoestring Budget</em> and the Rock Rich Community make up a step-by-step curriculum for people who refuse to wait until they're rich enough to be free.</p>
+        <button class="copy-btn" data-copy="medium">COPY</button>
+      </div>
+      <div class="bio">
+        <div class="lbl">LONG BIO</div>
+        <div class="wc">300 WORDS</div>
+        <p>Jason Rutland didn't inherit land. He didn't win the lottery, and he didn't sell a startup. He started 7 Kin Homestead 14 years ago with $300, a 22-foot trailer, and a conviction — that ordinary people, on ordinary paychecks, can own land and live off-grid if they approach it like a trade and not like a dream.</p>
+        <p>The first property came through a deal most buyers would have passed on. The seller needed out. Jason had no cash — but he had time, trades, and the kind of stubbornness that turns problems into plans. He built a bathroom for $200 from bartered materials. He wired his own solar array for $4,500 instead of the $20,000 installer quote. He built the house, the shop, and moved enough rocks by hand to earn the name he ended up giving his community: Rock Rich.</p>
+        <p>His work now reaches 730,000 followers on TikTok, 80,000 on Lemon8, and 57,000 subscribers on YouTube. He is the author of <em>Off-Grid on a Shoestring Budget</em> and the founder of the Rock Rich Community — a members' space that grew to 500+ in its first three weeks, where he teaches the numbers, the legal moves, and the sequencing that separates people who dream of the land from people who stand on it.</p>
+        <p>In the background, he also builds AI-powered content tools and household coordination systems from scratch — with no prior coding experience — because building things yourself is the only approach he trusts.</p>
+        <button class="copy-btn" data-copy="long">COPY</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── INTERVIEW TOPICS ── -->
+<section class="s alt" id="topics">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">04 · INTERVIEW TOPICS</span>
+        <h2>WHAT TO ASK <span class="acc">JASON ABOUT.</span></h2>
+      </div>
+      <p class="kicker">Eight angles that open strong segments for both general and homesteading audiences.</p>
+    </div>
+
+    <div class="topics">
+      <div class="topic"><div class="n">01</div><div><h4>$45,000 over 14 years</h4><p>The actual line-items of a full off-grid homestead — land, house, solar, shop — broken down with zero fluff and full receipts available on request.</p></div></div>
+      <div class="topic"><div class="n">02</div><div><h4>The $4,500 solar array</h4><p>Installers quoted $20,000. Jason sourced the components, ran the wire himself, and built a 20-kilowatt-equivalent array for $4,500. What they don't tell you.</p></div></div>
+      <div class="topic"><div class="n">03</div><div><h4>The $200 bathroom</h4><p>How trades, barter, and creative sourcing replaced a budget Jason didn't have. A case study in treating time and skill as currency when cash isn't available.</p></div></div>
+      <div class="topic"><div class="n">04</div><div><h4>The Freedom Number</h4><p>How to calculate your personal off-grid escape number — the exact monthly cost to live free — and reverse-engineer the path to get there from where you are now.</p></div></div>
+      <div class="topic"><div class="n">05</div><div><h4>Off-grid land acquisition lanes</h4><p>Owner-financed, tax-forfeiture, and landowner-partnership paths that most buyers never hear about. The ones that work when you don't have a down payment.</p></div></div>
+      <div class="topic"><div class="n">06</div><div><h4>The "shoestring" mindset</h4><p>Why the constraint is the curriculum — and why most homestead failures aren't skill failures. They're budget-planning failures that never had to happen.</p></div></div>
+      <div class="topic"><div class="n">07</div><div><h4>Working-class off-grid</h4><p>Making the life reachable for people who can't quit their job. Sequencing the build around paycheck life so you don't have to choose between starting and surviving.</p></div></div>
+      <div class="topic"><div class="n">08</div><div><h4>Building an audience from the land</h4><p>From $300 and a strong thesis to 730K TikTok followers — what actually travels in the homesteading niche, and why authentic beats aspirational every time.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SUGGESTED QUESTIONS ── -->
+<section class="s" id="questions">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">05 · SUGGESTED QUESTIONS</span>
+        <h2>FOR HOSTS <span class="acc">IN A HURRY.</span></h2>
+      </div>
+      <p class="kicker">Ten plug-and-play questions that open strong segments and leave room to go deeper.</p>
+    </div>
+
+    <div class="qs">
+      <div class="q"><div class="n">Q1</div><p>Your solar array cost $4,500. Installers quoted you $20,000. Walk us through how that's actually possible.</p></div>
+      <div class="q"><div class="n">Q2</div><p>You built a bathroom for $200. What does a $200 bathroom look like, and how does that math work?</p></div>
+      <div class="q"><div class="n">Q3</div><p>You've been off-grid for 14 years and your current monthly bills are $212. What's on that bill?</p></div>
+      <div class="q"><div class="n">Q4</div><p>What's the "Freedom Number," and how does someone calculate theirs tonight?</p></div>
+      <div class="q"><div class="n">Q5</div><p>What's the first real land acquisition move for someone who has $3,000 saved and a full-time job they can't quit yet?</p></div>
+      <div class="q"><div class="n">Q6</div><p>A lot of homesteading content is aspirational. Yours is line-item. Why that choice?</p></div>
+      <div class="q"><div class="n">Q7</div><p>You started with $300 and a 22-foot trailer. What did week one actually look like?</p></div>
+      <div class="q"><div class="n">Q8</div><p>What's the most common reason someone quits their off-grid build in the first two years?</p></div>
+      <div class="q"><div class="n">Q9</div><p>You have 730,000 TikTok followers in the homesteading space. What surprised you about which content traveled?</p></div>
+      <div class="q"><div class="n">Q10</div><p>If someone listening wants to own land inside 24 months, what's the exercise you'd give them to do tonight?</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── THE AUDIENCE ── -->
+<section class="s alt" id="audience">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">06 · THE AUDIENCE</span>
+        <h2>WHO <span class="acc">SHOWS UP.</span></h2>
+      </div>
+      <p class="kicker">Written from Jason's perspective — because these are people he made a commitment to, not a demographic to sell to.</p>
+    </div>
+
+    <div class="audience-grid">
+      <div class="audience-body">
+        <p>The people who show up for 7 Kin Homestead aren't looking for a lifestyle blog. They've had enough inspiration. They're looking for proof.</p>
+
+        <p>They work. Most of them are somewhere in the paycheck-to-paycheck stretch — not because they made bad choices, but because the system they were handed was designed that way. They grew up watching land ownership, financial independence, and a life built on their own terms get pushed further out of reach with every passing year. They've been told it's not realistic. That it's for other people.</p>
+
+        <p>They find 7 Kin because Jason shows his receipts. Every line-item. Every mistake. The actual cost of the solar array, the actual process of the land deal, the actual number on the bathroom tile. They stay because nothing Jason says requires them to first become someone they're not.</p>
+
+        <div class="audience-pills">
+          <span class="a-pill">AGES 28–45</span>
+          <span class="a-pill">TRADES · HEALTHCARE · AGRICULTURE</span>
+          <span class="a-pill">WORKING CLASS &amp; WORKING TOWARD</span>
+          <span class="a-pill">DISTRUST SYSTEM · NOT HOPELESS</span>
+          <span class="a-pill">WANT PROOF, NOT INSPIRATION</span>
+          <span class="a-pill">ALREADY MOVING OR JUST STARTING TO BELIEVE</span>
+        </div>
+
+        <p>They range from people already moving toward land to people who are just beginning to believe it might be possible for someone like them. They watch to confirm a suspicion they've always had — that with the right information, someone without a head start could actually do this.</p>
+
+        <p>That's the commitment 7 Kin Homestead made fourteen years ago. It hasn't changed.</p>
+      </div>
+      <div>
+        <div class="audience-portrait">
+          <img src="/media-kit-images/11.jpg" alt="Jason standing with arms wide in front of the full DIY solar array">
+          <div class="img-cap">THE $4,500 SOLAR ARRAY · BUILT BY HAND</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PHOTOGRAPHY ── -->
+<section class="s" id="photos">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">07 · PHOTOGRAPHY</span>
+        <h2>IMAGES FOR <span class="acc">FEATURES.</span></h2>
+      </div>
+      <p class="kicker">Hi-res versions available on request via press@7kin.com. All images cleared for editorial use in features covering 7 Kin Homestead.</p>
+    </div>
+
+    <div class="photos">
+      <!-- Row 1 -->
+      <div class="photo wide">
+        <img src="/media-kit-images/7.jpg" alt="Jason rigging chain and tripod on rocky homestead land, epic mountain backdrop">
+        <span class="tag">HERO · HOMESTEAD</span>
+        <span class="photo-cap">ROCKY RIDGE · HIGH DESERT</span>
+      </div>
+      <div class="photo">
+        <img src="/media-kit-images/1.jpg" alt="Jason Rutland portrait, overalls and knit cap, warm smile">
+        <span class="tag">PORTRAIT · JASON</span>
+        <span class="photo-cap">FOUNDER HEADSHOT</span>
+      </div>
+      <div class="photo">
+        <img src="/media-kit-images/11.jpg" alt="Jason with arms open wide in front of the large DIY solar array">
+        <span class="tag">DIY SOLAR</span>
+        <span class="photo-cap">THE $4,500 ARRAY</span>
+      </div>
+      <!-- Row 2 -->
+      <div class="photo">
+        <img src="/media-kit-images/6.jpg" alt="Jason welding with bright sparks flying in the homestead shop">
+        <span class="tag">THE SHOP</span>
+        <span class="photo-cap">WELDING THE SOLAR MOUNTS</span>
+      </div>
+      <div class="photo">
+        <img src="/media-kit-images/2.jpg" alt="Jason with three of his kids at a new wooden structure on the homestead">
+        <span class="tag">FAMILY</span>
+        <span class="photo-cap">FIVE KIDS · ONE HOMESTEAD</span>
+      </div>
+      <div class="photo">
+        <img src="/media-kit-images/9.jpg" alt="Jason shoveling snow in winter on the off-grid homestead">
+        <span class="tag">YEAR-ROUND</span>
+        <span class="photo-cap">FULL-TIME · ALL SEASONS</span>
+      </div>
+      <div class="photo">
+        <img src="/media-kit-images/15.jpg" alt="Jason leaning out of a log cabin doorway, new bathroom addition">
+        <span class="tag">THE HOUSE</span>
+        <span class="photo-cap">LOG CABIN · NEW ADDITION</span>
+      </div>
+      <!-- Row 3 -->
+      <div class="photo wide">
+        <img src="/media-kit-images/8.jpg" alt="Jason with arms wide open in front of greenhouse with mountain range behind him">
+        <span class="tag">LIFESTYLE · WIDE</span>
+        <span class="photo-cap">THE GREENHOUSE · HIGH DESERT RANGE</span>
+      </div>
+      <div class="photo">
+        <img src="/media-kit-images/4.jpg" alt="Jason working on plumbing and pump infrastructure on the homestead">
+        <span class="tag">INFRASTRUCTURE</span>
+        <span class="photo-cap">WATER SYSTEM BUILD</span>
+      </div>
+      <div class="photo">
+        <img src="/media-kit-images/14.jpg" alt="Jason carrying hay to the chicken coop on the homestead">
+        <span class="tag">DAILY LIFE</span>
+        <span class="photo-cap">MORNING ROUNDS</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── BRAND ASSETS ── -->
+<section class="s alt" id="brand">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">08 · BRAND ASSETS</span>
+        <h2>LOGOS, COLORS, <span class="acc">TYPE.</span></h2>
+      </div>
+      <p class="kicker">Full asset pack available on request via press@7kin.com. Do not recolor, distort, or add effects to the mark.</p>
+    </div>
+
+    <div class="kit">
+      <div class="tile">
+        <div class="lbl">LOGO · 4 VARIANTS</div>
+        <div class="logo-row">
+          <div class="logo-cell dk"><span class="t">PRIMARY · DARK BG</span><span class="logo-placeholder">LOGO PNG</span></div>
+          <div class="logo-cell lt"><span class="t" style="color:rgba(0,0,0,.4)">PRIMARY · LIGHT BG</span><span class="logo-placeholder" style="color:rgba(0,0,0,.25)">LOGO PNG</span></div>
+          <div class="logo-cell card"><span class="t">ON · CARD</span><span class="logo-placeholder">LOGO SVG</span></div>
+          <div class="logo-cell ac"><span class="t">ON · ACCENT</span><span class="logo-placeholder">REVERSE</span></div>
+        </div>
+        <div class="dl-row">
+          <span class="dl-chip">PNG</span>
+          <span class="dl-chip">SVG</span>
+          <span class="dl-chip">TRANSPARENT</span>
+          <span class="dl-chip">FAVICON</span>
+        </div>
+      </div>
+      <div class="tile">
+        <div class="lbl">COLORS</div>
+        <div class="palette">
+          <div class="sw"><div class="chip" style="background:#080808;"></div><div class="nm">BLACK</div><div class="hex">#080808</div></div>
+          <div class="sw"><div class="chip" style="background:#E03030;"></div><div class="nm">7 KIN RED</div><div class="hex">#E03030</div></div>
+          <div class="sw"><div class="chip" style="background:#fff;border:1px solid #333;"></div><div class="nm">WHITE</div><div class="hex">#FFFFFF</div></div>
+          <div class="sw"><div class="chip" style="background:#161616;"></div><div class="nm">CARD</div><div class="hex">#161616</div></div>
+        </div>
+      </div>
+      <div class="tile">
+        <div class="lbl">TYPE</div>
+        <div class="type">
+          <div class="t-specimen">
+            <div class="t-name">DISPLAY</div>
+            <div class="t-big-d">BEBAS NEUE</div>
+            <div class="t-use">Headlines · eyebrows · numerals · buttons</div>
+          </div>
+          <div class="t-specimen">
+            <div class="t-name">BODY</div>
+            <div class="t-big-b">DM Sans 300</div>
+            <div class="t-use">All body copy · fine print · captions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── IN THEIR WORDS ── -->
+<section class="s">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">09 · IN THEIR WORDS</span>
+        <h2>WHAT MEMBERS <span class="acc">SAY.</span></h2>
+      </div>
+      <p class="kicker">From the Rock Rich Community and the comment sections. The recurring theme: receipts.</p>
+    </div>
+
+    <div class="press">
+      <div class="quote"><blockquote>He broke down every single line-item. I stopped guessing and started buying.</blockquote><cite>— ROCK RICH MEMBER</cite></div>
+      <div class="quote"><blockquote>The only homestead teacher I've found who actually shows you the receipts instead of just the results.</blockquote><cite>— YOUTUBE SUBSCRIBER</cite></div>
+      <div class="quote"><blockquote>Every episode makes me feel like owning land is actually possible for someone like me.</blockquote><cite>— TIKTOK FOLLOWER</cite></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PARTNERSHIPS ── -->
+<section class="s alt" id="partnerships">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">10 · PARTNERSHIPS</span>
+        <h2>WHAT WORKS <span class="acc">WITH 7 KIN.</span></h2>
+      </div>
+      <p class="kicker">The audience trusts Jason because he has never sold them something he wouldn't use himself. That standard applies to every partnership.</p>
+    </div>
+
+    <div class="partner-grid">
+      <div class="partner-cat">
+        <span class="picon">⚡</span>
+        <h4>Off-Grid Energy</h4>
+        <ul>
+          <li>Solar components, inverters, charge controllers</li>
+          <li>Battery systems and energy storage</li>
+          <li>Off-grid monitoring and automation</li>
+          <li>Generator alternatives and backup power</li>
+        </ul>
+      </div>
+      <div class="partner-cat">
+        <span class="picon">🔧</span>
+        <h4>Tools &amp; Building</h4>
+        <ul>
+          <li>Hand tools, power tools, welding equipment</li>
+          <li>Construction and building materials</li>
+          <li>Fencing, livestock, and agricultural equipment</li>
+          <li>Water systems and plumbing supplies</li>
+        </ul>
+      </div>
+      <div class="partner-cat">
+        <span class="picon">🌱</span>
+        <h4>Land &amp; Homestead</h4>
+        <ul>
+          <li>Seeds, soil, and greenhouse supplies</li>
+          <li>Food preservation and long-term storage</li>
+          <li>Rural internet and off-grid communications</li>
+          <li>Preparedness and self-sufficiency brands</li>
+        </ul>
+      </div>
+      <div class="partner-cat">
+        <span class="picon">💰</span>
+        <h4>Financial Freedom</h4>
+        <ul>
+          <li>Alternative banking and credit unions</li>
+          <li>Land purchasing and rural mortgage alternatives</li>
+          <li>Debt payoff and financial education platforms</li>
+          <li>Passive income and rural business tools</li>
+        </ul>
+      </div>
+      <div class="partner-cat">
+        <span class="picon">👕</span>
+        <h4>Apparel &amp; Gear</h4>
+        <ul>
+          <li>Work and outdoor clothing built for actual work</li>
+          <li>Footwear rated for field and shop conditions</li>
+          <li>Safety and protective gear</li>
+          <li>Functional, not fashion-forward</li>
+        </ul>
+      </div>
+      <div class="partner-cat">
+        <span class="picon">📚</span>
+        <h4>Education &amp; Books</h4>
+        <ul>
+          <li>Trade skill courses and certifications</li>
+          <li>Rural law, land rights, and property resources</li>
+          <li>Personal finance and alternative economics</li>
+          <li>Homestead-relevant technical reference</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="partner-note">
+      <strong>How partnerships work at 7 Kin:</strong> Jason integrates brand partnerships the same way he documents everything else — with receipts. If a product lives on the homestead and earns its place, it shows up in context: in a build, a walkthrough, or a cost breakdown. If it doesn't hold up to what he'd tell a neighbor over a fence, it doesn't appear. High specificity, low volume. The audience notices the difference.
+    </div>
+    <div class="partner-no">
+      <div class="lbl">DOESN'T FIT</div>
+      Luxury lifestyle brands · products that require the audience to already be wealthy · anything that contradicts the core message of resourcefulness and independence · financial speculation products · anything Jason hasn't personally used and verified on the homestead.
+    </div>
+  </div>
+</section>
+
+<!-- ── USAGE DO/DON'T ── -->
+<section class="s">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="num">11 · USAGE</span>
+        <h2>DO &amp; <span class="acc">DON'T.</span></h2>
+      </div>
+      <p class="kicker">Covering or featuring 7 Kin? Keep these in mind.</p>
+    </div>
+
+    <div class="usage">
+      <div class="card">
+        <div class="lbl">DO</div>
+        <h3>PERMITTED USES</h3>
+        <ul>
+          <li>Use photography in articles, episodes, or features covering 7 Kin or Jason Rutland.</li>
+          <li>Quote any bio verbatim, or shorten to fit show notes or program copy.</li>
+          <li>Reference stats as of this kit date; confirm with press@7kin.com for anything older than 90 days.</li>
+          <li>Link back to 7kinhomestead.com or relevant product pages.</li>
+          <li>Reference the "$45,000 total homestead" figure — it includes land, house, solar, and shop. Receipts PDF available on request.</li>
+        </ul>
+      </div>
+      <div class="card dont">
+        <div class="lbl">PLEASE AVOID</div>
+        <h3>DON'T</h3>
+        <ul>
+          <li>Describe Jason's solar array as a "$20K solar" — the quoted price was $20K; the actual build cost was $4,500.</li>
+          <li>Recolor, stretch, or distort the logo. Use one of the four provided variants.</li>
+          <li>Use the logo to imply sponsorship, endorsement, or partnership without written approval.</li>
+          <li>Repackage and resell the photography outside of editorial context.</li>
+          <li>Add effects — drop shadows, glows, gradients — to the mark.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CONTACT ── -->
+<section class="s alt" id="contact">
+  <div class="wrap">
+    <div class="contact">
+      <div>
+        <h2>BOOK. FEATURE. <span class="acc">PARTNER.</span></h2>
+        <p>For interview bookings, media features, and partnership inquiries, use the dedicated press address below. Response within two business days.</p>
+        <a class="btn p" href="mailto:press@7kin.com">Email Press Desk →</a>
+      </div>
+      <dl class="lines">
+        <div class="row"><dt>PRESS</dt><dd>press@7kin.com</dd></div>
+        <div class="row"><dt>TIKTOK</dt><dd>@7kinhomestead</dd></div>
+        <div class="row"><dt>LEMON8</dt><dd>@7kinhomestead</dd></div>
+        <div class="row"><dt>YOUTUBE</dt><dd>7 Kin Homestead</dd></div>
+        <div class="row"><dt>WEB</dt><dd>7kinhomestead.com</dd></div>
+        <div class="row"><dt>BOOK</dt><dd>Off-Grid on a Shoestring Budget</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="inner">
+    <div>
+      <div class="b">7 KIN HOMESTEAD<span class="sub">Off-Grid Education &amp; Community</span></div>
+    </div>
+    <div class="right">
+      MEDIA KIT · REV. APR 2026<br>
+      Stats update monthly · Confirm figures older than 90 days via press@7kin.com<br>
+      © 7 Kin Homestead. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<!-- ── BIO COPY DATA ── -->
+<script type="application/json" id="bio-copy">
+{
+  "short": "Jason Rutland is the founder of 7 Kin Homestead and the author of Off-Grid on a Shoestring Budget. For 14 years he has lived and taught off-grid — building a full homestead, including a DIY solar array, for $45,000 all-in. He helps working-class families own land without going broke.",
+  "medium": "Jason Rutland spent 14 years proving a thesis most people don't believe: that a working-class family can own land, build a house, and live off-grid on a shoestring. He did it on $45,000 — total. That figure includes the land, the house, a 20-kilowatt-equivalent solar array he wired himself for $4,500 when installers quoted $20,000, and the shop where he now teaches.\n\nToday, his 7 Kin Homestead reaches 730,000 people on TikTok, 80,000 on Lemon8, and 57,000 on YouTube. His book Off-Grid on a Shoestring Budget and the Rock Rich Community make up a step-by-step curriculum for people who refuse to wait until they're rich enough to be free.",
+  "long": "Jason Rutland didn't inherit land. He didn't win the lottery, and he didn't sell a startup. He started 7 Kin Homestead 14 years ago with $300, a 22-foot trailer, and a conviction — that ordinary people, on ordinary paychecks, can own land and live off-grid if they approach it like a trade and not like a dream.\n\nThe first property came through a deal most buyers would have passed on. The seller needed out. Jason had no cash — but he had time, trades, and the kind of stubbornness that turns problems into plans. He built a bathroom for $200 from bartered materials. He wired his own solar array for $4,500 instead of the $20,000 installer quote. He built the house, the shop, and moved enough rocks by hand to earn the name he ended up giving his community: Rock Rich.\n\nHis work now reaches 730,000 followers on TikTok, 80,000 on Lemon8, and 57,000 subscribers on YouTube. He is the author of Off-Grid on a Shoestring Budget and the founder of the Rock Rich Community — a members' space that grew to 500+ in its first three weeks, where he teaches the numbers, the legal moves, and the sequencing that separates people who dream of the land from people who stand on it.\n\nIn the background, he also builds AI-powered content tools and household coordination systems from scratch — with no prior coding experience — because building things yourself is the only approach he trusts."
+}
+</script>
+
+<script>
+const bios = JSON.parse(document.getElementById('bio-copy').textContent);
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const key = btn.dataset.copy;
+    try {
+      await navigator.clipboard.writeText(bios[key]);
+      const orig = btn.textContent;
+      btn.textContent = 'COPIED ✓';
+      btn.classList.add('done');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('done'); }, 1800);
+    } catch(e) {
+      btn.textContent = 'SELECT + COPY MANUALLY';
+    }
+  });
+});
+</script>
 </body>
 </html>
