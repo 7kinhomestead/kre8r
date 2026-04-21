@@ -352,6 +352,8 @@ app.use((req, res, next) => {
   // GuardΩr — public fan-facing pages, no auth
   if (req.path.startsWith('/guard/') || req.path === '/guard') return next();
   if (req.path.startsWith('/api/guard/')) return next();
+  // OrgΩr bridge — internal key auth handled inside the route, no session needed
+  if (req.path === '/api/stats-export') return next();
 
   // Logged in — allow
   if (req.session?.userId) return next();
@@ -521,6 +523,7 @@ app.use('/api/markr',             require('./src/routes/markr'));
 app.use('/api/guard',             require('./src/routes/guard'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 app.use('/api/vectr',             require('./src/routes/vectr'));
+app.use('/api/stats-export',      require('./src/routes/stats-export'));
 
 // PostΩr queue processor — starts 60s interval to fire scheduled posts
 require('./src/postor/queue-processor').start();
