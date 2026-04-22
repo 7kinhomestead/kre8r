@@ -42,6 +42,67 @@ all work perfectly on web — only post-production and hardware-adjacent feature
 
 ## NEXT SESSION — Top Tasks
 
+### 1. Bridge End-to-End Test + DigitalOcean Deploy (Session 57)
+
+**Test the bridge locally first:**
+- Restart Kre8r Electron app (to pick up new `stats-export` route + `INTERNAL_API_KEY` env var)
+- Open OrgΩr board at http://localhost:3002/board?org=1
+- Click `🔗 KRE8R` → panel opens, hit SYNC NOW
+- Confirm snapshot stored, available keys list populates
+- Map 2-3 stats to divisions (e.g. `videos_published_this_month` → Production,
+  `days_since_last_publish` → Distribution, `pipeline_in_production` → Production)
+- Verify stat badges appear on division headers in the board
+- Confirm MAPPED tab shows mappings with latest values
+
+**Then deploy Kre8r to DigitalOcean** (media kit fixes + stats-export route are both undeployed):
+```
+cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master
+sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
+```
+Also add `INTERNAL_API_KEY` to the DO `.env` if OrgΩr will eventually run there.
+
+---
+
+### 2. Claude "Posted Employee" Chat per Job Card — OrgΩr (Session 57 or 58)
+
+Phase 2 of the bridge. Each job card in OrgΩr gets a Claude chat that:
+- Has full context: the job's title, purpose, VFP, policies, and all Kre8r stats mapped to that division
+- Acts as the "posted employee" — answers questions about what's happening in their area,
+  surfaces problems from the data, suggests actions
+- Uses OrgΩr's existing Claude route pattern (claude-assist.js)
+- UI: small `🤖 ASK` button on each job card → opens a chat modal pre-loaded with job context
+  + latest Kre8r bridge snapshot for that division
+- Zero new tables needed — reads from existing jobs, policies, stats, stat_reports
+
+**Implementation notes:**
+- Pull job context: `GET /api/jobs/:id` (title, purpose, vfp, exchange_description)
+- Pull division stats: `GET /api/kre8r-bridge/mappings/:orgId` filtered by division_id
+- System prompt: "You are the posted employee for [title]. Your VFP is [vfp]. 
+  Current stats in your area: [stats]. Your policies: [policy titles]."
+- This is the most impactful feature after the bridge — it makes the org chart interactive
+
+---
+
+### 3. OrgΩr + KinOS Auth (Security — Before Any Team Access)
+
+Both apps are unprotected. Brooklynn and Cari access means auth must exist first.
+
+**OrgΩr auth (same pattern as Kre8r — already battle-tested):**
+- Copy Kre8r's auth middleware pattern: `express-session` + `better-sqlite3` session store
+- `users` table (username, password_hash, role), `sessions` table
+- `/login` page (match OrgΩr dark theme)
+- Seed owner from `ORGBOARD_OWNER_PW` env var on first run
+- Viewer role: read-only (no edit/delete). Owner: full access.
+- Whitelist: `/login`, `/api/health`
+
+**KinOS auth (kinos.life — currently open to the internet):**
+- Same pattern. Family roles: owner (Jason/Cari), member (kids — limited view)
+- This is a security vulnerability — prioritize before adding any external device to the LAN
+
+**Scope:** ~2 hours for OrgΩr auth alone. KinOS is a separate session.
+
+---
+
 ### ~~0. VectΩr — Weekly Strategic Session (NorthΩr slide-out panel)~~ ✅ DONE Session 55
 Full build: backend (vectr.js, strategic_briefs table, kv_store session/cache), frontend
 (amber slide-out panel in NorthΩr, sync phase, SSE chat, lock brief modal), active brief

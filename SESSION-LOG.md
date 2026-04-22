@@ -1,3 +1,130 @@
+# Session 56 — Media Kit Fixes + Kre8r↔OrgΩr Bridge (2026-04-22)
+
+## Goal
+Fix media kit visual issues (hero text clipping, portrait headshot swap, logo cell overflow).
+Build a permanent live API bridge between Kre8r and OrgΩr so all Kre8r business metrics
+report into the org board with customizable stat mappings per division.
+
+## What Was Built
+
+### Media Kit Fixes (`public/media-kit.html` + `public/media-kit-kajabi.html`)
+Three visual issues fixed:
+
+**Hero text left-clipping:**
+- Root cause: `html` element wasn't getting `overflow-x:hidden` (body alone wasn't enough),
+  and `clamp(60px,7.5vw,108px)` produced ~96px at typical viewports — too wide for the column.
+- Fix: `html{overflow-x:hidden}`, font reduced to `clamp(48px,5vw,80px)`,
+  text column widened from `1fr` to `1.5fr` in hero grid.
+
+**Portrait showing trees instead of Jason:**
+- `object-position:right top` was showing the far-right edge of the photo.
+- Swapped headshot entirely: copied `C:\Users\18054\Desktop\7KH Brand Artwork\Hero Images\Jason-head-shot.png`
+  (1250×2000px proper portrait) to `public/media-kit-images/jason-headshot.png`.
+- `object-position` corrected to `center top`.
+- Both HTML files updated to use `<img>` tags pointing to the new file.
+
+**Logo cells overflowing:**
+- No width constraint on `.logo-cell img` — images rendered at natural size.
+- Fix: `.logo-cell img{width:100%;height:100%;object-fit:contain;display:block;}`
+
+---
+
+### Kre8r Stats Export Endpoint (`src/routes/stats-export.js` — new file)
+Internal API that snapshots all current Kre8r business metrics for the OrgΩr bridge.
+
+**Route:** `GET /api/stats-export` — requires `X-Internal-Key` header (INTERNAL_API_KEY env var).
+Auth-whitelisted in server.js middleware (never hits the session auth wall).
+
+**Metrics exported (all wrapped in try/catch — partial failures never crash the endpoint):**
+- Pipeline health: pre-production, in-production, in-post, in-distribution, stalled
+- Publishing stats (30d): days since last publish, videos this/last month, total published, days since last email
+- Footage vault: total clips, talking-head, b-roll, completed, action counts
+- Projects: total, published, active
+- Ideas (SeedΩr): total count
+- Viral clips: total + approved
+- Copyright marks (MarkΩr): total + active
+- Strategic brief (VectΩr): active flag + direction text
+- MailerLite live API call: latest open/click rates, avg rates, campaigns sampled
+
+**`server.js`:** route mounted at `/api/stats-export`, whitelisted before auth middleware.
+**`.env`:** `INTERNAL_API_KEY` added (shared secret with OrgΩr).
+
+---
+
+### OrgΩr Kre8r Bridge — Full Stack (`C:\Users\18054\orgboard\`)
+
+**Backend (`src/routes/kre8r-bridge.js` — new file), 6 endpoints:**
+- `POST /sync/:orgId` — pulls live Kre8r snapshot, stores in `kre8r_bridge_snapshots`,
+  writes `stat_reports` rows for all actively-mapped stats
+- `GET /snapshot/:orgId` — returns latest stored snapshot (no live Kre8r hit)
+- `GET /available/:orgId` — lists all stat keys + current values from latest snapshot
+- `GET /mappings/:orgId` — mapped stats joined with division/job names + latest reported value
+- `POST /map` — upsert a stat mapping (org_id + stat_key = unique key)
+- `DELETE /map/:statId` — clears kre8r_key + marks inactive (preserves all stat_reports history)
+
+**DB (`src/db.js`):**
+- Migration: `ALTER TABLE stats ADD COLUMN kre8r_key TEXT`
+  (ties any existing stats row to a Kre8r stat key)
+- New table: `kre8r_bridge_snapshots` (id, org_id, synced_at, raw_data, stat_count, created_at)
+
+**OrgΩr `server.js`:** kre8rBridgeRouter mounted at `/api/kre8r-bridge`.
+**OrgΩr `.env`:** `KRE8R_URL=http://localhost:3000` + `KRE8R_INTERNAL_KEY` added.
+
+---
+
+### OrgΩr Board UI (`public/board.html`)
+
+**CSS added:** `.kre8r-panel`, `.kp-*` (header, tabs, body, stat rows, mapping rows, modal),
+`.div-kre8r-stats`, `.div-kre8r-stat` — slide-in panel + division badge system.
+
+**Topbar:** `🔗 KRE8R` button added before `✦ ANALYZE`.
+
+**Division headers:** Live stat badges render inline under exchange_description for any division
+with mapped stats. Shows stat name + latest value + unit. Updates after every sync.
+
+**JS functions added:**
+- `loadKre8rMappings()` — loads all mapped stats grouped by division_id on org load
+- `openKre8rPanel()` / `closeKre8rPanel()` — slide-in panel toggle
+- `loadKre8rPanel()` — fetches available keys from latest snapshot
+- `syncKre8rNow()` — POST sync, refreshes available keys, reloads mappings, redraws org
+- `setKpTab(tab)` — switches between Available / Mapped tabs
+- `renderKre8rAvailable()` — renders all stat keys with MAP buttons
+- `renderKre8rMappings()` — renders active mappings with ✕ unmap buttons
+- `openAssignModal(stat)` — modal to pick division + display label + unit before mapping
+- `closeAssignModal()` / `assignStat()` — saves mapping, switches to Mapped tab
+- `unmapStat(statId)` — confirms + removes mapping, preserves history
+
+**Init:** `loadOrg().then(async()=>{ await loadKre8rMappings(); maybeRestoreChat(); })`
+  (mappings load on every board open so division badges are always fresh)
+
+---
+
+### PM2 + Env
+OrgΩr restarted with `--update-env` to pick up new KRE8R_URL + KRE8R_INTERNAL_KEY env vars.
+OrgΩr running clean at http://localhost:3002.
+Kre8r bridge commit: `15d2e0a` — `server.js` + `src/routes/stats-export.js`.
+
+---
+
+## Key Architecture Decisions
+- **Permanent bridge, not incorporation** — Kre8r stays standalone. OrgΩr pulls from it.
+  Other tenants can use Kre8r independently. The bridge is an opt-in org feature.
+- **Single shared key** — One `INTERNAL_API_KEY` in both `.env` files. Kre8r validates it,
+  OrgΩr sends it. No OAuth, no token rotation needed (both apps are local/same-machine).
+- **OrgΩr's existing stats tables as landing zone** — no new stats infrastructure needed.
+  `kre8r_key` column on existing `stats` rows, `stat_reports` for values. Clean.
+- **Unmap = soft delete** — clearing `kre8r_key` + setting `active=0` preserves all history.
+  Stat trend data is never lost when a mapping is removed.
+- **Division-level badges** — stats surface directly on division headers in the board view.
+  No separate analytics page needed — the org chart IS the dashboard.
+
+---
+
+## Stack Notes
+- 3 apps in the ecosystem: Kre8r :3000, KinOS :3001 (kinos.life), OrgΩr :3002
+- OrgΩr stays local-only (strategic data, not for public exposure)
+- KinOS auth and OrgΩr auth are flagged as security items — tracked in a separate program
+
 # Session 55 — VectΩr + VaultΩr Tag Filter + SyncΩr Overwrite + v1.0.7 (2026-04-20)
 
 ## Goal

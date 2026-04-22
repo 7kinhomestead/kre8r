@@ -234,6 +234,14 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    `window.__KRE8R_ELECTRON` flag set by main.js — use this to detect Electron context in frontend.
    DB stored at app.getPath('userData') (AppData) — reinstalling never overwrites the database.
 
+✅ OrgΩr Bridge — `src/routes/stats-export.js` — internal stats export for the OrgΩr bridge.
+   GET /api/stats-export — requires X-Internal-Key header (INTERNAL_API_KEY env var).
+   Exports: pipeline health, publishing stats (30d), vault counts, projects, ideas, viral clips,
+   copyright marks, active strategic brief, live MailerLite email metrics (latest + avg rates).
+   Auth-whitelisted in server.js middleware. All stat fetches wrapped in try/catch — partial
+   failures never crash the endpoint. Key shared with OrgΩr via KRE8R_INTERNAL_KEY env var.
+   OrgΩr runs on port 3002. KinOS runs on port 3001 (kinos.life — family operating system).
+
 ## Creator Profile
 **Jason Rutland** — 7 Kin Homestead
 - Voice: Straight-talking, warm, funny, never corporate. "Sharp-tongued neighbor
