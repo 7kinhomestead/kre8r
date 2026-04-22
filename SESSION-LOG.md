@@ -1,5 +1,61 @@
-# SESSION-LOG — Active (Sessions 55–57)
+# SESSION-LOG — Active (Sessions 55–58)
 # Older sessions → SESSION-LOG-ARCHIVE.md
+
+---
+
+# Session 58 — OIC + Dale AIE + Nav Redesign (2026-04-22)
+
+## Goal
+Build the Organizational Information Center (OIC) — weekly stat graphs, VFP conditions, Dale's
+full org context. Fix Dale's stat blindspot. Redesign board.html nav to icon bar.
+
+## What Was Built
+
+### OIC — Organizational Information Center (`public/oic.html` + `src/routes/oic.js`)
+Standalone page at `/oic`. Icon nav matching board.html aesthetic.
+- **VFP Board**: every org/division/job VFP seeded into `vfp_conditions` table with condition badges
+- **Stat cards**: 13-week line graphs (Chart.js), Y-axis auto-scales to data range (not zero-based),
+  division-colored lines, current value prominent, delta % vs prior week, gap-aware (null = no line)
+- **Condition badges**: clickable on every stat and VFP — picker sets Power/Affluence/Normal/Emergency/Danger/Non-Existence/Unassigned
+- **+ Report button**: manual weekly snapshot entry per stat (date picker, value, note)
+- **Responsible post**: assign which job owns each stat (shown on card)
+- **⟳ Collect This Week**: manual trigger for weekly snapshot collection
+- **⬡ Seed VFPs**: one-click seeds all org/division/job VFPs into condition board
+
+### Weekly Snapshot Scheduler (`server.js`)
+- `stat_weekly_snapshots` table: `UNIQUE(stat_id, week_start)` — one row per stat per Sunday
+- Scheduler fires hourly; on Sunday 18:xx triggers collection for all orgs
+- Startup missed-collection check: if Sunday has passed and no snapshots exist, collects immediately
+- Collection pulls latest `stat_reports` value per stat and locks it as that week's Sunday snapshot
+- 1-year retention (all rows kept); 13 weeks displayed in OIC graphs
+
+### Dale's Context (fixed + expanded)
+- **Stat blindspot fixed**: removed `kre8r_key IS NOT NULL` filter — Dale now sees ALL org stats
+- Stats block now includes `condition` level and `owner` (responsible job title) per stat
+- Employee chat route also fixed with same scope expansion
+
+### Board.html Nav Redesign
+- Full icon bar replacing text buttons: 34px icon buttons with CSS tooltip (::after, data-tip)
+- Grouped by: View toggles | Intelligence (🔍 Analyze, 💬 Chat, 📊 OIC) | Admin (📦 Orders, 📬 CSW, 📋 Policy DB, 🎓 Qual, ⚖ Admin Scale) | System (🔗 Kre8r, ⎙ Export, ⚙ Org Settings)
+- CSW badge wired to new `.n-badge` class
+- Labels: POLICY DB, QUAL (renamed from POLICIES, QUALS)
+
+### DB Migrations
+- `ALTER TABLE stats ADD COLUMN condition TEXT DEFAULT 'unassigned'`
+- `ALTER TABLE stats ADD COLUMN responsible_job_id INTEGER`
+- New: `stat_weekly_snapshots (stat_id, org_id, week_start, value, note, source, UNIQUE(stat_id,week_start))`
+- New: `vfp_conditions (org_id, source_type, source_id, title, responsible_job_id, condition, notes)`
+
+### Action Library
+- `orgboard.stat.report { stat_id, org_id, value, note, week_start }` — AIEs can report stats via CSW
+
+## Smoke Test
+- OIC endpoint: ✅ 7 divisions, 3 stats, 13-week slots populated
+- VFP seed: ✅ 43 VFPs seeded for 7 Kin Homestead
+- Weekly collect: ✅ fired on startup (missed-collection check), kre8r stat captured for Apr 19
+
+## Commits
+- (OrgΩr has no git repo — all changes in C:\Users\18054\orgboard)
 
 ---
 
