@@ -3,6 +3,65 @@
 
 ---
 
+# Session 59 — 7KH Homepage v11 + Water PDF + Member Count API (2026-04-24)
+
+## Goal
+Complete the Kajabi 7kinhomestead.com homepage v11: hover-expand tool preview video strip,
+community section video replacement. Fix water calculator PDF. Build live member count API.
+
+## What Was Built
+
+### Water Calculator PDF Report (`kre8r-land/public/water.html`)
+- Fixed broken `@media print` CSS (was accidentally nested inside `@media(max-width:480px)`)
+- Replaced with solar-tool-style `window.open('','_blank')` isolated white HTML report
+- Blue `#3b82f6` CTA button, 4 metric cards, spec table, water law box, BOM tables (Good/Better/Best)
+- Affiliate links in BOM. Auto-prints on load via `window.onload=()=>window.print()`
+
+### 7kinhomestead.land Homepage Video Banners (`kre8r-land/public/index.html`)
+- Wistia autoplay/muted/loop video banners added above each of 5 tool cards
+- IDs: Land=ppyykneltj, Lifestyle=311y3wvfph, Freedom=ao65emty5y, Solar=3uiwl9626y, Water=fhyf4qzggj
+
+### Kajabi Homepage v11 (`7kin-homepage_v11.html` — full page custom code block)
+**Tool Preview Strip** (below existing v10 Tool Shed block):
+- 5 Wistia video tiles in a single row, hover → scale(2.35) forward over siblings
+- Siblings dim to opacity:.22 + brightness(.45) while one is hovered
+- CSS `:has()` expands strip padding-bottom from 64px → 420px on hover (no JS needed)
+- Edge tiles: `transform-origin:top left` (first) / `top right` (last) — prevents off-screen bleed
+- Middle tiles: `transform-origin:top center`
+- Full-width Kajabi breakout: `width:100vw; left:50%; margin-left:-50vw`
+- Tool description fades in on hover. Mobile: horizontal scroll, tap to expand.
+- No "Open Tool" button — build value, require community join
+
+**Community Section Video** (replaces base64 Jason photo):
+- Wistia `aaairbit16` replaces `<div class="community-img">` base64 JPEG
+- Hover: `scale(1.04)` + red glow (subtle — card is already full-size)
+- Desktop hover → play, mouseleave → pause. Mobile tap toggles.
+- Member badge overlay: `500+` count (red Bebas Neue), "People who 'get it'", subtext
+
+### `/api/member-count` Endpoint (`kre8r-land/src/routes/member-count.js`)
+- Public CORS-open endpoint at `https://7kinhomestead.land/api/member-count`
+- Kajabi OAuth2 client_credentials token (same pattern as kre8r main AudiencΩr)
+- Fetches contacts, caches result 1 hour in-memory
+- `MEMBER_COUNT_OVERRIDE` env var: when set, skips Kajabi call (currently set to 500)
+- Fallback chain: live → stale cache → hardcoded 500 (never breaks the badge)
+- v11 community badge JS fetches this endpoint on load and updates `#community-count`
+- Deployed to 7kinhomestead.land, live and tested
+
+### 7 Kin Trusted Partners (TODO added)
+- BillyLand, LandLimited, OnlineLandHub confirmed as trusted partners
+- OnlineLandHub: RSS feed + referral commission agreement in place
+- Full infrastructure spec added to TODO.md (partners table, affiliate param injection, badge display)
+
+## Commits
+- kre8r-land: `Add /api/member-count - live Kajabi count with 1h cache`
+- kre8r-land: `Add MEMBER_COUNT_OVERRIDE env var`
+- kre8r-land: `Homepage: add Wistia autoplay video banners to all 5 tool cards`
+- kre8r-land: `Water tool: replace @media print with solar-style window.open PDF report`
+- kre8r (main): TODO.md updated (Trusted Partners spec added)
+- Kajabi v11: local file only — paste into Kajabi custom code block to deploy
+
+---
+
 # Session 58 — OIC + Dale AIE + Nav Redesign (2026-04-22)
 
 ## Goal

@@ -3,32 +3,41 @@
 
 ---
 
-## NEXT 3 TASKS (Session 57)
+## NEXT 3 TASKS (Session 60)
 
-### 1. Bridge End-to-End Test + DigitalOcean Deploy
+### 1. Deploy Kajabi Homepage v11
+- Open `C:\Users\18054\Desktop\7KH Brand Artwork\7KH Web Tools\website code 7 Kin Homestead\7kh homepage\7kin-homepage_v11.html`
+- Copy full file content → paste into Kajabi custom code block (replaces v10)
+- Test: tool preview strip hover-expand, community video plays on hover, member badge shows 500+
+- If live Kajabi member count needed: remove `MEMBER_COUNT_OVERRIDE` from kre8r-land `.env` + `pm2 restart kre8r-land --update-env`
+
+### 2. 7 Kin Trusted Partners Infrastructure — kre8r-land
+Wire OnlineLandHub RSS feed + build full trusted partners system:
+- `trusted_partners` table: name, site_url, rss_feed_url, affiliate_param, commission_rate, logo_url, status
+- Aggregator auto-appends affiliate param to listing URLs at ingest (per-source)
+- `/api/land/partners` route — returns active partners list
+- "7 Kin Trusted" badge on matching listings in the land finder
+- Need from Jason: OnlineLandHub RSS feed URL + their affiliate param format
+
+### 3. OrgΩr Bridge End-to-End Test + DigitalOcean Deploy
 - Restart Kre8r Electron app (picks up INTERNAL_API_KEY + stats-export route)
 - OrgΩr board → 🔗 KRE8R → SYNC NOW → confirm snapshot + available keys appear
 - Map stats to divisions (e.g. videos_published_this_month → Production division)
-- Verify stat badges appear on division headers
-- Deploy Kre8r to DigitalOcean (media kit fixes + bridge both undeployed):
+- Deploy Kre8r to DigitalOcean:
   `cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r pm2 restart kre8r`
-
-### 2. Claude "Posted Employee" Chat per Job Card — OrgΩr
-Each job card gets a 🤖 ASK button → chat modal pre-loaded with:
-- Job context: title, purpose, VFP, policies
-- Kre8r stats mapped to that division (from bridge snapshot)
-- System prompt: "You are the posted employee for [title]. VFP: [vfp]. Stats: [stats]."
-No new tables needed. Uses existing claude-assist route pattern.
-
-### 3. OrgΩr + KinOS Auth (Security — Before Team Access)
-OrgΩr and KinOS are both unprotected. Brooklynn + Cari access requires auth first.
-- Copy Kre8r's auth pattern: express-session + better-sqlite3 store, bcrypt, /login page
-- OrgΩr: seed owner from ORGBOARD_OWNER_PW env var. Viewer = read-only, Owner = full.
-- KinOS (kinos.life): currently open to the internet — security vulnerability, fix first.
 
 ---
 
 ## ACTIVE BACKLOG
+
+### 7 Kin Trusted Partners Infrastructure — kre8r-land
+Three confirmed partners: **BillyLand**, **LandLimited**, **OnlineLandHub** (RSS + referral commission).
+- `trusted_partners` table: name, site_url, rss_feed_url, affiliate_param, commission_rate, logo_url, description, status
+- Aggregator auto-appends affiliate param to every listing URL at ingest (per-source, stored in partners table)
+- `/api/land/partners` route — returns active partners list
+- **"7 Kin Trusted" display** on land finder page: vetted source badges on listings + a partner section showing logos/descriptions
+- OnlineLandHub RSS feed: wire into `src/aggregator/sources.js` once feed URL confirmed
+- Future: partner dashboard showing referral click counts (UTM tracking via redirect endpoint)
 
 ### Media Kit — Press Email
 press@7kinhomestead.com needs to exist before kit goes public.
