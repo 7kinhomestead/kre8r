@@ -206,6 +206,7 @@ const tenantDbCache  = require('./src/utils/tenant-db-cache');
 const ROOT_HOSTS = new Set([
   'kre8r.app', 'www.kre8r.app', 'localhost',
   '127.0.0.1', '0.0.0.0',
+  'guard.kre8r.app',
 ]);
 
 function extractTenantSlug(hostname) {
@@ -457,8 +458,15 @@ app.get('/download',         (req, res) => res.sendFile(path.join(__dirname, 'pu
 app.get('/landing',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/landing.html',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 // GuardΩr — public fan page (no auth). Serves for any /guard/:slug path.
+// Also handles guard.kre8r.app/:slug subdomain (ROOT_HOSTS treats it as main app)
 app.get('/guard/:slug',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'guardr.html')));
 app.get('/guard',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'guardr.html')));
+app.get('/:slug', (req, res, next) => {
+  if (req.hostname === 'guard.kre8r.app') {
+    return res.sendFile(path.join(__dirname, 'public', 'guardr.html'));
+  }
+  next();
+});
 app.get('/media-kit',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
 app.get('/media-kit.html',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'media-kit.html')));
 app.get('/beta-invite',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'beta-invite.html')));
