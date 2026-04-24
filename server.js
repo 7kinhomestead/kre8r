@@ -353,6 +353,8 @@ app.use((req, res, next) => {
   // GuardΩr — public fan-facing pages, no auth
   if (req.path.startsWith('/guard/') || req.path === '/guard') return next();
   if (req.path.startsWith('/api/guard/')) return next();
+  // guard.kre8r.app subdomain — all paths are public GuardΩr fan pages
+  if (req.hostname === 'guard.kre8r.app') return next();
   // OrgΩr bridge — internal key auth handled inside the route, no session needed
   if (req.path === '/api/stats-export') return next();
 
