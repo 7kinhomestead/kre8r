@@ -1,5 +1,121 @@
-# SESSION-LOG — Active (Sessions 55–58)
+# SESSION-LOG — Active (Sessions 55–current)
 # Older sessions → SESSION-LOG-ARCHIVE.md
+
+---
+
+# Session 61 — AffiliateΩr + Three-App Auth Layer + VectΩr Auto-Run (2026-04-25)
+
+## Goal
+Build AffiliateΩr in Kre8r, wire session-based auth into KinOS and OrgΩr, implement
+VectΩr Sunday auto-run cron, and architect the cross-app deployment strategy.
+
+## What Was Built
+
+### AffiliateΩr (`kre8r`)
+- `src/db.js`: 3 new tables — `affiliate_partners`, `affiliate_links`, `affiliate_clicks`
+- Pre-seeded 12 known partners (Amazon active, 11 pending with signup URLs)
+- `src/routes/affiliator.js`: full CRUD for partners + links, analytics, tracked URL builder
+- `server.js`: `/r/:partnerKey/:linkKey` public redirect endpoint (whitelisted from auth),
+  click logging with optional `?vid=PROJECT_ID` video attribution, `/api/affiliator` mount
+- `public/affiliator.html`: 4-tab UI — Partners (signup checklist), Tracked Links,
+  Analytics (clicks/estimated commission/30-day chart), Link Generator
+- `public/js/nav.js`: AffiliateΩr added to Dist dropdown
+
+### KinOS Auth Layer (`kinos`)
+- `bcrypt` + `express-session` installed
+- `src/db.js`: `password_hash`, `remember_token` columns added to `family_members`;
+  `express_sessions` table added
+- `server.js`: inline SQLiteStore, session middleware, auth middleware (X-Member-Id
+  injection from session — zero changes to 9 route files), login/logout/me/set-password
+  routes, `KINOS_ADMIN_PW` first-run seed for parent accounts, `KINOS_INTERNAL_TOKEN` cron bypass
+- `public/login.html`: avatar picker — 8 family member cards, click yours, enter password
+- `public/manage-passwords.html`: admin sees all 8 members, sets any password; status badge
+  flips live; Karen's card shows ♾ grandparent pill
+- Karen (id=8, `grandparent_mode:true`): 10-year cookie on login — never logs in again
+- Open-access fallback when no passwords configured (dev mode preserved)
+
+### OrgΩr Auth Layer (`orgboard`)
+- `bcrypt` + `express-session` installed; `.gitignore` created (first git repo init)
+- `src/db.js`: `users` table + `express_sessions` table added
+- `server.js`: same SQLiteStore pattern; auth middleware; full user CRUD API
+  (`/api/auth/login`, `/api/auth/logout`, `/api/auth/users`, `/api/auth/set-password`,
+  `/api/auth/status`); `ORGR_ADMIN_PW` seeds jason admin; duplicate `db` require removed
+- `public/login.html`: clean username/password form
+- `public/manage-users.html`: admin UI — add users, change passwords, delete users,
+  role badges (admin/user), card turns green on save
+
+### VectΩr Auto-Run (`kre8r`)
+- `src/routes/vectr.js`: new `POST /api/vectr/weekly-auto` — runs full sync + calls
+  Claude (non-streaming via `callClaudeMessages`) to generate strategic pre-read;
+  stores result in `kv_store` as `vectr_auto_draft`; new `GET/DELETE /api/vectr/auto-draft`
+- `server.js`: `scheduleVectrAutoRun()` — Sunday 14:00 UTC (10am ET) cron, fires
+  `weekly-auto` endpoint, logs result
+- `public/northr.html`: amber banner appears when auto-draft is waiting;
+  `openVectrWithDraft()` opens VectΩr panel with pre-read injected as first assistant message;
+  `checkVectrAutoDraft()` called on DOMContentLoaded
+
+## Deployment Notes
+**Three-app architecture decision:**
+- Kre8r → stays on its own DO droplet (video processing, heavy workloads)
+- KinOS + OrgΩr → shared $12/mo DO droplet (both are lightweight Express + SQLite)
+- kinos.life already live; OrgΩr needs domain assignment
+- Inter-app calls between KinOS + OrgΩr: localhost on shared droplet (reliable)
+- Kre8r ↔ KinOS/OrgΩr: HTTPS with internal API key (established pattern)
+
+**To activate auth on live servers:**
+- KinOS: set `KINOS_ADMIN_PW` + `SESSION_SECRET` in .env, restart → seed fires automatically;
+  log in as Jason → go to `/manage-passwords` → set all family member passwords;
+  set Karen's last — she logs in once, never again (10-year cookie)
+- OrgΩr: set `ORGR_ADMIN_PW` + `SESSION_SECRET` in .env, restart → jason seeded;
+  go to `/manage-users` → add any additional users
+
+## Pending (Next Sessions)
+- Deploy KinOS + OrgΩr to shared DigitalOcean droplet
+- Cross-app bridges: affiliate clicks → OrgΩr TreasΩr income, Kre8r publish schedule → KinOS
+- Dale morning CSW generator (OrgΩr Tier 1)
+- Rock Rich format profile in WritΩr (Tier 2)
+- Update kre8r-land tool pages with tracked `/r/` affiliate URLs
+
+---
+
+# Session 60 — BattlePlanΩr Print Polish + Receipt Scanner Bridge (2026-04-24)
+
+## Goal
+Polish BattlePlanΩr print output (3 nitpicks from PDF review), build KinΩS receipt scanner
+bridge into TreasΩr, and fix the receipt scanner itself which Cari reported as never working.
+
+## What Was Built
+
+### BattlePlanΩr Print Fixes (`orgboard/public/battleplan.html`)
+- **Header**: Removed `· PLAN` type suffix; "BATTLE PLAN" now renders in red bold only
+- **Legend cards**: Added `height:100%` to `.legend .l` — all 4 tier cards now equal height
+- **Page breaks (from prior session)**: Already confirmed working perfectly by user
+
+### TreasΩr ↔ KinΩS Receipt Scanner Bridge
+**Backend** (`orgboard/src/routes/treasor.js`):
+- New `POST /api/treasor/scan-receipt` endpoint — proxies base64 image to KinΩS at
+  `http://localhost:3001/api/ai/scan-receipt`, returns parsed receipt JSON
+- Server-side proxy means it works even when TreasΩr is accessed remotely
+
+**Frontend** (`orgboard/public/treasor.html`):
+- "📷 Scan Receipt" button added to Entry tab (teal, alongside Log Income / Log Expense / PO)
+- Hidden `<input type="file" accept="image/*" capture="environment">` for camera/upload
+- Canvas resize: 1600px max, 0.90 quality (same as KinΩS) before sending to backend
+- Review modal: shows store name, date, all line items, total; pre-fills description/vendor/date/amount
+- Bucket selector (auto-populated with org's configured buckets)
+- Logs as single expense via existing `POST /api/treasor/expenses/:orgId` → updates balances live
+
+### KinΩS Receipt Scanner Bug Fix (`kinos/src/routes/ai.js`)
+**Root cause**: `max_tokens: 1500` was too low — a real grocery receipt with 20+ items
+generates 2000–3000 tokens of JSON. Claude's response was being truncated mid-JSON,
+causing `JSON.parse` to throw and returning a generic error to Cari.
+- Bumped `max_tokens` from 1500 → 4096 for `scan-receipt` route
+- Added explicit try/catch around `JSON.parse` with clear, actionable error message
+- Requires `pm2 restart kinos` to go live
+
+## Commits
+- kinos: `Fix receipt scanner — bump max_tokens 1500→4096, add parse error handling`
+- orgboard: not a git repo
 
 ---
 

@@ -346,6 +346,9 @@ app.use((req, res, next) => {
        '/gate', '/kre8r-gate', '/kre8r-gate.html',
        '/download', '/download.html',
        '/privacy', '/privacy.html', '/tos', '/tos.html'].includes(req.path)) return next();
+  // The Fence — public link-in-bio AI page
+  if (req.path === '/fence' || req.path.startsWith('/fence/')) return next();
+  if (req.path === '/api/fence/ask') return next(); // SSE endpoint is public
   // Download assets (installer, yml) are public
   if (req.path.startsWith('/downloads/')) return next();
   // Media kit photography (public, no auth required)
@@ -357,6 +360,8 @@ app.use((req, res, next) => {
   if (req.hostname === 'guard.kre8r.app') return next();
   // OrgΩr bridge — internal key auth handled inside the route, no session needed
   if (req.path === '/api/stats-export') return next();
+  // AffiliateΩr redirect — public so external visitors can click through
+  if (req.path.startsWith('/r/')) return next();
 
   // Logged in — allow
   if (req.session?.userId) return next();
@@ -485,6 +490,9 @@ app.get('/kre8r-gate.html',(req, res) => res.sendFile(path.join(__dirname, 'publ
 app.get('/admin',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
+app.get('/affiliator',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'affiliator.html')));
+app.get('/affiliator.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'affiliator.html')));
+
 // ─────────────────────────────────────────────
 // STATIC FILES
 // ─────────────────────────────────────────────
@@ -534,6 +542,28 @@ app.use('/api/guard',             require('./src/routes/guard'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 app.use('/api/vectr',             require('./src/routes/vectr'));
 app.use('/api/stats-export',      require('./src/routes/stats-export'));
+app.use('/api/affiliator',        require('./src/routes/affiliator'));
+// The Fence — page served directly, API mounted separately
+app.get('/fence', (req, res) => res.sendFile(path.join(__dirname, 'public', 'fence', 'index.html')));
+app.use('/api/fence',             require('./src/routes/fence'));
+
+// ── AffiliateΩr public redirect — logs click, sends visitor to destination ──
+app.get('/r/:partnerKey/:linkKey', (req, res) => {
+  const { partnerKey, linkKey } = req.params;
+  const vid = req.query.vid ? parseInt(req.query.vid) : null;
+  const _db = require('./src/db');
+  try {
+    const link = _db.prepare('SELECT * FROM affiliate_links WHERE partner_key=? AND link_key=? AND active=1')
+      .get(partnerKey, linkKey);
+    if (!link) return res.status(404).send('Link not found');
+    _db.prepare('INSERT INTO affiliate_clicks (partner_key,link_key,project_id,referrer) VALUES (?,?,?,?)')
+      .run(partnerKey, linkKey, vid || null, req.get('referer') || null);
+    res.redirect(302, link.destination_url);
+  } catch (err) {
+    log.error({ module: 'affiliator', err }, 'Redirect failed');
+    res.status(500).send('Redirect error');
+  }
+});
 
 // PostΩr queue processor — starts 60s interval to fire scheduled posts
 require('./src/postor/queue-processor').start();
@@ -899,7 +929,38 @@ async function start() {
     // Runs once every morning at 8:00 AM local time so new members who joined
     // overnight land in the right MailerLite group before the morning reads.
     scheduleMorningSync();
+    scheduleVectrAutoRun();
   });
+}
+
+function scheduleVectrAutoRun() {
+  // Sundays at 14:00 UTC = 10am ET — sync data + generate strategic pre-read
+  // Jason finds a fresh brief waiting when he opens NorthΩr
+  const TARGET_DAY  = 0;  // Sunday
+  const TARGET_HOUR = 14; // 14:00 UTC
+  const CHECK_INTERVAL_MS = 60 * 1000;
+  let lastRunDate = null;
+
+  const tick = async () => {
+    const now   = new Date();
+    const today = now.toDateString();
+    if (now.getDay() === TARGET_DAY && now.getHours() === TARGET_HOUR && lastRunDate !== today) {
+      lastRunDate = today;
+      log.info({ module: 'vectr-auto' }, 'Weekly VectΩr auto-run starting');
+      try {
+        const { default: fetch } = await import('node-fetch');
+        const r = await fetch(`http://localhost:${PORT}/api/vectr/weekly-auto`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        if (r.ok) log.info({ module: 'vectr-auto' }, 'Weekly VectΩr auto-run complete');
+        else log.warn({ module: 'vectr-auto', status: r.status }, 'Weekly VectΩr auto-run returned error');
+      } catch (e) {
+        log.error({ module: 'vectr-auto', err: e.message }, 'Weekly VectΩr auto-run failed');
+      }
+    }
+  };
+
+  const timer = setInterval(tick, CHECK_INTERVAL_MS);
+  if (timer.unref) timer.unref();
+  log.info({ module: 'vectr-auto' }, 'VectΩr Sunday auto-run scheduler registered');
 }
 
 function scheduleMorningSync() {

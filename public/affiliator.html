@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AffiliateΩr</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--card:#141414;--card2:#1c1c1c;--border:#222;--border2:#333;
+  --off:rgba(255,255,255,.85);--muted:rgba(255,255,255,.45);--faint:rgba(255,255,255,.08);
+  --teal:#14b8a6;--red:#ef4444;--green:#22c55e;--amber:#f59e0b;--blue:#3b82f6;
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--off);font-size:14px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border)}
+.topbar h1{font-size:18px;font-weight:700;color:var(--teal);margin-right:auto}
+.tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--border)}
+.tab{padding:10px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--off)}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.content{padding:24px 20px;max-width:1100px}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:14px}
+.btn{padding:8px 16px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-secondary{background:var(--card2);color:var(--off);border:1px solid var(--border)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn:hover{opacity:.85}
+
+/* Status badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+.badge-active{background:rgba(20,184,166,.15);color:var(--teal);border:1px solid rgba(20,184,166,.3)}
+.badge-pending{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+
+/* Partner grid */
+.partner-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.partner-card{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px}
+.partner-card.active{border-color:rgba(20,184,166,.3)}
+.partner-card.pending{border-color:rgba(245,158,11,.2)}
+.partner-name{font-size:15px;font-weight:700;margin-bottom:6px}
+.partner-meta{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.partner-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:9px 10px;border-bottom:1px solid var(--card2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--faint)}
+.copy-url{font-family:monospace;font-size:11px;color:var(--teal);cursor:pointer;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-url:hover{text-decoration:underline}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:16px;font-weight:700;margin-bottom:18px;color:var(--teal)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--off);font-size:13px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--teal)}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+
+/* KPIs */
+.kpi-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 18px;flex:1;min-width:120px}
+.kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kpi-value{font-size:26px;font-weight:800;color:var(--teal)}
+
+/* Link generator */
+.gen-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.gen-result{font-family:monospace;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--teal);word-break:break-all;margin-top:10px;cursor:pointer}
+.empty{text-align:center;padding:32px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>⬡ AffiliateΩr</h1>
+  <button class="btn btn-secondary btn-sm" onclick="history.back()">← Back</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('partners')">Partners</div>
+  <div class="tab" onclick="showTab('links')">Tracked Links</div>
+  <div class="tab" onclick="showTab('analytics')">Analytics</div>
+  <div class="tab" onclick="showTab('generator')">Link Generator</div>
+</div>
+
+<!-- ── PARTNERS ── -->
+<div class="content" id="tab-partners">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-size:15px;font-weight:700">Affiliate Partners</div>
+    <button class="btn btn-primary" onclick="openPartnerModal()">＋ Add Partner</button>
+  </div>
+
+  <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--amber)">
+    📋 <strong>Cari's signup list:</strong> Partners marked <span class="badge badge-pending">PENDING</span> need affiliate accounts. Click "Sign Up" on each one.
+  </div>
+
+  <div class="partner-grid" id="partner-grid"></div>
+</div>
+
+<!-- ── TRACKED LINKS ── -->
+<div class="content" id="tab-links" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div style="font-size:15px;font-weight:700">Tracked Links</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="filter-tool" onchange="loadLinks()" style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--off);font-size:13px">
+        <option value="">All Tools</option>
+        <option value="water">Water</option>
+        <option value="solar">Solar</option>
+        <option value="lifestyle">Lifestyle</option>
+        <option value="freedom">Freedom</option>
+        <option value="general">General</option>
+      </select>
+      <button class="btn btn-primary" onclick="openLinkModal()">＋ Add Link</button>
+    </div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Label</th><th>Partner</th><th>Tool</th><th>Tracked URL</th><th>Clicks</th><th></th></tr></thead>
+      <tbody id="links-table"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── ANALYTICS ── -->
+<div class="content" id="tab-analytics" style="display:none">
+  <div class="kpi-row" id="analytics-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title">Clicks by Partner</div>
+      <table>
+        <thead><tr><th>Partner</th><th>Clicks</th><th>Est. Commission</th><th>Last Click</th></tr></thead>
+        <tbody id="by-partner"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Top Links</div>
+      <table>
+        <thead><tr><th>Label</th><th>Tool</th><th>Clicks</th></tr></thead>
+        <tbody id="by-link"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Last 30 Days</div>
+    <div id="by-day" style="font-size:12px;color:var(--muted);line-height:2"></div>
+  </div>
+</div>
+
+<!-- ── LINK GENERATOR ── -->
+<div class="content" id="tab-generator" style="display:none">
+  <div class="card">
+    <div class="card-title">Generate a Tracked Link</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Paste any destination URL, pick a partner, give it a key. The tracked link logs every click and attributes it to a video.</p>
+    <div class="gen-box">
+      <div class="field"><label>Destination URL</label><input type="url" id="gen-url" placeholder="https://www.amazon.com/dp/B0..."></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label>Partner</label><select id="gen-partner"></select></div>
+        <div class="field"><label>Tool / Category</label>
+          <select id="gen-tool">
+            <option value="water">Water</option>
+            <option value="solar">Solar</option>
+            <option value="lifestyle">Lifestyle</option>
+            <option value="freedom">Freedom</option>
+            <option value="general">General</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label>Link Key (slug)</label><input type="text" id="gen-key" placeholder="ibc-tote"></div>
+        <div class="field"><label>Display Label</label><input type="text" id="gen-label" placeholder="IBC Tote 275 Gal"></div>
+      </div>
+      <button class="btn btn-primary" onclick="generateLink()">Create Tracked Link</button>
+    </div>
+    <div id="gen-result" style="display:none">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Your tracked link (click to copy):</div>
+      <div class="gen-result" id="gen-url-out" onclick="copyGenUrl()"></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Use this link anywhere — on kre8r-land, in video descriptions, in emails. Every click is logged.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Replace Existing kre8r-land Links</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">These are the hardcoded affiliate links currently in the tool pages. Replace them with tracked versions once created.</p>
+    <table>
+      <thead><tr><th>Tool</th><th>Item</th><th>Current Link</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Water</td><td>IBC Tote 275 Gal</td><td><span style="color:var(--muted);font-size:11px">Amazon — hardcoded</span></td><td><span class="badge badge-pending">Replace</span></td></tr>
+        <tr><td>Water</td><td>Poly Tank 500 Gal</td><td><span style="color:var(--muted);font-size:11px">Tank Depot — direct</span></td><td><span class="badge badge-pending">Replace</span></td></tr>
+        <tr><td>Water</td><td>Big Berkey Filter</td><td><span style="color:var(--muted);font-size:11px">Amazon — hardcoded</span></td><td><span class="badge badge-pending">Replace</span></td></tr>
+        <tr><td>Solar</td><td>LiTime Battery</td><td><span style="color:var(--muted);font-size:11px">Amazon search — pending affiliate</span></td><td><span class="badge badge-pending">Pending signup</span></td></tr>
+        <tr><td>Solar</td><td>SunGold Panels</td><td><span style="color:var(--muted);font-size:11px">Amazon search — pending affiliate</span></td><td><span class="badge badge-pending">Pending signup</span></td></tr>
+        <tr><td>Lifestyle</td><td>Pressure Canner</td><td><span style="color:var(--muted);font-size:11px">#aff-pressure-canner — placeholder</span></td><td><span class="badge badge-pending">Replace</span></td></tr>
+        <tr><td>Lifestyle</td><td>Chest Freezer</td><td><span style="color:var(--muted);font-size:11px">#aff-chest-freezer — placeholder</span></td><td><span class="badge badge-pending">Replace</span></td></tr>
+        <tr><td>Lifestyle</td><td>Chicks (Meyer)</td><td><span style="color:var(--muted);font-size:11px">#aff-hatchery — placeholder</span></td><td><span class="badge badge-pending">Pending signup</span></td></tr>
+        <tr><td>Lifestyle</td><td>Seeds (Baker Creek)</td><td><span style="color:var(--muted);font-size:11px">#aff-seeds — placeholder</span></td><td><span class="badge badge-pending">Pending signup</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Partner Modal ── -->
+<div class="modal-overlay" id="modal-partner">
+  <div class="modal">
+    <h2 id="partner-modal-title">Add Partner</h2>
+    <div class="field"><label>Partner Key (slug)</label><input type="text" id="pm-key" placeholder="bakerCreek"></div>
+    <div class="field"><label>Partner Name</label><input type="text" id="pm-name" placeholder="Baker Creek Heirloom Seeds"></div>
+    <div class="field"><label>Commission %</label><input type="number" id="pm-pct" step="0.1" min="0" max="50" placeholder="3"></div>
+    <div class="field"><label>Signup URL</label><input type="url" id="pm-signup" placeholder="https://..."></div>
+    <div class="field"><label>Affiliate Tag Param (e.g. "tag")</label><input type="text" id="pm-tagparam" placeholder="tag"></div>
+    <div class="field"><label>Affiliate Tag Value (e.g. "7kinhomestead-20")</label><input type="text" id="pm-tagval" placeholder="7kinhomestead-20"></div>
+    <div class="field"><label>Status</label>
+      <select id="pm-status">
+        <option value="pending">Pending — need to sign up</option>
+        <option value="active">Active — account live</option>
+      </select>
+    </div>
+    <div class="field"><label>Notes</label><input type="text" id="pm-notes"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="savePartner()">Save</button>
+      <button class="btn btn-secondary" onclick="closeModal('partner')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Link Modal ── -->
+<div class="modal-overlay" id="modal-link">
+  <div class="modal">
+    <h2>Add Tracked Link</h2>
+    <div class="field"><label>Partner</label><select id="lm-partner"></select></div>
+    <div class="field"><label>Link Key (slug, e.g. "ibc-tote")</label><input type="text" id="lm-key" placeholder="ibc-tote"></div>
+    <div class="field"><label>Display Label</label><input type="text" id="lm-label" placeholder="IBC Tote 275 Gal"></div>
+    <div class="field"><label>Destination URL</label><input type="url" id="lm-url" placeholder="https://..."></div>
+    <div class="field"><label>Tool</label>
+      <select id="lm-tool">
+        <option value="water">Water</option>
+        <option value="solar">Solar</option>
+        <option value="lifestyle">Lifestyle</option>
+        <option value="freedom">Freedom</option>
+        <option value="general">General</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveLink()">Save</button>
+      <button class="btn btn-secondary" onclick="closeModal('link')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let partners = [];
+let clickCounts = {};
+
+async function init() {
+  partners = await fetch('/api/affiliator/partners').then(r => r.json());
+  renderPartners();
+  populatePartnerSelects();
+}
+
+function renderPartners() {
+  const el = document.getElementById('partner-grid');
+  if (!partners.length) { el.innerHTML = '<div class="empty">No partners yet.</div>'; return; }
+
+  el.innerHTML = partners.map(p => `
+    <div class="partner-card ${p.status}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="partner-name">${p.partner_name}</div>
+        <span class="badge badge-${p.status}">${p.status.toUpperCase()}</span>
+      </div>
+      <div class="partner-meta">
+        ${p.commission_pct > 0 ? `Commission: ${p.commission_pct}%<br>` : ''}
+        ${p.tag_value ? `Tag: <code style="font-size:10px">${p.tag_value}</code><br>` : ''}
+        ${p.notes ? `<em>${p.notes}</em>` : ''}
+      </div>
+      <div class="partner-actions">
+        ${p.status === 'pending' && p.signup_url ? `<a href="${p.signup_url}" target="_blank"><button class="btn btn-primary btn-sm">Sign Up ↗</button></a>` : ''}
+        ${p.status === 'pending' ? `<button class="btn btn-secondary btn-sm" onclick="markActive('${p.partner_key}')">✓ Mark Active</button>` : ''}
+        <button class="btn btn-secondary btn-sm" onclick="editPartner('${p.partner_key}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePartner('${p.partner_key}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function populatePartnerSelects() {
+  ['gen-partner','lm-partner'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = partners.map(p => `<option value="${p.partner_key}">${p.partner_name}${p.status==='pending'?' (pending)':''}</option>`).join('');
+  });
+}
+
+async function loadLinks() {
+  const tool = document.getElementById('filter-tool').value;
+  const qs = tool ? `?tool=${tool}` : '';
+  const [links, analytics] = await Promise.all([
+    fetch(`/api/affiliator/links${qs}`).then(r => r.json()),
+    fetch('/api/affiliator/analytics').then(r => r.json()),
+  ]);
+  clickCounts = {};
+  analytics.byLink.forEach(l => { clickCounts[`${l.partner_key}:${l.link_key}`] = l.clicks; });
+
+  const tb = document.getElementById('links-table');
+  if (!links.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No tracked links yet. Add one above or use the Link Generator tab.</td></tr>'; return; }
+  const pmap = {};
+  partners.forEach(p => pmap[p.partner_key] = p.partner_name);
+  const base = location.origin;
+  tb.innerHTML = links.map(l => {
+    const tracked = `${base}/r/${l.partner_key}/${l.link_key}`;
+    const clicks = clickCounts[`${l.partner_key}:${l.link_key}`] || 0;
+    return `<tr>
+      <td style="font-weight:600">${l.label}</td>
+      <td>${pmap[l.partner_key]||l.partner_key}</td>
+      <td>${l.tool||'—'}</td>
+      <td><span class="copy-url" onclick="copyText('${tracked}')" title="Click to copy">${tracked}</span></td>
+      <td style="font-weight:700;color:${clicks>0?'var(--teal)':'var(--muted)'}">${clicks}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteLink(${l.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadAnalytics() {
+  const data = await fetch('/api/affiliator/analytics').then(r => r.json());
+  document.getElementById('analytics-kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Total Clicks</div><div class="kpi-value">${data.total}</div></div>
+    <div class="kpi"><div class="kpi-label">Active Partners</div><div class="kpi-value">${partners.filter(p=>p.status==='active').length}</div></div>
+    <div class="kpi"><div class="kpi-label">Pending Signups</div><div class="kpi-value" style="color:var(--amber)">${partners.filter(p=>p.status==='pending').length}</div></div>
+  `;
+
+  document.getElementById('by-partner').innerHTML = data.byPartner.length
+    ? data.byPartner.map(r => `<tr>
+        <td>${r.partner_name||r.partner_key}</td>
+        <td style="font-weight:700;color:var(--teal)">${r.clicks}</td>
+        <td style="color:var(--green)">${r.commission_pct > 0 ? '~$' + (r.clicks * 0.02 * r.commission_pct).toFixed(0) : '—'}</td>
+        <td style="color:var(--muted);font-size:12px">${r.last_click||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="empty">No clicks yet.</td></tr>';
+
+  document.getElementById('by-link').innerHTML = data.byLink.length
+    ? data.byLink.map(r => `<tr>
+        <td>${r.label||r.link_key}</td>
+        <td style="color:var(--muted)">${r.tool||'—'}</td>
+        <td style="font-weight:700;color:var(--teal)">${r.clicks}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="3" class="empty">No clicks yet.</td></tr>';
+
+  document.getElementById('by-day').innerHTML = data.byDay.length
+    ? data.byDay.map(r => {
+        const bar = '█'.repeat(Math.max(1, Math.round(r.clicks / Math.max(...data.byDay.map(x=>x.clicks)) * 20)));
+        return `<span style="display:inline-block;min-width:90px;color:var(--muted)">${r.day}</span> <span style="color:var(--teal)">${bar}</span> ${r.clicks}`;
+      }).join('<br>')
+    : '<div class="empty">No click data yet.</div>';
+}
+
+async function generateLink() {
+  const url     = document.getElementById('gen-url').value.trim();
+  const partner = document.getElementById('gen-partner').value;
+  const tool    = document.getElementById('gen-tool').value;
+  const key     = document.getElementById('gen-key').value.trim().replace(/\s+/g,'-').toLowerCase();
+  const label   = document.getElementById('gen-label').value.trim();
+  if (!url || !partner || !key || !label) { alert('All fields required.'); return; }
+
+  await fetch('/api/affiliator/links', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ partner_key: partner, link_key: key, label, destination_url: url, tool })
+  });
+
+  const res = await fetch(`/api/affiliator/tracked-url?partner_key=${partner}&link_key=${key}`);
+  const data = await res.json();
+  document.getElementById('gen-url-out').textContent = data.url;
+  document.getElementById('gen-result').style.display = 'block';
+}
+
+function copyGenUrl() {
+  const url = document.getElementById('gen-url-out').textContent;
+  copyText(url);
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = event.target.textContent;
+    event.target.textContent = '✓ Copied!';
+    setTimeout(() => event.target.textContent = orig, 1500);
+  }).catch(() => prompt('Copy this:', text));
+}
+
+// ── Partner modal ──
+let editingPartnerKey = null;
+function openPartnerModal(key) {
+  editingPartnerKey = key || null;
+  document.getElementById('partner-modal-title').textContent = key ? 'Edit Partner' : 'Add Partner';
+  if (key) {
+    const p = partners.find(x => x.partner_key === key);
+    if (p) {
+      document.getElementById('pm-key').value      = p.partner_key;
+      document.getElementById('pm-name').value     = p.partner_name;
+      document.getElementById('pm-pct').value      = p.commission_pct;
+      document.getElementById('pm-signup').value   = p.signup_url||'';
+      document.getElementById('pm-tagparam').value = p.tag_param||'';
+      document.getElementById('pm-tagval').value   = p.tag_value||'';
+      document.getElementById('pm-status').value   = p.status;
+      document.getElementById('pm-notes').value    = p.notes||'';
+    }
+  } else {
+    ['pm-key','pm-name','pm-pct','pm-signup','pm-tagparam','pm-tagval','pm-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pm-status').value = 'pending';
+  }
+  openModal('partner');
+}
+function editPartner(key) { openPartnerModal(key); }
+
+async function savePartner() {
+  const body = {
+    partner_key:    document.getElementById('pm-key').value.trim(),
+    partner_name:   document.getElementById('pm-name').value.trim(),
+    commission_pct: parseFloat(document.getElementById('pm-pct').value) || 0,
+    signup_url:     document.getElementById('pm-signup').value.trim(),
+    tag_param:      document.getElementById('pm-tagparam').value.trim(),
+    tag_value:      document.getElementById('pm-tagval').value.trim(),
+    status:         document.getElementById('pm-status').value,
+    notes:          document.getElementById('pm-notes').value.trim(),
+  };
+  if (!body.partner_key || !body.partner_name) { alert('Key and name required.'); return; }
+  const url = editingPartnerKey ? `/api/affiliator/partners/${editingPartnerKey}` : '/api/affiliator/partners';
+  const method = editingPartnerKey ? 'PUT' : 'POST';
+  await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  closeModal('partner');
+  partners = await fetch('/api/affiliator/partners').then(r => r.json());
+  renderPartners();
+  populatePartnerSelects();
+}
+
+async function markActive(key) {
+  await fetch(`/api/affiliator/partners/${key}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ status:'active' })
+  });
+  partners = await fetch('/api/affiliator/partners').then(r => r.json());
+  renderPartners();
+}
+
+async function deletePartner(key) {
+  if (!confirm(`Delete partner "${key}"? All tracked links for this partner will also be deleted.`)) return;
+  await fetch(`/api/affiliator/partners/${key}`, { method:'DELETE' });
+  partners = await fetch('/api/affiliator/partners').then(r => r.json());
+  renderPartners();
+  populatePartnerSelects();
+}
+
+// ── Link modal ──
+function openLinkModal() {
+  ['lm-key','lm-label','lm-url'].forEach(id => document.getElementById(id).value = '');
+  openModal('link');
+}
+
+async function saveLink() {
+  const body = {
+    partner_key:     document.getElementById('lm-partner').value,
+    link_key:        document.getElementById('lm-key').value.trim().replace(/\s+/g,'-').toLowerCase(),
+    label:           document.getElementById('lm-label').value.trim(),
+    destination_url: document.getElementById('lm-url').value.trim(),
+    tool:            document.getElementById('lm-tool').value,
+  };
+  if (!body.partner_key || !body.link_key || !body.label || !body.destination_url) { alert('All fields required.'); return; }
+  await fetch('/api/affiliator/links', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  closeModal('link');
+  loadLinks();
+}
+
+async function deleteLink(id) {
+  if (!confirm('Delete this tracked link?')) return;
+  await fetch(`/api/affiliator/links/${id}`, { method:'DELETE' });
+  loadLinks();
+}
+
+function openModal(name)  { document.getElementById('modal-' + name).classList.add('open'); }
+function closeModal(name) { document.getElementById('modal-' + name).classList.remove('open'); }
+
+function showTab(name) {
+  ['partners','links','analytics','generator'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['partners','links','analytics','generator'][i] === name);
+  });
+  if (name === 'links')     loadLinks();
+  if (name === 'analytics') loadAnalytics();
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+init();
+</script>
+</body>
+</html>

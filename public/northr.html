@@ -1171,6 +1171,9 @@
   <div style="margin-top:18px;">
     <button class="vectr-btn" onclick="openVectr()" id="vectr-open-btn">⬡ VectΩr</button>
   </div>
+  <div id="vectr-auto-draft-banner" style="display:none;margin-top:14px;background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3);border-radius:10px;padding:12px 16px;font-size:13px;color:#f59e0b;cursor:pointer;max-width:420px;margin-left:auto;margin-right:auto;" onclick="openVectrWithDraft()">
+    📋 <strong>Weekly brief ready</strong> — VectΩr ran your Sunday pre-read. Click to review.
+  </div>
 </div>
 
 <!-- Active Brief Banner -->
@@ -1531,6 +1534,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadThisWeek();
   loadCopyrightHealth();
   loadActiveBrief();
+  checkVectrAutoDraft();
   // Default month picker to current month
   const now = new Date();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -2535,6 +2539,37 @@ function openVectr() {
   document.getElementById('vectr-panel').classList.add('open');
   document.getElementById('vectr-overlay').classList.add('open');
   vectrLoadSession();
+}
+
+async function openVectrWithDraft() {
+  openVectr();
+  // Hide the banner — they've seen it
+  document.getElementById('vectr-auto-draft-banner').style.display = 'none';
+  try {
+    const r    = await fetch('/api/vectr/auto-draft');
+    const data = await r.json();
+    if (!data.draft?.text) return;
+    // Inject the pre-read as an assistant message to start the session with context
+    const generatedAt = data.draft.generated_at ? new Date(data.draft.generated_at).toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' }) : 'this week';
+    const intro = `**Weekly Pre-Read — ${generatedAt}**\n\n${data.draft.text}\n\n---\n_Auto-generated Sunday brief. Start typing to continue the session or lock this as your vector._`;
+    if (!vectrMessages.length) {
+      vectrMessages = [{ role: 'assistant', content: intro }];
+      renderVectrMessages();
+      vectrSaveSession();
+    }
+    // Clear the draft so banner doesn't reappear
+    await fetch('/api/vectr/auto-draft', { method: 'DELETE' });
+  } catch (_) {}
+}
+
+async function checkVectrAutoDraft() {
+  try {
+    const r    = await fetch('/api/vectr/auto-draft');
+    const data = await r.json();
+    if (data.draft?.text) {
+      document.getElementById('vectr-auto-draft-banner').style.display = 'block';
+    }
+  } catch (_) {}
 }
 
 function closeVectr() {

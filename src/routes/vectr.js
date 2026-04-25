@@ -426,4 +426,123 @@ router.get('/briefs', (req, res) => {
   }
 });
 
+// ─── GET /api/vectr/auto-draft ────────────────────────────────────────────────
+// Returns the auto-generated weekly pre-read if one exists (for NorthΩr banner).
+
+router.get('/auto-draft', (req, res) => {
+  try {
+    const raw = db.getKv('vectr_auto_draft');
+    if (!raw) return res.json({ ok: true, draft: null });
+    res.json({ ok: true, draft: JSON.parse(raw) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/auto-draft', (req, res) => {
+  try {
+    db.setKv('vectr_auto_draft', null);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── POST /api/vectr/weekly-auto ─────────────────────────────────────────────
+// Called by Sunday cron: sync all platform data + ask Claude for a strategic
+// pre-read. Stores result in kv_store. NorthΩr shows a badge until Jason opens it.
+
+router.post('/weekly-auto', async (req, res) => {
+  try {
+    const { callClaudeMessages } = require('../utils/claude');
+    const { default: fetch } = await import('node-fetch');
+
+    // ── 1. Run sync (same logic as /sync) ─────────────────────────────────────
+    const syncResult = { youtube: null, email: null, community: null, pipeline: null, synced_at: new Date().toISOString() };
+
+    try {
+      const health  = db.getGlobalChannelHealth();
+      const recent  = db.getRecentProjectsWithAnalytics(10);
+      const fmtMap  = db.getYouTubeFormats ? db.getYouTubeFormats() : {};
+      const longform = recent.filter(v => { const f = fmtMap[v.id]?.format; return !f || f === 'longform' || f === 'standard'; });
+      const videos   = (longform.length > 0 ? longform : recent).slice(0, 10);
+      syncResult.youtube = {
+        avg_views:     health?.avg_views    || 0,
+        total_views:   health?.total_views  || 0,
+        best_video:    health?.best_video   || null,
+        video_count:   health?.video_count  || 0,
+        recent_videos: videos.map(v => ({ title: v.title, views: v.total_views || 0, likes: v.total_likes || 0, comments: v.total_comments || 0, published_at: v.published_at || null })),
+      };
+    } catch (e) { log.warn({ module: 'vectr/auto', err: e.message }, 'YouTube pull failed'); }
+
+    try {
+      const mlKey = process.env.MAILERLITE_API_KEY;
+      if (mlKey) {
+        const mlRes = await fetch(`${ML_BASE}/campaigns?limit=5`, { headers: { 'Authorization': `Bearer ${mlKey}`, 'Accept': 'application/json' } });
+        if (mlRes.ok) {
+          const mlData = await mlRes.json();
+          const campaigns = (mlData.data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+          syncResult.email = { campaigns: campaigns.map(c => ({ subject: c.emails?.[0]?.subject || c.name || '—', sent_at: c.sent_at || c.created_at, open_rate: c.stats?.open_rate ?? null, click_rate: c.stats?.click_rate ?? null, total_sent: c.stats?.sent ?? null })) };
+        }
+      }
+    } catch (e) { log.warn({ module: 'vectr/auto', err: e.message }, 'MailerLite pull failed'); }
+
+    try {
+      const kajToken = process.env.KAJABI_API_TOKEN || db.getKv('kajabi_access_token');
+      if (kajToken) {
+        const kjRes = await fetch('https://kajabi-app.com/api/v1/people?per_page=1', { headers: { 'Authorization': `Bearer ${kajToken}`, 'Accept': 'application/json' } });
+        if (kjRes.ok) { const kjData = await kjRes.json(); syncResult.community = { member_count: kjData.total_count || kjData.meta?.total || null }; }
+      }
+    } catch (e) { log.warn({ module: 'vectr/auto', err: e.message }, 'Kajabi pull failed'); }
+
+    try { syncResult.pipeline = db.getPipelineHealth ? db.getPipelineHealth() : null; } catch (_) {}
+    db.setVectrSyncCache(syncResult);
+
+    // ── 2. Build context block ─────────────────────────────────────────────────
+    const { brand, creatorName, followerSummary, profile: cp } = getCreatorContext();
+    let dataBlock = `**Sync time:** ${syncResult.synced_at}\n\n`;
+
+    if (syncResult.youtube) {
+      const yt = syncResult.youtube;
+      dataBlock += `**YouTube:** ${Number(yt.avg_views).toLocaleString()} avg views | ${yt.video_count} videos\n`;
+      if (yt.best_video) dataBlock += `Best: "${yt.best_video.title}" — ${Number(yt.best_video.views).toLocaleString()} views\n`;
+      if (yt.recent_videos?.length) {
+        dataBlock += `\nRecent:\n`;
+        yt.recent_videos.slice(0, 6).forEach(v => { dataBlock += `- "${v.title}": ${Number(v.views || 0).toLocaleString()} views\n`; });
+      }
+    }
+    if (syncResult.email?.campaigns?.length) {
+      dataBlock += `\n**Email:** Last ${syncResult.email.campaigns.length} campaigns:\n`;
+      syncResult.email.campaigns.forEach(c => {
+        const open  = c.open_rate  != null ? `${(c.open_rate  * 100).toFixed(1)}% open`  : '—';
+        const click = c.click_rate != null ? `${(c.click_rate * 100).toFixed(1)}% click` : '—';
+        dataBlock += `- "${c.subject}": ${open}, ${click}\n`;
+      });
+    }
+    if (syncResult.community?.member_count) dataBlock += `\n**Kajabi:** ${Number(syncResult.community.member_count).toLocaleString()} members\n`;
+
+    const prevBrief = db.getActiveBrief();
+    const prevBlock = prevBrief?.brief_json
+      ? `\n**Last locked brief:** Vector: ${prevBrief.brief_json.vector || '—'} | Focus: ${prevBrief.brief_json.focus || '—'} | Locked: ${prevBrief.brief_json.locked_date || '—'}\n`
+      : '';
+
+    // ── 3. Call Claude for strategic pre-read ─────────────────────────────────
+    const systemPrompt = `You are the strategic advisor for ${creatorName} at ${brand} — ${followerSummary}. It is Sunday evening. You are preparing a weekly strategic pre-read that Jason will find when he opens his dashboard. This is NOT an interactive session — it is a briefing document. Be direct, data-driven, and opinionated. Reference specific numbers and video titles. Max 400 words.`;
+
+    const userPrompt = `Here is this week's platform data:\n\n${dataBlock}${prevBlock}\n\nWrite a weekly strategic pre-read with these sections:\n\n**This week's read:** (2-3 sentences on what the data actually shows — be specific)\n\n**What's working:** (1-2 things backed by numbers)\n\n**The gap:** (the one thing the data is pointing to that isn't being addressed)\n\n**Recommended vector:** (one clear direction for the coming week — be bold)\n\n**Open question for the session:** (the one question Jason needs to answer to move forward)`;
+
+    const text = await callClaudeMessages(systemPrompt, [{ role: 'user', content: userPrompt }], 1024, { tool: 'vectr-auto' });
+
+    // ── 4. Store draft ─────────────────────────────────────────────────────────
+    const draft = { text, generated_at: new Date().toISOString(), sync: syncResult };
+    db.setKv('vectr_auto_draft', JSON.stringify(draft));
+    log.info({ module: 'vectr/auto' }, 'Weekly auto-draft generated and stored');
+
+    res.json({ ok: true, draft });
+  } catch (e) {
+    log.error({ module: 'vectr/auto', err: e }, 'weekly-auto failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

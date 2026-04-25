@@ -1009,6 +1009,67 @@ function runMigrations() {
   }
 
   console.log('[DB] MarkΩr tables verified');
+
+  // ── AffiliateΩr — click tracking + partner management ────────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS affiliate_partners (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    partner_key    TEXT    NOT NULL UNIQUE,
+    partner_name   TEXT    NOT NULL,
+    tag_param      TEXT,
+    tag_value      TEXT,
+    commission_pct REAL    NOT NULL DEFAULT 0,
+    signup_url     TEXT,
+    status         TEXT    NOT NULL DEFAULT 'pending',
+    notes          TEXT,
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS affiliate_links (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    partner_key     TEXT    NOT NULL,
+    link_key        TEXT    NOT NULL,
+    label           TEXT    NOT NULL,
+    destination_url TEXT    NOT NULL,
+    tool            TEXT,
+    active          INTEGER NOT NULL DEFAULT 1,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(partner_key, link_key)
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_aff_links_partner ON affiliate_links(partner_key)');
+  db.exec(`CREATE TABLE IF NOT EXISTS affiliate_clicks (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    partner_key TEXT    NOT NULL,
+    link_key    TEXT,
+    project_id  INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    referrer    TEXT,
+    clicked_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_aff_clicks_partner ON affiliate_clicks(partner_key)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_aff_clicks_date    ON affiliate_clicks(clicked_at)');
+
+  // Seed known partners if table is empty
+  const affCount = db.prepare('SELECT COUNT(*) AS n FROM affiliate_partners').get().n;
+  if (affCount === 0) {
+    const ins = db.prepare(`INSERT OR IGNORE INTO affiliate_partners
+      (partner_key,partner_name,tag_param,tag_value,commission_pct,signup_url,status,notes)
+      VALUES (?,?,?,?,?,?,?,?)`);
+    const seeds = [
+      ['amazon','Amazon Associates','tag','7kinhomestead-20',3,'https://affiliate-program.amazon.com','active','Already active — tag 7kinhomestead-20'],
+      ['billyLand','BillyLand',null,null,0,'https://billyland.com/affiliates','pending','Trusted partner — land listings'],
+      ['landLimited','LandLimited',null,null,0,'https://landlimited.com','pending','Trusted partner — land listings'],
+      ['onlineLandHub','OnlineLandHub',null,null,0,'https://onlinelandhub.com','pending','RSS feed + referral commission agreed'],
+      ['meyerHatchery','Meyer Hatchery',null,null,0,'https://www.meyerhatchery.com/affiliates','pending','Chicks + poultry'],
+      ['bakerCreek','Baker Creek Heirloom Seeds',null,null,0,'https://www.rareseeds.com/affiliate','pending','Heirloom seeds'],
+      ['signatureSolar','Signature Solar',null,null,0,'https://signaturesolar.com/affiliates','pending','Solar equipment'],
+      ['liTime','LiTime Batteries',null,null,0,'https://www.litime.com/pages/affiliate','pending','LiFePO4 batteries'],
+      ['sunGold','SunGold Power',null,null,0,'https://sungoldpower.com/pages/affiliate','pending','Solar panels'],
+      ['murrayMcmurray','Murray McMurray Hatchery',null,null,0,'https://www.mcmurrayhatchery.com/affiliates.html','pending','Hatchery + livestock'],
+      ['premier1','Premier1 Supplies',null,null,0,'https://www.premier1supplies.com/affiliates','pending','Fencing + electric'],
+      ['trueLeaf','True Leaf Market',null,null,0,'https://www.trueleafmarket.com/pages/affiliate-program','pending','Seeds + sprouting'],
+    ];
+    const tx = db.transaction(() => { for (const s of seeds) ins.run(...s); });
+    tx();
+    console.log('[DB] AffiliateΩr: seeded 12 partner records');
+  }
 }
 
 /**
