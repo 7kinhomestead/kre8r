@@ -1045,6 +1045,17 @@ function runMigrations() {
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_aff_clicks_partner ON affiliate_clicks(partner_key)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_aff_clicks_date    ON affiliate_clicks(clicked_at)');
+  db.exec(`CREATE TABLE IF NOT EXISTS affiliate_commissions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    partner_key     TEXT    NOT NULL,
+    link_key        TEXT,
+    amount          REAL    NOT NULL,
+    description     TEXT,
+    received_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    orgr_synced     INTEGER NOT NULL DEFAULT 0,
+    orgr_income_id  INTEGER,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
 
   // Seed known partners if table is empty
   const affCount = db.prepare('SELECT COUNT(*) AS n FROM affiliate_partners').get().n;
