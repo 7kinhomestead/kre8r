@@ -71,10 +71,51 @@ VectΩr Sunday auto-run cron, and architect the cross-app deployment strategy.
 
 ## Pending (Next Sessions)
 - Deploy KinOS + OrgΩr to shared DigitalOcean droplet
-- Cross-app bridges: affiliate clicks → OrgΩr TreasΩr income, Kre8r publish schedule → KinOS
-- Dale morning CSW generator (OrgΩr Tier 1)
+- Activate KinOS auth: set `KINOS_ADMIN_PW` + `SESSION_SECRET`, set passwords when Cari home
+- Kre8r publish schedule → KinOS family calendar bridge (Tier 1 remaining)
 - Rock Rich format profile in WritΩr (Tier 2)
 - Update kre8r-land tool pages with tracked `/r/` affiliate URLs
+
+---
+
+# Session 62 — Dale Morning Brief + Affiliate→TreasΩr Bridge (2026-04-25)
+
+## Goal
+Build Dale morning CSW generator (OrgΩr Tier 1) and the AffiliateΩr → OrgΩr TreasΩr
+commission bridge (Tier 1 cross-app bridge).
+
+## What Was Built
+
+### Dale Morning CSW Generator (`orgboard`)
+- `src/routes/csw.js`: `POST /api/csw/morning-generate` — finds exec AIE per org (via
+  `exec_aie_job_id` or falls back to top-level job with a persona), pulls org state:
+  all stats + conditions, stale open orders >24h, TreasΩr bucket balances, active
+  battle plans, strategic brief from Kre8r snapshot; builds full morning brief prompt
+  as Dale persona; calls Claude to produce 2-3 CSWs as a JSON array; inserts all as
+  `trigger_type: 'morning_brief'` status `pending`; idempotent — skips if already ran today
+- `server.js`: daily 7am `setInterval` cron fires `morning-generate` with internal token;
+  logs CSW count to console on completion
+- **Live test**: generated 2 real CSWs on first run — situations referenced actual Kre8r
+  pipeline data (content stalled 10+ days, email list 26 days cold, $0 TreasΩr)
+
+### AffiliateΩr → OrgΩr TreasΩr Commission Bridge (`kre8r`)
+- `src/db.js`: new `affiliate_commissions` table — tracks confirmed earnings with
+  `orgr_synced` flag and `orgr_income_id` for reconciliation
+- `src/routes/affiliator.js`:
+  - `GET /api/affiliator/commissions` — list history with partner names
+  - `POST /api/affiliator/commissions` — logs commission locally, then bridges to OrgΩr
+    `POST /api/treasor/income/:orgId` (fire-and-store pattern)
+- `.env`: added `ORGR_URL`, `ORGR_DEFAULT_ORG_ID`, `ORGR_INTERNAL_TOKEN` commented stubs
+  (activate when OrgΩr is deployed and accessible from Kre8r)
+
+## Activation Notes
+- `ORGR_URL=http://localhost:3002` (local) or `https://orgr.yourdomain.com` (deployed)
+- `ORGR_DEFAULT_ORG_ID=4` (7 Kin org id in OrgΩr)
+- Commission bridge is dormant until both env vars are set — fails silently, logs locally
+
+## Commits
+- orgboard: `9ebcdc6 Add Dale morning brief generator — daily 7am CSW cron`
+- kre8r: `69aafaf Add AffiliateΩr commission logging + OrgΩr TreasΩr bridge`
 
 ---
 
