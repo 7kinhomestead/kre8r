@@ -133,6 +133,11 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    Active tag pill shown below filter bar. Filter persists in session. Tag cloud highlights active.
    NOTE: subject tags generated at ingest via Claude Vision — ingest-time tagging is live,
    client-side filter is live. Semantic search across all tags is a future TODO item.
+   PROXY DEDUP: footageFilePathExists checks both file_path AND proxy_path — prevents
+   re-ingestion loop on server restart for proxies already linked to a BRAW record.
+   PROJECT ASSIGNMENT: processProxyUpdate propagates project_id to the BRAW record if
+   BRAW had none. For old projects (pre-folder convention): use VaultΩr bulk-assign or
+   name the intake subfolder [project_id]_anything for watcher auto-assignment.
 
 ✅ EditΩr (`/editor.html`) — SelectsΩr v2 engine (selects-new.js).
    Three shoot modes: SCRIPTED / HYBRID / FREEFORM.
@@ -325,6 +330,7 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 12. TeleprΩmpter: No back button from display screen — only exit is "📋 Scripts" button (hidden by default)
 13. ~~PostΩr: TikTok platform stub~~ — BUILT Session 49. Full OAuth + posting live. App In Review (submitted April 19 2026, ~5-10 days).
 14. MirrΩr: no "last synced" indicator — YouTube data can go stale silently. Sync Now button needed.
+15. ~~VaultΩr proxy re-ingest loop~~ — FIXED Session 62b. footageFilePathExists now checks proxy_path column; processProxyUpdate propagates project_id to BRAW record.
 
 ## Planned Features (Not Yet Built)
 - ~~VectΩr — Weekly strategic session~~ — BUILT Session 55. Live on NorthΩr.
@@ -334,7 +340,7 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
 - Cari creator profile (second voice profile for Rock Rich Shows)
 - RetentΩr — viral clip / retention cut module (post-edit, split from SelectsΩr)
-- AffiliateΩr — track links, commissions, video placement, performance
+- ~~AffiliateΩr — track links, commissions, video placement, performance~~ — BUILT Session 61. Partners/links/clicks/analytics live. Commission→TreasΩr bridge built Session 62.
 - VaultΩr full-text tag search across vault (ingest tagging + chip filter already live)
 - Analytics feedback loop (TikTok/YouTube performance → Id8Ωr recommendations)
 - Multi-tenant creator profiles (auth infrastructure in place, tenant isolation not built)

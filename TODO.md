@@ -3,28 +3,30 @@
 
 ---
 
-## NEXT 3 TASKS (Session 60)
+## NEXT TASKS (Session 62b)
 
-### 1. Deploy Kajabi Homepage v11
-- Open `C:\Users\18054\Desktop\7KH Brand Artwork\7KH Web Tools\website code 7 Kin Homestead\7kh homepage\7kin-homepage_v11.html`
-- Copy full file content → paste into Kajabi custom code block (replaces v10)
-- Test: tool preview strip hover-expand, community video plays on hover, member badge shows 500+
-- If live Kajabi member count needed: remove `MEMBER_COUNT_OVERRIDE` from kre8r-land `.env` + `pm2 restart kre8r-land --update-env`
+### 1. Restart Kre8r + Verify VaultΩr Loop Fix
+- Restart Kre8r (close/reopen Electron OR `node server.js`)
+- Open VaultΩr → check today's footage cards: do they show a project name?
+- If unassigned: select clips → "Assign to Project" → pick the correct project
+- Drop a new proxy into intake and confirm it only runs once in the log
 
-### 2. 7 Kin Trusted Partners Infrastructure — kre8r-land
-Wire OnlineLandHub RSS feed + build full trusted partners system:
-- `trusted_partners` table: name, site_url, rss_feed_url, affiliate_param, commission_rate, logo_url, status
-- Aggregator auto-appends affiliate param to listing URLs at ingest (per-source)
-- `/api/land/partners` route — returns active partners list
-- "7 Kin Trusted" badge on matching listings in the land finder
-- Need from Jason: OnlineLandHub RSS feed URL + their affiliate param format
+### 2. KinOS Auth Activation (when Cari is home)
+- Set `KINOS_ADMIN_PW` + `SESSION_SECRET` in kinos/.env on the live server
+- `pm2 restart kinos`
+- Login as Jason → go to `/manage-passwords` → set passwords for all family members
+- Set Karen last (she gets the 10-year cookie, logs in once, never again)
 
-### 3. OrgΩr Bridge End-to-End Test + DigitalOcean Deploy
-- Restart Kre8r Electron app (picks up INTERNAL_API_KEY + stats-export route)
-- OrgΩr board → 🔗 KRE8R → SYNC NOW → confirm snapshot + available keys appear
-- Map stats to divisions (e.g. videos_published_this_month → Production division)
-- Deploy Kre8r to DigitalOcean:
-  `cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r pm2 restart kre8r`
+### 3. Kre8r Publish Schedule → KinOS Family Calendar Bridge
+- When a project reaches `distribution` stage in PipΩr, POST to KinOS `/api/calendar/events`
+  or similar — so YouTube publish date shows on the family calendar
+- Requires: KinOS calendar event endpoint + Kre8r bridge call on stage change
+
+### 4. Deploy KinOS + OrgΩr to Shared DigitalOcean Droplet
+- Spin up $12/mo shared droplet for KinOS + OrgΩr
+- Nginx config: kinos.life → port 3001, orgr.yourdomain.com → port 3002
+- PM2 ecosystem file for both apps
+- Set `ORGR_URL` + `ORGR_DEFAULT_ORG_ID` in Kre8r `.env` to activate commission bridge
 
 ---
 
@@ -74,22 +76,23 @@ Needs OrgΩr auth built first (same session).
 | AudiencΩr tag filter (Kajabi 500 on filtered requests) | Low priority |
 | TikTok posting app in review (~April 28-30) | Waiting on Apple |
 | OrgΩr PM2 process lost after machine restart | Fix: re-register with pm2 start |
+| VaultΩr loop fix not live until Kre8r restarts | Restart Electron app |
 
 ---
 
 ## INFRASTRUCTURE NOTES
 
 - Kre8r: port 3000 (Electron desktop + kre8r.app on DO)
-- KinOS: port 3001 (kinos.life — family OS, currently no auth)
-- OrgΩr: port 3002 (local only, no auth yet)
+- KinOS: port 3001 (kinos.life — auth built Session 61, not yet activated on live server)
+- OrgΩr: port 3002 (local only — auth built Session 61, activate with ORGR_ADMIN_PW)
 - Deploy: `cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r`
 - OrgΩr PM2: `node %APPDATA%\npm\node_modules\pm2\bin\pm2 start server.js --name orgboard` (run from C:\Users\18054\orgboard)
 
 ---
 
 ## BEFORE BETA LAUNCH CHECKLIST
-- [ ] OrgΩr auth
-- [ ] KinOS auth
+- [x] OrgΩr auth — built Session 61, needs ORGR_ADMIN_PW to activate
+- [x] KinOS auth — built Session 61, needs passwords set when Cari is home
 - [ ] Desktop-only feature gates
 - [ ] Remove API key field from public/setup.html (operator pays)
 - [ ] MirrΩr last-synced indicator

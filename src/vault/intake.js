@@ -625,7 +625,9 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
 
   // Update the original BRAW record with full metadata from the proxy.
   // Also store proxy_path so transcription (Whisper) always has a decodable file.
-  db.updateFootage(brawRecord.id, {
+  // If the BRAW record has no project_id but the caller does, fill it in now —
+  // handles the case where BRAW was ingested without project context.
+  const updateFields = {
     shot_type:          normalizeShotType(classification.shot_type) || brawRecord.shot_type,
     subcategory:        classification.subcategory  || null,
     description:        classification.description  || brawRecord.description,
@@ -639,7 +641,12 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
     creation_timestamp: meta.creation_timestamp || brawRecord.creation_timestamp,
     thumbnail_path:     thumbs?.displayUrl || null,
     proxy_path:         proxyPath                    // ← transcription uses this
-  });
+  };
+  if (!brawRecord.project_id && projectId) {
+    updateFields.project_id = projectId;
+    console.log(`[VaultΩr] Proxy linked BRAW to project ${projectId} (BRAW had no project context)`);
+  }
+  db.updateFootage(brawRecord.id, updateFields);
 
   onProgress?.({ stage: 'saved', file: original_filename, id: brawRecord.id, proxy_update: true });
 

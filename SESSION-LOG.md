@@ -119,6 +119,42 @@ commission bridge (Tier 1 cross-app bridge).
 
 ---
 
+# Session 62b — VaultΩr Proxy Re-ingestion Loop + Project Assignment Fix (2026-04-26)
+
+## Goal
+Diagnose VaultΩr acting "dumb" — same clip ingesting repeatedly + footage not showing
+in EditΩr even after project assignment.
+
+## Root Causes Found
+
+### Bug 1 — Proxy re-ingestion loop (`src/db.js`)
+`footageFilePathExists(filePath)` only checked `file_path` column. Proxy files processed
+via `processProxyUpdate` never get their own `file_path` record — only the BRAW record's
+`proxy_path` column gets updated. So every server restart or chokidar re-trigger returned
+"not ingested" for the proxy file, causing the full proxy pipeline to re-run endlessly.
+
+**Fix**: `footageFilePathExists` now checks both `file_path` and `proxy_path`.
+
+### Bug 2 — Project context not propagated through proxy update (`src/vault/intake.js`)
+`processProxyUpdate` updated classification, thumbnails, codec, duration etc. but never
+wrote `project_id` to the BRAW record. If BRAW was ingested before project context was
+known (flat intake folder, no `[id]_slug` subfolder), and the proxy arrived via the
+watcher with a projectId, the project assignment was silently dropped.
+
+**Fix**: `processProxyUpdate` now writes `project_id` to the BRAW record if the BRAW
+had none and the caller passed one.
+
+## Intake Workflow Clarification (for old projects)
+Projects created before the `[id]_slug` folder convention don't get auto-assigned by
+the watcher. Two recovery paths:
+1. Use VaultΩr bulk-assign after ingest (select clips → "Assign to Project")
+2. Name the intake subfolder `[project_id]_anything` and watcher auto-assigns going forward
+
+## Commits
+- kre8r: `(pending restart + commit)` — fixes in `src/db.js` + `src/vault/intake.js`
+
+---
+
 # Session 60 — BattlePlanΩr Print Polish + Receipt Scanner Bridge (2026-04-24)
 
 ## Goal

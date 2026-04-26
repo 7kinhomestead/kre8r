@@ -2161,7 +2161,13 @@ function getFootageStats() {
 }
 
 function footageFilePathExists(filePath) {
-  return !!_get(`SELECT id FROM footage WHERE file_path = ?`, [filePath]);
+  // Check both file_path (all clips) and proxy_path (BRAW proxy files).
+  // Proxy files are never inserted as their own record — they update the BRAW record's
+  // proxy_path. Without the proxy_path check, every proxy re-triggers on server restart.
+  return !!_get(
+    `SELECT id FROM footage WHERE file_path = ? OR proxy_path = ?`,
+    [filePath, filePath]
+  );
 }
 
 // ─────────────────────────────────────────────
