@@ -3,26 +3,29 @@
 
 ---
 
-## NEXT TASKS (Session 62b)
+## NEXT TASKS (Session 63)
 
-### 1. Restart Kre8r + Verify VaultΩr Loop Fix
-- Restart Kre8r (close/reopen Electron OR `node server.js`)
-- Open VaultΩr → check today's footage cards: do they show a project name?
-- If unassigned: select clips → "Assign to Project" → pick the correct project
-- Drop a new proxy into intake and confirm it only runs once in the log
+### 1. Replace kre8r-land Tool Page Links with Tracked /r/ URLs
+- AffiliateΩr is live and working — create tracked links for all the hardcoded tool page items
+- Water page: IBC Tote, Poly Tank 500 Gal, Big Berkey Filter
+- Solar page: LiTime Battery, SunGold Panels
+- Lifestyle page: Pressure Canner, Chest Freezer, Chicks (Meyer), Seeds (Baker Creek)
+- Swap hardcoded URLs in kre8r-land tool pages with `/r/partner/link_key` tracked URLs
 
-### 2. KinOS Auth Activation (when Cari is home)
+### 2. Land Finder Tool — TBD (discuss with Jason)
+
+### 3. KinOS Auth Activation (when Cari is home)
 - Set `KINOS_ADMIN_PW` + `SESSION_SECRET` in kinos/.env on the live server
 - `pm2 restart kinos`
 - Login as Jason → go to `/manage-passwords` → set passwords for all family members
 - Set Karen last (she gets the 10-year cookie, logs in once, never again)
 
-### 3. Kre8r Publish Schedule → KinOS Family Calendar Bridge
+### 4. Kre8r Publish Schedule → KinOS Family Calendar Bridge
 - When a project reaches `distribution` stage in PipΩr, POST to KinOS `/api/calendar/events`
   or similar — so YouTube publish date shows on the family calendar
 - Requires: KinOS calendar event endpoint + Kre8r bridge call on stage change
 
-### 4. Deploy KinOS + OrgΩr to Shared DigitalOcean Droplet
+### 5. Deploy KinOS + OrgΩr to Shared DigitalOcean Droplet
 - Spin up $12/mo shared droplet for KinOS + OrgΩr
 - Nginx config: kinos.life → port 3001, orgr.yourdomain.com → port 3002
 - PM2 ecosystem file for both apps
@@ -76,7 +79,8 @@ Needs OrgΩr auth built first (same session).
 | AudiencΩr tag filter (Kajabi 500 on filtered requests) | Low priority |
 | TikTok posting app in review (~April 28-30) | Waiting on Apple |
 | OrgΩr PM2 process lost after machine restart | Fix: re-register with pm2 start |
-| VaultΩr loop fix not live until Kre8r restarts | Restart Electron app |
+| ~~VaultΩr loop fix not live until Kre8r restarts~~ | ✅ Confirmed fixed + live Session 63 |
+| ~~AffiliateΩr partner add + links loading broken~~ | ✅ Fixed (db.prepare export) Session 63 |
 
 ---
 

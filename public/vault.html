@@ -614,6 +614,19 @@
         <div class="scan-ingest-log" id="ingestLog"></div>
       </div>
 
+      <!-- Scan-done locked state banner -->
+      <div id="scanDoneBanner" style="display:none;margin-top:16px;padding:14px 18px;background:#1c2e24;border:1px solid #2c4838;border-radius:var(--radius);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:4px;">✓ Drive scan complete</div>
+          <div id="scanDoneSummary" style="font-size:12px;color:var(--text-dim);"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="runDedupe()" style="font-size:12px;padding:6px 12px;" title="Archive duplicate records, keeping the most complete version of each clip">⟳ Dedupe Vault</button>
+          <button class="btn btn-ghost" onclick="runPurge()" style="font-size:12px;padding:6px 12px;color:var(--red);" title="Hard-delete all archived records from the database">🗑 Purge Dupes</button>
+          <button class="btn-cancel" onclick="resetScan()" style="font-size:12px;padding:6px 12px;">↺ Reset Scan</button>
+        </div>
+      </div>
+
       <!-- Junk review -->
       <div class="scan-junk-section" id="junkSection">
         <div class="scan-junk-header">
@@ -793,6 +806,13 @@
         <div class="footage-empty-text">Loading footage…</div>
       </div>
     </div>
+
+    <!-- Pagination bar -->
+    <div id="paginationBar" style="display:none;margin-top:18px;display:flex;align-items:center;gap:10px;justify-content:center;">
+      <button class="btn btn-ghost" id="pagePrev" onclick="changePage(-1)" style="padding:6px 14px;">← Prev</button>
+      <span id="pageLabel" style="font-size:13px;color:var(--text-dim);min-width:120px;text-align:center;"></span>
+      <button class="btn btn-ghost" id="pageNext" onclick="changePage(1)" style="padding:6px 14px;">Next →</button>
+    </div>
   </div>
 
 </main>
@@ -922,6 +942,10 @@ let currentClip     = null;
 let viewMode        = 'grid';
 let showOrganized   = false;
 let selectedIds     = new Set();
+let currentPage     = 1;
+const PAGE_SIZE     = 100;
+let totalFootage    = 0;
+let totalPages      = 1;
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -1077,22 +1101,57 @@ async function loadProjects() {
 }
 
 // ── FOOTAGE LOAD ───────────────────────────────────────────────────────────
-async function loadFootage() {
+async function loadFootage(page = currentPage) {
   try {
-    const [footage, dist] = await Promise.all([
-      fetch('/api/vault/footage').then(r => r.json()),
+    const filters = activeFilters;
+    const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+    if (filters.shot    !== 'all') params.set('shot_type',    filters.shot);
+    if (filters.quality !== 'all') params.set('quality_flag', filters.quality);
+
+    const [result, dist] = await Promise.all([
+      fetch(`/api/vault/footage?${params}`).then(r => r.json()),
       fetch('/api/vault/distribution').then(r => r.json())
     ]);
-    allFootage = footage;
+
+    // Paginated response
+    const rows = result.rows ?? result; // fallback for legacy plain-array response
+    currentPage  = result.page  ?? 1;
+    totalFootage = result.total ?? rows.length;
+    totalPages   = result.pages ?? 1;
+
+    allFootage = rows;
     buildDistMap(dist);
     filteredFootage = applyFilters(allFootage);
     renderView(filteredFootage);
     renderTagCloud(filteredFootage);
-    updateFootageCount(filteredFootage.length, allFootage.length);
+    updateFootageCount(filteredFootage.length, totalFootage);
     updateUnorganizedCount();
+    renderPagination();
   } catch(e) {
-    document.getElementById('footageGrid').innerHTML = '<div class="footage-empty"><div class="footage-empty-icon">⚠</div><div class="footage-empty-text">Failed to load footage</div></div>';
+    console.error('[VaultΩr] loadFootage error:', e);
+    const grid = document.getElementById('footageGrid');
+    if (grid) grid.innerHTML = `<div class="footage-empty"><div class="footage-empty-icon">⚠</div><div class="footage-empty-text">Failed to load footage: ${e.message}</div></div>`;
   }
+}
+
+function renderPagination() {
+  const bar   = document.getElementById('paginationBar');
+  const label = document.getElementById('pageLabel');
+  const prev  = document.getElementById('pagePrev');
+  const next  = document.getElementById('pageNext');
+  if (totalPages <= 1) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  label.textContent = `Page ${currentPage} of ${totalPages}`;
+  prev.disabled = currentPage <= 1;
+  next.disabled = currentPage >= totalPages;
+}
+
+function changePage(delta) {
+  const target = currentPage + delta;
+  if (target < 1 || target > totalPages) return;
+  currentPage = target;
+  loadFootage(currentPage);
+  window.scrollTo({ top: document.getElementById('footageGrid').offsetTop - 80, behavior: 'smooth' });
 }
 
 function buildDistMap(records) {
@@ -1113,12 +1172,10 @@ function setFilter(type, value, el) {
   el.closest('.filter-group').querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('searchInput').value = '';
-  filteredFootage = applyFilters(allFootage);
-  renderView(filteredFootage);
-  renderTagCloud(filteredFootage);
-  updateFootageCount(filteredFootage.length, allFootage.length);
   renderActiveTagPill();
   saveSession();
+  currentPage = 1;
+  loadFootage(1);
 }
 
 function applyFilters(footage) {
@@ -1166,7 +1223,11 @@ function toggleShowOrganized(checked) {
 
 function updateFootageCount(shown, total) {
   const el = document.getElementById('footageCount');
-  el.textContent = shown === total ? `${total} clip${total !== 1 ? 's' : ''}` : `${shown} of ${total} clips`;
+  if (totalPages > 1) {
+    el.textContent = `${shown} clips · page ${currentPage} of ${totalPages} (${total.toLocaleString()} total)`;
+  } else {
+    el.textContent = shown === total ? `${total.toLocaleString()} clip${total !== 1 ? 's' : ''}` : `${shown} of ${total.toLocaleString()} clips`;
+  }
 }
 
 // ── SEARCH ─────────────────────────────────────────────────────────────────
@@ -2323,7 +2384,6 @@ function updatePhasePills(phase) {
     review: document.getElementById('pill-review'),
     ingest: document.getElementById('pill-ingest')
   };
-  // Reset all
   Object.values(pills).forEach(p => { p.classList.remove('active', 'done'); });
 
   if (phase === 'scanning') {
@@ -2335,6 +2395,10 @@ function updatePhasePills(phase) {
     pills.scan.classList.add('done');
     pills.review.classList.add('done');
     pills.ingest.classList.add('active');
+  } else if (phase === 'done') {
+    pills.scan.classList.add('done');
+    pills.review.classList.add('done');
+    pills.ingest.classList.add('done');
   }
 }
 
@@ -2400,9 +2464,27 @@ function applyCheckpoint(cp) {
   updateLiveStats(cp.stats || {});
 
   const isBusy = cp.phase === 'scanning' || cp.phase === 'ingesting';
+  const isDone = cp.phase === 'done';
 
-  document.getElementById('startScanBtn').disabled = isBusy;
+  document.getElementById('startScanBtn').disabled = isBusy || isDone;
   document.getElementById('cancelScanBtn').style.display = isBusy ? '' : 'none';
+
+  // Done state: show locked banner, hide action buttons
+  const banner = document.getElementById('scanDoneBanner');
+  if (isDone) {
+    banner.style.display = 'flex';
+    const s = cp.stats || {};
+    const rootPath = cp.rootPath || '';
+    const ingested = (s.ingested || 0).toLocaleString();
+    const inDb     = (s.already_in_db || 0).toLocaleString();
+    document.getElementById('scanDoneSummary').textContent =
+      `${ingested} clips ingested · ${inDb} already in DB · root: ${rootPath}`;
+    document.getElementById('scanActions').style.display = 'none';
+    document.getElementById('scanLive').classList.remove('visible');
+    document.getElementById('scanSummary').classList.remove('visible');
+  } else {
+    banner.style.display = 'none';
+  }
 
   if (cp.phase === 'complete' || cp.phase === 'ingesting') {
     renderSummaryCards(cp.stats || {});
@@ -2491,13 +2573,13 @@ function openScanSse() {
     }
 
     if (data.type === 'ingest_complete') {
-      const pct = 100;
-      document.getElementById('ingestBar').style.width = pct + '%';
+      document.getElementById('ingestBar').style.width = '100%';
       document.getElementById('cancelIngestBtn').style.display = 'none';
       document.getElementById('startIngestBtn').disabled = false;
-      updatePhasePills('complete');
+      updatePhasePills('done');
       if (data.stats) renderSummaryCards(data.stats);
       showToast('Ingestion complete', 'green');
+      loadReport();
     }
 
     if (data.type === 'cancelled') {
@@ -2524,6 +2606,44 @@ async function loadReport() {
     applyCheckpoint(cp);
   } catch (err) {
     // No checkpoint yet — ignore
+  }
+}
+
+async function runPurge() {
+  if (!confirm('Hard-delete all archived footage records? This cannot be undone.')) return;
+  try {
+    const r = await fetch('/api/vault/purge-archived', { method: 'POST' }).then(r => r.json());
+    showToast(`Purged ${r.deleted.toLocaleString()} records`, 'green');
+    await loadFootage(1);
+  } catch(e) {
+    showToast('Purge failed: ' + e.message, 'red');
+  }
+}
+
+async function resetScan() {
+  if (!confirm('Reset the drive scan? This clears the checkpoint so you can run a new scan. Your vault footage records are not affected.')) return;
+  try {
+    await fetch('/api/vault/scan/reset', { method: 'POST' });
+    showToast('Scan reset — ready for a new scan', 'amber');
+    await loadReport();
+  } catch(e) {
+    showToast('Reset failed: ' + e.message, 'red');
+  }
+}
+
+async function runDedupe() {
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.textContent = 'Deduping…';
+  try {
+    const r = await fetch('/api/vault/dedupe', { method: 'POST' }).then(r => r.json());
+    showToast(`Dedupe complete — ${r.archived} duplicates archived across ${r.groups} groups`, 'green');
+    await loadFootage(1);
+  } catch(e) {
+    showToast('Dedupe failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⟳ Dedupe Vault';
   }
 }
 

@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
       stats.pipeline_in_production   = p.in_production     ?? 0;
       stats.pipeline_in_post         = p.in_post           ?? 0;
       stats.pipeline_in_distribution = p.in_distribution   ?? 0;
-      stats.pipeline_stalled         = p.stalled           ?? 0;
+      stats.pipeline_stalled         = Array.isArray(p.stalled) ? p.stalled.length : (p.stalled ?? 0);
     } catch (_) {}
 
     // ── Publishing stats (last 30 days) ──────────────────────────────

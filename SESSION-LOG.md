@@ -3,7 +3,59 @@
 
 ---
 
-# Session 61 — AffiliateΩr + Three-App Auth Layer + VectΩr Auto-Run (2026-04-25)
+# Session 63 — AffiliateΩr Gear Page + VaultΩr Dedup + db.prepare Fix (2026-04-26)
+
+## Goal
+Recover interrupted session (power outage mid-affiliator edit), finish gear page on
+kre8r-land, add OG image scraping + manual upload to AffiliateΩr, fix partner add broken,
+clean VaultΩr 35k phantom records, confirm vault loop fix live.
+
+## What Was Built / Fixed
+
+### AffiliateΩr — Gear Page Images (`kre8r`)
+- `src/routes/affiliator.js`:
+  - Added `multer` image upload to `public/uploads/affiliate/` → `POST /links/:id/image`
+  - Added `scrapeOgImage()` → background OG scrape on link create + `POST /links/:id/rescrape`
+  - `GET /gear-public`: now includes `og_image_url`; makes local upload paths absolute URLs
+  - `POST /links`: changed from `RETURNING id` + `.get()` → `.run()` + `lastInsertRowid`
+    (RETURNING id not reliable across better-sqlite3 versions — this was breaking partner add
+    and links loading)
+- `src/db.js`:
+  - Added `og_image_url TEXT` column to `affiliate_links` via safe ALTER TABLE migration
+  - Added `purgeArchivedFootage()` — hard-deletes all `quality_flag = 'archived'` records
+  - Added `countFootage()` — paginated count for vault pagination bar
+  - **Root fix**: added `prepare: (sql) => _activeDb().prepare(sql)` to `module.exports` —
+    affiliator.js called `db.prepare()` directly but it was never exported; every single
+    affiliator API call was silently 500-ing; partners tab showed empty, add partner did nothing
+- `public/affiliator.html`:
+  - Product image section in link modal: preview thumbnail, 📷 Upload Image, 🔄 Re-fetch from URL
+  - `_activeLinkId` state tracks open link for post-save image upload
+  - `setImgPreview()`, `uploadLinkImage()`, `rescrapeOg()` functions
+
+### gear.html — kre8r-land (`kre8r-land`)
+- Replaced hardcoded `GEAR` array with `GEAR_FALLBACK` + live fetch from `kre8r.app/api/affiliator/gear-public`
+- `normalizeItem()` maps API shape to card fields
+- `renderGear(items)` function — works with both live data and fallback
+- Deployed to 7kinhomestead.land/gear — confirmed live ✅
+
+### VaultΩr Cleanup (`kre8r`)
+- `src/routes/vault.js`: added `POST /dedupe` and `POST /purge-archived` routes
+- `public/vault.html`: Dedupe + Purge Dupes + Reset Scan buttons in scan-done banner
+- Ran dedupe + purge — cleaned 35k phantom records (root cause: `runIngest` never cleared
+  `to_ingest` array in prior session, same 3,853 files ingested ~9 times)
+
+### VaultΩr Loop Fix — Confirmed Live (Session 62b fixes)
+- `footageFilePathExists` now checks both `file_path` and `proxy_path` — proxy re-ingest loop eliminated
+- `processProxyUpdate` propagates `project_id` to BRAW record — project assignment no longer silently dropped
+- Vault confirmed stable: drop proxy → ingests once ✅
+
+## Commits Needed
+- kre8r: db.prepare export fix + og_image_url migration + purgeArchivedFootage + vault routes + affiliator image endpoints
+- kre8r-land: gear.html live fetch (already committed `323262d`)
+
+---
+
+# Session 62b — VaultΩr Proxy Re-ingestion Loop + Project Assignment Fix (2026-04-26) AffiliateΩr + Three-App Auth Layer + VectΩr Auto-Run (2026-04-25)
 
 ## Goal
 Build AffiliateΩr in Kre8r, wire session-based auth into KinOS and OrgΩr, implement
@@ -151,7 +203,7 @@ the watcher. Two recovery paths:
 2. Name the intake subfolder `[project_id]_anything` and watcher auto-assigns going forward
 
 ## Commits
-- kre8r: `(pending restart + commit)` — fixes in `src/db.js` + `src/vault/intake.js`
+- kre8r: fixes in `src/db.js` (footageFilePathExists proxy_path check) + `src/vault/intake.js` (project_id propagation) — confirmed live Session 63
 
 ---
 

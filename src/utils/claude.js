@@ -226,4 +226,83 @@ async function callClaudeMessages(system, messages, maxTokens = 2048, options = 
   throw lastError || new Error('Claude API call failed after all retries');
 }
 
-module.exports = { callClaude, callClaudeMessages, repairJSON };
+/**
+ * callClaudeStream(system, messages, maxTokens, onToken, options)
+ *
+ * Streaming version — calls Anthropic with stream:true, fires onToken(text)
+ * for each text delta as it arrives. Returns the full assembled text when done.
+ * Used by The Fence and any other SSE-streaming feature.
+ */
+async function callClaudeStream(system, messages, maxTokens = 512, onToken, options = {}) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
+
+  const { tool = 'fence', session_id = null } = options;
+  const { default: fetch } = await import('node-fetch');
+
+  const body = { model: MODEL, max_tokens: maxTokens, stream: true, messages };
+  if (system) body.system = system;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method  : 'POST',
+    headers : {
+      'Content-Type'      : 'application/json',
+      'x-api-key'         : apiKey,
+      'anthropic-version' : ANTHROPIC_VERSION,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Claude stream error ${response.status}`);
+  }
+
+  let inputTokens  = 0;
+  let outputTokens = 0;
+  let fullText     = '';
+  let buffer       = '';
+
+  const stream = response.body;
+  stream.setEncoding('utf8');
+
+  await new Promise((resolve, reject) => {
+    stream.on('data', (chunk) => {
+      buffer += chunk;
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // hold incomplete line
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === '[DONE]') continue;
+        try {
+          const ev = JSON.parse(raw);
+          if (ev.type === 'message_start') {
+            inputTokens = ev.message?.usage?.input_tokens || 0;
+          }
+          if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+            const text = ev.delta.text;
+            fullText += text;
+            if (typeof onToken === 'function') onToken(text);
+          }
+          if (ev.type === 'message_delta') {
+            outputTokens = ev.usage?.output_tokens || 0;
+          }
+        } catch (_) {}
+      }
+    });
+    stream.on('end',   resolve);
+    stream.on('error', reject);
+  });
+
+  // Log usage — never let this crash
+  try {
+    const cost = (inputTokens * 0.000003) + (outputTokens * 0.000015);
+    require('../db').logTokenUsage({ tool, session_id, input_tokens: inputTokens, output_tokens: outputTokens, estimated_cost: cost });
+  } catch (_) {}
+
+  return fullText;
+}
+
+module.exports = { callClaude, callClaudeMessages, callClaudeStream, repairJSON };

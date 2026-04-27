@@ -297,7 +297,11 @@ async function runIngest(cp) {
   if (scanAborted) {
     broadcast({ type: 'cancelled', phase: cp.phase });
   } else {
-    cp.phase = 'complete';
+    // Clear the queue — it has been processed. Phase 'done' locks the UI
+    // until the user explicitly resets. This prevents replay on next page load.
+    cp.files.to_ingest = [];
+    cp.stats.to_ingest  = 0;
+    cp.phase = 'done';
     broadcast({ type: 'ingest_complete', stats: cp.stats });
   }
 
@@ -311,12 +315,26 @@ async function runIngest(cp) {
 // POST /start — begin scan
 router.post('/start', async (req, res) => {
   try {
-    const { rootPath } = req.body || {};
+    const { rootPath, force } = req.body || {};
     if (!rootPath) return res.status(400).json({ error: 'rootPath required' });
 
     const normalized = path.normalize(rootPath);
     if (!fs.existsSync(normalized)) {
       return res.status(400).json({ error: `Path does not exist: ${normalized}` });
+    }
+
+    // Block re-scan if a full scan already completed — require explicit reset first
+    if (!force) {
+      const existing = loadCheckpoint();
+      if (existing.phase === 'done') {
+        return res.status(409).json({
+          error: 'A scan has already been completed for this drive. Use Reset Scan to start fresh.',
+          phase: 'done',
+          stats: existing.stats,
+          rootPath: existing.rootPath,
+          startedAt: existing.startedAt
+        });
+      }
     }
 
     // Reset abort flag and kick off background scan
@@ -472,6 +490,19 @@ router.post('/delete-junk', async (req, res) => {
     res.json({ ok: true, deleted: deleted.length, failed });
   } catch (err) {
     logger.error({ err, module: 'vault-scan' }, 'POST /delete-junk error');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /reset — clear checkpoint, unlock Drive Operations for a fresh scan
+router.post('/reset', (req, res) => {
+  try {
+    const cp = emptyCheckpoint();
+    saveCheckpoint(cp);
+    broadcast({ type: 'reset' });
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err, module: 'vault-scan' }, 'POST /reset error');
     res.status(500).json({ error: err.message });
   }
 });

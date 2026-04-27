@@ -1035,6 +1035,9 @@ function runMigrations() {
     UNIQUE(partner_key, link_key)
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_aff_links_partner ON affiliate_links(partner_key)');
+  // Gear page columns — safe migrations, silently skip if already exist
+  ['show_on_gear INTEGER DEFAULT 0','gear_category TEXT','gear_price TEXT','gear_emoji TEXT','gear_description TEXT','og_image_url TEXT']
+    .forEach(col => { try { db.exec(`ALTER TABLE affiliate_links ADD COLUMN ${col}`); } catch(_) {} });
   db.exec(`CREATE TABLE IF NOT EXISTS affiliate_clicks (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     partner_key TEXT    NOT NULL,
@@ -1069,17 +1072,50 @@ function runMigrations() {
       ['landLimited','LandLimited',null,null,0,'https://landlimited.com','pending','Trusted partner — land listings'],
       ['onlineLandHub','OnlineLandHub',null,null,0,'https://onlinelandhub.com','pending','RSS feed + referral commission agreed'],
       ['meyerHatchery','Meyer Hatchery',null,null,0,'https://www.meyerhatchery.com/affiliates','pending','Chicks + poultry'],
-      ['bakerCreek','Baker Creek Heirloom Seeds',null,null,0,'https://www.rareseeds.com/affiliate','pending','Heirloom seeds'],
-      ['signatureSolar','Signature Solar',null,null,0,'https://signaturesolar.com/affiliates','pending','Solar equipment'],
-      ['liTime','LiTime Batteries',null,null,0,'https://www.litime.com/pages/affiliate','pending','LiFePO4 batteries'],
-      ['sunGold','SunGold Power',null,null,0,'https://sungoldpower.com/pages/affiliate','pending','Solar panels'],
+      ['signatureSolar','Signature Solar',null,null,0,'https://signaturesolar.com/affiliate-program','pending','Solar equipment — direct, up to 9%, 7-day cookie'],
+      ['liTime','LiTime Batteries',null,null,5,'https://ui.awin.com/merchant-profile/71451','pending','LiFePO4 batteries — on Awin (already have account), 5-6%'],
+      ['sunGold','SunGold Power',null,null,6,'https://sungoldpower.com/pages/affiliate-program','pending','Solar panels — direct, 6%'],
       ['murrayMcmurray','Murray McMurray Hatchery',null,null,0,'https://www.mcmurrayhatchery.com/affiliates.html','pending','Hatchery + livestock'],
-      ['premier1','Premier1 Supplies',null,null,0,'https://www.premier1supplies.com/affiliates','pending','Fencing + electric'],
-      ['trueLeaf','True Leaf Market',null,null,0,'https://www.trueleafmarket.com/pages/affiliate-program','pending','Seeds + sprouting'],
+      ['trueLeaf','True Leaf Market',null,null,0,'https://trueleafmarket.com/pages/affiliate-program-trueleafmarket','pending','Seeds + sprouting — Pepperjam, fast approval'],
+      ['yeti','YETI',null,null,6,'https://app.impact.com/advertiser-advertiser-info/YETI.brand','pending','Coolers/drinkware — on Impact (already have account), 5-7%, 30-day cookie'],
+      ['carhartt','Carhartt',null,null,6,'https://www.carhartt.com/affiliate','pending','Work gear — on Impact (already have account), 4-8%'],
+      ['harvestRight','Harvest Right',null,null,7,'https://affiliates.harvestright.com/home','pending','Freeze dryers — direct (iDevAffiliate), 3-10% tiered, 45-day cookie'],
+      ['lehmans','Lehman\'s',null,null,0,'https://www.lehmans.com/affiliates','pending','Non-electric/off-grid supplies — Pepperjam, fast approval'],
+      ['tractorSupply','Tractor Supply Co',null,null,0,'https://www.tractorsupply.com/tsc/cms/policies-information/affiliate-program','pending','Farm/animal/tool supplies — Partnerize, 2-3 days'],
+      ['northernTool','Northern Tool + Equipment',null,null,0,'https://www.northerntool.com/affiliate-program','pending','Tools + equipment — CJ Affiliate, fast approval'],
+      ['milwaukee','Milwaukee Tool',null,null,8,'https://www.flexoffers.com/affiliate-programs/milwaukee-affiliate-program/','pending','Power tools — CJ Affiliate, up to 10%'],
+      ['duluthTrading','Duluth Trading Company',null,null,7,'https://www.duluthtrading.com/affiliate-program.html','pending','Work gear — AvantLink, 5-10%, 14-day cookie'],
     ];
     const tx = db.transaction(() => { for (const s of seeds) ins.run(...s); });
     tx();
-    console.log('[DB] AffiliateΩr: seeded 12 partner records');
+    console.log('[DB] AffiliateΩr: seeded 18 partner records');
+  }
+
+  // Migration: remove no-program partners, add new gear shop partners
+  // Idempotent — checks for bakerCreek existence before running
+  const bakerExists = db.prepare("SELECT id FROM affiliate_partners WHERE partner_key='bakerCreek'").get();
+  if (bakerExists) {
+    const ins = db.prepare(`INSERT OR IGNORE INTO affiliate_partners
+      (partner_key,partner_name,tag_param,tag_value,commission_pct,signup_url,status,notes)
+      VALUES (?,?,?,?,?,?,?,?)`);
+    const tx = db.transaction(() => {
+      db.prepare("DELETE FROM affiliate_partners WHERE partner_key IN ('bakerCreek','premier1')").run();
+      ins.run('yeti','YETI',null,null,6,'https://app.impact.com/advertiser-advertiser-info/YETI.brand','pending','Coolers/drinkware — on Impact (already have account), 5-7%, 30-day cookie');
+      ins.run('carhartt','Carhartt',null,null,6,'https://www.carhartt.com/affiliate','pending','Work gear — on Impact (already have account), 4-8%');
+      ins.run('harvestRight','Harvest Right',null,null,7,'https://affiliates.harvestright.com/home','pending','Freeze dryers — direct (iDevAffiliate), 3-10% tiered, 45-day cookie');
+      ins.run('lehmans',"Lehman's",null,null,0,'https://www.lehmans.com/affiliates','pending','Non-electric/off-grid supplies — Pepperjam, fast approval');
+      ins.run('tractorSupply','Tractor Supply Co',null,null,0,'https://www.tractorsupply.com/tsc/cms/policies-information/affiliate-program','pending','Farm/animal/tool supplies — Partnerize, 2-3 days');
+      ins.run('northernTool','Northern Tool + Equipment',null,null,0,'https://www.northerntool.com/affiliate-program','pending','Tools + equipment — CJ Affiliate, fast approval');
+      ins.run('milwaukee','Milwaukee Tool',null,null,8,'https://www.flexoffers.com/affiliate-programs/milwaukee-affiliate-program/','pending','Power tools — CJ Affiliate, up to 10%');
+      ins.run('duluthTrading','Duluth Trading Company',null,null,7,'https://www.duluthtrading.com/affiliate-program.html','pending','Work gear — AvantLink, 5-10%, 14-day cookie');
+      // Update existing entries with corrected URLs + commission rates
+      db.prepare("UPDATE affiliate_partners SET signup_url='https://signaturesolar.com/affiliate-program', notes='Solar equipment — direct, up to 9%, 7-day cookie' WHERE partner_key='signatureSolar'").run();
+      db.prepare("UPDATE affiliate_partners SET commission_pct=5, signup_url='https://ui.awin.com/merchant-profile/71451', notes='LiFePO4 batteries — on Awin (already have account), 5-6%' WHERE partner_key='liTime'").run();
+      db.prepare("UPDATE affiliate_partners SET commission_pct=6, signup_url='https://sungoldpower.com/pages/affiliate-program' WHERE partner_key='sunGold'").run();
+      db.prepare("UPDATE affiliate_partners SET signup_url='https://trueleafmarket.com/pages/affiliate-program-trueleafmarket', notes='Seeds + sprouting — Pepperjam, fast approval' WHERE partner_key='trueLeaf'").run();
+    });
+    tx();
+    console.log('[DB] AffiliateΩr migration: removed bakerCreek+premier1, added 8 new gear shop partners');
   }
 }
 
@@ -2134,14 +2170,68 @@ function updateFootageCaptionPackage(footageId, captionPackageJson) {
   );
 }
 
-function getAllFootage({ shot_type, quality_flag, project_id } = {}) {
+function getAllFootage({ shot_type, quality_flag, project_id, limit, offset } = {}) {
   let sql = `SELECT * FROM footage WHERE 1=1`;
   const params = [];
   if (shot_type)    { sql += ` AND shot_type = ?`;    params.push(shot_type); }
   if (quality_flag) { sql += ` AND quality_flag = ?`; params.push(quality_flag); }
   if (project_id)   { sql += ` AND project_id = ?`;   params.push(project_id); }
   sql += ` ORDER BY ingested_at DESC`;
+  if (limit != null) {
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(limit, offset || 0);
+  }
   return _all(sql, params);
+}
+
+function countFootage({ shot_type, quality_flag, project_id } = {}) {
+  let sql = `SELECT COUNT(*) AS n FROM footage WHERE 1=1`;
+  const params = [];
+  if (shot_type)    { sql += ` AND shot_type = ?`;    params.push(shot_type); }
+  if (quality_flag) { sql += ` AND quality_flag = ?`; params.push(quality_flag); }
+  if (project_id)   { sql += ` AND project_id = ?`;   params.push(project_id); }
+  return (_get(sql, params)?.n) || 0;
+}
+
+// Deduplicate footage records by original_filename.
+// Keeps the record with the most complete data (thumbnail > proxy > project assignment).
+// Archives the rest (soft delete — sets quality_flag = 'archived').
+// Returns { archived, groups } counts.
+function purgeArchivedFootage() {
+  const result = _activeDb().prepare('DELETE FROM footage WHERE quality_flag = ?').run('archived');
+  return { deleted: result.changes ?? 0 };
+}
+
+function dedupeFootage() {
+  const groups = _all(`
+    SELECT original_filename, COUNT(*) AS cnt
+    FROM footage
+    WHERE quality_flag != 'archived' AND original_filename IS NOT NULL
+    GROUP BY original_filename
+    HAVING cnt > 1
+  `);
+
+  let archived = 0;
+
+  for (const group of groups) {
+    const records = _all(`
+      SELECT id,
+        (CASE WHEN thumbnail_path IS NOT NULL AND thumbnail_path != '' THEN 3 ELSE 0 END) +
+        (CASE WHEN proxy_path IS NOT NULL THEN 2 ELSE 0 END) +
+        (CASE WHEN project_id IS NOT NULL THEN 1 ELSE 0 END) AS score
+      FROM footage
+      WHERE original_filename = ? AND quality_flag != 'archived'
+      ORDER BY score DESC, id ASC
+    `, [group.original_filename]);
+
+    // Keep the first (best score, lowest id on tie) — archive the rest
+    for (let i = 1; i < records.length; i++) {
+      _run(`UPDATE footage SET quality_flag = 'archived' WHERE id = ?`, [records[i].id]);
+      archived++;
+    }
+  }
+
+  return { archived, groups: groups.length };
 }
 
 function searchFootageByWhere(whereClause) {
@@ -2161,12 +2251,16 @@ function getFootageStats() {
 }
 
 function footageFilePathExists(filePath) {
-  // Check both file_path (all clips) and proxy_path (BRAW proxy files).
-  // Proxy files are never inserted as their own record — they update the BRAW record's
-  // proxy_path. Without the proxy_path check, every proxy re-triggers on server restart.
+  // Normalize to both slash styles so watcher paths (backslash) and scan paths
+  // (forward slash or mixed) match the same DB record regardless of how it was inserted.
+  const fwd  = filePath.replace(/\\/g, '/');
+  const back = filePath.replace(/\//g, '\\');
   return !!_get(
-    `SELECT id FROM footage WHERE file_path = ? OR proxy_path = ?`,
-    [filePath, filePath]
+    `SELECT id FROM footage WHERE
+       file_path = ? OR proxy_path = ? OR
+       file_path = ? OR proxy_path = ? OR
+       file_path = ? OR proxy_path = ?`,
+    [filePath, filePath, fwd, fwd, back, back]
   );
 }
 
@@ -4311,6 +4405,9 @@ module.exports = {
   checkpoint,
   bootstrapTenantTables, // used by tenant-db-cache to fully initialise new tenant DBs
   getRawDb: () => db,  // used by session store in server.js
+  // Raw prepare — routes that build inline SQL (e.g. affiliator.js) need this.
+  // Delegates to _activeDb() so tenant context is respected.
+  prepare: (sql) => _activeDb().prepare(sql),
   // Auth
   getUserByUsername,
   getUserById,
@@ -4371,6 +4468,9 @@ module.exports = {
   getUnpackagedClips,
   updateFootageCaptionPackage,
   getAllFootage,
+  countFootage,
+  dedupeFootage,
+  purgeArchivedFootage,
   searchFootageByWhere,
   getFootageStats,
   footageFilePathExists,

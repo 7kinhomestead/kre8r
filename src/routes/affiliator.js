@@ -2,6 +2,40 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const multer  = require('multer');
+const path    = require('path');
+const fs      = require('fs');
+
+// ── Image upload storage ──────────────────────────────────────────────────────
+const UPLOAD_DIR = path.join(__dirname, '../../public/uploads/affiliate');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const imgUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+    filename:    (_req, file,  cb) => {
+      const ext  = path.extname(file.originalname).toLowerCase() || '.jpg';
+      cb(null, `gear-${Date.now()}${ext}`);
+    }
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype));
+  }
+});
+
+// ── OG image scraper (best-effort, never throws) ──────────────────────────────
+async function scrapeOgImage(url) {
+  try {
+    const res  = await fetch(url, { signal: AbortSignal.timeout(6000),
+                                    headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const m    = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+              || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    return m ? m[1] : null;
+  } catch (_) { return null; }
+}
 
 // ── Partners ──────────────────────────────────────────────────────────────────
 
@@ -51,20 +85,37 @@ router.get('/links', (req, res) => {
   res.json(db.prepare(sql).all(...params));
 });
 
-router.post('/links', (req, res) => {
-  const { partner_key, link_key, label, destination_url, tool } = req.body;
+router.post('/links', async (req, res) => {
+  const { partner_key, link_key, label, destination_url, tool,
+          show_on_gear, gear_category, gear_price, gear_emoji, gear_description } = req.body;
   if (!partner_key || !link_key || !label || !destination_url)
     return res.status(400).json({ error: 'partner_key, link_key, label, destination_url required' });
-  db.prepare(`INSERT INTO affiliate_links (partner_key,link_key,label,destination_url,tool)
-    VALUES (?,?,?,?,?)
+
+  const r = db.prepare(`INSERT INTO affiliate_links
+    (partner_key,link_key,label,destination_url,tool,show_on_gear,gear_category,gear_price,gear_emoji,gear_description)
+    VALUES (?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(partner_key,link_key) DO UPDATE SET
-      label=excluded.label, destination_url=excluded.destination_url, tool=excluded.tool`
-  ).run(partner_key, link_key, label, destination_url, tool||null);
-  res.json({ ok: true });
+      label=excluded.label, destination_url=excluded.destination_url, tool=excluded.tool,
+      show_on_gear=excluded.show_on_gear, gear_category=excluded.gear_category,
+      gear_price=excluded.gear_price, gear_emoji=excluded.gear_emoji, gear_description=excluded.gear_description`
+  ).run(partner_key, link_key, label, destination_url, tool||null,
+        show_on_gear ? 1 : 0, gear_category||null, gear_price||null, gear_emoji||null, gear_description||null);
+
+  const linkId = r.lastInsertRowid;
+  res.json({ ok: true, id: linkId });
+
+  // Scrape OG image in background — don't block the response
+  if (linkId && destination_url) {
+    scrapeOgImage(destination_url).then(ogUrl => {
+      if (ogUrl) db.prepare('UPDATE affiliate_links SET og_image_url=? WHERE id=? AND og_image_url IS NULL')
+                   .run(ogUrl, linkId);
+    });
+  }
 });
 
 router.put('/links/:id', (req, res) => {
-  const fields = ['label','destination_url','tool','active'];
+  const fields = ['label','destination_url','tool','active',
+                  'show_on_gear','gear_category','gear_price','gear_emoji','gear_description'];
   const sets = []; const vals = [];
   fields.forEach(f => { if (req.body[f] !== undefined) { sets.push(`${f}=?`); vals.push(req.body[f]); } });
   if (!sets.length) return res.json({ ok: true });
@@ -73,9 +124,54 @@ router.put('/links/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Public gear endpoint (CORS open — consumed by 7kinhomestead.land/gear) ───
+router.get('/gear-public', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const rows = db.prepare(`
+    SELECT l.id, l.partner_key, l.link_key, l.label,
+           l.gear_category, l.gear_price, l.gear_emoji, l.gear_description, l.og_image_url
+    FROM affiliate_links l
+    WHERE l.show_on_gear = 1 AND l.active = 1
+    ORDER BY l.gear_category, l.label
+  `).all();
+  // Build tracked redirect URLs
+  const base = req.protocol + '://' + req.get('host');
+  const gear = rows.map(r => ({
+    ...r,
+    href: `${base}/r/${r.partner_key}/${r.link_key}`,
+    // Make locally-uploaded images absolute so gear.html on kre8r-land can load them
+    og_image_url: r.og_image_url
+      ? (r.og_image_url.startsWith('http') ? r.og_image_url : `${base}${r.og_image_url}`)
+      : null
+  }));
+  res.json(gear);
+});
+
 router.delete('/links/:id', (req, res) => {
   db.prepare('DELETE FROM affiliate_links WHERE id=?').run(parseInt(req.params.id));
   res.json({ ok: true });
+});
+
+// ── Image upload / OG re-scrape for a link ────────────────────────────────────
+// POST /api/affiliator/links/:id/image  (multipart: field "image")
+// POST /api/affiliator/links/:id/rescrape  (re-fetch OG image from destination_url)
+router.post('/links/:id/image', imgUpload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image file received' });
+  const url = `/uploads/affiliate/${req.file.filename}`;
+  db.prepare('UPDATE affiliate_links SET og_image_url=? WHERE id=?').run(url, parseInt(req.params.id));
+  res.json({ ok: true, og_image_url: url });
+});
+
+router.post('/links/:id/rescrape', async (req, res) => {
+  const link = db.prepare('SELECT destination_url FROM affiliate_links WHERE id=?').get(parseInt(req.params.id));
+  if (!link) return res.status(404).json({ error: 'Link not found' });
+  const ogUrl = await scrapeOgImage(link.destination_url);
+  if (ogUrl) {
+    db.prepare('UPDATE affiliate_links SET og_image_url=? WHERE id=?').run(ogUrl, parseInt(req.params.id));
+    res.json({ ok: true, og_image_url: ogUrl });
+  } else {
+    res.json({ ok: false, error: 'No OG image found at destination URL' });
+  }
 });
 
 // ── Analytics ─────────────────────────────────────────────────────────────────

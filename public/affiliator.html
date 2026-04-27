@@ -244,6 +244,42 @@ tr:hover td{background:var(--faint)}
         <option value="general">General</option>
       </select>
     </div>
+    <div class="field" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #333;margin-top:4px;">
+      <input type="checkbox" id="lm-show-gear" onchange="toggleGearFields()" style="width:18px;height:18px;cursor:pointer;accent-color:#14b8a6;flex-shrink:0;">
+      <label for="lm-show-gear" style="cursor:pointer;font-size:13px;color:#e2e8f0;margin:0;">Show on <strong>7kinhomestead.land/gear</strong> page</label>
+    </div>
+    <div id="lm-gear-fields" style="display:none;border-left:2px solid #14b8a6;padding-left:14px;margin-top:4px;display:flex;flex-direction:column;gap:10px;">
+      <div class="field">
+        <label>Gear Category</label>
+        <select id="lm-gear-cat">
+          <option value="solar">☀️ Solar</option>
+          <option value="water">💧 Water</option>
+          <option value="tools">🔧 Tools</option>
+          <option value="animals">🐓 Animals</option>
+          <option value="garden">🌱 Garden</option>
+          <option value="food">🥫 Food Prep</option>
+          <option value="fencing">🪢 Fencing</option>
+        </select>
+      </div>
+      <div class="field"><label>Price (display, e.g. "~$45" or "Varies")</label><input type="text" id="lm-gear-price" placeholder="~$45"></div>
+      <div class="field"><label>Emoji (single emoji for card thumbnail)</label><input type="text" id="lm-gear-emoji" placeholder="🔋" maxlength="4"></div>
+      <div class="field"><label>Description — Jason's voice (why you use it)</label><textarea id="lm-gear-desc" rows="3" placeholder="Why it earned a spot on the homestead…" style="resize:vertical;"></textarea></div>
+      <!-- Product image -->
+      <div class="field">
+        <label>Product Image</label>
+        <div id="lm-img-wrap" style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+          <div id="lm-img-preview" style="width:80px;height:60px;border-radius:6px;border:1px solid #334155;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;">
+            📦
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:160px;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('lm-img-file').click()" style="font-size:11px;padding:5px 10px;width:fit-content;">📷 Upload Image</button>
+            <button type="button" id="lm-rescrape-btn" class="btn btn-secondary" onclick="rescrapeOg()" style="font-size:11px;padding:5px 10px;width:fit-content;display:none;">🔄 Re-fetch from URL</button>
+            <span id="lm-img-status" style="font-size:10px;color:#64748b;"></span>
+          </div>
+        </div>
+        <input type="file" id="lm-img-file" accept="image/*" style="display:none;" onchange="uploadLinkImage(this)">
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveLink()">Save</button>
       <button class="btn btn-secondary" onclick="closeModal('link')">Cancel</button>
@@ -450,21 +486,95 @@ async function deletePartner(key) {
 }
 
 // ── Link modal ──
+function toggleGearFields() {
+  const show = document.getElementById('lm-show-gear').checked;
+  document.getElementById('lm-gear-fields').style.display = show ? 'flex' : 'none';
+}
+
+let _activeLinkId = null; // tracks which link is open in the modal for image upload
+
 function openLinkModal() {
-  ['lm-key','lm-label','lm-url'].forEach(id => document.getElementById(id).value = '');
+  ['lm-key','lm-label','lm-url','lm-gear-price','lm-gear-emoji','lm-gear-desc'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('lm-show-gear').checked = false;
+  document.getElementById('lm-gear-fields').style.display = 'none';
+  _activeLinkId = null;
+  setImgPreview(null);
+  document.getElementById('lm-rescrape-btn').style.display = 'none';
   openModal('link');
 }
 
+function setImgPreview(url) {
+  const el = document.getElementById('lm-img-preview');
+  if (url) {
+    el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='📦'">`;
+  } else {
+    el.innerHTML = '📦';
+  }
+}
+
+async function uploadLinkImage(input) {
+  if (!input.files[0]) return;
+  const status = document.getElementById('lm-img-status');
+
+  // If we have a saved link id, upload directly
+  if (_activeLinkId) {
+    status.textContent = 'Uploading…';
+    const fd = new FormData();
+    fd.append('image', input.files[0]);
+    const r = await fetch(`/api/affiliator/links/${_activeLinkId}/image`, { method:'POST', body: fd }).then(r => r.json());
+    if (r.ok) {
+      setImgPreview(r.og_image_url);
+      status.textContent = '✓ Saved';
+      loadLinks();
+    } else {
+      status.textContent = '✗ Upload failed';
+    }
+  } else {
+    // Link not saved yet — preview locally, will upload after save
+    const url = URL.createObjectURL(input.files[0]);
+    setImgPreview(url);
+    status.textContent = 'Save the link first, then the image will upload';
+  }
+}
+
+async function rescrapeOg() {
+  if (!_activeLinkId) return;
+  const status = document.getElementById('lm-img-status');
+  const btn    = document.getElementById('lm-rescrape-btn');
+  btn.disabled = true; btn.textContent = '🔄 Fetching…';
+  const r = await fetch(`/api/affiliator/links/${_activeLinkId}/rescrape`, { method:'POST' }).then(r => r.json());
+  if (r.ok) {
+    setImgPreview(r.og_image_url);
+    status.textContent = '✓ Image updated';
+    loadLinks();
+  } else {
+    status.textContent = '✗ ' + (r.error || 'No image found');
+  }
+  btn.disabled = false; btn.textContent = '🔄 Re-fetch from URL';
+}
+
 async function saveLink() {
+  const showOnGear = document.getElementById('lm-show-gear').checked;
   const body = {
-    partner_key:     document.getElementById('lm-partner').value,
-    link_key:        document.getElementById('lm-key').value.trim().replace(/\s+/g,'-').toLowerCase(),
-    label:           document.getElementById('lm-label').value.trim(),
-    destination_url: document.getElementById('lm-url').value.trim(),
-    tool:            document.getElementById('lm-tool').value,
+    partner_key:      document.getElementById('lm-partner').value,
+    link_key:         document.getElementById('lm-key').value.trim().replace(/\s+/g,'-').toLowerCase(),
+    label:            document.getElementById('lm-label').value.trim(),
+    destination_url:  document.getElementById('lm-url').value.trim(),
+    tool:             document.getElementById('lm-tool').value,
+    show_on_gear:     showOnGear ? 1 : 0,
+    gear_category:    showOnGear ? document.getElementById('lm-gear-cat').value : null,
+    gear_price:       showOnGear ? document.getElementById('lm-gear-price').value.trim() : null,
+    gear_emoji:       showOnGear ? document.getElementById('lm-gear-emoji').value.trim() : null,
+    gear_description: showOnGear ? document.getElementById('lm-gear-desc').value.trim() : null,
   };
   if (!body.partner_key || !body.link_key || !body.label || !body.destination_url) { alert('All fields required.'); return; }
-  await fetch('/api/affiliator/links', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (showOnGear && !body.gear_description) { alert('Add a description for the gear page.'); return; }
+  const r = await fetch('/api/affiliator/links', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json());
+  if (r.id) {
+    _activeLinkId = r.id;
+    document.getElementById('lm-rescrape-btn').style.display = '';
+    document.getElementById('lm-img-status').textContent = showOnGear ? 'Fetching product image…' : '';
+  }
   closeModal('link');
   loadLinks();
 }

@@ -94,25 +94,42 @@ router.post('/ingest', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// GET /api/vault/footage — list footage
-// Query: shot_type, quality_flag, project_id, q (search)
+// GET /api/vault/footage — list footage (paginated)
+// Query: shot_type, quality_flag, project_id, q (search), page, limit
+// Returns: { rows, total, page, pages } for paginated requests,
+//          or a plain array when no page/limit is supplied (legacy callers).
 // ─────────────────────────────────────────────
 router.get('/footage', async (req, res) => {
   try {
     const { shot_type, quality_flag, project_id, q } = req.query;
+    const filters = {
+      shot_type:    shot_type    || null,
+      quality_flag: quality_flag || null,
+      project_id:   project_id  ? parseInt(project_id) : null
+    };
 
     let footage;
     if (q && q.trim()) {
-      // Natural language search via Claude → WHERE clause
       footage = await searchFootage(q.trim());
-    } else {
-      footage = db.getAllFootage({
-        shot_type:    shot_type    || null,
-        quality_flag: quality_flag || null,
-        project_id:   project_id  ? parseInt(project_id) : null
-      });
+      res.set('Cache-Control', 'no-store');
+      return res.json(footage);
     }
 
+    const pageParam  = req.query.page  ? parseInt(req.query.page)  : null;
+    const limitParam = req.query.limit ? parseInt(req.query.limit) : null;
+
+    if (pageParam != null && limitParam != null) {
+      const page   = Math.max(1, pageParam);
+      const limit  = Math.min(500, Math.max(1, limitParam));
+      const offset = (page - 1) * limit;
+      const rows   = db.getAllFootage({ ...filters, limit, offset });
+      const total  = db.countFootage(filters);
+      const pages  = Math.ceil(total / limit);
+      res.set('Cache-Control', 'no-store');
+      return res.json({ rows, total, page, pages });
+    }
+
+    footage = db.getAllFootage(filters);
     res.set('Cache-Control', 'no-store');
     res.json(footage);
   } catch (e) {
@@ -874,6 +891,35 @@ router.post('/footage/:id/archive', (req, res) => {
   try {
     db.archiveFootage(parseInt(req.params.id));
     res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/purge-archived
+// Hard-deletes all footage records with quality_flag = 'archived'.
+// Run after dedupe to reclaim DB space.
+// ─────────────────────────────────────────────
+router.post('/purge-archived', (req, res) => {
+  try {
+    const result = db.purgeArchivedFootage();
+    res.json({ ok: true, deleted: result.deleted });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/vault/dedupe
+// Soft-archives all but the best record per original_filename.
+// Scoring: thumbnail (+3), proxy (+2), project assignment (+1).
+// Safe to run multiple times — idempotent.
+// ─────────────────────────────────────────────
+router.post('/dedupe', (req, res) => {
+  try {
+    const result = db.dedupeFootage();
+    res.json({ ok: true, ...result });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

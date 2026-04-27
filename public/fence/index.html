@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content"/>
+<meta name="theme-color" content="#080808"/>
+<title>The Fence — 7 Kin Homestead</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+
+/* ══════════════════════════════════════════════
+   RESET
+══════════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;width:100%;background:#080808;color:#fff;
+  font-family:'DM Sans',sans-serif;font-weight:300;overflow:hidden;}
+
+/* ══════════════════════════════════════════════
+   ROOT
+══════════════════════════════════════════════ */
+#the-fence{display:flex;flex-direction:column;height:100dvh;width:100%;position:relative;}
+
+/* ══════════════════════════════════════════════
+   JASON'S SIDE
+══════════════════════════════════════════════ */
+#jason-side{
+  flex:6;position:relative;overflow:hidden;min-height:0;
+}
+
+/* ─ Background layers ─ */
+#bg-landscape{          /* 📌 swap src for time-of-day landscape photos */
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:center 30%;display:block;
+  transition:filter 3s ease, opacity 1.5s ease;
+  will-change:filter;
+}
+#bg-jason{              /* 📌 swap src for background-removed Jason PNGs */
+  position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  height:88%;width:auto;max-width:55%;
+  object-fit:contain;object-position:bottom center;
+  display:none;         /* hidden until real cutout photos are provided */
+  filter:drop-shadow(0 0 32px rgba(0,0,0,.6));
+  animation:jasonFloat 7s ease-in-out infinite;
+}
+@keyframes jasonFloat{
+  0%,100%{transform:translateX(-50%) translateY(0);}
+  50%{transform:translateX(-50%) translateY(-5px);}
+}
+
+/* ─ Dark gradient overlay ─ */
+#jason-overlay{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(to top,  rgba(8,8,8,.95) 0%, rgba(8,8,8,.6) 28%, rgba(8,8,8,.15) 65%, transparent 100%),
+    linear-gradient(to right, rgba(8,8,8,.45) 0%, transparent 55%);
+  pointer-events:none;
+}
+
+/* ─ Environmental particle canvas ─ */
+#particle-canvas{
+  position:absolute;inset:0;pointer-events:none;
+  opacity:0;transition:opacity 2s ease;
+}
+
+/* ─ Mist layer (dawn/morning) ─ */
+#mist-layer{
+  position:absolute;inset:0;pointer-events:none;
+  opacity:0;transition:opacity 3s ease;
+  background:linear-gradient(to right,
+    rgba(220,235,255,.0) 0%,
+    rgba(220,235,255,.09) 40%,
+    rgba(220,235,255,.04) 70%,
+    rgba(220,235,255,.0) 100%);
+  animation:mistDrift 22s ease-in-out infinite alternate;
+}
+@keyframes mistDrift{
+  0%{transform:translateX(-8%) scaleX(1);}
+  100%{transform:translateX(8%) scaleX(1.04);}
+}
+
+/* ─ Time label ─ */
+#time-label{
+  position:absolute;top:14px;right:18px;z-index:5;
+  font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:.14em;
+  color:rgba(255,255,255,.22);pointer-events:none;
+}
+
+/* ─ Arrival content ─ */
+#arrival-content{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  justify-content:flex-end;padding:0 24px 30px;
+  transition:opacity .6s ease;
+}
+#arrival-handle{font-size:11px;letter-spacing:.12em;color:rgba(255,255,255,.35);margin-bottom:8px;}
+#arrival-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,11.5vw,86px);
+  line-height:.88;letter-spacing:.06em;margin-bottom:8px;
+}
+#arrival-name .red{color:#E03030;}
+#arrival-sub{font-size:13px;color:rgba(255,255,255,.48);line-height:1.6;max-width:330px;}
+.a-pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;}
+.a-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);
+  border-radius:999px;padding:5px 11px;backdrop-filter:blur(6px);
+}
+.a-pill-n{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.04em;}
+.a-pill-l{font-size:10px;color:rgba(255,255,255,.38);letter-spacing:.06em;text-transform:uppercase;}
+
+/* ─ Response content ─ */
+#response-content{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  justify-content:flex-end;padding:0 24px 26px;
+  opacity:0;pointer-events:none;transition:opacity .55s ease;
+}
+#response-content.visible{opacity:1;pointer-events:auto;}
+#response-echo{
+  font-size:11px;letter-spacing:.05em;color:rgba(255,255,255,.28);
+  margin-bottom:9px;font-style:italic;max-width:420px;
+}
+#thinking-wrap{display:none;align-items:center;gap:8px;margin-bottom:8px;}
+#thinking-wrap.visible{display:flex;}
+#thinking-label{font-size:11.5px;color:rgba(255,255,255,.35);letter-spacing:.04em;}
+.think-dot{width:5px;height:5px;border-radius:50%;background:#00C4B4;opacity:.3;
+  animation:thinkpulse 1.5s ease infinite;}
+.think-dot:nth-child(2){animation-delay:.25s;}
+.think-dot:nth-child(3){animation-delay:.5s;}
+@keyframes thinkpulse{0%,80%,100%{opacity:.3;transform:scale(1);}40%{opacity:1;transform:scale(1.4);}}
+
+#response-text{
+  font-size:clamp(15px,3.8vw,19px);line-height:1.72;
+  color:rgba(255,255,255,.88);max-width:480px;font-weight:300;font-style:italic;
+}
+
+/* Streaming cursor */
+#stream-cursor{
+  display:inline-block;width:2px;height:1.1em;background:#00C4B4;
+  vertical-align:text-bottom;margin-left:2px;
+  animation:cursorblink .7s ease infinite;opacity:0;
+}
+@keyframes cursorblink{0%,100%{opacity:0;}45%,55%{opacity:1;}}
+#stream-cursor.active{opacity:1;animation:cursorblink .7s ease infinite;}
+
+/* ─ CTA card ─ */
+#cta-card{
+  margin-top:16px;
+  background:rgba(8,8,8,.7);border:1px solid rgba(255,180,0,.28);border-radius:10px;
+  padding:13px 17px;display:flex;align-items:center;gap:13px;
+  backdrop-filter:blur(14px);text-decoration:none;
+  transform:translateY(22px);opacity:0;
+  transition:opacity .5s ease .7s, transform .5s cubic-bezier(.34,1.46,.64,1) .7s,
+             border-color .2s, background .2s;
+  max-width:460px;
+}
+#cta-card.visible{transform:translateY(0);opacity:1;}
+#cta-card:hover{background:rgba(20,18,10,.85);border-color:rgba(255,180,0,.55);}
+.cta-icon{font-size:22px;flex-shrink:0;}
+.cta-body{flex:1;}
+.cta-label{font-size:10px;letter-spacing:.2em;font-family:'Bebas Neue',sans-serif;color:#ffb400;margin-bottom:3px;}
+.cta-title{font-size:14.5px;font-weight:500;color:#fff;line-height:1.3;}
+.cta-arrow{font-size:18px;color:#ffb400;flex-shrink:0;transition:transform .2s;}
+#cta-card:hover .cta-arrow{transform:translateX(4px);}
+
+/* ══════════════════════════════════════════════
+   THE FENCE RAIL — animated
+══════════════════════════════════════════════ */
+#fence-rail{
+  height:46px;flex-shrink:0;position:relative;z-index:20;overflow:visible;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0px, transparent 55px,
+      rgba(0,0,0,.08) 55px, rgba(0,0,0,.08) 57px,
+      transparent 57px, transparent 100px,
+      rgba(255,255,255,.025) 100px, rgba(255,255,255,.025) 101px
+    ),
+    linear-gradient(to bottom, #7c5238 0%, #5d3a20 30%, #4b2e18 55%, #3c2412 80%, #2d1b0c 100%);
+  box-shadow:
+    0 -8px 30px rgba(0,0,0,.82),
+    0  8px 30px rgba(0,0,0,.82),
+    inset 0 1px 0 rgba(255,255,255,.09),
+    inset 0 -1px 0 rgba(0,0,0,.45);
+  /* Rail glow — activated on submit */
+  transition:box-shadow .4s ease;
+}
+#fence-rail.pulse{
+  box-shadow:
+    0 -8px 30px rgba(0,0,0,.82),
+    0  8px 30px rgba(0,0,0,.82),
+    inset 0 1px 0 rgba(255,255,255,.09),
+    inset 0 -1px 0 rgba(0,0,0,.45),
+    0 0 48px rgba(255,180,0,.22);
+}
+
+/* ─ Posts ─ */
+.fence-post{
+  position:absolute;top:-78px;bottom:-78px;width:18px;border-radius:2px 2px 0 0;
+  transform-origin:bottom center;
+  background:
+    repeating-linear-gradient(180deg,transparent 0,transparent 11px,rgba(0,0,0,.07) 11px,rgba(0,0,0,.07) 12px),
+    linear-gradient(to right, #5e3a20 0%, #7c5235 25%, #8a6040 50%, #6d4628 75%, #4c3018 100%);
+  box-shadow:2px 0 9px rgba(0,0,0,.55),-1px 0 4px rgba(0,0,0,.3),inset 1px 0 2px rgba(255,255,255,.06);
+  z-index:21;
+}
+.fence-post::before{
+  content:'';position:absolute;top:-7px;left:-2px;right:-2px;height:9px;
+  background:inherit;border-radius:3px 3px 0 0;box-shadow:0 -2px 6px rgba(0,0,0,.45);
+}
+/* Individual sway — different duration + delay per post so none are in sync */
+.post-a{left:10%;animation:sway 3.2s ease-in-out infinite alternate;}
+.post-b{left:36%;animation:sway 2.8s ease-in-out .4s infinite alternate-reverse;}
+.post-c{left:63%;animation:sway 3.6s ease-in-out .9s infinite alternate;}
+.post-d{left:87%;animation:sway 2.6s ease-in-out .2s infinite alternate-reverse;}
+@keyframes sway{
+  0%{transform:rotate(-.6deg);}
+  100%{transform:rotate(.6deg);}
+}
+
+/* ══════════════════════════════════════════════
+   VISITOR'S SIDE
+══════════════════════════════════════════════ */
+#visitor-side{
+  flex:4;background:#080808;display:flex;flex-direction:column;
+  justify-content:center;padding:20px 24px 24px;
+  padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  position:relative;min-height:0;
+}
+#visitor-side::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:44px;
+  background:linear-gradient(to bottom,rgba(48,30,14,.28),transparent);pointer-events:none;
+}
+#prompt-label{
+  font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:.22em;
+  color:rgba(255,255,255,.26);text-transform:uppercase;margin-bottom:13px;
+  transition:opacity .3s;
+}
+#fence-input{
+  width:100%;background:transparent;border:none;
+  border-bottom:1px solid rgba(255,255,255,.11);outline:none;
+  color:#fff;font-family:'DM Sans',sans-serif;font-weight:300;
+  font-size:17px;line-height:1.5;padding:0 0 11px;resize:none;
+  caret-color:#00C4B4;min-height:28px;max-height:90px;overflow-y:auto;
+  transition:border-color .25s;-webkit-appearance:none;
+}
+#fence-input::placeholder{color:rgba(255,255,255,.18);font-style:italic;}
+#fence-input:focus{border-bottom-color:rgba(0,196,180,.4);}
+#fence-btn{
+  margin-top:17px;width:100%;
+  background:transparent;border:1px solid rgba(255,255,255,.13);border-radius:8px;
+  padding:15px 24px;font-family:'Bebas Neue',sans-serif;
+  font-size:14px;letter-spacing:.18em;color:rgba(255,255,255,.65);
+  cursor:pointer;transition:all .25s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  position:relative;overflow:hidden;
+}
+#fence-btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent,rgba(0,196,180,.06));
+  opacity:0;transition:opacity .3s;
+}
+#fence-btn:hover{border-color:rgba(0,196,180,.42);color:#fff;}
+#fence-btn:hover::before{opacity:1;}
+#fence-btn:active{transform:scale(.99);}
+#fence-btn:disabled{color:rgba(255,255,255,.25);border-color:rgba(255,255,255,.07);pointer-events:none;}
+.btn-rail{font-size:15px;opacity:.5;}
+#fence-note{
+  font-size:10px;color:rgba(255,255,255,.15);text-align:center;
+  margin-top:11px;letter-spacing:.02em;line-height:1.5;
+}
+#reset-btn{
+  position:absolute;bottom:14px;right:18px;
+  font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.22);
+  background:none;border:none;cursor:pointer;
+  font-family:'Bebas Neue',sans-serif;transition:color .2s;display:none;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+#reset-btn:hover{color:rgba(255,255,255,.5);}
+
+/* Tier badge (shows for garden/founding) */
+#tier-badge{
+  position:absolute;top:12px;left:16px;
+  font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:.15em;
+  padding:4px 10px;border-radius:999px;display:none;
+}
+#tier-badge.garden  {background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#22c55e;}
+#tier-badge.founding{background:rgba(255,180,0,.12);border:1px solid rgba(255,180,0,.3);color:#ffb400;}
+
+/* ══════════════════════════════════════════════
+   SMALL SCREEN ADJUSTMENTS
+══════════════════════════════════════════════ */
+@media(max-height:620px){
+  #arrival-name{font-size:clamp(36px,9vw,58px);}
+  #arrival-sub,.a-pills{display:none;}
+  #visitor-side{padding:13px 20px 14px;}
+  #prompt-label{margin-bottom:8px;}
+}
+@media(min-width:769px){
+  #visitor-side{padding:28px 44px 36px;}
+  #fence-input{font-size:19px;}
+  #arrival-content,#response-content{padding:0 44px 40px;}
+}
+
+</style>
+</head>
+<body>
+<div id="the-fence">
+
+  <!-- ══ JASON'S SIDE ══════════════════════════ -->
+  <div id="jason-side">
+
+    <!--
+      📌 LANDSCAPE PHOTOS:
+      Replace this src with your time-of-day landscape images.
+      JS will swap the src attribute based on current hour.
+      Recommended: 6–8 photos at dawn/morning/midday/afternoon/golden/dusk/night
+      Aspect: landscape, 16:9 or wider. ~400KB each (compressed).
+    -->
+    <img id="bg-landscape"
+      src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2165382940/settings_images/730aa-8a42-2ad-b6e7-4e64d37b47f_Untitled_design_46_.png"
+      alt="7 Kin Homestead"/>
+
+    <!--
+      📌 JASON CUTOUT:
+      Once you have background-removed PNGs of yourself, set display:block here.
+      JS will randomly pick from JASON_PHOTOS array below.
+      Recommended: 2-4 different poses/expressions. Transparent PNG. ~300KB each.
+    -->
+    <img id="bg-jason" src="" alt="Jason Rutland"/>
+
+    <div id="jason-overlay"></div>
+
+    <!-- Environmental particles (stars/dust/mist — JS-driven) -->
+    <canvas id="particle-canvas"></canvas>
+    <div id="mist-layer"></div>
+
+    <div id="time-label"></div>
+
+    <!-- ARRIVAL STATE -->
+    <div id="arrival-content">
+      <div id="arrival-handle">@7kinhomestead · The Fence</div>
+      <div id="arrival-name"><span>7</span><span class="red">KIN</span><br/>HOMESTEAD</div>
+      <div id="arrival-sub">Five kids. 700 sq ft. Off-grid in the PNW mountains. Figuring it out loud.</div>
+      <div class="a-pills">
+        <div class="a-pill"><span class="a-pill-n">726K</span><span class="a-pill-l">TikTok</span></div>
+        <div class="a-pill"><span class="a-pill-n">53.5K</span><span class="a-pill-l">YouTube</span></div>
+        <div class="a-pill"><span class="a-pill-n">11.4M</span><span class="a-pill-l">Peak Video</span></div>
+      </div>
+    </div>
+
+    <!-- RESPONSE STATE -->
+    <div id="response-content">
+      <div id="response-echo"></div>
+      <div id="thinking-wrap">
+        <div class="think-dot"></div><div class="think-dot"></div><div class="think-dot"></div>
+        <span id="thinking-label">Jason's thinking…</span>
+      </div>
+      <div id="response-text"><span id="stream-cursor"></span></div>
+      <a id="cta-card" href="#" target="_blank" rel="noopener noreferrer">
+        <span class="cta-icon">🏕️</span>
+        <div class="cta-body">
+          <div class="cta-label" id="cta-label">NEXT STEP</div>
+          <div class="cta-title" id="cta-title">Join The Greenhouse — It's Free</div>
+        </div>
+        <span class="cta-arrow">→</span>
+      </a>
+    </div>
+
+  </div><!-- /jason-side -->
+
+  <!-- ══ THE FENCE RAIL ══════════════════════════ -->
+  <div id="fence-rail">
+    <div class="fence-post post-a"></div>
+    <div class="fence-post post-b"></div>
+    <div class="fence-post post-c"></div>
+    <div class="fence-post post-d"></div>
+  </div>
+
+  <!-- ══ VISITOR'S SIDE ══════════════════════════ -->
+  <div id="visitor-side">
+    <div id="tier-badge"></div>
+    <div id="prompt-label">Tell him what you're working on</div>
+    <textarea id="fence-input"
+      placeholder="What's the mountain right now?"
+      rows="1" maxlength="400"
+      autocomplete="off" autocorrect="on" spellcheck="true"
+      inputmode="text"
+    ></textarea>
+    <button id="fence-btn" onclick="leanOnTheFence()">
+      <span class="btn-rail">—</span>
+      LEAN ON THE FENCE
+      <span class="btn-rail">→</span>
+    </button>
+    <div id="fence-note">Searches Jason's real video library · answers in his actual voice · 2–4 seconds</div>
+    <button id="reset-btn" onclick="resetFence()">ASK SOMETHING ELSE ↺</button>
+  </div>
+
+</div><!-- /the-fence -->
+
+<script>
+(function(){
+'use strict';
+
+/* ══════════════════════════════════════════════
+   CONFIGURATION  —  📌 UPDATE THESE
+══════════════════════════════════════════════ */
+
+// Landscape photos by hour bucket.
+// Each entry: [hourFrom, hourTo (inclusive), imageSrc]
+// 📌 Replace placeholder URLs with your real landscape photos.
+var LANDSCAPE_PHOTOS = [
+  { hours:[0,1,2,3,4],  src: null, label:'BEFORE DAWN' },     // night → predawn
+  { hours:[5,6],        src: null, label:'EARLY MORNING' },    // dawn
+  { hours:[7,8,9,10],   src: null, label:'MORNING' },          // morning
+  { hours:[11,12,13,14],src: null, label:'MIDDAY' },           // midday
+  { hours:[15,16],      src: null, label:'AFTERNOON' },        // afternoon
+  { hours:[17,18],      src: null, label:'GOLDEN HOUR' },      // golden hour
+  { hours:[19,20],      src: null, label:'DUSK' },             // dusk
+  { hours:[21,22,23],   src: null, label:'NIGHT' },            // night
+];
+
+// Background-removed Jason photos (randomized on each load).
+// 📌 Add 2-4 transparent PNG URLs here. Keep display:none on #bg-jason
+//    until you have real photos — it'll look wrong with placeholders.
+var JASON_PHOTOS = [
+  // 'https://your-cdn.com/jason-cutout-1.png',
+  // 'https://your-cdn.com/jason-cutout-2.png',
+];
+
+// Rotating placeholder text by hour bucket (index matches LANDSCAPE_PHOTOS)
+var PLACEHOLDERS = [
+  ['You\'re up late. What\'s on your mind?',   'Late night thinking — what\'s the stuck?'],
+  ['Early start. What are we solving today?',   'You\'re up early. Something brewing?'],
+  ['Morning. What\'s the build today?',        'What\'s the mountain right now?'],
+  ['Midday check. What\'s stuck?',              'What are you trying to figure out?'],
+  ['What\'s the question today?',              'What do you need to sort out?'],
+  ['Golden hour. What\'s the real question?',  'What\'s been on your mind all day?'],
+  ['End of day. What didn\'t get solved?',     'What\'s still unresolved?'],
+  ['Evening. What\'s still on your mind?',     'What\'s the one thing you\'d fix?'],
+];
+
+/* ══════════════════════════════════════════════
+   TIME OF DAY SETUP
+══════════════════════════════════════════════ */
+var h        = new Date().getHours();
+var bucket   = 0;
+for (var i = 0; i < LANDSCAPE_PHOTOS.length; i++) {
+  if (LANDSCAPE_PHOTOS[i].hours.indexOf(h) !== -1) { bucket = i; break; }
+}
+
+var bgEl      = document.getElementById('bg-landscape');
+var jasonEl   = document.getElementById('bg-jason');
+var timeLabel = document.getElementById('time-label');
+var canvas    = document.getElementById('particle-canvas');
+var mist      = document.getElementById('mist-layer');
+
+// Apply landscape photo if configured
+if (LANDSCAPE_PHOTOS[bucket].src && bgEl) {
+  bgEl.src = LANDSCAPE_PHOTOS[bucket].src;
+} else {
+  // Apply CSS filter fallback to simulate time of day on the placeholder image
+  var FILTERS = [
+    'brightness(.2) saturate(.4) hue-rotate(185deg)',  // night
+    'brightness(.38) saturate(.6) hue-rotate(165deg)', // predawn
+    'brightness(.72) saturate(.85) hue-rotate(-5deg)', // morning
+    'brightness(.96) saturate(.9)',                     // midday
+    'brightness(1) saturate(1)',                        // afternoon
+    'brightness(1.04) saturate(1.15) hue-rotate(-18deg)', // golden
+    'brightness(.62) saturate(.9) hue-rotate(10deg)',   // dusk
+    'brightness(.2) saturate(.4) hue-rotate(185deg)',   // night
+  ];
+  if (bgEl) bgEl.style.filter = FILTERS[bucket] || '';
+}
+
+// Set time label
+if (timeLabel) timeLabel.textContent = (LANDSCAPE_PHOTOS[bucket].label || '') + ' · 7 KIN HOMESTEAD';
+
+// Randomize Jason photo
+if (JASON_PHOTOS.length && jasonEl) {
+  jasonEl.src = JASON_PHOTOS[Math.floor(Math.random() * JASON_PHOTOS.length)];
+  jasonEl.style.display = 'block';
+}
+
+/* ══════════════════════════════════════════════
+   PARTICLE SYSTEM
+══════════════════════════════════════════════ */
+(function initParticles(){
+  if (!canvas) return;
+  var ctx    = canvas.getContext('2d');
+  var W, H, particles = [];
+  var TYPE = bucket <= 1 || bucket === 7 ? 'stars'
+           : bucket === 5 || bucket === 6 ? 'dust'
+           : null;
+  if (!TYPE) return;
+
+  canvas.style.opacity = bucket <= 1 || bucket === 7 ? '1' : '0.85';
+
+  function resize(){
+    W = canvas.width  = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Spawn particles
+  var count = TYPE === 'stars' ? 80 : 35;
+  for (var i = 0; i < count; i++) {
+    particles.push({
+      x  : Math.random() * 1000,  // % units resolved on draw
+      y  : Math.random() * 1000,
+      r  : TYPE === 'stars' ? (Math.random() * 1.4 + 0.4) : (Math.random() * 2.5 + 1),
+      a  : Math.random(),
+      da : (Math.random() * 0.008 + 0.003) * (Math.random() < .5 ? 1 : -1),
+      vy : TYPE === 'dust' ? -(Math.random() * 0.15 + 0.04) : 0,
+      col: TYPE === 'stars' ? 'rgba(255,248,230,' : 'rgba(255,200,80,',
+    });
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+    for (var p of particles) {
+      p.a += p.da;
+      if (p.a <= 0 || p.a >= 1) p.da *= -1;
+      if (TYPE === 'dust') {
+        p.y -= p.vy;
+        if (p.y < -5) p.y = 105;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x / 1000 * W, p.y / 1000 * H, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.col + Math.max(0, Math.min(1, p.a)).toFixed(2) + ')';
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  // Mist for morning buckets
+  if (bucket === 1 || bucket === 2) {
+    mist.style.opacity = '1';
+  }
+})();
+
+/* ══════════════════════════════════════════════
+   ROTATING PLACEHOLDER
+══════════════════════════════════════════════ */
+var input     = document.getElementById('fence-input');
+var phrList   = PLACEHOLDERS[bucket] || PLACEHOLDERS[5];
+var phrIdx    = 0;
+if (input) {
+  input.placeholder = phrList[0];
+  setInterval(function(){
+    if (document.activeElement !== input){
+      phrIdx = (phrIdx + 1) % phrList.length;
+      input.placeholder = phrList[phrIdx];
+    }
+  }, 4800);
+  // Auto-grow
+  input.addEventListener('input', function(){
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 90) + 'px';
+  });
+  input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); leanOnTheFence(); }
+  });
+}
+
+/* ══════════════════════════════════════════════
+   TIER DETECTION
+══════════════════════════════════════════════ */
+var params    = new URLSearchParams(window.location.search);
+var tier      = params.get('tier') || 'public';
+var sessionId = (function(){
+  try { return localStorage.getItem('7kh_fence_sid') || crypto.randomUUID(); } catch(_){ return 'anon'; }
+})();
+try { localStorage.setItem('7kh_fence_sid', sessionId); } catch(_){}
+
+// Show tier badge
+var tierBadge = document.getElementById('tier-badge');
+if (tierBadge && tier !== 'public') {
+  tierBadge.textContent = tier === 'founding' ? '🏆 FOUNDING 50' : '🌿 THE GARDEN';
+  tierBadge.className   = 'tier-badge ' + tier;
+  tierBadge.style.display = 'block';
+}
+
+/* ══════════════════════════════════════════════
+   UI STATE HELPERS
+══════════════════════════════════════════════ */
+var arrivalEl  = document.getElementById('arrival-content');
+var responseEl = document.getElementById('response-content');
+var thinkWrap  = document.getElementById('thinking-wrap');
+var respEcho   = document.getElementById('response-echo');
+var respText   = document.getElementById('response-text');
+var cursor     = document.getElementById('stream-cursor');
+var ctaCard    = document.getElementById('cta-card');
+var ctaLabel   = document.getElementById('cta-label');
+var ctaTitle   = document.getElementById('cta-title');
+var ctaIcon    = ctaCard.querySelector('.cta-icon');
+var resetBtn   = document.getElementById('reset-btn');
+var btn        = document.getElementById('fence-btn');
+var rail       = document.getElementById('fence-rail');
+
+function showArrival(){
+  arrivalEl.style.opacity = '1';
+  arrivalEl.style.pointerEvents = 'auto';
+  responseEl.classList.remove('visible');
+}
+
+function showResponse(){
+  arrivalEl.style.opacity = '0';
+  arrivalEl.style.pointerEvents = 'none';
+  responseEl.classList.add('visible');
+}
+
+function railPulse(){
+  rail.classList.add('pulse');
+  setTimeout(function(){ rail.classList.remove('pulse'); }, 1200);
+}
+
+/* ══════════════════════════════════════════════
+   THE MAIN ACTION — SSE wired
+══════════════════════════════════════════════ */
+window.leanOnTheFence = function(){
+  var q = input ? input.value.trim() : '';
+  if (!q) {
+    if (input){
+      input.focus();
+      input.style.borderBottomColor = 'rgba(224,48,48,.5)';
+      setTimeout(function(){ input.style.borderBottomColor = ''; }, 1300);
+    }
+    return;
+  }
+
+  // Lock UI
+  if (input) input.disabled = true;
+  if (btn)  { btn.disabled = true; btn.textContent = '…'; }
+  railPulse();
+
+  // Set up response zone
+  respEcho.textContent = '“' + q.slice(0, 74) + (q.length > 74 ? '…' : '') + '”';
+  respText.textContent = '';
+  if (cursor){ respText.appendChild(cursor); cursor.classList.add('active'); }
+  ctaCard.classList.remove('visible');
+  thinkWrap.classList.add('visible');
+  showResponse();
+
+  // Open SSE stream
+  fetch('/api/fence/ask', {
+    method : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify({ question: q, session_id: sessionId, tier }),
+  }).then(function(res){
+    if (!res.ok) throw new Error('Server error ' + res.status);
+    var reader  = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buf     = '';
+    var gotFirstToken = false;
+
+    function pump(){
+      return reader.read().then(function(chunk){
+        if (chunk.done) return;
+        buf += decoder.decode(chunk.value, { stream: true });
+        var lines = buf.split('\n');
+        buf = lines.pop();
+
+        for (var line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          var raw = line.slice(6).trim();
+          if (!raw) continue;
+          var ev;
+          try { ev = JSON.parse(raw); } catch(_){ continue; }
+
+          if (ev.type === 'status') {
+            // ignore — thinking dots already shown
+          }
+
+          if (ev.type === 'token') {
+            if (!gotFirstToken){
+              gotFirstToken = true;
+              thinkWrap.classList.remove('visible');
+            }
+            // Insert text before cursor
+            var txt = document.createTextNode(ev.text);
+            if (cursor && cursor.parentNode === respText) {
+              respText.insertBefore(txt, cursor);
+            } else {
+              respText.appendChild(txt);
+            }
+          }
+
+          if (ev.type === 'route' && ev.cta) {
+            if (cursor) cursor.classList.remove('active');
+            if (ctaIcon)  ctaIcon.textContent  = ev.cta.icon  || '→';
+            if (ctaLabel) ctaLabel.textContent = ev.cta.label || 'NEXT STEP';
+            if (ctaTitle) ctaTitle.textContent = ev.cta.title || '';
+            ctaCard.href = ev.cta.href || '#';
+            ctaCard.classList.add('visible');
+            if (resetBtn) resetBtn.style.display = 'block';
+          }
+
+          if (ev.type === 'done') {
+            if (cursor) cursor.classList.remove('active');
+            return; // stop pumping
+          }
+
+          if (ev.type === 'error') {
+            thinkWrap.classList.remove('visible');
+            var errNode = document.createTextNode(ev.message || 'Something broke on my end. Try again.');
+            if (cursor && cursor.parentNode === respText){
+              respText.insertBefore(errNode, cursor);
+            } else {
+              respText.appendChild(errNode);
+            }
+            if (cursor) cursor.classList.remove('active');
+            if (resetBtn) resetBtn.style.display = 'block';
+            return;
+          }
+        }
+
+        return pump();
+      });
+    }
+
+    return pump();
+  }).catch(function(err){
+    thinkWrap.classList.remove('visible');
+    var errMsg = 'Something went sideways. Try again in a second.';
+    if (cursor && cursor.parentNode === respText){
+      respText.insertBefore(document.createTextNode(errMsg), cursor);
+    } else {
+      respText.textContent = errMsg;
+    }
+    if (cursor) cursor.classList.remove('active');
+    if (resetBtn) resetBtn.style.display = 'block';
+  });
+};
+
+window.resetFence = function(){
+  if (input){
+    input.value = '';
+    input.disabled = false;
+    input.style.height = 'auto';
+    setTimeout(function(){ input.focus(); }, 250);
+  }
+  if (btn){
+    btn.disabled = false;
+    btn.innerHTML = '<span class="btn-rail">—</span> LEAN ON THE FENCE <span class="btn-rail">→</span>';
+  }
+  ctaCard.classList.remove('visible');
+  if (resetBtn) resetBtn.style.display = 'none';
+  thinkWrap.classList.remove('visible');
+  // Move cursor back to respText (reset)
+  respText.textContent = '';
+  if (cursor){ respText.appendChild(cursor); cursor.classList.remove('active'); }
+  showArrival();
+};
+
+/* ══════════════════════════════════════════════
+   RETURNING VISITOR MEMORY
+══════════════════════════════════════════════ */
+(function(){
+  try {
+    var KEY  = '7kh_fence_visit';
+    var now  = Date.now();
+    var last = localStorage.getItem(KEY);
+    if (last && (now - parseInt(last)) < 21 * 24 * 60 * 60 * 1000) {
+      // Returning in 21 days — subtly adjust placeholder
+      if (phrList) phrList.unshift('Good to see you back. What\'s the question today?');
+      if (input && phrList) input.placeholder = phrList[0];
+    }
+    localStorage.setItem(KEY, now.toString());
+  } catch(_){}
+})();
+
+})();
+</script>
+</body>
+</html>
