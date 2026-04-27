@@ -21,6 +21,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT:     3000
+        // KINOS_HUB_URL=https://kinos.life — set in .env for SSO hub-auth validation
       },
       // Structured log output
       log_date_format: 'YYYY-MM-DD HH:mm:ss',

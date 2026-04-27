@@ -330,6 +330,7 @@ app.use((req, res, next) => {
   // ── Normal auth guard ────────────────────────────────────────────────────────
   // Always public
   if (req.path === '/login' || req.path === '/login.html') return next();
+  if (req.path === '/hub-auth') return next(); // KinOS SSO inbound redirect
   if (req.path.startsWith('/auth/'))       return next();
   // Onboarding — invite token is the auth
   if (req.path === '/onboarding' || req.path === '/onboarding.html') return next();
@@ -385,6 +386,71 @@ app.use('/api/beta', require('./src/routes/beta'));
 
 app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+
+// ─── Hub SSO inbound ─────────────────────────────────────────────────────────
+// Called by KinOS hub via redirect: /hub-auth?token=xxx
+// Validates the one-use token with KinOS, creates a local session, then redirects to /
+app.get('/hub-auth', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.redirect('/login?error=missing_token');
+
+  const KINOS_HUB_URL = process.env.KINOS_HUB_URL || 'http://localhost:3001';
+
+  try {
+    const resp = await fetch(`${KINOS_HUB_URL}/api/hub/validate?token=${token}`);
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      log.warn({ status: resp.status, err: body.error }, 'hub-auth: token validation failed');
+      return res.redirect(`/login?error=${encodeURIComponent(body.error || 'invalid_token')}`);
+    }
+
+    const { member, app } = await resp.json();
+    if (app !== 'kre8r') {
+      log.warn({ app }, 'hub-auth: token was issued for wrong app');
+      return res.redirect('/login?error=wrong_app');
+    }
+
+    // Map KinOS app_role to Kre8r session role
+    // owner → full access, anything else → viewer
+    const kre8rRole = (member.app_role === 'owner') ? 'owner' : 'viewer';
+
+    // Check if a local user exists for this KinOS member; create one if not
+    const _db      = require('./src/db');
+    const bcryptjs = require('bcryptjs');
+    const username = `kinos_${member.id}`; // stable synthetic username
+
+    let localUser = _db.getUserByUsername(username);
+    if (!localUser) {
+      // Auto-provision a local user record (no real password — login is via hub only)
+      const dummyHash = bcryptjs.hashSync(require('crypto').randomBytes(32).toString('hex'), 10);
+      _db.createUser(username, dummyHash, kre8rRole);
+      localUser = _db.getUserByUsername(username);
+      log.info({ username, role: kre8rRole, kinos_id: member.id }, 'hub-auth: provisioned local user');
+    }
+
+    // Keep role in sync with whatever KinOS says
+    if (localUser.role !== kre8rRole) {
+      _db.getRawDb().prepare('UPDATE users SET role = ? WHERE username = ?').run(kre8rRole, username);
+    }
+
+    req.session.regenerate(err => {
+      if (err) return res.redirect('/login?error=session_error');
+      req.session.userId      = localUser.id;
+      req.session.username    = username;
+      req.session.displayName = member.name;
+      req.session.role        = kre8rRole;
+      req.session.via_hub     = true;
+      req.session.save(err2 => {
+        if (err2) return res.redirect('/login?error=session_save');
+        log.info({ name: member.name, role: kre8rRole }, 'hub-auth: session created');
+        res.redirect('/');
+      });
+    });
+  } catch (err) {
+    log.error({ err: err.message }, 'hub-auth: unexpected error');
+    res.redirect('/login?error=hub_unreachable');
+  }
+});
 
 // ─────────────────────────────────────────────
 // FIRST-RUN SETUP
