@@ -230,7 +230,7 @@ tr:hover td{background:var(--faint)}
 <!-- ── Link Modal ── -->
 <div class="modal-overlay" id="modal-link">
   <div class="modal">
-    <h2>Add Tracked Link</h2>
+    <h2 id="link-modal-title">Add Tracked Link</h2>
     <div class="field"><label>Partner</label><select id="lm-partner"></select></div>
     <div class="field"><label>Link Key (slug, e.g. "ibc-tote")</label><input type="text" id="lm-key" placeholder="ibc-tote"></div>
     <div class="field"><label>Display Label</label><input type="text" id="lm-label" placeholder="IBC Tote 275 Gal"></div>
@@ -328,7 +328,8 @@ function renderPartners() {
 function populatePartnerSelects() {
   ['gen-partner','lm-partner'].forEach(id => {
     const sel = document.getElementById(id);
-    sel.innerHTML = partners.map(p => `<option value="${p.partner_key}">${p.partner_name}${p.status==='pending'?' (pending)':''}</option>`).join('');
+    const blank = id === 'lm-partner' ? '<option value="" disabled selected>— Select partner —</option>' : '';
+    sel.innerHTML = blank + partners.map(p => `<option value="${p.partner_key}">${p.partner_name}${p.status==='pending'?' (pending)':''}</option>`).join('');
   });
 }
 
@@ -357,6 +358,7 @@ async function loadLinks() {
       <td><span class="copy-url" onclick="copyText('${tracked}')" title="Click to copy">${tracked}</span></td>
       <td style="font-weight:700;color:${clicks>0?'var(--teal)':'var(--muted)'}">${clicks}</td>
       <td style="display:flex;gap:4px;">
+        <button class="btn btn-secondary btn-sm" onclick="editLink(${l.id})" title="Edit link">✏️</button>
         <button class="btn btn-secondary btn-sm" onclick="setLinkImage(${l.id})" title="Set product image">🖼</button>
         <button class="btn btn-danger btn-sm" onclick="deleteLink(${l.id})">✕</button>
       </td>
@@ -499,14 +501,48 @@ function toggleGearFields() {
 }
 
 let _activeLinkId = null; // tracks which link is open in the modal for image upload
+let _editingLinkId = null; // null = new link, number = editing existing
 
 function openLinkModal() {
-  ['lm-key','lm-label','lm-url','lm-gear-price','lm-gear-emoji','lm-gear-desc'].forEach(id => document.getElementById(id).value = '');
+  _editingLinkId = null;
+  document.getElementById('link-modal-title').textContent = 'Add Tracked Link';
+  ['lm-key','lm-label','lm-url','lm-gear-price','lm-gear-emoji','lm-gear-desc','lm-img-url'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('lm-show-gear').checked = false;
   document.getElementById('lm-gear-fields').style.display = 'none';
+  document.getElementById('lm-key').disabled = false;
   _activeLinkId = null;
   setImgPreview(null);
   document.getElementById('lm-rescrape-btn').style.display = 'none';
+  openModal('link');
+}
+
+async function editLink(id) {
+  const res = await fetch(`/api/affiliator/links?_id=${id}`).then(r => r.json());
+  // fetch all links and find the one we want
+  const all = await fetch('/api/affiliator/links').then(r => r.json());
+  const l = all.find(x => x.id === id);
+  if (!l) return;
+  _editingLinkId = id;
+  _activeLinkId  = id;
+  document.getElementById('link-modal-title').textContent = 'Edit Tracked Link';
+  document.getElementById('lm-partner').value        = l.partner_key;
+  document.getElementById('lm-key').value            = l.link_key;
+  document.getElementById('lm-key').disabled         = true; // key is the PK, don't allow change
+  document.getElementById('lm-label').value          = l.label;
+  document.getElementById('lm-url').value            = l.destination_url;
+  document.getElementById('lm-tool').value           = l.tool || 'general';
+  document.getElementById('lm-show-gear').checked    = !!l.show_on_gear;
+  toggleGearFields();
+  if (l.show_on_gear) {
+    document.getElementById('lm-gear-cat').value     = l.gear_category || 'solar';
+    document.getElementById('lm-gear-price').value   = l.gear_price    || '';
+    document.getElementById('lm-gear-emoji').value   = l.gear_emoji    || '';
+    document.getElementById('lm-gear-desc').value    = l.gear_description || '';
+  }
+  document.getElementById('lm-img-url').value        = l.og_image_url  || '';
+  setImgPreview(l.og_image_url || null);
+  document.getElementById('lm-rescrape-btn').style.display = '';
+  document.getElementById('lm-img-status').textContent = '';
   openModal('link');
 }
 
@@ -580,8 +616,10 @@ async function rescrapeOg() {
 
 async function saveLink() {
   const showOnGear = document.getElementById('lm-show-gear').checked;
+  const partnerVal = document.getElementById('lm-partner').value;
+  if (!partnerVal) { alert('Please select a partner.'); return; }
   const body = {
-    partner_key:      document.getElementById('lm-partner').value,
+    partner_key:      partnerVal,
     link_key:         document.getElementById('lm-key').value.trim().replace(/\s+/g,'-').toLowerCase(),
     label:            document.getElementById('lm-label').value.trim(),
     destination_url:  document.getElementById('lm-url').value.trim(),
@@ -592,13 +630,31 @@ async function saveLink() {
     gear_emoji:       showOnGear ? document.getElementById('lm-gear-emoji').value.trim() : null,
     gear_description: showOnGear ? document.getElementById('lm-gear-desc').value.trim() : null,
   };
-  if (!body.partner_key || !body.link_key || !body.label || !body.destination_url) { alert('All fields required.'); return; }
+  if (!body.link_key || !body.label || !body.destination_url) { alert('All fields required.'); return; }
   if (showOnGear && !body.gear_description) { alert('Add a description for the gear page.'); return; }
-  const r = await fetch('/api/affiliator/links', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json());
-  if (r.id) {
-    _activeLinkId = r.id;
-    document.getElementById('lm-rescrape-btn').style.display = '';
-    document.getElementById('lm-img-status').textContent = showOnGear ? 'Fetching product image…' : '';
+
+  if (_editingLinkId) {
+    // Edit mode — use PUT
+    await fetch(`/api/affiliator/links/${_editingLinkId}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    // Save image URL if pasted
+    const imgUrl = document.getElementById('lm-img-url').value.trim();
+    if (imgUrl) await fetch(`/api/affiliator/links/${_editingLinkId}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ og_image_url: imgUrl })
+    });
+  } else {
+    // Create mode — use POST
+    const r = await fetch('/api/affiliator/links', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json());
+    if (r.id) {
+      _activeLinkId = r.id;
+      document.getElementById('lm-rescrape-btn').style.display = '';
+      document.getElementById('lm-img-status').textContent = showOnGear ? 'Fetching product image…' : '';
+      const imgUrl = document.getElementById('lm-img-url').value.trim();
+      if (imgUrl) await fetch(`/api/affiliator/links/${r.id}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ og_image_url: imgUrl })
+      });
+    }
   }
   closeModal('link');
   loadLinks();
