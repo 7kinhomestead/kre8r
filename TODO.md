@@ -44,6 +44,12 @@ Three confirmed partners: **BillyLand**, **LandLimited**, **OnlineLandHub** (RSS
 - OnlineLandHub RSS feed: wire into `src/aggregator/sources.js` once feed URL confirmed
 - Future: partner dashboard showing referral click counts (UTM tracking via redirect endpoint)
 
+### Testimonials Section (need 3–4 total)
+- 1 strong one saved → `TESTIMONIALS.md` (Founding 50, solar tool, April 2026)
+- Collect 2–3 more from community, then build testimonials section on:
+  kre8r-land tool pages, gear page, Rock Rich landing page
+- Tag each one with what it speaks to (solar tool, community, novice-friendly, etc.)
+
 ### Media Kit — Press Email
 press@7kinhomestead.com needs to exist before kit goes public.
 Simplest: forward from press@7kinhomestead.com → 7kinmedia@gmail.com via Zoho (free tier).
