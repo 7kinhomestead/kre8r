@@ -115,7 +115,7 @@ router.post('/links', async (req, res) => {
 
 router.put('/links/:id', (req, res) => {
   const fields = ['label','destination_url','tool','active',
-                  'show_on_gear','gear_category','gear_price','gear_emoji','gear_description'];
+                  'show_on_gear','gear_category','gear_price','gear_emoji','gear_description','og_image_url'];
   const sets = []; const vals = [];
   fields.forEach(f => { if (req.body[f] !== undefined) { sets.push(`${f}=?`); vals.push(req.body[f]); } });
   if (!sets.length) return res.json({ ok: true });
