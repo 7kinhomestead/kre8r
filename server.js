@@ -362,6 +362,8 @@ app.use((req, res, next) => {
   if (req.path === '/api/stats-export') return next();
   // AffiliateΩr redirect — public so external visitors can click through
   if (req.path.startsWith('/r/')) return next();
+  // AffiliateΩr gear feed — consumed by 7kinhomestead.land/gear (cross-origin, no session)
+  if (req.path === '/api/affiliator/gear-public') return next();
 
   // Logged in — allow
   if (req.session?.userId) return next();
