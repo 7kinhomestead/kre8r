@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AnalyticΩr — 7 Kin Homestead</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:#e2e8f0;font-family:'DM Sans',system-ui,sans-serif;font-size:14px;min-height:100vh}
+.page{max-width:1200px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:22px;font-weight:700;color:#fff;margin-bottom:4px}
+.sub{font-size:12px;color:#64748b;margin-bottom:28px}
+.synced{font-size:11px;color:#475569;margin-left:8px}
+
+/* Section headers */
+.sec{margin-bottom:28px}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#14b8a6;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:#1e293b}
+
+/* Stat cards grid */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.card{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:14px 16px}
+.card-label{font-size:10.5px;color:#64748b;margin-bottom:4px;font-weight:500}
+.card-val{font-size:24px;font-weight:700;color:#fff;line-height:1.1}
+.card-val.teal{color:#14b8a6}
+.card-sub{font-size:10.5px;color:#475569;margin-top:3px}
+.card.accent{border-color:#14b8a620;background:#14b8a608}
+.card.warn{border-color:#f59e0b30;background:#f59e0b08}
+.card.info{border-color:#3b82f630;background:#3b82f608}
+
+/* Wide card */
+.card-wide{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:16px;margin-bottom:10px}
+.card-wide-title{font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:12px}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#475569;text-align:left;padding:4px 8px;border-bottom:1px solid #1e293b}
+.tbl td{padding:7px 8px;border-bottom:1px solid #0f172a;font-size:12.5px;color:#cbd5e1}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#ffffff06}
+.pill{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#1e293b;color:#94a3b8}
+.pill.yt{background:#ef444420;color:#ef4444}
+.pill.email{background:#8b5cf620;color:#8b5cf6}
+.pill.land{background:#22c55e20;color:#22c55e}
+.pill.fence{background:#14b8a620;color:#14b8a6}
+
+/* Two-column layout */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+
+/* Sparkline */
+.spark{width:100%;height:32px;display:block}
+svg.spark path{fill:none}
+
+/* Loading / error states */
+.loading{color:#475569;font-size:12px;padding:16px 0}
+.err{color:#ef4444;font-size:12px;padding:8px 0}
+.dim{color:#475569}
+.badge-ok{display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:4px}
+.badge-err{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:4px}
+.badge-warn{display:inline-block;width:7px;height:7px;border-radius:50%;background:#f59e0b;margin-right:4px}
+
+/* Refresh button */
+.btn-refresh{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit}
+.btn-refresh:hover{background:#334155;color:#e2e8f0}
+</style>
+</head>
+<body>
+<div id="kre8r-nav"></div>
+
+<div class="page">
+  <h1>AnalyticΩr</h1>
+  <p class="sub">Unified view of 7 Kin Homestead — all platforms, one screen<span class="synced" id="lastSync"></span></p>
+
+  <!-- ── YOUTUBE ─────────────────────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-title">📺 YouTube</div>
+    <div id="yt-cards" class="cards"><div class="loading">Loading…</div></div>
+    <div class="two-col">
+      <div class="card-wide" id="yt-recent">
+        <div class="card-wide-title">Recent Videos</div>
+        <div class="loading">Loading…</div>
+      </div>
+      <div class="card-wide" id="yt-spark-wrap">
+        <div class="card-wide-title">30-Day View Trend</div>
+        <div class="loading">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EMAIL ──────────────────────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-title">✉️ Email</div>
+    <div id="email-cards" class="cards"><div class="loading">Loading…</div></div>
+  </div>
+
+  <!-- ── PIPELINE ───────────────────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-title">⚙️ Content Pipeline</div>
+    <div id="pipe-cards" class="cards"><div class="loading">Loading…</div></div>
+  </div>
+
+  <!-- ── LAND TOOL ──────────────────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-title">🌲 Land Finder + Tools</div>
+    <div id="land-cards" class="cards"><div class="loading">Loading…</div></div>
+    <div class="two-col">
+      <div class="card-wide" id="land-pages">
+        <div class="card-wide-title">Page Views by Tool</div>
+        <div class="loading">Loading…</div>
+      </div>
+      <div class="card-wide" id="land-refs">
+        <div class="card-wide-title">Top Referrers (30d)</div>
+        <div class="loading">Loading…</div>
+      </div>
+    </div>
+    <div class="card-wide" id="land-clicks">
+      <div class="card-wide-title">Listing Clicks by Source (30d)</div>
+      <div class="loading">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ── FENCE ─────────────────────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-title">🤠 The Fence AI Q&A</div>
+    <div id="fence-cards" class="cards"><div class="loading">Loading…</div></div>
+    <div class="card-wide" id="fence-topics">
+      <div class="card-wide-title">Top Topics (30d)</div>
+      <div class="loading">Loading…</div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:12px">
+    <button class="btn-refresh" onclick="loadAll()">↻ Refresh All</button>
+  </div>
+</div>
+
+<script src="/js/nav.js" defer></script>
+<script>window.addEventListener('load',()=>initNav())</script>
+<script>
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(n){if(n==null)return '—';if(n>=1000000)return (n/1000000).toFixed(1)+'M';if(n>=1000)return (n/1000).toFixed(1)+'K';return String(n);}
+function pct(n){return n==null?'—':n.toFixed(1)+'%';}
+function ago(d){if(!d)return '—';const diff=Date.now()-new Date(d).getTime();const h=Math.floor(diff/3600000);const days=Math.floor(h/24);if(days>0)return days+'d ago';if(h>0)return h+'h ago';return 'just now';}
+
+function card(label,val,sub='',cls=''){
+  return `<div class="card ${cls}"><div class="card-label">${label}</div><div class="card-val">${val}</div>${sub?`<div class="card-sub">${sub}</div>`:''}</div>`;
+}
+
+function sparkSvg(data, color='#14b8a6'){
+  if(!data||!data.length)return '<span class="dim">No data yet</span>';
+  const vals=data.map(d=>d.n||d.total||0);
+  const max=Math.max(...vals)||1;
+  const w=400,h=32,pad=2;
+  const pts=vals.map((v,i)=>{
+    const x=pad+(i/(vals.length-1||1))*(w-pad*2);
+    const y=h-pad-(v/max)*(h-pad*2);
+    return `${x},${y}`;
+  }).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8"/>
+  </svg>`;
+}
+
+function tableRows(data, cols){
+  if(!data||!data.length)return '<tr><td colspan="99" class="dim" style="padding:12px 8px;font-size:12px;">No data yet</td></tr>';
+  return data.map(row=>'<tr>'+cols.map(c=>`<td>${row[c]??'—'}</td>`).join('')+'</tr>').join('');
+}
+
+// ── YouTube ───────────────────────────────────────────────────────────────────
+async function loadYT(){
+  try{
+    const [health, vids] = await Promise.all([
+      fetch('/api/mirrr/channel-health').then(r=>r.json()),
+      fetch('/api/mirrr/videos?limit=8').then(r=>r.json()),
+    ]);
+    const h = health||{};
+    document.getElementById('yt-cards').innerHTML = [
+      card('Total Videos', fmt(h.total_videos),'synced from YouTube',''),
+      card('Avg Views/Video', fmt(h.avg_views_per_video),'',''),
+      card('Avg View Duration', h.avg_view_duration_sec ? Math.round(h.avg_view_duration_sec/60)+'m '+Math.round(h.avg_view_duration_sec%60)+'s' : '—','',''),
+      card('Avg CTR', pct(h.avg_ctr),'',''),
+      card('Avg Retention', pct(h.avg_avg_view_percentage),'',''),
+    ].join('');
+
+    const rows = Array.isArray(vids) ? vids : (vids.projects||vids.videos||[]);
+    document.getElementById('yt-recent').innerHTML = `
+      <div class="card-wide-title">Recent Videos</div>
+      <table class="tbl">
+        <thead><tr><th>Title</th><th>Views</th><th>CTR</th><th>Ret%</th><th>Published</th></tr></thead>
+        <tbody>${rows.slice(0,8).map(v=>`<tr>
+          <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.title||'Untitled'}</td>
+          <td>${fmt(v.views||v.total_views)}</td>
+          <td>${pct(v.ctr)}</td>
+          <td>${pct(v.avg_view_percentage)}</td>
+          <td>${ago(v.published_at)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+
+    document.getElementById('yt-spark-wrap').innerHTML = `
+      <div class="card-wide-title">30-Day View Trend</div>
+      <div class="dim" style="font-size:11px;padding:8px 0">Trend data from MirrΩr sync — view full analytics in <a href="/mirrr.html" style="color:#14b8a6">MirrΩr</a></div>`;
+
+  }catch(e){
+    document.getElementById('yt-cards').innerHTML = `<div class="err">YouTube data unavailable — sync in MirrΩr first</div>`;
+  }
+}
+
+// ── Email + Pipeline (northr/dashboard) ───────────────────────────────────────
+async function loadNorthr(){
+  try{
+    const d = await fetch('/api/northr/dashboard').then(r=>r.json());
+    const es = d.email_stats||{};
+    const st = d.stats||{};
+    const pp = d.pipeline||{};
+
+    document.getElementById('email-cards').innerHTML = [
+      card('Latest Open Rate', pct(es.latest_open_rate), ago(es.latest_sent_at), es.latest_open_rate>30?'accent':''),
+      card('Latest Click Rate', pct(es.latest_click_rate),'',''),
+      card('Avg Open Rate', pct(es.avg_open_rate), `${es.campaigns_sampled||0} campaigns sampled`,''),
+      card('Avg Click Rate', pct(es.avg_click_rate),'',''),
+      card('Days Since Email', st.days_since_last_email!=null?st.days_since_last_email+'d':'—','', st.days_since_last_email>14?'warn':''),
+    ].join('');
+
+    document.getElementById('pipe-cards').innerHTML = [
+      card('Pre-Production', fmt(pp.in_pre_production),'ideas + scripts',''),
+      card('In Production', fmt(pp.in_production),'shooting',''),
+      card('Post-Production', fmt(pp.in_post),'editing',''),
+      card('Distribution', fmt(pp.in_distribution),'publishing',''),
+      card('Videos This Month', fmt(st.videos_published_this_month),'published','accent'),
+      card('Days Since Publish', st.days_since_last_publish!=null?st.days_since_last_publish+'d':'—','', st.days_since_last_publish>7?'warn':''),
+      card('Total Published', fmt(st.total_videos_published),'all time',''),
+    ].join('');
+
+  }catch(e){
+    document.getElementById('email-cards').innerHTML = `<div class="err">Email data unavailable</div>`;
+    document.getElementById('pipe-cards').innerHTML = `<div class="err">Pipeline data unavailable</div>`;
+  }
+}
+
+// ── Land Tool ─────────────────────────────────────────────────────────────────
+async function loadLand(){
+  try{
+    const d = await fetch('/api/analyticr/land').then(r=>r.json());
+    if(!d.ok||!d.stats){
+      const msg = d.message||'Land server not configured';
+      ['land-cards','land-pages','land-refs','land-clicks','fence-cards','fence-topics'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el)el.innerHTML=`<div class="err" style="padding:12px">${msg}</div>`;
+      });
+      return;
+    }
+    const s = d.stats;
+
+    // Land cards
+    document.getElementById('land-cards').innerHTML = [
+      card('Total Listings', fmt(s.listings_active), `${s.listings_parsed||0} parsed`, 'accent'),
+      card('States Covered', fmt(s.listings_states_covered),'',''),
+      card('Page Views (30d)', fmt(s.pageviews_30d), `${fmt(s.pageviews_uniq)} unique visitors`,''),
+      card('Page Views (7d)', fmt(s.pageviews_7d),'',''),
+      card('Listing Clicks (30d)', fmt(s.clicks_30d),'outbound clicks',''),
+      card('Listing Clicks (7d)', fmt(s.clicks_7d),'',''),
+      card('Search Alerts', fmt(s.search_alerts_active),'email subscribers',''),
+    ].join('');
+
+    // Page views by tool
+    const pvRows = (s.pageviews_by_page||[]);
+    document.getElementById('land-pages').innerHTML = `
+      <div class="card-wide-title">Page Views by Tool</div>
+      <table class="tbl">
+        <thead><tr><th>Page</th><th>Total</th><th>7d</th><th>Unique</th></tr></thead>
+        <tbody>${pvRows.length?pvRows.map(r=>`<tr>
+          <td><span class="pill land">${r.page}</span></td>
+          <td>${fmt(r.total)}</td>
+          <td>${fmt(r.last_7d)}</td>
+          <td>${fmt(r.uniq)}</td>
+        </tr>`).join(''):'<tr><td colspan="4" class="dim" style="padding:12px 8px;font-size:12px;">No page views recorded yet</td></tr>'}</tbody>
+      </table>`;
+
+    // Top referrers
+    const refRows = (s.pageviews_top_referrers||[]);
+    document.getElementById('land-refs').innerHTML = `
+      <div class="card-wide-title">Top Referrers (30d)</div>
+      <table class="tbl">
+        <thead><tr><th>Source</th><th>Visits</th></tr></thead>
+        <tbody>${refRows.length?refRows.map(r=>`<tr>
+          <td>${r.referrer||'Direct'}</td>
+          <td>${fmt(r.n)}</td>
+        </tr>`).join(''):'<tr><td colspan="2" class="dim" style="padding:12px 8px;font-size:12px;">No referrer data yet</td></tr>'}</tbody>
+      </table>`;
+
+    // Listing clicks by source
+    const clkRows = (s.clicks_by_source_30d||[]);
+    document.getElementById('land-clicks').innerHTML = `
+      <div class="card-wide-title">Listing Clicks by Source (30d)</div>
+      <table class="tbl">
+        <thead><tr><th>Source</th><th>Clicks</th></tr></thead>
+        <tbody>${clkRows.length?clkRows.map(r=>`<tr>
+          <td>${r.source||'unknown'}</td>
+          <td>${fmt(r.n)}</td>
+        </tr>`).join(''):'<tr><td colspan="2" class="dim" style="padding:12px 8px;font-size:12px;">No clicks recorded yet</td></tr>'}</tbody>
+      </table>`;
+
+    // Fence cards
+    document.getElementById('fence-cards').innerHTML = [
+      card('Questions (All Time)', fmt(s.fence_questions_total),'','accent'),
+      card('Questions (30d)', fmt(s.fence_questions_30d),'',''),
+      card('Questions (7d)', fmt(s.fence_questions_7d),'',''),
+      card('Email Captures', fmt(s.fence_email_captures), 'from Q&A', ''),
+      card('Video Matches', fmt(s.fence_video_matches), 'transcript hits',''),
+    ].join('');
+
+    // Fence top topics
+    const topicRows = (s.fence_top_topics||[]);
+    document.getElementById('fence-topics').innerHTML = `
+      <div class="card-wide-title">Top Topics (30d)</div>
+      <table class="tbl">
+        <thead><tr><th>Topic</th><th>Questions</th></tr></thead>
+        <tbody>${topicRows.length?topicRows.map(r=>`<tr>
+          <td><span class="pill fence">${r.topic}</span></td>
+          <td>${fmt(r.n)}</td>
+        </tr>`).join(''):'<tr><td colspan="2" class="dim" style="padding:12px 8px;font-size:12px;">No topic data yet</td></tr>'}</tbody>
+      </table>`;
+
+  }catch(e){
+    ['land-cards','land-pages','land-refs','land-clicks','fence-cards','fence-topics'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.innerHTML=`<div class="err" style="padding:12px">Land server unavailable</div>`;
+    });
+  }
+}
+
+// ── Load all ──────────────────────────────────────────────────────────────────
+async function loadAll(){
+  document.getElementById('lastSync').textContent = '';
+  await Promise.allSettled([loadYT(), loadNorthr(), loadLand()]);
+  document.getElementById('lastSync').textContent = '· synced ' + new Date().toLocaleTimeString();
+}
+
+loadAll();
+</script>
+</body>
+</html>

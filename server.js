@@ -532,6 +532,8 @@ app.post('/setup-api', async (req, res) => {
 app.get('/download',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'download.html')));
 app.get('/landing',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/landing.html',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
+app.get('/analyticr',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'analyticr.html')));
+app.get('/analyticr.html',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'analyticr.html')));
 // GuardΩr — public fan page (no auth). Serves for any /guard/:slug path.
 // Also handles guard.kre8r.app/:slug subdomain (ROOT_HOSTS treats it as main app)
 app.get('/guard/:slug',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'guardr.html')));
@@ -610,6 +612,7 @@ app.use('/api/guard',             require('./src/routes/guard'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 app.use('/api/vectr',             require('./src/routes/vectr'));
 app.use('/api/stats-export',      require('./src/routes/stats-export'));
+app.use('/api/analyticr',         require('./src/routes/analyticr'));
 app.use('/api/affiliator',        require('./src/routes/affiliator'));
 // The Fence — page served directly, API mounted separately
 app.get('/fence', (req, res) => res.sendFile(path.join(__dirname, 'public', 'fence', 'index.html')));
