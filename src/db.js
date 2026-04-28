@@ -1117,6 +1117,22 @@ function runMigrations() {
     tx();
     console.log('[DB] AffiliateΩr migration: removed bakerCreek+premier1, added 8 new gear shop partners');
   }
+
+  // ── VectΩr — Strategic Briefs ─────────────────────────────────────────────
+  // strategic_briefs lives only in bootstrapTenantTables; add here so Jason's
+  // main DB gets the table created on first startup after this migration lands.
+  db.exec(`CREATE TABLE IF NOT EXISTS strategic_briefs (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform_context  TEXT,
+    conversation_json TEXT,
+    brief_json        TEXT NOT NULL,
+    locked_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    status            TEXT NOT NULL DEFAULT 'active',
+    superseded_at     TEXT
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_brief_status ON strategic_briefs(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_brief_locked ON strategic_briefs(locked_at)');
+  console.log('[DB] VectΩr strategic_briefs table verified');
 }
 
 /**

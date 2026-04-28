@@ -149,11 +149,13 @@ router.get('/', async (req, res) => {
     // ── VectΩr — active strategic brief ─────────────────────────────
     try {
       const brief = raw.prepare(`
-        SELECT direction, locked_at FROM strategic_briefs
-        WHERE is_active = 1 ORDER BY locked_at DESC LIMIT 1
+        SELECT brief_json, locked_at FROM strategic_briefs
+        WHERE status = 'active' ORDER BY locked_at DESC LIMIT 1
       `).get();
+      let bj = null;
+      try { bj = brief?.brief_json ? JSON.parse(brief.brief_json) : null; } catch (_) {}
       stats.strategic_brief_active    = brief ? 1 : 0;
-      stats.strategic_brief_direction = brief?.direction ?? null;
+      stats.strategic_brief_direction = bj?.vector ?? bj?.focus ?? null;
     } catch (_) {}
 
     // ── MailerLite — live API call ────────────────────────────────────

@@ -321,11 +321,20 @@ router.get('/report', (req, res) => {
           needs_attention: !p.pipr_complete
         };
       }
-      const covered       = config.beats.filter(b => b.covered);
-      const missing       = config.beats.filter(b => !b.covered).map(b => b.name);
+      // A beat counts as covered if:
+      //   1. It was matched to a footage select (b.covered from updateBeatCoverage), OR
+      //   2. A script was written for it in WritΩr (beat_scripts[i] has content), OR
+      //   3. A full script exists (writr_complete path — all beats scripted at once)
+      const beatScripts   = config.beat_scripts || {};
+      const hasFullScript = !!(config.script || p.writr_complete);
+      const effCovered    = config.beats.map((b, i) =>
+        b.covered || !!(beatScripts[i] && String(beatScripts[i]).trim()) || hasFullScript
+      );
+      const covered       = config.beats.filter((b, i) => effCovered[i]);
+      const missing       = config.beats.filter((b, i) => !effCovered[i]).map(b => b.name);
       const outOfSeq      = config.beats.filter(b => b.out_of_sequence).map(b => b.name);
       const criticalMissing = config.beats
-        .filter(b => !b.covered && ['All Is Lost', 'Break into Three', 'CTA', 'Hook'].includes(b.name))
+        .filter((b, i) => !effCovered[i] && ['All Is Lost', 'Break into Three', 'CTA', 'Hook'].includes(b.name))
         .map(b => b.name);
 
       return {
