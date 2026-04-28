@@ -19,13 +19,21 @@ const { checkAllThresholds, generateMonthlyStrategy, currentMonth, currentYear }
 
 const ML_BASE = 'https://connect.mailerlite.com/api';
 
+// ML v2 returns open_rate/click_rate as {float, string} objects OR plain numbers
+// Unwrap to a clean percentage float (e.g. 22.45, not 0.2245)
+function unwrapRate(v) {
+  if (v == null) return null;
+  if (typeof v === 'object') return v.float != null ? Math.round(v.float * 10000) / 100 : null;
+  return typeof v === 'number' ? Math.round(v * 10000) / 100 : null;
+}
+
 async function fetchMlCampaignStats(limit = 5) {
   const apiKey = process.env.MAILERLITE_API_KEY;
   if (!apiKey) return [];
   try {
     const { default: fetch } = await import('node-fetch');
-    // Fetch all statuses — sent, scheduled, draft — sorted newest first
-    const url = `${ML_BASE}/campaigns?limit=${limit}`;
+    // Fetch more than limit so we can filter to sent-only and still have enough
+    const url = `${ML_BASE}/campaigns?limit=25`;
     const res  = await fetch(url, {
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
     });
@@ -37,16 +45,17 @@ async function fetchMlCampaignStats(limit = 5) {
       return [];
     }
     const campaigns = data.data || [];
-    // Sort client-side by created_at desc (API default order may vary)
-    campaigns.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    return campaigns.slice(0, limit).map(c => ({
+    // Only sent campaigns have real stats — filter drafts/scheduled out
+    const sent = campaigns.filter(c => c.status === 'sent');
+    sent.sort((a, b) => new Date(b.sent_at || b.created_at) - new Date(a.sent_at || a.created_at));
+    return sent.slice(0, limit).map(c => ({
       id:         c.id,
       subject:    c.emails?.[0]?.subject || c.name || '—',
       status:     c.status,
-      sent_at:    c.sent_at || c.scheduled_for || c.created_at,
-      open_rate:  c.stats?.open_rate  ?? null,
-      click_rate: c.stats?.click_rate ?? null,
-      total_sent: c.stats?.sent       ?? null,
+      sent_at:    c.sent_at || c.created_at,
+      open_rate:  unwrapRate(c.open_rate),
+      click_rate: unwrapRate(c.click_rate),
+      total_sent: c.total_recipients ?? c.stats?.sent ?? null,
     }));
   } catch (e) {
     console.error('[northr] fetchMlCampaignStats error:', e.message);

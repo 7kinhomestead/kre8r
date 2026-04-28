@@ -15,25 +15,35 @@ const logger  = require('../utils/logger');
 
 const ML_BASE = 'https://connect.mailerlite.com/api';
 
+// ML v2 returns open_rate/click_rate as {float, string} objects OR plain numbers
+function unwrapRate(v) {
+  if (v == null) return null;
+  if (typeof v === 'object') return v.float != null ? Math.round(v.float * 10000) / 100 : null;
+  return typeof v === 'number' ? Math.round(v * 10000) / 100 : null;
+}
+
 async function fetchMlStats() {
   const apiKey = process.env.MAILERLITE_API_KEY;
   if (!apiKey) return null;
   try {
     const { default: fetch } = await import('node-fetch');
-    const res = await fetch(`${ML_BASE}/campaigns?limit=5`, {
+    const res = await fetch(`${ML_BASE}/campaigns?limit=25`, {
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
     });
     if (!res.ok) return null;
-    const data      = await res.json();
-    const campaigns = (data.data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const data = await res.json();
+    // Only sent campaigns have real stats
+    const campaigns = (data.data || [])
+      .filter(c => c.status === 'sent')
+      .sort((a, b) => new Date(b.sent_at || b.created_at) - new Date(a.sent_at || a.created_at));
     if (!campaigns.length) return null;
     const latest   = campaigns[0];
-    const avgOpen  = campaigns.reduce((s, c) => s + (c.stats?.open_rate  || 0), 0) / campaigns.length;
-    const avgClick = campaigns.reduce((s, c) => s + (c.stats?.click_rate || 0), 0) / campaigns.length;
+    const avgOpen  = campaigns.reduce((s, c) => s + (unwrapRate(c.open_rate)  || 0), 0) / campaigns.length;
+    const avgClick = campaigns.reduce((s, c) => s + (unwrapRate(c.click_rate) || 0), 0) / campaigns.length;
     return {
-      latest_open_rate:  latest.stats?.open_rate  ?? null,
-      latest_click_rate: latest.stats?.click_rate ?? null,
-      latest_sent_at:    latest.sent_at || latest.scheduled_for || null,
+      latest_open_rate:  unwrapRate(latest.open_rate),
+      latest_click_rate: unwrapRate(latest.click_rate),
+      latest_sent_at:    latest.sent_at || null,
       avg_open_rate:     Math.round(avgOpen  * 10) / 10,
       avg_click_rate:    Math.round(avgClick * 10) / 10,
       campaigns_sampled: campaigns.length,
