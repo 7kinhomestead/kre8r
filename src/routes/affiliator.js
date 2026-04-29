@@ -119,6 +119,7 @@ router.put('/links/:id', (req, res) => {
   const sets = []; const vals = [];
   fields.forEach(f => { if (req.body[f] !== undefined) { sets.push(`${f}=?`); vals.push(req.body[f]); } });
   if (!sets.length) return res.json({ ok: true });
+  sets.push("updated_at=datetime('now')");
   vals.push(req.params.id);
   db.prepare(`UPDATE affiliate_links SET ${sets.join(',')} WHERE id=?`).run(...vals);
   res.json({ ok: true });
@@ -158,7 +159,7 @@ router.delete('/links/:id', (req, res) => {
 router.post('/links/:id/image', imgUpload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file received' });
   const url = `/uploads/affiliate/${req.file.filename}`;
-  db.prepare('UPDATE affiliate_links SET og_image_url=? WHERE id=?').run(url, parseInt(req.params.id));
+  db.prepare("UPDATE affiliate_links SET og_image_url=?, updated_at=datetime('now') WHERE id=?").run(url, parseInt(req.params.id));
   res.json({ ok: true, og_image_url: url });
 });
 
@@ -167,7 +168,7 @@ router.post('/links/:id/rescrape', async (req, res) => {
   if (!link) return res.status(404).json({ error: 'Link not found' });
   const ogUrl = await scrapeOgImage(link.destination_url);
   if (ogUrl) {
-    db.prepare('UPDATE affiliate_links SET og_image_url=? WHERE id=?').run(ogUrl, parseInt(req.params.id));
+    db.prepare("UPDATE affiliate_links SET og_image_url=?, updated_at=datetime('now') WHERE id=?").run(ogUrl, parseInt(req.params.id));
     res.json({ ok: true, og_image_url: ogUrl });
   } else {
     res.json({ ok: false, error: 'No OG image found at destination URL' });
@@ -228,6 +229,15 @@ router.post('/sync-from-electron', (req, res) => {
   const tx = db.transaction(() => {
     for (const item of links) {
       if (!item.partner_key || !item.link_key) { skipped++; continue; }
+      // Last-write-wins: skip if receiver's row is newer than what's being pushed
+      if (item.updated_at) {
+        const existing = db.prepare(
+          'SELECT updated_at FROM affiliate_links WHERE partner_key=? AND link_key=?'
+        ).get(item.partner_key, item.link_key);
+        if (existing?.updated_at && existing.updated_at > item.updated_at) {
+          skipped++; continue;
+        }
+      }
       const sets = [], vals = [];
       ALLOWED.forEach(f => {
         if (item[f] !== undefined && item[f] !== null) {
@@ -235,6 +245,7 @@ router.post('/sync-from-electron', (req, res) => {
         }
       });
       if (!sets.length) { skipped++; continue; }
+      sets.push("updated_at=datetime('now')");
       vals.push(item.partner_key, item.link_key);
       const r = db.prepare(
         `UPDATE affiliate_links SET ${sets.join(',')} WHERE partner_key=? AND link_key=?`
@@ -290,11 +301,21 @@ router.post('/pull-from-live', async (req, res) => {
     const tx = db.transaction(() => {
       for (const item of links) {
         if (!item.partner_key || !item.link_key) { skipped++; continue; }
+        // Last-write-wins: skip if local row is newer than what production sent
+        if (item.updated_at) {
+          const existing = db.prepare(
+            'SELECT updated_at FROM affiliate_links WHERE partner_key=? AND link_key=?'
+          ).get(item.partner_key, item.link_key);
+          if (existing?.updated_at && existing.updated_at > item.updated_at) {
+            skipped++; continue;
+          }
+        }
         const sets = [], vals = [];
         ALLOWED.forEach(f => {
           if (item[f] !== undefined) { sets.push(`${f}=?`); vals.push(item[f]); }
         });
         if (!sets.length) { skipped++; continue; }
+        sets.push("updated_at=datetime('now')");
         vals.push(item.partner_key, item.link_key);
         const result = db.prepare(
           `UPDATE affiliate_links SET ${sets.join(',')} WHERE partner_key=? AND link_key=?`
@@ -323,7 +344,7 @@ router.post('/scrape-gear-images', async (req, res) => {
     try {
       const ogUrl = await scrapeOgImage(link.destination_url);
       if (ogUrl) {
-        db.prepare('UPDATE affiliate_links SET og_image_url=? WHERE id=?').run(ogUrl, link.id);
+        db.prepare("UPDATE affiliate_links SET og_image_url=?, updated_at=datetime('now') WHERE id=?").run(ogUrl, link.id);
         updated++;
       } else {
         skipped++;
