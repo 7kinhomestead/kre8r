@@ -175,25 +175,26 @@ async function loadYT(){
       fetch('/api/mirrr/videos?limit=8').then(r=>r.json()),
     ]);
     const h = health||{};
+    const yt = h.by_platform?.youtube || {};
     document.getElementById('yt-cards').innerHTML = [
       card('Total Videos', fmt(h.total_videos),'synced from YouTube',''),
-      card('Avg Views/Video', fmt(h.avg_views_per_video),'',''),
-      card('Avg View Duration', h.avg_view_duration_sec ? Math.round(h.avg_view_duration_sec/60)+'m '+Math.round(h.avg_view_duration_sec%60)+'s' : '—','',''),
-      card('Avg CTR', pct(h.avg_ctr),'',''),
-      card('Avg Retention', pct(h.avg_avg_view_percentage),'',''),
+      card('Avg Views/Video', fmt(h.avg_views),'all videos',''),
+      card('Longform Avg', fmt(h.longform_avg_views),'longform only','accent'),
+      card('Best Video', fmt(yt.best_video?.views || h.best_video?.views), h.best_video?.title ? h.best_video.title.slice(0,28)+'…' : '',''),
+      card('Top Angle', h.top_topic||'—','most viewed angle',''),
     ].join('');
 
     const rows = Array.isArray(vids) ? vids : (vids.projects||vids.videos||[]);
     document.getElementById('yt-recent').innerHTML = `
       <div class="card-wide-title">Recent Videos</div>
       <table class="tbl">
-        <thead><tr><th>Title</th><th>Views</th><th>CTR</th><th>Ret%</th><th>Published</th></tr></thead>
+        <thead><tr><th>Title</th><th>Views</th><th>Likes</th><th>Comments</th><th>Published</th></tr></thead>
         <tbody>${rows.slice(0,8).map(v=>`<tr>
           <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.title||'Untitled'}</td>
-          <td>${fmt(v.views||v.total_views)}</td>
-          <td>${pct(v.ctr)}</td>
-          <td>${pct(v.avg_view_percentage)}</td>
-          <td>${ago(v.published_at)}</td>
+          <td>${fmt(v.total_views)}</td>
+          <td>${fmt(v.total_likes)}</td>
+          <td>${fmt(v.total_comments)}</td>
+          <td>${ago(v.last_posted_at)}</td>
         </tr>`).join('')}</tbody>
       </table>`;
 
