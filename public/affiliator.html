@@ -87,6 +87,7 @@ tr:hover td{background:var(--faint)}
   <div class="tab" onclick="showTab('analytics')">Analytics</div>
   <div class="tab" onclick="showTab('generator')">Link Generator</div>
   <div class="tab" onclick="showTab('categories')">⚙ Categories</div>
+  <div class="tab" id="tab-todo-btn" onclick="showTab('todo')">⚠ To-Do <span id="todo-count-badge" style="display:none;background:var(--amber);color:#000;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:4px"></span></div>
 </div>
 
 <!-- ── PARTNERS ── -->
@@ -222,6 +223,23 @@ tr:hover td{background:var(--faint)}
   </div>
   <div style="background:rgba(20,184,166,.06);border:1px solid rgba(20,184,166,.2);border-radius:8px;padding:12px 16px;margin-top:14px;font-size:12px;color:var(--muted)">
     💡 <strong style="color:var(--off)">How it works:</strong> Adding a category here makes it available in the "Gear Category" dropdown when adding or editing a tracked link. The filter chip on the gear page shows automatically once a category has at least one active product.
+  </div>
+</div>
+
+<!-- ── GEAR TO-DO ── -->
+<div class="content" id="tab-todo" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div style="font-size:15px;font-weight:700">Gear Page — Incomplete Items</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">Gear products missing an image, description, price, or that are hidden. Fix them here — they drop off when complete.</div>
+    </div>
+    <button class="btn btn-secondary" onclick="loadTodo()">↺ Refresh</button>
+  </div>
+  <div id="todo-list"></div>
+  <div id="todo-done" style="display:none;text-align:center;padding:48px 20px;color:var(--muted)">
+    <div style="font-size:32px;margin-bottom:10px">✅</div>
+    <div style="font-size:15px;font-weight:700;color:var(--off)">All caught up.</div>
+    <div style="font-size:13px;margin-top:4px">Every gear product has an image, description, and price.</div>
   </div>
 </div>
 
@@ -369,6 +387,7 @@ async function init() {
   populatePartnerSelects();
   populateCategorySelects();
   loadCategories();
+  loadTodo(); // populate badge count on startup
 }
 
 function renderPartners() {
@@ -519,6 +538,98 @@ async function deleteCat(id, label) {
   const r = await fetch(`/api/affiliator/gear-categories/${id}`, { method:'DELETE' }).then(r => r.json());
   if (r.error) { alert(r.error); return; }
   loadCategories();
+}
+
+async function loadTodo() {
+  const links = await fetch('/api/affiliator/links').then(r => r.json());
+  // Only care about gear-page items
+  const gear = links.filter(l => l.show_on_gear);
+
+  const incomplete = gear.filter(l => {
+    const missing = getMissing(l);
+    return missing.length > 0;
+  }).sort((a, b) => getMissing(b).length - getMissing(a).length); // most incomplete first
+
+  // Update badge
+  const badge = document.getElementById('todo-count-badge');
+  badge.textContent = incomplete.length;
+  badge.style.display = incomplete.length ? '' : 'none';
+
+  const listEl = document.getElementById('todo-list');
+  const doneEl = document.getElementById('todo-done');
+
+  if (!incomplete.length) {
+    listEl.innerHTML = '';
+    doneEl.style.display = '';
+    return;
+  }
+  doneEl.style.display = 'none';
+
+  const pmap = {};
+  partners.forEach(p => pmap[p.partner_key] = p.partner_name);
+
+  listEl.innerHTML = `<div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead><tr>
+        <th>Product</th><th>Partner</th><th>Category</th><th>Missing</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${incomplete.map(l => {
+          const missing = getMissing(l);
+          const tags = missing.map(m => {
+            const colors = { image:'--amber', description:'--red', price:'--blue', hidden:'--purple' };
+            return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(0,0,0,.3);color:var(${colors[m]||'--muted'});border:1px solid currentColor;margin:1px">${m.toUpperCase()}</span>`;
+          }).join(' ');
+          const imgThumb = l.og_image_url
+            ? `<img src="${l.og_image_url}" style="width:36px;height:28px;object-fit:cover;border-radius:4px;border:1px solid var(--border);flex-shrink:0">`
+            : `<div style="width:36px;height:28px;background:var(--card2);border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${l.gear_emoji||'📦'}</div>`;
+          return `<tr style="${l.active===0?'opacity:.5':''}">
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                ${imgThumb}
+                <div>
+                  <div style="font-weight:600;font-size:13px">${l.label}</div>
+                  <div style="font-size:10px;color:var(--muted);font-family:monospace">${l.partner_key}/${l.link_key}</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-size:12px;color:var(--muted)">${pmap[l.partner_key]||l.partner_key}</td>
+            <td style="font-size:12px;color:var(--muted)">${l.gear_category||'—'}</td>
+            <td>${tags}</td>
+            <td style="display:flex;gap:4px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="editLink(${l.id});showTab('links')">✏️ Fix</button>
+              ${!l.og_image_url ? `<button class="btn btn-secondary btn-sm" onclick="scrapeOne(${l.id})" id="scrape-one-${l.id}">🔄 Fetch Image</button>` : ''}
+              <button class="btn ${l.active!==0?'btn-secondary':'btn-primary'} btn-sm" onclick="toggleActive(${l.id},${l.active!==0?0:1})">${l.active!==0?'Hide':'Show'}</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function getMissing(l) {
+  const missing = [];
+  if (!l.og_image_url)      missing.push('image');
+  if (!l.gear_description)  missing.push('description');
+  if (!l.gear_price)        missing.push('price');
+  if (l.active === 0)       missing.push('hidden');
+  return missing;
+}
+
+async function scrapeOne(id) {
+  const btn = document.getElementById(`scrape-one-${id}`);
+  if (btn) { btn.disabled = true; btn.textContent = '🔄…'; }
+  const all = await fetch('/api/affiliator/links').then(r => r.json());
+  const link = all.find(x => x.id === id);
+  if (!link) return;
+  const r = await fetch(`/api/affiliator/links/${id}/rescrape`, { method:'POST' }).then(r => r.json());
+  if (r.ok) {
+    if (btn) { btn.textContent = '✓ Got it'; }
+    setTimeout(() => loadTodo(), 800);
+  } else {
+    if (btn) { btn.disabled = false; btn.textContent = '✗ No image found'; }
+  }
 }
 
 async function loadLinks() {
@@ -888,15 +999,16 @@ function openModal(name)  { document.getElementById('modal-' + name).classList.a
 function closeModal(name) { document.getElementById('modal-' + name).classList.remove('open'); }
 
 function showTab(name) {
-  ['partners','links','analytics','generator','categories'].forEach(t => {
+  ['partners','links','analytics','generator','categories','todo'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((el, i) => {
-    el.classList.toggle('active', ['partners','links','analytics','generator','categories'][i] === name);
+    el.classList.toggle('active', ['partners','links','analytics','generator','categories','todo'][i] === name);
   });
   if (name === 'links')      loadLinks();
   if (name === 'analytics')  loadAnalytics();
   if (name === 'categories') loadCategories();
+  if (name === 'todo')       loadTodo();
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el => {
