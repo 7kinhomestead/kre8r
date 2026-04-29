@@ -222,6 +222,7 @@ router.post('/sync-from-electron', (req, res) => {
                    'gear_category','show_on_gear','label','active'];
   let updated = 0, skipped = 0;
 
+  try {
   const tx = db.transaction(() => {
     for (const item of links) {
       if (!item.partner_key || !item.link_key) { skipped++; continue; }
@@ -241,6 +242,9 @@ router.post('/sync-from-electron', (req, res) => {
   });
   tx();
   res.json({ ok: true, updated, skipped });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Bulk OG image scrape for all gear-page links missing images ───────────────
