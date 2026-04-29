@@ -4606,6 +4606,7 @@ module.exports = {
   // Raw prepare — routes that build inline SQL (e.g. affiliator.js) need this.
   // Delegates to _activeDb() so tenant context is respected.
   prepare: (sql) => _activeDb().prepare(sql),
+  transaction: (fn) => _activeDb().transaction(fn),
   // Auth
   getUserByUsername,
   getUserById,
