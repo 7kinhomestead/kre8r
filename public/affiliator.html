@@ -118,6 +118,7 @@ tr:hover td{background:var(--faint)}
         <option value="general">General</option>
       </select>
       <button id="scrape-all-btn" class="btn btn-secondary" onclick="scrapeAllImages()">🖼 Scrape All Images</button>
+      <button id="push-live-btn" class="btn btn-secondary" onclick="pushToLive()" title="Sync all gear data from this Electron app to kre8r.app">📤 Push to Live</button>
       <button class="btn btn-primary" onclick="openLinkModal()">＋ Add Link</button>
     </div>
   </div>
@@ -984,6 +985,22 @@ async function deleteLink(id) {
   if (!confirm('Delete this tracked link?')) return;
   await fetch(`/api/affiliator/links/${id}`, { method:'DELETE' });
   loadLinks();
+}
+
+async function pushToLive() {
+  const btn = document.getElementById('push-live-btn');
+  btn.disabled = true; btn.textContent = '📤 Pushing…';
+  try {
+    const r = await fetch('/api/affiliator/push-to-live', { method: 'POST' }).then(r => r.json());
+    if (r.ok || r.updated !== undefined) {
+      btn.textContent = `✓ Live — ${r.updated} updated`;
+    } else {
+      btn.textContent = '✗ ' + (r.error || 'Push failed');
+    }
+  } catch (err) {
+    btn.textContent = '✗ Error — check console';
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = '📤 Push to Live'; }, 5000);
 }
 
 async function scrapeAllImages() {

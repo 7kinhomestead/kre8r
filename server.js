@@ -361,6 +361,10 @@ app.use((req, res, next) => {
   if (req.hostname === 'guard.kre8r.app') return next();
   // OrgΩr bridge — internal key auth handled inside the route, no session needed
   if (req.path === '/api/stats-export') return next();
+  // AffiliateΩr Electron sync — internal key auth handled inside the route
+  if (req.path === '/api/affiliator/sync-from-electron') return next();
+  // AffiliateΩr gear-categories — public (consumed by 7kinhomestead.land/gear)
+  if (req.path === '/api/affiliator/gear-categories') return next();
   // AffiliateΩr redirect — public so external visitors can click through
   if (req.path.startsWith('/r/')) return next();
   // AffiliateΩr gear feed — consumed by 7kinhomestead.land/gear (cross-origin, no session)

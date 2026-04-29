@@ -174,6 +174,75 @@ router.post('/links/:id/rescrape', async (req, res) => {
   }
 });
 
+// ── Push local gear data to live kre8r.app (Electron → production) ───────────
+// Called from the Electron UI. Reads local affiliate_links and POSTs them to
+// the production sync endpoint using INTERNAL_API_KEY from the server .env.
+// Key never touches the browser renderer — stays server-side.
+router.post('/push-to-live', async (req, res) => {
+  const liveUrl = 'https://kre8r.app/api/affiliator/sync-from-electron';
+  const key = process.env.INTERNAL_API_KEY;
+  if (!key) return res.status(500).json({ error: 'INTERNAL_API_KEY not set in .env' });
+
+  const links = db.prepare('SELECT * FROM affiliate_links WHERE show_on_gear=1').all();
+  if (!links.length) return res.json({ ok: true, updated: 0, skipped: 0 });
+
+  try {
+    const r = await fetch(liveUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': key },
+      body: JSON.stringify({ links }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      return res.status(502).json({ error: `kre8r.app responded ${r.status}: ${txt}` });
+    }
+    const data = await r.json();
+    res.json(data);
+  } catch (err) {
+    res.status(502).json({ error: `Could not reach kre8r.app: ${err.message}` });
+  }
+});
+
+// ── Gear data push-sync from Electron → live server ──────────────────────────
+// Accepts a batch of {partner_key, link_key, fields…} from the Electron app
+// and applies them to the production DB. Auth: X-Internal-Key header.
+// Only updates fields explicitly included — never overwrites with nulls.
+router.post('/sync-from-electron', (req, res) => {
+  const key = req.headers['x-internal-key'];
+  if (!key || key !== process.env.INTERNAL_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const { links } = req.body;
+  if (!Array.isArray(links) || !links.length) {
+    return res.status(400).json({ error: 'links array required' });
+  }
+
+  const ALLOWED = ['og_image_url','gear_description','gear_price','gear_emoji',
+                   'gear_category','show_on_gear','label','active'];
+  let updated = 0, skipped = 0;
+
+  const tx = db.transaction(() => {
+    for (const item of links) {
+      if (!item.partner_key || !item.link_key) { skipped++; continue; }
+      const sets = [], vals = [];
+      ALLOWED.forEach(f => {
+        if (item[f] !== undefined && item[f] !== null) {
+          sets.push(`${f}=?`); vals.push(item[f]);
+        }
+      });
+      if (!sets.length) { skipped++; continue; }
+      vals.push(item.partner_key, item.link_key);
+      const r = db.prepare(
+        `UPDATE affiliate_links SET ${sets.join(',')} WHERE partner_key=? AND link_key=?`
+      ).run(...vals);
+      if (r.changes) updated++; else skipped++;
+    }
+  });
+  tx();
+  res.json({ ok: true, updated, skipped });
+});
+
 // ── Bulk OG image scrape for all gear-page links missing images ───────────────
 router.post('/scrape-gear-images', async (req, res) => {
   const links = db.prepare(`
