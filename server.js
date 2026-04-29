@@ -363,6 +363,7 @@ app.use((req, res, next) => {
   if (req.path === '/api/stats-export') return next();
   // AffiliateΩr Electron sync — internal key auth handled inside the route
   if (req.path === '/api/affiliator/sync-from-electron') return next();
+  if (req.path === '/api/affiliator/gear-export') return next();
   // AffiliateΩr gear-categories — public (consumed by 7kinhomestead.land/gear)
   if (req.path === '/api/affiliator/gear-categories') return next();
   // AffiliateΩr redirect — public so external visitors can click through

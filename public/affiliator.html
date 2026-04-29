@@ -118,7 +118,8 @@ tr:hover td{background:var(--faint)}
         <option value="general">General</option>
       </select>
       <button id="scrape-all-btn" class="btn btn-secondary" onclick="scrapeAllImages()">🖼 Scrape All Images</button>
-      <button id="push-live-btn" class="btn btn-secondary" onclick="pushToLive()" title="Sync all gear data from this Electron app to kre8r.app">📤 Push to Live</button>
+      <button id="pull-live-btn" class="btn btn-secondary" onclick="pullFromLive()" title="Pull latest gear data from kre8r.app into this app (gets Cari's changes)">📥 Pull from Live</button>
+      <button id="push-live-btn" class="btn btn-secondary" onclick="pushToLive()" title="Push all local gear data to kre8r.app">📤 Push to Live</button>
       <button class="btn btn-primary" onclick="openLinkModal()">＋ Add Link</button>
     </div>
   </div>
@@ -1001,6 +1002,23 @@ async function pushToLive() {
     btn.textContent = '✗ Error — check console';
   }
   setTimeout(() => { btn.disabled = false; btn.textContent = '📤 Push to Live'; }, 5000);
+}
+
+async function pullFromLive() {
+  const btn = document.getElementById('pull-live-btn');
+  btn.disabled = true; btn.textContent = '📥 Pulling…';
+  try {
+    const r = await fetch('/api/affiliator/pull-from-live', { method: 'POST' }).then(r => r.json());
+    if (r.ok || r.updated !== undefined) {
+      btn.textContent = `✓ Pulled — ${r.updated} updated`;
+      setTimeout(() => loadLinks(), 1000); // reload table with fresh data
+    } else {
+      btn.textContent = '✗ ' + (r.error || 'Pull failed');
+    }
+  } catch (err) {
+    btn.textContent = '✗ Error — check console';
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = '📥 Pull from Live'; }, 5000);
 }
 
 async function scrapeAllImages() {

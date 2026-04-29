@@ -183,7 +183,9 @@ router.post('/push-to-live', async (req, res) => {
   const key = process.env.INTERNAL_API_KEY;
   if (!key) return res.status(500).json({ error: 'INTERNAL_API_KEY not set in .env' });
 
-  const links = db.prepare('SELECT * FROM affiliate_links WHERE show_on_gear=1').all();
+  // Send ALL gear-eligible links (not just show_on_gear=1) so hidden/inactive
+  // state is also synced — otherwise items Jason hid locally stay visible on production.
+  const links = db.prepare('SELECT * FROM affiliate_links').all();
   if (!links.length) return res.json({ ok: true, updated: 0, skipped: 0 });
 
   try {
@@ -244,6 +246,66 @@ router.post('/sync-from-electron', (req, res) => {
   res.json({ ok: true, updated, skipped });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Export all gear data for pull-sync (requires X-Internal-Key) ─────────────
+// Used by the Electron "Pull from Live" button to fetch production state.
+router.get('/gear-export', (req, res) => {
+  const key = req.headers['x-internal-key'];
+  if (!key || key !== process.env.INTERNAL_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const links = db.prepare('SELECT * FROM affiliate_links').all();
+    res.json({ links });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Pull production gear data into local Electron DB ─────────────────────────
+// Fetches current state from kre8r.app and applies it locally so Cari's
+// web-based edits show up in the .bat app before Jason makes changes.
+router.post('/pull-from-live', async (req, res) => {
+  const liveUrl = 'https://kre8r.app/api/affiliator/gear-export';
+  const key = process.env.INTERNAL_API_KEY;
+  if (!key) return res.status(500).json({ error: 'INTERNAL_API_KEY not set in .env' });
+
+  try {
+    const r = await fetch(liveUrl, {
+      headers: { 'X-Internal-Key': key },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      return res.status(502).json({ error: `kre8r.app responded ${r.status}: ${txt}` });
+    }
+    const { links } = await r.json();
+    if (!Array.isArray(links) || !links.length) return res.json({ ok: true, updated: 0 });
+
+    const ALLOWED = ['og_image_url','gear_description','gear_price','gear_emoji',
+                     'gear_category','show_on_gear','label','active'];
+    let updated = 0, skipped = 0;
+    const tx = db.transaction(() => {
+      for (const item of links) {
+        if (!item.partner_key || !item.link_key) { skipped++; continue; }
+        const sets = [], vals = [];
+        ALLOWED.forEach(f => {
+          if (item[f] !== undefined) { sets.push(`${f}=?`); vals.push(item[f]); }
+        });
+        if (!sets.length) { skipped++; continue; }
+        vals.push(item.partner_key, item.link_key);
+        const result = db.prepare(
+          `UPDATE affiliate_links SET ${sets.join(',')} WHERE partner_key=? AND link_key=?`
+        ).run(...vals);
+        if (result.changes) updated++; else skipped++;
+      }
+    });
+    tx();
+    res.json({ ok: true, updated, skipped });
+  } catch (err) {
+    res.status(502).json({ error: `Pull failed: ${err.message}` });
   }
 });
 
