@@ -993,8 +993,11 @@ async function pushToLive() {
   btn.disabled = true; btn.textContent = '📤 Pushing…';
   try {
     const r = await fetch('/api/affiliator/push-to-live', { method: 'POST' }).then(r => r.json());
-    if (r.ok || r.updated !== undefined) {
-      btn.textContent = `✓ Live — ${r.updated} updated`;
+    if (r.ok) {
+      const parts = [];
+      if (r.inserted) parts.push(`${r.inserted} added`);
+      if (r.updated)  parts.push(`${r.updated} updated`);
+      btn.textContent = parts.length ? `✓ Live — ${parts.join(', ')}` : '✓ Live — already in sync';
     } else {
       btn.textContent = '✗ ' + (r.error || 'Push failed');
     }
@@ -1009,9 +1012,12 @@ async function pullFromLive() {
   btn.disabled = true; btn.textContent = '📥 Pulling…';
   try {
     const r = await fetch('/api/affiliator/pull-from-live', { method: 'POST' }).then(r => r.json());
-    if (r.ok || r.updated !== undefined) {
-      btn.textContent = `✓ Pulled — ${r.updated} updated`;
-      setTimeout(() => loadLinks(), 1000); // reload table with fresh data
+    if (r.ok) {
+      const parts = [];
+      if (r.inserted) parts.push(`${r.inserted} added`);
+      if (r.updated)  parts.push(`${r.updated} updated`);
+      btn.textContent = parts.length ? `✓ Pulled — ${parts.join(', ')}` : '✓ Pulled — already in sync';
+      setTimeout(() => loadLinks(), 1000);
     } else {
       btn.textContent = '✗ ' + (r.error || 'Pull failed');
     }

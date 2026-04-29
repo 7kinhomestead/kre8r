@@ -207,10 +207,75 @@ router.post('/push-to-live', async (req, res) => {
   }
 });
 
+// ── Shared sync helper — upsert a batch of affiliate_links into the local DB ──
+// Used by both sync-from-electron and pull-from-live.
+// New rows are INSERTed; existing rows are UPDATEd with last-write-wins.
+// Soft-delete is handled by active=0 in ALLOWED — no tombstone table needed.
+const SYNC_ALLOWED = ['og_image_url','gear_description','gear_price','gear_emoji',
+                      'gear_category','show_on_gear','label','active'];
+
+function applySyncBatch(links) {
+  let inserted = 0, updated = 0, skipped = 0;
+  const tx = db.transaction(() => {
+    for (const item of links) {
+      if (!item.partner_key || !item.link_key) { skipped++; continue; }
+      const existing = db.prepare(
+        'SELECT updated_at FROM affiliate_links WHERE partner_key=? AND link_key=?'
+      ).get(item.partner_key, item.link_key);
+
+      if (!existing) {
+        // New row on sender — insert it
+        db.prepare(`
+          INSERT OR IGNORE INTO affiliate_links
+            (partner_key, link_key, label, destination_url, tool, active,
+             show_on_gear, gear_category, gear_price, gear_emoji,
+             gear_description, og_image_url, updated_at)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        `).run(
+          item.partner_key, item.link_key,
+          item.label        || item.link_key,
+          item.destination_url || '',
+          item.tool         || null,
+          item.active       ?? 1,
+          item.show_on_gear ?? 0,
+          item.gear_category    || null,
+          item.gear_price       || null,
+          item.gear_emoji       || null,
+          item.gear_description || null,
+          item.og_image_url     || null,
+          item.updated_at       || null
+        );
+        inserted++;
+      } else {
+        // Existing row — last-write-wins
+        if (item.updated_at && existing.updated_at && existing.updated_at > item.updated_at) {
+          skipped++; continue;
+        }
+        const sets = [], vals = [];
+        SYNC_ALLOWED.forEach(f => {
+          if (item[f] !== undefined && item[f] !== null) {
+            sets.push(`${f}=?`); vals.push(item[f]);
+          }
+        });
+        if (!sets.length) { skipped++; continue; }
+        sets.push("updated_at=datetime('now')");
+        vals.push(item.partner_key, item.link_key);
+        const r = db.prepare(
+          `UPDATE affiliate_links SET ${sets.join(',')} WHERE partner_key=? AND link_key=?`
+        ).run(...vals);
+        if (r.changes) updated++; else skipped++;
+      }
+    }
+  });
+  tx();
+  return { inserted, updated, skipped };
+}
+
 // ── Gear data push-sync from Electron → live server ──────────────────────────
-// Accepts a batch of {partner_key, link_key, fields…} from the Electron app
-// and applies them to the production DB. Auth: X-Internal-Key header.
-// Only updates fields explicitly included — never overwrites with nulls.
+// Accepts a batch of affiliate_links from the Electron app and upserts them.
+// New rows are inserted; existing rows use last-write-wins on updated_at.
+// Soft-delete: active=0 propagates via SYNC_ALLOWED — no hard deletes needed.
+// Auth: X-Internal-Key header.
 router.post('/sync-from-electron', (req, res) => {
   const key = req.headers['x-internal-key'];
   if (!key || key !== process.env.INTERNAL_API_KEY) {
@@ -220,41 +285,9 @@ router.post('/sync-from-electron', (req, res) => {
   if (!Array.isArray(links) || !links.length) {
     return res.status(400).json({ error: 'links array required' });
   }
-
-  const ALLOWED = ['og_image_url','gear_description','gear_price','gear_emoji',
-                   'gear_category','show_on_gear','label','active'];
-  let updated = 0, skipped = 0;
-
   try {
-  const tx = db.transaction(() => {
-    for (const item of links) {
-      if (!item.partner_key || !item.link_key) { skipped++; continue; }
-      // Last-write-wins: skip if receiver's row is newer than what's being pushed
-      if (item.updated_at) {
-        const existing = db.prepare(
-          'SELECT updated_at FROM affiliate_links WHERE partner_key=? AND link_key=?'
-        ).get(item.partner_key, item.link_key);
-        if (existing?.updated_at && existing.updated_at > item.updated_at) {
-          skipped++; continue;
-        }
-      }
-      const sets = [], vals = [];
-      ALLOWED.forEach(f => {
-        if (item[f] !== undefined && item[f] !== null) {
-          sets.push(`${f}=?`); vals.push(item[f]);
-        }
-      });
-      if (!sets.length) { skipped++; continue; }
-      sets.push("updated_at=datetime('now')");
-      vals.push(item.partner_key, item.link_key);
-      const r = db.prepare(
-        `UPDATE affiliate_links SET ${sets.join(',')} WHERE partner_key=? AND link_key=?`
-      ).run(...vals);
-      if (r.changes) updated++; else skipped++;
-    }
-  });
-  tx();
-  res.json({ ok: true, updated, skipped });
+    const result = applySyncBatch(links);
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -293,38 +326,9 @@ router.post('/pull-from-live', async (req, res) => {
       return res.status(502).json({ error: `kre8r.app responded ${r.status}: ${txt}` });
     }
     const { links } = await r.json();
-    if (!Array.isArray(links) || !links.length) return res.json({ ok: true, updated: 0 });
-
-    const ALLOWED = ['og_image_url','gear_description','gear_price','gear_emoji',
-                     'gear_category','show_on_gear','label','active'];
-    let updated = 0, skipped = 0;
-    const tx = db.transaction(() => {
-      for (const item of links) {
-        if (!item.partner_key || !item.link_key) { skipped++; continue; }
-        // Last-write-wins: skip if local row is newer than what production sent
-        if (item.updated_at) {
-          const existing = db.prepare(
-            'SELECT updated_at FROM affiliate_links WHERE partner_key=? AND link_key=?'
-          ).get(item.partner_key, item.link_key);
-          if (existing?.updated_at && existing.updated_at > item.updated_at) {
-            skipped++; continue;
-          }
-        }
-        const sets = [], vals = [];
-        ALLOWED.forEach(f => {
-          if (item[f] !== undefined) { sets.push(`${f}=?`); vals.push(item[f]); }
-        });
-        if (!sets.length) { skipped++; continue; }
-        sets.push("updated_at=datetime('now')");
-        vals.push(item.partner_key, item.link_key);
-        const result = db.prepare(
-          `UPDATE affiliate_links SET ${sets.join(',')} WHERE partner_key=? AND link_key=?`
-        ).run(...vals);
-        if (result.changes) updated++; else skipped++;
-      }
-    });
-    tx();
-    res.json({ ok: true, updated, skipped });
+    if (!Array.isArray(links) || !links.length) return res.json({ ok: true, inserted: 0, updated: 0, skipped: 0 });
+    const result = applySyncBatch(links);
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(502).json({ error: `Pull failed: ${err.message}` });
   }
