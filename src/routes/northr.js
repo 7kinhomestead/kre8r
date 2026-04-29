@@ -274,7 +274,7 @@ router.post('/growth-plan', async (req, res) => {
           const lines = [
             b.vector    ? `Vector: ${b.vector}`       : '',
             b.focus     ? `Focus: ${b.focus}`          : '',
-            b.constraints?.length ? `Constraints: ${b.constraints.join(', ')}` : '',
+            b.constraints ? `Constraints: ${Array.isArray(b.constraints) ? b.constraints.join(', ') : b.constraints}` : '',
             b.locked_date ? `Locked: ${b.locked_date}` : '',
           ].filter(Boolean);
           return lines.length ? lines.join('\n') : null;
