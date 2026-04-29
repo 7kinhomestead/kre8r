@@ -1045,8 +1045,14 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_aff_links_partner ON affiliate_links(partner_key)');
   // Gear page columns — safe migrations, silently skip if already exist
   ['show_on_gear INTEGER DEFAULT 0','gear_category TEXT','gear_price TEXT','gear_emoji TEXT','gear_description TEXT','og_image_url TEXT',
-   'updated_at DATETIME DEFAULT CURRENT_TIMESTAMP']
+   'updated_at DATETIME']
     .forEach(col => { try { db.exec(`ALTER TABLE affiliate_links ADD COLUMN ${col}`); } catch(_) {} });
+  // Explicit check for updated_at in case the batch above was swallowed on older SQLite
+  const affCols = db.pragma('table_info(affiliate_links)').map(r => r.name);
+  if (!affCols.includes('updated_at')) {
+    db.exec('ALTER TABLE affiliate_links ADD COLUMN updated_at DATETIME');
+    console.log('[DB] Migration: added affiliate_links.updated_at');
+  }
   db.exec(`CREATE TABLE IF NOT EXISTS affiliate_clicks (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     partner_key TEXT    NOT NULL,
