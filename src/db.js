@@ -1181,6 +1181,67 @@ function runMigrations() {
   const linkTx = db.transaction(() => { for (const r of toolLinkSeeds) seedLinks.run(...r); });
   linkTx();
   console.log('[DB] AffiliateΩr tool-page links verified');
+
+  // ── AffiliateΩr — Fix tag + wire real storefront product URLs ────────────────
+  // One-time migration: replaces placeholder search URLs with real Amazon product
+  // pages from Jason's storefront. Tag corrected to jasonrutland-20 everywhere.
+  // Sentinel: presence of 'water-bladder' link_key = already run.
+  const storefrontDone = db.prepare("SELECT id FROM affiliate_links WHERE partner_key='amazon' AND link_key='water-bladder'").get();
+  if (!storefrontDone) {
+    const T = 'jasonrutland-20';
+    const upd = db.prepare('UPDATE affiliate_links SET destination_url=?, label=?, gear_description=? WHERE partner_key=? AND link_key=?');
+    const updUrl = db.prepare('UPDATE affiliate_links SET destination_url=? WHERE partner_key=? AND link_key=?');
+
+    // Fix the fake 7kinhomestead-20 tag on every existing link that used it
+    db.prepare("UPDATE affiliate_links SET destination_url=REPLACE(destination_url,'7kinhomestead-20',?)").run(T);
+
+    // Update existing links with real product URLs
+    upd.run(`https://www.amazon.com/dp/B0FFPH444Z?tag=${T}`, '2500 Gallon Vertical Water Storage Tank', '2500 gal UV-resistant poly tank by Elkhart Plastics. The real homestead anchor.', 'amazon', 'poly-tank-1500');
+    upd.run(`https://www.amazon.com/dp/B0BYH8J176?tag=${T}`, 'LiTime 12V 230Ah LiFePO4 Battery', '4000+ cycles, no maintenance. The battery bank we actually run.', 'liTime', '100ah-battery');
+    upd.run(`https://www.amazon.com/dp/B0FWRFLF31?tag=${T}`, 'SunGold 10×590W Bifacial Solar Panels', 'N-type bifacial — generates from both sides. What we run on the homestead.', 'sunGold', 'panels');
+    updUrl.run(`https://www.amazon.com/dp/B0DG8MLDST?tag=${T}`, 'amazon', 'pure-sine-inverter');
+    updUrl.run(`https://www.amazon.com/dp/B0CL3K19XH?tag=${T}`, 'milwaukee', 'reciprocating-saw');
+    // Fix wrong brand entries (Signature Solar → SunGold, placeholder → real product)
+    upd.run(`https://www.amazon.com/dp/B0C278SVF5?tag=${T}`, 'SunGold 8×450W Solar Panels', 'CEC-listed monocrystalline. Solid starter array for off-grid cabins and shops.', 'signatureSolar', '200w-panel');
+    upd.run(`https://www.amazon.com/dp/B0BYH8J176?tag=${T}`, 'LiTime 12V 230Ah LiFePO4 Battery', '4000+ cycles, built-in BMS. What we switched to from lead-acid.', 'signatureSolar', 'lifepo4-100ah');
+    upd.run(`https://www.amazon.com/dp/B0DG8MLDST?tag=${T}`, 'SunGold 6500W 48V Solar Inverter', 'Split-phase, built-in dual MPPT, WiFi monitoring. Powers the whole homestead.', 'amazon', 'pure-sine-inverter');
+    // Fix DeWalt drill → Milwaukee combo kit
+    upd.run(`https://www.amazon.com/dp/B017Y7WG7Q?tag=${T}`, 'Milwaukee M18 Fuel 6-Tool Combo Kit', '6 tools, 2 batteries, charger, 2 bags. The kit that runs the whole build.', 'amazon', 'dewalt-drill');
+
+    // Insert new storefront products — Water list
+    const ins = db.prepare(`INSERT OR IGNORE INTO affiliate_links
+      (partner_key,link_key,label,destination_url,tool,show_on_gear,gear_category,gear_emoji,gear_description)
+      VALUES (?,?,?,?,?,?,?,?,?)`);
+    const newLinks = [
+      // Water
+      ['amazon','water-bladder',      '1000 Gallon Foldable Water Bladder',  `https://www.amazon.com/dp/B0CKW3NLSF?tag=${T}`,  'water', 1, 'Water',      '🛢️', 'Foldable, portable, 1000 gal. Drought reserve, fire prevention, emergency supply.'],
+      ['amazon','rain-barrel',        '200 Gallon Collapsible Rain Barrel',   `https://www.amazon.com/dp/B0FPXQZ87N?tag=${T}`,  'water', 1, 'Water',      '💧', 'Foldable rain barrel with faucet. 200 gal for garden irrigation and collection.'],
+      ['amazon','ibc-tote-cover',     'IBC Tote Cover 275 Gal (Waterproof)',  `https://www.amazon.com/dp/B0DLP33GMH?tag=${T}`,  'water', 1, 'Water',      '🔲', '600D heavy-duty waterproof UV cover with zipper. Protects your IBC from weather.'],
+      ['amazon','ibc-tote-adapter',   'IBC Tote Hose Adapter 275–330 Gal',   `https://www.amazon.com/dp/B0F54JPYPP?tag=${T}`,  'water', 1, 'Water',      '🔧', 'Multi-thread adapter with 3/4" brass hose faucet. Taps your IBC to a garden hose.'],
+      // Solar — additional panel configs
+      ['sunGold','500w-panels',       'SunGold 10×500W Mono Solar Panels',    `https://www.amazon.com/dp/B0F2HSH34F?tag=${T}`,  'solar', 1, 'Solar',      '☀️', '10-panel 5000W system, IP68, UL61730. On/off-grid. What we built the homestead on.'],
+      ['sunGold','450w-panels',       'SunGold 8×450W Solar Panels (CEC)',    `https://www.amazon.com/dp/B0C278SVF5?tag=${T}`,  'solar', 1, 'Solar',      '☀️', 'CEC-listed, Class A cells. 3600W total. Solid starter array for cabins and shops.'],
+      ['sunGold','10000w-inverter',   'SunGold 10000W 48V Solar Inverter',    `https://www.amazon.com/dp/B0CJV387LX?tag=${T}`,  'solar', 1, 'Solar',      '🔌', '10kW split-phase, dual MPPT, 200A charging, AC 120/240V. Full-homestead scale.'],
+      ['sunGold','6500w-inverter',    'SunGold 6500W 48V Solar Inverter',     `https://www.amazon.com/dp/B0DG8MLDST?tag=${T}`,  'solar', 1, 'Solar',      '🔌', 'Split-phase, dual MPPT, WiFi monitoring, pure sine wave. Powers the whole build.'],
+      ['amazon', 'generator',         'Westinghouse 12500W Dual Fuel Generator',`https://www.amazon.com/dp/B07Q1DLKBG?tag=${T}`,'solar', 1, 'Solar',      '⚡', 'Gas or propane, remote start, transfer-switch ready. Backup when the sun doesn\'t cooperate.'],
+      ['amazon', 'wire-cable',        '10 Gauge Tinned Copper Wire (30+30 ft)',`https://www.amazon.com/dp/B08HSC5NW5?tag=${T}`,  'solar', 1, 'Solar',      '🔌', 'Tinned copper resists corrosion. Red + black 10 AWG for solar, marine, and trailer wiring.'],
+      ['amazon', 'crimping-tool',     'Battery Cable Lug Crimping Tool',      `https://www.amazon.com/dp/B00MVE48Z6?tag=${T}`,  'solar', 1, 'Solar',      '🔧', 'Handles 8–1/0 AWG with built-in wire shear. The right tool for battery terminal work.'],
+      ['amazon', 'battery-lugs',      '1/0 AWG Battery Lugs + Heat Shrink',   `https://www.amazon.com/dp/B08R6TX3XM?tag=${T}`,  'solar', 1, 'Solar',      '🔩', '10 ring terminal lugs with 3:1 heat shrink. 3/8" hole, heavy-duty battery connections.'],
+      ['liTime', '230ah-battery',     'LiTime 12V 230Ah LiFePO4 Battery',     `https://www.amazon.com/dp/B0BYH8J176?tag=${T}`,  'solar', 1, 'Batteries',  '🔋', '4000+ deep cycles, no maintenance. The battery bank we actually run on the homestead.'],
+      // Milwaukee tools
+      ['milwaukee','combo-6tool',     'Milwaukee M18 Fuel 6-Tool Combo Kit',  `https://www.amazon.com/dp/B017Y7WG7Q?tag=${T}`,  'tools', 1, 'Tools',      '🧰', '6 tools, 2×5Ah batteries, charger, 2 bags. The M18 platform that runs the homestead.'],
+      ['milwaukee','combo-2tool',     'Milwaukee M18 Fuel 2-Tool Combo Kit',  `https://www.amazon.com/dp/B0BB8FDVLQ?tag=${T}`,  'tools', 1, 'Tools',      '🔧', 'M18 Fuel 2-tool kit. Good entry into the M18 system.'],
+      ['milwaukee','battery-60ah',    'Milwaukee M18 6.0Ah Battery 2-Pack',   `https://www.amazon.com/dp/B0DW488CLH?tag=${T}`,  'tools', 1, 'Tools',      '🔋', 'HIGH Output REDLITHIUM 6.0Ah. More runtime for heavy cuts and long sessions.'],
+      ['milwaukee','battery-50ah',    'Milwaukee M18 5Ah Battery 2-Pack',     `https://www.amazon.com/dp/B0B8TDYXBP?tag=${T}`,  'tools', 1, 'Tools',      '🔋', 'XC Extended Capacity 5Ah 2-pack. Standard workhorse batteries for the M18 system.'],
+      ['milwaukee','oscillating-tool','Milwaukee M18 Fuel Oscillating Multi-Tool',`https://www.amazon.com/dp/B0B7HWXDRJ?tag=${T}`,'tools',1,'Tools',       '🔪', 'Cordless oscillating tool kit. Precision cuts, sanding, demo — indispensable for finish work.'],
+      ['milwaukee','circular-saw',    'Milwaukee M18 Circular Saw 7-1/4"',    `https://www.amazon.com/dp/B07VWKR5YN?tag=${T}`,  'tools', 1, 'Tools',      '🪚', 'Rear-handle 7-1/4" cordless circular saw. Runs all day on M18 batteries.'],
+      ['milwaukee','string-trimmer',  'Milwaukee M18 Fuel String Trimmer',    `https://www.amazon.com/dp/B0F1G2XR3P?tag=${T}`,  'tools', 1, 'Tools',      '🌿', 'Quik-LOK attachment system. Battery-powered, no exhaust on the homestead.'],
+      ['milwaukee','tape-measure',    'Milwaukee Compact Magnetic Tape Measure',`https://www.amazon.com/dp/B082L6Q7WV?tag=${T}`, 'tools', 1, 'Tools',      '📏', 'Wide blade, magnetic tip, compact. The one on every tool belt on the homestead.'],
+    ];
+    const newLinkTx = db.transaction(() => { for (const r of newLinks) ins.run(...r); });
+    newLinkTx();
+    console.log('[DB] AffiliateΩr storefront migration: tag fixed + 22 real product links added');
+  }
 }
 
 /**
