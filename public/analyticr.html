@@ -211,15 +211,19 @@ async function loadYT(){
 async function loadNorthr(){
   try{
     const d = await fetch('/api/northr/dashboard').then(r=>r.json());
-    const es = d.email_stats||{};
+    // email_stats is an array of campaign objects — compute aggregates here
+    const campaigns = Array.isArray(d.email_stats) ? d.email_stats : [];
+    const latest = campaigns[0] || null;
+    const avgOpen  = campaigns.length ? campaigns.reduce((s,c)=>s+(c.open_rate||0),0)/campaigns.length : null;
+    const avgClick = campaigns.length ? campaigns.reduce((s,c)=>s+(c.click_rate||0),0)/campaigns.length : null;
     const st = d.stats||{};
     const pp = d.pipeline||{};
 
     document.getElementById('email-cards').innerHTML = [
-      card('Latest Open Rate', pct(es.latest_open_rate), ago(es.latest_sent_at), es.latest_open_rate>30?'accent':''),
-      card('Latest Click Rate', pct(es.latest_click_rate),'',''),
-      card('Avg Open Rate', pct(es.avg_open_rate), `${es.campaigns_sampled||0} campaigns sampled`,''),
-      card('Avg Click Rate', pct(es.avg_click_rate),'',''),
+      card('Latest Open Rate', latest?pct(latest.open_rate):'—', latest?ago(latest.sent_at):'', latest&&latest.open_rate>30?'accent':''),
+      card('Latest Click Rate', latest?pct(latest.click_rate):'—','',''),
+      card('Avg Open Rate', avgOpen!=null?pct(avgOpen):'—', `${campaigns.length} campaigns sampled`,''),
+      card('Avg Click Rate', avgClick!=null?pct(avgClick):'—','',''),
       card('Days Since Email', st.days_since_last_email!=null?st.days_since_last_email+'d':'—','', st.days_since_last_email>14?'warn':''),
     ].join('');
 
@@ -228,9 +232,9 @@ async function loadNorthr(){
       card('In Production', fmt(pp.in_production),'shooting',''),
       card('Post-Production', fmt(pp.in_post),'editing',''),
       card('Distribution', fmt(pp.in_distribution),'publishing',''),
-      card('Videos This Month', fmt(st.videos_published_this_month),'published','accent'),
+      card('Videos This Month', fmt(st.videos_this_month),'published','accent'),
       card('Days Since Publish', st.days_since_last_publish!=null?st.days_since_last_publish+'d':'—','', st.days_since_last_publish>7?'warn':''),
-      card('Total Published', fmt(st.total_videos_published),'all time',''),
+      card('Total Published', fmt(st.total_posts),'all time',''),
     ].join('');
 
   }catch(e){
