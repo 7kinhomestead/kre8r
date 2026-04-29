@@ -3,6 +3,75 @@
 
 ---
 
+# Session 65 — AffiliateΩr Two-Way Sync + Opus 4.7 Audit + OLH URL Fix (2026-04-29)
+
+## Goal
+Wire Electron → production gear sync (Push/Pull), run Opus 4.7 architecture audit and close
+all 5 punch list items, fix OLH listings going to 404 pages, stabilize multi-user DB topology.
+
+## What Was Built / Fixed
+
+### AffiliateΩr — Two-Way Sync (`kre8r`)
+- `src/routes/affiliator.js`:
+  - `POST /push-to-live`: local endpoint reads ALL `affiliate_links` from AppData DB, POSTs
+    to production with `INTERNAL_API_KEY`. Sends all items (not just show_on_gear=1) so
+    hidden/inactive state propagates correctly.
+  - `POST /sync-from-electron`: production endpoint, `X-Internal-Key` auth. Full upsert —
+    new rows INSERT, existing rows UPDATE with last-write-wins on `updated_at`.
+  - `GET /gear-export`: production endpoint, returns all `affiliate_links` for pull sync.
+  - `POST /pull-from-live`: local endpoint fetches gear-export from production, upserts into
+    local DB. Allows Jason to pull Cari's kre8r.app edits before working.
+  - `applySyncBatch()` helper: shared upsert logic for both sync endpoints. Handles INSERT
+    for new rows, last-write-wins UPDATE for existing rows, skips UNIQUE collisions.
+  - All manual edit paths now stamp `updated_at=datetime('now')`.
+- `src/db.js`:
+  - Added `updated_at DATETIME` column to `affiliate_links` via safe ALTER TABLE migration.
+  - Added explicit pragma check for `updated_at` after batch migration (older SQLite compat).
+  - Added `transaction: (fn) => _activeDb().transaction(fn)` to module.exports — routes were
+    getting "db.transaction is not a function" because proxy never exposed it.
+- `server.js`: auth whitelist entries for `/sync-from-electron`, `/gear-export`.
+- `public/affiliator.html`:
+  - Added 📥 Pull from Live button alongside 📤 Push to Live.
+  - `pullFromLive()` function — shows "X added, Y updated" or "already in sync".
+  - Push feedback now shows inserted + updated counts separately.
+
+### DB Topology Investigation
+- Confirmed: `.bat` launcher uses `AppData\Roaming\kre8r\kre8r.db` (12MB, active).
+- `database/kre8r.db` in project folder was stale (4.8MB, April 23) — deleted.
+- `kre8r-electron-backup.db` was git-tracked — untracked, added to `.gitignore`.
+- `db.js` now logs loud warning when `DB_PATH` is unset.
+
+### Opus 4.7 Architecture Audit (Sessions 32–65)
+Full senior review of DB topology, multi-user sync, AffiliateΩr, and post-V2 additions.
+All 5 punch list items closed:
+1. ✅ Production DB backup — daily 3am cron, 14-day rolling (`/home/kre8r/backups/`)
+2. ✅ `updated_at` + last-write-wins sync — prevents silent overwrites between Jason/Cari
+3. ✅ INSERT/DELETE gap fixed — `applySyncBatch()` upsert + soft-delete via `active=0`
+4. ✅ Stale DB deleted, backup untracked from git, `DB_PATH` warning added to `db.js`
+5. ✅ Cari access model decision — parked (Electron setup when she's home), added to TODO
+
+### OLH URL Format Fix (`kre8r-land`)
+- Root cause: OLH feed has no URL field. Old construction was `{titleSlug}-{tract}` — wrong.
+  Correct format verified against live site: `properties/{state}-land-for-sale/{titleSlug}`.
+- `src/aggregator/sources.js`: fixed URL construction for all future OLH ingests.
+- `src/aggregator/index.js`: one-time migration `migrateOlhUrls()` runs on startup.
+  - Row-by-row with individual try/catch (UNIQUE collision fallback appends tract number).
+  - Sentinel: skips if any OLH URL already contains `-land-for-sale/`.
+  - Result: **134 OLH URLs fixed**, 551 skipped (no state/title data).
+- Fixed port 3010 crash loop on kre8r-land server (PM2 auto-restart hitting EADDRINUSE).
+- Fixed git object permissions (`chown -R landapp:landapp .git` after root pull).
+
+## DB Notes
+- Production DB backup cron installed: `sudo -u kre8r crontab -l` on kre8r.app droplet.
+- `INTERNAL_API_KEY` confirmed set in kre8r.app `.env` and local `.env`.
+- kre8r-land DB: `land.db` on `7kinhomestead` droplet at `/home/landapp/kre8r-land/database/`.
+
+## Commits
+- kre8r: ff39fe6, 6ccbc01, 6893176, 21218eb, 6eee43a, f1a6aca, 7192529, c68bf44
+- kre8r-land: d31f646, 3972e49
+
+---
+
 # Session 63 — AffiliateΩr Gear Page + VaultΩr Dedup + db.prepare Fix (2026-04-26)
 
 ## Goal

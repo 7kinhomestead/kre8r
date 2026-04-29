@@ -3,6 +3,25 @@
 
 ---
 
+## NEXT TASKS (Session 66)
+
+### 1. Verify Push to Live end-to-end + fix gear page categories
+- Confirm Push to Live button shows "✓ Live — X updated" with no errors
+- Verify inverter now shows under Solar (not Tools) on 7kinhomestead.land/gear
+- Check all product images are appearing correctly on live gear page
+
+### 2. OLH listing health check
+- Spot-check 5 OLH listings in the land finder tool — confirm redirects land on real pages
+- Verify HEAD check in `/go/:id` is correctly marking expired listings inactive
+- Run aggregator manually if OLH feed was 404ing at 6am (check logs)
+
+### 3. Cari Editor Role (when Cari is home — see TODO #3 above)
+- Until then: wire `kre8r-land` production DB backup cron (same pattern as kre8r.app)
+  `0 3 * * * node -e "..." > /home/landapp/backups/land-$(date +%F).db` on 7kinhomestead droplet
+  (sqlite3 CLI not installed — use node + better-sqlite3 for backup)
+
+---
+
 ## NEXT TASKS (Session 63)
 
 ### ~~1. Replace kre8r-land Tool Page Links with Tracked /r/ URLs~~ ✅ Done Session 64

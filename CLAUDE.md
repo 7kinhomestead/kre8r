@@ -233,7 +233,9 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 
 ✅ Electron Desktop App — `electron/main.js` wraps Express server in BrowserWindow.
    Setup wizard on first run (getUserCount() === 0 → /setup). Diagnostic error dialog on failure.
-   5-min rolling SQLite backup → database/kre8r-electron-backup.db.
+   5-min rolling SQLite backup → database/kre8r-electron-backup.db (git-ignored — not tracked).
+   NOTE: Electron DB lives at AppData\Roaming\kre8r\kre8r.db (NOT database/kre8r.db in project folder).
+   Production DB backup: daily 3am cron on kre8r.app droplet → /home/kre8r/backups/ (14-day rolling).
    Installer: `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.7.exe` (~238MB).
    Latest installer live at kre8r.app/download — served via /api/releases/upload pipeline.
    `window.__KRE8R_ELECTRON` flag set by main.js — use this to detect Electron context in frontend.
@@ -341,6 +343,11 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 - Cari creator profile (second voice profile for Rock Rich Shows)
 - RetentΩr — viral clip / retention cut module (post-edit, split from SelectsΩr)
 - ~~AffiliateΩr — track links, commissions, video placement, performance~~ — BUILT Session 61. Partners/links/clicks/analytics live. Commission→TreasΩr bridge built Session 62.
+  Two-way sync built Session 65: 📤 Push to Live + 📥 Pull from Live buttons in Tracked Links tab.
+  `POST /push-to-live` (local→production), `GET /gear-export` + `POST /pull-from-live` (production→local).
+  `applySyncBatch()`: upsert with last-write-wins on `updated_at`. Soft-delete via `active=0`.
+  Auth: `X-Internal-Key` header + `INTERNAL_API_KEY` env var (server-side only, never in renderer).
+  Cari edits kre8r.app directly; Jason pulls before working, pushes after. Path A (Cari Electron) planned.
 - VaultΩr full-text tag search across vault (ingest tagging + chip filter already live)
 - Analytics feedback loop (TikTok/YouTube performance → Id8Ωr recommendations)
 - Multi-tenant creator profiles (auth infrastructure in place, tenant isolation not built)
