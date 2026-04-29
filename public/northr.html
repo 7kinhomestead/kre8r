@@ -1702,6 +1702,14 @@ function renderStrategy(s) {
     container.innerHTML = `<div class="empty-state">Strategy data could not be parsed. Try regenerating.</div>`;
     return;
   }
+  // Sanity check: text fields must be prose, not embedded JSON artifacts.
+  // If Claude echoed raw data into a text field (chars:{...} pattern), reject and prompt regeneration.
+  const textFields = [s.top_priority, s.why_this_mix, s.avoid_this_month, s.momentum_risk];
+  const hasEmbeddedData = textFields.some(f => typeof f === 'string' && /chars\s*:\s*\{/.test(f));
+  if (hasEmbeddedData) {
+    container.innerHTML = `<div class="empty-state">⚠ Strategy contains a data formatting artifact. Click <strong>Regenerate →</strong> to get a clean strategy.</div>`;
+    return;
+  }
 
   const mixHTML = (s.recommended_mix || []).map(m => `
     <div class="mix-card">

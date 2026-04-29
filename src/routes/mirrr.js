@@ -1891,6 +1891,8 @@ router.post('/evaluate-strategy', async (req, res) => {
 
 Your job: evaluate how accurate last month's strategy was, so future strategies can be better calibrated. Be honest and specific. This is the system learning from evidence, not a feel-good recap.
 
+CRITICAL: All string fields must contain only human-readable prose. Never echo back raw data, JSON snippets, variable names, or numeric data structures into text fields. Text fields are for analysis and insight only.
+
 ## ${monthName.toUpperCase()} ${evalYear} — WHAT WAS RECOMMENDED
 
 ${strategyBlock}

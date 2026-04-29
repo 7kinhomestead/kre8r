@@ -297,7 +297,7 @@ STORY STRUCTURE PERFORMANCE (from real YouTube data — use to recommend the rig
 ${lines}
 When recommending content types in recommended_mix, add a structure_hint that tells the creator which PipΩr structure to use based on this evidence.`;
 })()}
-Generate a complete strategy. Return ONLY valid JSON — no markdown, no extra text:
+Generate a complete strategy. Return ONLY valid JSON — no markdown, no extra text. CRITICAL: all string values must be human-readable prose only — never embed raw data, JSON fragments, variable names, or code into text fields:
 {
   "top_priority": "The single most important content move to make first this month — be specific about topic/format",
   "why_this_mix": "2-3 sentences explaining the strategic logic based on the actual data above",
