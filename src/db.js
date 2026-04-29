@@ -9,7 +9,15 @@ const path = require('path');
 const fs = require('fs');
 
 // In Electron mode, DB_PATH env var points to the user's AppData directory.
-// In server/PM2 mode, fall back to the local database/ folder.
+// In server/PM2 mode (kre8r.app / DigitalOcean), DB_PATH is set in .env.
+// If neither is set, fall back to the local database/ folder and warn loudly —
+// this almost certainly means the .env is missing or someone ran node server.js
+// directly without the correct environment. Edits will go to the wrong database.
+if (!process.env.DB_PATH) {
+  console.warn('[DB] ⚠️  DB_PATH not set — falling back to ./database/kre8r.db. ' +
+    'If you are running via Electron, check that main.js set DB_PATH. ' +
+    'If running via PM2/node, add DB_PATH to your .env file.');
+}
 const DB_PATH     = process.env.DB_PATH    || path.join(__dirname, '..', 'database', 'kre8r.db');
 const SCHEMA_PATH = path.join(__dirname, '..', 'database', 'schema.sql');
 

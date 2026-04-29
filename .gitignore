@@ -23,6 +23,7 @@ database/kre8r.db
 database/kre8r.db-shm
 database/kre8r.db-wal
 database/kre8r-backup*.db
+database/kre8r-electron-backup.db
 database/backups/
 
 # ── Creator souls (NEVER bundle Jason's data in the installer) ────────────────
