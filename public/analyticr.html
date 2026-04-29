@@ -214,8 +214,11 @@ async function loadNorthr(){
     // email_stats is an array of campaign objects — compute aggregates here
     const campaigns = Array.isArray(d.email_stats) ? d.email_stats : [];
     const latest = campaigns[0] || null;
-    const avgOpen  = campaigns.length ? campaigns.reduce((s,c)=>s+(c.open_rate||0),0)/campaigns.length : null;
-    const avgClick = campaigns.length ? campaigns.reduce((s,c)=>s+(c.click_rate||0),0)/campaigns.length : null;
+    // Only average campaigns that actually have rate data (skip nulls)
+    const withOpen  = campaigns.filter(c => c.open_rate  != null);
+    const withClick = campaigns.filter(c => c.click_rate != null);
+    const avgOpen  = withOpen.length  ? withOpen.reduce((s,c)=>s+c.open_rate,0)  / withOpen.length  : null;
+    const avgClick = withClick.length ? withClick.reduce((s,c)=>s+c.click_rate,0) / withClick.length : null;
     const st = d.stats||{};
     const pp = d.pipeline||{};
 
