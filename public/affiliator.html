@@ -86,6 +86,7 @@ tr:hover td{background:var(--faint)}
   <div class="tab" onclick="showTab('links')">Tracked Links</div>
   <div class="tab" onclick="showTab('analytics')">Analytics</div>
   <div class="tab" onclick="showTab('generator')">Link Generator</div>
+  <div class="tab" onclick="showTab('categories')">⚙ Categories</div>
 </div>
 
 <!-- ── PARTNERS ── -->
@@ -203,6 +204,26 @@ tr:hover td{background:var(--faint)}
   </div>
 </div>
 
+<!-- ── CATEGORIES ── -->
+<div class="content" id="tab-categories" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div>
+      <div style="font-size:15px;font-weight:700">Gear Page Categories</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">Categories power the filter chips on 7kinhomestead.land/gear and the dropdown when adding a product.</div>
+    </div>
+    <button class="btn btn-primary" onclick="openCatModal()">＋ Add Category</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Emoji</th><th>Label</th><th>Key</th><th>Color</th><th>Order</th><th>Products</th><th></th></tr></thead>
+      <tbody id="cats-table"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <div style="background:rgba(20,184,166,.06);border:1px solid rgba(20,184,166,.2);border-radius:8px;padding:12px 16px;margin-top:14px;font-size:12px;color:var(--muted)">
+    💡 <strong style="color:var(--off)">How it works:</strong> Adding a category here makes it available in the "Gear Category" dropdown when adding or editing a tracked link. The filter chip on the gear page shows automatically once a category has at least one active product.
+  </div>
+</div>
+
 <!-- ── Partner Modal ── -->
 <div class="modal-overlay" id="modal-partner">
   <div class="modal">
@@ -291,14 +312,62 @@ tr:hover td{background:var(--faint)}
   </div>
 </div>
 
+<!-- ── Category Modal ── -->
+<div class="modal-overlay" id="modal-cat">
+  <div class="modal">
+    <h2 id="cat-modal-title">Add Category</h2>
+    <div style="display:grid;grid-template-columns:1fr 3fr;gap:12px;align-items:end">
+      <div class="field">
+        <label>Emoji</label>
+        <input type="text" id="cm-emoji" placeholder="☀️" maxlength="4" style="font-size:22px;text-align:center">
+      </div>
+      <div class="field">
+        <label>Category Name</label>
+        <input type="text" id="cm-label" placeholder="Solar, Water, Tools…">
+      </div>
+    </div>
+    <div class="field">
+      <label>URL Key (auto-generated, no spaces)</label>
+      <input type="text" id="cm-key" placeholder="solar" style="font-family:monospace">
+    </div>
+    <div class="field">
+      <label>Accent Color</label>
+      <select id="cm-color">
+        <option value="--gold">☀️ Gold — Solar</option>
+        <option value="--blue">💧 Blue — Water</option>
+        <option value="--orange">🔧 Orange — Tools</option>
+        <option value="--green">🌿 Green — Animals</option>
+        <option value="--teal">🌊 Teal — Garden</option>
+        <option value="--red">❤️ Red — Food</option>
+        <option value="--purple">💜 Purple — Fencing</option>
+        <option value="--white">⬜ White — General</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Display Order (lower = first)</label>
+      <input type="number" id="cm-order" value="10" min="0" max="99">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveCat()">Save Category</button>
+      <button class="btn btn-secondary" onclick="closeModal('cat')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let partners = [];
+let gearCategories = [];
 let clickCounts = {};
 
 async function init() {
-  partners = await fetch('/api/affiliator/partners').then(r => r.json());
+  [partners, gearCategories] = await Promise.all([
+    fetch('/api/affiliator/partners').then(r => r.json()),
+    fetch('/api/affiliator/gear-categories').then(r => r.json()).catch(() => [])
+  ]);
   renderPartners();
   populatePartnerSelects();
+  populateCategorySelects();
+  loadCategories();
 }
 
 function renderPartners() {
@@ -331,6 +400,124 @@ function populatePartnerSelects() {
     const blank = id === 'lm-partner' ? '<option value="" disabled selected>— Select partner —</option>' : '';
     sel.innerHTML = blank + partners.map(p => `<option value="${p.partner_key}">${p.partner_name}${p.status==='pending'?' (pending)':''}</option>`).join('');
   });
+}
+
+function populateCategorySelects() {
+  const sel = document.getElementById('lm-gear-cat');
+  if (!sel || !gearCategories.length) return;
+  const current = sel.value;
+  sel.innerHTML = gearCategories.map(c =>
+    `<option value="${c.cat_key}">${c.cat_emoji} ${c.cat_label}</option>`
+  ).join('');
+  if (current) sel.value = current;
+}
+
+async function loadCategories() {
+  const tb = document.getElementById('cats-table');
+  if (!tb) return;
+  // Fetch categories + link counts
+  const [cats, links] = await Promise.all([
+    fetch('/api/affiliator/gear-categories').then(r => r.json()),
+    fetch('/api/affiliator/links?_all=1').then(r => r.json()).catch(() => [])
+  ]);
+  gearCategories = cats;
+  populateCategorySelects();
+
+  // Count links per category
+  const counts = {};
+  links.forEach(l => { if (l.gear_category) counts[l.gear_category] = (counts[l.gear_category]||0) + 1; });
+
+  const COLOR_LABELS = {
+    '--gold':'🟡 Gold','--blue':'🔵 Blue','--orange':'🟠 Orange',
+    '--green':'🟢 Green','--teal':'🩵 Teal','--red':'🔴 Red',
+    '--purple':'🟣 Purple','--white':'⬜ White'
+  };
+
+  if (!cats.length) {
+    tb.innerHTML = '<tr><td colspan="7" class="empty">No categories yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = cats.map(c => `
+    <tr>
+      <td style="font-size:20px;text-align:center">${c.cat_emoji}</td>
+      <td style="font-weight:700">${c.cat_label}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${c.cat_key}</td>
+      <td style="font-size:12px">${COLOR_LABELS[c.color_var]||c.color_var}</td>
+      <td style="color:var(--muted);font-size:12px">${c.sort_order}</td>
+      <td style="font-weight:700;color:${(counts[c.cat_key]||0)>0?'var(--teal)':'var(--muted)'}">${counts[c.cat_key]||0}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-secondary btn-sm" onclick="editCat(${c.id})">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCat(${c.id},'${c.cat_label.replace(/'/g,"\\'")}')">✕</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+let _editingCatId = null;
+
+function openCatModal(id) {
+  _editingCatId = id || null;
+  document.getElementById('cat-modal-title').textContent = id ? 'Edit Category' : 'Add Category';
+  if (!id) {
+    document.getElementById('cm-emoji').value = '';
+    document.getElementById('cm-label').value = '';
+    document.getElementById('cm-key').value   = '';
+    document.getElementById('cm-color').value = '--teal';
+    document.getElementById('cm-order').value = '10';
+  }
+  openModal('cat');
+}
+
+function editCat(id) {
+  const c = gearCategories.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('cm-emoji').value = c.cat_emoji;
+  document.getElementById('cm-label').value = c.cat_label;
+  document.getElementById('cm-key').value   = c.cat_key;
+  document.getElementById('cm-color').value = c.color_var;
+  document.getElementById('cm-order').value = c.sort_order;
+  openCatModal(id);
+}
+
+// Auto-generate key from label as user types
+document.addEventListener('DOMContentLoaded', () => {
+  const lbl = document.getElementById('cm-label');
+  if (lbl) lbl.addEventListener('input', () => {
+    if (!_editingCatId) {
+      document.getElementById('cm-key').value = lbl.value.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+  });
+});
+
+async function saveCat() {
+  const body = {
+    cat_key:   document.getElementById('cm-key').value.trim(),
+    cat_label: document.getElementById('cm-label').value.trim(),
+    cat_emoji: document.getElementById('cm-emoji').value.trim() || '📦',
+    color_var: document.getElementById('cm-color').value,
+    sort_order: parseInt(document.getElementById('cm-order').value) || 0,
+  };
+  if (!body.cat_key || !body.cat_label) { alert('Name and key are required.'); return; }
+  if (_editingCatId) {
+    await fetch(`/api/affiliator/gear-categories/${_editingCatId}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+  } else {
+    const r = await fetch('/api/affiliator/gear-categories', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    }).then(r => r.json());
+    if (r.error) { alert(r.error); return; }
+  }
+  closeModal('cat');
+  loadCategories();
+}
+
+async function deleteCat(id, label) {
+  if (!confirm(`Delete category "${label}"?\n\nYou cannot delete a category that has products assigned to it.`)) return;
+  const r = await fetch(`/api/affiliator/gear-categories/${id}`, { method:'DELETE' }).then(r => r.json());
+  if (r.error) { alert(r.error); return; }
+  loadCategories();
 }
 
 async function loadLinks() {
@@ -680,14 +867,15 @@ function openModal(name)  { document.getElementById('modal-' + name).classList.a
 function closeModal(name) { document.getElementById('modal-' + name).classList.remove('open'); }
 
 function showTab(name) {
-  ['partners','links','analytics','generator'].forEach(t => {
+  ['partners','links','analytics','generator','categories'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((el, i) => {
-    el.classList.toggle('active', ['partners','links','analytics','generator'][i] === name);
+    el.classList.toggle('active', ['partners','links','analytics','generator','categories'][i] === name);
   });
-  if (name === 'links')     loadLinks();
-  if (name === 'analytics') loadAnalytics();
+  if (name === 'links')      loadLinks();
+  if (name === 'analytics')  loadAnalytics();
+  if (name === 'categories') loadCategories();
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el => {

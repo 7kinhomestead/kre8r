@@ -1242,6 +1242,66 @@ function runMigrations() {
     newLinkTx();
     console.log('[DB] AffiliateΩr storefront migration: tag fixed + 22 real product links added');
   }
+
+  // ── AffiliateΩr — Fix 3 ASINs that were returning 500 ─────────────────────
+  // Sentinel: wire-cable updated to the correct welding-cable ASIN
+  const asinFixDone = db.prepare("SELECT id FROM affiliate_links WHERE partner_key='amazon' AND link_key='wire-cable' AND destination_url LIKE '%B016HFD788%'").get();
+  if (!asinFixDone) {
+    const T = 'jasonrutland-20';
+    const asinFix = db.prepare('UPDATE affiliate_links SET destination_url=?, label=?, gear_description=? WHERE partner_key=? AND link_key=?');
+    asinFix.run(
+      `https://www.amazon.com/dp/B09ZPG2Y9F?tag=${T}`,
+      'IBC Tote Waterproof Cover (275 Gal)',
+      '600D heavy-duty waterproof UV cover with zipper access. Keeps your IBC tote protected year-round.',
+      'amazon', 'ibc-tote-cover'
+    );
+    asinFix.run(
+      `https://www.amazon.com/dp/B0FKH2QW5Z?tag=${T}`,
+      '50–2000 Gallon Foldable Water Storage Tank',
+      'Heavy-duty PVC foldable water tank. Emergency reserve, rainwater, fire prevention — collapses flat when not in use.',
+      'amazon', 'water-bladder'
+    );
+    asinFix.run(
+      `https://www.amazon.com/dp/B016HFD788?tag=${T}`,
+      'EWCS 1/0 Gauge Welding Cable Combo Pack (15+15 ft)',
+      'Extra-flexible 600V welding cable, black + red. The right wire for serious battery bank connections.',
+      'amazon', 'wire-cable'
+    );
+    console.log('[DB] AffiliateΩr: fixed 3 ASIN 500s (ibc-tote-cover, water-bladder, wire-cable)');
+  }
+
+  // ── AffiliateΩr — Gear Categories ─────────────────────────────────────────
+  // DB-backed categories for gear.html filter chips and link modal dropdown.
+  // color_var references a CSS variable name defined in gear.html :root.
+  db.exec(`CREATE TABLE IF NOT EXISTS gear_categories (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    cat_key    TEXT    NOT NULL UNIQUE,
+    cat_label  TEXT    NOT NULL,
+    cat_emoji  TEXT    NOT NULL DEFAULT '📦',
+    color_var  TEXT    NOT NULL DEFAULT '--teal',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    active     INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_gear_cats_sort ON gear_categories(sort_order)');
+
+  // Seed 7 existing categories if table is empty
+  const gearCatCount = db.prepare('SELECT COUNT(*) AS n FROM gear_categories').get().n;
+  if (gearCatCount === 0) {
+    const insC = db.prepare(`INSERT OR IGNORE INTO gear_categories
+      (cat_key, cat_label, cat_emoji, color_var, sort_order) VALUES (?,?,?,?,?)`);
+    const catTx = db.transaction(() => {
+      insC.run('solar',   'Solar',    '☀️', '--gold',   1);
+      insC.run('water',   'Water',    '💧', '--blue',   2);
+      insC.run('tools',   'Tools',    '🔧', '--orange', 3);
+      insC.run('animals', 'Animals',  '🐓', '--green',  4);
+      insC.run('garden',  'Garden',   '🌱', '--teal',   5);
+      insC.run('food',    'Food Prep','🥫', '--red',    6);
+      insC.run('fencing', 'Fencing',  '🪢', '--purple', 7);
+    });
+    catTx();
+    console.log('[DB] AffiliateΩr: seeded 7 gear categories');
+  }
 }
 
 /**
@@ -1814,6 +1874,19 @@ function bootstrapTenantTables(tdb) {
   )`);
   exec('CREATE INDEX IF NOT EXISTS idx_brief_status ON strategic_briefs(status)');
   exec('CREATE INDEX IF NOT EXISTS idx_brief_locked ON strategic_briefs(locked_at)');
+
+  // ─── AffiliateΩr — Gear Categories ────────────────────────────────────────
+  exec(`CREATE TABLE IF NOT EXISTS gear_categories (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    cat_key    TEXT    NOT NULL UNIQUE,
+    cat_label  TEXT    NOT NULL,
+    cat_emoji  TEXT    NOT NULL DEFAULT '📦',
+    color_var  TEXT    NOT NULL DEFAULT '--teal',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    active     INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_gear_cats_sort ON gear_categories(sort_order)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation

@@ -174,6 +174,52 @@ router.post('/links/:id/rescrape', async (req, res) => {
   }
 });
 
+// ── Gear Categories ───────────────────────────────────────────────────────────
+
+// Public — CORS open (consumed by gear.html on kre8r-land)
+router.get('/gear-categories', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.json(db.prepare(
+    'SELECT * FROM gear_categories WHERE active=1 ORDER BY sort_order, cat_label'
+  ).all());
+});
+
+router.post('/gear-categories', (req, res) => {
+  const { cat_key, cat_label, cat_emoji, color_var, sort_order } = req.body;
+  if (!cat_key || !cat_label) return res.status(400).json({ error: 'cat_key and cat_label required' });
+  // cat_key: lowercase slug, letters/numbers/hyphens only
+  const slug = cat_key.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  db.prepare(`INSERT INTO gear_categories (cat_key, cat_label, cat_emoji, color_var, sort_order)
+    VALUES (?,?,?,?,?)
+    ON CONFLICT(cat_key) DO UPDATE SET
+      cat_label=excluded.cat_label, cat_emoji=excluded.cat_emoji,
+      color_var=excluded.color_var, sort_order=excluded.sort_order`
+  ).run(slug, cat_label, cat_emoji || '📦', color_var || '--teal', sort_order || 0);
+  res.json({ ok: true, cat_key: slug });
+});
+
+router.put('/gear-categories/:id', (req, res) => {
+  const fields = ['cat_label', 'cat_emoji', 'color_var', 'sort_order', 'active'];
+  const sets = [], vals = [];
+  fields.forEach(f => { if (req.body[f] !== undefined) { sets.push(`${f}=?`); vals.push(req.body[f]); } });
+  if (!sets.length) return res.json({ ok: true });
+  vals.push(req.params.id);
+  db.prepare(`UPDATE gear_categories SET ${sets.join(',')} WHERE id=?`).run(...vals);
+  res.json({ ok: true });
+});
+
+router.delete('/gear-categories/:id', (req, res) => {
+  // Check if any links use this category first
+  const cat = db.prepare('SELECT cat_key FROM gear_categories WHERE id=?').get(parseInt(req.params.id));
+  if (cat) {
+    const linkCount = db.prepare('SELECT COUNT(*) AS n FROM affiliate_links WHERE gear_category=?').get(cat.cat_key).n;
+    if (linkCount > 0)
+      return res.status(400).json({ error: `${linkCount} link(s) use this category. Reassign them first.` });
+  }
+  db.prepare('DELETE FROM gear_categories WHERE id=?').run(parseInt(req.params.id));
+  res.json({ ok: true });
+});
+
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
 router.get('/analytics', (req, res) => {

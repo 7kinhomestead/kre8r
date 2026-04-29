@@ -19,7 +19,7 @@ Collect 3–4 strong ones, then add a testimonials section to:
 >
 > If you're looking for a supportive community with expert advice that's a step above the 'noise' of social media, I can't recommend this enough. The hard work is just beginning, but for the first time, I'm actually excited about the 'fun' part of building my homestead!"
 
-**Source:** Rock Rich Founding 50 member  
+**Source:** Cathy F. — Rock Rich Founding 50 member  
 **Highlights:** Solar planning tool, shopping list output, community support, novice-friendly  
 **Use for:** Solar tool page, community landing page, general social proof
 
@@ -43,9 +43,28 @@ Collect 3–4 strong ones, then add a testimonials section to:
 >
 > I have great respect for the land and the animals the universe has entrusted me with, and I am eternally grateful for the help Jason and Cari have so graciously given me to be successful in my homesteading journey."
 
-**Source:** Long-term community member, 3 years on the homestead  
+**Source:** Jen F. — Founding 50 member, 3 years on the homestead  
 **Highlights:** Solar setup (in-person help), greenhouse/walipini, livestock sequencing, fire prep, courses, community forum, high quality + low budget philosophy  
 **Use for:** Community landing page, Rock Rich sales page, general social proof — this one covers the full arc  
 **Note:** Long — will need an expanding card on the site
+
+---
+
+## Community Moderator — April 2026
+
+> "Three years ago, this lovely couple's TikTok Live popped up on my FYP. I stayed for a bit and quickly realized they were living the life we were just beginning. I kept listening—and was hooked. They were funny, full of great energy, and incredibly informative.
+>
+> Before long, I was watching their 7 Kin Homestead content across multiple platforms and catching every live I could. Eventually, I was fortunate enough to become a moderator and got to know Jason and Cari more personally. They are a true wealth of knowledge and wonderful sounding boards.
+>
+> Not only are they phenomenal cheerleaders, but they genuinely care about the success of every single person in their community. I have watched many off-grid channels, while some have good points or 'cool builds' you can tell a lot of their content is for views and entertainment but I wouldn't so much as take their coffee order suggestion.
+>
+> When the 7 Kin Rock Rich Community itself came together, it felt like the perfect next step for all of us to grow and learn.
+>
+> It really does take a village—and I'm so grateful this is ours."
+
+**Source:** Joleen S. — Community moderator, 3-year follower, TikTok origin story  
+**Highlights:** TikTok discovery, multi-platform loyalty, Jason + Cari personally, authenticity vs. entertainment-only channels, community feeling  
+**Use for:** Rock Rich community landing page, TikTok bio link, social proof against competitors — the "authenticity" angle is gold  
+**Note:** Shortest and punchiest of the three — great for above-the-fold pull quote
 
 <!-- Add more below as they come in -->
