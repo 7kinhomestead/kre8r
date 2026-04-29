@@ -260,47 +260,88 @@ router.post('/growth-plan', async (req, res) => {
     const { getCreatorContext } = require('../utils/creator-context');
 
     const { creatorName, brand, niche, followerSummary, contentAnglesText, profile } = getCreatorContext();
-    const health   = db.getGlobalChannelHealth();
-    const stats    = db.getPublishingStats(90);
-    const pipeline = db.getPipelineHealth();
-    const evals    = db.getRecentEvaluations(3);
+    const health     = db.getGlobalChannelHealth();
+    const stats      = db.getPublishingStats(90);
+    const pipeline   = db.getPipelineHealth();
+    const evals      = db.getRecentEvaluations(3);
     const structPerf = db.getStructurePerformance();
+    const activeBrief = db.getActiveBrief ? db.getActiveBrief() : null;
 
-    // Eval summary for context
-    const evalSummary = evals.length
+    // Active VectΩr brief — the locked strategic direction
+    const vectorBlock = activeBrief?.brief_json
+      ? (() => {
+          const b = activeBrief.brief_json;
+          const lines = [
+            b.vector    ? `Vector: ${b.vector}`       : '',
+            b.focus     ? `Focus: ${b.focus}`          : '',
+            b.constraints?.length ? `Constraints: ${b.constraints.join(', ')}` : '',
+            b.locked_date ? `Locked: ${b.locked_date}` : '',
+          ].filter(Boolean);
+          return lines.length ? lines.join('\n') : null;
+        })()
+      : null;
+
+    // Full eval context — one_line + calibration + weight adjustments
+    const evalBlock = evals.length
       ? evals.map(e => {
           try {
             const ev = JSON.parse(e.evaluation);
-            return `${e.month}/${e.year}: ${ev.one_line}`;
+            const weights = (ev.recommendation_accuracy || [])
+              .filter(r => r.weight_adjustment && r.weight_adjustment !== 'NEUTRAL')
+              .map(r => `    • ${r.recommendation}: weight ${r.weight_adjustment} — ${r.reason}`)
+              .join('\n');
+            return [
+              `${e.month}/${e.year} — Score ${ev.overall_accuracy_score}/10 — ${ev.one_line}`,
+              ev.calibration_notes ? `  Calibration: ${ev.calibration_notes}` : '',
+              weights ? `  Weight adjustments:\n${weights}` : '',
+            ].filter(Boolean).join('\n');
           } catch { return null; }
-        }).filter(Boolean).join(' | ')
+        }).filter(Boolean).join('\n\n')
       : null;
 
-    const structSummary = structPerf.length
-      ? structPerf.slice(0, 3).map(s => `${s.story_structure}: avg ${Number(s.avg_views).toLocaleString()} views (${s.video_count} videos)`).join(', ')
+    // Full structure breakdown
+    const structBlock = structPerf.length
+      ? structPerf.map(s =>
+          `- ${s.story_structure}: avg ${Number(s.avg_views).toLocaleString()} views (${s.video_count} videos, best: ${Number(s.max_views || 0).toLocaleString()})`
+        ).join('\n')
       : null;
 
     // Publishing cadence from profile
     const cadence = profile?.publishing?.cadence || 'weekly';
 
+    // YouTube-specific health
+    const ytHealth = health?.youtube || health;
+
     send('status', { message: 'Back-engineering your 3-month trajectory…' });
 
     const prompt = `You are NorthΩr, the strategic growth engine for ${creatorName} at ${brand} — a ${niche} creator.
 
-## CURRENT STATE (right now)
+CRITICAL: All string values in the JSON output must be human-readable prose only. Never embed raw data objects, JSON fragments, or variable names into text fields.
+
+## LOCKED VectΩr STRATEGIC BRIEF (this is the approved strategic direction — the trajectory plan must align with it)
+
+${vectorBlock || '(No VectΩr brief locked yet — infer from data below)'}
+
+## CURRENT STATE (live data)
 
 - Channel: ${followerSummary}
-- YouTube avg views per video (all-time): ${Math.round(health.avg_views || 0).toLocaleString()}
-- YouTube total views: ${Number(health.total_views || 0).toLocaleString()}
-- Best video: ${health.best_video ? `"${health.best_video.title}" — ${Number(health.best_video.views).toLocaleString()} views` : 'unknown'}
-- Publishing cadence: ${cadence} (goal)
+- YouTube avg views per video (all-time): ${Math.round(ytHealth.avg_views || 0).toLocaleString()}
+- YouTube total views: ${Number(ytHealth.total_views || 0).toLocaleString()}
+- Best video: ${ytHealth.best_video ? `"${ytHealth.best_video.title}" — ${Number(ytHealth.best_video.views).toLocaleString()} views` : 'unknown'}
+- Publishing cadence goal: ${cadence}
 - Days since last publish: ${stats.days_since_last_publish === 999 ? 'unknown' : stats.days_since_last_publish}
 - Videos published last 90 days: ${stats.videos_last_month + stats.videos_this_month}
 - Pipeline: ${pipeline.in_pre_production} in pre-production, ${pipeline.in_production} in production, ${pipeline.in_post} in post
-${evalSummary ? `- MirrΩr recent evaluation: ${evalSummary}` : ''}
-${structSummary ? `- Top story structures by views: ${structSummary}` : ''}
 
-## 3-MONTH TARGETS (what the creator wants to achieve)
+## STORY STRUCTURE PERFORMANCE (from actual YouTube data — this is the evidence base)
+
+${structBlock || '(No structure data yet)'}
+
+## MirrΩr SELF-EVALUATION — WHAT THE STRATEGY GOT RIGHT AND WRONG
+
+${evalBlock || '(No evaluations yet — this is the first trajectory plan)'}
+
+## 3-MONTH TARGETS
 
 ${Object.keys(targets).length > 0
   ? Object.entries(targets).map(([k, v]) => `- ${k}: ${v}`).join('\n')
@@ -309,15 +350,15 @@ ${Object.keys(targets).length > 0
 
 ## YOUR TASK
 
-Back-engineer a specific, actionable 3-month growth plan that bridges the gap between current state and targets. Be brutally specific — no generic advice. Every recommendation should reference the actual numbers above.
+The trajectory plan must:
+1. ALIGN WITH THE LOCKED VectΩr BRIEF above — don't contradict the approved direction
+2. BUILD ON MirrΩr's calibration — weight adjustments from evaluations must shape each month's recommendations
+3. Reference actual numbers from CURRENT STATE — no generic advice
+4. Be realistic for a solo creator (Jason) with a camera partner (Cari), outdoor shoots only, no studio
+5. Close the gap through content STRATEGY, not just "post more"
+6. Use the content angles: ${contentAnglesText.split('\n').slice(0,3).join(', ')}
 
-The plan must be realistic given:
-- This is a solo creator (Jason) with a partner (Cari) who handles camera
-- Outdoor shoots only, no studio
-- Content angles: ${contentAnglesText.split('\n').slice(0,3).join(', ')}
-- The gap between targets and current state must be closed through content strategy, NOT just "post more"
-
-Return ONLY valid JSON:
+Return ONLY valid JSON. All text fields must be prose, never raw data:
 
 {
   "targets_inferred": {
@@ -357,7 +398,7 @@ Return ONLY valid JSON:
   "structure_recommendation": "Based on story structure performance data, which PipΩr structure should dominate this quarter and why"
 }`;
 
-    const plan = await callClaude(prompt, 3000);
+    const plan = await callClaude(prompt, 4000);
 
     if (!plan || plan.parse_error) {
       send('error', { message: 'Could not parse growth plan. Try again.' });
