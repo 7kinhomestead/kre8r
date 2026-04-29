@@ -176,13 +176,17 @@ async function loadYT(){
     ]);
     const h = health||{};
     const yt = h.by_platform?.youtube || {};
-    document.getElementById('yt-cards').innerHTML = [
-      card('Total Videos', fmt(h.total_videos),'synced from YouTube',''),
-      card('Avg Views/Video', fmt(h.avg_views),'all videos',''),
-      card('Longform Avg', fmt(h.longform_avg_views),'longform only','accent'),
-      card('Best Video', fmt(yt.best_video?.views || h.best_video?.views), h.best_video?.title ? h.best_video.title.slice(0,28)+'…' : '',''),
-      card('Top Angle', h.top_topic||'—','most viewed angle',''),
-    ].join('');
+
+    if (!h.total_videos && !h.avg_views) {
+      document.getElementById('yt-cards').innerHTML = `<div class="err" style="padding:12px 0">No YouTube data — run <a href="/mirrr.html" style="color:#14b8a6">MirrΩr → Sync Now</a> first</div>`;
+    } else {
+      document.getElementById('yt-cards').innerHTML = [
+        card('Total Videos', fmt(h.total_videos),'synced from YouTube',''),
+        card('Avg Views/Video', fmt(h.avg_views),'all videos',''),
+        card('Longform Avg', fmt(h.longform_avg_views),'longform only','accent'),
+        card('Best Video', fmt(yt.best_video?.views || h.best_video?.views), h.best_video?.title ? h.best_video.title.slice(0,30)+'…' : '',''),
+      ].join('');
+    }
 
     const rows = Array.isArray(vids) ? vids : (vids.projects||vids.videos||[]);
     document.getElementById('yt-recent').innerHTML = `
