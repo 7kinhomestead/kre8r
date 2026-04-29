@@ -174,6 +174,32 @@ router.post('/links/:id/rescrape', async (req, res) => {
   }
 });
 
+// ── Bulk OG image scrape for all gear-page links missing images ───────────────
+router.post('/scrape-gear-images', async (req, res) => {
+  const links = db.prepare(`
+    SELECT id, destination_url FROM affiliate_links
+    WHERE show_on_gear = 1 AND active = 1
+    AND (og_image_url IS NULL OR og_image_url = '')
+  `).all();
+
+  let updated = 0, skipped = 0;
+  // Process in small batches to avoid hammering external sites
+  for (const link of links) {
+    try {
+      const ogUrl = await scrapeOgImage(link.destination_url);
+      if (ogUrl) {
+        db.prepare('UPDATE affiliate_links SET og_image_url=? WHERE id=?').run(ogUrl, link.id);
+        updated++;
+      } else {
+        skipped++;
+      }
+    } catch (_) { skipped++; }
+    // Small delay between requests
+    await new Promise(r => setTimeout(r, 300));
+  }
+  res.json({ ok: true, updated, skipped, total: links.length });
+});
+
 // ── Gear Categories ───────────────────────────────────────────────────────────
 
 // Public — CORS open (consumed by gear.html on kre8r-land)

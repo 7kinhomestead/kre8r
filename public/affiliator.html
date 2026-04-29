@@ -116,6 +116,7 @@ tr:hover td{background:var(--faint)}
         <option value="freedom">Freedom</option>
         <option value="general">General</option>
       </select>
+      <button id="scrape-all-btn" class="btn btn-secondary" onclick="scrapeAllImages()">🖼 Scrape All Images</button>
       <button class="btn btn-primary" onclick="openLinkModal()">＋ Add Link</button>
     </div>
   </div>
@@ -538,15 +539,18 @@ async function loadLinks() {
   tb.innerHTML = links.map(l => {
     const tracked = `${base}/r/${l.partner_key}/${l.link_key}`;
     const clicks = clickCounts[`${l.partner_key}:${l.link_key}`] || 0;
-    return `<tr>
-      <td style="font-weight:600">${l.label}</td>
+    const active = l.active !== 0;
+    const gearBadge = l.show_on_gear ? (active ? '<span style="font-size:10px;color:var(--teal)">● gear</span>' : '<span style="font-size:10px;color:var(--muted)">○ hidden</span>') : '';
+    return `<tr style="opacity:${active?1:0.45}">
+      <td style="font-weight:600">${l.label} ${gearBadge}</td>
       <td>${pmap[l.partner_key]||l.partner_key}</td>
       <td>${l.tool||'—'}</td>
       <td><span class="copy-url" onclick="copyText('${tracked}')" title="Click to copy">${tracked}</span></td>
       <td style="font-weight:700;color:${clicks>0?'var(--teal)':'var(--muted)'}">${clicks}</td>
-      <td style="display:flex;gap:4px;">
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn btn-secondary btn-sm" onclick="editLink(${l.id})" title="Edit link">✏️</button>
         <button class="btn btn-secondary btn-sm" onclick="setLinkImage(${l.id})" title="Set product image">🖼</button>
+        <button class="btn ${active?'btn-secondary':'btn-primary'} btn-sm" onclick="toggleActive(${l.id},${active?0:1})" title="${active?'Hide from gear page':'Show on gear page'}">${active?'Hide':'Show'}</button>
         <button class="btn btn-danger btn-sm" onclick="deleteLink(${l.id})">✕</button>
       </td>
     </tr>`;
@@ -857,9 +861,26 @@ async function setLinkImage(id) {
   if (r.ok) { alert('Image saved ✓'); loadLinks(); }
 }
 
+async function toggleActive(id, newVal) {
+  await fetch(`/api/affiliator/links/${id}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ active: newVal })
+  });
+  loadLinks();
+}
+
 async function deleteLink(id) {
   if (!confirm('Delete this tracked link?')) return;
   await fetch(`/api/affiliator/links/${id}`, { method:'DELETE' });
+  loadLinks();
+}
+
+async function scrapeAllImages() {
+  const btn = document.getElementById('scrape-all-btn');
+  btn.disabled = true; btn.textContent = '🔄 Scraping…';
+  const r = await fetch('/api/affiliator/scrape-gear-images', { method:'POST' }).then(r => r.json());
+  btn.textContent = `✓ Done — ${r.updated} updated, ${r.skipped} skipped`;
+  setTimeout(() => { btn.disabled = false; btn.textContent = '🖼 Scrape All Images'; }, 4000);
   loadLinks();
 }
 
