@@ -14,7 +14,15 @@
 
 ### 2. Land Finder Tool — TBD (discuss with Jason)
 
-### 3. KinOS Auth Activation (when Cari is home)
+### 3. Cari Electron Setup (when Cari is home)
+- Install Kre8Ωr Setup .exe on Cari's laptop
+- Add `INTERNAL_API_KEY=d6d13be62e9ff637e09cde86cf506201b85413a4a63f8ff0338ac5fed0efc7a2` to her `.env`
+  (AppData\Roaming\kre8r\.env — Electron creates this folder on first run)
+- Walk her through 📥 Pull from Live → edit → 📤 Push to Live workflow
+- Once confirmed working: she stops editing directly on kre8r.app for anything beyond gear
+- Safe to extend sync to other tables (projects etc.) only AFTER this is confirmed
+
+### 4. KinOS Auth Activation (when Cari is home)
 - Set `KINOS_ADMIN_PW` + `SESSION_SECRET` in kinos/.env on the live server
 - `pm2 restart kinos`
 - Login as Jason → go to `/manage-passwords` → set passwords for all family members
