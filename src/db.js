@@ -1133,6 +1133,54 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_brief_status ON strategic_briefs(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_brief_locked ON strategic_briefs(locked_at)');
   console.log('[DB] VectΩr strategic_briefs table verified');
+
+  // ── AffiliateΩr — Seed tracked tool-page links ──────────────────────────────
+  // These links power /r/ redirects on kre8r-land tool pages.
+  // INSERT OR IGNORE is idempotent — safe to run on every startup.
+  const seedLinks = db.prepare(`INSERT OR IGNORE INTO affiliate_links
+    (partner_key, link_key, label, destination_url, tool, show_on_gear, gear_category, gear_emoji, gear_description)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const toolLinkSeeds = [
+    // Water page
+    ['amazon',       'ibc-tote',          'IBC Tote (275 gal)',         'https://www.amazon.com/s?k=ibc+tote+275+gallon+food+grade&tag=7kinhomestead-20',        'water',     1, 'Water Storage',  '💧', 'Food-grade poly, stackable. Stack 4–6 for serious storage.'],
+    ['amazon',       'big-berkey',        'Big Berkey Gravity Filter',  'https://www.amazon.com/s?k=big+berkey+gravity+filter&tag=7kinhomestead-20',             'water',     1, 'Water Filtration','🧹', 'No pump, no electricity. Removes 99.9% of bacteria. Drinking-water ready.'],
+    ['amazon',       'pressure-canner',   'Presto 23qt Pressure Canner','https://www.amazon.com/s?k=presto+23qt+pressure+canner&tag=7kinhomestead-20',          'lifestyle', 1, 'Food Preservation','🫙', 'The non-negotiable. Food preservation starts here.'],
+    ['amazon',       'chest-freezer',     '7cu ft Chest Freezer',       'https://www.amazon.com/s?k=7+cubic+foot+chest+freezer&tag=7kinhomestead-20',            'lifestyle', 1, 'Food Storage',   '❄️', 'Butcher your own meat. Store a full season.'],
+    ['amazon',       'baker-creek-seeds', 'Baker Creek Heirloom Seeds', 'https://www.rareseeds.com/',                                                             'lifestyle', 1, 'Seeds',          '🌱', 'Non-GMO. Save your own seed year after year.'],
+    // Solar page
+    ['liTime',       '100ah-battery',     'LiTime LiFePO4 100Ah',       'https://www.amazon.com/s?k=LiTime+LiFePO4+100Ah+battery&tag=7kinhomestead-20',          'solar',     1, 'Batteries',      '🔋', 'Built-in BMS. Drop-in replacement. Trusted by 7 Kin.'],
+    ['liTime',       '200ah-battery',     'LiTime LiFePO4 200Ah',       'https://www.amazon.com/s?k=LiTime+LiFePO4+200Ah+self-heating+battery&tag=7kinhomestead-20','solar',  1, 'Batteries',      '🔋', 'Self-heating, built-in BMS. For larger off-grid systems.'],
+    ['sunGold',      'panels',            'SunGold Power Solar Panels',  'https://www.amazon.com/s?k=SunGold+Power+solar+panel&tag=7kinhomestead-20',             'solar',     1, 'Solar Panels',   '☀️', 'Bifacial, up to 30% more power. Personally used by Jason.'],
+    // Hatchery
+    ['meyerHatchery','egg-chickens',      'Meyer Hatchery — Egg Chickens','https://www.meyerhatchery.com/category_s/1.htm',                                       'lifestyle', 1, 'Livestock',      '🐣', 'Start here. 6 hens. Master this before anything else.'],
+    // Gear page — Solar
+    ['signatureSolar','200w-panel',        '200W Monocrystalline Panel',   'https://signaturesolar.com/collections/solar-panels',                                  'solar',     1, 'Solar',          '🔆', 'The panel we built our whole system around. Reliable output, built to survive hail and dumb mistakes.'],
+    ['amazon',       'mppt-controller',   '40A MPPT Charge Controller',   'https://www.amazon.com/s?k=40A+MPPT+charge+controller+solar&tag=7kinhomestead-20',     'solar',     1, 'Solar',          '⚡', 'MPPT over PWM every single time. The brain of the system.'],
+    ['signatureSolar','lifepo4-100ah',     '100Ah LiFePO4 Battery',        'https://signaturesolar.com/collections/lithium-batteries',                             'solar',     1, 'Solar',          '🔋', 'Switched from lead-acid and haven\'t looked back. 4000+ cycles, no maintenance.'],
+    ['amazon',       'pure-sine-inverter','2000W Pure Sine Inverter',      'https://www.amazon.com/s?k=2000W+pure+sine+wave+inverter&tag=7kinhomestead-20',        'solar',     1, 'Solar',          '🔌', 'Pure sine or don\'t bother. Modified sine waves will kill your sensitive electronics.'],
+    // Gear page — Water
+    ['amazon',       'shurflo-pump',      '12V Diaphragm Water Pump',     'https://www.amazon.com/s?k=shurflo+12v+diaphragm+water+pump&tag=7kinhomestead-20',     'water',     1, 'Water',          '💧', 'Runs off a single solar panel. Quiet, reliable, handles 20-foot head.'],
+    ['amazon',       'poly-tank-1500',    '1500 Gallon Poly Storage Tank', 'https://www.tankdepot.com/category/above-ground-poly-tanks',                           'water',     1, 'Water',          '🛢️', 'Rainwater collection anchor. UV-stabilized black poly. Get bigger than you think you need.'],
+    // Gear page — Tools
+    ['milwaukee',    'reciprocating-saw', 'Reciprocating Saw',             'https://www.amazon.com/s?k=Milwaukee+reciprocating+saw&tag=7kinhomestead-20',          'tools',     1, 'Tools',          '🪚', 'The tool Jason reaches for more than any other. Demo, rough framing, cutting fence posts.'],
+    ['amazon',       'post-hole-digger',  'Post Hole Digger (Manual)',     'https://www.amazon.com/s?k=manual+post+hole+digger+clamshell&tag=7kinhomestead-20',    'tools',     1, 'Tools',          '⛏️', 'Two handles, two blades, zero fuel costs. Your hands will adapt.'],
+    ['amazon',       'dewalt-drill',      '18V Cordless Drill Kit',        'https://www.amazon.com/s?k=DeWalt+18V+cordless+drill+kit&tag=7kinhomestead-20',        'tools',     1, 'Tools',          '🔧', 'Two batteries, a charger, and a case. 18V platform works across a dozen tools.'],
+    // Gear page — Animals
+    ['murrayMcmurray','dual-purpose-chicks','Dual-Purpose Meat & Layer Chicks','https://www.mcmurrayhatchery.com/category/dual-purpose-breeds',                    'lifestyle', 1, 'Animals',        '🐔', 'When you want eggs AND a freezer full of chicken. Murray McMurray since 1917.'],
+    ['amazon',       'chicken-feeder',    'Galvanized Hanging Feeder',     'https://www.amazon.com/s?k=galvanized+hanging+poultry+feeder&tag=7kinhomestead-20',    'lifestyle', 1, 'Animals',        '🌾', 'Simple, rodent-resistant, doesn\'t mold like plastic.'],
+    // Gear page — Garden
+    ['trueLeaf',     'microgreens-seeds', 'Microgreens Seed Variety Pack', 'https://www.trueleafmarket.com/collections/microgreens',                               'lifestyle', 1, 'Garden',         '🌱', 'Fastest food production in a small space. Best germination rates tested.'],
+    ['amazon',       'raised-bed',        '4x8 Raised Bed Kit',            'https://www.amazon.com/s?k=galvanized+steel+4x8+raised+bed+kit&tag=7kinhomestead-20',  'lifestyle', 1, 'Garden',         '🥕', 'Galvanized steel. Doesn\'t rot, doesn\'t leach, doesn\'t warp.'],
+    // Gear page — Food Prep
+    ['amazon',       'mason-jars',        'Ball Wide Mouth Mason Jars',    'https://www.amazon.com/s?k=Ball+wide+mouth+mason+jars+12+pack&tag=7kinhomestead-20',   'lifestyle', 1, 'Food Prep',      '🫙', 'The standard for a reason. Buy cases, not 12-packs. You will run out.'],
+    // Gear page — Fencing
+    ['amazon',       'premier1-netting',  'ElectroNet Poultry Netting',    'https://www.premier1supplies.com/c/poultry-fencing',                                   'lifestyle', 1, 'Fencing',        '⚡', 'Moveable electric poultry fence. Premier1 is the only brand worth buying.'],
+    ['amazon',       'field-fence',       'Field Fence 330ft Roll',        'https://www.amazon.com/s?k=Red+Brand+field+fence+330ft&tag=7kinhomestead-20',          'lifestyle', 1, 'Fencing',        '🪢', 'For permanent perimeter. Heavy gauge, holds up to weather and goats.'],
+    ['amazon',       'tpost-driver',      'T-Post Driver',                 'https://www.amazon.com/s?k=t-post+driver+manual&tag=7kinhomestead-20',                 'lifestyle', 1, 'Fencing',        '🔩', '30 seconds per post once you get the rhythm. Your shoulders will thank you.'],
+  ];
+  const linkTx = db.transaction(() => { for (const r of toolLinkSeeds) seedLinks.run(...r); });
+  linkTx();
+  console.log('[DB] AffiliateΩr tool-page links verified');
 }
 
 /**

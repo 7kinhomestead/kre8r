@@ -5,12 +5,12 @@
 
 ## NEXT TASKS (Session 63)
 
-### 1. Replace kre8r-land Tool Page Links with Tracked /r/ URLs
-- AffiliateΩr is live and working — create tracked links for all the hardcoded tool page items
-- Water page: IBC Tote, Poly Tank 500 Gal, Big Berkey Filter
-- Solar page: LiTime Battery, SunGold Panels
-- Lifestyle page: Pressure Canner, Chest Freezer, Chicks (Meyer), Seeds (Baker Creek)
-- Swap hardcoded URLs in kre8r-land tool pages with `/r/partner/link_key` tracked URLs
+### ~~1. Replace kre8r-land Tool Page Links with Tracked /r/ URLs~~ ✅ Done Session 64
+- db.js migration seeds 27 affiliate_links (all tool + gear page items) with show_on_gear=1
+- water.html: IBC Tote + Big Berkey → https://kre8r.app/r/amazon/{key} (both render views)
+- solar.html: LiTime 100Ah/200Ah + SunGold panels → /r/ tracked URLs
+- lifestyle.html: Pressure Canner, Chest Freezer, Meyer Hatchery, Baker Creek → /r/ tracked URLs
+- gear.html: All 20 fallback items updated to /r/ URLs; live API already returns proper hrefs
 
 ### 2. Land Finder Tool — TBD (discuss with Jason)
 
