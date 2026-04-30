@@ -83,9 +83,11 @@ router.get('/posts/:slug', (req, res) => {
   }
 });
 
-// ── Everything below requires an active kre8r session ─────────────────────────
+// ── Auth: session OR internal API key ─────────────────────────────────────────
 function requireAuth(req, res, next) {
   if (req.session?.userId) return next();
+  const key = req.headers['x-internal-key'];
+  if (key && key === process.env.INTERNAL_API_KEY) return next();
   res.status(401).json({ ok: false, error: 'Not authenticated' });
 }
 
@@ -164,6 +166,29 @@ router.delete('/posts/:id', requireAuth, (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     logger.error({ err }, '[blog] delete failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ─── PUSH TO LIVE: proxy a post to kre8r.app production ─────────────────────
+// Called from local MailΩr — sends post data to production with internal key.
+router.post('/push-to-live', requireAuth, async (req, res) => {
+  try {
+    const liveUrl = process.env.LIVE_API_URL || 'https://kre8r.app';
+    const key     = process.env.INTERNAL_API_KEY;
+    if (!key) return res.status(500).json({ ok: false, error: 'INTERNAL_API_KEY not set' });
+
+    const response = await fetch(`${liveUrl}/api/blog/posts`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-key': key },
+      body:    JSON.stringify(req.body),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Production error ${response.status}`);
+    logger.info({ slug: data.post?.slug }, '[blog] pushed to live');
+    res.json(data);
+  } catch (err) {
+    logger.error({ err }, '[blog] push-to-live failed');
     res.status(500).json({ ok: false, error: err.message });
   }
 });

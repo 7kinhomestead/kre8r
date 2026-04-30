@@ -1869,7 +1869,7 @@ async function publishBlogPost() {
       publish:       true,
     };
 
-    const res  = await fetch('/api/blog/posts', {
+    const res  = await fetch('/api/blog/push-to-live', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1877,9 +1877,8 @@ async function publishBlogPost() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
 
-    btn.textContent = '✓ Published';
-    btn.style.background = '#22c55e';
-    showToast(`Published: "${data.post.title}" — slug: ${data.post.slug}`, 'green');
+    btn.outerHTML = `<a href="https://7kinhomestead.land/blog/${data.post.slug}" target="_blank" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.04em;text-decoration:none;display:inline-block;">✓ Published · View Post →</a>`;
+    showToast(`Published: "${data.post.title}"`, 'green');
   } catch (e) {
     btn.disabled    = false;
     btn.textContent = '📤 Publish to Blog';
