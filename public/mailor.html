@@ -1830,7 +1830,7 @@ function renderBlogPost(blog) {
     <div class="results-header">
       <span class="results-label">📝 BLOG POST</span>
       <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn btn-copy" onclick="clipWrite(document.getElementById('bc-blog-body').textContent, () => showToast('Blog copied', 'green'))">Copy</button>
+        <button class="btn btn-copy" onclick="clipWrite(document.getElementById('bc-blog-body').innerHTML, () => showToast('Blog copied', 'green'))">Copy</button>
         <button class="btn" id="blog-publish-btn" style="background:#14b8a6;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.04em;" onclick="publishBlogPost()">📤 Publish to Blog</button>
       </div>
     </div>
@@ -1838,8 +1838,8 @@ function renderBlogPost(blog) {
       <div class="ab-card-body">
         <div class="email-field-label">Title</div>
         <div class="email-subject-box" id="bc-blog-title" contenteditable="true" style="outline:none;">${escHtml(blog.title || '')}</div>
-        <div class="email-field-label">Body</div>
-        <div class="email-body-box" id="bc-blog-body">${escHtml(blog.body || '')}</div>
+        <div class="email-field-label" style="display:flex;justify-content:space-between;align-items:center;">Body <span style="font-size:10px;color:#666;font-weight:400;">click to edit</span></div>
+        <div class="email-body-box" id="bc-blog-body" contenteditable="true" style="outline:none;min-height:200px;cursor:text;" spellcheck="true">${blog.body || ''}</div>
       </div>
     </div>`;
   el.style.display = 'block';
@@ -1850,10 +1850,11 @@ async function publishBlogPost() {
   const btn = document.getElementById('blog-publish-btn');
   if (!btn || !_lastBlogPost) return;
 
-  // Pick up any title edits the user made inline
+  // Read live DOM — picks up any edits the user made to title or body
   const titleEl = document.getElementById('bc-blog-title');
+  const bodyEl  = document.getElementById('bc-blog-body');
   const title   = (titleEl?.textContent || _lastBlogPost.title || '').trim();
-  const body    = _lastBlogPost.body || '';
+  const body    = bodyEl?.innerHTML || _lastBlogPost.body || '';
 
   btn.disabled    = true;
   btn.textContent = 'Publishing…';
