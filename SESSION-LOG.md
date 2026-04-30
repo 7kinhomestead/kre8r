@@ -3,6 +3,63 @@
 
 ---
 
+# Session 67 — Blog Pipeline Live + kre8r-land Crash Audit (2026-04-30)
+
+## Goal
+Get first blog post live at 7kinhomestead.land/blog. Fix kre8r-land crash loop (3500 restarts).
+Fix blog JSON truncation. Debug and resolve the "Not authenticated" publish chain.
+
+## What Was Built / Fixed
+
+### Blog Pipeline — End-to-End Live
+- **Root bug**: production server.js global auth guard was intercepting `POST /api/blog/posts`
+  before blog.js's `requireAuth` (which accepts the internal key) ever ran. Only `GET` was
+  whitelisted. Fix: added `POST /api/blog/posts` to server.js whitelist.
+- **Push-to-live proxy** (`src/routes/blog.js`): local server proxies publish to kre8r.app
+  using `INTERNAL_API_KEY`. No session needed. Same pattern as AffiliateΩr sync.
+- **Blog JSON truncation fix** (`src/routes/mailor.js`): replaced JSON response format with
+  plain-text `TITLE: xxx\n---\nHTML body` delimiter format. Claude no longer tries to JSON-encode
+  long HTML bodies. `callClaudeRaw()` + `parseBlogResponse()` added.
+- **parseBlogResponse hardened**: strips markdown code fences, extracts `<body>` from full HTML
+  documents, handles `# heading` and `**bold**` in title line, has fallback for missing delimiter.
+- **Blog system prompt tightened**: explicit rules — no meta-commentary, no full HTML documents,
+  no code fences, skip missing URLs rather than fabricate them, strict TITLE:/--- format.
+- **Publish button UX**: after success, button replaces itself with
+  `✓ Published · View Post →` link to `7kinhomestead.land/blog/{slug}`.
+- **First post live**: "Nobody Told Me This — And It Would Have Changed Everything"
+  published at 7kinhomestead.land/blog. YouTube thumbnail, TOC, Rock Rich CTA working.
+
+### kre8r-land Crash Audit (Opus background agent)
+All 8 issues found and fixed, deployed:
+1. **CRITICAL** `stateFull` ReferenceError (`sources.js`) — Temporal Dead Zone bug. Variable
+   used on line 348 before declared on line 354. Threw on every OLH aggregator run.
+   Primary cause of the 3500-restart crash loop. Fix: moved declaration above usage.
+2. **HIGH** No `unhandledRejection` / `uncaughtException` handlers — any unhandled async
+   error killed the process in Node 18+. Added both handlers to server.js.
+3. **HIGH** `migrateOlhUrls()` bare call at module load — if DB not ready, crashed
+   `require('./src/cron')` and server never started. Wrapped in try/catch.
+4. **MEDIUM** SIGTERM handler could stall — `server.close()` callback never fired if
+   `closeAllConnections` unavailable. Added 10s force-exit fallback (`gracefulShutdown()`).
+5. **FRONTEND** `openPP()` crashed on `price/acres = 0 or null` — `Math.round(Infinity)`
+   and `NaN.toLocaleString()` failures. Guarded all values with `|| 0` fallbacks.
+6. **FRONTEND** `l.score` undefined — `ppScoreNum` rendered "undefined". Fixed with `score = l.score || 0`.
+7. **BACKEND** `GET /:id` missing try/catch in listings.js — unstructured 500 on DB error.
+8. **FRONTEND** `l.loc.split(',')` TypeError — guarded with `(l.loc || '').split(',')`.
+9. **PM2** Added `listen_timeout: 10000` to ecosystem.config.js (OLH migration on boot).
+
+## Commits — kre8r
+- `ede494d` Blog: push-to-live proxy + internal key auth for POST /posts
+- `81c2361` Blog: remove requireAuth from push-to-live (local-only route)
+- `52ab55f` Blog: whitelist push-to-live from auth guard
+- `77272a4` Blog: plain-text response format — no more JSON parsing on long HTML bodies
+- `9c12d7d` Blog: harden parseBlogResponse + strict system prompt
+- `dca9c75` Blog: whitelist POST /api/blog/posts in server.js auth guard (THE fix)
+
+## Commits — kre8r-land
+- `71e614c` Crash audit fixes: stateFull TDZ, SIGTERM, unhandledRejection, openPP guards
+
+---
+
 # Session 65 — AffiliateΩr Two-Way Sync + Opus 4.7 Audit + OLH URL Fix (2026-04-29)
 
 ## Goal
