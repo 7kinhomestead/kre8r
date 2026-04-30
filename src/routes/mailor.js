@@ -26,6 +26,53 @@ function getKajabiKey() {
   return process.env.KAJABI_API_KEY || null;
 }
 
+// Plain-text Claude call — returns raw string, no JSON parsing.
+// Used for blog posts where long HTML bodies break JSON parsers.
+async function callClaudeRaw(systemPrompt, userPrompt, maxTokens = 4000) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
+  const { default: fetch } = await import('node-fetch');
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method  : 'POST',
+    headers : {
+      'Content-Type'      : 'application/json',
+      'x-api-key'         : apiKey,
+      'anthropic-version' : '2023-06-01',
+    },
+    body: JSON.stringify({
+      model      : process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+      max_tokens : maxTokens,
+      system     : systemPrompt,
+      messages   : [{ role: 'user', content: userPrompt }],
+    }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Claude API ${response.status}`);
+  }
+  const data = await response.json();
+  if (data.stop_reason === 'max_tokens') {
+    throw new Error(`Response too long for token budget (${maxTokens}). Try unchecking Deep Dive and generating separately.`);
+  }
+  return data.content[0].text.trim();
+}
+
+// Parse the TITLE: / --- delimiter format used for blog responses.
+function parseBlogResponse(raw) {
+  const sep = raw.indexOf('\n---\n');
+  if (sep === -1) {
+    // Fallback: first line is title, rest is body
+    const nl = raw.indexOf('\n');
+    return {
+      title: raw.slice(0, nl).replace(/^TITLE:\s*/i, '').trim(),
+      body:  raw.slice(nl + 1).trim(),
+    };
+  }
+  const titleLine = raw.slice(0, sep).replace(/^TITLE:\s*/i, '').trim();
+  const body      = raw.slice(sep + 5).trim();
+  return { title: titleLine, body };
+}
+
 async function callClaude(systemPrompt, userPrompt, maxTokens = 4000) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
@@ -306,11 +353,9 @@ DEEP DIVE BLOG POST RULES:
 - Include a "Want to go deeper?" section near the end pointing to the ROCK RICH community
 - End CTA should link to the YouTube video and the ROCK RICH community using real URLs from the SOCIAL LINKS block${blogCitationsSection}
 
-Return JSON only:
-{
-  "title": "blog post title",
-  "body": "full blog post as HTML with <p>, <h2>, <ul>/<li> tags, real hyperlinks for all social and citation URLs"
-}`
+TITLE: write the blog post title here
+---
+full blog post as HTML with <p>, <h2>, <ul>/<li> tags, real hyperlinks for all social and citation URLs`
         : `Write a blog post based on this prompt: ${prompt}
 Segment: ${segment || 'everyone'}
 Goal: ${goal || 'not specified'}
@@ -324,11 +369,10 @@ BLOG POST RULES:
 - End CTA should link to the YouTube video (if URL available) and the ROCK RICH community using real URLs from the SOCIAL LINKS block
 - Include social follow links naturally at the end (TikTok, Instagram, YouTube, Lemon8)${blogCitationsSection}
 
-Return JSON only:
-{
-  "title": "blog post title",
-  "body": "full blog post as HTML with <p>, <h2>, <ul>/<li> tags, real hyperlinks for all social and citation URLs"
-}`;
+Return plain text in this exact format — no JSON, no markdown code fences:
+TITLE: write the blog post title here
+---
+full blog post as HTML with <p>, <h2>, <ul>/<li> tags, real hyperlinks for all social and citation URLs`;
 
       const blogSystemPrompt = `You are a long-form writer for ${brand} — ${followerStr}.
 
@@ -338,7 +382,8 @@ You write blog posts for 7kinhomestead.land/blog — the research-backed compani
 These are NOT emails. They are standalone articles with HTML formatting, subheadings, inline citation links, and a clear narrative arc.
 Never write subject lines, email greetings, or "version_a/version_b" structure. Write a single cohesive article.`;
 
-      response.blog_post = await callClaude(blogSystemPrompt, blogPrompt, deep_dive ? 10000 : 6000);
+      const blogRaw      = await callClaudeRaw(blogSystemPrompt, blogPrompt, deep_dive ? 10000 : 6000);
+      response.blog_post = parseBlogResponse(blogRaw);
     }
 
     if (gen_community) {
