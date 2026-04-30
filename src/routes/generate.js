@@ -8,7 +8,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { getCreatorContext, getCommunityBlock, getSocialLinksBlock } = require('../utils/creator-context');
-const { callClaudeMessages } = require('../utils/claude');
+const { callClaudeMessages, repairJSON } = require('../utils/claude');
 
 // callClaudeMessages from shared util has full retry/backoff logic (429, 529, ECONNRESET).
 // Thin wrapper so call sites stay identical to the old local signature.
@@ -19,7 +19,12 @@ async function callClaude(systemPrompt, userPrompt, maxTokens = 4000) {
 function parseJson(text) {
   // Strip markdown fences if present
   const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-  return JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // Fallback: attempt structural repair for truncated/malformed JSON
+    return repairJSON(cleaned);
+  }
 }
 
 function fmtTs(s) {
@@ -284,6 +289,143 @@ OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
     res.json({ project_id: project_id || null, clips: parsed.clips });
   } catch (err) {
     console.error('[generate/captions]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/generate/captions-from-vault
+// Body: { footage_ids: [1,2,3], caption_direction? }
+// Loads each clip's transcript from VaultΩr and generates
+// platform captions from the actual spoken words.
+// No manual description entry. No clip-to-caption matching needed.
+// ─────────────────────────────────────────────
+router.post('/captions-from-vault', async (req, res) => {
+  const fs = require('fs');
+  const { transcribeFile } = require('../vault/transcribe');
+
+  try {
+    const { footage_ids, caption_direction } = req.body;
+    if (!footage_ids?.length) {
+      return res.status(400).json({ error: 'footage_ids required' });
+    }
+
+    const { brand, followerSummary, profile: cp } = getCreatorContext();
+
+    const systemPrompt = `You are the social media voice for ${brand} — ${followerSummary}.
+
+CREATOR VOICE: Straight-talking, warm, encouraging, genuinely funny. Never corporate. Real numbers always.
+
+PLATFORM RULES:
+- TikTok: Hook in the first line. Punchy, fast, scroll-stopping. 2-3 hashtags max. Under 300 characters total.
+- Instagram Reels: Warm, save-worthy. Ask a question or give a clear CTA. 5-8 hashtags at the end. 150-250 characters.
+- Facebook: Conversational and community-driven. 3-5 short paragraphs. "Comment X for the link" format works well. 0-2 hashtags.
+- YouTube Shorts: Search-aware. Include the main topic keyword naturally in the first sentence. 2-3 sentences + 3-5 hashtags.
+- Lemon8: Visual storytelling and lifestyle vibe. More descriptive than TikTok. Lists and "here's what I learned" structure. 5-8 hashtags.
+
+OUTPUT FORMAT — valid JSON only, no preamble:
+{
+  "footage_id": 123,
+  "filename": "clip_name.mp4",
+  "captions": {
+    "tiktok": "caption text",
+    "instagram": "caption text",
+    "facebook": "caption text",
+    "shorts": "caption text",
+    "lemon8": "caption text"
+  }
+}`;
+
+    // Build clip blocks — transcribe on-demand if not already done
+    const clipBlocks = [];
+    for (const rawId of footage_ids) {
+      const id = parseInt(rawId, 10);
+      const footage = db.getFootageById(id);
+      if (!footage) { console.warn(`[captions-from-vault] footage_id=${id} not found`); continue; }
+
+      console.log(`[captions-from-vault] id=${id} file=${footage.original_filename} has_transcript=${!!(footage.transcript)} transcript_path=${footage.transcript_path || 'none'}`);
+
+      let transcriptText = footage.transcript || '';
+
+      // If no plain-text transcript, try loading from transcript_path
+      if (!transcriptText && footage.transcript_path && fs.existsSync(footage.transcript_path)) {
+        try {
+          const tx = JSON.parse(fs.readFileSync(footage.transcript_path, 'utf8'));
+          transcriptText = tx.text || '';
+          console.log(`[captions-from-vault] id=${id} loaded transcript from path (${transcriptText.length} chars)`);
+        } catch (_) {}
+      }
+
+      // On-demand transcription if still missing
+      if (!transcriptText) {
+        const sourcePath = footage.proxy_path || footage.file_path;
+        console.log(`[captions-from-vault] id=${id} no transcript — attempting Whisper on ${sourcePath} (exists=${sourcePath ? fs.existsSync(sourcePath) : false})`);
+        if (sourcePath && fs.existsSync(sourcePath)) {
+          try {
+            console.log(`[captions-from-vault] id=${id} starting Whisper…`);
+            const tx = await transcribeFile(sourcePath, { footageId: id });
+            console.log(`[captions-from-vault] id=${id} Whisper done: ok=${tx.ok} error=${tx.error || 'none'}`);
+            if (tx.ok) transcriptText = tx.text || '';
+          } catch (txErr) {
+            console.warn(`[captions-from-vault] id=${id} Whisper threw: ${txErr.message}`);
+          }
+        }
+      }
+
+      const filename = footage.original_filename || footage.file_path?.split(/[\\/]/).pop() || `clip_${id}`;
+      const duration = footage.duration ? `${Math.round(footage.duration)}s` : '';
+      const transcriptLine = transcriptText
+        ? `TRANSCRIPT: ${transcriptText}`
+        : `TRANSCRIPT: (not available — write captions based on the filename and typical homestead content)`;
+
+      clipBlocks.push({
+        footage_id: id,
+        filename,
+        block: `[CLIP footage_id=${id} | file: ${filename}${duration ? ` | ${duration}` : ''}]\n${transcriptLine}`
+      });
+    }
+
+    // Call Claude once per clip — avoids timeout on large batches with full transcripts
+    const allClips = [];
+    for (let i = 0; i < clipBlocks.length; i++) {
+      const { block, footage_id, filename } = clipBlocks[i];
+      let userPrompt = `Generate platform-native captions for this short-form clip.\n`;
+      if (caption_direction) userPrompt += `Creator direction: ${caption_direction}\n`;
+      userPrompt += `\n${block}\n\nWrite all 5 platform captions. JSON only.`;
+      try {
+        console.log(`[captions-from-vault] calling Claude for footage_id=${footage_id} (${i+1}/${clipBlocks.length})`);
+        const rawText = await callClaude(systemPrompt, userPrompt, 4096);
+        let parsed;
+        try {
+          parsed = parseJson(rawText);
+        } catch (parseErr) {
+          // Last-resort: extract any complete caption strings via regex
+          console.warn(`[captions-from-vault] JSON parse failed for footage_id=${footage_id}, attempting regex extraction`);
+          const extract = (key) => {
+            const m = rawText.match(new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
+            return m ? m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"') : null;
+          };
+          const tiktok    = extract('tiktok');
+          const instagram = extract('instagram');
+          const facebook  = extract('facebook');
+          const shorts    = extract('shorts');
+          const lemon8    = extract('lemon8');
+          if (tiktok || instagram || facebook || shorts || lemon8) {
+            parsed = { captions: { tiktok, instagram, facebook, shorts, lemon8 } };
+            console.log(`[captions-from-vault] Regex rescue recovered captions for footage_id=${footage_id}`);
+          }
+        }
+        const captions = parsed?.captions || parsed?.clips?.[0]?.captions;
+        if (captions) allClips.push({ footage_id, filename, captions });
+        else console.warn(`[captions-from-vault] No captions parsed for footage_id=${footage_id}`);
+      } catch (clipErr) {
+        console.warn(`[captions-from-vault] Claude failed for footage_id=${footage_id}: ${clipErr.message}`);
+      }
+    }
+
+    res.json({ clips: allClips });
+  } catch (err) {
+    console.error('[generate/captions-from-vault]', err);
     res.status(500).json({ error: err.message });
   }
 });

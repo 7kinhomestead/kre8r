@@ -63,7 +63,8 @@ async function callClaude(prompt, maxTokens = 8192, options = {}) {
   for (let attempt = 0; attempt <= BACKOFF.length; attempt++) {
     try {
       const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), 75000); // 75s server-side timeout
+      const timeoutMs = options.timeoutMs || 180000; // default 3 min; callers can override
+      const timer = setTimeout(() => ac.abort(), timeoutMs);
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method  : 'POST',
         signal  : ac.signal,
@@ -169,7 +170,8 @@ async function callClaudeMessages(system, messages, maxTokens = 2048, options = 
       if (system) body.system = system;
 
       const ac2 = new AbortController();
-      const timer2 = setTimeout(() => ac2.abort(), 75000); // 75s server-side timeout
+      const timeoutMs2 = options.timeoutMs || 180000; // default 3 min; callers can override
+      const timer2 = setTimeout(() => ac2.abort(), timeoutMs2);
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method  : 'POST',
         signal  : ac2.signal,

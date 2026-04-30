@@ -19,9 +19,7 @@ const path = require('path');
 
 const db = require('../db');
 const { getCreatorContext } = require('../utils/creator-context');
-
-const ANTHROPIC_VERSION = '2023-06-01';
-const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
+const { callClaude: _callClaudeShared } = require('../utils/claude');
 
 // ─────────────────────────────────────────────
 // PROMPT BUILDER
@@ -163,47 +161,11 @@ Use exact decimal timestamps from the transcript.`;
 // ─────────────────────────────────────────────
 // CALL CLAUDE
 // ─────────────────────────────────────────────
+// Use the shared Claude caller — has retry logic, proper timeout, token logging.
+// 2048 output tokens is enough for cut analysis; 3-min timeout for large transcripts.
 
 async function callClaude(prompt) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
-
-  const { default: fetch } = await import('node-fetch');
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         apiKey,
-      'anthropic-version': ANTHROPIC_VERSION
-    },
-    body: JSON.stringify({
-      model:      MODEL,
-      max_tokens: 2048,
-      messages:   [{ role: 'user', content: prompt }]
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Claude API error ${response.status}`);
-  }
-
-  const data = await response.json();
-  const raw  = data.content[0].text.trim();
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```\s*$/i, '')
-    .trim();
-
-  try {
-    return JSON.parse(cleaned);
-  } catch (parseErr) {
-    throw new Error(
-      `Claude returned malformed JSON: ${parseErr.message}. ` +
-      `First 300 chars: ${cleaned.slice(0, 300)}`
-    );
-  }
+  return _callClaudeShared(prompt, 2048, { tool: 'cutor', timeoutMs: 180000 });
 }
 
 // ─────────────────────────────────────────────

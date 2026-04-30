@@ -430,6 +430,12 @@
       <div class="section-label">THE ASK <span class="badge badge-teal">BROADCAST</span></div>
       <div class="field-grid">
         <div class="field full">
+          <label>Link to Project <span style="opacity:.45;font-weight:300;letter-spacing:0">(optional — pulls research, script &amp; voice for blog posts)</span></label>
+          <select id="bc-project-select" onchange="onProjectSelect(this.value)" style="width:100%">
+            <option value="">— No project —</option>
+          </select>
+        </div>
+        <div class="field full">
           <label>What is this email about?</label>
           <textarea id="bc-prompt" rows="3" placeholder="e.g. New root cellar video just dropped. Real costs revealed. $340 for 800lbs of food storage."></textarea>
         </div>
@@ -477,7 +483,8 @@
         <div class="output-types-label">GENERATE</div>
         <div class="output-checkboxes">
           <label class="output-check"><input type="checkbox" id="gen-email" checked> Email A/B</label>
-          <label class="output-check"><input type="checkbox" id="gen-blog"> Blog Post</label>
+          <label class="output-check"><input type="checkbox" id="gen-blog" onchange="toggleDeepDive()"> Blog Post</label>
+          <label class="output-check" id="deep-dive-wrap" style="display:none;margin-left:12px;opacity:0.85"><input type="checkbox" id="gen-deep-dive"> 🔬 Deep Dive</label>
           <label class="output-check"><input type="checkbox" id="gen-community"> Community Post</label>
           <label class="output-check"><input type="checkbox" id="gen-fb-post"> 📘 Facebook Post</label>
         </div>
@@ -1008,6 +1015,7 @@
 // ─────────────────────────────────────────────
 let currentMode = 'broadcast';
 let currentProjectId = null;
+let currentProjectYoutubeUrl = null;
 let activeTiers = ['greenhouse', 'garden', 'founding'];
 let lastBroadcast = null;
 let lastSequence  = null;
@@ -1032,8 +1040,38 @@ window.addEventListener('DOMContentLoaded', async () => {
     currentProjectId = parseInt(pid);
     loadProjectContext(currentProjectId);
   }
-  await Promise.all([checkKajabiStatus(), checkMailerliteStatus(), loadVoiceProfiles()]);
+  await Promise.all([checkKajabiStatus(), checkMailerliteStatus(), loadVoiceProfiles(), loadProjectDropdown(pid ? parseInt(pid) : null)]);
 });
+
+async function loadProjectDropdown(preselect = null) {
+  try {
+    const res  = await fetch('/api/projects?limit=60&sort=updated');
+    const data = await res.json();
+    const projects = Array.isArray(data) ? data : (data.projects || []);
+    const sel = document.getElementById('bc-project-select');
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title || `Project ${p.id}`;
+      if (preselect && p.id === preselect) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
+async function onProjectSelect(val) {
+  if (!val) {
+    currentProjectId = null;
+    document.getElementById('project-bar').classList.add('hidden');
+    return;
+  }
+  currentProjectId = parseInt(val);
+  // Update URL so refreshing preserves the selection
+  const url = new URL(window.location);
+  url.searchParams.set('project_id', currentProjectId);
+  window.history.replaceState({}, '', url);
+  loadProjectContext(currentProjectId);
+}
 
 async function loadProjectContext(id) {
   try {
@@ -1048,6 +1086,7 @@ async function loadProjectContext(id) {
     }
     if (project.youtube_url) {
       document.getElementById('seq-video-url').value = project.youtube_url;
+      currentProjectYoutubeUrl = project.youtube_url;
     }
     if (selected_package?.title) {
       document.getElementById('seq-package-title').value = selected_package.title;
@@ -1615,6 +1654,12 @@ function getActiveTiers() {
 // ─────────────────────────────────────────────
 // GENERATE — BROADCAST
 // ─────────────────────────────────────────────
+function toggleDeepDive() {
+  const blogChecked = document.getElementById('gen-blog').checked;
+  document.getElementById('deep-dive-wrap').style.display = blogChecked ? 'inline-flex' : 'none';
+  if (!blogChecked) document.getElementById('gen-deep-dive').checked = false;
+}
+
 async function generateBroadcast() {
   const prompt = document.getElementById('bc-prompt').value.trim();
   if (!prompt) { showToast('Describe what this email is about', 'amber'); return; }
@@ -1640,6 +1685,7 @@ async function generateBroadcast() {
       gen_blog:       document.getElementById('gen-blog').checked,
       gen_community:  document.getElementById('gen-community').checked,
       gen_fb_post:    document.getElementById('gen-fb-post').checked,
+      deep_dive:      document.getElementById('gen-deep-dive').checked,
     };
 
     const res  = await fetch('/api/mailor/broadcast', {
@@ -1768,7 +1814,11 @@ function renderBroadcastResults(broadcast) {
   document.getElementById('bc-results').scrollIntoView({ behavior: 'smooth' });
 }
 
+// Store the last generated blog so the publish function can access it
+let _lastBlogPost = null;
+
 function renderBlogPost(blog) {
+  _lastBlogPost = blog;
   let el = document.getElementById('bc-blog-results');
   if (!el) {
     el = document.createElement('div');
@@ -1779,18 +1829,62 @@ function renderBlogPost(blog) {
   el.innerHTML = `
     <div class="results-header">
       <span class="results-label">📝 BLOG POST</span>
-      <button class="btn btn-copy" onclick="clipWrite(document.getElementById('bc-blog-body').textContent, () => showToast('Blog copied', 'green'))">Copy</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-copy" onclick="clipWrite(document.getElementById('bc-blog-body').textContent, () => showToast('Blog copied', 'green'))">Copy</button>
+        <button class="btn" id="blog-publish-btn" style="background:#14b8a6;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.04em;" onclick="publishBlogPost()">📤 Publish to Blog</button>
+      </div>
     </div>
     <div class="ab-card">
       <div class="ab-card-body">
         <div class="email-field-label">Title</div>
-        <div class="email-subject-box">${escHtml(blog.title || '')}</div>
+        <div class="email-subject-box" id="bc-blog-title" contenteditable="true" style="outline:none;">${escHtml(blog.title || '')}</div>
         <div class="email-field-label">Body</div>
         <div class="email-body-box" id="bc-blog-body">${escHtml(blog.body || '')}</div>
       </div>
     </div>`;
   el.style.display = 'block';
   el.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function publishBlogPost() {
+  const btn = document.getElementById('blog-publish-btn');
+  if (!btn || !_lastBlogPost) return;
+
+  // Pick up any title edits the user made inline
+  const titleEl = document.getElementById('bc-blog-title');
+  const title   = (titleEl?.textContent || _lastBlogPost.title || '').trim();
+  const body    = _lastBlogPost.body || '';
+
+  btn.disabled    = true;
+  btn.textContent = 'Publishing…';
+
+  try {
+    const payload = {
+      title,
+      body,
+      project_id:    currentProjectId || null,
+      content_angle: document.getElementById('bc-angle')?.value || null,
+      is_deep_dive:  document.getElementById('gen-deep-dive')?.checked || false,
+      youtube_url:   currentProjectYoutubeUrl || null,
+      publish:       true,
+    };
+
+    const res  = await fetch('/api/blog/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+
+    btn.textContent = '✓ Published';
+    btn.style.background = '#22c55e';
+    showToast(`Published: "${data.post.title}" — slug: ${data.post.slug}`, 'green');
+  } catch (e) {
+    btn.disabled    = false;
+    btn.textContent = '📤 Publish to Blog';
+    showToast(`Publish failed: ${e.message}`, 'red');
+  }
 }
 
 function renderCommunityPost(post) {

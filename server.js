@@ -366,6 +366,9 @@ app.use((req, res, next) => {
   if (req.path === '/api/affiliator/gear-export') return next();
   // AffiliateΩr gear-categories — public (consumed by 7kinhomestead.land/gear)
   if (req.path === '/api/affiliator/gear-categories') return next();
+  // Blog — public read endpoints (consumed by 7kinhomestead.land/blog)
+  if (req.method === 'GET' && req.path.startsWith('/api/blog/posts')) return next();
+  if (req.method === 'OPTIONS' && req.path.startsWith('/api/blog/posts')) return next();
   // AffiliateΩr redirect — public so external visitors can click through
   if (req.path.startsWith('/r/')) return next();
   // AffiliateΩr gear feed — consumed by 7kinhomestead.land/gear (cross-origin, no session)
@@ -622,6 +625,7 @@ app.use('/api/affiliator',        require('./src/routes/affiliator'));
 // The Fence — page served directly, API mounted separately
 app.get('/fence', (req, res) => res.sendFile(path.join(__dirname, 'public', 'fence', 'index.html')));
 app.use('/api/fence',             require('./src/routes/fence'));
+app.use('/api/blog',              require('./src/routes/blog'));
 
 // ── AffiliateΩr public redirect — logs click, sends visitor to destination ──
 app.get('/r/:partnerKey/:linkKey', (req, res) => {

@@ -1317,6 +1317,26 @@ function runMigrations() {
     catTx();
     console.log('[DB] AffiliateΩr: seeded 7 gear categories');
   }
+
+  // ─── Blog posts ───────────────────────────────────────────────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS blog_posts (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER,
+    slug          TEXT    NOT NULL UNIQUE,
+    title         TEXT    NOT NULL,
+    body          TEXT    NOT NULL,
+    content_angle TEXT,
+    is_deep_dive  INTEGER NOT NULL DEFAULT 0,
+    read_time_min INTEGER,
+    youtube_url   TEXT,
+    status        TEXT    NOT NULL DEFAULT 'draft',
+    published_at  TEXT,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_blog_status    ON blog_posts(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_blog_published ON blog_posts(published_at DESC)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_blog_project   ON blog_posts(project_id)');
 }
 
 /**
@@ -1902,6 +1922,26 @@ function bootstrapTenantTables(tdb) {
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   exec('CREATE INDEX IF NOT EXISTS idx_gear_cats_sort ON gear_categories(sort_order)');
+
+  // ─── Blog posts — published from MailΩr to 7kinhomestead.land ─────────────
+  exec(`CREATE TABLE IF NOT EXISTS blog_posts (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER,
+    slug          TEXT    NOT NULL UNIQUE,
+    title         TEXT    NOT NULL,
+    body          TEXT    NOT NULL,
+    content_angle TEXT,
+    is_deep_dive  INTEGER NOT NULL DEFAULT 0,
+    read_time_min INTEGER,
+    youtube_url   TEXT,
+    status        TEXT    NOT NULL DEFAULT 'draft',
+    published_at  TEXT,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_blog_status    ON blog_posts(status)');
+  exec('CREATE INDEX IF NOT EXISTS idx_blog_published ON blog_posts(published_at DESC)');
+  exec('CREATE INDEX IF NOT EXISTS idx_blog_project   ON blog_posts(project_id)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -4911,6 +4951,15 @@ module.exports = {
   clearVectrSession,
   getVectrSyncCache,
   setVectrSyncCache,
+  // Blog
+  insertBlogPost,
+  getBlogPost,
+  getBlogPostBySlug,
+  getAllBlogPosts,
+  updateBlogPost,
+  publishBlogPost,
+  unpublishBlogPost,
+  deleteBlogPost,
 };
 
 // ─────────────────────────────────────────────
@@ -5384,5 +5433,93 @@ function setVectrSyncCache(data) {
     `INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES ('vectr_sync_cache', ?, CURRENT_TIMESTAMP)`,
     [JSON.stringify(data)]
   );
+}
+
+// ─────────────────────────────────────────────
+// Blog — MailΩr → 7kinhomestead.land
+// ─────────────────────────────────────────────
+
+function _slugify(title) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100);
+}
+
+function _uniqueSlug(base) {
+  let slug = base;
+  let n = 0;
+  while (_get('SELECT id FROM blog_posts WHERE slug = ?', [slug])) {
+    n++;
+    slug = `${base}-${n}`;
+  }
+  return slug;
+}
+
+function _readTimeMins(html) {
+  const words = (html || '').replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+function insertBlogPost({ project_id, title, body, content_angle, is_deep_dive, youtube_url, status = 'draft' }) {
+  const slug        = _uniqueSlug(_slugify(title));
+  const read_time   = _readTimeMins(body);
+  const published_at = status === 'published' ? new Date().toISOString() : null;
+  const r = _run(
+    `INSERT INTO blog_posts (project_id, slug, title, body, content_angle, is_deep_dive, read_time_min, youtube_url, status, published_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [project_id || null, slug, title, body, content_angle || null,
+     is_deep_dive ? 1 : 0, read_time, youtube_url || null, status, published_at]
+  );
+  return _get('SELECT * FROM blog_posts WHERE id = ?', [r.lastInsertRowid]);
+}
+
+function getBlogPost(id) {
+  return _get('SELECT * FROM blog_posts WHERE id = ?', [id]);
+}
+
+function getBlogPostBySlug(slug) {
+  return _get('SELECT * FROM blog_posts WHERE slug = ?', [slug]);
+}
+
+function getAllBlogPosts({ status = null, limit = 50, offset = 0 } = {}) {
+  if (status) {
+    return _all('SELECT * FROM blog_posts WHERE status = ? ORDER BY published_at DESC, created_at DESC LIMIT ? OFFSET ?',
+      [status, limit, offset]);
+  }
+  return _all('SELECT * FROM blog_posts ORDER BY created_at DESC LIMIT ? OFFSET ?', [limit, offset]);
+}
+
+function updateBlogPost(id, fields) {
+  const allowed = ['title', 'body', 'content_angle', 'is_deep_dive', 'read_time_min', 'youtube_url', 'status'];
+  const sets = [];
+  const vals = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) { sets.push(`${k} = ?`); vals.push(v); }
+  }
+  if (!sets.length) return;
+  if (fields.body) {
+    sets.push('read_time_min = ?');
+    vals.push(_readTimeMins(fields.body));
+  }
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  vals.push(id);
+  _run(`UPDATE blog_posts SET ${sets.join(', ')} WHERE id = ?`, vals);
+  return _get('SELECT * FROM blog_posts WHERE id = ?', [id]);
+}
+
+function publishBlogPost(id) {
+  _run(`UPDATE blog_posts SET status = 'published', published_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [id]);
+  return _get('SELECT * FROM blog_posts WHERE id = ?', [id]);
+}
+
+function unpublishBlogPost(id) {
+  _run(`UPDATE blog_posts SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [id]);
+  return _get('SELECT * FROM blog_posts WHERE id = ?', [id]);
+}
+
+function deleteBlogPost(id) {
+  _run('DELETE FROM blog_posts WHERE id = ?', [id]);
 }
 

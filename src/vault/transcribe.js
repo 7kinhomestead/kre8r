@@ -47,10 +47,13 @@ const WHISPER_CANDIDATES = process.env.PYTHON_PATH
   ? [process.env.PYTHON_PATH]
   : ['py', 'python3', 'python'];
 
-// Test whether `bin -m whisper --help` works; resolves version string or null
+// Test whether `bin -c "import whisper; print(whisper.__version__)"` works;
+// resolves version string or null.
+// NOTE: we do NOT use `python -m whisper --help` because whisper's help text
+// contains a Unicode character (U+3002) that crashes on Windows cp1252 pipes.
 function _testWhisperBinary(bin) {
   return new Promise((resolve) => {
-    const proc = spawn(bin, ['-m', 'whisper', '--help'], {
+    const proc = spawn(bin, ['-c', 'import whisper; print(whisper.__version__)'], {
       windowsHide: true,
       timeout: 10_000
     });
@@ -58,14 +61,10 @@ function _testWhisperBinary(bin) {
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', d => { out += d.toString(); });
     proc.on('error', () => resolve(null));
-    proc.on('close', () => {
-      const lower = out.toLowerCase();
-      if (lower.includes('whisper') || lower.includes('usage') || lower.includes('model')) {
-        const m = out.match(/(\d+\.\d+[\.\d]*)/);
-        resolve(m ? m[1] : 'installed');
-      } else {
-        resolve(null);
-      }
+    proc.on('close', (code) => {
+      if (code !== 0) { resolve(null); return; }
+      const ver = out.trim();
+      resolve(ver.length > 0 ? ver : 'installed');
     });
   });
 }

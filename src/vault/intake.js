@@ -269,7 +269,7 @@ function getVisionPrompt() {
   const _vCtx = getCreatorContext();
   return `You are analyzing three thumbnails from different points in a video clip (early, middle, late) from a ${_vCtx.niche} content creator (${_vCtx.brand}). Use all three frames together to make your classification — do not judge on any single frame alone. A blurry early frame with sharp middle and late frames is a usable or hero clip, not a discard. Return ONLY a JSON object:
 {
-  "shot_type": "one of: dialogue, talking-head, b-roll, action, completed-video, unusable",
+  "shot_type": "one of: dialogue, talking-head, b-roll, action, completed-video, social-clip, unusable",
   "subcategory": "one of: wide, medium, close-up, detail, null — only for b-roll, null for all others",
   "description": "1-2 sentences describing what is visible across the three frames — specific and search-useful",
   "quality_flag": "one of: hero, usable, review, discard",
@@ -286,6 +286,8 @@ const SHOT_TYPE_ALIASES = {
   'broll'        : 'b-roll',
   'b_roll'       : 'b-roll',
   'completed_video' : 'completed-video',
+  'social_clip'     : 'social-clip',
+  'socialclip'      : 'social-clip',
 };
 function normalizeShotType(val) {
   if (!val) return null;

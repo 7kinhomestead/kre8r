@@ -17,6 +17,7 @@ const chokidar  = require('chokidar');
 const path      = require('path');
 const fs        = require('fs');
 const { ingestFile } = require('./intake');
+const { transcribeFile } = require('./transcribe');
 
 const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH || path.join(__dirname, '..', '..', 'creator-profile.json');
 const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv']);
@@ -181,6 +182,24 @@ function startWatcher(overridePath = null) {
       const result = await ingestFile(filePath, { projectId, shot_type_override });
       if (result.ok) {
         console.log(`[VaultΩr Watcher] ✓ Ingested: ${path.basename(filePath)} (id=${result.id}, type=${result.shot_type || 'unclassified'})`);
+
+        // Auto-transcribe social clips so CaptionΩr can generate captions
+        // from the actual spoken words — no manual matching needed.
+        if (result.shot_type === 'social-clip' && result.id) {
+          (async () => {
+            try {
+              console.log(`[VaultΩr Watcher] Auto-transcribing social clip id=${result.id}…`);
+              const tx = await transcribeFile(filePath, { footageId: result.id });
+              if (tx.ok) {
+                console.log(`[VaultΩr Watcher] ✓ Transcript ready for clip id=${result.id}`);
+              } else {
+                console.warn(`[VaultΩr Watcher] Transcription skipped for clip id=${result.id}: ${tx.error}`);
+              }
+            } catch (txErr) {
+              console.warn(`[VaultΩr Watcher] Auto-transcribe failed for clip id=${result.id}: ${txErr.message}`);
+            }
+          })();
+        }
       } else {
         console.warn(`[VaultΩr Watcher] ✗ Ingest failed: ${path.basename(filePath)} — ${result.error}`);
       }

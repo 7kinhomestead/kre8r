@@ -140,9 +140,10 @@ router.post('/broadcast', async (req, res) => {
       gen_blog,         // boolean — generate blog post
       gen_community,    // boolean — generate community post
       gen_fb_post,      // boolean — generate Facebook text/image post
+      deep_dive,        // boolean — deep-dive blog post (full research, all citations, 1200-1800w)
     } = req.body;
 
-    console.log('[mailor/broadcast] flags:', { gen_email, gen_blog, gen_community });
+    console.log('[mailor/broadcast] flags:', { gen_email, gen_blog, gen_community, deep_dive });
 
     if (!prompt) return res.status(400).json({ error: 'prompt is required' });
 
@@ -225,7 +226,7 @@ RULES:
           researchBlock += `\nPRE-PRODUCTION RESEARCH (use this to validate the argument — the "why this matters"):\n`;
           if (id8r.chosenConcept?.title)       researchBlock += `Chosen Concept: ${id8r.chosenConcept.title}\n`;
           if (id8r.chosenConcept?.hook)        researchBlock += `Original Hook: ${id8r.chosenConcept.hook}\n`;
-          if (id8r.researchSummary)            researchBlock += `Research Findings: ${String(id8r.researchSummary).slice(0, 800)}\n`;
+          if (id8r.researchSummary)            researchBlock += `Research Findings: ${deep_dive ? String(id8r.researchSummary) : String(id8r.researchSummary).slice(0, 800)}\n`;
           if (id8r.briefData?.visionStatement) researchBlock += `Vision: ${id8r.briefData.visionStatement}\n`;
 
           // Citations — credible sources for blog backlinks and argument validation
@@ -278,19 +279,39 @@ RULES:
 
     userPrompt += `\nKeep each email body under 350 words — punchy, one job, done.\nReturn JSON only:\n{\n  "segment": "${segment || 'everyone'}",\n  "version_a": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  },\n  "version_b": {\n    "label": "one word describing this approach",\n    "subject": "subject line",\n    "body": "full email body"\n  }\n}`;
 
-    const result = await callClaude(systemPrompt, userPrompt, 8192);
-
     const response = { ok: true };
 
     if (gen_email !== false) {
+      const result = await callClaude(systemPrompt, userPrompt, 8192);
       response.broadcast = result;
     }
 
     if (gen_blog) {
       const blogCitationsSection = citationsHtml
-        ? `\n\nAt the end of the blog post, include a Sources section:\n<h3>Sources</h3>\n<ul>\n${citationsHtml}\n</ul>\nAlso weave 1-2 of these citations naturally into the body as inline <a href> links where they support the argument.`
+        ? `\n\nAt the end of the blog post, include a Sources section:\n<h3>Sources</h3>\n<ul>\n${citationsHtml}\n</ul>\nWeave ${deep_dive ? 'every available citation' : '1-2 of these citations'} naturally into the body as inline <a href> links where they support the argument.`
         : '';
-      const blogPrompt = `Write a blog post based on this prompt: ${prompt}
+
+      const blogPrompt = deep_dive
+        ? `Write a long-form deep-dive blog post based on this prompt: ${prompt}
+Segment: ${segment || 'everyone'}
+Goal: ${goal || 'not specified'}
+${projectContextBlock}${researchBlock}${citationsBlock}${packageBlock}${viralClipsBlock}${transcriptBlock}${socialBlock}
+DEEP DIVE BLOG POST RULES:
+- This is a companion piece to the video — for the viewer who wants to go further after watching
+- Use ALL the research findings above as the backbone. Name the studies, name the researchers, cite the numbers.
+- Structure: powerful opening hook → "here's what the research actually says" (cite each study/finding with inline links) → how this showed up in real life on the homestead → practical takeaways the reader can use today → CTA
+- Write in Jason's voice — straight-talking, warm, real numbers, never corporate
+- 1,200–1,800 words. Use <h2> subheadings to break it into scannable sections.
+- Every citation in CREDIBLE SOURCES should appear as an inline <a href> link at least once
+- Include a "Want to go deeper?" section near the end pointing to the ROCK RICH community
+- End CTA should link to the YouTube video and the ROCK RICH community using real URLs from the SOCIAL LINKS block${blogCitationsSection}
+
+Return JSON only:
+{
+  "title": "blog post title",
+  "body": "full blog post as HTML with <p>, <h2>, <ul>/<li> tags, real hyperlinks for all social and citation URLs"
+}`
+        : `Write a blog post based on this prompt: ${prompt}
 Segment: ${segment || 'everyone'}
 Goal: ${goal || 'not specified'}
 ${projectContextBlock}${researchBlock}${citationsBlock}${packageBlock}${viralClipsBlock}${transcriptBlock}${socialBlock}
@@ -308,7 +329,16 @@ Return JSON only:
   "title": "blog post title",
   "body": "full blog post as HTML with <p>, <h2>, <ul>/<li> tags, real hyperlinks for all social and citation URLs"
 }`;
-      response.blog_post = await callClaude(systemPrompt, blogPrompt, 6000);
+
+      const blogSystemPrompt = `You are a long-form writer for ${brand} — ${followerStr}.
+
+${voiceContext}
+
+You write blog posts for 7kinhomestead.land/blog — the research-backed companion pieces to the creator's videos.
+These are NOT emails. They are standalone articles with HTML formatting, subheadings, inline citation links, and a clear narrative arc.
+Never write subject lines, email greetings, or "version_a/version_b" structure. Write a single cohesive article.`;
+
+      response.blog_post = await callClaude(blogSystemPrompt, blogPrompt, deep_dive ? 10000 : 6000);
     }
 
     if (gen_community) {

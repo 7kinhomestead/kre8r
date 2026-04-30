@@ -1251,7 +1251,8 @@
     }
 
     // ─────────────────────────────────────────────
-    // Send to DaVinci — creates vertical 9:16 timelines
+    // Send to DaVinci — full source on ONE timeline, colored span markers per clip
+    // Creator blades at marker boundaries instead of relying on Whisper timestamps
     // ─────────────────────────────────────────────
     async function sendToDavinci(footageId, filename) {
       const btn = document.getElementById('davinciBtn');
@@ -1274,17 +1275,13 @@
           return;
         }
 
-        const n = data.timeline_count || 0;
-        showToast(`✓ ${n} vertical timeline${n !== 1 ? 's' : ''} created in Resolve — "${data.project_name}"`, 'green');
+        const n = data.markers_added || 0;
+        showToast(`✓ ${n} clip marker${n !== 1 ? 's' : ''} placed in Resolve — "${data.project_name}"`, 'green');
+        setTimeout(() => showToast('💡 Blade at each marker\'s start and end — green=gold, blue=social, cyan=retention', 'blue'), 1800);
 
-        if (data.reframe_note) {
-          setTimeout(() => showToast('💡 ' + data.reframe_note, 'blue'), 1800);
-        }
+        if (btn) { btn.disabled = false; btn.textContent = `✓ ${n} markers in Resolve`; }
 
-        if (btn) { btn.disabled = false; btn.textContent = `✓ ${n} timelines in Resolve`; }
-
-            // Show persistent breadcrumb card below the button wrap
-        // Fetch project folder_path so we can point to the exact clips subfolder
+        // Show persistent breadcrumb card
         let projectFolderPath = null;
         if (currentFootage?.project_id) {
           try {
@@ -1304,12 +1301,12 @@
     // ─────────────────────────────────────────────
     // DaVinci success breadcrumb — persistent next-step card
     // ─────────────────────────────────────────────
-    function showDaVinciSuccessCard(timelineCount, projectName, projectFolderPath) {
+    function showDaVinciSuccessCard(markerCount, projectName, projectFolderPath) {
       // Remove any previous card
       const existing = document.getElementById('davinci-success-card');
       if (existing) existing.remove();
 
-      // Use project clips subfolder if available, otherwise fall back to intake root
+      // Render path for after DaVinci export
       const renderPath = projectFolderPath
         ? projectFolderPath + '\\clips\\'
         : 'D:\\kre8r\\intake';
@@ -1334,19 +1331,24 @@
       card.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
           <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;color:#14b8a6;text-transform:uppercase;">
-            ✅ ${timelineCount} Timeline${timelineCount !== 1 ? 's' : ''} in Resolve${projectName ? ` — "${escHtml(projectName)}"` : ''}
+            ✅ ${markerCount} clip marker${markerCount !== 1 ? 's' : ''} in Resolve${projectName ? ` — "${escHtml(projectName)}"` : ''}
           </div>
           <button onclick="this.closest('#davinci-success-card').remove()" style="background:none;border:none;color:#666;font-size:16px;cursor:pointer;line-height:1;flex-shrink:0;" title="Dismiss">✕</button>
         </div>
-        <div style="color:#aaa;margin-bottom:10px;">
-          When you finish editing in DaVinci, render your vertical clips to:
+        <div style="color:#aaa;margin-bottom:10px;font-size:12px;line-height:1.7;">
+          In DaVinci: open the <strong style="color:#e5e5e5;">CLIP_MARKERS</strong> timeline. Each colored marker spans one clip.<br>
+          <span style="color:#4ade80;">■</span> Green = gold &nbsp; <span style="color:#60a5fa;">■</span> Blue = social &nbsp; <span style="color:#67e8f9;">■</span> Cyan = retention &nbsp; <span style="color:#f87171;">■</span> Red = off-script gold<br>
+          Blade at the <strong style="color:#e5e5e5;">start</strong> and <strong style="color:#e5e5e5;">end</strong> of each colored marker region, delete the gaps, then export each clip.
+        </div>
+        <div style="color:#777;margin-bottom:10px;font-size:11px;">
+          After export, render clips to:
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
           <code style="background:#1e1e1e;border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:12px;color:#e5e5e5;letter-spacing:.3px;">${escHtml(renderPath)}</code>
           <button onclick="copyRenderPath('${renderPath.replace(/\\/g,'\\\\')}')" style="background:#1e1e1e;border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:11px;color:#aaa;cursor:pointer;white-space:nowrap;" id="copy-path-btn">📋 Copy Path</button>
         </div>
         <div style="color:#aaa;margin-bottom:10px;font-size:12px;">
-          VaultΩr watches that folder — clips land automatically and appear in <strong style="color:#e5e5e5;">PostΩr → Campaign Builder</strong> once they're tagged as social clips.
+          VaultΩr watches that folder — clips land automatically and appear in <strong style="color:#e5e5e5;">PostΩr</strong> once tagged as social clips.
         </div>
         <a href="${postorUrl}" style="display:inline-block;background:#14b8a6;color:#000;font-weight:700;font-size:12px;border-radius:6px;padding:6px 14px;text-decoration:none;letter-spacing:.3px;">→ Open PostΩr Campaign Builder</a>`;
 

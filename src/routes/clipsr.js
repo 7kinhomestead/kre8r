@@ -272,9 +272,9 @@ router.put('/clips/:clip_id', (req, res) => {
 // ─────────────────────────────────────────────
 // POST /api/clipsr/send-to-davinci
 // Body: { footage_id, project_name? }
-// Gets approved clips for a footage item, creates a Resolve project
-// with one 9:16 vertical timeline per clip (in/out pre-set).
-// Creator applies Smart Reframe per clip in Resolve (~5s each).
+// Places the full source video on ONE Resolve timeline and adds a
+// colored duration-span marker for each approved clip.
+// Creator blades at marker boundaries — no Whisper-timestamp cut errors.
 // ─────────────────────────────────────────────
 router.post('/send-to-davinci', async (req, res) => {
   const { footage_id, project_name } = req.body;
@@ -284,8 +284,8 @@ router.post('/send-to-davinci', async (req, res) => {
     const footage = db.getFootageById(parseInt(footage_id, 10));
     if (!footage) return res.status(404).json({ error: 'Footage not found' });
 
-    // Get approved clips — fall back to all candidates if none approved yet
-    let clips = db.getViralClipsByFootage(parseInt(footage_id, 10))
+    // Get approved clips
+    const clips = db.getViralClipsByFootage(parseInt(footage_id, 10))
       .filter(c => c.status === 'approved');
 
     if (!clips.length) {
@@ -302,28 +302,46 @@ router.post('/send-to-davinci', async (req, res) => {
       });
     }
 
-    // Detect frame rate from footage metadata (stored as "1920x1080" etc — fps separate)
-    // Default to 29.97; footage table doesn't store fps directly so we approximate
+    // Load transcript segments for per-clip text extraction
+    // Segments that overlap the clip window are included; text is concatenated in order.
+    let transcriptSegments = [];
+    if (footage.transcript_path && fs.existsSync(footage.transcript_path)) {
+      try {
+        const tx = JSON.parse(fs.readFileSync(footage.transcript_path, 'utf8'));
+        transcriptSegments = tx.segments || [];
+      } catch (_) {}
+    }
+
+    function clipTranscript(startS, endS) {
+      return transcriptSegments
+        .filter(seg => seg.end > startS && seg.start < endS)
+        .map(seg => seg.text.trim())
+        .join(' ')
+        .trim();
+    }
+
+    // Default 29.97 — footage table doesn't store fps directly
     const fps = 29.97;
 
     const clipsPayload = clips.map(c => ({
-      rank:      c.rank,
-      start:     c.start_time,
-      end:       c.end_time,
-      hook:      c.hook      || '',
-      caption:   c.caption   || '',
-      clip_type: c.clip_type || 'social',
+      rank:       c.rank,
+      start:      c.start_time,
+      end:        c.end_time,
+      hook:       c.hook       || '',
+      reasoning:  c.reasoning  || '',
+      clip_type:  c.clip_type  || 'social',
+      transcript: clipTranscript(c.start_time, c.end_time),
     }));
 
     const resolvedProjectName = project_name
       || (footage.original_filename || 'SocialClips').replace(/\.[^.]+$/, '');
 
-    const result = await runScript('create-social-clips.py', [
+    const result = await runScript('clip-markers.py', [
       '--project_name', resolvedProjectName,
       '--source_path',  sourcePath,
       '--clips_json',   JSON.stringify(clipsPayload),
       '--fps',          String(fps),
-    ], 120_000); // 2 min timeout
+    ], 120_000);
 
     res.json(result);
 

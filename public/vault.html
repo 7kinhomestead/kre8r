@@ -737,6 +737,7 @@
         <button class="filter-chip" data-shot="b-roll" onclick="setFilter('shot','b-roll',this)">B-roll</button>
         <button class="filter-chip" data-shot="talking-head" onclick="setFilter('shot','talking-head',this)">Talking Head</button>
         <button class="filter-chip" data-shot="completed-video" onclick="setFilter('shot','completed-video',this)">Completed</button>
+        <button class="filter-chip" data-shot="social-clip" onclick="setFilter('shot','social-clip',this)">Social Clips ✂️</button>
         <button class="filter-chip" data-shot="dialogue" onclick="setFilter('shot','dialogue',this)">Dialogue</button>
         <button class="filter-chip" data-shot="action" onclick="setFilter('shot','action',this)">Action</button>
         <button class="filter-chip" data-shot="unusable" onclick="setFilter('shot','unusable',this)">Unusable</button>
@@ -859,6 +860,7 @@
           <option value="b-roll">B-roll</option>
           <option value="talking-head">Talking Head</option>
           <option value="completed-video">Completed Video</option>
+          <option value="social-clip">Social Clip ✂️</option>
           <option value="dialogue">Dialogue</option>
           <option value="action">Action</option>
           <option value="unusable">Unusable</option>
@@ -1362,7 +1364,7 @@ function renderFolder(footage) {
   grid.className = 'footage-folder';
   if (!footage.length) { grid.innerHTML = emptyHtml(); return; }
 
-  const shotOrder = ['b-roll', 'talking-head', 'dialogue', 'action', 'completed-video', 'unusable', 'unclassified'];
+  const shotOrder = ['b-roll', 'talking-head', 'dialogue', 'action', 'completed-video', 'social-clip', 'unusable', 'unclassified'];
   const grouped = {};
   for (const f of footage) {
     const k = f.shot_type || 'unclassified';
@@ -2304,7 +2306,7 @@ async function bulkAssign() {
 
 // ── UTILS ──────────────────────────────────────────────────────────────────
 function shotTypeTag(type) {
-  const map = { 'b-roll':'tag-broll', 'dialogue':'tag-dialogue', 'talking-head':'tag-talkinghead', 'action':'tag-action', 'completed-video':'tag-completed', 'unusable':'tag-unusable' };
+  const map = { 'b-roll':'tag-broll', 'dialogue':'tag-dialogue', 'talking-head':'tag-talkinghead', 'action':'tag-action', 'completed-video':'tag-completed', 'social-clip':'tag-completed', 'unusable':'tag-unusable' };
   return `<span class="tag ${map[type] || 'tag-unclassified'}">${type || 'unclassified'}</span>`;
 }
 

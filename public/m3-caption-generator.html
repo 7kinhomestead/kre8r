@@ -281,8 +281,54 @@
     </div>
   </div>
 
-  <!-- CLIPS -->
-  <div class="section-card" style="animation-delay:0.12s;">
+  <!-- MODE SWITCHER -->
+  <div style="display:flex;gap:8px;margin-bottom:4px;">
+    <button id="mode-vault-btn" onclick="setMode('vault')"
+      style="flex:1;padding:11px;border-radius:8px;border:2px solid var(--teal);background:var(--teal);color:#000;font-weight:700;font-size:13px;cursor:pointer;letter-spacing:.3px;">
+      🎬 From VaultΩr Clips
+    </button>
+    <button id="mode-manual-btn" onclick="setMode('manual')"
+      style="flex:1;padding:11px;border-radius:8px;border:2px solid var(--border);background:transparent;color:var(--text-dim);font-weight:600;font-size:13px;cursor:pointer;letter-spacing:.3px;">
+      ✏️ Manual Entry
+    </button>
+  </div>
+
+  <!-- VAULT MODE -->
+  <div id="vault-mode" class="section-card" style="animation-delay:0.12s;">
+    <div class="section-label">
+      FROM VAULTΩR
+      <span class="badge badge-teal">STEP 2</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">
+      Clips exported from DaVinci and picked up by VaultΩr. Select the ones you want captions for — Claude reads each clip's actual transcript and writes platform-native captions.
+    </div>
+
+    <button onclick="loadVaultClips()" style="background:var(--teal);color:#000;border:none;border-radius:6px;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:16px;">
+      ⟳ Load Recent Clips
+    </button>
+
+    <div id="vault-clips-list" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:12px;color:var(--text-dim);" id="vault-clips-count"></span>
+        <div style="display:flex;gap:8px;">
+          <button onclick="selectAllVaultClips(true)"  style="font-size:11px;background:transparent;border:1px solid var(--border);border-radius:4px;padding:4px 10px;color:var(--text-dim);cursor:pointer;">Select All</button>
+          <button onclick="selectAllVaultClips(false)" style="font-size:11px;background:transparent;border:1px solid var(--border);border-radius:4px;padding:4px 10px;color:var(--text-dim);cursor:pointer;">Clear</button>
+        </div>
+      </div>
+      <div id="vault-clips-grid" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+    </div>
+
+    <div id="vault-empty" style="display:none;color:var(--text-dim);font-size:13px;padding:16px 0;">
+      No social clips found in VaultΩr. Export clips from DaVinci to your intake <code>clips/</code> subfolder first.
+    </div>
+
+    <button class="generate-btn" id="vault-gen-btn" onclick="generateFromVault()" style="display:none;">
+      <span id="vault-gen-btn-text">GENERATE CAPTIONS FROM CLIPS</span>
+    </button>
+  </div>
+
+  <!-- MANUAL MODE (existing) -->
+  <div id="manual-mode" class="section-card" style="animation-delay:0.12s;display:none;">
     <div class="section-label">
       YOUR CLIPS
       <span class="badge badge-teal">STEP 2</span>
@@ -361,6 +407,147 @@ const PLATFORMS = [
 ];
 
 // ─────────────────────────────────────────────
+// MODE SWITCHER
+// ─────────────────────────────────────────────
+let currentMode = 'vault';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('vault-mode').style.display   = mode === 'vault'  ? '' : 'none';
+  document.getElementById('manual-mode').style.display  = mode === 'manual' ? '' : 'none';
+  const vBtn = document.getElementById('mode-vault-btn');
+  const mBtn = document.getElementById('mode-manual-btn');
+  if (mode === 'vault') {
+    vBtn.style.background = 'var(--teal)'; vBtn.style.color = '#000'; vBtn.style.borderColor = 'var(--teal)';
+    mBtn.style.background = 'transparent'; mBtn.style.color = 'var(--text-dim)'; mBtn.style.borderColor = 'var(--border)';
+  } else {
+    mBtn.style.background = 'var(--teal)'; mBtn.style.color = '#000'; mBtn.style.borderColor = 'var(--teal)';
+    vBtn.style.background = 'transparent'; vBtn.style.color = 'var(--text-dim)'; vBtn.style.borderColor = 'var(--border)';
+  }
+}
+
+// ─────────────────────────────────────────────
+// VAULT MODE — load + generate
+// ─────────────────────────────────────────────
+let vaultClips = [];
+
+async function loadVaultClips() {
+  try {
+    // Fetch social-clip typed footage from VaultΩr
+    const res  = await fetch('/api/vault/footage?shot_type=social-clip&limit=50');
+    const data = await res.json();
+    const clips = (data.footage || data || []).filter(f => f.shot_type === 'social-clip' || f.shot_type === 'completed-video');
+
+    vaultClips = clips;
+    const grid  = document.getElementById('vault-clips-grid');
+    const list  = document.getElementById('vault-clips-list');
+    const empty = document.getElementById('vault-empty');
+    const genBtn = document.getElementById('vault-gen-btn');
+
+    if (!clips.length) {
+      list.style.display = 'none'; empty.style.display = ''; genBtn.style.display = 'none'; return;
+    }
+
+    empty.style.display = 'none';
+    list.style.display  = '';
+    document.getElementById('vault-clips-count').textContent = `${clips.length} clip${clips.length !== 1 ? 's' : ''} found`;
+
+    grid.innerHTML = clips.map((f, i) => {
+      const name = f.original_filename || f.file_path?.split(/[\\/]/).pop() || `clip_${f.id}`;
+      const dur  = f.duration ? `${Math.round(f.duration)}s` : '';
+      const hasTx = !!(f.transcript || f.transcript_path);
+      return `
+        <label style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;"
+          onmouseover="this.style.borderColor='var(--teal-dim)'" onmouseout="this.style.borderColor=this.querySelector('input').checked?'var(--teal)':'var(--border)'">
+          <input type="checkbox" data-id="${f.id}" checked onchange="refreshVaultGenBtn()"
+            style="width:16px;height:16px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">
+              ${dur ? dur + ' · ' : ''}${hasTx ? '<span style="color:#4ade80;">✓ transcript ready</span>' : '<span style="color:var(--amber);">⏳ will transcribe on generate</span>'}
+            </div>
+          </div>
+        </label>`;
+    }).join('');
+
+    genBtn.style.display = '';
+    refreshVaultGenBtn();
+  } catch (e) {
+    showError('Could not load VaultΩr clips: ' + e.message);
+  }
+}
+
+function refreshVaultGenBtn() {
+  const checked = document.querySelectorAll('#vault-clips-grid input[type=checkbox]:checked').length;
+  const btn = document.getElementById('vault-gen-btn');
+  const txt = document.getElementById('vault-gen-btn-text');
+  btn.disabled = checked === 0;
+  txt.textContent = checked > 0 ? `GENERATE CAPTIONS FOR ${checked} CLIP${checked !== 1 ? 'S' : ''}` : 'SELECT AT LEAST ONE CLIP';
+}
+
+function selectAllVaultClips(checked) {
+  document.querySelectorAll('#vault-clips-grid input[type=checkbox]').forEach(cb => cb.checked = checked);
+  refreshVaultGenBtn();
+}
+
+async function generateFromVault() {
+  const checked = [...document.querySelectorAll('#vault-clips-grid input[type=checkbox]:checked')];
+  if (!checked.length) return;
+
+  const footage_ids = checked.map(cb => parseInt(cb.dataset.id));
+  const direction   = document.getElementById('caption-direction')?.value?.trim() || '';
+
+  const btn = document.getElementById('vault-gen-btn');
+  const txt = document.getElementById('vault-gen-btn-text');
+  btn.disabled = true;
+  txt.textContent = '⏳ Generating captions…';
+  document.getElementById('loading-section').style.display = '';
+  document.getElementById('loading-sub').textContent = `Reading transcripts and writing captions for ${footage_ids.length} clip${footage_ids.length !== 1 ? 's' : ''}…`;
+  document.getElementById('results-section').classList.remove('show');
+
+  try {
+    const res  = await fetch('/api/generate/captions-from-vault', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ footage_ids, caption_direction: direction || undefined })
+    });
+    const data = await res.json();
+
+    document.getElementById('loading-section').style.display = 'none';
+    btn.disabled = false;
+    txt.textContent = `GENERATE CAPTIONS FOR ${footage_ids.length} CLIP${footage_ids.length !== 1 ? 'S' : ''}`;
+
+    if (!res.ok || !data.clips?.length) {
+      showError(data.error || 'No captions returned');
+      return;
+    }
+
+    // Map footage_id → filename for display
+    const idToName = {};
+    vaultClips.forEach(f => {
+      idToName[f.id] = f.original_filename || f.file_path?.split(/[\\/]/).pop() || `clip_${f.id}`;
+    });
+
+    // Build clip objects in the shape renderResults expects
+    const clipObjs = data.clips.map((c, i) => ({
+      id:          String(i + 1),
+      description: idToName[c.footage_id] || c.filename || `Clip ${i + 1}`,
+      timestamp:   '',
+      captions:    c.captions
+    }));
+    // renderResults(resultsArray, clipsArray) — pass clipObjs as both
+    const resultsArray = clipObjs.map(c => ({ clip_id: c.id, captions: c.captions }));
+    renderResults(resultsArray, clipObjs);
+
+  } catch (e) {
+    document.getElementById('loading-section').style.display = 'none';
+    btn.disabled = false;
+    txt.textContent = `GENERATE CAPTIONS FOR ${footage_ids.length} CLIP${footage_ids.length !== 1 ? 'S' : ''}`;
+    showError('Network error: ' + e.message);
+  }
+}
+
+// ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -370,9 +557,10 @@ window.addEventListener('DOMContentLoaded', () => {
     currentProjectId = parseInt(pid);
     loadProjectContext(currentProjectId);
     loadApprovedClips(currentProjectId);
+    setMode('manual'); // project context → use manual mode with pre-filled clips
   } else {
-    addClip();
-    addClip();
+    setMode('vault');  // default: VaultΩr mode
+    addClip(); addClip(); // pre-fill manual tab too
   }
 });
 
