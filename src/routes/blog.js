@@ -193,6 +193,25 @@ router.post('/push-to-live', async (req, res) => {
   }
 });
 
+// LIST proxy — fetch all posts (including drafts) from production for Manage Posts panel
+router.get('/list-live', async (req, res) => {
+  try {
+    const liveUrl = process.env.LIVE_API_URL || 'https://kre8r.app';
+    const key     = process.env.INTERNAL_API_KEY;
+    if (!key) return res.status(500).json({ ok: false, error: 'INTERNAL_API_KEY not set' });
+
+    const response = await fetch(`${liveUrl}/api/blog/admin/posts`, {
+      headers: { 'x-internal-key': key },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Production error ${response.status}`);
+    res.json(data);
+  } catch (err) {
+    logger.error({ err }, '[blog] list-live failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // PATCH proxy — update an existing post on production (e.g. fix youtube_url)
 router.post('/patch-to-live/:id', async (req, res) => {
   try {
@@ -211,6 +230,27 @@ router.post('/patch-to-live/:id', async (req, res) => {
     res.json(data);
   } catch (err) {
     logger.error({ err }, '[blog] patch-to-live failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// DELETE proxy — delete a post on production
+router.post('/delete-live/:id', async (req, res) => {
+  try {
+    const liveUrl = process.env.LIVE_API_URL || 'https://kre8r.app';
+    const key     = process.env.INTERNAL_API_KEY;
+    if (!key) return res.status(500).json({ ok: false, error: 'INTERNAL_API_KEY not set' });
+
+    const response = await fetch(`${liveUrl}/api/blog/posts/${req.params.id}`, {
+      method:  'DELETE',
+      headers: { 'x-internal-key': key },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Production error ${response.status}`);
+    logger.info({ id: req.params.id }, '[blog] deleted live post');
+    res.json(data);
+  } catch (err) {
+    logger.error({ err }, '[blog] delete-live failed');
     res.status(500).json({ ok: false, error: err.message });
   }
 });

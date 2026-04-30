@@ -369,12 +369,16 @@ app.use((req, res, next) => {
   // Blog — public read endpoints (consumed by 7kinhomestead.land/blog)
   if (req.method === 'GET' && req.path.startsWith('/api/blog/posts')) return next();
   if (req.method === 'OPTIONS' && req.path.startsWith('/api/blog/posts')) return next();
-  // Blog POST/PATCH — auth handled inside blog.js requireAuth (session or internal key)
-  if (req.method === 'POST'  && req.path === '/api/blog/posts') return next();
-  if (req.method === 'PATCH' && req.path.startsWith('/api/blog/posts/')) return next();
-  // Blog push/patch-to-live — local proxies to production, real auth is internal key on kre8r.app
+  // Blog POST/PATCH/DELETE/admin — auth handled inside blog.js requireAuth (session or internal key)
+  if (req.method === 'POST'   && req.path === '/api/blog/posts') return next();
+  if (req.method === 'PATCH'  && req.path.startsWith('/api/blog/posts/')) return next();
+  if (req.method === 'DELETE' && req.path.startsWith('/api/blog/posts/')) return next();
+  if (req.method === 'GET'    && req.path === '/api/blog/admin/posts') return next();
+  // Blog push/patch/delete/list — local proxies to production, real auth is internal key on kre8r.app
   if (req.path === '/api/blog/push-to-live') return next();
   if (req.path.startsWith('/api/blog/patch-to-live/')) return next();
+  if (req.path.startsWith('/api/blog/delete-live/')) return next();
+  if (req.path === '/api/blog/list-live') return next();
   // AffiliateΩr redirect — public so external visitors can click through
   if (req.path.startsWith('/r/')) return next();
   // AffiliateΩr gear feed — consumed by 7kinhomestead.land/gear (cross-origin, no session)

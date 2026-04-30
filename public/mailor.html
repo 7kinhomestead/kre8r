@@ -485,6 +485,7 @@
           <label class="output-check"><input type="checkbox" id="gen-email" checked> Email A/B</label>
           <label class="output-check"><input type="checkbox" id="gen-blog" onchange="toggleDeepDive()"> Blog Post</label>
           <label class="output-check" id="deep-dive-wrap" style="display:none;margin-left:12px;opacity:0.85"><input type="checkbox" id="gen-deep-dive"> 🔬 Deep Dive</label>
+          <button type="button" onclick="openManagePosts()" style="background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;margin-left:8px;letter-spacing:.04em;" title="Edit or fix published posts">📋 Manage Posts</button>
           <label class="output-check"><input type="checkbox" id="gen-community"> Community Post</label>
           <label class="output-check"><input type="checkbox" id="gen-fb-post"> 📘 Facebook Post</label>
         </div>
@@ -1921,6 +1922,123 @@ async function addVideoToPost(postId, postSlug) {
   }
 }
 
+// ─── MANAGE POSTS PANEL ──────────────────────────────────────────────────────
+
+async function openManagePosts() {
+  document.getElementById('manage-posts-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  await loadManagedPosts();
+}
+
+function closeManagePosts() {
+  document.getElementById('manage-posts-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Close on backdrop click
+document.getElementById('manage-posts-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeManagePosts();
+});
+
+async function loadManagedPosts() {
+  const list = document.getElementById('mpm-list');
+  list.innerHTML = '<div id="mpm-loading" style="color:rgba(255,255,255,.4);font-size:13px;padding:24px 0;">Loading posts…</div>';
+  try {
+    const res  = await fetch('/api/blog/list-live');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    renderManagedPosts(data.posts || []);
+  } catch (e) {
+    list.innerHTML = `<div style="color:#f87171;font-size:13px;padding:16px 0;">Failed to load posts: ${e.message}</div>`;
+  }
+}
+
+function renderManagedPosts(posts) {
+  const list = document.getElementById('mpm-list');
+  if (!posts.length) {
+    list.innerHTML = '<div style="color:rgba(255,255,255,.4);font-size:13px;padding:24px 0;">No posts yet.</div>';
+    return;
+  }
+  list.innerHTML = posts.map(p => {
+    const hasVideo = !!p.youtube_url;
+    const date = p.published_at ? new Date(p.published_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Draft';
+    const statusDot = p.status === 'published'
+      ? '<span style="color:#22c55e;font-size:10px;">●</span> Published'
+      : '<span style="color:#f59e0b;font-size:10px;">●</span> Draft';
+    return `
+    <div id="mpm-post-${p.id}" style="border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px;margin-bottom:12px;background:#1a1a1a;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:#fff;line-height:1.4;margin-bottom:4px;">${escHtml(p.title)}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:10px;">
+            <span>${statusDot}</span>
+            <span>${date}</span>
+            ${p.read_time_min ? `<span>${p.read_time_min} min read</span>` : ''}
+            ${hasVideo
+              ? `<span style="color:#22c55e;">📹 Video linked</span>`
+              : `<span style="color:#f59e0b;">⚠ No video</span>`}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <a href="https://7kinhomestead.land/blog/${p.slug}" target="_blank"
+             style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);border-radius:5px;padding:5px 10px;font-size:11px;cursor:pointer;text-decoration:none;display:inline-block;" title="View post">↗</a>
+          <button onclick="deleteLivePost(${p.id},'${escHtml(p.title)}')"
+                  style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:5px;padding:5px 10px;font-size:11px;cursor:pointer;" title="Delete post">🗑</button>
+        </div>
+      </div>
+      <!-- YouTube URL editor -->
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+        <input id="mpm-yt-${p.id}" type="url" placeholder="YouTube URL (https://youtu.be/…)"
+               value="${escHtml(p.youtube_url || '')}"
+               style="flex:1;background:#0d0d0d;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:7px 10px;font-size:12px;color:#fff;outline:none;"
+               onkeydown="if(event.key==='Enter') saveMpmVideo(${p.id})">
+        <button onclick="saveMpmVideo(${p.id})"
+                style="background:#14b8a6;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;" id="mpm-save-${p.id}">
+          ${hasVideo ? 'Update' : 'Add Video'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveMpmVideo(postId) {
+  const input = document.getElementById(`mpm-yt-${postId}`);
+  const btn   = document.getElementById(`mpm-save-${postId}`);
+  const url   = input?.value?.trim() || '';
+  if (!url) { showToast('Paste a YouTube URL first', 'red'); return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res  = await fetch(`/api/blog/patch-to-live/${postId}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ youtube_url: url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    btn.disabled = false; btn.textContent = 'Update';
+    showToast('Video URL saved', 'green');
+    // Update the status indicator inline
+    const dot = document.querySelector(`#mpm-post-${postId} span[style*="f59e0b"]`);
+    if (dot) dot.closest('span').outerHTML = `<span style="color:#22c55e;">📹 Video linked</span>`;
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Add Video';
+    showToast(`Failed: ${e.message}`, 'red');
+  }
+}
+
+async function deleteLivePost(postId, title) {
+  if (!confirm(`Delete "${title}"?\n\nThis removes it from the live site permanently.`)) return;
+  try {
+    const res  = await fetch(`/api/blog/delete-live/${postId}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    document.getElementById(`mpm-post-${postId}`)?.remove();
+    showToast('Post deleted', 'green');
+  } catch (e) {
+    showToast(`Delete failed: ${e.message}`, 'red');
+  }
+}
+
 function renderCommunityPost(post) {
   let el = document.getElementById('bc-community-results');
   if (!el) {
@@ -2860,6 +2978,26 @@ function escHtmlSq(str) {
     </div>
     <div style="overflow-y:auto;flex:1;padding:24px;background:#f9f9f9;border-radius:0 0 10px 10px;">
       <div id="wc-preview-body" style="max-width:560px;margin:0 auto;background:#fff;padding:28px 32px;border-radius:6px;font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#222;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MANAGE POSTS MODAL
+════════════════════════════════════════════════════════════════ -->
+<div id="manage-posts-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);overflow-y:auto;">
+  <div style="max-width:760px;margin:48px auto 48px;background:#111;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08);">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.04em;">📋 Manage Blog Posts</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">Edit YouTube URL, view or delete published posts</div>
+      </div>
+      <button onclick="closeManagePosts()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;" title="Close">✕</button>
+    </div>
+    <!-- Post list -->
+    <div id="mpm-list" style="padding:16px 24px 24px;">
+      <div id="mpm-loading" style="color:rgba(255,255,255,.4);font-size:13px;padding:24px 0;">Loading posts…</div>
     </div>
   </div>
 </div>
