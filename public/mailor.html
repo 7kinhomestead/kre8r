@@ -1866,7 +1866,7 @@ async function publishBlogPost() {
       project_id:    currentProjectId || null,
       content_angle: document.getElementById('bc-angle')?.value || null,
       is_deep_dive:  document.getElementById('gen-deep-dive')?.checked || false,
-      youtube_url:   currentProjectYoutubeUrl || null,
+      youtube_url:   currentProjectYoutubeUrl || document.getElementById('seq-video-url')?.value?.trim() || null,
       publish:       true,
     };
 
@@ -1878,12 +1878,46 @@ async function publishBlogPost() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
 
-    btn.outerHTML = `<a href="https://7kinhomestead.land/blog/${data.post.slug}" target="_blank" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.04em;text-decoration:none;display:inline-block;">✓ Published · View Post →</a>`;
+    const postId   = data.post.id;
+    const postSlug = data.post.slug;
+    const hasVideo = !!payload.youtube_url;
+    let successHtml = `<a href="https://7kinhomestead.land/blog/${postSlug}" target="_blank" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.04em;text-decoration:none;display:inline-block;">✓ Published · View Post →</a>`;
+    if (!hasVideo) {
+      successHtml += ` <button id="blog-add-video-btn" style="background:#f59e0b;color:#000;border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;margin-left:6px;" onclick="addVideoToPost(${postId},'${postSlug}')">📹 Add Video</button>`;
+    }
+    btn.outerHTML = `<span id="blog-publish-result" style="display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;">${successHtml}</span>`;
     showToast(`Published: "${data.post.title}"`, 'green');
   } catch (e) {
     btn.disabled    = false;
     btn.textContent = '📤 Publish to Blog';
     showToast(`Publish failed: ${e.message}`, 'red');
+  }
+}
+
+async function addVideoToPost(postId, postSlug) {
+  const btn = document.getElementById('blog-add-video-btn');
+  // Grab the URL from the video input (already populated from the video picker)
+  const ytUrl = document.getElementById('seq-video-url')?.value?.trim()
+             || currentProjectYoutubeUrl
+             || '';
+  if (!ytUrl) {
+    showToast('No YouTube URL found — paste it in the Video URL field first', 'red');
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const res  = await fetch(`/api/blog/patch-to-live/${postId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ youtube_url: ytUrl }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+    if (btn) btn.outerHTML = `<span style="color:#22c55e;font-size:12px;font-weight:600;">📹 Video added</span>`;
+    showToast('Video embed added to post', 'green');
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '📹 Add Video'; }
+    showToast(`Failed: ${e.message}`, 'red');
   }
 }
 

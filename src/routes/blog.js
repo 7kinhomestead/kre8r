@@ -193,4 +193,26 @@ router.post('/push-to-live', async (req, res) => {
   }
 });
 
+// PATCH proxy — update an existing post on production (e.g. fix youtube_url)
+router.post('/patch-to-live/:id', async (req, res) => {
+  try {
+    const liveUrl = process.env.LIVE_API_URL || 'https://kre8r.app';
+    const key     = process.env.INTERNAL_API_KEY;
+    if (!key) return res.status(500).json({ ok: false, error: 'INTERNAL_API_KEY not set' });
+
+    const response = await fetch(`${liveUrl}/api/blog/posts/${req.params.id}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-internal-key': key },
+      body:    JSON.stringify(req.body),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Production error ${response.status}`);
+    logger.info({ id: req.params.id }, '[blog] patched live post');
+    res.json(data);
+  } catch (err) {
+    logger.error({ err }, '[blog] patch-to-live failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;

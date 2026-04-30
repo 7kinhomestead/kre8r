@@ -59,12 +59,26 @@ async function callClaudeRaw(systemPrompt, userPrompt, maxTokens = 4000) {
 
 // Parse the TITLE: / --- delimiter format used for blog responses.
 function parseBlogResponse(raw) {
-  // Strip markdown code fences (```html ... ``` or ``` ... ```)
-  let text = raw.replace(/^```[\w]*\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+  // Strip markdown code fences — opening and closing, anywhere in the string
+  let text = raw
+    .replace(/^```[\w]*\s*/i, '')   // opening fence at start
+    .replace(/\s*```\s*$/i, '')     // closing fence at end
+    .trim();
 
   // If Claude wrote a full HTML document, extract just the <body> contents
   const bodyTagMatch = text.match(/<body[^>]*>([\s\S]*)<\/body>/i);
   if (bodyTagMatch) text = bodyTagMatch[1].trim();
+
+  // Strip any trailing non-HTML meta-commentary after the last closing tag
+  // (Claude sometimes appends "---" dividers or explanatory sentences at the end)
+  const lastTagEnd = text.lastIndexOf('>');
+  if (lastTagEnd !== -1 && lastTagEnd < text.length - 1) {
+    const trailing = text.slice(lastTagEnd + 1).trim();
+    // If trailing content looks like meta-commentary (no HTML, not blank), chop it
+    if (trailing && !trailing.startsWith('<')) {
+      text = text.slice(0, lastTagEnd + 1).trim();
+    }
+  }
 
   // Find the TITLE: / --- delimiter
   const sep = text.indexOf('\n---\n');
