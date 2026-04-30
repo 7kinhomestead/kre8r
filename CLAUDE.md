@@ -172,6 +172,11 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    Post Now or Schedule tabs → calls /api/postor/fb-post or /api/postor/queue.
    Email send: MailerLite v2 API. "Send in ~10 min" or "📅 Schedule" tabs with date/time picker
    and quick buttons (+1d/+2d/+3d/+1wk). sends_at ISO string passed to /api/mailerlite/send.
+   Blog post: plain-text TITLE:/--- delimiter format (not JSON) via callClaudeRaw + parseBlogResponse.
+   Blog body is contenteditable — edit in-browser before publishing. Publish button reads live DOM.
+   📋 Manage Posts button: modal lists all live posts, inline YouTube URL editor per post, delete.
+   Push-to-live proxies: push-to-live (POST), patch-to-live/:id (PATCH), delete-live/:id (DELETE),
+   list-live (GET admin) — all proxy to kre8r.app via INTERNAL_API_KEY, whitelisted in server.js.
    Old M4 page still exists at /m4-email-generator.html (legacy, keep for now).
 
 ✅ PostΩr (`/postor.html`) — Multi-platform social publishing.

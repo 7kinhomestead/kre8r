@@ -3,22 +3,27 @@
 
 ---
 
-## NEXT TASKS (Session 66)
+## NEXT TASKS (Session 69)
 
-### 1. Verify Push to Live end-to-end + fix gear page categories
-- Confirm Push to Live button shows "✓ Live — X updated" with no errors
-- Verify inverter now shows under Solar (not Tools) on 7kinhomestead.land/gear
-- Check all product images are appearing correctly on live gear page
+### 1. Community Engagement Gamification — Design + Build
+- Research brief from separate conversation (Jason to bring back findings)
+- Design gamification layer for ROCK RICH community (Kajabi):
+  - What mechanics make sense for the existing 3 tiers (Greenhouse / Garden / Founding 50)
+  - Points, streaks, badges, leaderboards — what to build vs what Kajabi already has
+  - Decide: Kre8Ωr-side tracking (DB tables) vs Kajabi-native vs hybrid
+- Build whatever the research session surfaces as the highest-leverage first feature
 
-### 2. OLH listing health check
-- Spot-check 5 OLH listings in the land finder tool — confirm redirects land on real pages
-- Verify HEAD check in `/go/:id` is correctly marking expired listings inactive
-- Run aggregator manually if OLH feed was 404ing at 6am (check logs)
+### 2. Fix second blog post YouTube embed
+- Open MailΩr → 📋 Manage Posts
+- Find the second post (⚠ No video)
+- Paste its YouTube URL and hit Add Video
+- Confirm embed appears at 7kinhomestead.land/blog
 
-### 3. Cari Editor Role (when Cari is home — see TODO #3 above)
-- Until then: wire `kre8r-land` production DB backup cron (same pattern as kre8r.app)
-  `0 3 * * * node -e "..." > /home/landapp/backups/land-$(date +%F).db` on 7kinhomestead droplet
-  (sqlite3 CLI not installed — use node + better-sqlite3 for backup)
+### 3. kre8r-land Production DB Backup Cron
+- Wire daily backup on 7kinhomestead droplet — same pattern as kre8r.app (3am, 14-day rolling)
+- sqlite3 CLI not installed on droplet — use node + better-sqlite3 backup script
+- `0 3 * * * node /home/landapp/kre8r-land/scripts/backup-db.js >> /home/landapp/logs/backup.log 2>&1`
+- Confirm backup dir exists: `/home/landapp/backups/`
 
 ---
 

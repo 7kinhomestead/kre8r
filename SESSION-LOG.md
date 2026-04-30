@@ -3,6 +3,58 @@
 
 ---
 
+# Session 68 — Blog Post YouTube Embed Fix + Manage Posts Panel (2026-04-30)
+
+## Goal
+Fix missing YouTube video embed on second published blog post. Make blog body editable before
+publishing. Add Field Notes blog card to 7kinhomestead.land/links page. Add Manage Posts panel
+to MailΩr so published posts can be edited/fixed without regenerating.
+
+## What Was Built / Fixed
+
+### Blog: YouTube Embed Fix
+- **Root bug**: `publishBlogPost()` in mailor.html used `currentProjectYoutubeUrl` which is only
+  set when a project is loaded via the project picker. If blog was generated from a video directly
+  (without a loaded project), it stayed null and the embed never made it into the DB.
+- **Fix**: `publishBlogPost()` now falls back to `document.getElementById('seq-video-url')?.value`
+  — the video picker input — so the URL is always captured regardless of project load state.
+
+### Blog: parseBlogResponse Hardening
+- Added trailing meta-commentary strip: after last closing HTML `>`, any non-HTML text is chopped.
+  Fixes "code at bottom of post" — Claude occasionally appends dividers or explanatory sentences
+  after the final closing tag.
+
+### Blog: Manage Posts Panel (MailΩr)
+- **📋 Manage Posts** button added next to the Blog Post checkbox in MailΩr.
+- Opens a full-screen modal listing all live posts fetched from production.
+- Each post card shows: title, status dot, date, read time, video indicator (✅/⚠).
+- **Inline YouTube URL editor**: paste URL into input under any post, hit Update/Add Video.
+  Patches the live post via `PATCH /api/blog/posts/:id` without touching body or title.
+- **Delete button**: confirms then permanently removes post from live site.
+- New proxy routes added to `src/routes/blog.js`:
+  - `GET  /list-live` → proxies to `GET /api/blog/admin/posts` on production (internal key)
+  - `POST /patch-to-live/:id` → proxies to `PATCH /api/blog/posts/:id` on production
+  - `POST /delete-live/:id` → proxies to `DELETE /api/blog/posts/:id` on production
+- All three proxy routes whitelisted in server.js global auth guard (both local and production).
+- Production `PATCH` + `DELETE` + admin `GET` endpoints whitelisted in server.js so internal key
+  reaches blog.js `requireAuth` without being blocked first.
+
+### kre8r-land: Field Notes Blog Card
+- Added "The Research Behind The Videos" section to `public/links/index.html`.
+- `link-card teal` pointing to `https://7kinhomestead.land/blog` with 📓 icon.
+- Inserted between TikTok card and Tools section.
+- Deployed to 7kinhomestead droplet.
+
+## Commits — kre8r
+- `b273627` Blog: make body editable (contenteditable, render HTML, read DOM on publish)
+- `f02d4ca` Blog: fix missing YouTube embed on published posts
+- `c8471da` Blog: Manage Posts panel in MailΩr
+
+## Commits — kre8r-land
+- `8678201` Links: add Field Notes blog card
+
+---
+
 # Session 67 — Blog Pipeline Live + kre8r-land Crash Audit (2026-04-30)
 
 ## Goal
