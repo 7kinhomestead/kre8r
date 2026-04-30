@@ -59,18 +59,32 @@ async function callClaudeRaw(systemPrompt, userPrompt, maxTokens = 4000) {
 
 // Parse the TITLE: / --- delimiter format used for blog responses.
 function parseBlogResponse(raw) {
-  const sep = raw.indexOf('\n---\n');
+  // Strip markdown code fences (```html ... ``` or ``` ... ```)
+  let text = raw.replace(/^```[\w]*\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+  // If Claude wrote a full HTML document, extract just the <body> contents
+  const bodyTagMatch = text.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  if (bodyTagMatch) text = bodyTagMatch[1].trim();
+
+  // Find the TITLE: / --- delimiter
+  const sep = text.indexOf('\n---\n');
   if (sep === -1) {
-    // Fallback: first line is title, rest is body
-    const nl = raw.indexOf('\n');
+    // Fallback: first line that looks like a title, rest is body
+    const nl = text.indexOf('\n');
+    const candidate = text.slice(0, nl).replace(/^(?:TITLE:|#+)\s*/i, '').replace(/\*\*/g, '').trim();
     return {
-      title: raw.slice(0, nl).replace(/^TITLE:\s*/i, '').trim(),
-      body:  raw.slice(nl + 1).trim(),
+      title: candidate || 'Untitled',
+      body:  text.slice(nl + 1).trim(),
     };
   }
-  const titleLine = raw.slice(0, sep).replace(/^TITLE:\s*/i, '').trim();
-  const body      = raw.slice(sep + 5).trim();
-  return { title: titleLine, body };
+  // Everything before --- is the title line; strip TITLE: prefix, markdown, and heading #
+  const titleLine = text.slice(0, sep)
+    .replace(/^TITLE:\s*/i, '')
+    .replace(/^#+\s*/, '')
+    .replace(/\*\*/g, '')
+    .trim();
+  const body = text.slice(sep + 5).trim();
+  return { title: titleLine || 'Untitled', body };
 }
 
 async function callClaude(systemPrompt, userPrompt, maxTokens = 4000) {
@@ -378,9 +392,15 @@ full blog post as HTML with <p>, <h2>, <ul>/<li> tags, real hyperlinks for all s
 
 ${voiceContext}
 
-You write blog posts for 7kinhomestead.land/blog — the research-backed companion pieces to the creator's videos.
-These are NOT emails. They are standalone articles with HTML formatting, subheadings, inline citation links, and a clear narrative arc.
-Never write subject lines, email greetings, or "version_a/version_b" structure. Write a single cohesive article.`;
+You write blog posts for 7kinhomestead.land/blog — research-backed companion pieces to the creator's videos.
+
+STRICT OUTPUT RULES — follow exactly, no exceptions:
+- Output ONLY the blog post. No preamble, no explanations, no meta-commentary.
+- Do NOT mention missing context, placeholder blocks, or what you're about to do. Just write.
+- Do NOT write a full HTML document. Write HTML fragments only: <p>, <h2>, <h3>, <ul>, <li>, <a>, <strong>, <blockquote>. No <!DOCTYPE>, <html>, <head>, <body> tags.
+- Do NOT wrap output in markdown code fences (\`\`\`html or \`\`\`).
+- If social URLs or citations are missing from context, skip them — do not fabricate URLs.
+- First line: TITLE: followed by the post title. Then a blank line, then ---, then a blank line, then the HTML body.`;
 
       const blogRaw      = await callClaudeRaw(blogSystemPrompt, blogPrompt, deep_dive ? 10000 : 6000);
       response.blog_post = parseBlogResponse(blogRaw);
