@@ -369,6 +369,8 @@ app.use((req, res, next) => {
   // Blog — public read endpoints (consumed by 7kinhomestead.land/blog)
   if (req.method === 'GET' && req.path.startsWith('/api/blog/posts')) return next();
   if (req.method === 'OPTIONS' && req.path.startsWith('/api/blog/posts')) return next();
+  // Blog push-to-live — local proxy to production, real auth is internal key on kre8r.app
+  if (req.path === '/api/blog/push-to-live') return next();
   // AffiliateΩr redirect — public so external visitors can click through
   if (req.path.startsWith('/r/')) return next();
   // AffiliateΩr gear feed — consumed by 7kinhomestead.land/gear (cross-origin, no session)
