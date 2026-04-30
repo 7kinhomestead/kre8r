@@ -172,7 +172,7 @@ router.delete('/posts/:id', requireAuth, (req, res) => {
 
 // ─── PUSH TO LIVE: proxy a post to kre8r.app production ─────────────────────
 // Called from local MailΩr — sends post data to production with internal key.
-router.post('/push-to-live', requireAuth, async (req, res) => {
+router.post('/push-to-live', async (req, res) => {
   try {
     const liveUrl = process.env.LIVE_API_URL || 'https://kre8r.app';
     const key     = process.env.INTERNAL_API_KEY;
