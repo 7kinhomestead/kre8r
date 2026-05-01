@@ -14,6 +14,7 @@ const path    = require('path');
 const db      = require('../db');
 const { buildVoiceSummaryFromProfiles } = require('../writr/voice-analyzer');
 const { getSocialLinksBlock } = require('../utils/creator-context');
+const { SLOP_RULE } = require('../utils/claude');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -263,7 +264,9 @@ RULES:
 - Short, punchy subject lines — no clickbait, no ALL CAPS gimmicks.
 - Every email has one job. One CTA. Don't pile on.
 - A/B means meaningfully different approaches — not just different subject lines. Different angle, different entry point, different emotional hook.
-- Use {$name} once near the top of each email as the greeting. This is MailerLite's native merge tag for first name.`;
+- Use {$name} once near the top of each email as the greeting. This is MailerLite's native merge tag for first name.
+
+${SLOP_RULE}`;
 
     let userPrompt = `Write an A/B broadcast email pair for this situation:\n\nPrompt: ${prompt}\nSegment: ${segment || 'everyone'}\nGoal: ${goal || 'not specified'}\n`;
 
@@ -414,7 +417,9 @@ STRICT OUTPUT RULES — follow exactly, no exceptions:
 - Do NOT write a full HTML document. Write HTML fragments only: <p>, <h2>, <h3>, <ul>, <li>, <a>, <strong>, <blockquote>. No <!DOCTYPE>, <html>, <head>, <body> tags.
 - Do NOT wrap output in markdown code fences (\`\`\`html or \`\`\`).
 - If social URLs or citations are missing from context, skip them — do not fabricate URLs.
-- First line: TITLE: followed by the post title. Then a blank line, then ---, then a blank line, then the HTML body.`;
+- First line: TITLE: followed by the post title. Then a blank line, then ---, then a blank line, then the HTML body.
+
+${SLOP_RULE}`;
 
       const blogRaw      = await callClaudeRaw(blogSystemPrompt, blogPrompt, deep_dive ? 10000 : 6000);
       response.blog_post = parseBlogResponse(blogRaw);

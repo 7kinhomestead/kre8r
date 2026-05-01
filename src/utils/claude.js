@@ -307,4 +307,63 @@ async function callClaudeStream(system, messages, maxTokens = 512, onToken, opti
   return fullText;
 }
 
-module.exports = { callClaude, callClaudeMessages, callClaudeStream, repairJSON };
+/**
+ * SLOP_RULE — inject into any Claude prompt that generates audience-facing written content.
+ * Emails, blog posts, captions, community posts, hooks — anything a human reads or hears.
+ * Same list as WritΩr's SLOP_RULE. Single source of truth here, imported everywhere else.
+ */
+const SLOP_RULE = `VOICE AUTHENTICITY RULE — NEVER USE THESE PHRASES OR STRUCTURES:
+
+BANNED PHRASES (AI tells — audiences clock these instantly):
+- "It's not X, it's Y" construction (e.g. "It's not a tiny house, it's a lifestyle")
+- "Let's dive in" / "Let's dive deep" / "Deep dive"
+- "At the end of the day"
+- "Game changer" / "This changes everything"
+- "In today's world" / "In a world where"
+- "Here's the thing..." (as an opener)
+- "The truth is..."
+- "What if I told you..."
+- "Let's unpack that" / "Let's break this down"
+- "Whether you're a beginner or an expert"
+- "Without further ado"
+- "Stay tuned" / "Don't forget to hit the bell"
+- "Spoiler alert"
+- "That's where [X] comes in"
+- "But here's the kicker"
+- "It begs the question"
+- "Needless to say"
+- "First and foremost" / "Last but not least"
+- "That being said" / "With that being said" / "Having said that"
+- "It's worth noting that" / "It's important to note"
+- "It goes without saying"
+- "Moving forward" / "Going forward"
+- "Take it to the next level"
+- "Now more than ever"
+- "Simply put" / "In other words" / "Long story short"
+- "When all is said and done"
+- "As we can see" / "As you can see"
+- "In conclusion" / "To summarize" / "In summary"
+- "Studies show" or "Experts say" without a real specific source
+- "The science is clear"
+- "Here's what you need to know"
+- "So, what does this mean for you?"
+- "At its core"
+- "Utilize" (say "use") / "Facilitate" / "Leverage" as a verb
+- "Furthermore" / "Moreover" (in spoken or written content — sounds like an essay)
+- "This allows us to" / "This enables"
+- "So let's get into it" / "Let's get started"
+- "Today we're going to be talking about"
+
+BANNED STRUCTURES:
+- "It's not X, it's Y" contrast sentences — the #1 AI tell, ban it completely
+- Opening with "In this video I will..." / "In this post I will..." — just start
+- Ending with a bulleted "Key takeaways" summary — that's a textbook, not Jason
+- Transitions that sound like essay paragraphs ("Furthermore, this demonstrates...")
+- Any sentence that sounds like it could appear in anyone else's content — rewrite it
+
+WRITE LIKE THE BRAND ACTUALLY TALKS:
+Straight-talking, warm, funny, never corporate. Real numbers. Real names. Real moments.
+Tangents are fine. Interrupting the thought is fine. Sounding polished is not fine.
+If a line sounds like it was written by a committee — it was. Cut it.`;
+
+module.exports = { callClaude, callClaudeMessages, callClaudeStream, repairJSON, SLOP_RULE };

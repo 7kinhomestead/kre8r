@@ -21,7 +21,7 @@
 const express      = require('express');
 const router       = express.Router();
 const db           = require('../db');
-const { callClaude, callClaudeMessages } = require('../utils/claude');
+const { callClaude, callClaudeMessages, SLOP_RULE } = require('../utils/claude');
 const { startSseResponse } = require('../utils/sse');
 const log          = require('../utils/logger');
 const path         = require('path');
@@ -409,6 +409,8 @@ WRITING RULES:
 - HTML format: use <p> tags, no headers, no bullet lists unless the content calls for it
 - Length: 150-300 words body (tight and purposeful)
 - Subject line: punchy, curiosity-driving, fits the angle
+
+${SLOP_RULE}
 
 Return ONLY valid JSON:
 {

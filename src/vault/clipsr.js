@@ -11,7 +11,7 @@
 
 'use strict';
 
-const { callClaude }        = require('../utils/claude');
+const { callClaude, SLOP_RULE } = require('../utils/claude');
 const { getCreatorContext } = require('../utils/creator-context');
 const db                    = require('../db');
 
@@ -60,6 +60,8 @@ A great clip:
 - Has a clear arc or punchline — a reason to watch to the end
 - Reflects the creator's authentic voice, not a polished TV moment
 - Hits the audience psychology shown in the TikTok Intelligence section above (when present)
+
+${SLOP_RULE}
 
 ## TRANSCRIPT
 ${transcriptText}

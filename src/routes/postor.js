@@ -1091,7 +1091,7 @@ router.delete('/queue/:id', (req, res) => {
 // CAMPAIGN BUILDER
 // ─────────────────────────────────────────────────────────────────────────────
 
-const { callClaude }       = require('../utils/claude');
+const { callClaude, SLOP_RULE } = require('../utils/claude');
 const { getCreatorContext } = require('../utils/creator-context');
 
 // GET /api/postor/campaign/clips?project_id=
@@ -1153,7 +1153,9 @@ PLATFORM RULES:
 - Lemon8: Visual storytelling and lifestyle vibe. Lists and "here's what I learned" structure. 5-8 hashtags.
 
 OUTPUT FORMAT — valid JSON only, no preamble, no markdown fences:
-{"tiktok":"...","instagram":"...","facebook":"...","shorts":"...","lemon8":"..."}`;
+{"tiktok":"...","instagram":"...","facebook":"...","shorts":"...","lemon8":"..."}
+
+${SLOP_RULE}`;
 
       // Inject project context (title, high concept, story angle) + approved script if project provided
       let scriptContext = '';
