@@ -1143,7 +1143,7 @@ router.post('/campaign/generate-captions', (req, res) => {
 
       const systemPrompt = `You are the social media voice for ${brand} — ${followerSummary}.
 
-CREATOR VOICE: Straight-talking, warm, encouraging, genuinely funny. Never corporate. Slips jokes in. Real numbers always.
+CREATOR VOICE: Straight-talking, warm, encouraging, actually funny. Never corporate. Slips jokes in. Real numbers always.
 
 PLATFORM RULES:
 - TikTok: Hook in the first line. Punchy, fast, scroll-stopping. 2-3 hashtags max. Under 300 characters total.
