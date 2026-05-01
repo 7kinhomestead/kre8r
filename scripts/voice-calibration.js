@@ -23,10 +23,11 @@
 
 'use strict';
 
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const fs   = require('fs');
 const path = require('path');
+
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const TRANSCRIPTS_PATH = path.join(__dirname, '..', '..', 'kre8r-land', 'data', 'transcripts.json');
@@ -271,9 +272,19 @@ async function main() {
     process.stdout.write(`🔄  Batch ${i + 1}/${batches.length} (${batch.length} videos)… `);
 
     try {
-      const raw    = await callOpus(BATCH_SYSTEM, batchPrompt(batch), 3000);
+      const raw     = await callOpus(BATCH_SYSTEM, batchPrompt(batch), 3000);
       const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-      const result  = JSON.parse(cleaned);
+      let result;
+      try {
+        result = JSON.parse(cleaned);
+      } catch (parseErr) {
+        // Fallback: ask Opus to repair the broken JSON
+        process.stdout.write(`\n    ⚠️  JSON parse error, asking Opus to repair… `);
+        const fixRaw     = await callOpus('You are a JSON repair tool. Return ONLY valid JSON, nothing else.', `The following JSON is malformed. Fix all escaping and syntax errors. Return ONLY the corrected valid JSON:\n\n${cleaned}`, 3000);
+        const fixCleaned = fixRaw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+        result           = JSON.parse(fixCleaned);
+        process.stdout.write(`repaired `);
+      }
 
       progress.batchResults.push(result);
       progress.completedBatches.push(i);
@@ -295,7 +306,14 @@ async function main() {
   try {
     const raw     = await callOpus(SYNTHESIS_SYSTEM, synthesisPrompt(progress.batchResults), 6000);
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-    voiceProfile  = JSON.parse(cleaned);
+    try {
+      voiceProfile = JSON.parse(cleaned);
+    } catch (_) {
+      console.log(`\n    ⚠️  Synthesis JSON parse error, repairing…`);
+      const fixRaw     = await callOpus('You are a JSON repair tool. Return ONLY valid JSON, nothing else.', `Fix all escaping and syntax errors in this JSON. Return ONLY the corrected JSON:\n\n${cleaned}`, 6000);
+      const fixCleaned = fixRaw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      voiceProfile     = JSON.parse(fixCleaned);
+    }
     console.log(`✅  Synthesis complete`);
   } catch (err) {
     console.error(`❌  Synthesis failed: ${err.message}`);
