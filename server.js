@@ -361,6 +361,8 @@ app.use((req, res, next) => {
   if (req.hostname === 'guard.kre8r.app') return next();
   // OrgΩr bridge — internal key auth handled inside the route, no session needed
   if (req.path === '/api/stats-export') return next();
+  // HarvestΩr membership verification — internal key auth handled inside the route
+  if (req.path === '/api/kajabi/member-check') return next();
   // AffiliateΩr Electron sync — internal key auth handled inside the route
   if (req.path === '/api/affiliator/sync-from-electron') return next();
   if (req.path === '/api/affiliator/gear-export') return next();

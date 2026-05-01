@@ -3,27 +3,27 @@
 
 ---
 
-## NEXT TASKS (Session 69)
+## NEXT TASKS (Session 70)
 
-### 1. Community Engagement Gamification — Design + Build
-- Research brief from separate conversation (Jason to bring back findings)
-- Design gamification layer for ROCK RICH community (Kajabi):
-  - What mechanics make sense for the existing 3 tiers (Greenhouse / Garden / Founding 50)
-  - Points, streaks, badges, leaderboards — what to build vs what Kajabi already has
-  - Decide: Kre8Ωr-side tracking (DB tables) vs Kajabi-native vs hybrid
-- Build whatever the research session surfaces as the highest-leverage first feature
-
-### 2. Fix second blog post YouTube embed
-- Open MailΩr → 📋 Manage Posts
-- Find the second post (⚠ No video)
+### 1. Fix second blog post YouTube embed (5 min)
+- Open MailΩr → 📋 Manage Posts (button next to Blog Post checkbox)
+- Find the post showing ⚠ No video
 - Paste its YouTube URL and hit Add Video
 - Confirm embed appears at 7kinhomestead.land/blog
 
+### 2. HarvestΩr → kre8r.app bridge: verify member-check endpoint is live
+- Deploy kre8r.app with Session 69 kajabi.js + server.js changes
+- Test from harvestomr dev server: `POST https://kre8r.app/api/kajabi/member-check`
+  with `{ email: "test@example.com" }` + `X-Internal-Key` header
+- Confirm returns `{ active: false, reason: 'not_found' }` (expected for unknown email)
+- Confirm a real Rock Rich member email returns correct tier
+
 ### 3. kre8r-land Production DB Backup Cron
 - Wire daily backup on 7kinhomestead droplet — same pattern as kre8r.app (3am, 14-day rolling)
-- sqlite3 CLI not installed on droplet — use node + better-sqlite3 backup script
-- `0 3 * * * node /home/landapp/kre8r-land/scripts/backup-db.js >> /home/landapp/logs/backup.log 2>&1`
-- Confirm backup dir exists: `/home/landapp/backups/`
+- sqlite3 CLI not installed — use node + better-sqlite3 backup script
+- Script: `/home/landapp/kre8r-land/scripts/backup-db.js`
+- Cron: `0 3 * * * node /home/landapp/kre8r-land/scripts/backup-db.js >> /home/landapp/logs/backup.log 2>&1`
+- Confirm `/home/landapp/backups/` exists first
 
 ---
 

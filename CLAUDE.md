@@ -254,6 +254,14 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    failures never crash the endpoint. Key shared with OrgΩr via KRE8R_INTERNAL_KEY env var.
    OrgΩr runs on port 3002. KinOS runs on port 3001 (kinos.life — family operating system).
 
+✅ HarvestΩr Bridge — `src/routes/kajabi.js` → `POST /api/kajabi/member-check`
+   Internal endpoint for HarvestΩr (Rock Rich member gamification app) membership verification.
+   Auth: X-Internal-Key header. Body: { email }. Returns kajabi_contact_id + tier on success.
+   Tier priority: founding50 > garden > greenhouse (reuses KAJABI_TIER_TAGS + TIER_PRIORITY constants).
+   Whitelisted in server.js global auth guard. HarvestΩr lives at C:\Users\18054\harvestomr\
+   (separate repo, port 3011 on 7kinhomestead droplet, rockrich.7kinhomestead.land).
+   Magic link auth via MailerSend (free tier, same login as MailerLite at mailersend.com).
+
 ## Creator Profile
 **Jason Rutland** — 7 Kin Homestead
 - Voice: Straight-talking, warm, funny, never corporate. "Sharp-tongued neighbor

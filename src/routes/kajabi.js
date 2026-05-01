@@ -17,6 +17,7 @@
 
 const express = require('express');
 const router  = express.Router();
+const logger  = require('../utils/logger');
 
 const KAJABI_API  = 'https://api.kajabi.com/v1';
 const TOKEN_URL   = 'https://api.kajabi.com/v1/oauth/token';
@@ -420,6 +421,63 @@ router.post('/bulk-sync-mailerlite', async (req, res) => {
     res.json(result);
   } catch (e) {
     console.error('[bulk-sync-mailerlite]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── POST /api/kajabi/member-check ───────────────────────────────────────────
+// Internal endpoint for HarvestΩr membership verification.
+// Called during magic-link first-visit flow to confirm a visitor is a paying
+// ROCK RICH member and determine their tier.
+//
+// Auth:    X-Internal-Key header (INTERNAL_API_KEY env var)
+// Body:    { email }
+// Returns: { active: true, kajabi_contact_id, tier } on success
+//          { active: false, reason: 'not_found'|'not_a_member' } otherwise
+
+router.post('/member-check', async (req, res) => {
+  const key = req.headers['x-internal-key'];
+  if (!key || key !== process.env.INTERNAL_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'email required' });
+
+  try {
+    // Kajabi supports filter[email] — returns matching contacts with tag relationships inline
+    const data     = await kajabi('GET', `/contacts?filter[email]=${encodeURIComponent(email)}`);
+    const contacts = data?.data || [];
+
+    if (!contacts.length) {
+      return res.json({ active: false, reason: 'not_found' });
+    }
+
+    const contact  = contacts[0];
+    const tagRefs  = contact?.relationships?.tags?.data || [];
+
+    // Find highest tier tag on this contact
+    let tier = null;
+    for (const ref of tagRefs) {
+      const t = KAJABI_TIER_TAGS[ref.id];
+      if (t && (!tier || TIER_PRIORITY[t] > TIER_PRIORITY[tier])) {
+        tier = t;
+      }
+    }
+
+    // Contact exists in Kajabi but has no community tier tag — not a member
+    if (!tier) {
+      return res.json({ active: false, reason: 'not_a_member' });
+    }
+
+    return res.json({
+      active             : true,
+      kajabi_contact_id  : contact.id,
+      tier,              // 'greenhouse' | 'garden' | 'founding50'
+    });
+
+  } catch (e) {
+    logger.error({ err: e }, '[kajabi/member-check] error');
     res.status(500).json({ error: e.message });
   }
 });

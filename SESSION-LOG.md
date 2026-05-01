@@ -3,6 +3,54 @@
 
 ---
 
+# Session 69 — HarvestΩr Architecture Planning + Kajabi Bridge (2026-04-30)
+
+## Goal
+Architecture review of GAMIFICATION_SPEC_V3.md (Opus-reviewed). Confirm tech stack decisions.
+Wire Kajabi membership verification bridge on kre8r.app so HarvestΩr can verify members
+without needing its own Kajabi credentials.
+
+## What Was Built / Fixed
+
+### HarvestΩr Architecture Decisions (no code — planning session)
+- **Stack confirmed**: PWA → Capacitor → App Store. Vanilla JS + Express, same pattern as kre8r-land.
+  Zero framework friction, Capacitor wraps the existing web app, no rewrite.
+- **Location**: `C:\Users\18054\harvestomr\` — sibling to kre8r and kre8r-land. Own repo,
+  own SQLite DB, own PM2 entry. Being scaffolded in a separate conversation.
+- **Server**: Port 3011 on 7kinhomestead droplet. Nginx block for `rockrich.7kinhomestead.land`.
+- **Auth**: Magic link (MailerSend free tier — 3k/month, same MailerLite login at mailersend.com).
+  Do NOT use MailerLite for transactional — different product, wrong deliverability profile.
+- **Kajabi role**: Gating only. HarvestΩr verifies membership via kre8r.app bridge (internal key),
+  then manages all gamification state in its own DB. Kajabi community tab = WebView inside the app.
+- **WKWebView gotcha**: On iOS, Capacitor WKWebView does NOT share Safari cookie store.
+  Members will hit Kajabi login inside the Community tab on first open — session persists after that.
+  "Seamless if already logged in on Safari" is Android-only. Noted in spec.
+- **Kajabi as gating only** (correct call): Points, challenges, wins, skills, endorsements, leaderboards
+  all live in HarvestΩr's own SQLite DB. Kajabi API queried only to confirm active membership tier.
+
+### Kajabi Verification Bridge — kre8r.app (`src/routes/kajabi.js` + `server.js`)
+- `POST /api/kajabi/member-check` added to kajabi.js:
+  - Auth: `X-Internal-Key` header (INTERNAL_API_KEY)
+  - Body: `{ email }`
+  - Looks up contact by email via Kajabi API, checks tag relationships for tier tags
+  - Returns `{ active: true, kajabi_contact_id, tier }` or `{ active: false, reason }`
+  - Tier priority: founding50 (3) > garden (2) > greenhouse (1) — returns highest held
+  - Reuses existing `KAJABI_TIER_TAGS` + `TIER_PRIORITY` constants already in kajabi.js
+- `server.js`: `/api/kajabi/member-check` whitelisted in global auth guard (internal key
+  handled inside route)
+- HarvestΩr magic link flow: email → member-check → if active, issue magic link token →
+  create/update local member record with kajabi_contact_id + tier
+
+### Spec Files Added
+- `GAMIFICATION_SPEC.md` — original spec (V1)
+- `GAMIFICATION_SPEC_V2.md` — V2 (pre-Opus review)
+- V3 lives in the harvestomr repo (being built in separate conversation)
+
+## Commits — kre8r
+- `(this session)` HarvestΩr: Kajabi member-check bridge + server.js whitelist
+
+---
+
 # Session 68 — Blog Post YouTube Embed Fix + Manage Posts Panel (2026-04-30)
 
 ## Goal
