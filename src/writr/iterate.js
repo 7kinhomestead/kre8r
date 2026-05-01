@@ -22,7 +22,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -52,6 +52,8 @@ function buildPrompt({ currentScript, feedback, iterationCount, config, profile,
   return `You are WritΩr — a script revision assistant for ${brand}.
 
 ${REALITY_RULE}
+
+${SLOP_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}

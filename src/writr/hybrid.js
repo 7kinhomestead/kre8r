@@ -18,7 +18,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE, loadTikTokIntelligenceBlock } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -232,6 +232,8 @@ function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, 
 
 ${REALITY_RULE}
 
+${SLOP_RULE}
+
 ## CREATOR VOICE
 ${voiceSummary}
 ${tikTokBlock}
@@ -336,6 +338,8 @@ function buildScriptPromptA({ reconcileResult, concept, whatCaptured, config, pr
 
 ${REALITY_RULE}
 
+${SLOP_RULE}
+
 ## CREATOR VOICE
 ${voiceSummary}
 
@@ -392,6 +396,8 @@ function buildScriptPromptB({ reconcileResult, concept, whatCaptured, config, pr
   return `You are WritΩr — a script developer for ${brand}.
 
 ${REALITY_RULE}
+
+${SLOP_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}

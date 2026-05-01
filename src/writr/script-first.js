@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE, loadTikTokIntelligenceBlock } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -87,6 +87,8 @@ off-grid living creator. Your job is to develop authentic, beat-mapped scripts f
 real content the creator provides.
 
 ${REALITY_RULE}
+
+${SLOP_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}

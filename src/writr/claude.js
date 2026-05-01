@@ -88,6 +88,66 @@ could fill this beat]. Do not invent the moment. Do not pretend it happened.
 
 The creator's audience trusts them because everything is real. Fabrication destroys that trust.`;
 
+/**
+ * AI Slop Blacklist — injected into every WritΩr prompt alongside REALITY_RULE.
+ * These are the phrases that make audiences instantly recognize AI-written scripts
+ * and tune out. Jason's audience is sharp. One of these kills credibility.
+ */
+const SLOP_RULE = `VOICE AUTHENTICITY RULE — NEVER USE THESE PHRASES OR STRUCTURES:
+
+BANNED PHRASES (AI tells — audiences clock these instantly):
+- "It's not X, it's Y" construction (e.g. "It's not a tiny house, it's a lifestyle")
+- "Let's dive in" / "Let's dive deep" / "Deep dive"
+- "At the end of the day"
+- "Game changer" / "This changes everything"
+- "In today's world" / "In a world where"
+- "Here's the thing..." (as an opener)
+- "The truth is..."
+- "What if I told you..."
+- "Let's unpack that" / "Let's break this down"
+- "Whether you're a beginner or an expert"
+- "Without further ado"
+- "Stay tuned" / "Don't forget to hit the bell"
+- "Spoiler alert"
+- "That's where [X] comes in"
+- "But here's the kicker"
+- "It begs the question"
+- "Needless to say"
+- "First and foremost" / "Last but not least"
+- "That being said" / "With that being said" / "Having said that"
+- "It's worth noting that" / "It's important to note"
+- "It goes without saying"
+- "Moving forward" / "Going forward"
+- "Take it to the next level"
+- "Now more than ever"
+- "Simply put" / "In other words" / "Long story short"
+- "When all is said and done"
+- "As we can see" / "As you can see"
+- "In conclusion" / "To summarize" / "In summary"
+- "Studies show" or "Experts say" without a real specific source
+- "The science is clear"
+- "Here's what you need to know"
+- "So, what does this mean for you?"
+- "At its core" / "At the end of the day"
+- "Utilize" (say "use") / "Facilitate" / "Leverage" as a verb
+- "Furthermore" / "Moreover" (in spoken dialogue — sounds like an essay)
+- "This allows us to" / "This enables"
+- "So let's get into it" / "Let's get started"
+- "Today we're going to be talking about"
+
+BANNED STRUCTURES:
+- Rhetorical "It's not X, it's Y" contrast sentences — the commenter who said this was right, it's the #1 AI tell
+- Opening with "In this video I will..." — Jason never announces, he just goes
+- Ending with a bulleted "Key takeaways" summary — that's a blog post, not Jason
+- Transitions that sound like essay paragraphs ("Furthermore, this demonstrates...")
+- Any sentence that sounds like it came from a PowerPoint slide
+
+WRITE LIKE JASON ACTUALLY TALKS:
+Jason interrupts himself. He goes on tangents. He says "dude" and "man" and "honestly."
+He references specific real things — the actual price, the actual date, Cari's actual name.
+He does not summarize. He does not transition smoothly. He just says the next real thing.
+If a line sounds like it could appear in anyone else's video — rewrite it.`;
+
 // ── TikTok audience intelligence — shared across all WritΩr modes ─────────────
 // Loads the last-saved TikTok pattern analysis from kv_store.
 // Returns a formatted block to inject into any WritΩr prompt, or '' if no data.
@@ -116,4 +176,4 @@ These markers guide ClipsΩr when analyzing the finished video. Place them at hi
   }
 }
 
-module.exports = { callClaude, REALITY_RULE, loadTikTokIntelligenceBlock };
+module.exports = { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock };
