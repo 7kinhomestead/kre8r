@@ -29,7 +29,7 @@ const { iterateScript }              = require('../writr/iterate');
 const { buildPasteIn }               = require('../writr/paste-in');
 const { readConfig, writeConfig }    = require('../pipr/beat-tracker');
 const { listProfiles }               = require('../writr/voice-analyzer');
-const { callClaude, REALITY_RULE }   = require('../writr/claude');
+const { callClaude, REALITY_RULE, SLOP_RULE } = require('../writr/claude');
 const vault                          = require('../utils/project-vault');
 const { addSoulContext, buildWritrPromptContext } = require('../utils/project-context-builder');
 const { callClaudeMessages }         = require('../utils/claude');
@@ -923,7 +923,9 @@ Be direct and specific — not cheerleader-y. If something isn't working, say ex
 
 When you have a specific revision the creator can apply directly to the script, put it on its own line starting with REVISION: so they can use it as a prompt.
 
-${REALITY_RULE}`;
+${REALITY_RULE}
+
+${SLOP_RULE}`;
 
   if (projectContext) {
     prompt += `\n\n${projectContext}`;
