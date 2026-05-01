@@ -7,6 +7,9 @@
 
 'use strict';
 
+const fs   = require('fs');
+const path = require('path');
+
 const ANTHROPIC_VERSION = '2023-06-01';
 const MODEL             = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
 const MAX_TOKENS        = 16384;
@@ -127,8 +130,20 @@ function loadVoiceCalibrationBlock() {
   try {
     const db     = require('../db');
     const stored = db.getKv('voice_calibration');
-    if (!stored) return '';
-    const vc = JSON.parse(stored);
+    let vc = null;
+
+    if (stored) {
+      vc = JSON.parse(stored);
+    } else {
+      // Fallback: read from JSON file (e.g. first run before kv_store is populated)
+      const calPath = path.join(__dirname, '..', '..', 'data', 'voice-calibration.json');
+      if (fs.existsSync(calPath)) {
+        vc = JSON.parse(fs.readFileSync(calPath, 'utf8'));
+        // Backfill kv_store so next call is faster
+        try { db.setKv('voice_calibration', JSON.stringify(vc)); } catch (_) {}
+      }
+    }
+
     if (!vc) return '';
 
     const lines = ['## VOICE CALIBRATION (sourced from 190 real video transcripts — highest priority)'];
