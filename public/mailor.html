@@ -485,7 +485,7 @@
           <label class="output-check"><input type="checkbox" id="gen-email" checked> Email A/B</label>
           <label class="output-check"><input type="checkbox" id="gen-blog" onchange="toggleDeepDive()"> Blog Post</label>
           <label class="output-check" id="deep-dive-wrap" style="display:none;margin-left:12px;opacity:0.85"><input type="checkbox" id="gen-deep-dive"> 🔬 Deep Dive</label>
-          <button type="button" onclick="openManagePosts()" style="background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;margin-left:8px;letter-spacing:.04em;" title="Edit or fix published posts">📋 Manage Posts</button>
+          <button type="button" onclick="openManagePosts()" style="background:none;border:1px solid var(--border);color:var(--text-dimmer);border-radius:var(--radius-sm);padding:3px 10px;font-size:11px;cursor:pointer;margin-left:8px;letter-spacing:.04em;font-family:var(--font-body);transition:all .15s;" onmouseover="this.style.borderColor='var(--teal-dim)';this.style.color='var(--teal)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dimmer)'" title="Edit or fix published posts">📋 Manage Posts</button>
           <label class="output-check"><input type="checkbox" id="gen-community"> Community Post</label>
           <label class="output-check"><input type="checkbox" id="gen-fb-post"> 📘 Facebook Post</label>
         </div>
@@ -1956,45 +1956,41 @@ async function loadManagedPosts() {
 function renderManagedPosts(posts) {
   const list = document.getElementById('mpm-list');
   if (!posts.length) {
-    list.innerHTML = '<div style="color:rgba(255,255,255,.4);font-size:13px;padding:24px 0;">No posts yet.</div>';
+    list.innerHTML = '<div class="mpm-empty">No posts yet.</div>';
     return;
   }
   list.innerHTML = posts.map(p => {
-    const hasVideo = !!p.youtube_url;
-    const date = p.published_at ? new Date(p.published_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Draft';
-    const statusDot = p.status === 'published'
-      ? '<span style="color:#22c55e;font-size:10px;">●</span> Published'
-      : '<span style="color:#f59e0b;font-size:10px;">●</span> Draft';
+    const hasVideo  = !!p.youtube_url;
+    const date      = p.published_at ? new Date(p.published_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Draft';
+    const dotClass  = p.status === 'published' ? 'mpm-dot-pub' : 'mpm-dot-draft';
+    const dotLabel  = p.status === 'published' ? 'Published' : 'Draft';
+    const videoTag  = hasVideo
+      ? `<span class="mpm-has-video">📹 Video linked</span>`
+      : `<span class="mpm-no-video">⚠ No video</span>`;
     return `
-    <div id="mpm-post-${p.id}" style="border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px;margin-bottom:12px;background:#1a1a1a;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+    <div id="mpm-post-${p.id}" class="mpm-card">
+      <div class="mpm-card-top">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;color:#fff;line-height:1.4;margin-bottom:4px;">${escHtml(p.title)}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:10px;">
-            <span>${statusDot}</span>
+          <div class="mpm-card-title">${escHtml(p.title)}</div>
+          <div class="mpm-card-meta">
+            <span class="${dotClass}">●</span><span>${dotLabel}</span>
             <span>${date}</span>
             ${p.read_time_min ? `<span>${p.read_time_min} min read</span>` : ''}
-            ${hasVideo
-              ? `<span style="color:#22c55e;">📹 Video linked</span>`
-              : `<span style="color:#f59e0b;">⚠ No video</span>`}
+            ${videoTag}
           </div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
-          <a href="https://7kinhomestead.land/blog/${p.slug}" target="_blank"
-             style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);border-radius:5px;padding:5px 10px;font-size:11px;cursor:pointer;text-decoration:none;display:inline-block;" title="View post">↗</a>
-          <button onclick="deleteLivePost(${p.id},'${escHtml(p.title)}')"
-                  style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:5px;padding:5px 10px;font-size:11px;cursor:pointer;" title="Delete post">🗑</button>
+        <div class="mpm-actions">
+          <a class="mpm-btn-view" href="https://7kinhomestead.land/blog/${p.slug}" target="_blank" title="View post">↗ View</a>
+          <button class="mpm-btn-del" onclick="deleteLivePost(${p.id},'${escHtml(p.title)}')" title="Delete post">🗑</button>
         </div>
       </div>
-      <!-- YouTube URL editor -->
-      <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
-        <input id="mpm-yt-${p.id}" type="url" placeholder="YouTube URL (https://youtu.be/…)"
+      <div class="mpm-url-row">
+        <input id="mpm-yt-${p.id}" class="mpm-url-input" type="url"
+               placeholder="YouTube URL (https://youtu.be/…)"
                value="${escHtml(p.youtube_url || '')}"
-               style="flex:1;background:#0d0d0d;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:7px 10px;font-size:12px;color:#fff;outline:none;"
                onkeydown="if(event.key==='Enter') saveMpmVideo(${p.id})">
-        <button onclick="saveMpmVideo(${p.id})"
-                style="background:#14b8a6;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;" id="mpm-save-${p.id}">
-          ${hasVideo ? 'Update' : 'Add Video'}
+        <button id="mpm-save-${p.id}" class="mpm-btn-save" onclick="saveMpmVideo(${p.id})">
+          ${hasVideo ? 'UPDATE' : 'ADD VIDEO'}
         </button>
       </div>
     </div>`;
@@ -2985,19 +2981,48 @@ function escHtmlSq(str) {
 <!-- ═══════════════════════════════════════════════════════════════
      MANAGE POSTS MODAL
 ════════════════════════════════════════════════════════════════ -->
-<div id="manage-posts-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);overflow-y:auto;">
-  <div style="max-width:760px;margin:48px auto 48px;background:#111;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;">
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08);">
+<style>
+  #manage-posts-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);overflow-y:auto;}
+  .mpm-sheet{max-width:720px;margin:48px auto 64px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .mpm-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);}
+  .mpm-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--teal);}
+  .mpm-sub{font-size:11px;color:var(--text-dimmer);margin-top:2px;letter-spacing:.04em;text-transform:uppercase;}
+  .mpm-close{background:none;border:none;color:var(--text-dimmer);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;transition:color .15s;}
+  .mpm-close:hover{color:var(--text);}
+  .mpm-list{padding:16px 22px 24px;display:flex;flex-direction:column;gap:10px;}
+  .mpm-card{background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;}
+  .mpm-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  .mpm-card-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.45;}
+  .mpm-card-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px;}
+  .mpm-card-meta span{font-size:11px;color:var(--text-dimmer);}
+  .mpm-dot-pub{color:var(--green,#5cba8a);}
+  .mpm-dot-draft{color:var(--amber);}
+  .mpm-no-video{color:var(--amber);font-size:11px;}
+  .mpm-has-video{color:var(--green,#5cba8a);font-size:11px;}
+  .mpm-actions{display:flex;gap:6px;flex-shrink:0;}
+  .mpm-btn-view{background:var(--bg);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:5px 11px;font-size:11px;cursor:pointer;text-decoration:none;display:inline-block;transition:all .15s;}
+  .mpm-btn-view:hover{border-color:var(--teal-dim);color:var(--teal);}
+  .mpm-btn-del{background:var(--bg);border:1px solid var(--border);color:var(--text-dimmer);border-radius:var(--radius-sm);padding:5px 11px;font-size:11px;cursor:pointer;transition:all .15s;}
+  .mpm-btn-del:hover{border-color:var(--red,#e05c5c);color:var(--red,#e05c5c);}
+  .mpm-url-row{display:flex;gap:8px;align-items:center;}
+  .mpm-url-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:8px 11px;font-size:12px;font-family:var(--font-body);outline:none;transition:border-color .15s;}
+  .mpm-url-input:focus{border-color:var(--teal-dim);}
+  .mpm-url-input::placeholder{color:var(--text-dimmer);}
+  .mpm-btn-save{background:var(--teal);color:var(--bg);border:none;border-radius:var(--radius-sm);padding:8px 16px;font-family:var(--font-head);font-size:15px;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:opacity .15s;}
+  .mpm-btn-save:disabled{opacity:.5;cursor:not-allowed;}
+  .mpm-empty{color:var(--text-dimmer);font-size:13px;padding:28px 0;text-align:center;}
+</style>
+<div id="manage-posts-modal">
+  <div class="mpm-sheet">
+    <div class="mpm-header">
       <div>
-        <div style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.04em;">📋 Manage Blog Posts</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">Edit YouTube URL, view or delete published posts</div>
+        <div class="mpm-title">MANAGE POSTS</div>
+        <div class="mpm-sub">Edit YouTube URL · View · Delete</div>
       </div>
-      <button onclick="closeManagePosts()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;" title="Close">✕</button>
+      <button class="mpm-close" onclick="closeManagePosts()" title="Close">✕</button>
     </div>
-    <!-- Post list -->
-    <div id="mpm-list" style="padding:16px 24px 24px;">
-      <div id="mpm-loading" style="color:rgba(255,255,255,.4);font-size:13px;padding:24px 0;">Loading posts…</div>
+    <div id="mpm-list" class="mpm-list">
+      <div class="mpm-empty">Loading posts…</div>
     </div>
   </div>
 </div>
