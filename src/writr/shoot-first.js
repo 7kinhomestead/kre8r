@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -118,7 +118,8 @@ function buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProf
     : '## FOOTAGE TRANSCRIPTS\n(No transcripts available — work from the creator\'s description only)';
 
   const seasonBlock  = buildSeasonBlock(seasonContext);
-  const tikTokBlock  = loadTikTokIntelligenceBlock();
+  const tikTokBlock    = loadTikTokIntelligenceBlock();
+  const voiceCalBlock  = loadVoiceCalibrationBlock();
 
   return `You are WritΩr — a story finder and script developer for ${brand}, a homesteading
 and off-grid living reality content creator.
@@ -129,6 +130,7 @@ ${SLOP_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}
+${voiceCalBlock}
 ${tikTokBlock}
 ## PROJECT CONFIG
 Brand: ${brand}

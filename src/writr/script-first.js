@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -81,6 +81,7 @@ function buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock, sea
   const mission          = profile?.creator?.mission || '';
   const seasonBlock      = buildSeasonBlock(seasonContext);
   const tikTokBlock      = loadTikTokIntelligenceBlock();
+  const voiceCalBlock    = loadVoiceCalibrationBlock();
 
   return `You are WritΩr — a script development assistant for ${brand}, a homesteading and
 off-grid living creator. Your job is to develop authentic, beat-mapped scripts from
@@ -92,6 +93,7 @@ ${SLOP_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}
+${voiceCalBlock}
 ${tikTokBlock}
 ## PROJECT CONFIG
 Brand: ${brand}

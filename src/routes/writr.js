@@ -29,7 +29,7 @@ const { iterateScript }              = require('../writr/iterate');
 const { buildPasteIn }               = require('../writr/paste-in');
 const { readConfig, writeConfig }    = require('../pipr/beat-tracker');
 const { listProfiles }               = require('../writr/voice-analyzer');
-const { callClaude, REALITY_RULE, SLOP_RULE } = require('../writr/claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadVoiceCalibrationBlock } = require('../writr/claude');
 const vault                          = require('../utils/project-vault');
 const { addSoulContext, buildWritrPromptContext } = require('../utils/project-context-builder');
 const { callClaudeMessages }         = require('../utils/claude');
@@ -913,7 +913,8 @@ router.post('/:project_id/unapprove', (req, res) => {
 // ─────────────────────────────────────────────
 
 function buildRoomSystemPrompt(project, projectContext, currentScript) {
-  const title = project.title || 'this video';
+  const title        = project.title || 'this video';
+  const voiceCalBlock = loadVoiceCalibrationBlock();
 
   let prompt = `You are the creative director for "${title}". You have complete context on this project: the original concept, why it was chosen, the story structure, the beat map, and the current script draft.
 
@@ -925,7 +926,8 @@ When you have a specific revision the creator can apply directly to the script, 
 
 ${REALITY_RULE}
 
-${SLOP_RULE}`;
+${SLOP_RULE}
+${voiceCalBlock}`;
 
   if (projectContext) {
     prompt += `\n\n${projectContext}`;

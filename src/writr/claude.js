@@ -119,4 +119,69 @@ These markers guide ClipsΩr when analyzing the finished video. Place them at hi
   }
 }
 
-module.exports = { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock };
+// ── Voice Calibration block — injected into every WritΩr prompt ──────────────
+// Loads the master voice profile produced by scripts/voice-calibration.js.
+// Returns a formatted injection block, or '' if calibration hasn't been run yet.
+
+function loadVoiceCalibrationBlock() {
+  try {
+    const db     = require('../db');
+    const stored = db.getKv('voice_calibration');
+    if (!stored) return '';
+    const vc = JSON.parse(stored);
+    if (!vc) return '';
+
+    const lines = ['## VOICE CALIBRATION (sourced from 190 real video transcripts — highest priority)'];
+
+    if (vc.voice_summary) {
+      lines.push(`\n${vc.voice_summary}`);
+    }
+
+    if (vc.the_fence_post_rule) {
+      lines.push(`\nTHE VIBE: ${vc.the_fence_post_rule}`);
+    }
+
+    if (vc.sentence_rhythm) {
+      lines.push(`\nSENTENCE RHYTHM: ${vc.sentence_rhythm}`);
+    }
+
+    if (vc.vocabulary_level) {
+      lines.push(`\nVOCABULARY: ${vc.vocabulary_level}`);
+    }
+
+    const phrases = (vc.signature_phrases || []).slice(0, 15);
+    if (phrases.length) {
+      lines.push(`\nSIGNATURE PHRASES (use these — they're real):\n${phrases.map(p => `- "${p}"`).join('\n')}`);
+    }
+
+    if (vc.the_tangent_move) {
+      lines.push(`\nTHE TANGENT MOVE (these are his most authentic moments): ${vc.the_tangent_move}`);
+    }
+
+    if (vc.number_rules) {
+      lines.push(`\nNUMBER RULES: ${vc.number_rules}`);
+    }
+
+    if (vc.cari_and_family_references) {
+      lines.push(`\nFAMILY REFERENCES: ${vc.cari_and_family_references}`);
+    }
+
+    const neverDoes = (vc.what_jason_never_does || []).slice(0, 8);
+    if (neverDoes.length) {
+      lines.push(`\nJASON NEVER DOES THESE (derived from his actual 190 videos):\n${neverDoes.map(x => `- ${x}`).join('\n')}`);
+    }
+
+    // Few-shot examples — most useful for grounding the voice
+    const examples = vc.few_shot_examples || {};
+    const general  = (examples.general || []).slice(0, 6);
+    if (general.length) {
+      lines.push(`\nQUINTESSENTIAL JASON SENTENCES (write like this):\n${general.map(s => `• ${s}`).join('\n')}`);
+    }
+
+    return '\n' + lines.join('\n') + '\n';
+  } catch (_) {
+    return '';
+  }
+}
+
+module.exports = { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock };

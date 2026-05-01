@@ -22,7 +22,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE, SLOP_RULE } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadVoiceCalibrationBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -44,10 +44,11 @@ function buildVoiceSummary(profile, voiceProfiles) {
 }
 
 function buildPrompt({ currentScript, feedback, iterationCount, config, profile, voiceProfiles }) {
-  const voiceSummary = buildVoiceSummary(profile, voiceProfiles);
-  const structure    = config?.story_structure || 'free_form';
-  const brand        = profile?.creator?.brand || '7 Kin Homestead';
-  const draftLabel   = `Draft ${iterationCount}`;
+  const voiceSummary  = buildVoiceSummary(profile, voiceProfiles);
+  const voiceCalBlock = loadVoiceCalibrationBlock();
+  const structure     = config?.story_structure || 'free_form';
+  const brand         = profile?.creator?.brand || '7 Kin Homestead';
+  const draftLabel    = `Draft ${iterationCount}`;
 
   return `You are WritΩr — a script revision assistant for ${brand}.
 
@@ -57,6 +58,7 @@ ${SLOP_RULE}
 
 ## CREATOR VOICE
 ${voiceSummary}
+${voiceCalBlock}
 
 ## STORY STRUCTURE: ${structure}
 
