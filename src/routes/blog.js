@@ -95,10 +95,22 @@ function requireAuth(req, res, next) {
 router.get('/admin/posts', requireAuth, (req, res) => {
   try {
     const posts = db.getAllBlogPosts();
-    // Strip body from list view here too
+    // Strip body from list view for performance
     res.json({ ok: true, posts: posts.map(({ body: _b, ...p }) => p) });
   } catch (err) {
     logger.error({ err }, '[blog] GET /admin/posts failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ─── ADMIN: single post by ID (includes body) ────────────────────────────────
+router.get('/admin/posts/:id', requireAuth, (req, res) => {
+  try {
+    const post = db.getBlogPost(parseInt(req.params.id));
+    if (!post) return res.status(404).json({ ok: false, error: 'Post not found' });
+    res.json({ ok: true, post });
+  } catch (err) {
+    logger.error({ err }, '[blog] GET /admin/posts/:id failed');
     res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -230,6 +242,25 @@ router.post('/patch-to-live/:id', async (req, res) => {
     res.json(data);
   } catch (err) {
     logger.error({ err }, '[blog] patch-to-live failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// BODY proxy — fetch full body of a single post from production (for inline editor)
+router.get('/body-live/:id', async (req, res) => {
+  try {
+    const liveUrl = process.env.LIVE_API_URL || 'https://kre8r.app';
+    const key     = process.env.INTERNAL_API_KEY;
+    if (!key) return res.status(500).json({ ok: false, error: 'INTERNAL_API_KEY not set' });
+
+    const response = await fetch(`${liveUrl}/api/blog/admin/posts/${req.params.id}`, {
+      headers: { 'x-internal-key': key },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Production error ${response.status}`);
+    res.json({ ok: true, body: data.post?.body || '' });
+  } catch (err) {
+    logger.error({ err }, '[blog] body-live failed');
     res.status(500).json({ ok: false, error: err.message });
   }
 });

@@ -2033,13 +2033,30 @@ async function saveMpmVideo(postId) {
   }
 }
 
-function toggleMpmBodyEditor(postId) {
+async function toggleMpmBodyEditor(postId) {
   const editor = document.getElementById(`mpm-body-editor-${postId}`);
   const ta     = document.getElementById(`mpm-body-ta-${postId}`);
   if (!editor) return;
   const isOpen = editor.style.display !== 'none';
   editor.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen && ta) ta.value = window._mpmBodies?.[postId] || '';
+  if (!isOpen && ta) {
+    if (window._mpmBodies?.[postId] !== undefined) {
+      ta.value = window._mpmBodies[postId];
+    } else {
+      ta.value = 'Loading…';
+      try {
+        const slug = editor.dataset.slug;
+        const res  = await fetch(`/api/blog/body-live/${postId}`);
+        const data = await res.json();
+        window._mpmBodies = window._mpmBodies || {};
+        window._mpmBodies[postId] = data.body || '';
+        ta.value = data.body || '';
+      } catch (e) {
+        ta.value = '';
+        showToast('Could not load body', 'red');
+      }
+    }
+  }
 }
 
 async function saveMpmBody(postId) {
