@@ -252,6 +252,8 @@ router.post('/send', async (req, res) => {
 
     // Wrap bare HTML in a minimal email-safe container so it renders consistently
     // across email clients (Outlook, Gmail, Apple Mail, etc.)
+    // REQUIRED by MailerLite: {$unsubscribe} and {$company_address} must be present
+    // or the campaign will be blocked from scheduling via API.
     const wrappedHtml = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -262,9 +264,14 @@ router.post('/send', async (req, res) => {
       <tr><td style="color:#222222;font-family:Georgia,serif;font-size:16px;line-height:1.7;">
         ${html_body}
       </td></tr>
+      <tr><td style="padding-top:40px;border-top:1px solid #eeeeee;text-align:center;color:#999999;font-family:Georgia,serif;font-size:12px;line-height:1.8;">
+        {$company_address}<br>
+        <a href="{$unsubscribe_url}" style="color:#999999;">Unsubscribe</a>
+      </td></tr>
     </table>
   </td></tr>
 </table>
+{$unsubscribe}
 </body></html>`;
 
     // Resolve sender — env vars take priority (immune to profile overwrites)
