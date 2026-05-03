@@ -53,9 +53,11 @@ async function fetchMlCampaignStats(limit = 5) {
       subject:    c.emails?.[0]?.subject || c.name || '—',
       status:     c.status,
       sent_at:    c.sent_at || c.created_at,
-      open_rate:  unwrapRate(c.open_rate),
-      click_rate: unwrapRate(c.click_rate),
-      total_sent: c.total_recipients ?? c.stats?.sent ?? null,
+      open_rate:        unwrapRate(c.stats?.open_rate),
+      click_rate:       unwrapRate(c.stats?.click_rate),
+      unsubscribe_rate: unwrapRate(c.stats?.unsubscribe_rate),
+      click_to_open:    unwrapRate(c.stats?.click_to_open_rate),
+      total_sent:       c.total_recipients ?? c.stats?.sent ?? null,
     }));
   } catch (e) {
     console.error('[northr] fetchMlCampaignStats error:', e.message);

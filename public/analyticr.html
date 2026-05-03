@@ -242,7 +242,9 @@ async function loadNorthr(){
     document.getElementById('email-cards').innerHTML = [
       card('Latest Open Rate', latest?pct(latest.open_rate):'—', latest?ago(latest.sent_at):'', latest&&latest.open_rate>30?'accent':''),
       card('Latest Click Rate', latest?pct(latest.click_rate):'—','',''),
-      card('Avg Open Rate', avgOpen!=null?pct(avgOpen):'—', `${campaigns.length} campaigns sampled`,''),
+      card('Click-to-Open', latest&&latest.click_to_open!=null?pct(latest.click_to_open):'—','of openers clicked',''),
+      card('Unsubscribes', latest&&latest.unsubscribe_rate!=null?pct(latest.unsubscribe_rate):'—','last send', latest&&latest.unsubscribe_rate>1?'warn':''),
+      card('Avg Open Rate', avgOpen!=null?pct(avgOpen):'—', `${withOpen.length} campaigns sampled`,''),
       card('Avg Click Rate', avgClick!=null?pct(avgClick):'—','',''),
       card('Days Since Email', st.days_since_last_email!=null?st.days_since_last_email+'d':'—','', st.days_since_last_email>14?'warn':''),
     ].join('');
