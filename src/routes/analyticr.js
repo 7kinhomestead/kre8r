@@ -36,4 +36,27 @@ router.get('/land', async (req, res) => {
   }
 });
 
+// GET /api/analyticr/fence-questions
+// Proxies to /api/fence/questions on kre8r-land — returns last 200 questions with full detail
+router.get('/fence-questions', async (req, res) => {
+  if (!LAND_KEY) {
+    return res.json({ ok: false, message: 'LAND_INTERNAL_KEY not configured', questions: [] });
+  }
+  try {
+    const { default: fetch } = await import('node-fetch');
+    const upstream = await fetch(`${LAND_URL}/api/fence/questions`, {
+      headers: { 'x-internal-key': LAND_KEY },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!upstream.ok) {
+      return res.json({ ok: false, message: `land server returned ${upstream.status}`, questions: [] });
+    }
+    const data = await upstream.json();
+    res.json({ ok: true, questions: Array.isArray(data) ? data : [] });
+  } catch (err) {
+    logger.warn({ err: err.message }, 'analyticr/fence-questions proxy failed');
+    res.json({ ok: false, message: err.message, questions: [] });
+  }
+});
+
 module.exports = router;
