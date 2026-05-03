@@ -27,6 +27,36 @@ function unwrapRate(v) {
   return typeof v === 'number' ? Math.round(v * 10000) / 100 : null;
 }
 
+async function fetchMlAutomationStats() {
+  const apiKey = process.env.MAILERLITE_API_KEY;
+  if (!apiKey) return [];
+  try {
+    const { default: fetch } = await import('node-fetch');
+    const res  = await fetch(`${ML_BASE}/automations?limit=25`, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
+    });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = {}; }
+    if (!res.ok) return [];
+    return (data.data || []).map(a => ({
+      id:          a.id,
+      name:        a.name,
+      enabled:     a.enabled,
+      sent:        a.stats?.sent ?? 0,
+      open_rate:   unwrapRate(a.stats?.open_rate),
+      click_rate:  unwrapRate(a.stats?.click_rate),
+      click_to_open: unwrapRate(a.stats?.click_to_open_rate),
+      unsubscribe_rate: unwrapRate(a.stats?.unsubscribe_rate),
+      completed:   a.stats?.completed_subscribers_count ?? 0,
+      in_queue:    a.stats?.subscribers_in_queue_count ?? 0,
+    }));
+  } catch (e) {
+    console.error('[northr] fetchMlAutomationStats error:', e.message);
+    return [];
+  }
+}
+
 async function fetchMlCampaignStats(limit = 5) {
   const apiKey = process.env.MAILERLITE_API_KEY;
   if (!apiKey) return [];
@@ -160,7 +190,20 @@ router.get('/dashboard', async (req, res) => {
     const stats         = db.getPublishingStats(30);
     const goals         = db.getGoal(currentMonth(), currentYear());
     const latest_report = db.getLatestReport(currentMonth(), currentYear());
-    const email_stats   = await fetchMlCampaignStats(5);
+    const [email_stats, automation_stats] = await Promise.all([
+      fetchMlCampaignStats(5),
+      fetchMlAutomationStats(),
+    ]);
+
+    // Override days_since_last_email from live ML campaign data when available
+    // — the DB only knows about emails sent through MailΩr, not direct ML sends
+    const latestMlSent = email_stats[0]?.sent_at ? new Date(email_stats[0].sent_at) : null;
+    if (latestMlSent) {
+      const mlDays = Math.floor((Date.now() - latestMlSent.getTime()) / 86400000);
+      if (mlDays < (stats.days_since_last_email ?? 999)) {
+        stats.days_since_last_email = mlDays;
+      }
+    }
 
     let report_content = null;
     if (latest_report?.content) {
@@ -187,6 +230,7 @@ router.get('/dashboard', async (req, res) => {
       stats,
       goals,
       email_stats,
+      automation_stats,
       published_dates: publishedDates,
       report: report_content ? { ...latest_report, content: report_content } : null,
     });

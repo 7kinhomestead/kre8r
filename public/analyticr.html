@@ -103,6 +103,14 @@ svg.spark path{fill:none}
     <div id="email-cards" class="cards"><div class="loading">Loading…</div></div>
   </div>
 
+  <!-- ── SEQUENCES ────────────────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-title">📬 Welcome Sequences (by Tier)</div>
+    <div class="card-wide" id="seq-stats">
+      <div class="loading">Loading…</div>
+    </div>
+  </div>
+
   <!-- ── PIPELINE ───────────────────────────────────────────────────────── -->
   <div class="sec">
     <div class="sec-title">⚙️ Content Pipeline</div>
@@ -248,6 +256,44 @@ async function loadNorthr(){
       card('Avg Click Rate', avgClick!=null?pct(avgClick):'—','',''),
       card('Days Since Email', st.days_since_last_email!=null?st.days_since_last_email+'d':'—','', st.days_since_last_email>14?'warn':''),
     ].join('');
+
+    // Sequences
+    const seqs = Array.isArray(d.automation_stats) ? d.automation_stats : [];
+    const seqEl = document.getElementById('seq-stats');
+    if (!seqs.length) {
+      seqEl.innerHTML = '<div class="dim" style="padding:12px 8px;font-size:12px;">No automations found in MailerLite</div>';
+    } else {
+      function tierBadge(name) {
+        const n = (name||'').toLowerCase();
+        if (n.includes('founding')) return '<span class="pill tier-founding">Founding 50 🏆</span>';
+        if (n.includes('garden'))   return '<span class="pill tier-garden">Garden 🌿</span>';
+        if (n.includes('greenhouse')) return '<span class="pill tier-greenhouse">Greenhouse 🌱</span>';
+        return `<span class="pill">${name}</span>`;
+      }
+      const seqRows = seqs.map(s => `<tr>
+        <td>${tierBadge(s.name)}</td>
+        <td style="color:#94a3b8;font-size:12px;max-width:200px">${s.name}</td>
+        <td>${s.enabled ? '<span style="color:#22c55e;font-weight:600">✓ Live</span>' : '<span style="color:#475569">Paused</span>'}</td>
+        <td><strong>${s.sent||0}</strong></td>
+        <td>${s.open_rate!=null?'<strong>'+pct(s.open_rate)+'</strong>':'—'}</td>
+        <td>${s.click_rate!=null?pct(s.click_rate):'—'}</td>
+        <td>${s.click_to_open!=null?pct(s.click_to_open):'—'}</td>
+        <td>${s.unsubscribe_rate!=null?pct(s.unsubscribe_rate):'—'}</td>
+        <td style="color:#475569">${s.completed||0}</td>
+        <td style="color:#14b8a6">${s.in_queue||0}</td>
+      </tr>`).join('');
+      seqEl.innerHTML = `
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>Tier</th><th>Sequence Name</th><th>Status</th><th>Sent</th>
+              <th>Open Rate</th><th>Click Rate</th><th>CTO</th><th>Unsub</th>
+              <th>Completed</th><th>In Queue</th>
+            </tr></thead>
+            <tbody>${seqRows}</tbody>
+          </table>
+        </div>`;
+    }
 
     document.getElementById('pipe-cards').innerHTML = [
       card('Pre-Production', fmt(pp.in_pre_production),'ideas + scripts',''),
