@@ -1935,9 +1935,12 @@ function closeManagePosts() {
   document.body.style.overflow = '';
 }
 
-// Close on backdrop click
-document.getElementById('manage-posts-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeManagePosts();
+// Close on backdrop click (deferred — modal HTML is defined later in the page)
+window.addEventListener('DOMContentLoaded', function() {
+  var modal = document.getElementById('manage-posts-modal');
+  if (modal) modal.addEventListener('click', function(e) {
+    if (e.target === this) closeManagePosts();
+  });
 });
 
 async function loadManagedPosts() {
