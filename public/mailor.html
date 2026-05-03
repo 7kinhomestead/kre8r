@@ -1981,7 +1981,7 @@ function renderManagedPosts(posts) {
         </div>
         <div class="mpm-actions">
           <a class="mpm-btn-view" href="https://7kinhomestead.land/blog/${p.slug}" target="_blank" title="View post">↗ View</a>
-          <button class="mpm-btn-del" onclick="deleteLivePost(${p.id},'${escHtml(p.title)}')" title="Delete post">🗑</button>
+          <button class="mpm-btn-del" onclick="deleteLivePost(${p.id}, this)" title="Delete post">🗑</button>
         </div>
       </div>
       <div class="mpm-url-row">
@@ -2022,7 +2022,8 @@ async function saveMpmVideo(postId) {
   }
 }
 
-async function deleteLivePost(postId, title) {
+async function deleteLivePost(postId, btn) {
+  const title = btn.closest('.mpm-card')?.querySelector('.mpm-card-title')?.textContent || 'this post';
   if (!confirm(`Delete "${title}"?\n\nThis removes it from the live site permanently.`)) return;
   try {
     const res  = await fetch(`/api/blog/delete-live/${postId}`, { method: 'POST' });
