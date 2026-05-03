@@ -1959,7 +1959,10 @@ function renderManagedPosts(posts) {
     list.innerHTML = '<div class="mpm-empty">No posts yet.</div>';
     return;
   }
+  // Store bodies for inline editing
+  window._mpmBodies = {};
   list.innerHTML = posts.map(p => {
+    window._mpmBodies[p.id] = p.body || '';
     const hasVideo  = !!p.youtube_url;
     const date      = p.published_at ? new Date(p.published_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Draft';
     const dotClass  = p.status === 'published' ? 'mpm-dot-pub' : 'mpm-dot-draft';
@@ -1981,6 +1984,7 @@ function renderManagedPosts(posts) {
         </div>
         <div class="mpm-actions">
           <a class="mpm-btn-view" href="https://7kinhomestead.land/blog/${p.slug}" target="_blank" title="View post">↗ View</a>
+          <button class="mpm-btn-edit-body" onclick="toggleMpmBodyEditor(${p.id})" title="Edit body HTML">✏</button>
           <button class="mpm-btn-del" onclick="deleteLivePost(${p.id}, this)" title="Delete post">🗑</button>
         </div>
       </div>
@@ -1992,6 +1996,13 @@ function renderManagedPosts(posts) {
         <button id="mpm-save-${p.id}" class="mpm-btn-save" onclick="saveMpmVideo(${p.id})">
           ${hasVideo ? 'UPDATE' : 'ADD VIDEO'}
         </button>
+      </div>
+      <div id="mpm-body-editor-${p.id}" style="display:none;margin-top:10px;">
+        <textarea id="mpm-body-ta-${p.id}" style="width:100%;height:200px;font-size:11px;font-family:monospace;background:#111;color:#ccc;border:1px solid var(--border);border-radius:6px;padding:10px;box-sizing:border-box;resize:vertical;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button id="mpm-body-save-${p.id}" class="mpm-btn-save" onclick="saveMpmBody(${p.id})">SAVE BODY</button>
+          <button style="background:none;border:1px solid var(--border);color:var(--text-dimmer);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;" onclick="toggleMpmBodyEditor(${p.id})">Cancel</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -2022,6 +2033,38 @@ async function saveMpmVideo(postId) {
   }
 }
 
+function toggleMpmBodyEditor(postId) {
+  const editor = document.getElementById(`mpm-body-editor-${postId}`);
+  const ta     = document.getElementById(`mpm-body-ta-${postId}`);
+  if (!editor) return;
+  const isOpen = editor.style.display !== 'none';
+  editor.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen && ta) ta.value = window._mpmBodies?.[postId] || '';
+}
+
+async function saveMpmBody(postId) {
+  const ta  = document.getElementById(`mpm-body-ta-${postId}`);
+  const btn = document.getElementById(`mpm-body-save-${postId}`);
+  if (!ta) return;
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res  = await fetch(`/api/blog/patch-to-live/${postId}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ body: ta.value }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    if (window._mpmBodies) window._mpmBodies[postId] = ta.value;
+    btn.disabled = false; btn.textContent = 'SAVE BODY';
+    showToast('Body saved', 'green');
+    toggleMpmBodyEditor(postId);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'SAVE BODY';
+    showToast(`Save failed: ${e.message}`, 'red');
+  }
+}
+
 async function deleteLivePost(postId, btn) {
   const title = btn.closest('.mpm-card')?.querySelector('.mpm-card-title')?.textContent || 'this post';
   if (!confirm(`Delete "${title}"?\n\nThis removes it from the live site permanently.`)) return;
@@ -2031,6 +2074,7 @@ async function deleteLivePost(postId, btn) {
     if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
     document.getElementById(`mpm-post-${postId}`)?.remove();
     showToast('Post deleted', 'green');
+    closeManagePosts();
   } catch (e) {
     showToast(`Delete failed: ${e.message}`, 'red');
   }
@@ -3003,6 +3047,8 @@ function escHtmlSq(str) {
   .mpm-actions{display:flex;gap:6px;flex-shrink:0;}
   .mpm-btn-view{background:var(--bg);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:5px 11px;font-size:11px;cursor:pointer;text-decoration:none;display:inline-block;transition:all .15s;}
   .mpm-btn-view:hover{border-color:var(--teal-dim);color:var(--teal);}
+  .mpm-btn-edit-body{background:var(--bg);border:1px solid var(--border);color:var(--text-dimmer);border-radius:var(--radius-sm);padding:5px 11px;font-size:11px;cursor:pointer;transition:all .15s;}
+  .mpm-btn-edit-body:hover{border-color:var(--teal-dim);color:var(--teal);}
   .mpm-btn-del{background:var(--bg);border:1px solid var(--border);color:var(--text-dimmer);border-radius:var(--radius-sm);padding:5px 11px;font-size:11px;cursor:pointer;transition:all .15s;}
   .mpm-btn-del:hover{border-color:var(--red,#e05c5c);color:var(--red,#e05c5c);}
   .mpm-url-row{display:flex;gap:8px;align-items:center;}
