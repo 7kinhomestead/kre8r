@@ -3,22 +3,34 @@
 
 ---
 
-## NEXT TASKS (Session 70)
+## NEXT TASKS (Session 71)
 
-### 1. Fix second blog post YouTube embed (5 min)
-- Open MailΩr → 📋 Manage Posts (button next to Blog Post checkbox)
-- Find the post showing ⚠ No video
-- Paste its YouTube URL and hit Add Video
-- Confirm embed appears at 7kinhomestead.land/blog
+### 1. Check Apr 30 blog post YouTube embeds
+- View "Why Hard Work Feels Different" and "The Life You Have Isn't the Only One"
+  at 7kinhomestead.land/blog — confirm Error 153 is gone (kre8r-land iframe fix is live)
+- If still 153ing, kre8r-land deploy may not have included the latest blog-post.html change
 
-### 2. HarvestΩr → kre8r.app bridge: verify member-check endpoint is live
+### 2. Blog body editor — verify working
+- Hard refresh MailΩr (Ctrl+Shift+R) to clear cached JS
+- Open Manage Posts → click ✏ on any post → confirm body loads in textarea
+- If still empty: check Network tab for body-live request and response
+
+### 3. Restart local Electron app to pick up voice calibration profile
+- `data/voice-calibration.json` is written — Electron needs restart to load it into kv_store
+- After restart: generate a WritΩr script and confirm calibration block appears in output
+
+### 4. Load Rock Rich email sequences into MailerLite
+- Welcome sequence (6 emails) + upgrade sequence written in Session 70
+- Create automation in MailerLite, paste emails in order
+
+### 5. HarvestΩr → kre8r.app bridge: verify member-check endpoint is live
 - Deploy kre8r.app with Session 69 kajabi.js + server.js changes
 - Test from harvestomr dev server: `POST https://kre8r.app/api/kajabi/member-check`
   with `{ email: "test@example.com" }` + `X-Internal-Key` header
 - Confirm returns `{ active: false, reason: 'not_found' }` (expected for unknown email)
 - Confirm a real Rock Rich member email returns correct tier
 
-### 3. kre8r-land Production DB Backup Cron
+### 6. kre8r-land Production DB Backup Cron
 - Wire daily backup on 7kinhomestead droplet — same pattern as kre8r.app (3am, 14-day rolling)
 - sqlite3 CLI not installed — use node + better-sqlite3 backup script
 - Script: `/home/landapp/kre8r-land/scripts/backup-db.js`

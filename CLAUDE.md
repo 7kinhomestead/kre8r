@@ -106,6 +106,9 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 ✅ WritΩr (`/writr.html`) — Script generation in Jason's actual voice using analyzed
    voice profiles. 3 modes: full script / bullets / hybrid. Voice blend slider.
    Beat cards show emotional_function descriptions. Short-form mode: 150–300 words, timing per beat.
+   Voice calibration: 190 transcripts analyzed via Opus → `data/voice-calibration.json` + kv_store.
+   `loadVoiceCalibrationBlock()` in src/writr/claude.js injected into all 5 prompt builders
+   (script-first, shoot-first, hybrid, iterate, writr route room prompt).
 
 ✅ DirectΩr (`/director.html`) — Shot list and crew brief generation.
 
@@ -174,7 +177,13 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    and quick buttons (+1d/+2d/+3d/+1wk). sends_at ISO string passed to /api/mailerlite/send.
    Blog post: plain-text TITLE:/--- delimiter format (not JSON) via callClaudeRaw + parseBlogResponse.
    Blog body is contenteditable — edit in-browser before publishing. Publish button reads live DOM.
-   📋 Manage Posts button: modal lists all live posts, inline YouTube URL editor per post, delete.
+   📋 Manage Posts button: modal lists all live posts, inline YouTube URL editor per post, delete,
+   and ✏ body editor (loads raw HTML lazily via /api/blog/body-live/:id, saves via patch-to-live).
+   CAN-SPAM compliance tags ({$unsubscribe}, {$company_address}) added to wrappedHtml template.
+   Deep dive blog prompt: explicit no-<iframe> rule — YouTube linked as <a href> only.
+   Blog YouTube embed (kre8r-land blog-post.html): updated to current YouTube spec —
+   web-share in allow, referrerpolicy="strict-origin-when-cross-origin", youtube.com (not nocookie),
+   no deprecated modestbranding. Missing web-share was causing Error 153 "Video player config error".
    Push-to-live proxies: push-to-live (POST), patch-to-live/:id (PATCH), delete-live/:id (DELETE),
    list-live (GET admin) — all proxy to kre8r.app via INTERNAL_API_KEY, whitelisted in server.js.
    Old M4 page still exists at /m4-email-generator.html (legacy, keep for now).

@@ -3,6 +3,92 @@
 
 ---
 
+# Session 70 — Voice Calibration, Email Sequences, AnalyticΩr Fixes, Blog Error 153 (2026-05-03)
+
+## Goal
+Wire voice calibration into all WritΩr prompts. Run calibration across 190 transcripts.
+Rewrite Rock Rich email sequences in Jason's voice. Fix AnalyticΩr LAND key errors.
+Add fence question log. Fix MailerLite stats + Days Since Email. Fix blog YouTube Error 153.
+
+## What Was Built / Fixed
+
+### Voice Calibration (`loadVoiceCalibrationBlock`)
+- `src/writr/claude.js`: added `loadVoiceCalibrationBlock()` — reads from kv_store,
+  falls back to `data/voice-calibration.json`, backfills kv_store on first server load.
+- Injected into all 5 WritΩr prompt builders:
+  `script-first.js`, `shoot-first.js`, `hybrid.js`, `iterate.js`, `src/routes/writr.js`
+- `scripts/voice-calibration.js`: fixed dotenv override issue (`{ override: true }`),
+  added Opus JSON repair fallback for malformed batch output.
+- Calibration ran across 190 transcripts (19 batches × 10) via Opus. ~$8.46.
+  Result stored in `data/voice-calibration.json` + kv_store.
+
+### Email Sequences (Rock Rich Community)
+- Rewrote full welcome sequence (6 emails) + upgrade sequence (Day 8+) in Jason's voice
+  using calibration findings: "ask me how I know", "that's not nothing", specific numbers,
+  fence post rule, conversational rhythm.
+- Word count of transcript DB surfaced (~X words) and injected into Email 4 ("Two questions").
+- Sequences ready to load into MailerLite.
+
+### AnalyticΩr — LAND_INTERNAL_KEY
+- `LAND_INTERNAL_KEY=7kin2026landXsecret99` added to `.env` (was missing entirely).
+- All AnalyticΩr land panels now load correctly.
+
+### AnalyticΩr — Fence Question Log
+- `GET /api/analyticr/fence-questions` proxy added to `src/routes/analyticr.js`.
+  Proxies to `/api/fence/questions` on kre8r-land with LAND_INTERNAL_KEY.
+- `analyticr.html`: new "Fence Questions" panel renders full question text, topic,
+  tier (color-coded pill), matched video, email captured, timestamp.
+
+### AnalyticΩr — Email Stats Fixes (`src/routes/northr.js`)
+- ML v2 rates nested under `c.stats?.open_rate` (not `c.open_rate`) — fixed.
+- Added `unsubscribe_rate` + `click_to_open` to campaign mapping.
+- `fetchMlAutomationStats()` added — fetches all automations + stats.
+- Welcome sequence performance by tier now renders in AnalyticΩr via `automation_stats`.
+- Days Since Email override: live ML campaign `sent_at` compared to DB value,
+  uses whichever is more recent. Fixes "35d" showing when last send was 4d ago.
+
+### MailerLite CAN-SPAM Compliance (`src/routes/mailerlite.js`)
+- `{$company_address}`, `{$unsubscribe_url}`, `{$unsubscribe}` added to `wrappedHtml`
+  template. MailerLite API was blocking campaign scheduling without these.
+
+### Blog: YouTube Error 153 — Full Investigation + Fix
+- **Root cause**: YouTube's 2023 player update requires `web-share` in the `allow`
+  attribute and `referrerpolicy="strict-origin-when-cross-origin"`. Missing these
+  triggers "Video player configuration error" (Error 153). Also removed deprecated
+  `modestbranding=1` parameter. Switched from `youtube-nocookie.com` to `youtube.com`.
+- **kre8r-land** `public/blog-post.html`: iframe updated to full current YouTube embed spec.
+- **mailor.js blog system prompt**: explicit `Do NOT include <iframe> tags` rule added
+  so future deep dive output never puts a conflicting embed in the body HTML.
+- **Additional blog fixes this session**:
+  - Delete button in Manage Posts was silently broken for posts with apostrophes in
+    title (inline onclick JS string delimiter issue). Fixed to pass `this` + read
+    title from DOM.
+  - Modal `backdrop click` listener ran before modal HTML existed (TypeError halted
+    script execution, blocking all functions defined after it). Fixed with
+    `DOMContentLoaded` deferral.
+  - Auto-close modal after successful delete.
+  - **Body editor** added to Manage Posts: ✏ button expands raw HTML textarea,
+    fetches body lazily via `GET /api/blog/body-live/:id` proxy, saves via patch-to-live.
+  - `GET /admin/posts/:id` (returns full post incl. body) added to `src/routes/blog.js`.
+  - `GET /body-live/:id` proxy route added to `src/routes/blog.js`.
+
+## Commits — kre8r
+- `4a6ee2c` voice calibration + AnalyticΩr fence questions + northr stats fixes + ML compliance
+- `ec41938` fix: delete button broken for posts with apostrophes in title
+- `f3f0b74` feat: Manage Posts body editor + auto-close after delete
+- `5cd4212` fix: Manage Posts body editor now loads body from server
+- `05a0ccf` fix: defer manage-posts-modal backdrop listener to DOMContentLoaded
+
+## Commits — kre8r-land
+- iframe updated: web-share + referrerpolicy + youtube.com + no modestbranding (Error 153 fix)
+
+## Known Outstanding
+- Body editor textarea still populating empty for the current post — body may be genuinely
+  empty in DB (push-to-live may not have stored it). Hard refresh MailΩr may also be needed.
+- Apr 30 blog posts should also be checked — same old iframe spec, probably also 153ing.
+
+---
+
 # Session 69 — HarvestΩr Architecture Planning + Kajabi Bridge (2026-04-30)
 
 ## Goal
