@@ -649,13 +649,14 @@ app.use('/api/blog',              require('./src/routes/blog'));
 app.get('/r/:partnerKey/:linkKey', (req, res) => {
   const { partnerKey, linkKey } = req.params;
   const vid = req.query.vid ? parseInt(req.query.vid) : null;
+  const src = req.query.src ? String(req.query.src).slice(0, 120) : null; // content source tag
   const _db = require('./src/db');
   try {
     const link = _db.prepare('SELECT * FROM affiliate_links WHERE partner_key=? AND link_key=? AND active=1')
       .get(partnerKey, linkKey);
     if (!link) return res.status(404).send('Link not found');
-    _db.prepare('INSERT INTO affiliate_clicks (partner_key,link_key,project_id,referrer) VALUES (?,?,?,?)')
-      .run(partnerKey, linkKey, vid || null, req.get('referer') || null);
+    _db.prepare('INSERT INTO affiliate_clicks (partner_key,link_key,project_id,referrer,src) VALUES (?,?,?,?,?)')
+      .run(partnerKey, linkKey, vid || null, req.get('referer') || null, src);
     res.redirect(302, link.destination_url);
   } catch (err) {
     log.error({ module: 'affiliator', err }, 'Redirect failed');

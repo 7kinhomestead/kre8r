@@ -437,7 +437,16 @@ router.get('/analytics', (req, res) => {
 
   const total = db.prepare('SELECT COUNT(*) AS n FROM affiliate_clicks').get().n;
 
-  res.json({ total, byPartner, byLink, byDay });
+  // Content source breakdown — clicks tagged with ?src=
+  const bySrc = db.prepare(`
+    SELECT src, partner_key, COUNT(*) AS clicks,
+           strftime('%Y-%m-%d', MAX(clicked_at)) AS last_click
+    FROM affiliate_clicks
+    WHERE src IS NOT NULL AND src != ''
+    GROUP BY src, partner_key ORDER BY clicks DESC LIMIT 50
+  `).all();
+
+  res.json({ total, byPartner, byLink, byDay, bySrc });
 });
 
 // ── Commissions (confirmed earnings → OrgΩr TreasΩr bridge) ─────────────────

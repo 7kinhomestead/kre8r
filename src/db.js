@@ -1063,6 +1063,8 @@ function runMigrations() {
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_aff_clicks_partner ON affiliate_clicks(partner_key)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_aff_clicks_date    ON affiliate_clicks(clicked_at)');
+  // Add src column for content-source tagging (?src=video-slug) — safe migration
+  try { db.exec('ALTER TABLE affiliate_clicks ADD COLUMN src TEXT'); } catch (_) {}
   db.exec(`CREATE TABLE IF NOT EXISTS affiliate_commissions (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     partner_key     TEXT    NOT NULL,
