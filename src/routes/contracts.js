@@ -247,7 +247,8 @@ body{font-family:var(--f-body);font-weight:300;color:var(--ink);line-height:1.55
       padding:0.6in 0.75in 14px;border-bottom:2px solid var(--accent);}
 .head-logo{width:68px;height:68px;display:flex;align-items:center;justify-content:center;
            background:var(--accent-wash);border:1px solid var(--accent-rule);border-radius:4px;
-           font-family:var(--f-display);font-size:24px;letter-spacing:.04em;color:var(--accent);flex-shrink:0;}
+           overflow:hidden;flex-shrink:0;}
+.head-logo img{width:100%;height:100%;object-fit:contain;padding:6px;}
 .head-id{display:flex;flex-direction:column;gap:3px;}
 .head-eyebrow{font-family:var(--f-display);font-size:10px;letter-spacing:.32em;color:var(--accent);}
 .head-org{font-family:var(--f-display);font-size:26px;letter-spacing:.03em;color:var(--ink);}
@@ -341,7 +342,7 @@ body{font-family:var(--f-body);font-weight:300;color:var(--ink);line-height:1.55
 <body>
 <div class="sheet">
   <div class="head">
-    <div class="head-logo">7K</div>
+    <div class="head-logo"><img src="/media-kit-images/logo.png" alt="7 Kin Homestead"></div>
     <div class="head-id">
       <div class="head-eyebrow">Partnership Agreement</div>
       <div class="head-org">7 Kin Homestead</div>
