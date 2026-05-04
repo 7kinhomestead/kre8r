@@ -83,19 +83,19 @@ function renderTemplate(bodyTemplate, variables) {
 function buildSigningPage({ status, agreement, errorMsg }) {
   const bodyContent = (() => {
     if (errorMsg) {
-      return `<div class="msg error">${errorMsg}</div>`;
+      return `<div class="msg-wrap"><div class="msg error">${errorMsg}</div></div>`;
     }
     if (status === 'not_found') {
-      return `<div class="msg error">Agreement not found. This link may be invalid or expired.</div>`;
+      return `<div class="msg-wrap"><div class="msg error">Agreement not found. This link may be invalid or expired.</div></div>`;
     }
     if (status === 'already_signed') {
       const date = agreement.signed_at
         ? new Date(agreement.signed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
         : 'a previous date';
-      return `<div class="msg success">This agreement has already been signed on ${date}.</div>`;
+      return `<div class="msg-wrap"><div class="msg success">&#10003; This agreement was signed on ${date}.</div></div>`;
     }
     if (status === 'success') {
-      return `<div class="msg success">&#10003; Signed! A copy has been emailed to you.</div>`;
+      return `<div class="msg-wrap"><div class="msg success">&#10003; Signed! A copy has been emailed to you.</div></div>`;
     }
     // status === 'pending' — show the signing form
     // Detect any {{variable}} placeholders remaining in body_snapshot — these are
@@ -221,59 +221,133 @@ function buildSigningPage({ status, agreement, errorMsg }) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Partnership Agreement — 7 Kin Homestead</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0a0a0a;--card:#141414;--border:#222;--border2:#333;
-  --off:rgba(255,255,255,.88);--muted:rgba(255,255,255,.48);
-  --teal:#14b8a6;--green:#22c55e;--red:#ef4444;
+  --paper:#faf9f6;--white:#fff;--ink:#1a1a1a;--ink2:#3a3a3a;--muted:#6b7280;
+  --teal:#14b8a6;--teal-light:rgba(20,184,166,.08);--teal-mid:rgba(20,184,166,.18);
+  --border:#e5e2db;--border2:#d1cec7;
+  --amber:#f59e0b;--red:#dc2626;--green:#16a34a;
 }
-body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--off);font-size:15px;min-height:100vh;padding:0 0 60px}
-.header{background:#111;border-bottom:1px solid var(--border);padding:18px 24px;display:flex;align-items:center;gap:14px}
-.header-logo{font-size:20px;font-weight:800;color:var(--teal);letter-spacing:-.3px}
-.header-sub{font-size:13px;color:var(--muted);margin-top:2px}
-.container{max-width:780px;margin:0 auto;padding:32px 24px}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#ede9e0;color:var(--ink);font-size:15px;min-height:100vh;padding:32px 16px 80px}
+
+/* ── Page / document shell ── */
+.page{max-width:760px;margin:0 auto;background:var(--white);border-radius:4px;
+      box-shadow:0 4px 6px rgba(0,0,0,.07),0 12px 40px rgba(0,0,0,.10),0 1px 0 rgba(0,0,0,.05);}
+
+/* ── Letterhead ── */
+.lh-accent{height:5px;background:linear-gradient(90deg,var(--teal),#0ea5e9);border-radius:4px 4px 0 0;}
+.lh{padding:32px 48px 24px;border-bottom:1.5px solid var(--border);}
+.lh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;}
+.lh-brand{display:flex;flex-direction:column;gap:4px;}
+.lh-name{font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:700;
+         color:var(--ink);letter-spacing:-.3px;line-height:1;}
+.lh-name span{color:var(--teal);}
+.lh-tag{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+.lh-meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.7;}
+.lh-meta a{color:var(--muted);text-decoration:none;}
+.lh-divider{margin-top:20px;border:none;border-top:1px solid var(--border);}
+.doc-title{margin-top:16px;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);}
+
+/* ── Agreement body ── */
 .agreement-body{
-  background:var(--card);border:1px solid var(--border);border-radius:10px;
-  padding:28px 32px;line-height:1.8;font-size:14px;color:var(--off);
-  white-space:pre-wrap;font-family:'DM Sans',system-ui,sans-serif;
-  margin-bottom:28px;max-height:65vh;overflow-y:auto;
+  padding:36px 48px;line-height:1.85;font-size:14px;color:var(--ink2);
+  white-space:pre-wrap;font-family:'DM Sans',system-ui,sans-serif;font-weight:300;
+  max-height:58vh;overflow-y:auto;border-bottom:1px solid var(--border);
+  background:var(--paper);
 }
-.sig-section{background:#111;border:1px solid var(--teal);border-radius:10px;padding:28px 32px;margin-bottom:24px}
-.sig-section h3{font-size:17px;font-weight:700;color:var(--teal);margin-bottom:18px}
-.field{margin-bottom:16px}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.field input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:10px 14px;color:var(--off);font-size:15px;font-family:inherit}
-.field input:focus{outline:none;border-color:var(--teal)}
-.checkbox-label{display:flex;align-items:flex-start;gap:10px;font-size:14px;cursor:pointer;margin-bottom:20px;line-height:1.5;color:var(--off)}
-.checkbox-label input{margin-top:3px;accent-color:var(--teal);width:16px;height:16px;flex-shrink:0}
-.btn-sign{width:100%;padding:14px;background:var(--teal);border:none;border-radius:8px;font-size:16px;font-weight:700;color:#fff;cursor:pointer;transition:opacity .15s}
-.btn-sign:hover{opacity:.87}
-.btn-sign:disabled{opacity:.45;cursor:not-allowed}
-.sign-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--red);margin-top:12px}
-.footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;padding:0 20px}
-.msg{padding:20px 24px;border-radius:10px;font-size:15px;font-weight:600;text-align:center}
-.msg.success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);font-size:18px;padding:32px}
-.msg.error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:var(--red)}
-/* Signer-fillable fields */
-.signer-fields{background:#111;border:1px solid #f59e0b44;border-radius:10px;padding:24px 28px;margin-bottom:22px}
-.sf-heading{font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:16px;letter-spacing:.2px}
-/* Placeholder highlights in agreement body */
-.ph{background:rgba(245,158,11,.18);color:#f59e0b;border-radius:3px;padding:1px 3px;font-weight:600;transition:background .2s,color .2s}
-.ph.ph-filled{background:rgba(20,184,166,.15);color:var(--teal)}
-@media(max-width:600px){.agreement-body{padding:18px;max-height:55vh}.sig-section{padding:20px}.signer-fields{padding:18px}.container{padding:20px 14px}}
+.agreement-body::-webkit-scrollbar{width:5px;}
+.agreement-body::-webkit-scrollbar-track{background:transparent;}
+.agreement-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* ── Signer-fillable fields ── */
+.signer-fields{padding:24px 48px;background:#fffbeb;border-bottom:1px solid #fde68a;}
+.sf-heading{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+            color:var(--amber);margin-bottom:16px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;
+             letter-spacing:.08em;color:var(--muted);margin-bottom:5px;}
+.field input{width:100%;background:var(--white);border:1px solid var(--border2);
+             border-radius:6px;padding:9px 13px;color:var(--ink);font-size:14px;
+             font-family:inherit;transition:border-color .15s;}
+.field input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-mid);}
+
+/* ── Signature section ── */
+.sig-section{padding:32px 48px;background:var(--white);}
+.sig-section h3{font-family:'Playfair Display',Georgia,serif;font-size:18px;color:var(--ink);
+                margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.checkbox-label{display:flex;align-items:flex-start;gap:10px;font-size:13px;cursor:pointer;
+                margin-bottom:16px;line-height:1.6;color:var(--ink2);
+                padding:12px 14px;border:1px solid var(--border);border-radius:7px;
+                background:var(--paper);transition:border-color .15s;}
+.checkbox-label:has(input:checked){border-color:var(--teal);background:var(--teal-light);}
+.checkbox-label input{margin-top:2px;accent-color:var(--teal);width:15px;height:15px;flex-shrink:0;}
+.name-field{margin-bottom:20px;}
+.name-field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;
+                  letter-spacing:.08em;color:var(--muted);margin-bottom:5px;}
+.name-field input{width:100%;background:var(--white);border:1.5px solid var(--border2);
+                  border-radius:6px;padding:10px 14px;color:var(--ink);font-size:15px;
+                  font-family:inherit;transition:border-color .15s;}
+.name-field input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-mid);}
+.btn-sign{width:100%;padding:14px;background:var(--teal);border:none;border-radius:7px;
+          font-size:15px;font-weight:700;color:#fff;cursor:pointer;
+          letter-spacing:.03em;transition:background .15s,opacity .15s;margin-top:6px;}
+.btn-sign:hover{background:#0ea098;}
+.btn-sign:disabled{opacity:.4;cursor:not-allowed;}
+.sign-error{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;
+            padding:10px 14px;font-size:13px;color:var(--red);margin-top:12px;}
+
+/* ── Footer ── */
+.doc-footer{padding:16px 48px 28px;text-align:center;font-size:11px;color:var(--muted);
+            line-height:1.7;border-top:1px solid var(--border);}
+.doc-footer strong{color:var(--ink2);}
+
+/* ── Status messages ── */
+.msg-wrap{padding:48px;}
+.msg{padding:24px 28px;border-radius:8px;font-size:15px;font-weight:600;text-align:center;}
+.msg.success{background:#f0fdf4;border:1px solid #bbf7d0;color:var(--green);font-size:18px;padding:36px;}
+.msg.error{background:#fef2f2;border:1px solid #fecaca;color:var(--red);}
+
+/* ── Placeholder highlights ── */
+.ph{background:rgba(245,158,11,.15);color:#b45309;border-radius:3px;padding:1px 4px;
+    font-weight:600;border-bottom:1.5px dashed var(--amber);transition:all .2s;}
+.ph.ph-filled{background:var(--teal-light);color:#0f766e;border-bottom-color:var(--teal);}
+
+@media(max-width:620px){
+  .lh,.agreement-body,.signer-fields,.sig-section,.doc-footer{padding-left:20px;padding-right:20px;}
+  body{padding:0 0 60px;background:#e5e0d8;}
+  .page{border-radius:0;}
+}
+@media print{
+  body{background:white;padding:0;}
+  .page{box-shadow:none;}
+  .sig-section{display:none;}
+}
 </style>
 </head>
 <body>
-<div class="header">
-  <div>
-    <div class="header-logo">7 Kin Homestead</div>
-    <div class="header-sub">Partnership Agreement</div>
+<div class="page">
+  <div class="lh-accent"></div>
+  <div class="lh">
+    <div class="lh-top">
+      <div class="lh-brand">
+        <div class="lh-name">7 Kin <span>Homestead</span></div>
+        <div class="lh-tag">Off-Grid · Resourceful · Rock Rich</div>
+      </div>
+      <div class="lh-meta">
+        7kinhomestead.land<br>
+        <a href="mailto:jason@7kinhomestead.com">jason@7kinhomestead.com</a>
+      </div>
+    </div>
+    <hr class="lh-divider">
+    <div class="doc-title">Partnership Agreement</div>
   </div>
-</div>
-<div class="container">
-${bodyContent}
+  ${bodyContent}
+  <div class="doc-footer">
+    <strong>7 Kin Homestead</strong> · 7kinhomestead.land<br>
+    This is a legally binding electronic agreement. Your signature, IP address, browser, and timestamp are recorded per the U.S. ESIGN Act.
+  </div>
 </div>
 </body>
 </html>`;
