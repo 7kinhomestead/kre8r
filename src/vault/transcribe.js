@@ -39,6 +39,10 @@ const db = require('../db');
 const WHISPER_MODEL  = process.env.WHISPER_MODEL  || 'medium';
 const TRANSCRIPTS_DIR = path.join(__dirname, '..', '..', 'database', 'transcripts');
 
+const RESOLVE_TRANSCRIBE_SCRIPT = path.join(
+  __dirname, '..', '..', 'scripts', 'davinci', 'resolve-transcribe.py'
+);
+
 // Binary detection — cached after first successful probe
 let _whisperBinary  = null;   // null = not yet detected, '' = not found, string = binary name
 let _whisperVersion = null;
@@ -363,4 +367,179 @@ async function transcribeFile(filePath, options = {}) {
   }
 }
 
-module.exports = { transcribeFile, checkWhisper, detectPython, resetWhisperCache, TRANSCRIPTS_DIR };
+// ─────────────────────────────────────────────
+// RESOLVE TRANSCRIPTION
+// Calls resolve-transcribe.py which uses DaVinci Resolve's built-in
+// AI transcription (Whisper-based, timecode-accurate, Cari-filtered).
+// Returns same schema as transcribeFile so it's a transparent swap.
+// ─────────────────────────────────────────────
+
+async function transcribeWithResolve(filePath, options = {}) {
+  const { footageId = null, onProgress = null } = options;
+
+  const pythonBin = await detectPython();
+  if (!pythonBin) {
+    return { ok: false, error: 'Python not found — cannot call resolve-transcribe.py' };
+  }
+
+  if (!fs.existsSync(RESOLVE_TRANSCRIBE_SCRIPT)) {
+    return { ok: false, error: `resolve-transcribe.py not found at ${RESOLVE_TRANSCRIBE_SCRIPT}` };
+  }
+
+  const args = [
+    RESOLVE_TRANSCRIBE_SCRIPT,
+    '--file_path', filePath,
+  ];
+  if (footageId != null) args.push('--footage_id', String(footageId));
+
+  onProgress?.({ stage: 'resolve_transcribe_start', file: path.basename(filePath) });
+
+  return new Promise((resolve) => {
+    const proc = spawn(pythonBin, args, {
+      windowsHide: true,
+      timeout: 360_000,  // 6 minutes — Resolve transcription can be slow on long clips
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (d) => { stdout += d.toString(); });
+
+    proc.stderr.on('data', (d) => {
+      const chunk = d.toString();
+      stderr += chunk;
+      // Surface progress lines to SSE caller
+      for (const line of chunk.split('\n')) {
+        const l = line.trim();
+        if (!l) continue;
+        if (l.startsWith('[progress]') || l.startsWith('[resolve]') || l.startsWith('[filter]')) {
+          onProgress?.({ stage: 'resolve_progress', line: l });
+        }
+      }
+    });
+
+    proc.on('error', (err) => {
+      resolve({ ok: false, error: `Failed to spawn resolve-transcribe.py: ${err.message}` });
+    });
+
+    proc.on('close', (code) => {
+      const raw = stdout.trim();
+      if (!raw) {
+        resolve({
+          ok: false,
+          error: `resolve-transcribe.py produced no output (exit ${code}). stderr: ${stderr.slice(-400)}`
+        });
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.ok) {
+          resolve({ ok: false, error: parsed.error || 'resolve-transcribe returned ok:false' });
+          return;
+        }
+        resolve({ ok: true, ...parsed });
+      } catch (e) {
+        resolve({ ok: false, error: `resolve-transcribe.py JSON parse failed: ${e.message}. stdout: ${raw.slice(0, 200)}` });
+      }
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// MODIFIED transcribeFile — tries Resolve first, falls back to Whisper
+//
+// Strategy:
+//   1. If TRANSCRIBE_ENGINE=whisper env var is set → skip Resolve, go straight to Whisper
+//   2. Try Resolve (transcribeWithResolve) — succeeds if DaVinci is running
+//   3. If Resolve fails/unavailable → fall back to Whisper transparently
+//   4. Either way: write to database/transcripts/, update DB, return same schema
+//
+// Zero changes needed in any caller (selects-new.js, assemblr.js, clipsr.js, etc.)
+// ─────────────────────────────────────────────
+
+const _originalTranscribeFile = transcribeFile;
+
+async function transcribeFileSmart(filePath, options = {}) {
+  const { footageId = null, onProgress = null } = options;
+
+  if (!fs.existsSync(filePath)) {
+    return { ok: false, error: `File not found: ${filePath}` };
+  }
+
+  const slug     = transcriptSlug(filePath);
+  const destPath = path.join(TRANSCRIPTS_DIR, slug + '.json');
+
+  // Already transcribed? Serve from cache immediately
+  if (fs.existsSync(destPath)) {
+    onProgress?.({ stage: 'skipped', reason: 'already transcribed' });
+    const existing = JSON.parse(fs.readFileSync(destPath, 'utf8'));
+    return { ok: true, skipped: true, transcript_path: destPath, ...existing };
+  }
+
+  // Force-Whisper override
+  const forceWhisper = (process.env.TRANSCRIBE_ENGINE || '').toLowerCase() === 'whisper';
+
+  let transcript = null;
+  let usedEngine  = null;
+
+  // ── Try Resolve first ───────────────────────────────────────────────────
+  if (!forceWhisper) {
+    onProgress?.({ stage: 'resolve_attempt', message: 'Trying DaVinci Resolve transcription…' });
+    const resolveResult = await transcribeWithResolve(filePath, { footageId, onProgress });
+
+    if (resolveResult.ok && resolveResult.segments && resolveResult.segments.length > 0) {
+      transcript = {
+        footage_id: footageId,
+        file_path:  filePath,
+        language:   resolveResult.language || 'en',
+        text:       resolveResult.text      || '',
+        duration:   resolveResult.duration  || 0,
+        segments:   resolveResult.segments  || [],
+        _source:    'resolve',
+      };
+      usedEngine = 'resolve';
+      onProgress?.({ stage: 'resolve_success', segments: transcript.segments.length });
+    } else {
+      // Resolve unavailable or failed — log and fall through to Whisper
+      const reason = resolveResult.error || 'unknown';
+      onProgress?.({ stage: 'resolve_fallback', message: `Resolve unavailable (${reason}), falling back to Whisper…` });
+    }
+  }
+
+  // ── Fall back to Whisper ─────────────────────────────────────────────────
+  if (!transcript) {
+    onProgress?.({ stage: 'whisper_start_fallback' });
+    const whisperResult = await _originalTranscribeFile(filePath, options);
+    // _originalTranscribeFile already writes the file and updates DB — just return
+    return whisperResult;
+  }
+
+  // ── Write transcript file + update DB ────────────────────────────────────
+  ensureTranscriptsDir();
+  fs.writeFileSync(destPath, JSON.stringify(transcript, null, 2));
+
+  if (footageId) {
+    db.updateFootage(footageId, {
+      transcript_path: destPath,
+      transcript:      transcript.text
+    });
+  }
+
+  onProgress?.({
+    stage:    'transcribed',
+    engine:   usedEngine,
+    segments: transcript.segments.length,
+    duration: transcript.duration,
+  });
+
+  return { ok: true, transcript_path: destPath, ...transcript };
+}
+
+module.exports = {
+  transcribeFile:        transcribeFileSmart,   // primary export — Resolve-first
+  transcribeWithResolve,                        // exposed so vault route can call it directly
+  checkWhisper,
+  detectPython,
+  resetWhisperCache,
+  TRANSCRIPTS_DIR,
+};
