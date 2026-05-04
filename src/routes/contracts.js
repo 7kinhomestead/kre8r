@@ -363,6 +363,102 @@ body{font-family:var(--f-body);font-weight:300;color:var(--ink);line-height:1.55
 </html>`;
 }
 
+// ── Signed agreement email renderer (inline styles — email-client safe) ──────
+// Renders the full document as a pretty HTML email matching the signing page
+// aesthetic: letterhead header, agreement body, ESIGN audit trail at bottom.
+function buildAgreementEmail({ bodySnapshot, partnerName, signerName, introHtml }) {
+  const liveBase = (process.env.LIVE_API_URL || 'https://kre8r.app').replace(/\/$/, '');
+  const logoUrl  = `${liveBase}/media-kit-images/logo.png`;
+
+  // Split body from audit trail so we can style them separately
+  const TRAIL_MARKER = '────────────────────────────────────────────────────────────\nELECTRONIC SIGNATURE AUDIT TRAIL';
+  const trailIdx  = (bodySnapshot || '').indexOf('────────────────────────────────────────────────────────────\nELECTRONIC SIGNATURE AUDIT TRAIL');
+  const bodyText  = trailIdx > -1 ? bodySnapshot.slice(0, trailIdx).trim() : (bodySnapshot || '').trim();
+  const trailText = trailIdx > -1 ? bodySnapshot.slice(trailIdx).trim() : '';
+
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const bodyHtml  = esc(bodyText).replace(/\n/g,'<br>');
+  const trailHtml = esc(trailText).replace(/\n/g,'<br>');
+
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Signed Agreement — 7 Kin Homestead</title></head>
+<body style="margin:0;padding:0;background:#eceae6;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#eceae6;padding:32px 0 60px;">
+<tr><td align="center">
+<table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;box-shadow:0 4px 24px rgba(0,0,0,.10);max-width:620px;width:100%;">
+
+  <!-- Header -->
+  <tr><td style="border-bottom:2px solid #14b8a6;padding:32px 40px 18px;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="64" valign="middle">
+          <img src="${logoUrl}" width="56" height="56" alt="7 Kin Homestead"
+               style="display:block;border:1px solid rgba(20,184,166,.25);border-radius:4px;
+                      background:rgba(20,184,166,.07);padding:5px;object-fit:contain;">
+        </td>
+        <td width="16"></td>
+        <td valign="middle">
+          <div style="font-family:Impact,'Bebas Neue',sans-serif;font-size:9px;letter-spacing:.28em;
+                      text-transform:uppercase;color:#14b8a6;margin-bottom:3px;">Partnership Agreement</div>
+          <div style="font-family:Impact,'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.03em;
+                      color:#0a0a0a;line-height:1;">7 Kin Homestead</div>
+          <div style="font-family:Impact,'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.18em;
+                      color:#6b6b6b;margin-top:2px;">Off-Grid · Resourceful · Rock Rich</div>
+        </td>
+        <td align="right" valign="middle" style="font-size:10px;color:#9a9a9a;line-height:1.7;
+                                                  font-family:Impact,'Bebas Neue',sans-serif;letter-spacing:.12em;">
+          7kinhomestead.land<br>jason@7kinhomestead.com
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- Intro message -->
+  <tr><td style="padding:22px 40px 16px;border-bottom:1px solid #e8e5e0;">
+    ${introHtml}
+  </td></tr>
+
+  <!-- Doc title -->
+  <tr><td style="padding:18px 40px 10px;border-bottom:1px solid #e8e5e0;background:#faf9f6;">
+    <div style="font-family:Impact,'Bebas Neue',sans-serif;font-size:9px;letter-spacing:.28em;
+                text-transform:uppercase;color:#14b8a6;margin-bottom:3px;">For the Record</div>
+    <div style="font-family:Impact,'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.02em;
+                color:#0a0a0a;">${esc(partnerName || 'Partnership')} Agreement</div>
+  </td></tr>
+
+  <!-- Agreement body -->
+  <tr><td style="padding:24px 40px;background:#faf9f6;border-bottom:1px solid #e8e5e0;">
+    <div style="font-size:13px;color:#2a2a2a;line-height:1.75;font-weight:300;white-space:pre-wrap;
+                font-family:'DM Sans',Helvetica,Arial,sans-serif;">${bodyHtml}</div>
+  </td></tr>
+
+  ${trailHtml ? `
+  <!-- ESIGN Audit Trail -->
+  <tr><td style="padding:20px 40px;background:#f0fdf9;border-top:2px solid #14b8a6;border-bottom:1px solid #a7f3d0;">
+    <div style="font-family:Impact,'Bebas Neue',sans-serif;font-size:10px;letter-spacing:.22em;
+                color:#14b8a6;margin-bottom:10px;">Electronic Signature Audit Trail</div>
+    <div style="font-family:'Courier New',Courier,monospace;font-size:11px;color:#374151;
+                line-height:1.7;white-space:pre-wrap;">${trailHtml}</div>
+  </td></tr>` : ''}
+
+  <!-- Footer -->
+  <tr><td style="padding:14px 40px 22px;border-top:1px solid #e8e5e0;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="font-family:Impact,'Bebas Neue',sans-serif;font-size:9px;letter-spacing:.12em;
+                   text-transform:uppercase;color:#9a9a9a;">7 Kin Homestead · 7kinhomestead.land</td>
+        <td align="right" style="font-family:Impact,'Bebas Neue',sans-serif;font-size:9px;letter-spacing:.12em;
+                                  text-transform:uppercase;color:#9a9a9a;">Signed Electronically · ESIGN Act Compliant</td>
+      </tr>
+    </table>
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC ROUTES — no auth required
 // ─────────────────────────────────────────────────────────────────────────────
@@ -422,26 +518,33 @@ router.post('/api/contracts/sign/:token', async (req, res) => {
 
     db.updateAgreementStatus(agreement.id, 'signed', signer_name.trim(), signerIp, signedAt, signerAgent);
 
-    // Send confirmation emails (non-blocking — don't fail the sign request on email error)
-    // body_snapshot already contains the full audit trail block at this point
-    const agreementBodyHtml = (agreement.body_snapshot || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>');
+    // Send confirmation emails — full rendered document with ESIGN audit trail
+    const partnerHtml = buildAgreementEmail({
+      bodySnapshot: agreement.body_snapshot,
+      partnerName:  agreement.partner_name,
+      signerName:   signer_name.trim(),
+      introHtml: `
+        <p style="font-size:15px;font-weight:600;color:#0a0a0a;margin-bottom:8px;">
+          Your agreement has been signed.</p>
+        <p style="font-size:13px;color:#4b5563;line-height:1.6;">
+          Hi ${signer_name.trim()}, thank you for signing the
+          <strong>${agreement.partner_name || 'Partnership'}</strong> agreement with
+          7 Kin Homestead. Your electronic signature, IP address, browser, and timestamp
+          have been recorded. The full signed agreement and audit trail are below for
+          your records.</p>`,
+    });
 
-    const partnerHtml = `
-      <h2 style="color:#14b8a6">Your agreement has been signed</h2>
-      <p>Hi ${signer_name.trim()},</p>
-      <p>Thank you for signing the <strong>${agreement.partner_name || 'Partnership'}</strong> agreement with 7 Kin Homestead. Your electronic signature, IP address, browser, and timestamp have been recorded. The full signed agreement including audit trail is below for your records.</p>
-      <hr style="border-color:#222;margin:20px 0">
-      <div style="font-family:monospace;font-size:13px;white-space:pre-wrap">${agreementBodyHtml}</div>`;
-
-    const jasonHtml = `
-      <h2 style="color:#14b8a6">Agreement signed: ${agreement.partner_name}</h2>
-      <p><strong>${signer_name.trim()}</strong> (${agreement.partner_email}) signed the partnership agreement. Full audit trail is embedded at the bottom of the agreement below.</p>
-      <hr style="border-color:#222;margin:20px 0">
-      <div style="font-family:monospace;font-size:13px;white-space:pre-wrap">${agreementBodyHtml}</div>`;
+    const jasonHtml = buildAgreementEmail({
+      bodySnapshot: agreement.body_snapshot,
+      partnerName:  agreement.partner_name,
+      signerName:   signer_name.trim(),
+      introHtml: `
+        <p style="font-size:15px;font-weight:600;color:#0a0a0a;margin-bottom:8px;">
+          Agreement signed — ${agreement.partner_name}</p>
+        <p style="font-size:13px;color:#4b5563;line-height:1.6;">
+          <strong>${signer_name.trim()}</strong> (${agreement.partner_email}) signed
+          the partnership agreement. Full audit trail is embedded at the bottom.</p>`,
+    });
 
     Promise.all([
       sendMailerSend(
