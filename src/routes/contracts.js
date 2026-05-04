@@ -117,21 +117,27 @@ function buildSigningPage({ status, agreement, errorMsg }) {
     const toLabel = k => k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const signerFieldsHtml = signerVars.length > 0 ? `
       <div class="signer-fields">
-        <div class="sf-heading">&#9998; Fill in your details before signing</div>
-        ${signerVars.map(v => `
-        <div class="field">
-          <label for="sf-${v}">${toLabel(v)}</label>
-          <input type="text" id="sf-${v}" class="sf-input" data-key="${v}"
-            placeholder="${toLabel(v)}" oninput="updatePreview(this)">
-        </div>`).join('')}
+        <div class="sf-heading">Complete your details before signing</div>
+        <div class="sf-grid">
+          ${signerVars.map(v => `
+          <div class="field">
+            <label for="sf-${v}">${toLabel(v)}</label>
+            <input type="text" id="sf-${v}" class="sf-input" data-key="${v}"
+              placeholder="${toLabel(v)}" oninput="updatePreview(this)">
+          </div>`).join('')}
+        </div>
       </div>` : '';
 
     return `
+      <div class="title-block">
+        <div class="doc-eyebrow">For Signature</div>
+        <div class="doc-title">${agreement.partner_name || 'Partner'} Agreement</div>
+      </div>
       ${signerFieldsHtml}
       <div class="agreement-body" id="agreement-body">${bodyHtml}</div>
-      <div class="sig-section">
-        <h3>Sign this Agreement</h3>
-        <div class="field">
+      <div class="attest">
+        <div class="attest-title">Electronic Signature</div>
+        <div class="name-field">
           <label for="signer-name">Full Legal Name</label>
           <input type="text" id="signer-name" placeholder="Your full legal name" required autocomplete="name">
         </div>
@@ -145,10 +151,6 @@ function buildSigningPage({ status, agreement, errorMsg }) {
         </label>
         <button class="btn-sign" onclick="submitSignature()">Sign Agreement</button>
         <div id="sign-error" class="sign-error" style="display:none"></div>
-      </div>
-      <div class="footer">
-        By signing, you confirm your identity, consent to electronic signature, and agree to be bound by the terms above.<br>
-        Your signature, IP address, browser, and timestamp are recorded as part of the legally binding audit trail.
       </div>
       <script>
         // Live preview — update {{placeholder}} spans as signer types
@@ -221,132 +223,139 @@ function buildSigningPage({ status, agreement, errorMsg }) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Partnership Agreement — 7 Kin Homestead</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --paper:#faf9f6;--white:#fff;--ink:#1a1a1a;--ink2:#3a3a3a;--muted:#6b7280;
-  --teal:#14b8a6;--teal-light:rgba(20,184,166,.08);--teal-mid:rgba(20,184,166,.18);
-  --border:#e5e2db;--border2:#d1cec7;
+  --accent:#14b8a6;--accent-wash:rgba(20,184,166,.07);--accent-rule:rgba(20,184,166,.25);
+  --ink:#0a0a0a;--ink-2:#2a2a2a;--ink-muted:#6b6b6b;--ink-faint:#9a9a9a;
+  --rule:#d8d8d8;--paper:#fff;--bg:#eceae6;
   --amber:#f59e0b;--red:#dc2626;--green:#16a34a;
+  --f-display:'Bebas Neue','Impact',sans-serif;
+  --f-body:'DM Sans',-apple-system,Segoe UI,sans-serif;
 }
-body{font-family:'DM Sans',system-ui,sans-serif;background:#ede9e0;color:var(--ink);font-size:15px;min-height:100vh;padding:32px 16px 80px}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:var(--bg);}
+body{font-family:var(--f-body);font-weight:300;color:var(--ink);line-height:1.55;
+     -webkit-font-smoothing:antialiased;padding:40px 16px 80px;}
 
-/* ── Page / document shell ── */
-.page{max-width:760px;margin:0 auto;background:var(--white);border-radius:4px;
-      box-shadow:0 4px 6px rgba(0,0,0,.07),0 12px 40px rgba(0,0,0,.10),0 1px 0 rgba(0,0,0,.05);}
+/* ── Document shell ── */
+.sheet{width:100%;max-width:780px;margin:0 auto;background:var(--paper);
+       box-shadow:0 10px 30px rgba(0,0,0,.08);display:flex;flex-direction:column;}
 
-/* ── Letterhead ── */
-.lh-accent{height:5px;background:linear-gradient(90deg,var(--teal),#0ea5e9);border-radius:4px 4px 0 0;}
-.lh{padding:32px 48px 24px;border-bottom:1.5px solid var(--border);}
-.lh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;}
-.lh-brand{display:flex;flex-direction:column;gap:4px;}
-.lh-name{font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:700;
-         color:var(--ink);letter-spacing:-.3px;line-height:1;}
-.lh-name span{color:var(--teal);}
-.lh-tag{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
-.lh-meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.7;}
-.lh-meta a{color:var(--muted);text-decoration:none;}
-.lh-divider{margin-top:20px;border:none;border-top:1px solid var(--border);}
-.doc-title{margin-top:16px;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);}
+/* ── Header / letterhead ── */
+.head{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:end;
+      padding:0.6in 0.75in 14px;border-bottom:2px solid var(--accent);}
+.head-logo{width:68px;height:68px;display:flex;align-items:center;justify-content:center;
+           background:var(--accent-wash);border:1px solid var(--accent-rule);border-radius:4px;
+           font-family:var(--f-display);font-size:24px;letter-spacing:.04em;color:var(--accent);flex-shrink:0;}
+.head-id{display:flex;flex-direction:column;gap:3px;}
+.head-eyebrow{font-family:var(--f-display);font-size:10px;letter-spacing:.32em;color:var(--accent);}
+.head-org{font-family:var(--f-display);font-size:26px;letter-spacing:.03em;color:var(--ink);}
+.head-doctype{font-family:var(--f-display);font-size:13px;letter-spacing:.22em;color:var(--ink-muted);}
+.head-meta{display:flex;flex-direction:column;gap:4px;align-items:flex-end;min-width:140px;}
+.head-meta-row{font-family:var(--f-display);font-size:10px;letter-spacing:.15em;color:var(--ink-muted);}
+.head-meta-row span{color:var(--ink-2);}
+
+/* ── Title block ── */
+.title-block{padding:18px 0.75in 14px;border-bottom:1px solid var(--rule);}
+.doc-eyebrow{font-family:var(--f-display);font-size:10px;letter-spacing:.28em;color:var(--accent);margin-bottom:4px;}
+.doc-title{font-family:var(--f-display);font-size:30px;letter-spacing:.02em;color:var(--ink);}
+
+/* ── Signer-fillable fields ── */
+.signer-fields{padding:18px 0.75in;background:#fffbeb;border-bottom:1px solid #fde68a;}
+.sf-heading{font-family:var(--f-display);font-size:11px;letter-spacing:.22em;color:var(--amber);margin-bottom:14px;}
+.sf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-family:var(--f-display);font-size:9px;letter-spacing:.22em;color:var(--ink-muted);}
+.field input{background:var(--paper);border:1px solid var(--rule);border-radius:3px;
+             padding:8px 11px;color:var(--ink);font-size:13px;font-family:var(--f-body);
+             transition:border-color .15s;}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash);}
 
 /* ── Agreement body ── */
 .agreement-body{
-  padding:36px 48px;line-height:1.85;font-size:14px;color:var(--ink2);
-  white-space:pre-wrap;font-family:'DM Sans',system-ui,sans-serif;font-weight:300;
-  max-height:58vh;overflow-y:auto;border-bottom:1px solid var(--border);
+  padding:24px 0.75in;line-height:1.75;font-size:13.5px;color:var(--ink-2);
+  white-space:pre-wrap;font-family:var(--f-body);font-weight:300;
+  max-height:55vh;overflow-y:auto;border-bottom:1px solid var(--rule);
   background:var(--paper);
 }
-.agreement-body::-webkit-scrollbar{width:5px;}
+.agreement-body::-webkit-scrollbar{width:4px;}
 .agreement-body::-webkit-scrollbar-track{background:transparent;}
-.agreement-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+.agreement-body::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px;}
 
-/* ── Signer-fillable fields ── */
-.signer-fields{padding:24px 48px;background:#fffbeb;border-bottom:1px solid #fde68a;}
-.sf-heading{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
-            color:var(--amber);margin-bottom:16px;}
-.field{margin-bottom:14px;}
-.field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;
-             letter-spacing:.08em;color:var(--muted);margin-bottom:5px;}
-.field input{width:100%;background:var(--white);border:1px solid var(--border2);
-             border-radius:6px;padding:9px 13px;color:var(--ink);font-size:14px;
-             font-family:inherit;transition:border-color .15s;}
-.field input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-mid);}
-
-/* ── Signature section ── */
-.sig-section{padding:32px 48px;background:var(--white);}
-.sig-section h3{font-family:'Playfair Display',Georgia,serif;font-size:18px;color:var(--ink);
-                margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);}
-.checkbox-label{display:flex;align-items:flex-start;gap:10px;font-size:13px;cursor:pointer;
-                margin-bottom:16px;line-height:1.6;color:var(--ink2);
-                padding:12px 14px;border:1px solid var(--border);border-radius:7px;
-                background:var(--paper);transition:border-color .15s;}
-.checkbox-label:has(input:checked){border-color:var(--teal);background:var(--teal-light);}
-.checkbox-label input{margin-top:2px;accent-color:var(--teal);width:15px;height:15px;flex-shrink:0;}
-.name-field{margin-bottom:20px;}
-.name-field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;
-                  letter-spacing:.08em;color:var(--muted);margin-bottom:5px;}
-.name-field input{width:100%;background:var(--white);border:1.5px solid var(--border2);
-                  border-radius:6px;padding:10px 14px;color:var(--ink);font-size:15px;
-                  font-family:inherit;transition:border-color .15s;}
-.name-field input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-mid);}
-.btn-sign{width:100%;padding:14px;background:var(--teal);border:none;border-radius:7px;
-          font-size:15px;font-weight:700;color:#fff;cursor:pointer;
-          letter-spacing:.03em;transition:background .15s,opacity .15s;margin-top:6px;}
+/* ── Attestation / signature section ── */
+.attest{padding:22px 0.75in 28px;border-bottom:1px solid var(--rule);}
+.attest-title{font-family:var(--f-display);font-size:12px;letter-spacing:.22em;color:var(--ink-2);margin-bottom:16px;}
+.name-field{display:flex;flex-direction:column;gap:4px;margin-bottom:18px;}
+.name-field label{font-family:var(--f-display);font-size:9px;letter-spacing:.22em;color:var(--ink-muted);}
+.name-field input{background:var(--paper);border:1px solid var(--rule);border-radius:3px;
+                  padding:9px 12px;color:var(--ink);font-size:14px;font-family:var(--f-body);
+                  transition:border-color .15s;}
+.name-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash);}
+.checkbox-label{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;cursor:pointer;
+                margin-bottom:10px;line-height:1.6;color:var(--ink-2);
+                padding:10px 12px;border:1px solid var(--rule);border-radius:3px;background:#f9f9f9;
+                transition:border-color .15s,background .15s;}
+.checkbox-label:has(input:checked){border-color:var(--accent);background:var(--accent-wash);}
+.checkbox-label input{margin-top:2px;accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;}
+.btn-sign{width:100%;margin-top:16px;padding:13px;background:var(--accent);border:none;border-radius:3px;
+          font-family:var(--f-display);font-size:16px;letter-spacing:.12em;color:#fff;
+          cursor:pointer;transition:background .15s,opacity .15s;}
 .btn-sign:hover{background:#0ea098;}
 .btn-sign:disabled{opacity:.4;cursor:not-allowed;}
-.sign-error{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;
-            padding:10px 14px;font-size:13px;color:var(--red);margin-top:12px;}
+.sign-error{background:#fef2f2;border:1px solid #fecaca;border-radius:3px;
+            padding:9px 12px;font-size:12px;color:var(--red);margin-top:10px;}
 
 /* ── Footer ── */
-.doc-footer{padding:16px 48px 28px;text-align:center;font-size:11px;color:var(--muted);
-            line-height:1.7;border-top:1px solid var(--border);}
-.doc-footer strong{color:var(--ink2);}
+.foot{padding:12px 0.75in 0.5in;display:flex;justify-content:space-between;
+      font-family:var(--f-display);font-size:9px;letter-spacing:.12em;
+      text-transform:uppercase;color:var(--ink-faint);}
 
 /* ── Status messages ── */
-.msg-wrap{padding:48px;}
-.msg{padding:24px 28px;border-radius:8px;font-size:15px;font-weight:600;text-align:center;}
-.msg.success{background:#f0fdf4;border:1px solid #bbf7d0;color:var(--green);font-size:18px;padding:36px;}
+.msg-wrap{padding:0.75in;}
+.msg{padding:24px 28px;border-radius:4px;font-family:var(--f-display);font-size:18px;
+     letter-spacing:.04em;text-align:center;}
+.msg.success{background:#f0fdf4;border:1px solid #bbf7d0;color:var(--green);}
 .msg.error{background:#fef2f2;border:1px solid #fecaca;color:var(--red);}
 
-/* ── Placeholder highlights ── */
-.ph{background:rgba(245,158,11,.15);color:#b45309;border-radius:3px;padding:1px 4px;
-    font-weight:600;border-bottom:1.5px dashed var(--amber);transition:all .2s;}
-.ph.ph-filled{background:var(--teal-light);color:#0f766e;border-bottom-color:var(--teal);}
+/* ── Placeholder highlights in body ── */
+.ph{background:rgba(245,158,11,.14);color:#92400e;border-radius:2px;padding:0 3px;
+    font-weight:500;border-bottom:1.5px dashed var(--amber);transition:all .2s;}
+.ph.ph-filled{background:var(--accent-wash);color:#0f766e;border-bottom-color:var(--accent);}
 
-@media(max-width:620px){
-  .lh,.agreement-body,.signer-fields,.sig-section,.doc-footer{padding-left:20px;padding-right:20px;}
-  body{padding:0 0 60px;background:#e5e0d8;}
-  .page{border-radius:0;}
+@media(max-width:600px){
+  body{padding:0 0 60px;}
+  .sheet{box-shadow:none;}
+  .head,.title-block,.signer-fields,.agreement-body,.attest,.foot{padding-left:20px;padding-right:20px;}
+  .head{grid-template-columns:auto 1fr;padding-top:24px;}
+  .head-meta{display:none;}
 }
 @media print{
-  body{background:white;padding:0;}
-  .page{box-shadow:none;}
-  .sig-section{display:none;}
+  body{background:#fff;padding:0;}
+  .sheet{box-shadow:none;}
+  .attest{display:none;}
+  .foot{position:static;}
 }
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="lh-accent"></div>
-  <div class="lh">
-    <div class="lh-top">
-      <div class="lh-brand">
-        <div class="lh-name">7 Kin <span>Homestead</span></div>
-        <div class="lh-tag">Off-Grid · Resourceful · Rock Rich</div>
-      </div>
-      <div class="lh-meta">
-        7kinhomestead.land<br>
-        <a href="mailto:jason@7kinhomestead.com">jason@7kinhomestead.com</a>
-      </div>
+<div class="sheet">
+  <div class="head">
+    <div class="head-logo">7K</div>
+    <div class="head-id">
+      <div class="head-eyebrow">Partnership Agreement</div>
+      <div class="head-org">7 Kin Homestead</div>
+      <div class="head-doctype">Off-Grid · Resourceful · Rock Rich</div>
     </div>
-    <hr class="lh-divider">
-    <div class="doc-title">Partnership Agreement</div>
+    <div class="head-meta">
+      <div class="head-meta-row">Web <span>7kinhomestead.land</span></div>
+      <div class="head-meta-row">Email <span>jason@7kinhomestead.com</span></div>
+    </div>
   </div>
   ${bodyContent}
-  <div class="doc-footer">
-    <strong>7 Kin Homestead</strong> · 7kinhomestead.land<br>
-    This is a legally binding electronic agreement. Your signature, IP address, browser, and timestamp are recorded per the U.S. ESIGN Act.
+  <div class="foot">
+    <span>7 Kin Homestead · 7kinhomestead.land</span>
+    <span>Signed electronically · ESIGN Act compliant</span>
   </div>
 </div>
 </body>
