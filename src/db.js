@@ -4837,6 +4837,10 @@ function getAgreementByToken(token) {
   return _get(`SELECT * FROM agreements WHERE signing_token = ?`, [token]);
 }
 
+function updateAgreementBodySnapshot(id, body) {
+  _run(`UPDATE agreements SET body_snapshot = ? WHERE id = ?`, [body, id]);
+}
+
 function updateAgreementStatus(id, status, signerName, signerIp, signedAt) {
   _run(
     `UPDATE agreements SET status = ?, signer_name = ?, signer_ip = ?, signed_at = ? WHERE id = ?`,
@@ -5168,6 +5172,7 @@ module.exports = {
   getAgreements,
   getAgreement,
   getAgreementByToken,
+  updateAgreementBodySnapshot,
   updateAgreementStatus,
   markAgreementSent,
 };

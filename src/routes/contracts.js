@@ -67,11 +67,14 @@ async function sendMailerSend(to, toName, subject, html) {
 }
 
 // ── Template variable replacement ─────────────────────────────────────────
+// Empty / missing values are intentionally left as {{variable}} so the signing
+// page can detect them and present them as signer-fillable input fields.
 function renderTemplate(bodyTemplate, variables) {
   let rendered = bodyTemplate;
   for (const [key, val] of Object.entries(variables || {})) {
+    if (val === undefined || val === null || val === '') continue; // preserve placeholder
     const re = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-    rendered = rendered.replace(re, val || '');
+    rendered = rendered.replace(re, val);
   }
   return rendered;
 }
@@ -95,14 +98,37 @@ function buildSigningPage({ status, agreement, errorMsg }) {
       return `<div class="msg success">&#10003; Signed! A copy has been emailed to you.</div>`;
     }
     // status === 'pending' — show the signing form
-    const bodyHtml = (agreement.body_snapshot || '')
+    // Detect any {{variable}} placeholders remaining in body_snapshot — these are
+    // signer-fillable fields that Jason left blank when sending.
+    const PLACEHOLDER_RE = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+    const rawBody = agreement.body_snapshot || '';
+    const signerVars = [...new Set([...rawBody.matchAll(PLACEHOLDER_RE)].map(m => m[1]))];
+
+    // Render body with placeholders highlighted (styled spans the JS will update live)
+    const bodyHtml = rawBody
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
+      .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g,
+        '<span class="ph" data-key="$1">{{$1}}</span>')
       .replace(/\n/g, '<br>');
 
+    // Build signer-fillable fields section (only shown if there are remaining vars)
+    const toLabel = k => k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const signerFieldsHtml = signerVars.length > 0 ? `
+      <div class="signer-fields">
+        <div class="sf-heading">&#9998; Fill in your details before signing</div>
+        ${signerVars.map(v => `
+        <div class="field">
+          <label for="sf-${v}">${toLabel(v)}</label>
+          <input type="text" id="sf-${v}" class="sf-input" data-key="${v}"
+            placeholder="${toLabel(v)}" oninput="updatePreview(this)">
+        </div>`).join('')}
+      </div>` : '';
+
     return `
-      <div class="agreement-body">${bodyHtml}</div>
+      ${signerFieldsHtml}
+      <div class="agreement-body" id="agreement-body">${bodyHtml}</div>
       <div class="sig-section">
         <h3>Sign this Agreement</h3>
         <div class="field">
@@ -120,6 +146,16 @@ function buildSigningPage({ status, agreement, errorMsg }) {
         By signing, you agree to be bound by the terms above. Signed agreements are timestamped and legally binding.
       </div>
       <script>
+        // Live preview — update {{placeholder}} spans as signer types
+        function updatePreview(input) {
+          const key = input.dataset.key;
+          const val = input.value.trim();
+          document.querySelectorAll('.ph[data-key="' + key + '"]').forEach(el => {
+            el.textContent = val || ('{{' + key + '}}');
+            el.classList.toggle('ph-filled', !!val);
+          });
+        }
+
         async function submitSignature() {
           const name  = document.getElementById('signer-name').value.trim();
           const check = document.getElementById('agree-check').checked;
@@ -127,13 +163,28 @@ function buildSigningPage({ status, agreement, errorMsg }) {
           errEl.style.display = 'none';
           if (!name)  { errEl.textContent = 'Please enter your full legal name.'; errEl.style.display = ''; return; }
           if (!check) { errEl.textContent = 'You must check the box to confirm you have read the agreement.'; errEl.style.display = ''; return; }
+
+          // Validate all signer-fillable fields are filled
+          const sfInputs = document.querySelectorAll('.sf-input');
+          const emptyFields = [...sfInputs].filter(el => !el.value.trim());
+          if (emptyFields.length > 0) {
+            emptyFields[0].focus();
+            errEl.textContent = 'Please fill in all required fields before signing.';
+            errEl.style.display = '';
+            return;
+          }
+
+          // Collect signer field values
+          const signerFields = {};
+          sfInputs.forEach(el => { signerFields[el.dataset.key] = el.value.trim(); });
+
           const btn = document.querySelector('.btn-sign');
           btn.disabled = true; btn.textContent = 'Signing…';
           try {
             const res = await fetch(location.pathname.replace('/sign/', '/api/contracts/sign/'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ signer_name: name })
+              body: JSON.stringify({ signer_name: name, signer_fields: signerFields })
             });
             const data = await res.json();
             if (data.ok) {
@@ -194,7 +245,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .msg{padding:20px 24px;border-radius:10px;font-size:15px;font-weight:600;text-align:center}
 .msg.success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);font-size:18px;padding:32px}
 .msg.error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:var(--red)}
-@media(max-width:600px){.agreement-body{padding:18px;max-height:55vh}.sig-section{padding:20px}.container{padding:20px 14px}}
+/* Signer-fillable fields */
+.signer-fields{background:#111;border:1px solid #f59e0b44;border-radius:10px;padding:24px 28px;margin-bottom:22px}
+.sf-heading{font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:16px;letter-spacing:.2px}
+/* Placeholder highlights in agreement body */
+.ph{background:rgba(245,158,11,.18);color:#f59e0b;border-radius:3px;padding:1px 3px;font-weight:600;transition:background .2s,color .2s}
+.ph.ph-filled{background:rgba(20,184,166,.15);color:var(--teal)}
+@media(max-width:600px){.agreement-body{padding:18px;max-height:55vh}.sig-section{padding:20px}.signer-fields{padding:18px}.container{padding:20px 14px}}
 </style>
 </head>
 <body>
@@ -243,9 +300,16 @@ router.post('/api/contracts/sign/:token', async (req, res) => {
       return res.status(409).json({ ok: false, error: 'Already signed' });
     }
 
-    const { signer_name } = req.body;
+    const { signer_name, signer_fields } = req.body;
     if (!signer_name || !signer_name.trim()) {
       return res.status(400).json({ ok: false, error: 'signer_name required' });
+    }
+
+    // Final render: fill in any signer-provided field values before locking the agreement
+    if (signer_fields && typeof signer_fields === 'object' && Object.keys(signer_fields).length > 0) {
+      const finalBody = renderTemplate(agreement.body_snapshot || '', signer_fields);
+      db.updateAgreementBodySnapshot(agreement.id, finalBody);
+      agreement.body_snapshot = finalBody; // use finalBody in confirmation emails below
     }
 
     const signedAt = new Date().toISOString();
