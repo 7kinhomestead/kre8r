@@ -91,22 +91,83 @@ def _walk_folder(folder):
         yield from _walk_folder(sub)
 
 
+def _clip_stem(path_str):
+    """
+    Normalised filename stem for fuzzy matching.
+    A010_04172135_C026_proxy.mp4  →  a010_04172135_c026
+    A010_04172135_C026.braw       →  a010_04172135_c026
+    Strips _proxy suffix so proxy MP4 matches the BRAW already in Resolve.
+    """
+    stem = os.path.splitext(os.path.basename(path_str))[0].lower()
+    if stem.endswith("_proxy"):
+        stem = stem[:-6]
+    return stem
+
+
 def find_or_import_clip(media_pool, file_path):
-    """Return a MediaPoolItem for file_path, importing if not already in pool."""
-    norm = file_path.lower().replace("\\", "/")
-    root = media_pool.GetRootFolder()
+    """
+    Return a MediaPoolItem for file_path.
+
+    Search order:
+      1. Exact path match  — same file, already imported
+      2. Stem match        — proxy MP4 in VaultΩr vs BRAW in Resolve have the
+                             same base name (A010_04172135_C026). Prefer items
+                             that are already transcribed (status == "Completed").
+      3. Import fresh      — clip not found at all; import the proxy
+
+    Stem matching fixes the common case where:
+      VaultΩr path:  D:/kre8r/vault/A010_04172135_C026_proxy.mp4
+      Resolve path:  H:/Media/A010_04172135_C026.braw
+    The full paths never match, but the stem does.
+    """
+    norm        = file_path.lower().replace("\\", "/")
+    target_stem = _clip_stem(file_path)
+    root        = media_pool.GetRootFolder()
+
+    exact_match  = None
+    stem_matches = []   # list of (item, already_transcribed)
 
     for _folder, clips in _walk_folder(root):
         for clip in clips:
             try:
                 fp = clip.GetClipProperty("File Path") or ""
-                if fp.lower().replace("\\", "/") == norm:
-                    print(f"[resolve] Found in media pool: {os.path.basename(file_path)}", file=sys.stderr)
-                    return clip
+                if not fp:
+                    continue
+                fp_norm = fp.lower().replace("\\", "/")
+
+                # 1. Exact path
+                if fp_norm == norm:
+                    exact_match = clip
+                    break
+
+                # 2. Stem match
+                if _clip_stem(fp) == target_stem:
+                    status = _safe_call(clip.GetTranscriptionStatus) or "None"
+                    stem_matches.append((clip, status == "Completed"))
+
             except Exception:
                 pass
+        if exact_match:
+            break
 
-    # Not in pool — import it
+    if exact_match:
+        status = _safe_call(exact_match.GetTranscriptionStatus) or "None"
+        print(f"[resolve] Exact match in media pool (status={status}): {os.path.basename(file_path)}", file=sys.stderr)
+        return exact_match
+
+    if stem_matches:
+        # Prefer already-transcribed items; otherwise take the first stem match
+        stem_matches.sort(key=lambda x: (0 if x[1] else 1))
+        best, already_done = stem_matches[0]
+        fp_found = best.GetClipProperty("File Path") or "?"
+        print(
+            f"[resolve] Stem match → {os.path.basename(fp_found)} "
+            f"(transcribed={already_done})",
+            file=sys.stderr
+        )
+        return best
+
+    # 3. Not found — import the proxy/original from VaultΩr path
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"File not found on disk: {file_path}")
 
@@ -114,7 +175,7 @@ def find_or_import_clip(media_pool, file_path):
     if not items:
         raise RuntimeError(f"Resolve ImportMedia failed for: {file_path}")
 
-    print(f"[resolve] Imported: {os.path.basename(file_path)}", file=sys.stderr)
+    print(f"[resolve] Imported fresh: {os.path.basename(file_path)}", file=sys.stderr)
     return items[0]
 
 
@@ -123,32 +184,57 @@ def find_or_import_clip(media_pool, file_path):
 def trigger_and_wait(item):
     """
     Trigger Resolve's built-in transcription and wait for completion.
-    Returns True on success, raises on timeout/failure.
+
+    IMPORTANT: TranscribeAudio() called from an external Python script does NOT
+    reliably wake up Resolve's AI engine on all builds. The status may stay "None"
+    indefinitely even though the call returns without error.
+
+    Strategy:
+      - If already "Completed" → use immediately, no wait
+      - Call TranscribeAudio(), then poll for up to NONE_BAIL_COUNT × POLL_INTERVAL_SEC
+      - If status stays "None" that whole time → scripted trigger failed; raise so
+        Node.js falls back to Whisper gracefully
+      - If status moves to "InProgress" → reset bail counter and wait up to full timeout
     """
-    # Check if already transcribed (avoid re-running if Resolve cached it)
     status = _safe_call(item.GetTranscriptionStatus)
     if status == "Completed":
         print("[resolve] Transcript already present — reusing.", file=sys.stderr)
         return True
 
     print("[resolve] Triggering transcription…", file=sys.stderr)
-    ok = _safe_call(item.TranscribeAudio)
-    if ok is False:
-        # Some versions return False when transcription is already queued — that's OK
-        print("[resolve] TranscribeAudio returned False — may already be queued.", file=sys.stderr)
+    _safe_call(item.TranscribeAudio)
 
-    deadline = time.time() + TRANSCRIPTION_TIMEOUT_SEC
-    dots = 0
+    # If status stays "None" for this many consecutive polls we give up.
+    # 20 polls × 2s = 40s — enough to confirm the AI engine isn't responding.
+    NONE_BAIL_COUNT = 20
+    none_streak     = 0
+    deadline        = time.time() + TRANSCRIPTION_TIMEOUT_SEC
+    dots            = 0
+
     while time.time() < deadline:
         status = _safe_call(item.GetTranscriptionStatus)
         print(f"[resolve] Transcription status: {status}", file=sys.stderr)
 
         if status == "Completed":
             return True
+
         if status == "Failed":
             raise RuntimeError("DaVinci Resolve transcription returned status: Failed")
 
-        # Provide progress dots every 10s so Node.js SSE caller knows we're alive
+        if status == "None" or status is None:
+            none_streak += 1
+            if none_streak >= NONE_BAIL_COUNT:
+                raise RuntimeError(
+                    "TranscribeAudio() did not start after 40s — Resolve's AI engine "
+                    "does not respond to scripted triggers on this build. "
+                    "To fix: open the clip in Resolve's Edit page → Transcription panel → "
+                    "transcribe manually, then re-run AssemblΩr. "
+                    "(Node.js will fall back to Whisper this run.)"
+                )
+        else:
+            # Status moved to something other than None (e.g. InProgress) — reset bail
+            none_streak = 0
+
         dots += 1
         if dots % 5 == 0:
             elapsed = int(time.time() - (deadline - TRANSCRIPTION_TIMEOUT_SEC))
@@ -157,8 +243,7 @@ def trigger_and_wait(item):
         time.sleep(POLL_INTERVAL_SEC)
 
     raise TimeoutError(
-        f"Resolve transcription did not complete within {TRANSCRIPTION_TIMEOUT_SEC}s. "
-        "Try transcribing this clip manually in Resolve first."
+        f"Resolve transcription did not complete within {TRANSCRIPTION_TIMEOUT_SEC}s."
     )
 
 
