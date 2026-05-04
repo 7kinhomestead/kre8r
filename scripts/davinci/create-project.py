@@ -190,7 +190,21 @@ def run(args):
 
     # ---- Build full project name -------------------------------------------
     date_str = datetime.date.today().strftime("%Y-%m-%d")
-    safe_name = args.project_name.replace(" ", "-")
+
+    # Resolve chokes on quotes, em-dashes, apostrophes, and other non-ASCII.
+    # Normalise to a safe slug: keep alphanumerics, spaces→hyphens, collapse runs.
+    import unicodedata, re
+    raw = args.project_name
+    # Decompose unicode (é→e+combining) then drop combining marks
+    raw = unicodedata.normalize("NFKD", raw)
+    raw = "".join(c for c in raw if not unicodedata.combining(c))
+    # Replace common punctuation with hyphens before stripping
+    raw = raw.replace("—", "-").replace("–", "-").replace("'", "").replace('"', "").replace("'", "").replace(""", "").replace(""", "")
+    # Replace spaces and any remaining non-alphanumeric (except hyphens) with hyphens
+    raw = re.sub(r"[^A-Za-z0-9]+", "-", raw)
+    # Collapse multiple hyphens and strip leading/trailing
+    safe_name = re.sub(r"-{2,}", "-", raw).strip("-")
+
     full_name = f"{date_str}_{safe_name}_{args.project_id:03d}"
 
     # ---- Create project ----------------------------------------------------
