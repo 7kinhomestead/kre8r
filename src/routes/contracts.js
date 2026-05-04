@@ -465,10 +465,10 @@ router.post('/api/contracts/agreements/send', requireAuth, async (req, res) => {
     );
     db.markAgreementSent(agreement.id, new Date().toISOString());
 
-    // Build the signing URL
-    const protocol = (req.headers['x-forwarded-proto'] || req.protocol || 'https');
-    const host     = req.headers['x-forwarded-host'] || req.headers.host || 'kre8r.app';
-    const signingUrl = `${protocol}://${host}/sign/${token}`;
+    // Build the signing URL — always use the live public URL so links work
+    // regardless of whether the request came from Electron (localhost) or the server.
+    const liveBase   = (process.env.LIVE_API_URL || 'https://kre8r.app').replace(/\/$/, '');
+    const signingUrl = `${liveBase}/sign/${token}`;
 
     // Email to partner
     const partnerHtml = `
