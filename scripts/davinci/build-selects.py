@@ -363,17 +363,23 @@ def run(args):
         pass  # may already exist
 
     # ---- Build the timeline -------------------------------------------------
-    # APPROACH: full clip(s) placed once each, markers only for beats/quality/gold.
-    # No subclipping. Every frame of every clip makes it to the timeline.
+    # APPROACH: place actual subclips cut to AssemblΩr's selected_takes timestamps.
+    # Each beat's chosen take lands on the timeline as a real cut in beat order —
+    # a proper rough cut, not a marked-up full clip.
     #
-    # Phase 1 — place each unique clip ONCE (full duration, no in/out points)
-    # Phase 2 — add beat, quality, and gold markers using take timecodes
+    # Phase 1 — import all needed clips into the media pool cache
+    # Phase 2 — place subclips in beat order using selected_takes start/end seconds
+    # Phase 3 — add beat-header and gold markers on top of the assembled cuts
 
     clips_placed  = 0
     clips_missing = 0
 
-    # Sort sections by section_index (gold nuggets last so markers go on top)
-    sections_sorted = sorted(sections, key=lambda s: (1 if s.get("gold_nugget") else 0, s.get("section_index", 0)))
+    # Sort sections by section_index for assembly order
+    beat_sections = sorted(
+        [s for s in sections if not s.get("gold_nugget")],
+        key=lambda s: s.get("section_index", 0)
+    )
+    gold_sections = [s for s in sections if s.get("gold_nugget")]
 
     # Diagnostic
     print(f"[diag] footage_paths keys: {sorted(footage_paths.keys())}", file=sys.stderr)
@@ -381,144 +387,174 @@ def run(args):
         exists = os.path.isfile(fp) if fp else False
         print(f"[diag] footage {fid}: path={fp!r} exists={exists}", file=sys.stderr)
 
-    # ── Phase 1: place each unique clip once, full extent ─────────────────────
-    # clip_timeline_offset[footage_id] = frame where that clip starts on the timeline
-    clip_timeline_offset = {}
-    current_frame = 0
-
-    # Collect unique footage_ids from non-gold sections (in order of first appearance)
-    seen_fids = []
-    for section in sections_sorted:
-        if section.get("gold_nugget"):
-            continue
-        fid = section.get("winner_footage_id")
-        if fid is not None and fid not in seen_fids:
-            seen_fids.append(fid)
-
-    for fid in seen_fids:
-        if fid not in footage_paths:
-            print(f"[warn] footage_id {fid} not in footage_paths — skipped", file=sys.stderr)
-            clips_missing += 1
-            continue
-
-        file_path = footage_paths[fid]
-        item, _   = find_clip(path_index, file_path, media_pool)
-
-        if not item:
+    # ── Phase 1: pre-import all clips into the media pool ────────────────────
+    # Build fid → MediaPoolItem lookup so Phase 2 can place subclips
+    item_cache = {}
+    for fid, file_path in footage_paths.items():
+        item, _ = find_clip(path_index, file_path, media_pool)
+        if item:
+            item_cache[fid] = item
+        else:
             print(f"[warn] could not resolve clip for footage_id {fid}", file=sys.stderr)
             clips_missing += 1
-            continue
 
-        # Place full clip — no startFrame/endFrame means use the whole thing
-        result = media_pool.AppendToTimeline([{
-            "mediaPoolItem": item,
-            "trackIndex":    1,
-        }])
-
-        if result:
-            clip_timeline_offset[fid] = current_frame
-            # Get actual clip duration in frames to advance current_frame
-            try:
-                dur_str = item.GetClipProperty("Duration") or ""
-                if ":" in dur_str:
-                    parts = [int(x) for x in dur_str.split(":")]
-                    dur_frames = ((parts[0] * 3600 + parts[1] * 60 + parts[2]) * fps) + parts[3]
-                else:
-                    dur_frames = int(dur_str) if dur_str else 0
-            except Exception:
-                dur_frames = 0
-            current_frame += dur_frames
-            clips_placed  += 1
-            print(f"[placed] full clip footage_id={fid} ({dur_frames} frames) at frame {clip_timeline_offset[fid]}", file=sys.stderr)
-        else:
-            print(f"[warn] AppendToTimeline failed for footage_id={fid}", file=sys.stderr)
-            clips_missing += 1
-
-    # ── Phase 2: markers from beat sections ───────────────────────────────────
-    # For each non-gold section: beat header marker + per-take quality markers
-    # For gold sections: red marker at the gold moment timecode
-
-    beat_sections   = [s for s in sections_sorted if not s.get("gold_nugget")]
-    gold_sections   = [s for s in sections_sorted if s.get("gold_nugget")]
-
-    # ── Phase 2a: beat + quality markers ─────────────────────────────────────
-    # For each beat section, add a blue beat-header marker at the first take's
-    # timecode, then per-take quality markers (orange=fumbled, green=strong, cyan=clean).
-    # All frame positions are: clip_timeline_offset[footage_id] + ts_to_frame(take.start)
+    # ── Phase 2: place selected_takes as subclips in beat order ──────────────
+    # Each section's selected_takes is an ordered list of segments Claude chose.
+    # We place them sequentially on V1 — this IS the rough cut.
+    #
+    # timeline_beat_frame[section_index] = frame position on timeline where
+    #   that beat starts — used by Phase 3 for beat-header markers.
+    timeline_beat_frame = {}
+    current_frame       = 0
 
     for section in beat_sections:
-        label     = section.get("script_section") or f"Section {section.get('section_index', '?')}"
-        fire_note = section.get("fire_suggestion") or ""
-        takes     = section.get("takes") or []
-        fid       = section.get("winner_footage_id")
+        label          = section.get("script_section") or f"Section {section.get('section_index', '?')}"
+        section_index  = section.get("section_index", 0)
+        selected_takes = section.get("selected_takes") or []
+        fire_note      = section.get("fire_suggestion") or ""
 
-        if fid not in clip_timeline_offset:
-            warnings.append(f"Section '{label}': footage_id {fid} not placed — markers skipped")
-            continue
-
-        clip_offset = clip_timeline_offset[fid]
-
-        # Blue beat-header at the first take's start
-        if takes:
-            beat_frame = clip_offset + ts_to_frame(takes[0].get("start", 0), fps)
-            add_marker(
-                timeline,
-                max(0, beat_frame),
-                MARKER_COLORS["section"],
-                label,
-                f"{len(takes)} take(s) | {fire_note[:120]}"
-            )
-
-        # Per-take quality markers
-        for t_idx, take in enumerate(takes):
-            t_start  = take.get("start", 0)
-            t_end    = take.get("end", t_start)
-            quality  = take.get("quality", "clean")
-            note     = take.get("note", "") or ""
-            t_frame  = clip_offset + ts_to_frame(t_start, fps)
-            dur_f    = max(1, ts_to_frame(t_end - t_start, fps))
-            t_label  = f"Take {t_idx + 1}/{len(takes)}"
-
-            if quality in ("fumbled", "partial"):
-                add_marker(timeline, max(0, t_frame), "Orange",
-                    f"⚠ REVIEW {t_label} [{quality}]",
-                    note[:200] if note else f"{quality} — review and cut if needed",
-                    duration=dur_f)
-            elif quality == "strong":
-                add_marker(timeline, max(0, t_frame), "Green",
-                    f"✓ STRONG {t_label}",
-                    note[:200] if note else "Strong take — likely keeper",
-                    duration=dur_f)
+        if not selected_takes:
+            # No selected takes — fall back to full winner clip if available
+            fid = section.get("winner_footage_id")
+            if fid and fid in item_cache:
+                result = media_pool.AppendToTimeline([{
+                    "mediaPoolItem": item_cache[fid],
+                    "trackIndex":    1,
+                }])
+                if result:
+                    timeline_beat_frame[section_index] = current_frame
+                    # Advance by full clip duration
+                    try:
+                        dur_str = item_cache[fid].GetClipProperty("Duration") or ""
+                        if ":" in dur_str:
+                            parts = [int(x) for x in dur_str.split(":")]
+                            dur_f = ((parts[0]*3600 + parts[1]*60 + parts[2]) * fps) + parts[3]
+                        else:
+                            dur_f = int(dur_str) if dur_str else 0
+                    except Exception:
+                        dur_f = 0
+                    current_frame += dur_f
+                    clips_placed  += 1
+                    print(f"[placed] full fallback beat='{label}' footage_id={fid}", file=sys.stderr)
+                else:
+                    warnings.append(f"Beat '{label}': AppendToTimeline failed (full clip fallback)")
+                    clips_missing += 1
             else:
-                add_marker(timeline, max(0, t_frame), "Cyan",
-                    f"○ CLEAN {t_label}",
-                    note[:200] if note else "Clean take",
-                    duration=dur_f)
-
-    # ── Phase 2b: gold moment markers ────────────────────────────────────────
-    for section in gold_sections:
-        takes = section.get("takes") or []
-        fid   = section.get("winner_footage_id")
-        note  = section.get("fire_suggestion") or "Off-script gold moment"
-
-        if fid not in clip_timeline_offset:
-            warnings.append(f"Gold moment: footage_id {fid} not placed — marker skipped")
+                warnings.append(f"Beat '{label}': no selected_takes and no winner clip — skipped")
             continue
 
-        clip_offset = clip_timeline_offset[fid]
+        # Record where this beat starts on the timeline
+        timeline_beat_frame[section_index] = current_frame
 
-        for take in takes:
-            t_start = take.get("start", 0)
-            t_end   = take.get("end", t_start)
-            dur_f   = max(1, ts_to_frame(t_end - t_start, fps))
-            add_marker(
-                timeline,
-                max(0, clip_offset + ts_to_frame(t_start, fps)),
-                MARKER_COLORS["gold"],
-                "🔴 GOLD — OFF-SCRIPT",
-                note[:200],
-                duration=dur_f
-            )
+        for take in selected_takes:
+            fid       = take.get("footage_id")
+            t_start   = float(take.get("start", 0))
+            t_end     = float(take.get("end", t_start))
+            duration  = t_end - t_start
+
+            if duration <= 0:
+                print(f"[warn] Beat '{label}': take has zero/negative duration ({t_start}→{t_end}) — skipped", file=sys.stderr)
+                continue
+
+            if fid not in item_cache:
+                warnings.append(f"Beat '{label}': footage_id {fid} not in cache — take skipped")
+                clips_missing += 1
+                continue
+
+            # Convert seconds → source frames (relative to clip start, frame 0 = first frame)
+            src_in  = ts_to_frame(t_start, fps)
+            src_out = ts_to_frame(t_end,   fps)
+
+            # Add 2-frame handles on both ends where possible (avoids hard flicker cuts)
+            src_in  = max(0, src_in  - 2)
+            src_out = src_out + 2
+
+            result = media_pool.AppendToTimeline([{
+                "mediaPoolItem": item_cache[fid],
+                "startFrame":    src_in,
+                "endFrame":      src_out,
+                "trackIndex":    1,
+            }])
+
+            if result:
+                seg_frames = src_out - src_in
+                current_frame += seg_frames
+                clips_placed  += 1
+                print(
+                    f"[cut] beat='{label}' {t_start:.2f}→{t_end:.2f}s "
+                    f"(frames {src_in}→{src_out}, {seg_frames}f)",
+                    file=sys.stderr
+                )
+            else:
+                warnings.append(
+                    f"Beat '{label}': AppendToTimeline failed for take "
+                    f"{t_start:.2f}→{t_end:.2f}s (footage_id={fid})"
+                )
+                clips_missing += 1
+
+    print(f"[assembly] {clips_placed} subclips placed, {clips_missing} failed/missing", file=sys.stderr)
+
+    # ── Phase 3: markers — beat headers + gold moments ───────────────────────
+    # Beat-header markers sit at the start of each beat on the assembled timeline.
+    # Gold moment markers appended after the main assembly.
+
+    # Phase 3a: beat-header markers
+    for section in beat_sections:
+        label         = section.get("script_section") or f"Section {section.get('section_index', '?')}"
+        section_index = section.get("section_index", 0)
+        fire_note     = section.get("fire_suggestion") or ""
+        takes         = section.get("takes") or []
+
+        tl_frame = timeline_beat_frame.get(section_index)
+        if tl_frame is None:
+            continue
+
+        add_marker(
+            timeline,
+            max(0, tl_frame),
+            MARKER_COLORS["section"],
+            label[:40],
+            f"{len(takes)} take(s) | {fire_note[:120]}"
+        )
+
+    # Phase 3b: gold moment subclips appended at the end, with red markers
+    for section in gold_sections:
+        selected_takes = section.get("selected_takes") or section.get("takes") or []
+        fid            = section.get("winner_footage_id")
+        note           = section.get("fire_suggestion") or "Off-script gold moment"
+
+        if not selected_takes or fid not in item_cache:
+            warnings.append(f"Gold moment: footage_id {fid} not placed — skipped")
+            continue
+
+        gold_start_frame = current_frame
+
+        for take in selected_takes:
+            t_start = float(take.get("start", 0))
+            t_end   = float(take.get("end", t_start))
+            if t_end <= t_start:
+                continue
+            src_in  = max(0, ts_to_frame(t_start, fps) - 2)
+            src_out = ts_to_frame(t_end, fps) + 2
+
+            result = media_pool.AppendToTimeline([{
+                "mediaPoolItem": item_cache[fid],
+                "startFrame":    src_in,
+                "endFrame":      src_out,
+                "trackIndex":    1,
+            }])
+            if result:
+                current_frame += src_out - src_in
+                clips_placed  += 1
+
+        add_marker(
+            timeline,
+            max(0, gold_start_frame),
+            MARKER_COLORS["gold"],
+            "🔴 GOLD — OFF-SCRIPT",
+            note[:200],
+            duration=max(1, current_frame - gold_start_frame)
+        )
 
     # ---- Beat markers from PipΩr project-config.json ----------------------
     config = load_project_config(args.project_id)
@@ -590,7 +626,7 @@ def run(args):
     return {
         "ok":             True,
         "timeline_name":  final_name,
-        "sections":       len(sections_sorted),
+        "sections":       len(beat_sections) + len(gold_sections),
         "clips_placed":   clips_placed,
         "clips_missing":  clips_missing,
         "warnings":       warnings,
