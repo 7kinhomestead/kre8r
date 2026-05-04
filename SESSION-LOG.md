@@ -3,6 +3,74 @@
 
 ---
 
+# Session 72 — Contracts v2, Signature Solar, AnimΩr (2026-05-03)
+
+## Goal
+Finish contracts module (signer-fillable fields, ESIGN compliance, signing page letterhead),
+research Signature Solar partnership, add `?src=` content-source tracking to AffiliateΩr,
+and build AnimΩr — Remotion motion-graphics renderer.
+
+## What Was Built / Fixed
+
+### Contracts — Signer-Fillable Fields
+- `renderTemplate()`: skips empty values — `{{variable}}` placeholders preserved in body_snapshot
+  when Jason doesn't fill them in. Signer fills them on the signing page.
+- `buildSigningPage()`: detects remaining `{{vars}}`, renders editable input fields with
+  live preview update. POST `/api/contracts/sign/:token` accepts `signer_fields`, does
+  final render + calls `updateAgreementBodySnapshot`.
+- `src/db.js`: added `updateAgreementBodySnapshot` helper.
+
+### Contracts — ESIGN Act Compliance
+- Second checkbox added: explicit ESIGN Act consent (separate from "I agree to terms").
+- `user_agent` captured at signing time → `signer_agent` column added to `agreements` table
+  (safe ALTER TABLE migration in db.js).
+- Audit trail block appended to `body_snapshot` before locking:
+  signer name, date/time, ISO timestamp, IP address, browser, ESIGN consent statement.
+
+### Contracts — Signing Page Letterhead
+- Rebuilt to match QualΩr checksheet print aesthetic:
+  `background:#eceae6` linen body, white paper `#fff` with shadow, Bebas Neue display,
+  DM Sans 300 body, teal accent rule under header, `--ink:#0a0a0a`.
+- Logo: `public/media-kit-images/logo.png` replaces "7K" monogram.
+- Signing URL always uses `LIVE_API_URL` env var (not request host) — fixes localhost
+  links when sent from Electron.
+- Confirmation email: `buildAgreementEmail()` — inline-style table email matching
+  letterhead aesthetic. Logo at absolute URL, ESIGN audit trail in teal-accented box.
+
+### AffiliateΩr — Content Source Tracking (`?src=`)
+- `affiliate_clicks` table: `src TEXT` column added (safe migration in db.js).
+- `server.js` redirect handler: captures `req.query.src`, inserts into clicks row.
+- `src/routes/affiliator.js`: `bySrc` analytics query added.
+- `public/affiliator.html`: "Clicks by Content Source" table in analytics tab.
+  Usage: `/r/signature-solar/main?src=solar-vid-123`
+
+### AnimΩr — Remotion Motion Graphics
+- **`src/animr/Root.jsx`**: Remotion root registering all 3 compositions.
+- **`src/animr/compositions/BarChart.jsx`**: animated cost comparison (already built prev session).
+- **`src/animr/compositions/CountUp.jsx`**: count-up with glow (already built prev session).
+- **`src/animr/compositions/StatCard.jsx`**: animated stat card (already built prev session).
+- **`src/routes/animr.js`**: render API:
+  - `POST /api/animr/render` — starts job, returns jobId
+  - `GET  /api/animr/render/:id/stream` — SSE render progress
+  - `GET  /api/animr/renders` — list completed MP4s
+  - `DELETE /api/animr/renders/:filename` — delete render
+  - Uses `@remotion/bundler` + `@remotion/renderer` (already installed).
+  - Outputs to `public/animr-renders/` (auto-created).
+- **`public/animr.html`**: full UI — composition picker (BarChart/CountUp/StatCard),
+  props configuration per composition, bars editor (add/remove/color), duration/fps controls,
+  SSE progress with bundle + render phases, result preview with download + PostΩr send,
+  library tab for all rendered files (hover-to-play).
+- **`server.js`**: `app.use('/api/animr', ...)` mounted.
+- **`public/js/nav.js`**: AnimΩr added to Post section.
+
+## Signature Solar Meeting
+- Signature Solar offered $24k / 20kw solar system in exchange for being first partner
+  when their commission program relaunches (company values aligned).
+- AffiliateΩr partner already set up. Will use `/r/signature-solar/main?src=[video-id]`
+  for per-video tracking once commission program live.
+
+---
+
 # Session 70 — Voice Calibration, Email Sequences, AnalyticΩr Fixes, Blog Error 153 (2026-05-03)
 
 ## Goal

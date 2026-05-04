@@ -637,6 +637,7 @@ app.use('/api/vectr',             require('./src/routes/vectr'));
 app.use('/api/stats-export',      require('./src/routes/stats-export'));
 app.use('/api/analyticr',         require('./src/routes/analyticr'));
 app.use('/api/affiliator',        require('./src/routes/affiliator'));
+app.use('/api/animr',             require('./src/routes/animr'));
 // Contracts — authenticated CRUD + public signing page (/sign/:token)
 // All routes defined with full paths — mount once at root so /sign/:token works without auth
 app.use('/', require('./src/routes/contracts'));

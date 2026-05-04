@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnimΩr</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--card:#141414;--card2:#1c1c1c;--border:#222;--border2:#333;
+  --off:rgba(255,255,255,.85);--muted:rgba(255,255,255,.45);--faint:rgba(255,255,255,.08);
+  --teal:#14b8a6;--red:#ef4444;--green:#22c55e;--amber:#f59e0b;--blue:#3b82f6;
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--off);font-size:14px;min-height:100vh}
+
+/* ── topbar ─────────────────────────────────────────────────────────────── */
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border)}
+.topbar h1{font-size:18px;font-weight:700;color:var(--teal);margin-right:auto}
+
+/* ── layout ─────────────────────────────────────────────────────────────── */
+.layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 50px)}
+.sidebar{border-right:1px solid var(--border);padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.main{padding:24px;overflow-y:auto}
+
+/* ── cards ──────────────────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:14px}
+.section-title{font-size:18px;font-weight:700;margin-bottom:16px}
+
+/* ── composition picker ─────────────────────────────────────────────────── */
+.comp-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.comp-card{
+  background:var(--card2);border:2px solid var(--border);border-radius:8px;
+  padding:12px;cursor:pointer;transition:all .15s;
+}
+.comp-card:hover{border-color:var(--border2)}
+.comp-card.selected{border-color:var(--teal);background:rgba(20,184,166,.06)}
+.comp-card-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.comp-card-desc{font-size:12px;color:var(--muted)}
+
+/* ── form fields ─────────────────────────────────────────────────────────── */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select{
+  width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:6px;
+  color:var(--off);font-size:13px;padding:7px 10px;outline:none;transition:border .15s;
+}
+.field input:focus,.field select:focus{border-color:var(--teal)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.color-preview{width:20px;height:20px;border-radius:4px;border:1px solid var(--border2);flex-shrink:0}
+
+/* ── bars editor ─────────────────────────────────────────────────────────── */
+.bars-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.bar-row{
+  display:grid;grid-template-columns:1fr 90px 30px 28px;gap:6px;align-items:center;
+  background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;
+}
+.bar-row input{background:transparent;border:none;border-bottom:1px solid var(--border2);
+  color:var(--off);font-size:12px;padding:2px 4px;outline:none}
+.bar-row input:focus{border-bottom-color:var(--teal)}
+.bar-color-swatch{width:22px;height:22px;border-radius:4px;border:1px solid var(--border2);cursor:pointer;padding:0;flex-shrink:0}
+.remove-bar{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0;line-height:1}
+.remove-bar:hover{color:var(--red)}
+
+/* ── buttons ─────────────────────────────────────────────────────────────── */
+.btn{padding:8px 16px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-secondary{background:var(--card2);color:var(--off);border:1px solid var(--border)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-xs{padding:2px 8px;font-size:11px}
+.render-btn{width:100%;padding:12px;font-size:15px;font-weight:800;letter-spacing:.02em}
+
+/* ── progress ─────────────────────────────────────────────────────────────── */
+.progress-wrap{margin-top:12px}
+.progress-label{font-size:12px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between}
+.progress-bar{height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--teal);transition:width .3s;width:0%}
+.log-area{
+  background:#0d0d0d;border:1px solid var(--border);border-radius:6px;
+  font-family:'Courier New',monospace;font-size:11px;color:var(--muted);
+  padding:10px;max-height:140px;overflow-y:auto;margin-top:10px;
+}
+.log-line{margin-bottom:2px}
+.log-line.error{color:var(--red)}
+.log-line.done{color:var(--green)}
+
+/* ── render result ───────────────────────────────────────────────────────── */
+.result-card{
+  background:var(--card);border:1px solid var(--teal);border-radius:10px;padding:20px;
+  margin-top:16px;
+}
+.result-card video{width:100%;border-radius:6px;margin-bottom:12px;border:1px solid var(--border)}
+.result-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── renders library ─────────────────────────────────────────────────────── */
+.renders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.render-item{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.render-item video{width:100%;display:block;max-height:160px;object-fit:cover;background:#000}
+.render-item-info{padding:10px 12px}
+.render-item-name{font-size:12px;font-weight:700;color:var(--off);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.render-item-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.render-item-actions{display:flex;gap:6px}
+
+/* ── tabs ────────────────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{padding:8px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--off)}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+
+/* ── misc ────────────────────────────────────────────────────────────────── */
+.empty{color:var(--muted);font-size:13px;padding:40px;text-align:center}
+</style>
+</head>
+<body>
+
+<div id="kre8r-nav"></div>
+
+<div class="topbar">
+  <h1>AnimΩr</h1>
+  <span style="font-size:12px;color:var(--muted)">Motion graphics for your content</span>
+</div>
+
+<div class="layout">
+  <!-- ── Sidebar: composition picker + config ─────────────────────────────── -->
+  <div class="sidebar">
+
+    <!-- Composition picker -->
+    <div>
+      <div class="card-title">Composition</div>
+      <div class="comp-grid" id="compPicker">
+        <div class="comp-card selected" data-comp="BarChart" onclick="selectComp('BarChart')">
+          <div class="comp-card-name">📊 Bar Chart</div>
+          <div class="comp-card-desc">Animated cost comparison bars with count-up values</div>
+        </div>
+        <div class="comp-card" data-comp="CountUp" onclick="selectComp('CountUp')">
+          <div class="comp-card-name">🔢 Count Up</div>
+          <div class="comp-card-desc">Large number that counts up with glow effect</div>
+        </div>
+        <div class="comp-card" data-comp="StatCard" onclick="selectComp('StatCard')">
+          <div class="comp-card-name">📋 Stat Card</div>
+          <div class="comp-card-desc">Animated card with label, value, and accent lines</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Duration -->
+    <div>
+      <div class="card-title">Duration</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Seconds</label>
+          <input type="number" id="durationSec" value="3" min="1" max="30" step="0.5" oninput="updateFrameCount()">
+        </div>
+        <div class="field">
+          <label>FPS</label>
+          <select id="fps" onchange="updateFrameCount()">
+            <option value="30" selected>30 fps</option>
+            <option value="60">60 fps</option>
+            <option value="24">24 fps</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted)" id="frameCount">90 frames</div>
+    </div>
+
+    <!-- Dynamic props panel -->
+    <div id="propsPanel"></div>
+
+    <!-- Render button -->
+    <button class="btn btn-primary render-btn" id="renderBtn" onclick="startRender()">⚡ Render</button>
+
+    <!-- Progress -->
+    <div id="progressArea" style="display:none">
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span id="progressLabel">Bundling…</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="log-area" id="logArea"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Main: result + renders library ───────────────────────────────────── -->
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('result')">Current Render</div>
+      <div class="tab" onclick="showTab('library')">Library</div>
+    </div>
+
+    <!-- Result tab -->
+    <div id="tab-result">
+      <div id="resultArea">
+        <div class="empty">Configure a composition on the left and hit Render.</div>
+      </div>
+    </div>
+
+    <!-- Library tab -->
+    <div id="tab-library" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="section-title" style="margin:0">Rendered Files</div>
+        <button class="btn btn-secondary btn-sm" onclick="loadLibrary()">↻ Refresh</button>
+      </div>
+      <div id="rendersGrid"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────────────────────────────────────────────────────── -->
+<script>
+let currentComp = 'BarChart';
+let currentJobId = null;
+let currentSse   = null;
+
+// ── Composition props definitions ────────────────────────────────────────────
+const COMP_DEFS = {
+  BarChart: {
+    defaultDuration: 4,
+    buildProps: () => {
+      const title = document.getElementById('bc_title')?.value || 'Cost Comparison';
+      const prefix = document.getElementById('bc_prefix')?.value || '$';
+      const suffix = document.getElementById('bc_suffix')?.value || '/yr';
+      const accent = document.getElementById('bc_accent')?.value || '#14b8a6';
+      const bg     = document.getElementById('bc_bg')?.value    || '#0a0a0a';
+      const bars   = getBarsFromUI();
+      return { title, bars, valuePrefix: prefix, valueSuffix: suffix, accentColor: accent, bgColor: bg };
+    },
+    renderForm: () => `
+      <div>
+        <div class="card-title">Bar Chart Settings</div>
+        <div class="field">
+          <label>Title</label>
+          <input id="bc_title" value="Cost Comparison" placeholder="Chart title">
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Value Prefix</label><input id="bc_prefix" value="$" placeholder="$"></div>
+          <div class="field"><label>Value Suffix</label><input id="bc_suffix" value="/yr" placeholder="/yr"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Accent Color</label><input id="bc_accent" type="color" value="#14b8a6"></div>
+          <div class="field"><label>Background</label><input id="bc_bg" type="color" value="#0a0a0a"></div>
+        </div>
+        <div class="card-title" style="margin-top:10px">Bars</div>
+        <div class="bars-list" id="barsList"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addBar()">+ Add Bar</button>
+      </div>
+    `,
+    afterRender: () => {
+      renderBars([
+        { label: 'Grid Power', value: 4800, color: '#ef4444' },
+        { label: 'Solar',      value:  800, color: '#14b8a6' },
+      ]);
+    },
+  },
+  CountUp: {
+    defaultDuration: 3,
+    buildProps: () => ({
+      targetValue: parseFloat(document.getElementById('cu_value')?.value) || 24000,
+      prefix:      document.getElementById('cu_prefix')?.value || '$',
+      suffix:      document.getElementById('cu_suffix')?.value || '',
+      label:       document.getElementById('cu_label')?.value  || '',
+      decimals:    parseInt(document.getElementById('cu_decimals')?.value) || 0,
+      accentColor: document.getElementById('cu_accent')?.value || '#14b8a6',
+      bgColor:     document.getElementById('cu_bg')?.value     || '#0a0a0a',
+    }),
+    renderForm: () => `
+      <div>
+        <div class="card-title">Count Up Settings</div>
+        <div class="field"><label>Target Value</label><input id="cu_value" type="number" value="24000"></div>
+        <div class="field-row">
+          <div class="field"><label>Prefix</label><input id="cu_prefix" value="$" placeholder="$"></div>
+          <div class="field"><label>Suffix</label><input id="cu_suffix" value="" placeholder="K"></div>
+        </div>
+        <div class="field"><label>Label (optional)</label><input id="cu_label" value="Annual Savings" placeholder="above the number"></div>
+        <div class="field"><label>Decimals</label><input id="cu_decimals" type="number" value="0" min="0" max="4"></div>
+        <div class="field-row">
+          <div class="field"><label>Accent Color</label><input id="cu_accent" type="color" value="#14b8a6"></div>
+          <div class="field"><label>Background</label><input id="cu_bg" type="color" value="#0a0a0a"></div>
+        </div>
+      </div>
+    `,
+    afterRender: () => {},
+  },
+  StatCard: {
+    defaultDuration: 3,
+    buildProps: () => ({
+      label:       document.getElementById('sc_label')?.value    || 'Annual Savings',
+      value:       document.getElementById('sc_value')?.value    || '$4,800',
+      subtitle:    document.getElementById('sc_subtitle')?.value || '',
+      accentColor: document.getElementById('sc_accent')?.value   || '#14b8a6',
+      bgColor:     document.getElementById('sc_bg')?.value       || '#0a0a0a',
+    }),
+    renderForm: () => `
+      <div>
+        <div class="card-title">Stat Card Settings</div>
+        <div class="field"><label>Label</label><input id="sc_label" value="Annual Savings" placeholder="LABEL"></div>
+        <div class="field"><label>Value</label><input id="sc_value" value="$4,800" placeholder="$4,800"></div>
+        <div class="field"><label>Subtitle (optional)</label><input id="sc_subtitle" value="vs grid power" placeholder="below the value"></div>
+        <div class="field-row">
+          <div class="field"><label>Accent Color</label><input id="sc_accent" type="color" value="#14b8a6"></div>
+          <div class="field"><label>Background</label><input id="sc_bg" type="color" value="#0a0a0a"></div>
+        </div>
+      </div>
+    `,
+    afterRender: () => {},
+  },
+};
+
+// ── Bars UI helpers ───────────────────────────────────────────────────────────
+let barsData = [];
+
+function renderBars(initial) {
+  if (initial) barsData = initial;
+  const list = document.getElementById('barsList');
+  if (!list) return;
+  list.innerHTML = barsData.map((b, i) => `
+    <div class="bar-row">
+      <input value="${b.label}" placeholder="Label" oninput="barsData[${i}].label=this.value">
+      <input type="number" value="${b.value}" placeholder="Value" oninput="barsData[${i}].value=parseFloat(this.value)||0">
+      <input type="color" value="${b.color}" oninput="barsData[${i}].color=this.value" style="width:28px;height:28px;border-radius:4px;border:1px solid var(--border2);cursor:pointer;padding:0;background:none">
+      <button class="remove-bar" onclick="removeBar(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function addBar() {
+  const colors = ['#ef4444','#3b82f6','#f59e0b','#a855f7','#ec4899'];
+  barsData.push({ label: 'New Bar', value: 1000, color: colors[barsData.length % colors.length] });
+  renderBars();
+}
+
+function removeBar(i) {
+  barsData.splice(i, 1);
+  renderBars();
+}
+
+function getBarsFromUI() { return [...barsData]; }
+
+// ── Composition selection ─────────────────────────────────────────────────────
+function selectComp(name) {
+  currentComp = name;
+  document.querySelectorAll('.comp-card').forEach(c => c.classList.toggle('selected', c.dataset.comp === name));
+  const def = COMP_DEFS[name];
+  document.getElementById('propsPanel').innerHTML = def.renderForm();
+  if (def.afterRender) def.afterRender();
+  // Set default duration
+  document.getElementById('durationSec').value = def.defaultDuration;
+  updateFrameCount();
+}
+
+function updateFrameCount() {
+  const sec = parseFloat(document.getElementById('durationSec').value) || 3;
+  const fps = parseInt(document.getElementById('fps').value) || 30;
+  document.getElementById('frameCount').textContent = `${Math.round(sec * fps)} frames`;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+async function startRender() {
+  if (currentSse) { currentSse.close(); currentSse = null; }
+
+  const def  = COMP_DEFS[currentComp];
+  const props = def.buildProps();
+  const sec  = parseFloat(document.getElementById('durationSec').value) || 3;
+  const fps  = parseInt(document.getElementById('fps').value) || 30;
+  const durationInFrames = Math.round(sec * fps);
+
+  document.getElementById('renderBtn').disabled = true;
+  document.getElementById('progressArea').style.display = 'block';
+  document.getElementById('logArea').innerHTML = '';
+  setProgress('bundle', 0);
+
+  let jobId;
+  try {
+    const r = await fetch('/api/animr/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ composition: currentComp, props, durationInFrames, fps }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'render failed');
+    jobId = data.jobId;
+    currentJobId = jobId;
+  } catch (err) {
+    addLog('ERROR: ' + err.message, 'error');
+    document.getElementById('renderBtn').disabled = false;
+    return;
+  }
+
+  // SSE stream
+  const sse = new EventSource(`/api/animr/render/${jobId}/stream`);
+  currentSse = sse;
+
+  let bundlePct = 0;
+  let renderPct = 0;
+
+  sse.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'log') {
+      addLog(msg.msg);
+      if (msg.msg.includes('Bundling')) setProgress('bundle', 0);
+      if (msg.msg.includes('Rendering'))  setProgress('render', 0);
+    } else if (msg.type === 'bundle_progress') {
+      bundlePct = msg.pct;
+      setProgress('bundle', bundlePct);
+    } else if (msg.type === 'render_progress') {
+      renderPct = msg.pct;
+      setProgress('render', renderPct);
+    } else if (msg.type === 'done') {
+      sse.close();
+      addLog(`Done! ${(msg.sizeBytes / 1024 / 1024).toFixed(1)} MB`, 'done');
+      setProgress('render', 100);
+      showResult(msg);
+      document.getElementById('renderBtn').disabled = false;
+    } else if (msg.type === 'error') {
+      sse.close();
+      addLog('ERROR: ' + msg.error, 'error');
+      document.getElementById('renderBtn').disabled = false;
+    }
+  };
+
+  sse.onerror = () => {
+    sse.close();
+    document.getElementById('renderBtn').disabled = false;
+  };
+}
+
+function setProgress(phase, pct) {
+  const labels = { bundle: 'Bundling compositions…', render: 'Rendering frames…' };
+  document.getElementById('progressLabel').textContent = labels[phase] || phase;
+  // bundle = 0-40%, render = 40-100%
+  const overall = phase === 'bundle' ? pct * 0.4 : 40 + pct * 0.6;
+  document.getElementById('progressFill').style.width = overall + '%';
+  document.getElementById('progressPct').textContent  = Math.round(overall) + '%';
+}
+
+function addLog(text, cls = '') {
+  const area = document.getElementById('logArea');
+  const line = document.createElement('div');
+  line.className = 'log-line' + (cls ? ' ' + cls : '');
+  line.textContent = text;
+  area.appendChild(line);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showResult(msg) {
+  showTab('result');
+  document.getElementById('resultArea').innerHTML = `
+    <div class="result-card">
+      <div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:12px">✅ Render complete</div>
+      <video src="${msg.url}" controls playsinline muted style="width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:14px"></video>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">${msg.filename} · ${(msg.sizeBytes/1024/1024).toFixed(1)} MB</div>
+      <div class="result-actions">
+        <a href="${msg.url}" download class="btn btn-primary btn-sm">⬇ Download</a>
+        <button class="btn btn-secondary btn-sm" onclick="copyPath('${msg.url}')">📋 Copy URL</button>
+        <button class="btn btn-secondary btn-sm" onclick="sendToPostor('${msg.url}','${msg.filename}')">📤 Send to PostΩr</button>
+      </div>
+    </div>
+  `;
+}
+
+function copyPath(url) {
+  const full = window.location.origin + url;
+  navigator.clipboard.writeText(full).then(() => alert('URL copied!'));
+}
+
+function sendToPostor(url, filename) {
+  const label = filename.replace('.mp4','').replace(/_\d+$/,'');
+  localStorage.setItem('captionr_prefill', JSON.stringify({
+    clip_label: label,
+    video_path: url,
+  }));
+  window.open('/postor.html', '_blank');
+}
+
+// ── Library ───────────────────────────────────────────────────────────────────
+async function loadLibrary() {
+  const grid = document.getElementById('rendersGrid');
+  grid.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const r = await fetch('/api/animr/renders');
+    const data = await r.json();
+    if (!data.renders.length) {
+      grid.innerHTML = '<div class="empty">No renders yet.</div>';
+      return;
+    }
+    grid.innerHTML = '<div class="renders-grid">' + data.renders.map(item => `
+      <div class="render-item">
+        <video src="${item.url}" muted playsinline preload="metadata"
+          onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0"></video>
+        <div class="render-item-info">
+          <div class="render-item-name">${item.filename}</div>
+          <div class="render-item-meta">${(item.sizeBytes/1024/1024).toFixed(1)} MB · ${new Date(item.createdAt).toLocaleDateString()}</div>
+          <div class="render-item-actions">
+            <a href="${item.url}" download class="btn btn-secondary btn-xs">⬇</a>
+            <button class="btn btn-secondary btn-xs" onclick="copyPath('${item.url}')">📋</button>
+            <button class="btn btn-secondary btn-xs" onclick="sendToPostor('${item.url}','${item.filename}')">📤</button>
+            <button class="btn btn-danger btn-xs" onclick="deleteRender('${item.filename}', this)">🗑</button>
+          </div>
+        </div>
+      </div>
+    `).join('') + '</div>';
+  } catch (err) {
+    grid.innerHTML = `<div class="empty">Error: ${err.message}</div>`;
+  }
+}
+
+async function deleteRender(filename, btn) {
+  if (!confirm(`Delete ${filename}?`)) return;
+  btn.disabled = true;
+  await fetch(`/api/animr/renders/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+  loadLibrary();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['result','library'][i] === name));
+  document.getElementById('tab-result').style.display  = name === 'result'  ? '' : 'none';
+  document.getElementById('tab-library').style.display = name === 'library' ? '' : 'none';
+  if (name === 'library') loadLibrary();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+selectComp('BarChart');
+</script>
+
+<script src="/js/nav.js" defer></script>
+<script>window.addEventListener('load', () => initNav())</script>
+</body>
+</html>
