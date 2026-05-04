@@ -5,37 +5,44 @@
 
 ## NEXT TASKS (Session 71)
 
-### 1. Check Apr 30 blog post YouTube embeds
-- View "Why Hard Work Feels Different" and "The Life You Have Isn't the Only One"
-  at 7kinhomestead.land/blog — confirm Error 153 is gone (kre8r-land iframe fix is live)
-- If still 153ing, kre8r-land deploy may not have included the latest blog-post.html change
+### ~~1. Check Apr 30 blog post YouTube embeds~~ ✅ Done Session 71
+### ~~2. Blog body editor — verify working~~ ✅ Done Session 71
+### ~~3. Restart Electron / voice calibration~~ ✅ Done Session 71
+### ~~4. Load Rock Rich email sequences into MailerLite~~ ✅ Done — firing all day
+### ~~5. HarvestΩr bridge verify~~ ✅ Live — one member got in with no help, did the thing
 
-### 2. Blog body editor — verify working
-- Hard refresh MailΩr (Ctrl+Shift+R) to clear cached JS
-- Open Manage Posts → click ✏ on any post → confirm body loads in textarea
-- If still empty: check Network tab for body-live request and response
+---
 
-### 3. Restart local Electron app to pick up voice calibration profile
-- `data/voice-calibration.json` is written — Electron needs restart to load it into kv_store
-- After restart: generate a WritΩr script and confirm calibration block appears in output
+## NEXT TASKS (Session 72)
 
-### 4. Load Rock Rich email sequences into MailerLite
-- Welcome sequence (6 emails) + upgrade sequence written in Session 70
-- Create automation in MailerLite, paste emails in order
+### 1. Trusted Partner Badge — OLH Listings (kre8r-land)
+- Add "7 Kin Trusted Partner" badge to OnlineLandHub listings on the land finder page
+- Same badge style as BillyLand treatment
+- Badge should be visually distinct — signals vetted/trusted source to visitors
+- Wire per-source so each partner (BillyLand, LandLimited, OLH) gets its own badge
 
-### 5. HarvestΩr → kre8r.app bridge: verify member-check endpoint is live
-- Deploy kre8r.app with Session 69 kajabi.js + server.js changes
-- Test from harvestomr dev server: `POST https://kre8r.app/api/kajabi/member-check`
-  with `{ email: "test@example.com" }` + `X-Internal-Key` header
-- Confirm returns `{ active: false, reason: 'not_found' }` (expected for unknown email)
-- Confirm a real Rock Rich member email returns correct tier
+### 2. Partner Contract — Mock Up + Send
+- Draft partnership contract for trusted land partners (BillyLand, LandLimited, OLH)
+- Cover: referral commission rate, affiliate param requirements, data usage, term
+- Send to partners for review/signing
 
-### 6. kre8r-land Production DB Backup Cron
+### 3. MirrΩr — Full Video Reanalysis Sync
+- Run the sync that reanalyzes all YouTube videos with updated calibration context
+- Not done yet — back-burnered during Session 70/71 work
+- Will feed updated retention/hook data back into Id8Ωr + WritΩr recommendations
+
+### 4. kre8r-land Production DB Backup Cron
 - Wire daily backup on 7kinhomestead droplet — same pattern as kre8r.app (3am, 14-day rolling)
 - sqlite3 CLI not installed — use node + better-sqlite3 backup script
 - Script: `/home/landapp/kre8r-land/scripts/backup-db.js`
 - Cron: `0 3 * * * node /home/landapp/kre8r-land/scripts/backup-db.js >> /home/landapp/logs/backup.log 2>&1`
-- Confirm `/home/landapp/backups/` exists first
+
+### 5. TikTok App Approval (waiting)
+- Still in review as of May 3, 2026
+- Check status — once approved, wire TikTok Analytics module (TikTΩkr)
+
+### 6. Cari Electron Setup — back-burnered
+- Not needed now given recent workflow wins. Revisit if she needs direct pipeline access.
 
 ---
 
@@ -127,7 +134,7 @@ Needs OrgΩr auth built first (same session).
 |-------|--------|
 | TeleprΩmpter: no back button from display screen | Open |
 | AudiencΩr tag filter (Kajabi 500 on filtered requests) | Low priority |
-| TikTok posting app in review (~April 28-30) | Waiting on Apple |
+| TikTok posting app in review | Waiting on Apple |
 | OrgΩr PM2 process lost after machine restart | Fix: re-register with pm2 start |
 | ~~VaultΩr loop fix not live until Kre8r restarts~~ | ✅ Confirmed fixed + live Session 63 |
 | ~~AffiliateΩr partner add + links loading broken~~ | ✅ Fixed (db.prepare export) Session 63 |
@@ -137,16 +144,18 @@ Needs OrgΩr auth built first (same session).
 ## INFRASTRUCTURE NOTES
 
 - Kre8r: port 3000 (Electron desktop + kre8r.app on DO)
-- KinOS: port 3001 (kinos.life — auth built Session 61, not yet activated on live server)
-- OrgΩr: port 3002 (local only — auth built Session 61, activate with ORGR_ADMIN_PW)
+- KinOS: port 3001 (kinos.life — ✅ auth activated, hub site live)
+- OrgΩr: port 3002 (local only — activate with ORGR_ADMIN_PW when needed)
 - Deploy: `cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r`
 - OrgΩr PM2: `node %APPDATA%\npm\node_modules\pm2\bin\pm2 start server.js --name orgboard` (run from C:\Users\18054\orgboard)
 
 ---
 
-## BEFORE BETA LAUNCH CHECKLIST
-- [x] OrgΩr auth — built Session 61, needs ORGR_ADMIN_PW to activate
-- [x] KinOS auth — built Session 61, needs passwords set when Cari is home
+## BETA LAUNCH — INTENTIONALLY BACK-BURNERED
+Jason is keeping Kre8Ωr private for now. Having a superpower and not leveling the
+playing field. Revisit when/if the calculus changes. Checklist preserved below for reference.
+- [x] OrgΩr auth
+- [x] KinOS auth + hub site live
 - [ ] Desktop-only feature gates
 - [ ] Remove API key field from public/setup.html (operator pays)
 - [ ] MirrΩr last-synced indicator
