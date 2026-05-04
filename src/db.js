@@ -1364,6 +1364,8 @@ function runMigrations() {
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_agreements_status ON agreements(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_agreements_token  ON agreements(signing_token)');
+  // Add signer_agent column if not present (safe migration)
+  try { db.exec('ALTER TABLE agreements ADD COLUMN signer_agent TEXT'); } catch (_) {}
 
   // Seed default General Affiliate Agreement template if none exist
   const tmplCount = db.prepare('SELECT COUNT(*) AS n FROM agreement_templates').get().n;
@@ -4841,10 +4843,10 @@ function updateAgreementBodySnapshot(id, body) {
   _run(`UPDATE agreements SET body_snapshot = ? WHERE id = ?`, [body, id]);
 }
 
-function updateAgreementStatus(id, status, signerName, signerIp, signedAt) {
+function updateAgreementStatus(id, status, signerName, signerIp, signedAt, signerAgent) {
   _run(
-    `UPDATE agreements SET status = ?, signer_name = ?, signer_ip = ?, signed_at = ? WHERE id = ?`,
-    [status, signerName || null, signerIp || null, signedAt || null, id]
+    `UPDATE agreements SET status = ?, signer_name = ?, signer_ip = ?, signed_at = ?, signer_agent = ? WHERE id = ?`,
+    [status, signerName || null, signerIp || null, signedAt || null, signerAgent || null, id]
   );
 }
 

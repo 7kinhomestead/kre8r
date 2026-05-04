@@ -136,14 +136,19 @@ function buildSigningPage({ status, agreement, errorMsg }) {
           <input type="text" id="signer-name" placeholder="Your full legal name" required autocomplete="name">
         </div>
         <label class="checkbox-label">
+          <input type="checkbox" id="esign-check">
+          I consent to conduct this transaction using electronic records and electronic signatures, as permitted under the U.S. Electronic Signatures in Global and National Commerce Act (ESIGN) and applicable state law.
+        </label>
+        <label class="checkbox-label">
           <input type="checkbox" id="agree-check">
-          I have read and agree to the terms above
+          I have read, understand, and agree to all terms of this agreement.
         </label>
         <button class="btn-sign" onclick="submitSignature()">Sign Agreement</button>
         <div id="sign-error" class="sign-error" style="display:none"></div>
       </div>
       <div class="footer">
-        By signing, you agree to be bound by the terms above. Signed agreements are timestamped and legally binding.
+        By signing, you confirm your identity, consent to electronic signature, and agree to be bound by the terms above.<br>
+        Your signature, IP address, browser, and timestamp are recorded as part of the legally binding audit trail.
       </div>
       <script>
         // Live preview — update {{placeholder}} spans as signer types
@@ -157,12 +162,14 @@ function buildSigningPage({ status, agreement, errorMsg }) {
         }
 
         async function submitSignature() {
-          const name  = document.getElementById('signer-name').value.trim();
-          const check = document.getElementById('agree-check').checked;
-          const errEl = document.getElementById('sign-error');
+          const name       = document.getElementById('signer-name').value.trim();
+          const esignCheck = document.getElementById('esign-check').checked;
+          const agreeCheck = document.getElementById('agree-check').checked;
+          const errEl      = document.getElementById('sign-error');
           errEl.style.display = 'none';
-          if (!name)  { errEl.textContent = 'Please enter your full legal name.'; errEl.style.display = ''; return; }
-          if (!check) { errEl.textContent = 'You must check the box to confirm you have read the agreement.'; errEl.style.display = ''; return; }
+          if (!name)       { errEl.textContent = 'Please enter your full legal name.'; errEl.style.display = ''; return; }
+          if (!esignCheck) { errEl.textContent = 'You must consent to electronic signature to proceed.'; errEl.style.display = ''; return; }
+          if (!agreeCheck) { errEl.textContent = 'You must confirm you have read and agree to the terms.'; errEl.style.display = ''; return; }
 
           // Validate all signer-fillable fields are filled
           const sfInputs = document.querySelectorAll('.sf-input');
@@ -184,7 +191,11 @@ function buildSigningPage({ status, agreement, errorMsg }) {
             const res = await fetch(location.pathname.replace('/sign/', '/api/contracts/sign/'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ signer_name: name, signer_fields: signerFields })
+              body: JSON.stringify({
+                signer_name:   name,
+                signer_fields: signerFields,
+                user_agent:    navigator.userAgent
+              })
             });
             const data = await res.json();
             if (data.ok) {
@@ -300,26 +311,35 @@ router.post('/api/contracts/sign/:token', async (req, res) => {
       return res.status(409).json({ ok: false, error: 'Already signed' });
     }
 
-    const { signer_name, signer_fields } = req.body;
+    const { signer_name, signer_fields, user_agent } = req.body;
     if (!signer_name || !signer_name.trim()) {
       return res.status(400).json({ ok: false, error: 'signer_name required' });
     }
 
-    // Final render: fill in any signer-provided field values before locking the agreement
+    const signedAt  = new Date().toISOString();
+    const signerIp  = req.ip || req.connection?.remoteAddress || 'unknown';
+    const signerAgent = (user_agent || '').slice(0, 512); // cap length
+
+    // Final render: fill in any signer-provided field values before locking
+    let finalBody = agreement.body_snapshot || '';
     if (signer_fields && typeof signer_fields === 'object' && Object.keys(signer_fields).length > 0) {
-      const finalBody = renderTemplate(agreement.body_snapshot || '', signer_fields);
-      db.updateAgreementBodySnapshot(agreement.id, finalBody);
-      agreement.body_snapshot = finalBody; // use finalBody in confirmation emails below
+      finalBody = renderTemplate(finalBody, signer_fields);
     }
 
-    const signedAt = new Date().toISOString();
-    const signerIp = req.ip || req.connection?.remoteAddress || 'unknown';
-    db.updateAgreementStatus(agreement.id, 'signed', signer_name.trim(), signerIp, signedAt);
+    // Append legally-required audit trail block to the stored agreement body
+    const signedDate = new Date(signedAt).toLocaleString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short'
+    });
+    finalBody += `\n\n${'─'.repeat(60)}\nELECTRONIC SIGNATURE AUDIT TRAIL\n${'─'.repeat(60)}\nSigned by:    ${signer_name.trim()}\nDate/Time:    ${signedDate}\nTimestamp:    ${signedAt}\nIP Address:   ${signerIp}\nBrowser:      ${signerAgent || 'not recorded'}\nESIGN Act consent confirmed by signer at time of signing.\n${'─'.repeat(60)}`;
+
+    db.updateAgreementBodySnapshot(agreement.id, finalBody);
+    agreement.body_snapshot = finalBody; // use in confirmation emails below
+
+    db.updateAgreementStatus(agreement.id, 'signed', signer_name.trim(), signerIp, signedAt, signerAgent);
 
     // Send confirmation emails (non-blocking — don't fail the sign request on email error)
-    const signedDate = new Date(signedAt).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric'
-    });
+    // body_snapshot already contains the full audit trail block at this point
     const agreementBodyHtml = (agreement.body_snapshot || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -329,15 +349,13 @@ router.post('/api/contracts/sign/:token', async (req, res) => {
     const partnerHtml = `
       <h2 style="color:#14b8a6">Your agreement has been signed</h2>
       <p>Hi ${signer_name.trim()},</p>
-      <p>Thank you for signing the <strong>${agreement.partner_name || 'Partnership'}</strong> agreement with 7 Kin Homestead on ${signedDate}.</p>
-      <p style="color:#888">Signed by: ${signer_name.trim()} | IP: ${signerIp} | Timestamp: ${signedAt}</p>
+      <p>Thank you for signing the <strong>${agreement.partner_name || 'Partnership'}</strong> agreement with 7 Kin Homestead. Your electronic signature, IP address, browser, and timestamp have been recorded. The full signed agreement including audit trail is below for your records.</p>
       <hr style="border-color:#222;margin:20px 0">
       <div style="font-family:monospace;font-size:13px;white-space:pre-wrap">${agreementBodyHtml}</div>`;
 
     const jasonHtml = `
       <h2 style="color:#14b8a6">Agreement signed: ${agreement.partner_name}</h2>
-      <p><strong>${signer_name.trim()}</strong> (${agreement.partner_email}) signed the partnership agreement on ${signedDate}.</p>
-      <p style="color:#888">IP: ${signerIp} | Timestamp: ${signedAt}</p>
+      <p><strong>${signer_name.trim()}</strong> (${agreement.partner_email}) signed the partnership agreement. Full audit trail is embedded at the bottom of the agreement below.</p>
       <hr style="border-color:#222;margin:20px 0">
       <div style="font-family:monospace;font-size:13px;white-space:pre-wrap">${agreementBodyHtml}</div>`;
 
