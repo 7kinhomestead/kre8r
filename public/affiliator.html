@@ -88,6 +88,7 @@ tr:hover td{background:var(--faint)}
   <div class="tab" onclick="showTab('generator')">Link Generator</div>
   <div class="tab" onclick="showTab('categories')">⚙ Categories</div>
   <div class="tab" id="tab-todo-btn" onclick="showTab('todo')">⚠ To-Do <span id="todo-count-badge" style="display:none;background:var(--amber);color:#000;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:4px"></span></div>
+  <div class="tab" onclick="showTab('contracts')">📄 Contracts</div>
 </div>
 
 <!-- ── PARTNERS ── -->
@@ -242,6 +243,100 @@ tr:hover td{background:var(--faint)}
     <div style="font-size:32px;margin-bottom:10px">✅</div>
     <div style="font-size:15px;font-weight:700;color:var(--off)">All caught up.</div>
     <div style="font-size:13px;margin-top:4px">Every gear product has an image, description, and price.</div>
+  </div>
+</div>
+
+<!-- ── CONTRACTS ── -->
+<div class="content" id="tab-contracts" style="display:none">
+
+  <!-- Templates section -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div>
+      <div style="font-size:15px;font-weight:700">Agreement Templates</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">Reusable agreement bodies with <code style="background:var(--card2);padding:1px 5px;border-radius:3px">{{variable}}</code> placeholders.</div>
+    </div>
+    <button class="btn btn-primary" onclick="openTemplateModal()">＋ New Template</button>
+  </div>
+  <div id="templates-list" class="card">
+    <div class="empty">Loading templates…</div>
+  </div>
+
+  <!-- Agreements section -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:24px 0 16px">
+    <div>
+      <div style="font-size:15px;font-weight:700">Sent Agreements</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">Partner agreements sent for signature.</div>
+    </div>
+    <button class="btn btn-primary" onclick="openSendAgreementModal()">📨 Send Agreement</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th>Partner</th><th>Email</th><th>Status</th><th>Sent</th><th>Signed</th><th></th>
+      </tr></thead>
+      <tbody id="agreements-table"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Template Modal ── -->
+<div class="modal-overlay" id="modal-template">
+  <div class="modal" style="max-width:680px">
+    <h2 id="template-modal-title">New Template</h2>
+    <div class="field">
+      <label>Template Name</label>
+      <input type="text" id="tm-name" placeholder="e.g. General Affiliate Agreement">
+    </div>
+    <div class="field">
+      <label>Agreement Body</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">
+        Use <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{{partner_name}}</code>,
+        <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{{commission_rate}}</code>,
+        <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{{effective_date}}</code>,
+        <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{{territory}}</code>,
+        <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{{payment_terms}}</code>
+        or any custom <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{{variable}}</code>
+      </div>
+      <textarea id="tm-body" rows="18" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--off);font-size:13px;font-family:monospace;resize:vertical"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveTemplate()">Save Template</button>
+      <button class="btn btn-secondary" onclick="closeModal('template')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Send Agreement Modal ── -->
+<div class="modal-overlay" id="modal-send-agreement">
+  <div class="modal" style="max-width:560px">
+    <h2>Send Agreement</h2>
+    <div class="field">
+      <label>Template</label>
+      <select id="sa-template" onchange="onTemplateSelect()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--off);font-size:13px">
+        <option value="">— Select a template —</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Partner Name</label><input type="text" id="sa-name" placeholder="Their full name"></div>
+      <div class="field"><label>Partner Email</label><input type="email" id="sa-email" placeholder="partner@example.com"></div>
+    </div>
+    <div id="sa-variables" style="margin-top:4px"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-secondary" style="flex:1" onclick="previewAgreement()">👁 Preview</button>
+      <button class="btn btn-primary" style="flex:1" id="sa-send-btn" onclick="sendAgreement()">📨 Send to Partner</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── View Agreement Modal ── -->
+<div class="modal-overlay" id="modal-view-agreement">
+  <div class="modal" style="max-width:680px">
+    <h2 id="view-agreement-title">Signed Agreement</h2>
+    <div id="view-agreement-meta" style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.8"></div>
+    <pre id="view-agreement-body" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:18px;font-size:12px;font-family:monospace;max-height:55vh;overflow-y:auto;white-space:pre-wrap;color:var(--off)"></pre>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('view-agreement')">Close</button>
+    </div>
   </div>
 </div>
 
@@ -1040,16 +1135,236 @@ function openModal(name)  { document.getElementById('modal-' + name).classList.a
 function closeModal(name) { document.getElementById('modal-' + name).classList.remove('open'); }
 
 function showTab(name) {
-  ['partners','links','analytics','generator','categories','todo'].forEach(t => {
+  ['partners','links','analytics','generator','categories','todo','contracts'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((el, i) => {
-    el.classList.toggle('active', ['partners','links','analytics','generator','categories','todo'][i] === name);
+    el.classList.toggle('active', ['partners','links','analytics','generator','categories','todo','contracts'][i] === name);
   });
   if (name === 'links')      loadLinks();
   if (name === 'analytics')  loadAnalytics();
   if (name === 'categories') loadCategories();
   if (name === 'todo')       loadTodo();
+  if (name === 'contracts')  loadContracts();
+}
+
+// ── CONTRACTS ────────────────────────────────────────────────────────────────
+
+let _templates      = [];
+let _agreements     = [];
+let _editingTmplId  = null;
+
+async function loadContracts() {
+  await Promise.all([loadTemplates(), loadAgreements()]);
+}
+
+async function loadTemplates() {
+  const r = await fetch('/api/contracts/templates').then(r => r.json()).catch(() => ({ ok: false }));
+  _templates = r.templates || [];
+  renderTemplates();
+  populateTemplateSelect();
+}
+
+function renderTemplates() {
+  const el = document.getElementById('templates-list');
+  if (!_templates.length) {
+    el.innerHTML = '<div class="empty">No templates yet. Create one to get started.</div>';
+    return;
+  }
+  el.innerHTML = `<table>
+    <thead><tr><th>Name</th><th>Variables Found</th><th>Updated</th><th></th></tr></thead>
+    <tbody>${_templates.map(t => {
+      const vars = [...new Set((t.body.match(/\{\{(\w+)\}\}/g) || []).map(m => m.replace(/[{}]/g, '')))];
+      const varChips = vars.map(v => `<span style="background:rgba(20,184,166,.1);color:var(--teal);padding:1px 7px;border-radius:10px;font-size:11px;font-family:monospace">{{${v}}}</span>`).join(' ');
+      const updated = t.updated_at ? new Date(t.updated_at).toLocaleDateString() : '—';
+      return `<tr>
+        <td style="font-weight:600">${esc(t.name)}</td>
+        <td style="max-width:320px">${varChips || '<span style="color:var(--muted)">none</span>'}</td>
+        <td style="color:var(--muted)">${updated}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-secondary btn-sm" onclick="editTemplate(${t.id})" style="margin-right:4px">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTemplate(${t.id})">Delete</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function populateTemplateSelect() {
+  const sel = document.getElementById('sa-template');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select a template —</option>' +
+    _templates.map(t => `<option value="${t.id}"${t.id == cur ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
+}
+
+async function loadAgreements() {
+  const r = await fetch('/api/contracts/agreements').then(r => r.json()).catch(() => ({ ok: false }));
+  _agreements = r.agreements || [];
+  renderAgreements();
+}
+
+function renderAgreements() {
+  const tbody = document.getElementById('agreements-table');
+  if (!_agreements.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">No agreements sent yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = _agreements.map(a => {
+    const statusColors = { draft:'var(--muted)', sent:'var(--amber)', signed:'var(--green)' };
+    const statusBadge = `<span style="background:rgba(255,255,255,.06);color:${statusColors[a.status]||'var(--muted)'};padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;text-transform:uppercase">${a.status}</span>`;
+    const sentAt   = a.sent_at   ? new Date(a.sent_at).toLocaleDateString()   : '—';
+    const signedAt = a.signed_at ? new Date(a.signed_at).toLocaleDateString() : '—';
+    return `<tr>
+      <td style="font-weight:600">${esc(a.partner_name)}</td>
+      <td style="color:var(--muted);font-size:12px">${esc(a.partner_email)}</td>
+      <td>${statusBadge}</td>
+      <td style="color:var(--muted)">${sentAt}</td>
+      <td style="color:${a.signed_at ? 'var(--green)' : 'var(--muted)'}">${signedAt}</td>
+      <td>
+        ${a.status === 'signed' ? `<button class="btn btn-secondary btn-sm" onclick="viewAgreement(${a.id})">View</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openTemplateModal(id) {
+  _editingTmplId = id || null;
+  const t = id ? _templates.find(x => x.id === id) : null;
+  document.getElementById('template-modal-title').textContent = id ? 'Edit Template' : 'New Template';
+  document.getElementById('tm-name').value = t ? t.name : '';
+  document.getElementById('tm-body').value = t ? t.body : '';
+  openModal('template');
+}
+
+function editTemplate(id) { openTemplateModal(id); }
+
+async function saveTemplate() {
+  const name = document.getElementById('tm-name').value.trim();
+  const body = document.getElementById('tm-body').value.trim();
+  if (!name || !body) { alert('Name and body are required.'); return; }
+
+  const url    = _editingTmplId ? `/api/contracts/templates/${_editingTmplId}` : '/api/contracts/templates';
+  const method = _editingTmplId ? 'PATCH' : 'POST';
+  const r = await fetch(url, {
+    method, headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, body })
+  }).then(r => r.json());
+
+  if (!r.ok) { alert('Save failed: ' + (r.error || 'unknown error')); return; }
+  closeModal('template');
+  await loadTemplates();
+}
+
+async function deleteTemplate(id) {
+  const t = _templates.find(x => x.id === id);
+  if (!confirm(`Delete template "${t?.name || id}"?`)) return;
+  await fetch(`/api/contracts/templates/${id}`, { method: 'DELETE' });
+  await loadTemplates();
+}
+
+function openSendAgreementModal() {
+  document.getElementById('sa-name').value  = '';
+  document.getElementById('sa-email').value = '';
+  document.getElementById('sa-template').value = '';
+  document.getElementById('sa-variables').innerHTML = '';
+  openModal('send-agreement');
+}
+
+function onTemplateSelect() {
+  const id   = parseInt(document.getElementById('sa-template').value);
+  const tmpl = _templates.find(t => t.id === id);
+  const cont = document.getElementById('sa-variables');
+  if (!tmpl) { cont.innerHTML = ''; return; }
+
+  const vars = [...new Set((tmpl.body.match(/\{\{(\w+)\}\}/g) || [])
+    .map(m => m.replace(/[{}]/g, ''))
+    .filter(v => v !== 'partner_name'))]; // partner_name is always auto-filled
+
+  if (!vars.length) { cont.innerHTML = '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">No additional variables in this template.</div>'; return; }
+
+  cont.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Fill in template variables:</div>` +
+    vars.map(v => `
+      <div class="field">
+        <label>{{${v}}}</label>
+        <input type="text" id="sa-var-${v}" placeholder="${v.replace(/_/g,' ')}">
+      </div>`).join('');
+}
+
+async function previewAgreement() {
+  const id   = parseInt(document.getElementById('sa-template').value);
+  const tmpl = _templates.find(t => t.id === id);
+  if (!tmpl) { alert('Select a template first.'); return; }
+
+  const partnerName = document.getElementById('sa-name').value.trim() || '{{partner_name}}';
+  const vars        = { partner_name: partnerName };
+  const varEls = document.querySelectorAll('[id^="sa-var-"]');
+  varEls.forEach(el => {
+    const key = el.id.replace('sa-var-', '');
+    vars[key] = el.value.trim();
+  });
+
+  // Simple client-side render
+  let preview = tmpl.body;
+  for (const [k, v] of Object.entries(vars)) {
+    preview = preview.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), v || `{{${k}}}`);
+  }
+
+  document.getElementById('view-agreement-title').textContent = tmpl.name + ' — Preview';
+  document.getElementById('view-agreement-meta').innerHTML = '<span style="color:var(--amber)">Preview only — not yet sent</span>';
+  document.getElementById('view-agreement-body').textContent = preview;
+  openModal('view-agreement');
+}
+
+async function sendAgreement() {
+  const templateId  = parseInt(document.getElementById('sa-template').value) || null;
+  const partnerName = document.getElementById('sa-name').value.trim();
+  const partnerEmail= document.getElementById('sa-email').value.trim();
+
+  if (!partnerName || !partnerEmail) { alert('Partner name and email required.'); return; }
+  if (!templateId) { alert('Select a template.'); return; }
+
+  const vars = {};
+  document.querySelectorAll('[id^="sa-var-"]').forEach(el => {
+    vars[el.id.replace('sa-var-', '')] = el.value.trim();
+  });
+
+  const btn = document.getElementById('sa-send-btn');
+  btn.disabled = true; btn.textContent = '⏳ Sending…';
+
+  const r = await fetch('/api/contracts/agreements/send', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ template_id: templateId, partner_name: partnerName, partner_email: partnerEmail, variables: vars })
+  }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+
+  btn.disabled = false; btn.textContent = '📨 Send to Partner';
+
+  if (!r.ok) { alert('Send failed: ' + (r.error || 'unknown error')); return; }
+
+  closeModal('send-agreement');
+  alert(`✓ Agreement sent to ${partnerEmail}\n\nSigning link: ${r.signing_url}`);
+  await loadAgreements();
+}
+
+async function viewAgreement(id) {
+  const r = await fetch(`/api/contracts/agreements/${id}`).then(r => r.json());
+  if (!r.ok) { alert('Could not load agreement.'); return; }
+  const a = r.agreement;
+  document.getElementById('view-agreement-title').textContent = a.partner_name + ' — Signed Agreement';
+  const meta = [
+    `Partner: ${a.partner_name} &lt;${a.partner_email}&gt;`,
+    `Status: <strong style="color:var(--green)">${a.status}</strong>`,
+    `Sent: ${a.sent_at ? new Date(a.sent_at).toLocaleString() : '—'}`,
+    `Signed by: ${a.signer_name || '—'} on ${a.signed_at ? new Date(a.signed_at).toLocaleString() : '—'}`,
+    `IP at signing: ${a.signer_ip || '—'}`,
+  ].join('<br>');
+  document.getElementById('view-agreement-meta').innerHTML = meta;
+  document.getElementById('view-agreement-body').textContent = a.body_snapshot || '';
+  openModal('view-agreement');
+}
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el => {

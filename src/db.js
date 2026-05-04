@@ -1337,6 +1337,135 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_blog_status    ON blog_posts(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_blog_published ON blog_posts(published_at DESC)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_blog_project   ON blog_posts(project_id)');
+
+  // ─── Contracts — agreement templates + signed agreements ─────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS agreement_templates (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    body       TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS agreements (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id    INTEGER,
+    partner_name   TEXT NOT NULL,
+    partner_email  TEXT NOT NULL,
+    variables      TEXT DEFAULT '{}',
+    body_snapshot  TEXT NOT NULL,
+    status         TEXT DEFAULT 'draft',
+    signing_token  TEXT UNIQUE,
+    signer_name    TEXT,
+    signer_ip      TEXT,
+    signed_at      TEXT,
+    sent_at        TEXT,
+    created_at     TEXT DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_agreements_status ON agreements(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_agreements_token  ON agreements(signing_token)');
+
+  // Seed default General Affiliate Agreement template if none exist
+  const tmplCount = db.prepare('SELECT COUNT(*) AS n FROM agreement_templates').get().n;
+  if (tmplCount === 0) {
+    const DEFAULT_BODY = `AFFILIATE PARTNERSHIP AGREEMENT
+
+This Affiliate Partnership Agreement ("Agreement") is entered into as of {{effective_date}} between:
+
+7 Kin Homestead / Jason Rutland ("Company"), and
+
+{{partner_name}} ("Partner").
+
+---
+
+1. SCOPE OF PARTNERSHIP
+
+Partner agrees to promote Company's content, products, and affiliated brands through Partner's own channels and platforms. Company agrees to compensate Partner for qualifying referrals as described below.
+
+---
+
+2. COMMISSION STRUCTURE
+
+Company will pay Partner a commission of {{commission_rate}} on qualifying sales or referrals generated through Partner's unique tracking link(s). Commissions are calculated on the net sale amount after refunds, returns, and chargebacks.
+
+---
+
+3. PAYMENT TERMS
+
+{{payment_terms}}. Commissions are paid only on confirmed, non-refunded transactions. Minimum payout threshold is $25 USD. Company reserves the right to withhold payment on suspected fraudulent activity pending investigation.
+
+---
+
+4. TERRITORY
+
+This Agreement applies to the following territory: {{territory}}. Partner agrees not to run paid advertising campaigns targeting users outside the approved territory without prior written consent from Company.
+
+---
+
+5. TERM AND TERMINATION
+
+This Agreement begins on {{effective_date}} and continues until terminated by either party. Either party may terminate this Agreement at any time with 14 days written notice. Upon termination, any commissions already earned on confirmed sales will be paid at the next scheduled payment date.
+
+---
+
+6. PARTNER RESPONSIBILITIES
+
+Partner agrees to:
+- Disclose the affiliate relationship clearly in all promotional content (e.g., "This post contains affiliate links").
+- Only make truthful, accurate claims about Company products and content.
+- Not engage in spam, misleading advertising, or any practice that could damage the Company's brand.
+- Promptly remove or update any links or content upon request from Company.
+
+---
+
+7. INTELLECTUAL PROPERTY
+
+All trademarks, logos, and brand assets provided by Company remain the exclusive property of Company. Partner is granted a limited, non-exclusive, revocable license to use Company's branding solely for the purpose of promoting the partnership under this Agreement. No ownership rights are transferred.
+
+---
+
+8. CONFIDENTIALITY
+
+Partner agrees to keep the specific terms of this Agreement (including commission rates) confidential and not to disclose them to third parties without Company's prior written consent.
+
+---
+
+9. INDEPENDENT CONTRACTOR
+
+Partner is an independent contractor, not an employee, agent, or partner of Company. Nothing in this Agreement creates any employment relationship. Partner is solely responsible for Partner's own taxes, insurance, and legal compliance.
+
+---
+
+10. LIMITATION OF LIABILITY
+
+Company's total liability under this Agreement is limited to the total commissions paid to Partner in the 3 months preceding the claim. Company is not liable for indirect, incidental, or consequential damages.
+
+---
+
+11. GOVERNING LAW
+
+This Agreement is governed by the laws of the state of Texas, United States, without regard to conflict-of-law principles. Any disputes shall be resolved through binding arbitration in the state of Texas.
+
+---
+
+12. ENTIRE AGREEMENT
+
+This Agreement constitutes the entire agreement between the parties regarding the subject matter herein and supersedes all prior discussions, representations, or agreements.
+
+---
+
+By signing below, both parties agree to be bound by the terms of this Agreement.
+
+Company: Jason Rutland, 7 Kin Homestead
+Date: {{effective_date}}
+
+Partner: {{partner_name}}
+(Signed electronically)`;
+
+    db.prepare('INSERT INTO agreement_templates (name, body) VALUES (?, ?)')
+      .run('General Affiliate Agreement', DEFAULT_BODY);
+    console.log('[DB] Contracts: seeded default General Affiliate Agreement template');
+  }
 }
 
 /**
@@ -4653,6 +4782,75 @@ function bulkCreateIdeas(ideas) {
   return ids;
 }
 
+// ─────────────────────────────────────────────
+// CONTRACTS — Agreement Templates + Agreements
+// ─────────────────────────────────────────────
+
+function insertAgreementTemplate(name, body) {
+  const result = _run(
+    `INSERT INTO agreement_templates (name, body) VALUES (?, ?)`,
+    [name, body]
+  );
+  return _get('SELECT * FROM agreement_templates WHERE id = ?', [result.lastInsertRowid]);
+}
+
+function getAgreementTemplates() {
+  return _all(`SELECT * FROM agreement_templates ORDER BY created_at DESC`);
+}
+
+function getAgreementTemplate(id) {
+  return _get(`SELECT * FROM agreement_templates WHERE id = ?`, [id]);
+}
+
+function updateAgreementTemplate(id, name, body) {
+  _run(
+    `UPDATE agreement_templates SET name = ?, body = ?, updated_at = datetime('now') WHERE id = ?`,
+    [name, body, id]
+  );
+  return _get('SELECT * FROM agreement_templates WHERE id = ?', [id]);
+}
+
+function deleteAgreementTemplate(id) {
+  _run(`DELETE FROM agreement_templates WHERE id = ?`, [id]);
+}
+
+function insertAgreement(templateId, partnerName, partnerEmail, variables, bodySnapshot, token) {
+  const result = _run(
+    `INSERT INTO agreements
+       (template_id, partner_name, partner_email, variables, body_snapshot, signing_token, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'sent')`,
+    [templateId || null, partnerName, partnerEmail,
+     JSON.stringify(variables || {}), bodySnapshot, token]
+  );
+  return _get('SELECT * FROM agreements WHERE id = ?', [result.lastInsertRowid]);
+}
+
+function getAgreements() {
+  return _all(`SELECT * FROM agreements ORDER BY created_at DESC`);
+}
+
+function getAgreement(id) {
+  return _get(`SELECT * FROM agreements WHERE id = ?`, [id]);
+}
+
+function getAgreementByToken(token) {
+  return _get(`SELECT * FROM agreements WHERE signing_token = ?`, [token]);
+}
+
+function updateAgreementStatus(id, status, signerName, signerIp, signedAt) {
+  _run(
+    `UPDATE agreements SET status = ?, signer_name = ?, signer_ip = ?, signed_at = ? WHERE id = ?`,
+    [status, signerName || null, signerIp || null, signedAt || null, id]
+  );
+}
+
+function markAgreementSent(id, sentAt) {
+  _run(
+    `UPDATE agreements SET sent_at = ?, status = 'sent' WHERE id = ?`,
+    [sentAt || new Date().toISOString(), id]
+  );
+}
+
 module.exports = {
   initDb,
   checkpoint,
@@ -4960,6 +5158,18 @@ module.exports = {
   publishBlogPost,
   unpublishBlogPost,
   deleteBlogPost,
+  // Contracts
+  insertAgreementTemplate,
+  getAgreementTemplates,
+  getAgreementTemplate,
+  updateAgreementTemplate,
+  deleteAgreementTemplate,
+  insertAgreement,
+  getAgreements,
+  getAgreement,
+  getAgreementByToken,
+  updateAgreementStatus,
+  markAgreementSent,
 };
 
 // ─────────────────────────────────────────────

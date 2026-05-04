@@ -385,6 +385,9 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/r/')) return next();
   // AffiliateΩr gear feed — consumed by 7kinhomestead.land/gear (cross-origin, no session)
   if (req.path === '/api/affiliator/gear-public') return next();
+  // Contracts — partner signing page and signature submission are public (token is the auth)
+  if (req.path.startsWith('/sign/')) return next();
+  if (req.path.startsWith('/api/contracts/sign/')) return next();
 
   // Logged in — allow
   if (req.session?.userId) return next();
@@ -634,6 +637,9 @@ app.use('/api/vectr',             require('./src/routes/vectr'));
 app.use('/api/stats-export',      require('./src/routes/stats-export'));
 app.use('/api/analyticr',         require('./src/routes/analyticr'));
 app.use('/api/affiliator',        require('./src/routes/affiliator'));
+// Contracts — authenticated CRUD + public signing page (/sign/:token)
+// All routes defined with full paths — mount once at root so /sign/:token works without auth
+app.use('/', require('./src/routes/contracts'));
 // The Fence — page served directly, API mounted separately
 app.get('/fence', (req, res) => res.sendFile(path.join(__dirname, 'public', 'fence', 'index.html')));
 app.use('/api/fence',             require('./src/routes/fence'));
