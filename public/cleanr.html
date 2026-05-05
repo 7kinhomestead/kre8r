@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CleanΩr — Kre8Ωr</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --teal: #14b8a6;
+      --teal-dim: #0d9488;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --green: #22c55e;
+      --blue: #3b82f6;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --muted2: #94a3b8;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+    #kre8r-nav { position: sticky; top: 0; z-index: 100; }
+
+    .page-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px 80px; }
+
+    /* ── Header ── */
+    .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .page-header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; }
+    .page-header h1 span { color: var(--teal); }
+    .page-header p { color: var(--muted2); font-size: 0.9rem; }
+    .header-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+
+    /* ── Buttons ── */
+    .btn { padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.15s; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--teal); color: #000; }
+    .btn-primary:hover:not(:disabled) { background: #0fb5a3; }
+    .btn-danger  { background: var(--red); color: #fff; }
+    .btn-danger:hover:not(:disabled) { background: #dc2626; }
+    .btn-amber   { background: var(--amber); color: #000; }
+    .btn-amber:hover:not(:disabled) { background: #d97706; }
+    .btn-ghost   { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+    .btn-sm { padding: 5px 12px; font-size: 0.78rem; }
+
+    /* ── Drive bars ── */
+    .drive-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 28px; }
+    .drive-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .drive-card .drive-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+    .drive-card .drive-root { color: var(--muted2); font-size: 0.78rem; margin-bottom: 10px; }
+    .drive-bar-outer { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .drive-bar-inner { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+    .drive-bar-inner.warn { background: var(--amber); }
+    .drive-bar-inner.danger { background: var(--red); }
+    .drive-bar-inner.ok { background: var(--teal); }
+    .drive-label { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.75rem; color: var(--muted2); }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+    .tab { padding: 8px 18px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--muted2); border: 1px solid transparent; border-bottom: none; position: relative; bottom: -1px; background: transparent; transition: all 0.15s; }
+    .tab:hover { color: var(--text); }
+    .tab.active { background: var(--surface); border-color: var(--border); color: var(--teal); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Status bar ── */
+    .scan-status { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
+    .scan-status .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .scan-status .status-text { flex: 1; }
+    .scan-status .total-badge { background: var(--teal); color: #000; padding: 3px 10px; border-radius: 20px; font-weight: 700; font-size: 0.82rem; }
+    .scan-status.done { border-color: var(--teal); }
+    .scan-status.idle { display: none; }
+
+    /* ── Category cards ── */
+    .category-list { display: flex; flex-direction: column; gap: 12px; }
+    .cat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .cat-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; cursor: pointer; user-select: none; }
+    .cat-header:hover { background: var(--surface2); }
+    .cat-check { width: 18px; height: 18px; accent-color: var(--teal); flex-shrink: 0; cursor: pointer; }
+    .cat-title { font-weight: 600; font-size: 0.92rem; flex: 1; }
+    .cat-desc { color: var(--muted2); font-size: 0.78rem; margin-top: 2px; }
+    .cat-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 0.78rem; color: var(--muted2); white-space: nowrap; }
+    .cat-badge.has-size { background: rgba(20,184,166,0.1); border-color: var(--teal); color: var(--teal); }
+    .cat-chevron { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
+    .cat-card.expanded .cat-chevron { transform: rotate(90deg); }
+    .cat-body { display: none; border-top: 1px solid var(--border); }
+    .cat-card.expanded .cat-body { display: block; }
+    .cat-actions { display: flex; gap: 8px; padding: 10px 18px; background: var(--surface2); border-bottom: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
+    .cat-actions .sel-all { font-size: 0.78rem; color: var(--teal); cursor: pointer; }
+    .cat-actions .sel-all:hover { text-decoration: underline; }
+    .cat-actions .spacer { flex: 1; }
+    .item-list { max-height: 320px; overflow-y: auto; }
+    .item-row { display: flex; align-items: center; gap: 10px; padding: 8px 18px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+    .item-row:last-child { border-bottom: none; }
+    .item-row:hover { background: var(--surface2); }
+    .item-check { width: 15px; height: 15px; accent-color: var(--teal); flex-shrink: 0; cursor: pointer; }
+    .item-icon { font-size: 0.9rem; flex-shrink: 0; }
+    .item-name { flex: 1; color: var(--muted2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .item-name .item-path { display: block; font-size: 0.7rem; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .item-size { color: var(--text); font-weight: 600; white-space: nowrap; font-size: 0.8rem; }
+    .item-size.big { color: var(--amber); }
+    .item-size.huge { color: var(--red); }
+
+    /* ── Performance tab ── */
+    .perf-section { margin-bottom: 24px; }
+    .perf-section h2 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; color: var(--teal); display: flex; align-items: center; gap: 8px; }
+    .perf-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .perf-table th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--muted2); font-weight: 600; background: var(--surface2); }
+    .perf-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+    .perf-table tr:last-child td { border-bottom: none; }
+    .perf-table tr:hover td { background: var(--surface2); }
+    .cpu-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 3px; }
+    .cpu-fill { height: 100%; border-radius: 3px; background: var(--teal); }
+    .cpu-fill.warn { background: var(--amber); }
+    .cpu-fill.danger { background: var(--red); }
+    .startup-note { font-size: 0.8rem; color: var(--muted2); padding: 12px; background: var(--surface2); border-radius: 8px; margin-bottom: 12px; }
+    .startup-note a { color: var(--teal); cursor: pointer; }
+
+    /* ── Driver audit ── */
+    .driver-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+    .driver-filter-btn { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted2); font-size: 0.78rem; cursor: pointer; }
+    .driver-filter-btn.active { border-color: var(--teal); color: var(--teal); background: rgba(20,184,166,0.1); }
+    .driver-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+    .driver-badge.current  { background: rgba(34,197,94,0.15);  color: var(--green); }
+    .driver-badge.consider { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .driver-badge.outdated { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .driver-badge.unsigned { background: rgba(239,68,68,0.2);   color: var(--red); border: 1px solid rgba(239,68,68,0.4); }
+    .driver-badge.unknown  { background: var(--surface2); color: var(--muted); }
+    .driver-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .driver-summary-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; }
+    .driver-summary-chip .num { font-size: 1.2rem; font-weight: 700; display: block; }
+    .driver-summary-chip.red-chip .num { color: var(--red); }
+    .driver-summary-chip.amber-chip .num { color: var(--amber); }
+    .driver-summary-chip.green-chip .num { color: var(--green); }
+
+    /* ── Report tab ── */
+    .report-empty { text-align: center; padding: 60px; color: var(--muted2); }
+    .report-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; text-align: center; }
+    .report-stat .num { font-size: 2.2rem; font-weight: 800; color: var(--teal); }
+    .report-stat .label { font-size: 0.82rem; color: var(--muted2); margin-top: 4px; }
+    .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .report-log { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; max-height: 400px; overflow-y: auto; }
+    .report-log h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; }
+    .log-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+    .log-item:last-child { border-bottom: none; }
+    .log-ok { color: var(--green); }
+    .log-err { color: var(--red); }
+    .log-size { margin-left: auto; color: var(--teal); font-weight: 600; }
+
+    /* ── Bottom action bar ── */
+    .action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 12px; z-index: 50; }
+    .action-bar .sel-count { font-size: 0.85rem; color: var(--muted2); }
+    .action-bar .sel-size  { font-weight: 700; color: var(--teal); }
+    .action-bar .spacer    { flex: 1; }
+    .action-bar.hidden     { display: none; }
+
+    /* ── Misc ── */
+    .empty-state { text-align: center; padding: 32px; color: var(--muted); font-size: 0.85rem; }
+    .loading-pulse { color: var(--muted); font-size: 0.82rem; animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .badge-zero { opacity: 0.4; }
+    .node-warning { font-size: 0.75rem; color: var(--amber); margin-left: 6px; }
+  </style>
+</head>
+<body>
+<div id="kre8r-nav"></div>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <h1>Clean<span>Ω</span>r</h1>
+      <p>Find junk, free space, identify what's slowing you down — nothing deleted without your say.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-perf" onclick="loadPerformance()">⚡ Performance Snapshot</button>
+      <button class="btn btn-primary" id="btn-scan" onclick="startScan()">🔍 Scan Drive</button>
+    </div>
+  </div>
+
+  <!-- Drive Status -->
+  <div class="drive-row" id="drive-row">
+    <div class="drive-card" style="color:var(--muted);font-size:0.82rem">Click "Scan Drive" or load drive info…</div>
+  </div>
+
+  <!-- Scan status bar -->
+  <div class="scan-status idle" id="scan-status">
+    <div class="spinner" id="scan-spinner"></div>
+    <div class="status-text" id="scan-status-text">Scanning…</div>
+    <div class="total-badge" id="scan-total" style="display:none"></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('junk')">🗑 Junk Cleanup</div>
+    <div class="tab" onclick="switchTab('perf')">⚡ Performance</div>
+    <div class="tab" onclick="switchTab('report')">📊 Report</div>
+  </div>
+
+  <!-- Junk tab -->
+  <div class="tab-panel active" id="tab-junk">
+    <div class="category-list" id="category-list">
+      <div class="empty-state">Click <strong>Scan Drive</strong> to find junk on your C: drive.</div>
+    </div>
+  </div>
+
+  <!-- Performance tab -->
+  <div class="tab-panel" id="tab-perf">
+    <div id="perf-content">
+      <div class="empty-state">Click <strong>⚡ Performance Snapshot</strong> to see what's hogging resources.</div>
+    </div>
+  </div>
+
+  <!-- Report tab -->
+  <div class="tab-panel" id="tab-report">
+    <div id="report-content">
+      <div class="report-empty">Nothing cleaned yet — run a scan and delete some junk first.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Fixed action bar (shows when items are selected) -->
+<div class="action-bar hidden" id="action-bar">
+  <span class="sel-count"><span id="sel-count-num">0</span> items selected —</span>
+  <span class="sel-size" id="sel-size-label">0 B</span>
+  <div class="spacer"></div>
+  <label style="font-size:0.78rem;color:var(--muted2);white-space:nowrap">Move to:</label>
+  <input id="move-dest-input" type="text" value="D:\kre8r-moved"
+    style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 10px;font-size:0.8rem;width:200px"
+    placeholder="D:\kre8r-moved" />
+  <button class="btn btn-amber btn-sm" id="btn-move" onclick="moveSelected()">📦 Move</button>
+  <button class="btn btn-danger btn-sm" id="btn-delete" onclick="deleteSelected()">🗑 Delete Selected</button>
+</div>
+
+<script src="/js/nav.js" defer></script>
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+const categories = {};   // id → { name, description, items: [], totalSize, rendered }
+const selected = new Set();  // item paths
+let grandTotal = 0;
+let scanRunning = false;
+let reportLog = [];
+let totalFreed = 0;
+let totalMoved = 0;
+
+// ─── Formatting ─────────────────────────────────────────────────────────────
+function fmtSize(bytes) {
+  if (bytes == null || isNaN(bytes)) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
+function sizeClass(bytes) {
+  if (bytes > 500 * 1024 * 1024) return 'huge';
+  if (bytes > 100 * 1024 * 1024) return 'big';
+  return '';
+}
+
+// ─── Tabs ────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['junk', 'perf', 'report'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ─── Drives ──────────────────────────────────────────────────────────────────
+async function loadDrives() {
+  try {
+    const res = await fetch('/api/cleanr/drives');
+    const { drives } = await res.json();
+    renderDrives(drives);
+  } catch { /* silent */ }
+}
+
+function renderDrives(drives) {
+  const row = document.getElementById('drive-row');
+  if (!drives || drives.length === 0) { row.innerHTML = ''; return; }
+  row.innerHTML = drives.map(d => {
+    const usedGB = d.UsedGB || 0;
+    const freeGB = d.FreeGB || 0;
+    const totalGB = usedGB + freeGB;
+    const pct = totalGB > 0 ? Math.round((usedGB / totalGB) * 100) : 0;
+    const cls = pct > 90 ? 'danger' : pct > 75 ? 'warn' : 'ok';
+    return `<div class="drive-card">
+      <div class="drive-name">${d.Name}:</div>
+      <div class="drive-root">${d.Root || ''}</div>
+      <div class="drive-bar-outer"><div class="drive-bar-inner ${cls}" style="width:${pct}%"></div></div>
+      <div class="drive-label"><span>${fmtSize(usedGB * 1024**3)} used</span><span>${fmtSize(freeGB * 1024**3)} free (${100-pct}%)</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Scan ────────────────────────────────────────────────────────────────────
+function startScan() {
+  if (scanRunning) return;
+  scanRunning = true;
+  selected.clear();
+  Object.keys(categories).forEach(k => delete categories[k]);
+  grandTotal = 0;
+
+  const btn = document.getElementById('btn-scan');
+  btn.disabled = true;
+  btn.textContent = '⏳ Scanning…';
+
+  const statusBar = document.getElementById('scan-status');
+  statusBar.className = 'scan-status';
+  document.getElementById('scan-status-text').textContent = 'Starting scan…';
+  document.getElementById('scan-total').style.display = 'none';
+
+  document.getElementById('category-list').innerHTML = '';
+  updateActionBar();
+
+  loadDrives();
+
+  const es = new EventSource('/api/cleanr/scan');
+
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'category_start') {
+      document.getElementById('scan-status-text').textContent = 'Scanning ' + msg.name + '…';
+      // Insert placeholder card
+      insertCategoryCard(msg.id, msg.name, msg.description, null, []);
+    } else if (msg.type === 'category_done') {
+      grandTotal += msg.totalSize;
+      categories[msg.id] = { name: msg.name, description: msg.description, items: msg.items, totalSize: msg.totalSize };
+      updateCategoryCard(msg.id, msg.totalSize, msg.count, msg.items);
+      if (grandTotal > 0) {
+        const tot = document.getElementById('scan-total');
+        tot.style.display = '';
+        tot.textContent = fmtSize(grandTotal) + ' found';
+      }
+    } else if (msg.type === 'scan_complete') {
+      scanDone(es, btn, statusBar);
+    } else if (msg.type === 'error') {
+      document.getElementById('scan-status-text').textContent = 'Scan error: ' + msg.message;
+      scanDone(es, btn, statusBar);
+    }
+  };
+
+  es.onerror = () => scanDone(es, btn, statusBar);
+}
+
+function scanDone(es, btn, statusBar) {
+  es.close();
+  scanRunning = false;
+  btn.disabled = false;
+  btn.textContent = '🔍 Re-scan';
+  statusBar.classList.add('done');
+  document.getElementById('scan-spinner').style.display = 'none';
+  document.getElementById('scan-status-text').textContent = '✅ Scan complete — ' + fmtSize(grandTotal) + ' of cleanable junk found';
+  loadDrives(); // refresh drive bars after scan info is in
+}
+
+// ─── Category card rendering ─────────────────────────────────────────────────
+function insertCategoryCard(id, name, description, totalSize, items) {
+  const list = document.getElementById('category-list');
+  const card = document.createElement('div');
+  card.className = 'cat-card';
+  card.id = 'cat-' + id;
+  card.innerHTML = renderCatInner(id, name, description, totalSize, items);
+  list.appendChild(card);
+}
+
+function updateCategoryCard(id, totalSize, count, items) {
+  const card = document.getElementById('cat-' + id);
+  if (!card) return;
+  card.innerHTML = renderCatInner(id, categories[id].name, categories[id].description, totalSize, items);
+}
+
+function renderCatInner(id, name, description, totalSize, items) {
+  const badgeCls = totalSize > 0 ? 'cat-badge has-size' : 'cat-badge badge-zero';
+  const badgeText = totalSize != null ? fmtSize(totalSize) + (items ? ` (${items.length})` : '') : '…';
+  const isNodeMod = id === 'node_modules';
+
+  return `
+  <div class="cat-header" onclick="toggleCat('${id}')">
+    <input type="checkbox" class="cat-check" id="catcheck-${id}" onclick="event.stopPropagation(); toggleCatAll('${id}', this.checked)" />
+    <div style="flex:1">
+      <div class="cat-title">${name}${isNodeMod ? '<span class="node-warning">⚠ re-run npm install to restore</span>' : ''}</div>
+      <div class="cat-desc">${description}</div>
+    </div>
+    <span class="${badgeCls}">${badgeText}</span>
+    <span class="cat-chevron">▶</span>
+  </div>
+  <div class="cat-body">
+    ${items && items.length > 0 ? `
+    <div class="cat-actions">
+      <span class="sel-all" onclick="toggleCatAll('${id}', true)">Select all</span>
+      <span class="sel-all" style="color:var(--muted2)" onclick="toggleCatAll('${id}', false)">Deselect</span>
+      <span class="spacer"></span>
+      <button class="btn btn-amber btn-sm" onclick="moveCategory('${id}')">📦 Move to D:\</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteCategory('${id}')">🗑 Delete All</button>
+    </div>
+    <div class="item-list">
+      ${items.map(item => renderItemRow(item)).join('')}
+    </div>` : `<div class="empty-state">Nothing found in this category</div>`}
+  </div>`;
+}
+
+function renderItemRow(item) {
+  const icon = item.type === 'dir' ? '📁' : getFileIcon(item.name);
+  const sc = sizeClass(item.size);
+  const safePath = item.path.replace(/"/g, '&quot;');
+  return `<div class="item-row" id="irow-${btoa(item.path).replace(/=/g,'').slice(0,16)}">
+    <input type="checkbox" class="item-check" data-path="${safePath}" data-size="${item.size}" onchange="onItemCheck(this)" />
+    <span class="item-icon">${icon}</span>
+    <span class="item-name">${item.name}<span class="item-path">${item.path}</span></span>
+    <span class="item-size ${sc}">${fmtSize(item.size)}</span>
+  </div>`;
+}
+
+function getFileIcon(name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  if (['mp4','mov','avi','mkv','braw'].includes(ext)) return '🎬';
+  if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) return '🖼';
+  if (['zip','rar','7z','tar','gz'].includes(ext)) return '📦';
+  if (['log','txt','md'].includes(ext)) return '📄';
+  if (['db','sqlite'].includes(ext)) return '🗄';
+  return '📄';
+}
+
+function toggleCat(id) {
+  const card = document.getElementById('cat-' + id);
+  if (card) card.classList.toggle('expanded');
+}
+
+function toggleCatAll(id, checked) {
+  const catCheck = document.getElementById('catcheck-' + id);
+  if (catCheck) catCheck.checked = checked;
+  const cat = document.getElementById('cat-' + id);
+  if (!cat) return;
+  cat.querySelectorAll('.item-check').forEach(cb => {
+    cb.checked = checked;
+    const p = cb.dataset.path;
+    if (checked) selected.add(p);
+    else selected.delete(p);
+  });
+  updateActionBar();
+}
+
+function onItemCheck(cb) {
+  const p = cb.dataset.path;
+  if (cb.checked) selected.add(p);
+  else selected.delete(p);
+  updateActionBar();
+}
+
+function updateActionBar() {
+  const bar = document.getElementById('action-bar');
+  if (selected.size === 0) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  document.getElementById('sel-count-num').textContent = selected.size;
+  // Calculate total selected size
+  let total = 0;
+  document.querySelectorAll('.item-check:checked').forEach(cb => { total += parseInt(cb.dataset.size) || 0; });
+  document.getElementById('sel-size-label').textContent = fmtSize(total);
+}
+
+// ─── Delete ──────────────────────────────────────────────────────────────────
+async function deleteSelected() {
+  if (selected.size === 0) return;
+  const paths = [...selected];
+  const sizeEst = getSelectedSize();
+  if (!confirm(`Delete ${paths.length} item(s) (≈${fmtSize(sizeEst)})?\n\nThis cannot be undone.`)) return;
+  await doDelete(paths);
+}
+
+async function deleteCategory(id) {
+  const cat = categories[id];
+  if (!cat || cat.items.length === 0) return;
+  if (!confirm(`Delete ALL items in "${cat.name}" (${fmtSize(cat.totalSize)})?\n\nThis cannot be undone.`)) return;
+  await doDelete(cat.items.map(i => i.path));
+}
+
+async function doDelete(paths) {
+  document.getElementById('btn-delete').disabled = true;
+  try {
+    const res = await fetch('/api/cleanr/delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths }),
+    });
+    const data = await res.json();
+    processActionResults(data.results, data.totalFreed, 'deleted');
+    totalFreed += data.totalFreed;
+    loadDrives();
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+  }
+  document.getElementById('btn-delete').disabled = false;
+}
+
+// ─── Move ─────────────────────────────────────────────────────────────────────
+function getMoveDestRoot() {
+  const input = document.getElementById('move-dest-input');
+  return (input ? input.value.trim() : '') || 'D:\\kre8r-moved';
+}
+
+async function moveSelected() {
+  if (selected.size === 0) return;
+  const destRoot = getMoveDestRoot();
+  if (!destRoot.match(/^[dD]:\\/)) { alert('Destination must be on D:\\ (e.g. D:\\kre8r-moved)'); return; }
+  await doMove([...selected], destRoot);
+}
+
+async function moveCategory(id) {
+  const cat = categories[id];
+  if (!cat || !cat.items || cat.items.length === 0) return;
+  const destRoot = getMoveDestRoot();
+  if (!destRoot.match(/^[dD]:\\/)) { alert('Destination must be on D:\\ (e.g. D:\\kre8r-moved)'); return; }
+  if (!confirm(`Move all ${cat.items.length} item(s) in "${cat.name}" to ${destRoot}?`)) return;
+  await doMove(cat.items.map(i => i.path), destRoot);
+}
+
+async function doMove(paths, destRoot) {
+  const btnMove = document.getElementById('btn-move');
+  if (btnMove) btnMove.disabled = true;
+  try {
+    const res = await fetch('/api/cleanr/move', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths, destRoot }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (!Array.isArray(data.results)) throw new Error('Unexpected server response — try re-scanning first');
+    processActionResults(data.results, data.totalMoved || 0, 'moved');
+    totalMoved += data.totalMoved || 0;
+    loadDrives();
+  } catch (err) {
+    alert('Move failed: ' + err.message);
+  }
+  if (btnMove) btnMove.disabled = false;
+}
+
+function getSelectedSize() {
+  let total = 0;
+  document.querySelectorAll('.item-check:checked').forEach(cb => { total += parseInt(cb.dataset.size) || 0; });
+  return total;
+}
+
+function processActionResults(results, totalBytes, action) {
+  for (const r of results) {
+    reportLog.unshift({ path: r.path, ok: r.ok, size: r.size || 0, action, dest: r.dest, error: r.error });
+    if (r.ok) {
+      // Remove from selected and UI
+      selected.delete(r.path);
+      // Remove the item row
+      document.querySelectorAll(`.item-check[data-path="${r.path.replace(/"/g,'&quot;')}"]`).forEach(cb => {
+        cb.closest('.item-row')?.remove();
+      });
+    }
+  }
+  updateActionBar();
+  renderReport();
+  const ok = results.filter(r => r.ok).length;
+  const fail = results.length - ok;
+  const msg = `✅ ${ok} item(s) ${action} (${fmtSize(totalBytes)} freed)` + (fail > 0 ? `\n⚠ ${fail} item(s) failed — check Report tab` : '');
+  alert(msg);
+  switchTab('report');
+}
+
+// ─── Report ──────────────────────────────────────────────────────────────────
+function renderReport() {
+  const container = document.getElementById('report-content');
+  if (reportLog.length === 0) {
+    container.innerHTML = '<div class="report-empty">Nothing cleaned yet.</div>';
+    return;
+  }
+  const deletedBytes = reportLog.filter(r => r.ok && r.action === 'deleted').reduce((s, r) => s + r.size, 0);
+  const movedBytes   = reportLog.filter(r => r.ok && r.action === 'moved').reduce((s, r) => s + r.size, 0);
+  const failCount    = reportLog.filter(r => !r.ok).length;
+
+  container.innerHTML = `
+    <div class="report-grid">
+      <div class="report-stat"><div class="num">${fmtSize(deletedBytes)}</div><div class="label">Deleted from C:</div></div>
+      <div class="report-stat"><div class="num">${fmtSize(movedBytes)}</div><div class="label">Moved to D:</div></div>
+      <div class="report-stat"><div class="num">${fmtSize(deletedBytes + movedBytes)}</div><div class="label">Total C: Space Freed</div></div>
+      <div class="report-stat"><div class="num" style="color:${failCount > 0 ? 'var(--red)' : 'var(--green)'}">${failCount}</div><div class="label">Failed</div></div>
+    </div>
+    <div class="report-log">
+      <h3>Action Log (newest first)</h3>
+      ${reportLog.map(r => `
+        <div class="log-item">
+          <span class="${r.ok ? 'log-ok' : 'log-err'}">${r.ok ? '✅' : '❌'}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted2)">${r.path}</span>
+          ${r.dest ? `<span style="color:var(--muted);font-size:0.75rem">→ ${r.dest}</span>` : ''}
+          ${r.error ? `<span style="color:var(--red);font-size:0.75rem">${r.error}</span>` : ''}
+          <span class="log-size">${r.ok ? fmtSize(r.size) : ''}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ─── Performance ─────────────────────────────────────────────────────────────
+async function loadPerformance() {
+  switchTab('perf');
+  const container = document.getElementById('perf-content');
+  container.innerHTML = '<div class="loading-pulse" style="padding:32px;text-align:center">Loading performance data…</div>';
+
+  const [procRes, startRes] = await Promise.all([
+    fetch('/api/cleanr/processes').then(r => r.json()).catch(() => ({ processes: [] })),
+    fetch('/api/cleanr/startup').then(r => r.json()).catch(() => ({ startup: [] })),
+  ]);
+
+  const procs = procRes.processes || [];
+  const maxCPU = Math.max(...procs.map(p => p.CPU || 0), 1);
+
+  container.innerHTML = `
+    <div class="perf-section">
+      <h2>⚡ Top Processes by CPU Usage</h2>
+      <p style="font-size:0.8rem;color:var(--muted2);margin-bottom:12px">Snapshot taken right now. High CPU at idle is a sign of runaway processes. Use Task Manager to end processes.</p>
+      <table class="perf-table">
+        <thead><tr><th>Process</th><th style="width:90px">CPU (s)</th><th style="width:100px">RAM</th><th style="width:60px">PID</th></tr></thead>
+        <tbody>
+        ${procs.slice(0, 20).map(p => {
+          const pct = Math.min(100, ((p.CPU || 0) / maxCPU) * 100);
+          const cls = pct > 70 ? 'danger' : pct > 30 ? 'warn' : '';
+          return `<tr>
+            <td>${p.Name || '—'}</td>
+            <td>${p.CPU != null ? p.CPU.toFixed(1) : '—'}<div class="cpu-bar"><div class="cpu-fill ${cls}" style="width:${pct}%"></div></div></td>
+            <td>${p.RAM_MB != null ? p.RAM_MB + ' MB' : '—'}</td>
+            <td style="color:var(--muted)">${p.Id || '—'}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="perf-section">
+      <h2>🚀 Startup Programs</h2>
+      <div class="startup-note">These programs launch every time Windows starts and slow your boot time.
+        To disable: <strong>Ctrl+Shift+Esc → Startup Apps tab</strong> and toggle off anything you don't need.
+        <br>⚠ Don't disable antivirus, drivers, or anything you're unsure about.</div>
+      ${(startRes.startup || []).length > 0 ? `
+      <table class="perf-table">
+        <thead><tr><th>Name</th><th>Command</th><th>User</th><th>Location</th></tr></thead>
+        <tbody>
+          ${(startRes.startup || []).map(s => `<tr>
+            <td>${s.Name || '—'}</td>
+            <td style="color:var(--muted);font-size:0.75rem;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.Command || '—'}</td>
+            <td style="color:var(--muted2)">${s.User || '—'}</td>
+            <td style="color:var(--muted);font-size:0.75rem">${s.Location || '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : '<div class="empty-state">No startup entries found via WMI.</div>'}
+    </div>
+
+    <div class="perf-section" id="driver-section">
+      <h2>🔧 Driver Audit
+        <button class="btn btn-ghost btn-sm" style="margin-left:12px;font-weight:600" onclick="loadDrivers()">Scan Drivers</button>
+        <span style="font-size:0.75rem;color:var(--muted);margin-left:8px;font-weight:400">Takes ~20–30 sec</span>
+      </h2>
+      <div id="driver-content">
+        <div class="startup-note">Scans every installed driver for age and signing status. Outdated or unsigned drivers are a common cause of crashes, stuttering, and poor performance. Click <strong>Scan Drivers</strong> to run it.</div>
+      </div>
+    </div>
+
+    <div class="perf-section">
+      <h2>💡 Speed Tips</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+        ${[
+          ['🗑 Clear junk files', 'Switch to the Junk Cleanup tab and delete temp files, caches, and Windows Update leftovers. This alone can free several GB.'],
+          ['💽 C: drive space', 'When C: is over 85% full, Windows virtual memory performance drops hard. Keep at least 15% free.'],
+          ['🚀 Startup programs', 'Fewer startup programs = faster boot. Use Task Manager → Startup Apps to disable what you don\'t need.'],
+          ['🔁 Restart often', 'Windows accumulates memory leaks. A full restart (not just sleep) clears RAM and refreshes the page file.'],
+          ['⚡ Power plan', 'Run: powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c in cmd to enable High Performance mode.'],
+          ['📁 Move big files to D:', 'Videos, downloads, and project archives don\'t need to be on C:. Use the Junk Cleanup tab to move them.'],
+        ].map(([title, body]) => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font-weight:700;margin-bottom:6px">${title}</div>
+          <div style="font-size:0.8rem;color:var(--muted2)">${body}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ─── Driver audit ─────────────────────────────────────────────────────────────
+let allDrivers = [];
+let driverFilter = 'all';
+
+async function loadDrivers() {
+  const container = document.getElementById('driver-content');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-pulse" style="padding:20px;text-align:center">Scanning drivers — this takes ~20 seconds…</div>';
+
+  try {
+    const res = await fetch('/api/cleanr/drivers');
+    const { drivers, error } = await res.json();
+    if (error) throw new Error(error);
+    allDrivers = drivers || [];
+    driverFilter = 'flagged'; // default to showing the interesting stuff
+    renderDrivers();
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--red)">Driver scan failed: ${err.message}</div>`;
+  }
+}
+
+function driverStatus(d) {
+  if (d.IsSigned === false) return 'unsigned';
+  if (!d.DriverDate) return 'unknown';
+  const age = (Date.now() - new Date(d.DriverDate).getTime()) / (1000 * 60 * 60 * 24 * 365);
+  if (age > 3) return 'outdated';
+  if (age > 2) return 'consider';
+  return 'current';
+}
+
+function driverStatusLabel(status) {
+  return {
+    current:  'Current',
+    consider: 'Consider updating',
+    outdated: 'Outdated',
+    unsigned: 'Unsigned',
+    unknown:  'Unknown date',
+  }[status] || status;
+}
+
+function renderDrivers() {
+  const container = document.getElementById('driver-content');
+  if (!container || !allDrivers.length) return;
+
+  const counts = { current: 0, consider: 0, outdated: 0, unsigned: 0, unknown: 0 };
+  for (const d of allDrivers) counts[driverStatus(d)] = (counts[driverStatus(d)] || 0) + 1;
+
+  // Collect unique classes for filter buttons
+  const classes = [...new Set(allDrivers.map(d => d.DeviceClass).filter(Boolean))].sort();
+
+  const filtered = allDrivers.filter(d => {
+    if (driverFilter === 'all') return true;
+    if (driverFilter === 'flagged') return ['outdated', 'consider', 'unsigned'].includes(driverStatus(d));
+    if (driverFilter === 'unsigned') return driverStatus(d) === 'unsigned';
+    return (d.DeviceClass || '').toLowerCase() === driverFilter.toLowerCase();
+  });
+
+  container.innerHTML = `
+    <div class="driver-summary">
+      <div class="driver-summary-chip red-chip"><span class="num">${counts.outdated || 0}</span>Outdated (&gt;3 yr)</div>
+      <div class="driver-summary-chip amber-chip"><span class="num">${counts.consider || 0}</span>Consider updating (2–3 yr)</div>
+      <div class="driver-summary-chip red-chip"><span class="num">${counts.unsigned || 0}</span>Unsigned</div>
+      <div class="driver-summary-chip"><span class="num">${counts.unknown || 0}</span>Unknown date</div>
+      <div class="driver-summary-chip green-chip"><span class="num">${counts.current || 0}</span>Current (&lt;2 yr)</div>
+    </div>
+
+    <div class="driver-filters">
+      <span style="font-size:0.78rem;color:var(--muted2)">Show:</span>
+      ${['flagged', 'all', 'unsigned', ...classes.slice(0, 8)].map(f => {
+        const label = f === 'flagged' ? '⚠ Flagged only' : f === 'all' ? 'All drivers' : f;
+        return `<button class="driver-filter-btn ${driverFilter === f ? 'active' : ''}" onclick="setDriverFilter('${f}')">${label}</button>`;
+      }).join('')}
+    </div>
+
+    <div class="startup-note" style="margin-bottom:12px">
+      ⚠ To update a driver: right-click the Start menu → <strong>Device Manager</strong>, find the device, right-click → <strong>Update driver</strong>. For GPU drivers use the manufacturer's app (NVIDIA App, AMD Software, or Intel Arc Control) — always safer than Windows Update for display drivers.
+    </div>
+
+    ${filtered.length === 0
+      ? '<div class="empty-state">No drivers match this filter.</div>'
+      : `<table class="perf-table">
+          <thead><tr>
+            <th>Device</th>
+            <th style="width:110px">Class</th>
+            <th style="width:105px">Driver Date</th>
+            <th style="width:130px">Version</th>
+            <th style="width:130px">Status</th>
+          </tr></thead>
+          <tbody>
+            ${filtered.map(d => {
+              const status = driverStatus(d);
+              return `<tr>
+                <td>${d.DeviceName || '—'}<br><span style="font-size:0.72rem;color:var(--muted)">${d.Manufacturer || ''}</span></td>
+                <td style="color:var(--muted2);font-size:0.78rem">${d.DeviceClass || '—'}</td>
+                <td style="font-size:0.8rem">${d.DriverDate || '—'}</td>
+                <td style="color:var(--muted);font-size:0.75rem">${d.DriverVersion || '—'}</td>
+                <td><span class="driver-badge ${status}">${driverStatusLabel(status)}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`
+    }`;
+}
+
+function setDriverFilter(f) {
+  driverFilter = f;
+  renderDrivers();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initNav();
+  loadDrives();
+});
+</script>
+</body>
+</html>

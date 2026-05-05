@@ -229,7 +229,24 @@
       <span class="spinner" id="davinciSpinner" style="display:none"></span>
       Push to DaVinci
     </button>
+    <button class="btn btn-ghost" id="timelineTranscriptBtn" disabled title="Read transcript from the selected Resolve timeline">
+      <span class="spinner" id="ttSpinner" style="display:none"></span>
+      📄 Read Timeline Transcript
+    </button>
     <button class="btn btn-ghost btn-sm" id="clearBtn" disabled style="margin-left:auto">Clear</button>
+  </div>
+
+  <!-- TIMELINE PICKER -->
+  <div id="timelinePicker" style="display:none; margin-top:8px; display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+    <label style="font-size:12px; color:#64748b; white-space:nowrap;">Timeline:</label>
+    <select id="timelineSelect" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px;min-width:220px;">
+      <option value="02_SELECTS">02_SELECTS</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" id="refreshTimelinesBtn" title="Reload timeline list from Resolve">↺ Refresh</button>
+    <label style="font-size:11px; color:#475569; margin-left:4px;">
+      <input type="checkbox" id="ttReadOnly" checked style="margin-right:4px;">
+      Read existing subtitles only (don't re-transcribe)
+    </label>
   </div>
 
   <!-- SELECTS PROGRESS -->
@@ -244,6 +261,13 @@
     <div class="progress-title">PUSHING TO DAVINCI</div>
     <div class="progress-bar-outer"><div class="progress-bar-inner" id="davinciBar"></div></div>
     <div class="progress-log" id="davinciLog"></div>
+  </div>
+
+  <!-- TIMELINE TRANSCRIPT PROGRESS -->
+  <div class="progress-wrap" id="ttProgress">
+    <div class="progress-title">READING TIMELINE TRANSCRIPT</div>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="ttBar"></div></div>
+    <div class="progress-log" id="ttLog"></div>
   </div>
 
   <!-- STATUS PILLS -->
@@ -331,6 +355,11 @@
             <button class="btn btn-ghost btn-sm" onclick="clearBrollSearch()" title="Clear search">✕</button>
           </div>
           <div id="brollSearchMeta" style="font-size:11px;color:var(--text-dimmer);margin-top:5px"></div>
+          <div id="brollTranscriptHint" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(20,184,166,0.07);border:1px solid rgba(20,184,166,0.2);border-radius:6px;font-size:11px;color:#64748b;display:none;align-items:center;gap:8px">
+            <span>📄 Timeline transcript on file</span>
+            <button class="btn btn-ghost btn-sm" onclick="loadBrollFromTranscript()" style="font-size:11px;padding:3px 8px">Score from transcript</button>
+            <span style="color:#475569">— ranks vault clips against what you actually said in the edit</span>
+          </div>
         </div>
 
         <div class="broll-none" id="brollEmpty">Select a project and run AssemblΩr to see b-roll suggestions.</div>
@@ -570,6 +599,8 @@ async function init() {
 
   document.getElementById('buildSelectsBtn').addEventListener('click', onBuildSelects);
   document.getElementById('davinciBtn').addEventListener('click', onPushToDavinci);
+  document.getElementById('timelineTranscriptBtn').addEventListener('click', onReadTimelineTranscript);
+  document.getElementById('refreshTimelinesBtn').addEventListener('click', loadTimelineList);
   document.getElementById('importBrollBtn').addEventListener('click', onImportBroll);
   document.getElementById('clearBtn').addEventListener('click', onClearSelects);
 
@@ -614,7 +645,10 @@ async function onProjectChange(projectId) {
   document.getElementById('buildSelectsBtn').disabled = !hasFootage;
   document.getElementById('clearBtn').disabled = false;
   document.getElementById('davinciBtn').disabled = true;
+  document.getElementById('timelineTranscriptBtn').disabled = false;  // always available once project is selected
+  document.getElementById('timelinePicker').style.display = 'flex';
   document.getElementById('importBrollBtn').disabled = true;
+  loadTimelineList(); // populate dropdown from Resolve
   document.getElementById('statusBar').style.display = 'none';
   document.getElementById('overallNotes').style.display = 'none';
   document.getElementById('advanceBanner').classList.remove('visible');
@@ -652,6 +686,18 @@ async function onProjectChange(projectId) {
 
   // Load b-roll suggestions
   await loadBroll(projectId);
+  checkTranscriptHint(projectId);
+
+  // Check for saved timeline transcript
+  try {
+    const tr = await fetch(`/api/editor/timeline-transcript/${projectId}`);
+    const td = await tr.json();
+    if (td.transcript && td.transcript.text) {
+      showTimelineTranscriptPreview(td.transcript);
+      appendLog('ttLog', `Timeline transcript on file — ${td.transcript.segments.length} segments (${td.transcript.recorded_at?.slice(0,10) || '?'})`, 'ok');
+      showProgress('ttProgress', true);
+    }
+  } catch (e) { /* not critical */ }
 }
 
 // ─────────────────────────────────────────────
@@ -744,8 +790,9 @@ function renderSelects(data) {
   document.getElementById('fireCount').textContent     = data.fire_sections || 0;
   document.getElementById('statusBar').style.display   = 'flex';
 
-  // Enable DaVinci button
+  // Enable DaVinci + Timeline Transcript buttons
   document.getElementById('davinciBtn').disabled = false;
+  document.getElementById('timelineTranscriptBtn').disabled = false;
 
   document.getElementById('overallNotes').style.display = 'none';
 
@@ -939,6 +986,119 @@ function setDavinciLoading(loading) {
 }
 
 // ─────────────────────────────────────────────
+// READ TIMELINE TRANSCRIPT FROM RESOLVE
+// ─────────────────────────────────────────────
+
+// ── Timeline list / picker ────────────────────────────────────────────────
+
+async function loadTimelineList() {
+  if (!currentProjectId) return;
+  const sel = document.getElementById('timelineSelect');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const r = await fetch(`/api/editor/timeline-list/${currentProjectId}`);
+    const d = await r.json();
+    if (!d.ok || !d.timelines?.length) {
+      sel.innerHTML = '<option value="02_SELECTS">02_SELECTS</option>';
+      return;
+    }
+    sel.innerHTML = d.timelines
+      .map(t => `<option value="${t.name}"${t.name === '02_SELECTS' ? ' selected' : ''}>${t.name}</option>`)
+      .join('');
+    // If 02_SELECTS not in list, just select the first
+    if (!d.timelines.find(t => t.name === '02_SELECTS')) {
+      sel.selectedIndex = 0;
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="02_SELECTS">02_SELECTS</option>';
+  }
+}
+
+async function onReadTimelineTranscript() {
+  if (!currentProjectId) return;
+
+  const forceRetranscribe = window._ttForceRetranscribe || false;
+  window._ttForceRetranscribe = false;
+
+  const timelineName = document.getElementById('timelineSelect')?.value || '02_SELECTS';
+  const readOnly     = document.getElementById('ttReadOnly')?.checked ?? true;
+
+  setTtLoading(true);
+  showProgress('ttProgress', true);
+  appendLog('ttLog', `Connecting to Resolve — reading '${timelineName}'…`, 'dim');
+
+  try {
+    const r = await fetch(`/api/editor/timeline-transcript/${currentProjectId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        timeline_name:      timelineName,
+        force_retranscribe: forceRetranscribe,
+        read_only:          !forceRetranscribe && readOnly,
+      }),
+    });
+    const { job_id } = await r.json();
+
+    await streamJob(job_id, '/api/editor/timeline-transcript/status/', 'ttProgress', 'ttBar', 'ttLog', {
+      onStage: (ev) => {
+        if (ev.stage === 'davinci_log')               appendLog('ttLog', ev.line, 'dim');
+        if (ev.stage === 'timeline_transcript_start') appendLog('ttLog', `Reading '${ev.timeline}'…`, 'dim');
+        if (ev.stage === 'timeline_transcript_saved') appendLog('ttLog', `Saved — ${ev.segments} segments, ${ev.chars} chars`, 'ok');
+      },
+      onDone: (result) => {
+        appendLog('ttLog', `✅ ${result.segments.length} segments read from '${result.timeline_name}'`, 'ok');
+        showTimelineTranscriptPreview(result);
+        setTtLoading(false);
+      },
+      onError: (err) => {
+        appendLog('ttLog', `Error: ${err}`, 'err');
+        setTtLoading(false);
+      }
+    });
+  } catch (e) {
+    appendLog('ttLog', `Request failed: ${e.message}`, 'err');
+    setTtLoading(false);
+  }
+}
+
+function setTtLoading(loading) {
+  document.getElementById('timelineTranscriptBtn').disabled = loading;
+  document.getElementById('ttSpinner').style.display = loading ? 'inline-block' : 'none';
+}
+
+function showTimelineTranscriptPreview(result) {
+  const log = document.getElementById('ttLog');
+  const existing = document.getElementById('ttTranscriptPreview');
+  if (existing) existing.remove();
+  const existingLink = document.getElementById('ttRetranscribeLink');
+  if (existingLink) existingLink.remove();
+
+  const preview = document.createElement('div');
+  preview.id = 'ttTranscriptPreview';
+  preview.style.cssText = `
+    margin-top: 8px; padding: 10px 12px;
+    background: rgba(20,184,166,0.08); border: 1px solid rgba(20,184,166,0.2);
+    border-radius: 6px; font-size: 12px; color: #94a3b8; line-height: 1.6;
+    max-height: 200px; overflow-y: auto; white-space: pre-wrap;
+  `;
+  preview.textContent = result.text || '(no text)';
+  log.parentNode.appendChild(preview);
+
+  const retranscribeLink = document.createElement('div');
+  retranscribeLink.id = 'ttRetranscribeLink';
+  retranscribeLink.style.cssText = 'margin-top:6px; font-size:11px; color:#475569;';
+  retranscribeLink.innerHTML =
+    '<a style="color:#14b8a6; cursor:pointer" onclick="triggerRetranscribe()">↺ Force re-transcribe (new Resolve pass)</a>';
+  log.parentNode.appendChild(retranscribeLink);
+}
+
+function triggerRetranscribe() {
+  document.getElementById('ttReadOnly').checked = false;
+  window._ttForceRetranscribe = true;
+  onReadTimelineTranscript();
+}
+
+// ─────────────────────────────────────────────
 // CLEAR SELECTS
 // ─────────────────────────────────────────────
 
@@ -953,10 +1113,16 @@ async function onClearSelects() {
     clearSections();
     clearBroll();
     document.getElementById('davinciBtn').disabled = true;
+    document.getElementById('timelineTranscriptBtn').disabled = true;
     document.getElementById('importBrollBtn').disabled = true;
     document.getElementById('missingBanner').classList.remove('visible');
     hideProgress('selectsProgress');
     hideProgress('davinciProgress');
+    hideProgress('ttProgress');
+    const ttPreview = document.getElementById('ttTranscriptPreview');
+    if (ttPreview) ttPreview.remove();
+    const ttLink = document.getElementById('ttRetranscribeLink');
+    if (ttLink) ttLink.remove();
   } catch (e) {
     console.error('Clear failed:', e);
   }
@@ -992,6 +1158,43 @@ async function loadBroll(projectId, query = '') {
     renderBroll(data);
   } catch (e) {
     console.error('Failed to load b-roll:', e);
+  }
+}
+
+// Check if a timeline transcript exists and show the hint banner
+async function checkTranscriptHint(projectId) {
+  const hint = document.getElementById('brollTranscriptHint');
+  if (!hint) return;
+  try {
+    const r = await fetch(`/api/editor/timeline-transcript/${projectId}`);
+    const d = await r.json();
+    hint.style.display = (d.transcript?.text) ? 'flex' : 'none';
+  } catch (_) {
+    hint.style.display = 'none';
+  }
+}
+
+// Score b-roll candidates against the actual timeline transcript text
+async function loadBrollFromTranscript() {
+  if (!currentProjectId) return;
+  try {
+    const r = await fetch(`/api/editor/timeline-transcript/${currentProjectId}`);
+    const d = await r.json();
+    if (!d.transcript?.text) {
+      alert('No timeline transcript found. Read the timeline transcript from EditΩr first.');
+      return;
+    }
+    // Use the full transcript text as the search query
+    // The scoring engine tokenises it and matches against vault clip subjects + descriptions
+    const input = document.getElementById('brollSearchInput');
+    if (input) input.value = d.transcript.text;
+    await loadBroll(currentProjectId, d.transcript.text);
+
+    const meta = document.getElementById('brollSearchMeta');
+    if (meta) meta.textContent =
+      `${brollCandidates.length} clips scored against your timeline transcript`;
+  } catch (e) {
+    console.error('loadBrollFromTranscript failed:', e);
   }
 }
 
@@ -1038,36 +1241,145 @@ function buildBrollSection(sec, candidates) {
   div.className = 'broll-section';
   div.dataset.sectionId = sec.section_id;
 
-  const selectId = `broll-select-${sec.section_id}`;
-
-  // Build option list — show subjects tags as hints, flag cross-project clips
-  const options = candidates.map(c => {
-    const tags    = (c.subjects || []).slice(0, 3).join(', ');
-    const xp      = c.same_project ? '' : ' [vault]';
-    const label   = `${c.filename}${c.duration ? ` · ${Math.round(c.duration)}s` : ''}${xp}${tags ? ` — ${tags}` : ''}`;
-    return `<option value="${c.footage_id}">${esc(label)}</option>`;
-  }).join('');
-
-  // Highlight sections Claude flagged as needing b-roll
   const needsBadge = sec.needs_broll
     ? `<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:1px 6px;margin-left:6px">needs b-roll</span>`
     : '';
 
-  div.innerHTML = `
-    <div class="broll-section-label">${esc(sec.script_section)}${needsBadge}</div>
-    ${sec.fire_suggestion ? `<div class="broll-suggestion">${esc(sec.fire_suggestion)}</div>` : ''}
-    ${candidates.length > 0
-      ? `<select class="broll-select" id="${selectId}" onchange="onBrollAssign(${sec.section_id}, this.value)">
-           <option value="">— choose b-roll clip —</option>
-           ${options}
-         </select>`
-      : `<div style="font-size:12px;color:var(--text-dimmer);font-style:italic">No b-roll in vault. Search above or add clips to VaultΩr.</div>`
-    }
+  const header = document.createElement('div');
+  header.className = 'broll-section-label';
+  header.innerHTML = `${esc(sec.script_section)}${needsBadge}`;
+  div.appendChild(header);
+
+  if (sec.fire_suggestion) {
+    const sug = document.createElement('div');
+    sug.className = 'broll-suggestion';
+    sug.textContent = sec.fire_suggestion;
+    div.appendChild(sug);
+  }
+
+  if (!candidates.length) {
+    const none = document.createElement('div');
+    none.style.cssText = 'font-size:12px;color:var(--text-dimmer);font-style:italic;margin-top:6px';
+    none.textContent = 'No b-roll in vault. Search above or add clips to VaultΩr.';
+    div.appendChild(none);
+    return div;
+  }
+
+  // ── Selected clip display ──────────────────────────────────────────────
+  const selectedWrap = document.createElement('div');
+  selectedWrap.id = `broll-selected-${sec.section_id}`;
+  selectedWrap.style.cssText = 'display:none;margin-top:8px;padding:6px 8px;background:rgba(20,184,166,0.1);border:1px solid rgba(20,184,166,0.3);border-radius:6px;display:none;align-items:center;gap:10px';
+  selectedWrap.innerHTML = `
+    <img id="broll-sel-thumb-${sec.section_id}" src="" style="width:72px;height:45px;object-fit:cover;border-radius:4px;background:#0f172a;flex-shrink:0">
+    <div style="flex:1;min-width:0">
+      <div id="broll-sel-name-${sec.section_id}" style="font-size:12px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      <div id="broll-sel-tags-${sec.section_id}" style="font-size:11px;color:#64748b;margin-top:2px"></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="clearBrollAssignment(${sec.section_id})" style="font-size:11px;flex-shrink:0">✕ Clear</button>
   `;
+  div.appendChild(selectedWrap);
+
+  // ── Thumbnail grid ─────────────────────────────────────────────────────
+  const gridWrap = document.createElement('div');
+  gridWrap.style.cssText = 'margin-top:8px';
+
+  const grid = document.createElement('div');
+  grid.id = `broll-grid-${sec.section_id}`;
+  grid.style.cssText = `
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 4px 0;
+  `;
+
+  for (const c of candidates) {
+    const tile = document.createElement('div');
+    tile.dataset.footageId = c.footage_id;
+    tile.style.cssText = `
+      cursor: pointer; border-radius: 6px; overflow: hidden;
+      border: 2px solid transparent; position: relative;
+      background: #0f172a; transition: border-color 0.15s;
+    `;
+    tile.title = (c.subjects || []).join(', ') || c.filename;
+
+    const tags = (c.subjects || []).slice(0, 3).join(', ');
+    const dur  = c.duration ? `${Math.round(c.duration)}s` : '';
+    const xp   = c.same_project ? '' : '<span style="position:absolute;top:3px;right:3px;font-size:9px;background:rgba(0,0,0,0.7);color:#94a3b8;padding:1px 4px;border-radius:3px">vault</span>';
+
+    if (c.thumbnail) {
+      tile.innerHTML = `
+        <img src="${esc(c.thumbnail)}" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" loading="lazy">
+        ${xp}
+        <div style="padding:3px 5px;font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#0f172a">
+          ${tags || dur || '&nbsp;'}
+        </div>
+      `;
+    } else {
+      // No thumbnail — show filename abbreviated
+      tile.innerHTML = `
+        <div style="aspect-ratio:16/9;background:#1e293b;display:flex;align-items:center;justify-content:center;padding:4px">
+          <span style="font-size:9px;color:#475569;text-align:center;word-break:break-all">${esc(c.filename)}</span>
+        </div>
+        ${xp}
+        <div style="padding:3px 5px;font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#0f172a">
+          ${tags || dur || '&nbsp;'}
+        </div>
+      `;
+    }
+
+    tile.addEventListener('click', () => selectBrollTile(sec.section_id, c, tile, grid));
+    grid.appendChild(tile);
+  }
+
+  gridWrap.appendChild(grid);
+  div.appendChild(gridWrap);
+
   return div;
 }
 
+function selectBrollTile(sectionId, clip, tile, grid) {
+  // Deselect all tiles in this section's grid
+  grid.querySelectorAll('div[data-footage-id]').forEach(t => {
+    t.style.borderColor = 'transparent';
+    t.style.boxShadow = 'none';
+  });
+
+  // Highlight selected
+  tile.style.borderColor = '#14b8a6';
+  tile.style.boxShadow = '0 0 0 1px #14b8a6';
+
+  // Update selected clip display
+  const wrap = document.getElementById(`broll-selected-${sectionId}`);
+  const thumb = document.getElementById(`broll-sel-thumb-${sectionId}`);
+  const name  = document.getElementById(`broll-sel-name-${sectionId}`);
+  const tags  = document.getElementById(`broll-sel-tags-${sectionId}`);
+  if (wrap) {
+    thumb.src = clip.thumbnail || '';
+    thumb.style.display = clip.thumbnail ? 'block' : 'none';
+    name.textContent = clip.filename;
+    tags.textContent = (clip.subjects || []).join(', ');
+    wrap.style.display = 'flex';
+  }
+
+  // Register assignment
+  brollAssignments[sectionId] = clip.footage_id;
+}
+
+function clearBrollAssignment(sectionId) {
+  delete brollAssignments[sectionId];
+  const wrap = document.getElementById(`broll-selected-${sectionId}`);
+  if (wrap) wrap.style.display = 'none';
+  const grid = document.getElementById(`broll-grid-${sectionId}`);
+  if (grid) grid.querySelectorAll('div[data-footage-id]').forEach(t => {
+    t.style.borderColor = 'transparent';
+    t.style.boxShadow = 'none';
+  });
+}
+
 function onBrollAssign(sectionId, footageId) {
+  // Legacy — kept for safety, UI now uses selectBrollTile
   if (footageId) {
     brollAssignments[sectionId] = parseInt(footageId, 10);
   } else {

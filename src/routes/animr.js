@@ -28,7 +28,7 @@ function makeJobId() {
 
 // ── POST /api/animr/render ────────────────────────────────────────────────────
 router.post('/render', async (req, res) => {
-  const { composition, props = {}, durationInFrames, fps = 30 } = req.body;
+  const { composition, props = {}, durationInFrames, fps = 30, transparent = false } = req.body;
 
   if (!composition) return res.status(400).json({ error: 'composition required' });
 
@@ -76,22 +76,89 @@ router.post('/render', async (req, res) => {
       // Override duration if caller specified one
       if (durationInFrames) comp.durationInFrames = durationInFrames;
 
-      const outFilename = `${composition}_${Date.now()}.mp4`;
+      const ext         = transparent ? 'mov' : 'mp4';
+      const outFilename = `${composition}_${Date.now()}.${ext}`;
       const outputLocation = path.join(RENDERS_DIR, outFilename);
 
-      emit({ type: 'log', msg: `Rendering ${comp.durationInFrames} frames at ${fps}fps…` });
+      emit({ type: 'log', msg: `Rendering ${comp.durationInFrames} frames at ${fps}fps${transparent ? ' (ProRes 4444 α)' : ''}…` });
 
-      await renderMedia({
-        composition: comp,
-        serveUrl: bundleLocation,
-        codec: 'h264',
-        outputLocation,
-        inputProps,
-        fps,
-        onProgress: ({ progress }) => {
-          emit({ type: 'render_progress', pct: Math.round(progress * 100) });
-        },
-      });
+      if (transparent) {
+        // ── Transparent path: PNG frames → ProRes 4444 .mov with true alpha ──
+        // Remotion's 'prores' codec maps to the `prores` ffmpeg encoder which
+        // does NOT support alpha. We must use `prores_ks` with yuva444p10le.
+        // Solution: render RGBA PNG frames via renderFrames, then stitch with
+        // a direct ffmpeg call using prores_ks -profile:v 4444.
+        const { renderFrames } = require('@remotion/renderer');
+        const { execFile } = require('child_process');
+        const { promisify } = require('util');
+        const execFileAsync  = promisify(execFile);
+
+        const framesDir = path.join(RENDERS_DIR, `_frames_${jobId}`);
+        fs.mkdirSync(framesDir, { recursive: true });
+
+        try {
+          emit({ type: 'log', msg: 'Rendering RGBA PNG frames…' });
+
+          await renderFrames({
+            composition: comp,
+            serveUrl:    bundleLocation,
+            outputDir:   framesDir,
+            inputProps,
+            imageFormat: 'png',
+            fps,
+            onFrameUpdate: (rendered) => {
+              emit({ type: 'render_progress', pct: Math.round((rendered / comp.durationInFrames) * 80) });
+            },
+          });
+
+          emit({ type: 'log', msg: 'Stitching ProRes 4444 with alpha channel…' });
+
+          // Build concat list (alphabetical sort = correct frame order)
+          const frameFiles = fs.readdirSync(framesDir)
+            .filter(f => f.endsWith('.png'))
+            .sort();
+
+          if (!frameFiles.length) throw new Error('renderFrames produced no PNG frames');
+
+          const concatPath = path.join(framesDir, 'concat.txt');
+          fs.writeFileSync(concatPath,
+            frameFiles.map(f =>
+              `file '${path.join(framesDir, f).replace(/\\/g, '/')}'`
+            ).join('\n')
+          );
+
+          const ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
+          await execFileAsync(ffmpegBin, [
+            '-f', 'concat', '-safe', '0',
+            '-r', String(fps),
+            '-i', concatPath,
+            '-c:v', 'prores_ks',
+            '-profile:v', '4444',
+            '-pix_fmt', 'yuva444p10le',
+            '-r', String(fps),
+            '-y', outputLocation,
+          ]);
+
+          emit({ type: 'render_progress', pct: 100 });
+
+        } finally {
+          fs.rmSync(framesDir, { recursive: true, force: true });
+        }
+
+      } else {
+        // ── Standard h264 path ────────────────────────────────────────────────
+        await renderMedia({
+          composition: comp,
+          serveUrl:    bundleLocation,
+          codec:       'h264',
+          outputLocation,
+          inputProps,
+          fps,
+          onProgress: ({ progress }) => {
+            emit({ type: 'render_progress', pct: Math.round(progress * 100) });
+          },
+        });
+      }
 
       const stat = fs.statSync(outputLocation);
       emit({
@@ -145,7 +212,7 @@ router.get('/render/:id/stream', (req, res) => {
 router.get('/renders', (req, res) => {
   try {
     const files = fs.readdirSync(RENDERS_DIR)
-      .filter(f => f.endsWith('.mp4'))
+      .filter(f => f.endsWith('.mp4') || f.endsWith('.mov'))
       .map(f => {
         const stat = fs.statSync(path.join(RENDERS_DIR, f));
         return {
@@ -166,7 +233,7 @@ router.get('/renders', (req, res) => {
 // ── DELETE /api/animr/renders/:filename ──────────────────────────────────────
 router.delete('/renders/:filename', (req, res) => {
   const safe = path.basename(req.params.filename);
-  if (!safe.endsWith('.mp4')) return res.status(400).json({ error: 'mp4 only' });
+  if (!safe.endsWith('.mp4') && !safe.endsWith('.mov')) return res.status(400).json({ error: 'mp4/mov only' });
   const fp = path.join(RENDERS_DIR, safe);
   try {
     if (fs.existsSync(fp)) fs.unlinkSync(fp);

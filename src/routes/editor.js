@@ -356,6 +356,200 @@ router.post('/davinci/build/:project_id', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// TIMELINE LIST — list all timelines in Resolve project
+// GET /api/editor/timeline-list/:project_id
+// ─────────────────────────────────────────────
+
+router.get('/timeline-list/:project_id', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  const project = db.getProject(projectId);
+  if (!project) return res.status(404).json({ error: `Project ${projectId} not found` });
+
+  (async () => {
+    try {
+      const binary = await detectPython();
+      if (!binary) return res.status(500).json({ error: 'Python not found' });
+
+      const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'davinci', 'resolve-timeline-transcript.py');
+      const args = [
+        scriptPath,
+        '--project_id',   String(projectId),
+        '--project_name', project.davinci_project_name || project.title,
+        '--list_timelines',
+      ];
+
+      const proc = spawn(binary, args, { windowsHide: true, timeout: 30_000 });
+      let stdout = ''; let stderr = '';
+      proc.stdout.on('data', d => { stdout += d.toString(); });
+      proc.stderr.on('data', d => { stderr += d.toString(); });
+      proc.on('error', err => res.status(500).json({ error: err.message }));
+      proc.on('close', code => {
+        try {
+          const result = JSON.parse(stdout.trim());
+          res.json(result);
+        } catch (_) {
+          res.status(500).json({ error: `Parse failed: ${stderr.slice(-300)}` });
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  })();
+});
+
+// ─────────────────────────────────────────────
+// TIMELINE TRANSCRIPT — READ FROM RESOLVE
+// POST /api/editor/timeline-transcript/:project_id
+// Body: { timeline_name?: string, force_retranscribe?: bool, read_only?: bool }
+// ─────────────────────────────────────────────
+
+router.post('/timeline-transcript/:project_id', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  const project = db.getProject(projectId);
+  if (!project) return res.status(404).json({ error: `Project ${projectId} not found` });
+
+  const timelineName      = req.body?.timeline_name || '02_SELECTS';
+  const forceRetranscribe = !!req.body?.force_retranscribe;
+  const readOnly          = !!req.body?.read_only;
+
+  const job = createJob();
+  res.json({ job_id: job.id, project_id: projectId });
+
+  (async () => {
+    try {
+      const binary = await detectPython();
+      if (!binary) return failJob(job, `Python not found. Tried: ${PYTHON_CANDIDATES.join(', ')}`);
+
+      const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'davinci', 'resolve-timeline-transcript.py');
+
+      const args = [
+        scriptPath,
+        '--project_id',   String(projectId),
+        '--project_name', project.davinci_project_name || project.title,
+        '--timeline_name', timelineName,
+        ...(forceRetranscribe ? ['--force_retranscribe'] : []),
+        ...(readOnly          ? ['--read_only']          : []),
+      ];
+
+      pushEvent(job, { stage: 'timeline_transcript_start', timeline: timelineName });
+
+      const proc = spawn(binary, args, { windowsHide: true, timeout: 360_000 }); // 6 min — transcription takes time
+
+      let stdout = '';
+      let stderr = '';
+
+      proc.stdout.on('data', d => {
+        const chunk = d.toString();
+        stdout += chunk;
+        // Relay any intermediate JSON progress events (stage: 'transcribing')
+        for (const line of chunk.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const ev = JSON.parse(trimmed);
+            if (ev.stage && ev.stage !== 'ok') {
+              pushEvent(job, { stage: 'davinci_log', line: ev.message || trimmed });
+            }
+          } catch (_) { /* final result line */ }
+        }
+      });
+
+      proc.stderr.on('data', d => {
+        const line = d.toString().trim();
+        stderr += line;
+        if (line) pushEvent(job, { stage: 'davinci_log', line });
+      });
+
+      proc.on('error', err => failJob(job, `Python spawn failed: ${err.message}`));
+
+      proc.on('close', code => {
+        // Extract the last valid JSON line from stdout (skip progress events)
+        let resultJson = null;
+        const lines = stdout.trim().split('\n').filter(l => l.trim());
+        for (let i = lines.length - 1; i >= 0; i--) {
+          try {
+            const parsed = JSON.parse(lines[i]);
+            if ('ok' in parsed) { resultJson = parsed; break; }
+          } catch (_) { /* skip */ }
+        }
+
+        if (!resultJson) {
+          return failJob(job, `No valid JSON in stdout. ${stderr.slice(-400)}`);
+        }
+
+        if (!resultJson.ok) {
+          return failJob(job, resultJson.error || 'resolve-timeline-transcript.py returned ok:false');
+        }
+
+        if (code !== 0 && !resultJson.ok) {
+          return failJob(job, `Script exited ${code}: ${stderr.slice(-400)}`);
+        }
+
+        // Store the timeline transcript in kv_store for downstream use
+        // (CaptionΩr, WritΩr, etc.)  Key: timeline_transcript_<projectId>
+        try {
+          db.setKv(`timeline_transcript_${projectId}`, JSON.stringify({
+            timeline_name: resultJson.timeline_name,
+            text:          resultJson.text,
+            segments:      resultJson.segments,
+            fps:           resultJson.fps,
+            recorded_at:   new Date().toISOString(),
+            _source:       resultJson._source,
+          }));
+          pushEvent(job, {
+            stage: 'timeline_transcript_saved',
+            segments: resultJson.segments.length,
+            chars: resultJson.text.length,
+          });
+        } catch (dbErr) {
+          pushEvent(job, { stage: 'davinci_log', line: `[warn] Could not save transcript to DB: ${dbErr.message}` });
+        }
+
+        finishJob(job, resultJson);
+      });
+
+    } catch (err) {
+      failJob(job, err.message);
+    }
+  })();
+});
+
+// ─────────────────────────────────────────────
+// TIMELINE TRANSCRIPT — STATUS (SSE) + GET SAVED
+// Status route MUST be registered before /:project_id to avoid
+// Express matching "status" as the project_id param.
+// GET /api/editor/timeline-transcript/status/:job_id
+// GET /api/editor/timeline-transcript/:project_id
+// ─────────────────────────────────────────────
+
+router.get('/timeline-transcript/status/:job_id', (req, res) => {
+  const job = jobs.get(req.params.job_id);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  sseStream(job, req, res);
+});
+
+router.get('/timeline-transcript/:project_id', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  const project = db.getProject(projectId);
+  if (!project) return res.status(404).json({ error: `Project ${projectId} not found` });
+
+  try {
+    const raw = db.getKv(`timeline_transcript_${projectId}`);
+    if (!raw) return res.json({ ok: true, project_id: projectId, transcript: null });
+    const transcript = JSON.parse(raw);
+    res.json({ ok: true, project_id: projectId, transcript });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // BROLL — GET SUGGESTIONS
 // GET /api/editor/broll/:project_id
 // ─────────────────────────────────────────────

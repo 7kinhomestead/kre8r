@@ -187,20 +187,24 @@ async function importBroll(projectId, assignments, onProgress = null) {
   }
 
   // Build section → footage_path map
+  // getAllFootage() with NO project filter — b-roll assignments can come from
+  // any project in the vault (cross-project vault search is by design).
   const sections    = db.getSelectsByProject(projectId);
   const sectionMap  = Object.fromEntries(sections.map(s => [s.id, s]));
-  const allFootage  = db.getAllFootage({ project_id: projectId });
+  const allFootage  = db.getAllFootage();   // <-- entire vault, not just this project
   const footageMap  = Object.fromEntries(allFootage.map(f => [f.id, f]));
 
   const resolvedAssignments = assignments.map(a => {
     const section = sectionMap[a.section_id];
     const footage = footageMap[a.footage_id];
+    // Prefer proxy (MP4) → organized → raw file_path
+    const filePath = footage?.proxy_path || footage?.organized_path || footage?.file_path || null;
     return {
       section_id:      a.section_id,
       section_index:   section?.section_index ?? 0,
       script_section:  section?.script_section || '',
       footage_id:      a.footage_id,
-      file_path:       footage?.organized_path || footage?.file_path || null
+      file_path:       filePath
     };
   }).filter(a => a.file_path);
 

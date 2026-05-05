@@ -1237,11 +1237,43 @@ function renderAgreements() {
       <td>${statusBadge}</td>
       <td style="color:var(--muted)">${sentAt}</td>
       <td style="color:${a.signed_at ? 'var(--green)' : 'var(--muted)'}">${signedAt}</td>
-      <td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        ${a.signing_token ? `<button class="btn btn-secondary btn-sm" onclick="copySigningLink('${a.signing_token}')" title="Copy signing link to clipboard">🔗 Copy Link</button>` : ''}
+        ${a.status !== 'signed' ? `<button class="btn btn-secondary btn-sm" onclick="resendAgreement(${a.id})">↺ Resend</button>` : ''}
         ${a.status === 'signed' ? `<button class="btn btn-secondary btn-sm" onclick="viewAgreement(${a.id})">View</button>` : ''}
       </td>
     </tr>`;
   }).join('');
+}
+
+function copySigningLink(token) {
+  const base = 'https://kre8r.app';
+  const url  = `${base}/sign/${token}`;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Signing link copied — paste it to your partner', 'teal');
+  }).catch(() => {
+    prompt('Copy this signing link:', url);
+  });
+}
+
+async function resendAgreement(id) {
+  const a = _agreements.find(x => x.id === id);
+  if (!a) return;
+  if (!confirm(`Resend agreement email to ${a.partner_email}?`)) return;
+  try {
+    const r = await fetch(`/api/contracts/agreements/${id}/resend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).then(r => r.json());
+    if (r.ok) {
+      showToast(`Resent to ${a.partner_email}`, 'teal');
+      await loadContracts();
+    } else {
+      showToast(r.error || 'Resend failed', 'red');
+    }
+  } catch (e) {
+    showToast('Resend failed: ' + e.message, 'red');
+  }
 }
 
 function openTemplateModal(id) {

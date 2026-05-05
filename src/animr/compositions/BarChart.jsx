@@ -10,6 +10,7 @@ export const BarChart = ({
   valueSuffix = '/yr',
   accentColor = '#14b8a6',
   bgColor = '#0a0a0a',
+  fx = { glow: true, shadow: false, scanlines: false, vignette: false },
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -25,6 +26,7 @@ export const BarChart = ({
       alignItems: 'center', justifyContent: 'center',
       fontFamily: "'DM Sans', sans-serif",
       padding: '60px 80px',
+      position: 'relative', overflow: 'hidden',
     }}>
       {/* Title */}
       <div style={{
@@ -78,7 +80,10 @@ export const BarChart = ({
                   height: `${heightPct * barHeight}%`,
                   background: `linear-gradient(180deg, ${bar.color}, ${bar.color}88)`,
                   borderRadius: '6px 6px 0 0',
-                  boxShadow: `0 0 30px ${bar.color}44`,
+                  boxShadow: [
+                    fx.glow   ? `0 0 30px ${bar.color}88` : '',
+                    fx.shadow ? `4px 8px 24px rgba(0,0,0,0.8)` : '',
+                  ].filter(Boolean).join(', ') || 'none',
                   transition: 'none',
                 }} />
               </div>
@@ -98,6 +103,21 @@ export const BarChart = ({
         background: 'rgba(255,255,255,.12)', marginTop: 0,
         opacity: interpolate(frame, [5, 25], [0, 1], { extrapolateRight: 'clamp' }),
       }} />
+
+      {fx.scanlines && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.18) 2px,rgba(0,0,0,0.18) 4px)',
+          zIndex: 10,
+        }} />
+      )}
+      {fx.vignette && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%)',
+          zIndex: 11,
+        }} />
+      )}
     </div>
   );
 };

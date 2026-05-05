@@ -36,6 +36,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 }
 .comp-card:hover{border-color:var(--border2)}
 .comp-card.selected{border-color:var(--teal);background:rgba(20,184,166,.06)}
+.fx-btn{background:var(--card2);border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:11px;font-weight:600;padding:5px 10px;cursor:pointer;transition:all .15s;letter-spacing:.03em;}
+.fx-btn:hover{border-color:var(--border2);color:var(--off);}
+.fx-btn.active{border-color:var(--teal);background:rgba(20,184,166,.1);color:var(--teal);}
 .comp-card-name{font-size:13px;font-weight:700;margin-bottom:2px}
 .comp-card-desc{font-size:12px;color:var(--muted)}
 
@@ -144,6 +147,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
           <div class="comp-card-name">📋 Stat Card</div>
           <div class="comp-card-desc">Animated card with label, value, and accent lines</div>
         </div>
+        <div class="comp-card" data-comp="Stomper" onclick="selectComp('Stomper')">
+          <div class="comp-card-name">💥 Stomper</div>
+          <div class="comp-card-desc">Small number counts up — then a giant number slams in and stomps it</div>
+        </div>
       </div>
     </div>
 
@@ -165,6 +172,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
         </div>
       </div>
       <div style="font-size:11px;color:var(--muted)" id="frameCount">90 frames</div>
+    </div>
+
+    <!-- Effects toggles -->
+    <div>
+      <div class="card-title">Effects</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px" id="fxToggles">
+        <button class="fx-btn active" data-fx="glow"        onclick="toggleFx('glow')">✦ Glow</button>
+        <button class="fx-btn"        data-fx="shadow"      onclick="toggleFx('shadow')">◼ Drop Shadow</button>
+        <button class="fx-btn"        data-fx="scanlines"   onclick="toggleFx('scanlines')">▤ Scanlines</button>
+        <button class="fx-btn"        data-fx="vignette"    onclick="toggleFx('vignette')">◉ Vignette</button>
+        <button class="fx-btn"        data-fx="transparent" onclick="toggleFx('transparent')" title="Renders ProRes 4444 .mov with alpha channel — drop straight into DaVinci">🎭 Transparent BG</button>
+      </div>
     </div>
 
     <!-- Dynamic props panel -->
@@ -218,6 +237,53 @@ let currentComp = 'BarChart';
 let currentJobId = null;
 let currentSse   = null;
 
+// ── Effects state ─────────────────────────────────────────────────────────────
+const activeFx = new Set(['glow']);
+function toggleFx(name) {
+  if (activeFx.has(name)) activeFx.delete(name); else activeFx.add(name);
+  document.querySelectorAll('.fx-btn').forEach(b => {
+    b.classList.toggle('active', activeFx.has(b.dataset.fx));
+  });
+}
+function getFx() {
+  return {
+    glow:      activeFx.has('glow'),
+    shadow:    activeFx.has('shadow'),
+    scanlines: activeFx.has('scanlines'),
+    vignette:  activeFx.has('vignette'),
+  };
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function hexToRgba(hex, opacity) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  const a = Math.max(0, Math.min(1, parseFloat(opacity)));
+  return a >= 1 ? hex : `rgba(${r},${g},${b},${a})`;
+}
+function getBgColor(hexId, alphaId) {
+  if (activeFx.has('transparent')) return 'transparent';
+  const hex   = document.getElementById(hexId)?.value   || '#0a0a0a';
+  const alpha = document.getElementById(alphaId)?.value ?? 1;
+  return hexToRgba(hex, alpha);
+}
+const BG_FIELD = (hexId, alphaId) => `
+  <div class="field">
+    <label>Background</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="${hexId}" type="color" value="#0a0a0a" style="width:38px;height:32px;padding:2px;flex-shrink:0">
+      <input id="${alphaId}" type="range" min="0" max="1" step="0.01" value="1" style="flex:1">
+      <span style="font-size:11px;color:var(--muted);width:28px;text-align:right" id="${alphaId}_lbl">100%</span>
+    </div>
+  </div>
+  <script>
+    document.getElementById('${alphaId}').addEventListener('input',function(){
+      document.getElementById('${alphaId}_lbl').textContent=Math.round(this.value*100)+'%';
+    });
+  <\/script>
+`;
+
 // ── Composition props definitions ────────────────────────────────────────────
 const COMP_DEFS = {
   BarChart: {
@@ -227,9 +293,9 @@ const COMP_DEFS = {
       const prefix = document.getElementById('bc_prefix')?.value || '$';
       const suffix = document.getElementById('bc_suffix')?.value || '/yr';
       const accent = document.getElementById('bc_accent')?.value || '#14b8a6';
-      const bg     = document.getElementById('bc_bg')?.value    || '#0a0a0a';
+      const bg     = getBgColor('bc_bg','bc_bg_alpha');
       const bars   = getBarsFromUI();
-      return { title, bars, valuePrefix: prefix, valueSuffix: suffix, accentColor: accent, bgColor: bg };
+      return { title, bars, valuePrefix: prefix, valueSuffix: suffix, accentColor: accent, bgColor: bg, fx: getFx() };
     },
     renderForm: () => `
       <div>
@@ -244,8 +310,8 @@ const COMP_DEFS = {
         </div>
         <div class="field-row">
           <div class="field"><label>Accent Color</label><input id="bc_accent" type="color" value="#14b8a6"></div>
-          <div class="field"><label>Background</label><input id="bc_bg" type="color" value="#0a0a0a"></div>
         </div>
+        ${BG_FIELD('bc_bg','bc_bg_alpha')}
         <div class="card-title" style="margin-top:10px">Bars</div>
         <div class="bars-list" id="barsList"></div>
         <button class="btn btn-secondary btn-sm" onclick="addBar()">+ Add Bar</button>
@@ -262,27 +328,28 @@ const COMP_DEFS = {
     defaultDuration: 3,
     buildProps: () => ({
       targetValue: parseFloat(document.getElementById('cu_value')?.value) || 24000,
-      prefix:      document.getElementById('cu_prefix')?.value || '$',
+      prefix:      document.getElementById('cu_prefix')?.value ?? '',
       suffix:      document.getElementById('cu_suffix')?.value || '',
       label:       document.getElementById('cu_label')?.value  || '',
       decimals:    parseInt(document.getElementById('cu_decimals')?.value) || 0,
       accentColor: document.getElementById('cu_accent')?.value || '#14b8a6',
-      bgColor:     document.getElementById('cu_bg')?.value     || '#0a0a0a',
+      bgColor:     getBgColor('cu_bg','cu_bg_alpha'),
+      fx:          getFx(),
     }),
     renderForm: () => `
       <div>
         <div class="card-title">Count Up Settings</div>
         <div class="field"><label>Target Value</label><input id="cu_value" type="number" value="24000"></div>
         <div class="field-row">
-          <div class="field"><label>Prefix</label><input id="cu_prefix" value="$" placeholder="$"></div>
+          <div class="field"><label>Prefix</label><input id="cu_prefix" value="" placeholder="$ (optional)"></div>
           <div class="field"><label>Suffix</label><input id="cu_suffix" value="" placeholder="K"></div>
         </div>
         <div class="field"><label>Label (optional)</label><input id="cu_label" value="Annual Savings" placeholder="above the number"></div>
         <div class="field"><label>Decimals</label><input id="cu_decimals" type="number" value="0" min="0" max="4"></div>
         <div class="field-row">
           <div class="field"><label>Accent Color</label><input id="cu_accent" type="color" value="#14b8a6"></div>
-          <div class="field"><label>Background</label><input id="cu_bg" type="color" value="#0a0a0a"></div>
         </div>
+        ${BG_FIELD('cu_bg','cu_bg_alpha')}
       </div>
     `,
     afterRender: () => {},
@@ -294,7 +361,8 @@ const COMP_DEFS = {
       value:       document.getElementById('sc_value')?.value    || '$4,800',
       subtitle:    document.getElementById('sc_subtitle')?.value || '',
       accentColor: document.getElementById('sc_accent')?.value   || '#14b8a6',
-      bgColor:     document.getElementById('sc_bg')?.value       || '#0a0a0a',
+      bgColor:     getBgColor('sc_bg','sc_bg_alpha'),
+      fx:          getFx(),
     }),
     renderForm: () => `
       <div>
@@ -304,8 +372,36 @@ const COMP_DEFS = {
         <div class="field"><label>Subtitle (optional)</label><input id="sc_subtitle" value="vs grid power" placeholder="below the value"></div>
         <div class="field-row">
           <div class="field"><label>Accent Color</label><input id="sc_accent" type="color" value="#14b8a6"></div>
-          <div class="field"><label>Background</label><input id="sc_bg" type="color" value="#0a0a0a"></div>
         </div>
+        ${BG_FIELD('sc_bg','sc_bg_alpha')}
+      </div>
+    `,
+    afterRender: () => {},
+  },
+  Stomper: {
+    defaultDuration: 7,
+    buildProps: () => ({
+      smallValue:  parseFloat(document.getElementById('st_small')?.value)  || 15000,
+      bigValue:    parseFloat(document.getElementById('st_big')?.value)    || 140000000,
+      smallLabel:  document.getElementById('st_smalllabel')?.value || 'Acres taken by eminent domain last year',
+      bigLabel:    document.getElementById('st_biglabel')?.value   || 'Acres of privately owned land in the U.S.',
+      accentSmall: document.getElementById('st_accent_small')?.value || '#14b8a6',
+      accentBig:   document.getElementById('st_accent_big')?.value   || '#ef4444',
+      bgColor:     getBgColor('st_bg','st_bg_alpha'),
+      fx:          getFx(),
+    }),
+    renderForm: () => `
+      <div>
+        <div class="card-title">Stomper Settings</div>
+        <div class="field"><label>Small Number</label><input id="st_small" type="number" value="15000"></div>
+        <div class="field"><label>Small Label</label><input id="st_smalllabel" value="Acres taken by eminent domain last year"></div>
+        <div class="field"><label>Big Number</label><input id="st_big" type="number" value="140000000"></div>
+        <div class="field"><label>Big Label</label><input id="st_biglabel" value="Acres of privately owned land in the U.S."></div>
+        <div class="field-row">
+          <div class="field"><label>Small Color</label><input id="st_accent_small" type="color" value="#14b8a6"></div>
+          <div class="field"><label>Big Color</label><input id="st_accent_big" type="color" value="#ef4444"></div>
+        </div>
+        ${BG_FIELD('st_bg','st_bg_alpha')}
       </div>
     `,
     afterRender: () => {},
@@ -380,7 +476,7 @@ async function startRender() {
     const r = await fetch('/api/animr/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ composition: currentComp, props, durationInFrames, fps }),
+      body: JSON.stringify({ composition: currentComp, props, durationInFrames, fps, transparent: activeFx.has('transparent') }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'render failed');
@@ -450,15 +546,22 @@ function addLog(text, cls = '') {
 
 function showResult(msg) {
   showTab('result');
+  const isMov = msg.filename.endsWith('.mov');
+  const previewHtml = isMov
+    ? `<div style="background:#111;border-radius:8px;border:1px solid var(--border);padding:28px;text-align:center;margin-bottom:14px;font-size:13px;color:var(--muted)">
+        🎭 <strong style="color:var(--off)">ProRes 4444 with alpha channel</strong><br>
+        <span style="font-size:11px">Drop the .mov straight into DaVinci — transparency intact, no keying needed.</span>
+       </div>`
+    : `<video src="${msg.url}" controls playsinline muted style="width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:14px"></video>`;
   document.getElementById('resultArea').innerHTML = `
     <div class="result-card">
       <div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:12px">✅ Render complete</div>
-      <video src="${msg.url}" controls playsinline muted style="width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:14px"></video>
+      ${previewHtml}
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">${msg.filename} · ${(msg.sizeBytes/1024/1024).toFixed(1)} MB</div>
       <div class="result-actions">
         <a href="${msg.url}" download class="btn btn-primary btn-sm">⬇ Download</a>
         <button class="btn btn-secondary btn-sm" onclick="copyPath('${msg.url}')">📋 Copy URL</button>
-        <button class="btn btn-secondary btn-sm" onclick="sendToPostor('${msg.url}','${msg.filename}')">📤 Send to PostΩr</button>
+        ${isMov ? '' : `<button class="btn btn-secondary btn-sm" onclick="sendToPostor('${msg.url}','${msg.filename}')">📤 Send to PostΩr</button>`}
       </div>
     </div>
   `;
@@ -489,22 +592,26 @@ async function loadLibrary() {
       grid.innerHTML = '<div class="empty">No renders yet.</div>';
       return;
     }
-    grid.innerHTML = '<div class="renders-grid">' + data.renders.map(item => `
+    grid.innerHTML = '<div class="renders-grid">' + data.renders.map(item => {
+      const isMov = item.filename.endsWith('.mov');
+      const preview = isMov
+        ? `<div style="width:100%;height:80px;background:#111;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted)">🎭 ProRes α — download for DaVinci</div>`
+        : `<video src="${item.url}" muted playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0"></video>`;
+      return `
       <div class="render-item">
-        <video src="${item.url}" muted playsinline preload="metadata"
-          onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0"></video>
+        ${preview}
         <div class="render-item-info">
           <div class="render-item-name">${item.filename}</div>
           <div class="render-item-meta">${(item.sizeBytes/1024/1024).toFixed(1)} MB · ${new Date(item.createdAt).toLocaleDateString()}</div>
           <div class="render-item-actions">
             <a href="${item.url}" download class="btn btn-secondary btn-xs">⬇</a>
             <button class="btn btn-secondary btn-xs" onclick="copyPath('${item.url}')">📋</button>
-            <button class="btn btn-secondary btn-xs" onclick="sendToPostor('${item.url}','${item.filename}')">📤</button>
+            ${isMov ? '' : `<button class="btn btn-secondary btn-xs" onclick="sendToPostor('${item.url}','${item.filename}')">📤</button>`}
             <button class="btn btn-danger btn-xs" onclick="deleteRender('${item.filename}', this)">🗑</button>
           </div>
         </div>
-      </div>
-    `).join('') + '</div>';
+      </div>`;
+    }).join('') + '</div>';
   } catch (err) {
     grid.innerHTML = `<div class="empty">Error: ${err.message}</div>`;
   }

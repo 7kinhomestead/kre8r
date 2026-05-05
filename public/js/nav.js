@@ -58,6 +58,7 @@
           { label: 'ClipsΩr',  href: '/clipsr.html' },
           { label: 'ComposΩr', href: '/composor.html' },
           { label: 'AnimΩr',   href: '/animr.html' },
+          { label: 'CleanΩr',  href: '/cleanr.html' },
         ]
       },
       {

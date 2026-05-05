@@ -415,6 +415,7 @@ STRICT OUTPUT RULES — follow exactly, no exceptions:
 - Output ONLY the blog post. No preamble, no explanations, no meta-commentary.
 - Do NOT mention missing context, placeholder blocks, or what you're about to do. Just write.
 - Do NOT write a full HTML document. Write HTML fragments only: <p>, <h2>, <h3>, <ul>, <li>, <a>, <strong>, <blockquote>. No <!DOCTYPE>, <html>, <head>, <body> tags.
+- Do NOT include <iframe> tags of any kind. YouTube videos are embedded separately by the blog page — link to them with a plain <a href> instead.
 - Do NOT wrap output in markdown code fences (\`\`\`html or \`\`\`).
 - If social URLs or citations are missing from context, skip them — do not fabricate URLs.
 - First line: TITLE: followed by the post title. Then a blank line, then ---, then a blank line, then the HTML body.

@@ -8,6 +8,7 @@ export const CountUp = ({
   decimals = 0,
   accentColor = '#14b8a6',
   bgColor = '#0a0a0a',
+  fx = { glow: true, shadow: false, scanlines: false, vignette: false },
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -50,12 +51,17 @@ export const CountUp = ({
         fontSize: 160, fontWeight: 900,
         lineHeight: 1,
         color: accentColor,
-        textShadow: `0 0 ${80 * glowIntensity}px ${accentColor}`,
+        textShadow: [
+          fx.glow   ? `0 0 ${80 * glowIntensity}px ${accentColor}` : '',
+          fx.shadow ? '4px 6px 20px rgba(0,0,0,0.8)' : '',
+        ].filter(Boolean).join(', ') || 'none',
         fontVariantNumeric: 'tabular-nums',
       }}>
-        <span style={{ fontSize: 80, fontWeight: 600, verticalAlign: 'top', marginTop: 28, display: 'inline-block' }}>
-          {prefix}
-        </span>
+        {prefix && (
+          <span style={{ fontSize: 80, fontWeight: 600, verticalAlign: 'top', marginTop: 28, display: 'inline-block' }}>
+            {prefix}
+          </span>
+        )}
         {formatted}
         {suffix && (
           <span style={{ fontSize: 60, fontWeight: 400, color: 'rgba(255,255,255,.4)', marginLeft: 8 }}>
@@ -63,6 +69,20 @@ export const CountUp = ({
           </span>
         )}
       </div>
+      {fx.scanlines && (
+        <div style={{
+          position:'absolute', inset:0, pointerEvents:'none',
+          backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.18) 2px,rgba(0,0,0,0.18) 4px)',
+          zIndex:10,
+        }}/>
+      )}
+      {fx.vignette && (
+        <div style={{
+          position:'absolute', inset:0, pointerEvents:'none',
+          background:'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%)',
+          zIndex:11,
+        }}/>
+      )}
     </div>
   );
 };

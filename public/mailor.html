@@ -568,6 +568,7 @@
               <input type="time" id="ml-sched-time" value="08:00">
             </div>
             <div style="display:flex;gap:5px;align-self:flex-end;padding-bottom:2px;">
+              <button class="fb-quick-btn" onclick="mlQuickScheduleMinutes(20)" style="background:rgba(20,184,166,0.15);border-color:rgba(20,184,166,0.4);color:#14b8a6">+20min</button>
               <button class="fb-quick-btn" onclick="mlQuickSchedule(1)">+1d</button>
               <button class="fb-quick-btn" onclick="mlQuickSchedule(2)">+2d</button>
               <button class="fb-quick-btn" onclick="mlQuickSchedule(3)">+3d</button>
@@ -973,9 +974,36 @@
               </label>
             </div>
           </div>
-          <div class="wc-actions" style="margin-top:14px;">
+          <!-- When to send -->
+          <div style="margin-top:14px;">
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;">When to send?</div>
+            <div class="ml-version-pick" style="margin-bottom:8px;">
+              <button class="ml-version-btn active" id="pm-time-now" onclick="setPmSendMode('now')">⚡ Send in ~10 min</button>
+              <button class="ml-version-btn" id="pm-time-sched" onclick="setPmSendMode('schedule')">📅 Schedule</button>
+            </div>
+            <div id="pm-sched-picker" style="display:none;margin-bottom:10px;">
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <div>
+                  <label style="font-size:10px;color:var(--text-dimmer);display:block;margin-bottom:3px">DATE</label>
+                  <input type="date" id="pm-sched-date">
+                </div>
+                <div>
+                  <label style="font-size:10px;color:var(--text-dimmer);display:block;margin-bottom:3px">TIME</label>
+                  <input type="time" id="pm-sched-time" value="08:00">
+                </div>
+                <div style="display:flex;gap:5px;align-self:flex-end;padding-bottom:2px;">
+                  <button class="fb-quick-btn" onclick="pmQuickScheduleMinutes(20)" style="background:rgba(20,184,166,0.15);border-color:rgba(20,184,166,0.4);color:#14b8a6">+20min</button>
+                  <button class="fb-quick-btn" onclick="pmQuickScheduleDays(1)">+1d</button>
+                  <button class="fb-quick-btn" onclick="pmQuickScheduleDays(2)">+2d</button>
+                  <button class="fb-quick-btn" onclick="pmQuickScheduleDays(3)">+3d</button>
+                  <button class="fb-quick-btn" onclick="pmQuickScheduleDays(7)">+1wk</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wc-actions" style="margin-top:8px;">
             <button class="ml-send-btn" id="pm-send-btn" onclick="pmSend()" style="font-size:14px;padding:12px 24px;width:auto;">
-              SEND NOW
+              <span id="pm-send-label">SEND NOW</span>
             </button>
             <button class="wc-btn wc-btn-gen" onclick="pmGenerate()">↺ Regenerate</button>
           </div>
@@ -1185,6 +1213,39 @@ function mlQuickSchedule(days) {
   document.getElementById('ml-sched-date').value = d.toISOString().slice(0, 10);
 }
 
+function mlQuickScheduleMinutes(minutes) {
+  const d = new Date(Date.now() + minutes * 60 * 1000);
+  document.getElementById('ml-sched-date').value = d.toISOString().slice(0, 10);
+  document.getElementById('ml-sched-time').value =
+    `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── Premiere schedule picker ──────────────────────────────────────────────
+let pmSendMode = 'now';
+
+function setPmSendMode(mode) {
+  pmSendMode = mode;
+  document.getElementById('pm-time-now').classList.toggle('active', mode === 'now');
+  document.getElementById('pm-time-sched').classList.toggle('active', mode === 'schedule');
+  document.getElementById('pm-sched-picker').style.display = mode === 'schedule' ? 'block' : 'none';
+  document.getElementById('pm-send-label').textContent = mode === 'schedule' ? '📅 SCHEDULE EMAIL' : 'SEND NOW';
+  if (mode === 'schedule' && !document.getElementById('pm-sched-date').value) {
+    pmQuickScheduleMinutes(20); // default to +20 min when schedule tab opens
+  }
+}
+
+function pmQuickScheduleMinutes(minutes) {
+  const d = new Date(Date.now() + minutes * 60 * 1000);
+  document.getElementById('pm-sched-date').value = d.toISOString().slice(0, 10);
+  document.getElementById('pm-sched-time').value =
+    `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function pmQuickScheduleDays(days) {
+  const d = new Date(); d.setDate(d.getDate() + days);
+  document.getElementById('pm-sched-date').value = d.toISOString().slice(0, 10);
+}
+
 async function sendViaMailerlite() {
   if (!lastBroadcast) { showToast('Generate a broadcast first', 'amber'); return; }
   if (!mlConnected)   { showToast('Mailerlite not connected', 'amber'); return; }
@@ -1221,13 +1282,21 @@ async function sendViaMailerlite() {
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
 
     const successEl = document.getElementById('ml-success');
-    const sendsAtDt = data.sends_at ? new Date(data.sends_at) : null;
-    const friendlyTime = sendsAtDt
-      ? sendsAtDt.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
-      : '';
-    successEl.textContent = `Queued! Sends ${friendlyTime} — Campaign ID: ${data.campaign_id}`;
-    successEl.classList.add('show');
-    showToast(emailSendMode === 'schedule' ? `Email scheduled for ${friendlyTime}` : 'Email queued — sends in ~10 min', 'green');
+    if (data.in_drafts) {
+      successEl.textContent = `In MailerLite drafts (ID: ${data.campaign_id}) — open MailerLite to send it.`;
+      successEl.style.cssText = 'display:block;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.4);color:#f59e0b';
+      showToast('Campaign in MailerLite drafts — open MailerLite to send', 'amber');
+    } else {
+      const sendsAtDt = data.sends_at ? new Date(data.sends_at) : null;
+      const friendlyTime = sendsAtDt
+        ? sendsAtDt.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
+        : '';
+      successEl.textContent = data.status === 'scheduled'
+        ? `Scheduled for ${friendlyTime} — Campaign ID: ${data.campaign_id}`
+        : `Sent — Campaign ID: ${data.campaign_id}`;
+      successEl.classList.add('show');
+      showToast(data.status === 'scheduled' ? `Email scheduled for ${friendlyTime}` : 'Email sent!', 'green');
+    }
   } catch(e) {
     showToast('Send failed: ' + e.message, 'red');
   } finally {
@@ -1451,6 +1520,14 @@ async function pmSend() {
       return;
     }
 
+    let pm_sends_at = null;
+    if (pmSendMode === 'schedule') {
+      const dateVal = document.getElementById('pm-sched-date').value;
+      const timeVal = document.getElementById('pm-sched-time').value || '08:00';
+      if (!dateVal) { showToast('Pick a date/time to schedule.', 'amber'); btn.disabled = false; btn.querySelector ? null : null; document.getElementById('pm-send-label').textContent = '📅 SCHEDULE EMAIL'; return; }
+      pm_sends_at = new Date(`${dateVal}T${timeVal}:00`).toISOString();
+    }
+
     const r = await fetch('/api/mailerlite/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1460,15 +1537,26 @@ async function pmSend() {
         group_ids:  pmAudience,
         from_name:  sender.from_name,
         from_email: sender.from_email,
+        sends_at:   pm_sends_at,
       }),
     });
     const j = await r.json();
     if (j.ok) {
       const suc = document.getElementById('pm-success');
-      const sendsAt = j.sends_at ? new Date(j.sends_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
-      suc.textContent = `Scheduled! Sends at ${sendsAt} — Campaign ID: ${j.campaign_id}`;
-      suc.classList.add('show');
-      showToast('Premiere email scheduled — sends in ~10 min', 'teal');
+      if (j.in_drafts) {
+        suc.textContent = `Campaign created (ID: ${j.campaign_id}) — sitting in MailerLite drafts. Open MailerLite to send it.`;
+        suc.style.color = '#f59e0b';
+        suc.classList.add('show');
+        showToast('In MailerLite drafts — open MailerLite to send', 'amber');
+      } else {
+        const sendsAt = j.sends_at ? new Date(j.sends_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'shortly';
+        suc.textContent = j.status === 'scheduled'
+          ? `Scheduled for ${sendsAt} — Campaign ID: ${j.campaign_id}`
+          : `Sent — Campaign ID: ${j.campaign_id}`;
+        suc.style.color = '';
+        suc.classList.add('show');
+        showToast(j.status === 'scheduled' ? `Premiere email scheduled for ${sendsAt}` : 'Premiere email sent!', 'teal');
+      }
     } else {
       showToast(j.error || 'Send failed', 'red');
     }
@@ -1476,7 +1564,7 @@ async function pmSend() {
     showToast('Send failed: ' + e.message, 'red');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'SEND NOW';
+    document.getElementById('pm-send-label').textContent = pmSendMode === 'schedule' ? '📅 SCHEDULE EMAIL' : 'SEND NOW';
   }
 }
 

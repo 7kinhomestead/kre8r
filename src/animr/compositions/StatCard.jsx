@@ -6,6 +6,7 @@ export const StatCard = ({
   subtitle = '',
   accentColor = '#14b8a6',
   bgColor = '#0a0a0a',
+  fx = { glow: true, shadow: false, scanlines: false, vignette: false },
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -23,6 +24,7 @@ export const StatCard = ({
       width: '100%', height: '100%', background: bgColor,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontFamily: "'DM Sans', sans-serif",
+      position: 'relative', overflow: 'hidden',
     }}>
       <div style={{
         transform: `scale(${cardScale})`,
@@ -54,6 +56,10 @@ export const StatCard = ({
           opacity: valueOpacity,
           transform: `scale(${valueScale})`,
           marginBottom: subtitle ? 24 : 0,
+          textShadow: [
+            fx.glow   ? `0 0 60px ${accentColor}` : '',
+            fx.shadow ? '4px 6px 20px rgba(0,0,0,0.8)' : '',
+          ].filter(Boolean).join(', ') || 'none',
         }}>{value}</div>
         {/* Subtitle */}
         {subtitle && (
@@ -70,6 +76,20 @@ export const StatCard = ({
           width: `${lineWidth}%`, margin: '40px auto 0',
         }} />
       </div>
+      {fx.scanlines && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.18) 2px,rgba(0,0,0,0.18) 4px)',
+          zIndex: 10,
+        }} />
+      )}
+      {fx.vignette && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%)',
+          zIndex: 11,
+        }} />
+      )}
     </div>
   );
 };
