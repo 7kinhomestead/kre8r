@@ -388,6 +388,9 @@ app.use((req, res, next) => {
   // Contracts — partner signing page and signature submission are public (token is the auth)
   if (req.path.startsWith('/sign/')) return next();
   if (req.path.startsWith('/api/contracts/sign/')) return next();
+  // Contracts API — allow internal key through so scripts/curl can query agreements
+  if (req.path.startsWith('/api/contracts/') &&
+      req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY) return next();
 
   // Logged in — allow
   if (req.session?.userId) return next();
@@ -638,6 +641,7 @@ app.use('/api/stats-export',      require('./src/routes/stats-export'));
 app.use('/api/analyticr',         require('./src/routes/analyticr'));
 app.use('/api/affiliator',        require('./src/routes/affiliator'));
 app.use('/api/animr',             require('./src/routes/animr'));
+app.use('/api/cleanr',            require('./src/routes/cleanr'));
 // Contracts — authenticated CRUD + public signing page (/sign/:token)
 // All routes defined with full paths — mount once at root so /sign/:token works without auth
 app.use('/', require('./src/routes/contracts'));

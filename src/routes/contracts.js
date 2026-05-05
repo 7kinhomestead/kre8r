@@ -695,6 +695,42 @@ router.post('/api/contracts/agreements/send', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/contracts/agreements/:id/resend — resend signing email for existing agreement
+router.post('/api/contracts/agreements/:id/resend', requireAuth, async (req, res) => {
+  try {
+    const agreement = db.getAgreement(parseInt(req.params.id));
+    if (!agreement) return res.status(404).json({ ok: false, error: 'Agreement not found' });
+    if (agreement.status === 'signed') {
+      return res.status(400).json({ ok: false, error: 'Agreement already signed' });
+    }
+
+    const liveBase   = (process.env.LIVE_API_URL || 'https://kre8r.app').replace(/\/$/, '');
+    const signingUrl = `${liveBase}/sign/${agreement.signing_token}`;
+
+    const partnerHtml = `
+      <h2 style="color:#14b8a6">Partnership Agreement — 7 Kin Homestead</h2>
+      <p>Hi ${agreement.partner_name},</p>
+      <p>This is a reminder that Jason from 7 Kin Homestead has sent you a partnership agreement to review and sign.</p>
+      <p style="margin:24px 0">
+        <a href="${signingUrl}" style="background:#14b8a6;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">
+          Review &amp; Sign Agreement
+        </a>
+      </p>
+      <p style="color:#888;font-size:13px">Or copy this link: ${signingUrl}</p>`;
+
+    await sendMailerSend(
+      agreement.partner_email, agreement.partner_name,
+      `Reminder: Partnership Agreement from 7 Kin Homestead`, partnerHtml
+    );
+
+    db.markAgreementSent(agreement.id, new Date().toISOString());
+    res.json({ ok: true, signing_url: signingUrl });
+  } catch (err) {
+    logger.error({ err }, '[contracts] POST agreements/:id/resend failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/contracts/agreements/:id
 router.get('/api/contracts/agreements/:id', requireAuth, (req, res) => {
   try {

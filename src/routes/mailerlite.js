@@ -338,31 +338,61 @@ router.post('/send', async (req, res) => {
 
     log.info({ module: 'mailerlite', campaignId, subject }, 'Campaign created');
 
-    // 2. Schedule — use provided sends_at or default to +10 min
-    // MailerLite needs a brief buffer to clear its review process.
-    const minBuffer = new Date(Date.now() + 5 * 60 * 1000); // 5-min minimum
-    let sendAt = sends_at ? new Date(sends_at) : new Date(Date.now() + 10 * 60 * 1000);
-    if (sendAt < minBuffer) sendAt = minBuffer; // never schedule in the past or too close
-    const scheduleBody = {
-      delivery: 'scheduled',
-      schedule: {
-        date:    `${sendAt.getFullYear()}-${String(sendAt.getMonth() + 1).padStart(2, '0')}-${String(sendAt.getDate()).padStart(2, '0')}`,
-        hours:   String(sendAt.getHours()).padStart(2, '0'),
-        minutes: String(sendAt.getMinutes()).padStart(2, '0'),
-      },
-    };
-    try {
-      await ml('POST', `/campaigns/${campaignId}/schedule`, scheduleBody);
-    } catch (sendErr) {
-      throw new Error(`Campaign schedule failed (id=${campaignId}): ${sendErr.message}`);
+    // 2. Send / Schedule
+    // If no sends_at provided → use delivery:"instant" (bypasses time-zone scheduling issues).
+    // If sends_at provided → use delivery:"scheduled" with local time values.
+    let finalSendsAt = null;
+    let scheduleStatus = 'sent';
+
+    if (!sends_at) {
+      // Instant delivery — MailerLite queues it immediately, no time needed
+      try {
+        await ml('POST', `/campaigns/${campaignId}/schedule`, { delivery: 'instant' });
+        scheduleStatus = 'sent';
+      } catch (sendErr) {
+        // Instant failed — campaign is still in drafts, user can send from MailerLite
+        log.warn({ module: 'mailerlite', campaignId, err: sendErr.message }, 'Instant send failed — campaign in drafts');
+        scheduleStatus = 'draft';
+      }
+    } else {
+      // Scheduled delivery
+      const minBuffer = new Date(Date.now() + 15 * 60 * 1000);
+      let sendAt = new Date(sends_at);
+      if (sendAt < minBuffer) sendAt = minBuffer;
+      finalSendsAt = sendAt.toISOString();
+
+      const scheduleBody = {
+        delivery: 'scheduled',
+        schedule: {
+          date:    `${sendAt.getFullYear()}-${String(sendAt.getMonth() + 1).padStart(2, '0')}-${String(sendAt.getDate()).padStart(2, '0')}`,
+          hours:   String(sendAt.getHours()).padStart(2, '0'),
+          minutes: String(sendAt.getMinutes()).padStart(2, '0'),
+        },
+      };
+      try {
+        await ml('POST', `/campaigns/${campaignId}/schedule`, scheduleBody);
+        scheduleStatus = 'scheduled';
+      } catch (sendErr) {
+        log.warn({ module: 'mailerlite', campaignId, err: sendErr.message }, 'Scheduled send failed — campaign in drafts');
+        scheduleStatus = 'draft';
+      }
     }
 
-    log.info({ module: 'mailerlite', campaignId }, 'Campaign sent');
+    log.info({ module: 'mailerlite', campaignId, scheduleStatus }, 'Campaign processed');
 
-    // Tell NorthΩr an email went out — updates days_since_last_email
+    // Tell NorthΩr an email went out
     try { db.setKv('last_mailerlite_send', new Date().toISOString()); } catch (_) {}
 
-    res.json({ ok: true, campaign_id: campaignId, status: 'scheduled', sends_at: sendAt.toISOString() });
+    res.json({
+      ok: true,
+      campaign_id:   campaignId,
+      status:        scheduleStatus,
+      sends_at:      finalSendsAt,
+      in_drafts:     scheduleStatus === 'draft',
+      draft_message: scheduleStatus === 'draft'
+        ? 'Campaign created in MailerLite drafts — open MailerLite to send it manually.'
+        : null,
+    });
   } catch (e) {
     log.error({ module: 'mailerlite', err: e }, 'send failed');
     res.status(500).json({ error: e.message });
@@ -593,9 +623,12 @@ RULES:
 - Do NOT summarise the whole video — tease one tension or unexpected moment
 - The email should feel like a real person sent it, not a marketing blast
 - 2–4 short paragraphs max. Punchy. No fluff.
-- End with a single clear CTA: watch the video (include the URL if provided)
+- End with a single clear CTA paragraph linking to the video
+- If a YouTube URL is provided, the link MUST be a real HTML hyperlink: <a href="URL" style="color:#14b8a6;">Watch it here →</a>
+- NEVER output a bare URL as plain text — always wrap it in <a href="...">
 - Subject line: intriguing, personal, 8 words or fewer
 - Use {$name} once near the top (this is MailerLite's native merge tag for first name)
+- The body field must be valid HTML using only <p>, <a href>, <strong>, <em>, <br> — no markdown, no asterisks
 
 Return ONLY valid JSON in this exact shape:
 {
