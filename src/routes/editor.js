@@ -367,7 +367,8 @@ router.get('/broll/:project_id', (req, res) => {
   const project = db.getProject(projectId);
   if (!project) return res.status(404).json({ error: `Project ${projectId} not found` });
 
-  const data = getBrollSuggestions(projectId);
+  const query = (req.query.q || '').trim();
+  const data = getBrollSuggestions(projectId, query);
   res.json({ project_id: projectId, project_title: project.title, ...data });
 });
 

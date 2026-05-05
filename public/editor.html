@@ -321,6 +321,18 @@
           <div class="progress-log" id="brollLog"></div>
         </div>
 
+        <!-- B-roll vault search -->
+        <div id="brollSearchWrap" style="display:none;margin-bottom:14px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="brollSearchInput" type="text" placeholder="Search vault… wide open spaces, land, forest, tools…"
+              style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:7px 10px;outline:none"
+              oninput="debouncedBrollSearch()"
+              onfocus="this.style.borderColor='var(--teal-dim)'" onblur="this.style.borderColor='var(--border)'">
+            <button class="btn btn-ghost btn-sm" onclick="clearBrollSearch()" title="Clear search">✕</button>
+          </div>
+          <div id="brollSearchMeta" style="font-size:11px;color:var(--text-dimmer);margin-top:5px"></div>
+        </div>
+
         <div class="broll-none" id="brollEmpty">Select a project and run AssemblΩr to see b-roll suggestions.</div>
         <div id="brollSections" style="display:none"></div>
       </div>
@@ -954,18 +966,47 @@ async function onClearSelects() {
 // B-ROLL
 // ─────────────────────────────────────────────
 
-async function loadBroll(projectId) {
+let brollSearchTimer = null;
+
+async function loadBroll(projectId, query = '') {
   try {
-    const r = await fetch(`/api/editor/broll/${projectId}`);
+    const qs  = query ? `?q=${encodeURIComponent(query)}` : '';
+    const r   = await fetch(`/api/editor/broll/${projectId}${qs}`);
     const data = await r.json();
 
     brollCandidates  = data.candidates || [];
-    brollAssignments = {};
+    if (!query) brollAssignments = {};  // only reset on fresh load
+
+    // Show/hide search bar
+    document.getElementById('brollSearchWrap').style.display =
+      data.sections?.length ? 'block' : 'none';
+
+    // Update search meta
+    const meta = document.getElementById('brollSearchMeta');
+    if (meta) {
+      meta.textContent = query
+        ? `${brollCandidates.length} clips matched across entire vault`
+        : `${brollCandidates.length} b-roll clips available in vault`;
+    }
 
     renderBroll(data);
   } catch (e) {
     console.error('Failed to load b-roll:', e);
   }
+}
+
+function debouncedBrollSearch() {
+  clearTimeout(brollSearchTimer);
+  brollSearchTimer = setTimeout(() => {
+    const q = document.getElementById('brollSearchInput')?.value || '';
+    if (currentProjectId) loadBroll(currentProjectId, q);
+  }, 350);
+}
+
+function clearBrollSearch() {
+  const input = document.getElementById('brollSearchInput');
+  if (input) input.value = '';
+  if (currentProjectId) loadBroll(currentProjectId, '');
 }
 
 function renderBroll(data) {
@@ -999,19 +1040,28 @@ function buildBrollSection(sec, candidates) {
 
   const selectId = `broll-select-${sec.section_id}`;
 
-  const options = candidates.map(c =>
-    `<option value="${c.footage_id}">${esc(c.filename)}${c.duration ? ` (${c.duration}s)` : ''}</option>`
-  ).join('');
+  // Build option list — show subjects tags as hints, flag cross-project clips
+  const options = candidates.map(c => {
+    const tags    = (c.subjects || []).slice(0, 3).join(', ');
+    const xp      = c.same_project ? '' : ' [vault]';
+    const label   = `${c.filename}${c.duration ? ` · ${Math.round(c.duration)}s` : ''}${xp}${tags ? ` — ${tags}` : ''}`;
+    return `<option value="${c.footage_id}">${esc(label)}</option>`;
+  }).join('');
+
+  // Highlight sections Claude flagged as needing b-roll
+  const needsBadge = sec.needs_broll
+    ? `<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:1px 6px;margin-left:6px">needs b-roll</span>`
+    : '';
 
   div.innerHTML = `
-    <div class="broll-section-label">${esc(sec.script_section)}</div>
-    <div class="broll-suggestion">${esc(sec.fire_suggestion)}</div>
+    <div class="broll-section-label">${esc(sec.script_section)}${needsBadge}</div>
+    ${sec.fire_suggestion ? `<div class="broll-suggestion">${esc(sec.fire_suggestion)}</div>` : ''}
     ${candidates.length > 0
       ? `<select class="broll-select" id="${selectId}" onchange="onBrollAssign(${sec.section_id}, this.value)">
            <option value="">— choose b-roll clip —</option>
            ${options}
          </select>`
-      : `<div style="font-size:12px;color:var(--text-dimmer);font-style:italic">No b-roll footage in VaultΩr for this project.</div>`
+      : `<div style="font-size:12px;color:var(--text-dimmer);font-style:italic">No b-roll in vault. Search above or add clips to VaultΩr.</div>`
     }
   `;
   return div;

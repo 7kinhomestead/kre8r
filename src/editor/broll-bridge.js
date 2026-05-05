@@ -62,46 +62,109 @@ function isBrollSuggestion(text) {
 }
 
 // ─────────────────────────────────────────────
-// GET B-ROLL SUGGESTIONS
-// Returns sections that need b-roll + VaultΩr clip candidates
+// TAG-BASED RELEVANCE SCORING
+// Score a clip against a query string using its
+// subjects array + description from Claude Vision.
+// Returns 0–100. Clips with 0 are excluded.
 // ─────────────────────────────────────────────
 
-function getBrollSuggestions(projectId) {
-  const sections = db.getSelectsByProject(projectId);
+function scoreClip(clip, queryWords) {
+  if (!queryWords.length) return 50; // no query = show everything
+  let score = 0;
 
-  const brollSections = sections
-    .filter(s => isBrollSuggestion(s.fire_suggestion))
-    .map(s => ({
-      section_id:       s.id,
-      section_index:    s.section_index,
-      script_section:   s.script_section,
-      fire_suggestion:  s.fire_suggestion,
-      gold_nugget:      s.gold_nugget
-    }));
+  const subjects = (() => {
+    try { return JSON.parse(clip.subjects || '[]'); } catch { return []; }
+  })();
+  const desc = (clip.description || '').toLowerCase();
+  const subjectText = subjects.join(' ').toLowerCase();
+  const combined = `${subjectText} ${desc}`;
 
-  if (brollSections.length === 0) {
-    return { sections: [], candidates: {} };
+  for (const word of queryWords) {
+    if (word.length < 3) continue;
+    // Exact subject tag match = high value
+    if (subjects.some(s => s.toLowerCase().includes(word))) score += 25;
+    // Partial match in combined text
+    else if (combined.includes(word)) score += 10;
   }
 
-  // Pull all b-roll footage for this project from VaultΩr
-  const brollFootage = db.getAllFootage({ project_id: projectId })
+  return Math.min(score, 100);
+}
+
+function tokenize(text) {
+  return (text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 2);
+}
+
+// ─────────────────────────────────────────────
+// GET B-ROLL SUGGESTIONS
+// Returns ALL beat sections (not just fire_suggestion ones),
+// with ranked VaultΩr candidates searched across the ENTIRE
+// vault — not just the current project.
+// ─────────────────────────────────────────────
+
+function getBrollSuggestions(projectId, query = '') {
+  const sections = db.getSelectsByProject(projectId);
+
+  // Include every beat section — editor decides which ones need b-roll
+  const brollSections = sections.map(s => ({
+    section_id:       s.id,
+    section_index:    s.section_index,
+    script_section:   s.script_section,
+    fire_suggestion:  s.fire_suggestion,
+    gold_nugget:      s.gold_nugget,
+    needs_broll:      isBrollSuggestion(s.fire_suggestion),
+  }));
+
+  // Pull ALL b-roll from the entire vault (cross-project)
+  const allBroll = db.getAllFootage()
     .filter(f => {
       const t = (f.shot_type || '').toLowerCase();
       return t.startsWith('b_roll') || t.startsWith('b-roll') || t === 'action';
+    });
+
+  // Build query words — use caller's search term, or fall back to
+  // aggregating keywords from the beat fire_suggestions for this project
+  const queryText = query || sections
+    .map(s => s.fire_suggestion || s.script_section || '')
+    .join(' ');
+  const queryWords = tokenize(queryText);
+
+  // Score, filter zeros, sort by relevance then recency
+  const candidates = allBroll
+    .map(f => {
+      const subjects = (() => {
+        try { return JSON.parse(f.subjects || '[]'); } catch { return []; }
+      })();
+      const score = scoreClip(f, queryWords);
+      return {
+        footage_id:   f.id,
+        project_id:   f.project_id,
+        filename:     path.basename(f.proxy_path || f.organized_path || f.file_path || ''),
+        file_path:    f.proxy_path || f.organized_path || f.file_path,
+        shot_type:    f.shot_type,
+        duration:     f.duration,
+        description:  f.description || null,
+        subjects,
+        thumbnail:    f.thumbnail_path || null,
+        score,
+        same_project: f.project_id === parseInt(projectId),
+      };
     })
-    .map(f => ({
-      footage_id:  f.id,
-      filename:    path.basename(f.organized_path || f.file_path || ''),
-      file_path:   f.organized_path || f.file_path,
-      shot_type:   f.shot_type,
-      duration:    f.duration,
-      description: f.description || f.notes || null,
-      thumbnail:   f.thumbnail_path || null
-    }));
+    .filter(f => f.score > 0 || !query) // if no query, show all
+    .sort((a, b) => {
+      // Same-project clips float to top, then by score
+      if (a.same_project !== b.same_project) return a.same_project ? -1 : 1;
+      return b.score - a.score;
+    })
+    .slice(0, 60); // cap at 60 results
 
   return {
     sections:   brollSections,
-    candidates: brollFootage
+    candidates,
+    query,
   };
 }
 
