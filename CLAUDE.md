@@ -92,6 +92,11 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    Bulk entry mode (paste 23 ideas → AI parses all). "Promote to Project" → pre-fills PipΩr.
    ConstellΩr view: Three.js 3D constellation graph, semantic clusters, color-coded by angle.
    Ideas persist forever, never tied to a session.
+   💬 From Comments: paste raw YouTube comments → Claude mines fear language, unanswered
+   questions, emotional signals → generates 6-8 video idea cards with the specific comment
+   signal that inspired each. Select/deselect, save tagged `source: comment_intelligence`.
+   `POST /api/ideas/from-comments` in `src/routes/ideas.js`. Studio Intel content gaps
+   injected as context if brief exists.
 
 ✅ Id8Ωr (`/id8r.html`) — Ideation engine. 3 modes: Shape It / Find It / Deep Dive.
    Conversation → sequential web research → package (3 titles, 3 thumbnails, 3 hooks)
@@ -221,6 +226,13 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    platform data (YouTube, MailerLite, Kajabi, pipeline health), streams Claude strategic
    debrief, locks a Strategic Brief that injects into Id8Ωr and WritΩr for next N weeks.
    Active brief banner shows current vector + direction on dashboard.
+   StudioΩr panel: teal 📊 Studio Intel button in hero opens slide-out. Claude generates 9
+   targeted Ask Studio queries (YouTube's internal data, not API) → Jason runs in YouTube
+   Studio → pastes responses + audience instinct → Claude synthesizes 7-section Intelligence
+   Brief. Brief saved to kv_store (`studio_intel_brief`) indefinitely — no hard expiry.
+   Auto-injected into VectΩr + Id8Ωr (both concept phases) + SeedΩr comment analysis.
+   Query cards persist in localStorage across restarts. 30-day amber advisory only.
+   `src/routes/studio-intel.js` — queries, synthesize (SSE), brief GET/DELETE.
 
 ✅ VectΩr (`/northr.html` slide-out panel) — Weekly strategic session with pushback mechanic.
    `src/routes/vectr.js`: sync, SSE chat, session persistence (kv_store), brief lock/history.
@@ -254,6 +266,14 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    Latest installer live at kre8r.app/download — served via /api/releases/upload pipeline.
    `window.__KRE8R_ELECTRON` flag set by main.js — use this to detect Electron context in frontend.
    DB stored at app.getPath('userData') (AppData) — reinstalling never overwrites the database.
+
+✅ CleanΩr (`/cleanr.html`) — Disk cleanup + performance snapshot tool. Windows-only.
+   Junk scan (SSE): temp files, old logs, node_modules, large files. Move to D:\ (true move —
+   copy then delete). Delete selected. Drive space overview. Top processes. Startup programs.
+   Driver Audit: scans Win32_PnPSignedDriver via PowerShell `-File` temp script (not `-Command`
+   — avoids nested quote mangling). Sorts oldest-first. NOTE: 2006-06-21 date on Windows inbox
+   drivers is a WMI quirk, not real outdated dates — only third-party drivers matter.
+   `src/routes/cleanr.js` — scan (SSE), drives, processes, startup, drivers, delete, move.
 
 ✅ OrgΩr Bridge — `src/routes/stats-export.js` — internal stats export for the OrgΩr bridge.
    GET /api/stats-export — requires X-Internal-Key header (INTERNAL_API_KEY env var).

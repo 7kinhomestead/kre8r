@@ -241,6 +241,23 @@ router.post('/chat', async (req, res) => {
       }
     } catch (_) {}
 
+    // ── Studio Intel brief injection ─────────────────────────────────────────
+    let studioIntelBlock = '';
+    try {
+      const siRaw = db.getKv('studio_intel_brief');
+      if (siRaw) {
+        const si = JSON.parse(siRaw);
+        const ageHours = Math.floor((Date.now() - new Date(si.created_at)) / 3600000);
+          // Extract just the "Inject Into Strategy" section if present
+          const injectMatch = si.text?.match(/## 💉 Inject Into Strategy\s*([\s\S]+?)(?=\n## |$)/);
+          const injectText = injectMatch ? injectMatch[1].trim() : si.text?.slice(0, 600);
+          if (injectText) {
+            const ageLabel = ageHours < 48 ? `${ageHours}h ago` : `${Math.floor(ageHours/24)}d ago`;
+            studioIntelBlock = `\n\n## YOUTUBE STUDIO INTELLIGENCE (${ageLabel})\n${injectText}`;
+          }
+      }
+    } catch (_) {}
+
     // ── Previous locked brief ─────────────────────────────────────────────────
     let prevBriefBlock = '';
     try {
@@ -317,7 +334,7 @@ RESPONSE STYLE:
 - Short paragraphs. No bullet-point avalanches.
 - If you're making a bold recommendation, state it clearly and defend it.
 - Ask one focused question per turn — not five.
-${platformBlock}${coachBlock}${principlesBlock}${prevBriefBlock}`;
+${platformBlock}${coachBlock}${principlesBlock}${prevBriefBlock}${studioIntelBlock}`;
 
     // ── Stream from Anthropic ─────────────────────────────────────────────────
     const apiKey = process.env.ANTHROPIC_API_KEY;

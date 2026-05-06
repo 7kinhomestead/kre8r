@@ -13,6 +13,38 @@
 
 ---
 
+## NEXT TASKS (Session 74)
+
+### 1. Performance Velocity Alerts — NorthΩr
+- MirrΩr sync runs on schedule; compare latest metrics to previous snapshot
+- Alert thresholds: CTR spike (+2% in 24h), views velocity (2x baseline in 8h), comment surge
+- NorthΩr dashboard: amber/red banner when a video is spiking
+
+### 2. Auto Short-Clip ID from Timeline Transcript
+- After timeline transcript is saved, Claude scans full text for high-tension moments
+- Scores each segment: hook potential, curiosity gap, standalone shareability
+- Pre-populates ClipsΩr with suggested clip ranges (start/end timestamps)
+- Creator confirms or skips — no hunting through the video manually
+
+### 3. Analytics → Angle Weighting in Id8Ωr
+- MirrΩr data: calculate avg views/CTR/retention per content angle
+- Inject performance weights into Id8Ωr system prompt: "system angle is currently outperforming by 3x"
+- SeedΩr constellation: color intensity reflects angle performance, not just angle type
+
+### 4. Gemini 2.5 Pro — Id8Ωr Research Phase (Claude orchestrates Gemini)
+- Add GEMINI_API_KEY to .env (Google AI Studio — free tier during preview)
+- Claude generates research queries → Gemini fetches with Google Search grounding → Claude synthesizes
+- Toggle: if no GEMINI_API_KEY, fall back to current Claude research (graceful degradation)
+- Test protocol: same topic through both pipelines, blind score hook quality, let videos decide
+
+## COMPLETED THIS SESSION (Session 73) ✅
+- ~~StudioΩr — YouTube Studio Intelligence Bridge~~ ✅ Live. Brief persists in DB indefinitely.
+- ~~Comment Intelligence → SeedΩr~~ ✅ Live. 💬 From Comments button in SeedΩr toolbar.
+- ~~Studio Intel brief expiry~~ ✅ No hard expiry. Timestamp shown. Amber at 30 days.
+- ~~CleanΩr driver scan~~ ✅ PowerShell -File fix. Jason updated AMD + Realtek drivers.
+
+---
+
 ## NEXT TASKS (Session 72)
 
 ### 1. Trusted Partner Badge — OLH Listings (kre8r-land)

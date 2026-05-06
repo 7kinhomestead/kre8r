@@ -142,6 +142,101 @@ Parse as many ideas as you can find. Minimum 1, no maximum.`;
   }
 });
 
+// POST /api/ideas/from-comments — paste YouTube comments, Claude extracts video ideas
+// Body: { comments: string, source_video?: string }
+// Returns: { ok, ideas: [...] } — ideas NOT yet saved, frontend previews + confirms
+router.post('/from-comments', async (req, res) => {
+  try {
+    const { comments, source_video = '' } = req.body;
+    if (!comments || !comments.trim()) return res.status(400).json({ error: 'comments text required' });
+
+    const profile = (() => {
+      try { return require('../utils/profile-validator').loadProfile(); } catch { return {}; }
+    })();
+    const angles = (profile.content_angles || []).map(a => a.id || a).join(', ') ||
+      'financial, system, rockrich, howto, mistakes, lifestyle, viral';
+    const brand = profile.brand_name || '7 Kin Homestead';
+    const creatorName = profile.creator_name || 'Jason';
+
+    // Pull studio intel brief for extra context
+    let studioContext = '';
+    try {
+      const siRaw = db.getKv('studio_intel_brief');
+      if (siRaw) {
+        const si = JSON.parse(siRaw);
+        const gapMatch = si.text?.match(/## 📭 Content Gaps[\s\S]*?(?=\n## |$)/);
+        if (gapMatch) studioContext = `\nKnown content gaps from Studio Intelligence:\n${gapMatch[0].slice(0, 400)}`;
+      }
+    } catch (_) {}
+
+    const sourceContext = source_video
+      ? `These comments are from the video: "${source_video}"\n\n`
+      : '';
+
+    const prompt = `You are a YouTube audience intelligence analyst for ${creatorName} at ${brand}.
+
+${sourceContext}Here are raw YouTube comments from ${creatorName}'s audience:
+
+<comments>
+${comments.trim().slice(0, 12000)}
+</comments>
+${studioContext}
+
+Your job: mine these comments for latent VIDEO IDEAS. Not what the comments say — what they REVEAL about what this audience needs, fears, wants to know, or is confused about.
+
+Look for:
+- Recurring questions that haven't been answered in a video
+- Fears or anxieties surfacing in the language (especially around money, land, government, survival)
+- "Has anyone tried..." or "I wonder if..." moments — unmet curiosity
+- Comments where people share their own situation — what problem are they in?
+- "I wish someone would explain..." or "nobody talks about..."
+- Strong emotional reactions that signal a deeper need
+- Follow-up video requests (explicit or implied)
+
+Generate 6-8 video ideas directly extracted from what these comments reveal. Each idea must:
+- Come DIRECTLY from a real signal in the comments (not generic)
+- Match ${creatorName}'s voice: straight-talking, real numbers, never corporate
+- Have a specific hook — not "tips on X" but "the thing everyone gets wrong about X"
+
+Valid content angles: ${angles}
+
+Return ONLY valid JSON array:
+[
+  {
+    "title": "Short punchy title (max 10 words)",
+    "concept": "What this video is actually about and why this audience needs it (2 sentences)",
+    "angle": "one angle from the valid list",
+    "hook": "The opening hook or scroll-stopping tension (1 sentence)",
+    "notes": "The specific comment signal that inspired this — quote or paraphrase 1-2 comments that revealed this need",
+    "source": "comment_intelligence"
+  }
+]`;
+
+    const rawText = await callClaudeMessages(
+      'You are a data analyst. Return only valid JSON, no commentary.',
+      [{ role: 'user', content: prompt }],
+      4096,
+      { tool: 'seedr-comments' }
+    );
+
+    const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return res.status(500).json({ error: 'Claude did not return a valid JSON array' });
+
+    let parsed;
+    try { parsed = JSON.parse(jsonMatch[0]); }
+    catch (e) { return res.status(500).json({ error: 'Could not parse Claude response: ' + e.message }); }
+
+    if (!Array.isArray(parsed) || !parsed.length) {
+      return res.status(400).json({ error: 'No ideas could be extracted from those comments' });
+    }
+
+    // Return preview — frontend confirms which to save
+    res.json({ ok: true, count: parsed.length, ideas: parsed, source_video });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/ideas/constellation — Claude generates cluster assignments + connection graph
 router.post('/constellation', async (req, res) => {
   try {

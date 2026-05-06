@@ -422,6 +422,21 @@ router.post('/fast-concepts', async (req, res) => {
       }
     } catch (_) {}
 
+    // ── Studio Intel brief injection ──────────────────────────────────────────
+    try {
+      const siRaw = require('../db').getKv('studio_intel_brief');
+      if (siRaw) {
+        const si = JSON.parse(siRaw);
+        const ageHours = Math.floor((Date.now() - new Date(si.created_at)) / 3600000);
+          const injectMatch = si.text?.match(/## 💉 Inject Into Strategy\s*([\s\S]+?)(?=\n## |$)/);
+          const injectText = injectMatch ? injectMatch[1].trim() : si.text?.slice(0, 500);
+          if (injectText) {
+            const ageLabel = ageHours < 48 ? `${ageHours}h ago` : `${Math.floor(ageHours/24)}d ago`;
+            mirrrBlock += `\n\n## YOUTUBE STUDIO AUDIENCE INTELLIGENCE (${ageLabel})\n${injectText}\nBias concept angles toward what this audience data reveals.`;
+          }
+      }
+    } catch (_) {}
+
     const angleInstruction = angle
       ? `\nThe creator wants to lean toward the "${angle}" angle — at least 2 concepts should use or riff on it.`
       : '';
@@ -572,6 +587,22 @@ router.post('/concepts', async (req, res) => {
       }
     } catch (_) {}
 
+    // ── Studio Intel brief injection (research phase) ─────────────────────────
+    let studioIntelBlock2 = '';
+    try {
+      const siRaw = require('../db').getKv('studio_intel_brief');
+      if (siRaw) {
+        const si = JSON.parse(siRaw);
+        const ageHours = Math.floor((Date.now() - new Date(si.created_at)) / 3600000);
+        const injectMatch = si.text?.match(/## 💉 Inject Into Strategy\s*([\s\S]+?)(?=\n## |$)/);
+        const injectText = injectMatch ? injectMatch[1].trim() : si.text?.slice(0, 500);
+        if (injectText) {
+          const ageLabel = ageHours < 48 ? `${ageHours}h ago` : `${Math.floor(ageHours/24)}d ago`;
+          studioIntelBlock2 = `\n\n## YOUTUBE STUDIO AUDIENCE INTELLIGENCE (${ageLabel})\n${injectText}\nBias concepts toward what this audience data reveals.`;
+        }
+      }
+    } catch (_) {}
+
     const result = await callClaudeJSON(
       `You are Id8Ωr, a creative strategist for ${brand} (${followerSummary}, ${niche} content). Based on the conversation below, generate exactly 3 concept directions for the next video.
 
@@ -582,7 +613,7 @@ RULES:
 - Be specific to what was discussed, not generic. Match the creator's real voice: straight-talking, funny, real numbers, never corporate.
 
 CONTENT ANGLES:
-${anglesText}${intelligenceBlock}${clipsrBlock}${mirrrBlock}
+${anglesText}${intelligenceBlock}${clipsrBlock}${mirrrBlock}${studioIntelBlock2}
 
 Return ONLY valid JSON in this exact shape:
 {

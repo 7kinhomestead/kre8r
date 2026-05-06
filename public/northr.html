@@ -777,6 +777,228 @@
     --vectr-border: rgba(217,119,6,0.35);
     --vectr-glow: rgba(217,119,6,0.07);
   }
+  .studio-btn {
+    background: rgba(62,207,178,0.1);
+    color: var(--teal);
+    border: 1px solid rgba(62,207,178,0.25);
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.15s;
+  }
+  .studio-btn:hover { background: rgba(62,207,178,0.2); }
+
+  /* Studio Intel panel — teal theme, same mechanics as VectΩr */
+  .studio-panel {
+    position: fixed;
+    top: var(--nav-height, 54px);
+    right: 0;
+    bottom: 0;
+    width: 460px;
+    max-width: 95vw;
+    background: #111;
+    border-left: 1px solid rgba(62,207,178,0.2);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+    z-index: 300;
+    overflow: hidden;
+  }
+  .studio-panel.open { transform: translateX(0); }
+  .studio-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 299;
+  }
+  .studio-overlay.open { display: block; }
+
+  .studio-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(62,207,178,0.15);
+    flex-shrink: 0;
+  }
+  .studio-title { font-family: var(--font-head); font-size: 20px; letter-spacing: 2px; color: var(--teal); }
+  .studio-close { background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 4px 8px; }
+
+  .studio-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .studio-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    margin-bottom: 6px;
+  }
+  .studio-topic-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .studio-topic-input {
+    flex: 1;
+    background: #1a1a1a;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+  }
+  .studio-topic-input:focus { border-color: var(--teal); }
+  .studio-topic-input::placeholder { color: var(--text-dimmer); }
+
+  .studio-generate-btn {
+    background: var(--teal);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  .studio-generate-btn:hover { opacity: 0.85; }
+  .studio-generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .studio-query-card {
+    background: #181818;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .studio-query-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .studio-query-cat {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--teal);
+  }
+  .studio-copy-btn {
+    background: rgba(62,207,178,0.1);
+    border: 1px solid rgba(62,207,178,0.2);
+    border-radius: 4px;
+    color: var(--teal);
+    font-size: 11px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .studio-copy-btn:hover { background: rgba(62,207,178,0.2); }
+  .studio-query-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 6px;
+  }
+  .studio-query-why {
+    font-size: 11px;
+    color: var(--text-dimmer);
+    font-style: italic;
+    margin-bottom: 8px;
+  }
+  .studio-response-area {
+    width: 100%;
+    background: #111;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: var(--font-body);
+    padding: 8px 10px;
+    resize: vertical;
+    min-height: 60px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .studio-response-area:focus { border-color: rgba(62,207,178,0.4); }
+  .studio-response-area::placeholder { color: var(--text-dimmer); }
+
+  .studio-instinct-area {
+    width: 100%;
+    background: #181818;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-body);
+    padding: 10px 12px;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .studio-instinct-area:focus { border-color: rgba(62,207,178,0.4); }
+  .studio-instinct-area::placeholder { color: var(--text-dimmer); }
+
+  .studio-synth-btn {
+    background: var(--teal);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.15s;
+  }
+  .studio-synth-btn:hover { opacity: 0.85; }
+  .studio-synth-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .studio-brief-output {
+    background: #0d1f1c;
+    border: 1px solid rgba(62,207,178,0.2);
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .studio-brief-output h2 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--teal);
+    margin: 14px 0 6px;
+  }
+  .studio-brief-output h2:first-child { margin-top: 0; }
+
+  .studio-footer {
+    padding: 12px 18px;
+    border-top: 1px solid rgba(62,207,178,0.12);
+    flex-shrink: 0;
+    display: flex;
+    gap: 8px;
+  }
+
   .vectr-btn {
     background: var(--vectr-dim);
     color: var(--vectr-bright);
@@ -1168,8 +1390,9 @@
   <div class="hero-sub">Your creative compass. It yells when you need it.</div>
   <div class="hero-tagline">The ship stays off the rocks, so long as someone yells.</div>
   <div id="hero-badge"></div>
-  <div style="margin-top:18px;">
+  <div style="margin-top:18px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
     <button class="vectr-btn" onclick="openVectr()" id="vectr-open-btn">⬡ VectΩr</button>
+    <button class="studio-btn" onclick="openStudioIntel()" id="studio-open-btn">📊 Studio Intel</button>
   </div>
   <div id="vectr-auto-draft-banner" style="display:none;margin-top:14px;background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3);border-radius:10px;padding:12px 16px;font-size:13px;color:#f59e0b;cursor:pointer;max-width:420px;margin-left:auto;margin-right:auto;" onclick="openVectrWithDraft()">
     📋 <strong>Weekly brief ready</strong> — VectΩr ran your Sunday pre-read. Click to review.
@@ -1488,6 +1711,72 @@
   </div>
 
 </div><!-- /vectr-panel -->
+
+<!-- Studio Intel overlay + panel -->
+<div class="studio-overlay" id="studio-overlay" onclick="closeStudioIntel()"></div>
+<div class="studio-panel" id="studio-panel">
+
+  <div class="studio-header">
+    <div class="studio-title">📊 STUDIO INTEL</div>
+    <button class="studio-close" onclick="closeStudioIntel()">✕</button>
+  </div>
+
+  <div class="studio-body" id="studio-body">
+
+    <!-- Step 1: Topic hint + generate -->
+    <div id="studio-step-generate">
+      <div class="studio-section-label">Topic Hint (optional)</div>
+      <div class="studio-topic-row">
+        <input type="text" class="studio-topic-input" id="studio-topic-input"
+          placeholder="e.g. land rights video, water rights, off-grid mortgage…"
+          onkeydown="if(event.key==='Enter')generateStudioQueries()">
+        <button class="studio-generate-btn" id="studio-generate-btn" onclick="generateStudioQueries()">
+          Generate Queries
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--text-dimmer);margin-top:6px;line-height:1.5;">
+        Claude will generate 9 targeted Ask Studio questions — things YouTube knows internally that the API doesn't expose. Run each in YouTube Studio → paste the answer back.
+      </div>
+    </div>
+
+    <!-- Step 2: Query cards (populated by JS) -->
+    <div id="studio-queries-section" style="display:none;">
+      <div class="studio-section-label" id="studio-queries-label">Ask Studio Queries — copy each, run in YouTube Studio, paste the answer</div>
+      <div id="studio-query-cards"></div>
+    </div>
+
+    <!-- Step 3: Jason's instinct -->
+    <div id="studio-instinct-section" style="display:none;">
+      <div class="studio-section-label">Your Audience Instinct</div>
+      <textarea class="studio-instinct-area" id="studio-instinct"
+        placeholder="What do YOU know about your audience that the data can't show? What's your gut feeling about what they need right now? What patterns have you noticed in DMs, comments, or community?"></textarea>
+    </div>
+
+    <!-- Step 4: Synthesize button -->
+    <div id="studio-synth-section" style="display:none;">
+      <button class="studio-synth-btn" id="studio-synth-btn" onclick="synthesizeStudioIntel()">
+        ⚡ Synthesize Intelligence Brief
+      </button>
+    </div>
+
+    <!-- Brief output -->
+    <div id="studio-brief-section" style="display:none;">
+      <div class="studio-section-label">Intelligence Brief</div>
+      <div class="studio-brief-output" id="studio-brief-output"></div>
+    </div>
+
+  </div><!-- /studio-body -->
+
+  <div class="studio-footer">
+    <button onclick="resetStudioIntel()" style="background:#1a1a1a;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;flex:1;">
+      ↺ Start Over
+    </button>
+    <button onclick="loadSavedStudioBrief()" style="background:#1a1a1a;border:1px solid rgba(62,207,178,0.2);color:var(--teal);border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;flex:1;">
+      📋 Load Saved Brief
+    </button>
+  </div>
+
+</div><!-- /studio-panel -->
 
 <!-- Lock Vector modal -->
 <div class="vectr-modal-overlay" id="vectr-modal-overlay">
@@ -2887,6 +3176,247 @@ async function confirmLockBrief() {
   } catch (e) {
     toast('Lock error: ' + e.message, 'error');
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// STUDIO INTEL
+// ══════════════════════════════════════════════════════════════════
+
+let studioQueries = [];
+
+function openStudioIntel() {
+  document.getElementById('studio-panel').classList.add('open');
+  document.getElementById('studio-overlay').classList.add('open');
+  restoreStudioQueries();
+  checkSavedStudioBrief();
+}
+
+function restoreStudioQueries() {
+  try {
+    const saved = localStorage.getItem('studio_intel_queries');
+    if (!saved) return;
+    const { queries, topic_hint, generated_at } = JSON.parse(saved);
+    if (!queries?.length) return;
+
+    studioQueries = queries;
+    if (topic_hint) document.getElementById('studio-topic-input').value = topic_hint;
+
+    const ageHours = Math.floor((Date.now() - new Date(generated_at)) / 3600000);
+    document.getElementById('studio-queries-label').textContent =
+      `Ask Studio Queries (generated ${ageHours}h ago) — copy each, run in YouTube Studio, paste the answer`;
+
+    renderStudioQueryCards(studioQueries);
+    document.getElementById('studio-queries-section').style.display = '';
+    document.getElementById('studio-instinct-section').style.display = '';
+    document.getElementById('studio-synth-section').style.display = '';
+    document.getElementById('studio-generate-btn').textContent = 'Regenerate';
+  } catch (e) { /* nothing saved — fresh start */ }
+}
+
+function closeStudioIntel() {
+  document.getElementById('studio-panel').classList.remove('open');
+  document.getElementById('studio-overlay').classList.remove('open');
+}
+
+async function checkSavedStudioBrief() {
+  try {
+    const r = await fetch('/api/studio-intel/brief');
+    const d = await r.json();
+    if (d.brief) {
+      const age = Math.floor((Date.now() - new Date(d.brief.created_at)) / 3600000);
+      document.getElementById('studio-generate-btn').insertAdjacentHTML('afterend',
+        `<div style="font-size:11px;color:var(--teal);margin-top:8px;">📋 Saved brief from ${age}h ago — click "Load Saved Brief" to view</div>`
+      );
+    }
+  } catch (e) { /* no brief — fine */ }
+}
+
+async function generateStudioQueries() {
+  const btn = document.getElementById('studio-generate-btn');
+  const topicHint = document.getElementById('studio-topic-input').value.trim();
+
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  try {
+    const r = await fetch('/api/studio-intel/queries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic_hint: topicHint })
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Query generation failed');
+
+    studioQueries = d.queries;
+    // Persist so queries survive page/app restart
+    localStorage.setItem('studio_intel_queries', JSON.stringify({
+      queries: studioQueries,
+      topic_hint: topicHint,
+      generated_at: d.generated_at
+    }));
+
+    renderStudioQueryCards(studioQueries);
+
+    document.getElementById('studio-queries-section').style.display = '';
+    document.getElementById('studio-instinct-section').style.display = '';
+    document.getElementById('studio-synth-section').style.display = '';
+
+  } catch (e) {
+    toast('Query generation failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Regenerate';
+  }
+}
+
+function renderStudioQueryCards(queries) {
+  const container = document.getElementById('studio-query-cards');
+  container.innerHTML = queries.map((q, i) => `
+    <div class="studio-query-card" id="studio-card-${q.id}">
+      <div class="studio-query-meta">
+        <span class="studio-query-cat">${q.category}</span>
+        <button class="studio-copy-btn" onclick="copyStudioQuery(${i})">Copy</button>
+      </div>
+      <div class="studio-query-text">${escHtml(q.query)}</div>
+      <div class="studio-query-why">↳ ${escHtml(q.why)}</div>
+      <textarea class="studio-response-area" id="studio-resp-${q.id}"
+        placeholder="Paste YouTube Studio's answer here…"
+        oninput="checkStudioProgress()"></textarea>
+    </div>
+  `).join('');
+}
+
+function copyStudioQuery(index) {
+  const q = studioQueries[index];
+  if (!q) return;
+  navigator.clipboard.writeText(q.query).then(() => {
+    toast('Query copied — paste into Ask Studio', 'success');
+  });
+}
+
+function checkStudioProgress() {
+  const filled = studioQueries.filter(q => {
+    const el = document.getElementById(`studio-resp-${q.id}`);
+    return el && el.value.trim().length > 10;
+  }).length;
+  const label = document.getElementById('studio-queries-label');
+  if (label) label.textContent = `Ask Studio Queries — ${filled} of ${studioQueries.length} answered`;
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function synthesizeStudioIntel() {
+  const btn = document.getElementById('studio-synth-btn');
+  const instinct = document.getElementById('studio-instinct').value.trim();
+  const topicHint = document.getElementById('studio-topic-input').value.trim();
+
+  // Collect responses
+  const responses = studioQueries.map(q => ({
+    id:       q.id,
+    query:    q.query,
+    response: (document.getElementById(`studio-resp-${q.id}`)?.value || '').trim()
+  }));
+
+  const filled = responses.filter(r => r.response.length > 10).length;
+  if (filled === 0) {
+    toast('Paste at least one Ask Studio response before synthesizing', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⚡ Synthesizing…';
+
+  // Show brief section + clear it
+  document.getElementById('studio-brief-section').style.display = '';
+  const output = document.getElementById('studio-brief-output');
+  output.innerHTML = `<div style="font-size:11px;color:var(--text-dimmer);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(62,207,178,0.1);">
+    📋 Brief generated today${topicHint ? ` · Topic: ${topicHint}` : ''} · Saved to database — persists indefinitely
+  </div><div id="studio-brief-text"></div>`;
+  output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const r = await fetch('/api/studio-intel/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ responses, instinct, topic_hint: topicHint })
+    });
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const ev = JSON.parse(line.slice(6));
+          if (ev.type === 'token') {
+            const textEl = document.getElementById('studio-brief-text') || output;
+            textEl.textContent += ev.text;
+          }
+          if (ev.type === 'done') {
+            toast('Studio Intelligence Brief saved', 'success');
+          }
+          if (ev.type === 'error') {
+            toast('Synthesis error: ' + ev.message, 'error');
+          }
+        } catch (e) { /* skip malformed */ }
+      }
+    }
+  } catch (e) {
+    toast('Synthesis failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Synthesize Intelligence Brief';
+  }
+}
+
+async function loadSavedStudioBrief() {
+  try {
+    const r = await fetch('/api/studio-intel/brief');
+    const d = await r.json();
+    if (!d.brief) { toast('No saved brief found', 'error'); return; }
+
+    const ageDays  = Math.floor((Date.now() - new Date(d.brief.created_at)) / 86400000);
+    const ageLabel = ageDays === 0 ? 'today' : ageDays === 1 ? 'yesterday' : `${ageDays} days ago`;
+    const isStale  = ageDays >= 30;
+
+    document.getElementById('studio-brief-section').style.display = '';
+
+    const output = document.getElementById('studio-brief-output');
+    // Timestamp header
+    output.innerHTML = `<div style="font-size:11px;color:${isStale ? '#f59e0b' : 'var(--text-dimmer)'};margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(62,207,178,0.1);">
+      ${isStale ? '⚠️ ' : '📋 '}Brief generated ${ageLabel}${d.brief.topic_hint ? ` · Topic: ${d.brief.topic_hint}` : ''}
+      ${isStale ? '<br><span style="color:#f59e0b;">This brief is over 30 days old — consider running a fresh Studio Intel session.</span>' : ''}
+    </div><div id="studio-brief-text"></div>`;
+    document.getElementById('studio-brief-text').textContent = d.brief.text;
+    output.scrollIntoView({ behavior: 'smooth' });
+
+    if (d.brief.topic_hint) document.getElementById('studio-topic-input').value = d.brief.topic_hint;
+    toast(`Brief loaded (generated ${ageLabel})`, 'success');
+  } catch (e) {
+    toast('Could not load brief: ' + e.message, 'error');
+  }
+}
+
+function resetStudioIntel() {
+  studioQueries = [];
+  localStorage.removeItem('studio_intel_queries');
+  document.getElementById('studio-topic-input').value = '';
+  document.getElementById('studio-query-cards').innerHTML = '';
+  document.getElementById('studio-instinct').value = '';
+  document.getElementById('studio-queries-section').style.display = 'none';
+  document.getElementById('studio-instinct-section').style.display = 'none';
+  document.getElementById('studio-synth-section').style.display = 'none';
+  document.getElementById('studio-brief-section').style.display = 'none';
+  document.getElementById('studio-generate-btn').textContent = 'Generate Queries';
 }
 </script>
 

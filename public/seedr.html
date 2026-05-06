@@ -233,6 +233,7 @@ select.field-input option{background:var(--bg-card);}
     <input type="text" class="toolbar-search" id="searchInput" placeholder="Search ideas…" oninput="renderList()">
     <div class="toolbar-spacer"></div>
     <button class="btn btn-ghost btn-sm" onclick="openBulkModal()">📥 Bulk Import</button>
+    <button class="btn btn-ghost btn-sm" onclick="openCommentsModal()" style="border-color:rgba(62,207,178,0.3);color:var(--teal);">💬 From Comments</button>
     <button class="btn btn-outline btn-sm" id="btnGenerateConstellation" onclick="startConstellation()">🌌 Generate Constellation</button>
   </div>
 
@@ -368,6 +369,40 @@ select.field-input option{background:var(--bg-card);}
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeBulkModal()">Cancel</button>
       <button class="btn btn-primary hidden" id="btnSaveAll" onclick="saveBulkIdeas()">Save All</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── COMMENT INTELLIGENCE MODAL ───────────────── -->
+<div class="modal-overlay hidden" id="commentsModalOverlay" onclick="if(event.target===this)closeCommentsModal()">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head">
+      <span class="modal-title">💬 From Comments</span>
+      <button class="modal-close" onclick="closeCommentsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Source Video (optional)</label>
+        <input type="text" class="field-input" id="commentsSourceVideo"
+          placeholder="e.g. I Was Scared of This Too — So I Looked It Up">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Paste YouTube Comments</label>
+        <textarea class="field-input" id="commentsText" rows="10"
+          placeholder="Paste comments here — copy from YouTube Studio or right from the video page. The more the better. Claude will mine them for what your audience actually needs."></textarea>
+      </div>
+      <div style="font-size:11px;color:var(--text-dimmer);line-height:1.5;">
+        Claude reads the fear language, unanswered questions, and emotional signals — not the surface content. You'll get 6-8 video ideas extracted directly from what your audience revealed.
+      </div>
+      <button class="btn btn-outline" id="btnAnalyzeComments" onclick="analyzeComments()">⚡ Extract Ideas from Comments</button>
+      <div id="commentPreviewWrap" style="display:none">
+        <div class="field-label" style="margin-bottom:8px">Ideas Found in Your Comments</div>
+        <div class="bulk-preview" id="commentPreview"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeCommentsModal()">Cancel</button>
+      <button class="btn btn-primary hidden" id="btnSaveCommentIdeas" onclick="saveCommentIdeas()">Save Selected</button>
     </div>
   </div>
 </div>
@@ -781,6 +816,136 @@ async function saveBulkIdeas() {
   closeBulkModal();
   renderList();
   showToast(`Saved ${saved} ideas`, 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMENT INTELLIGENCE MODAL
+// ═══════════════════════════════════════════════════════════════════════════════
+let parsedCommentIdeas = [];
+let selectedCommentIds = new Set();
+
+function openCommentsModal() {
+  parsedCommentIdeas = [];
+  selectedCommentIds = new Set();
+  document.getElementById('commentsText').value = '';
+  document.getElementById('commentsSourceVideo').value = '';
+  document.getElementById('commentPreviewWrap').style.display = 'none';
+  document.getElementById('btnSaveCommentIdeas').classList.add('hidden');
+  document.getElementById('commentsModalOverlay').classList.remove('hidden');
+}
+
+function closeCommentsModal() {
+  document.getElementById('commentsModalOverlay').classList.add('hidden');
+  parsedCommentIdeas = [];
+  selectedCommentIds = new Set();
+}
+
+async function analyzeComments() {
+  const comments = document.getElementById('commentsText').value.trim();
+  const sourceVideo = document.getElementById('commentsSourceVideo').value.trim();
+  if (!comments) { showToast('Paste some comments first', 'error'); return; }
+
+  const btn = document.getElementById('btnAnalyzeComments');
+  btn.disabled = true;
+  btn.textContent = '⚡ Analyzing…';
+
+  try {
+    const r = await fetch('/api/ideas/from-comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments, source_video: sourceVideo })
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Analysis failed');
+
+    parsedCommentIdeas = d.ideas;
+    selectedCommentIds = new Set(parsedCommentIdeas.map((_, i) => i)); // all selected by default
+
+    renderCommentPreview();
+    document.getElementById('commentPreviewWrap').style.display = '';
+    document.getElementById('btnSaveCommentIdeas').classList.remove('hidden');
+    showToast(`Found ${d.count} ideas in your comments`, 'success');
+  } catch (e) {
+    showToast('Analysis failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Extract Ideas from Comments';
+  }
+}
+
+function renderCommentPreview() {
+  const container = document.getElementById('commentPreview');
+  container.innerHTML = parsedCommentIdeas.map((idea, i) => {
+    const isSelected = selectedCommentIds.has(i);
+    return `
+      <div class="bulk-item" id="comment-item-${i}" style="cursor:pointer;border-color:${isSelected ? 'var(--teal)' : 'var(--border)'};background:${isSelected ? 'rgba(62,207,178,0.05)' : ''}"
+        onclick="toggleCommentIdea(${i})">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div>
+            <div class="bulk-item-title">${escSeedHtml(idea.title)}</div>
+            <div class="bulk-item-meta">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--teal);">${idea.angle || ''}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:4px;line-height:1.4;">${escSeedHtml(idea.concept || '')}</div>
+            ${idea.notes ? `<div style="font-size:11px;color:var(--text-dimmer);margin-top:4px;font-style:italic;">↳ ${escSeedHtml(idea.notes)}</div>` : ''}
+          </div>
+          <div style="flex-shrink:0;font-size:18px;color:${isSelected ? 'var(--teal)' : 'var(--text-dimmer)'};">
+            ${isSelected ? '✓' : '○'}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const selectedCount = selectedCommentIds.size;
+  document.getElementById('btnSaveCommentIdeas').textContent =
+    `Save ${selectedCount} Idea${selectedCount !== 1 ? 's' : ''} to SeedΩr`;
+}
+
+function toggleCommentIdea(index) {
+  if (selectedCommentIds.has(index)) {
+    selectedCommentIds.delete(index);
+  } else {
+    selectedCommentIds.add(index);
+  }
+  renderCommentPreview();
+}
+
+function escSeedHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function saveCommentIdeas() {
+  const toSave = parsedCommentIdeas.filter((_, i) => selectedCommentIds.has(i));
+  if (!toSave.length) { showToast('Select at least one idea', 'error'); return; }
+
+  const btn = document.getElementById('btnSaveCommentIdeas');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  let saved = 0;
+  for (const idea of toSave) {
+    try {
+      const r = await fetch('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title:   idea.title,
+          concept: idea.concept,
+          angle:   idea.angle,
+          hook:    idea.hook,
+          notes:   idea.notes,
+          source:  'comment_intelligence'
+        })
+      });
+      if (r.ok) saved++;
+    } catch (e) { /* skip failed */ }
+  }
+
+  await loadIdeas();
+  renderList();
+  closeCommentsModal();
+  showToast(`Saved ${saved} ideas to SeedΩr`, 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
