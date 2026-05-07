@@ -130,6 +130,22 @@
       margin-top: 28px;
       opacity: .5;
     }
+
+    .legal-links {
+      text-align: center;
+      font-size: 11px;
+      margin-top: 12px;
+    }
+
+    .legal-links a {
+      color: var(--text-dim);
+      text-decoration: none;
+      opacity: .6;
+      transition: opacity .15s;
+    }
+
+    .legal-links a:hover { opacity: 1; }
+    .legal-links span { color: var(--text-dim); opacity: .3; margin: 0 6px; }
   </style>
 </head>
 <body>
@@ -157,6 +173,11 @@
     </form>
 
     <div class="footer" id="login-footer">Kre8Ωr · Private</div>
+    <div class="legal-links">
+      <a href="/tos" target="_blank">Terms of Service</a>
+      <span>·</span>
+      <a href="/privacy" target="_blank">Privacy Policy</a>
+    </div>
     <script>
       // Show tenant slug in footer when on a subdomain (slug.kre8r.app)
       (function() {
