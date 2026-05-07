@@ -195,7 +195,10 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
 
 ✅ PostΩr (`/postor.html`) — Multi-platform social publishing.
    Platforms live: YouTube ✅, Facebook video ✅, Facebook text/image post ✅, Instagram Reels ✅, TikTok ✅ (built, pending approval)
-   TikTok: full OAuth 2.0 + PKCE + FILE_UPLOAD posting built. App submitted for review April 19 2026.
+   TikTok: full OAuth 2.0 + PKCE + FILE_UPLOAD posting built. App rejected April 2026 (missing ToS/PP
+   links on homepage, login page as homepage URL). Fixed Session 74: /tos + /privacy routes live,
+   links added to login + landing pages, homepage URL changed to /landing, test account provided.
+   Resubmitted May 7 2026 — awaiting re-review.
    Compliance UI: privacy level, duet/comment/stitch toggles, brand_content/brand_organic disclosure.
    NOTE: getCallbackUrl() reads x-forwarded-proto header for https detection behind nginx proxy.
    Post Now / 📅 Schedule toggle. Schedule: queue table + 60s processor (setInterval in server.js).
@@ -372,14 +375,14 @@ NOT <nav id="main-nav"> — that pattern doesn't work.
 10. ~~MirrΩr: `no such column: pr.angle` and `TypeError: Assignment to constant variable`~~ — FIXED
 11. ~~TeleprΩmpter: Solo tab crashes the app~~ — FIXED Session 48 (early-return guard in launchViaCloud + cloudLaunchActive reset in backToSelector)
 12. TeleprΩmpter: No back button from display screen — only exit is "📋 Scripts" button (hidden by default)
-13. ~~PostΩr: TikTok platform stub~~ — BUILT Session 49. Full OAuth + posting live. App In Review (submitted April 19 2026, ~5-10 days).
+13. ~~PostΩr: TikTok platform stub~~ — BUILT Session 49. Full OAuth + posting live. App rejected (missing ToS/PP on homepage) → fixed + resubmitted Session 74. Awaiting re-review.
 14. MirrΩr: no "last synced" indicator — YouTube data can go stale silently. Sync Now button needed.
 15. ~~VaultΩr proxy re-ingest loop~~ — FIXED Session 62b. footageFilePathExists now checks proxy_path column; processProxyUpdate propagates project_id to BRAW record.
 
 ## Planned Features (Not Yet Built)
 - ~~VectΩr — Weekly strategic session~~ — BUILT Session 55. Live on NorthΩr.
 - ~~MarkΩr + GuardΩr — Copyright protection + community enforcement~~ — BUILT Sessions 51-54. Live.
-- TikTok Content Posting API — app in review, expected approval ~5-10 days from April 19 2026
+- TikTok Content Posting API — resubmitted May 7 2026 after rejection fix (ToS/PP/homepage). Awaiting re-review.
 - TikTok Analytics module (TikTΩkr) — separate from MirrΩr. Wire after TikTok app approved.
 - Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
 - Cari creator profile (second voice profile for Rock Rich Shows)

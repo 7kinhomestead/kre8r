@@ -13,25 +13,39 @@
 
 ---
 
-## NEXT TASKS (Session 74)
+## NEXT TASKS (Session 75)
 
-### 1. Performance Velocity Alerts — NorthΩr
+### ~~1. TikTok Re-submission~~ ✅ Done Session 74
+- Fixed: /tos and /privacy routes live (express.static extensions: ['html'])
+- Fixed: ToS + PP links added to login page and landing page footer
+- Fixed: Homepage URL changed to kre8r.app/landing (not login page)
+- Test account created (tiktok-reviewer / RockRich2026!) and submitted to reviewer
+- Resubmitted — awaiting TikTok review (est. a few days)
+
+### 2. ClipsΩr → DaVinci freeze-frame (PAUSED — resume when ready)
+- No-overlap prompt rule + post-processing dedup applied — not yet verified
+- Root pattern: clips with overlapping frame ranges from same source cause DaVinci cache collision
+- If still freezing: try SetInPoint/SetOutPoint on MediaPoolItem instead of explicit frames
+- Nuclear option: revert clip-markers.py to marker approach (full source + colored markers,
+  creator blades manually) — originally described in file header, avoids all AppendToTimeline issues
+
+### 3. Performance Velocity Alerts — NorthΩr
 - MirrΩr sync runs on schedule; compare latest metrics to previous snapshot
 - Alert thresholds: CTR spike (+2% in 24h), views velocity (2x baseline in 8h), comment surge
 - NorthΩr dashboard: amber/red banner when a video is spiking
 
-### 2. Auto Short-Clip ID from Timeline Transcript
+### 5. Auto Short-Clip ID from Timeline Transcript
 - After timeline transcript is saved, Claude scans full text for high-tension moments
 - Scores each segment: hook potential, curiosity gap, standalone shareability
 - Pre-populates ClipsΩr with suggested clip ranges (start/end timestamps)
 - Creator confirms or skips — no hunting through the video manually
 
-### 3. Analytics → Angle Weighting in Id8Ωr
+### 6. Analytics → Angle Weighting in Id8Ωr
 - MirrΩr data: calculate avg views/CTR/retention per content angle
 - Inject performance weights into Id8Ωr system prompt: "system angle is currently outperforming by 3x"
 - SeedΩr constellation: color intensity reflects angle performance, not just angle type
 
-### 4. Gemini 2.5 Pro — Id8Ωr Research Phase (Claude orchestrates Gemini)
+### 7. Gemini 2.5 Pro — Id8Ωr Research Phase (Claude orchestrates Gemini)
 - Add GEMINI_API_KEY to .env (Google AI Studio — free tier during preview)
 - Claude generates research queries → Gemini fetches with Google Search grounding → Claude synthesizes
 - Toggle: if no GEMINI_API_KEY, fall back to current Claude research (graceful degradation)
