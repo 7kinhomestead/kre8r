@@ -3,6 +3,299 @@
 
 ---
 
+# Session 76 — AssemblΩr Full Rebuild: Auto-Transcription, AI Assembly, EditΩr Room (2026-05-08)
+
+## Goal
+5-phase AssemblΩr rebuild: fix everything that was broken (full-clip placement, model re-download,
+no auto-transcription, no edit context bridge). Build a real AI editor that assembles short takes
+into a coherent rough cut beat-by-beat, then gives Jason a persistent editing partner to think
+through story decisions.
+
+## What Was Built
+
+### Phase 1 — VaultΩr Auto-Transcription Queue
+**`src/vault/transcribe-queue.js`** (NEW)
+- Background EventEmitter queue — one Whisper job at a time, never blocks ingest
+- In-memory job tracking: job_id, status (pending/running/done/failed), progress events
+- SSE broadcast to connected clients so vault.html can show live transcription status
+- Idempotent — checks DB for existing transcript_path before enqueueing, no double-work
+- `enqueue(footageId, filePath, label)` — key export; returns `{ ok, job_id, reason }`
+
+**`src/vault/watcher.js`** (MODIFIED)
+- Auto-enqueues talking-head clips after ingest: `if (result.shot_type === 'talking-head' && result.id)`
+- No manual "Transcribe" button needed — footage lands in vault, transcription starts
+
+**`src/vault/transcribe.js`** (MODIFIED)  
+- `WHISPER_CACHE_DIR`: `database/whisper-model-cache/` (env override: `WHISPER_CACHE_DIR`)
+- `--download-root` flag added to Whisper spawn — fixes repeated model re-download bug
+- Model now cached once, subsequent transcriptions start immediately
+
+**`src/routes/vault.js`** (MODIFIED)
+- `GET /api/vault/transcribe-queue/status` — current queue state
+- `GET /api/vault/transcribe-queue/stream` — SSE stream for live progress
+- `POST /api/vault/transcribe-queue/add` — manually enqueue a clip (footageId)
+
+**`public/vault.html`** (MODIFIED)
+- Transcription queue pill: hidden when idle, shows "🎙 Transcribing N queued" when active
+- `🎙 Transcribe` button on talking-head cards without transcript
+- `✓ Transcribed` badge on already-transcribed cards
+- SSE EventSource: `startTxQueueStream()` → `updateTxQueuePill()` + `refreshCardById()`
+- `@keyframes pulse` animation on active queue pill
+
+### Phase 2 — AssemblΩr Core Intelligence
+**`src/utils/claude.js`** (MODIFIED)
+- `callClaudeMessages` now accepts `options.model` override
+- Enables per-call model selection without touching the global MODEL constant
+
+**`src/editor/assemblr.js`** (MAJOR REWRITE)
+- `ASSEMBLY_MODEL` constant: `claude-sonnet-4-6` (override via `CLAUDE_ASSEMBLY_MODEL` env)
+- **Root bug fixed**: `assembleBeat()` (Call 2) was disabled — full clips were placed instead
+- Re-enabled Call 2 per beat with model override and `extractAssemblyJson()` for preamble-tolerant parsing
+- Short-takes prompt: "Takes are 1-3 sentences each — sequence them like building blocks"
+- Gold moment merger: gold takes merged into nearest beat pool (tagged `quality:'gold'`) instead of being exiled to separate sections
+- `assembly_note` property attached to sequence array — Claude's one-sentence editorial strategy
+- Sections now store:
+  - `takes`: all tagged takes (building blocks for approval UI)
+  - `selected_takes`: Claude's proposed ordered sequence with handles applied
+  - `assembly_note`: editorial strategy note
+  - `assembly_mode: 'ai_assembled'`
+
+**`src/db.js`** (MODIFIED)
+- Migration: `addCol('selects', 'assembly_note', 'TEXT')`
+- Migration: `addCol('selects', 'assembly_mode', 'TEXT')`
+- `insertSelect`: 11-parameter insert including both new columns
+- `getSelectsByProject`: returns `assembly_note` and `assembly_mode`
+
+### Phase 3 — Approval UI (Two-Panel View)
+**`public/editor.html`** (MULTIPLE MODIFICATIONS)
+- `buildSequenceHTML()` (NEW): "PROPOSED SEQUENCE" panel — Claude's cut list, one card per segment
+  - Timecode, level badge (color-coded by quality), ▶ play button, editorial note
+  - Hidden when sequence empty or old full_clip format
+- `buildTakesHTML()` (UPDATED): "ALL TAKES" panel with quality colors
+  - strong=green, clean=teal, fumbled=red, partial=amber, gold=gold
+  - `✓ IN SEQ` badge if take appears in proposed sequence
+  - Play button per take
+- Assembly note: teal callout box showing Claude's editorial strategy when present
+- Badge: "N segs assembled" instead of old "tap to swap"
+- `playClipSegment(filePath, startSec, endSec)`:
+  - Floating fixed-position video player (bottom-right, 320×180px)
+  - `file://` URL for Electron proxy playback
+  - Auto-stops at `endSec` via `ontimeupdate`
+- `closePlayer()` — dismiss video overlay
+
+### Phase 4 — EditΩr Room (Persistent Editing Partner)
+**`src/routes/editr-room.js`** (NEW)
+- SSE streaming chat: `POST /api/editr-room/chat`
+  - `buildSystemPrompt()`: rich context block — beat map with assembly status, WritΩr script excerpt, voice profile
+  - "Editor-to-editor talk" persona — no corporate filler, short direct responses, willing to pushback
+  - Uses `callClaudeStream` token-by-token
+  - Keepalive heartbeat every 20s
+- Session persistence: `GET/POST/DELETE /api/editr-room/session/:project_id`
+  - Stored in kv_store as `editr_room_session_{project_id}` (auto-parsed JSON)
+- Context endpoint: `GET /api/editr-room/context/:project_id`
+  - Compact beat summary + recent 6 messages for BrollΩr injection
+
+**`server.js`** (MODIFIED)
+- `app.use('/api/editr-room', require('./src/routes/editr-room'))`
+
+**`public/editor.html`** (MODIFIED — EditΩr Room panel)
+- "💬 EditΩr Room" button in project bar (enabled on project load)
+- 420px slide-out panel, full viewport height
+- Message history: user messages right-aligned teal, assistant messages dark-card
+- `loadEditrRoomSession()` → restore prior conversation on project load
+- `sendEditrRoomMsg()` → SSE token stream → incremental render
+- `clearEditrRoomSession()` → DELETE session API → clear UI
+- `toggleEditrRoom()` → slide panel in/out
+
+**`src/routes/brollr.js`** (MODIFIED — context injection)
+- `/analyze` endpoint: loads PipΩr beats + assembly notes + EditΩr Room conversation
+- Builds `editorContext` block: beat names, emotional functions, assembly notes, recent chat turns
+- Appends to analyze prompt → b-roll suggestions serve the narrative, not just look cool
+
+### Phase 5 — DaVinci Output (Already Complete)
+- `build-selects.py` already handles `selected_takes` with start/end timestamps (prior session)
+- Phase 2: `AppendToTimeline` with `startFrame`/`endFrame` per segment — real subclip cuts
+- Phase 3: Beat-header markers + gold moment markers on top of assembled cuts
+- PipΩr beat markers from `project-config.json` (covered/missing/out-of-sequence)
+- `editor.js` `/davinci/build/:project_id` auto-creates DaVinci project if not linked
+- Data flow: `assemblr.js` → `insertSelect` → `getSelectsByProject` → `build-selects.py` ✓
+
+## Commits
+- (this session)
+
+---
+
+# Session 75 — BrollΩr Soul Characters + Two-Step Pipeline + Prompt Engineering (2026-05-08)
+
+## Goal
+Complete BrollΩr Soul ID character system, fix all Higgsfield API timeout issues,
+add image review step before animation, prove full pipeline end-to-end with Jason's
+actual face in generated b-roll for a loneliness video.
+
+## What Was Built / Fixed
+
+### BrollΩr — Image Review Step (two-step pipeline)
+- **`src/routes/brollr.js`** — generate route now stops at Step 1 (text→image) and emits
+  `image_ready` SSE event with `image_url`. Does NOT auto-proceed to video.
+- New **`POST /api/brollr/animate`** SSE route — Step 2 only. Takes `generation_id` + `image_url`,
+  POSTs to `/v1/image2video/dop`, polls to completion, emits `done` with `result_url`.
+- `status: 'image_ready'` saved to DB between steps so image URL is preserved.
+
+### BrollΩr — Regen Image with Prompt Editing
+- **`public/brollr.html`** — image preview box now contains a **"Refine prompt"** textarea
+  pre-populated on `image_ready` SSE event with the prompt that generated the image.
+- **`regenImage(idx)`** function — syncs refined text back to main prompt textarea, clears
+  preview, calls `generateMoment(idx)`. Edit prompt → regen without losing context.
+- ↺ Regen Image button in preview box (distinct from main Generate button).
+- Image preview box styled with teal border to stand out from card.
+
+### BrollΩr — Timeout Fixes (all routes)
+All Higgsfield operations were timing out. Extended across the board:
+- Soul ID training: SSE 10min → **25min**, `maxPollTime` 5min → **25min**, `pollInterval: 8000`
+- Heartbeat messages every 60s during training queue wait ("X min elapsed")
+- Image generation: poll 3min → **8min**, SSE 5min → **10min**
+- Animate to video: poll 5min → **10min**, SSE 6min → **12min**
+
+### BrollΩr — Animate Button Stuck Fix
+- Added `finally` block to `animateMoment()` — button always resets to "▶ Animate to Video"
+  regardless of whether SSE ended with done/error or silently disconnected.
+  Previously: silent timeout left button permanently disabled.
+
+### BrollΩr — Soul ID System (Characters tab)
+- `brollr_characters` table migration includes `notes TEXT` column (safe ALTER TABLE)
+- `createBrollCharacter` accepts `notes` param
+- `GET /api/brollr/characters/higgsfield-list` — direct axios to `platform.higgsfield.ai/v1/custom-references`
+- `POST /api/brollr/characters/import` — save existing Soul ID without training
+- `PATCH /api/brollr/characters/:id` — update notes field, auto-saves on blur
+- Appearance notes auto-injected into every generation prompt via `notesClause`
+- Character selector on every moment card — `soul_id` passed to both generate + animate routes
+- `populateMomentCharSelects()` rebuilds dropdowns after character list changes
+
+### Soul ID Training — Key Discovery
+- Platform Soul IDs (trained on higgsfield.ai UI) are NOT accessible to developer API — separate workspaces
+- Jason trained Soul ID via BrollΩr developer API flow using 500 API credits (~$3)
+- v1 `HiggsfieldClient` required for training (has `uploadImage()` + `createSoulId()`)
+- v2 `createHiggsfieldClient` only has `subscribe()` — no upload/training methods
+
+## Prompt Engineering Discoveries
+Working patterns for Higgsfield Soul model:
+- Describe LIGHT not objects (avoid "phone screen" → describe "cold blue-white uplight from below frame")
+- Negative prompts backfire — saying "WE CANNOT SEE THE SCREEN" makes it draw the screen
+- Physical posture language works: "shoulders back, weight shifting forward, jaw set"
+- Compositional direction works: "the man looks small in the space"
+- "Something in his hands just below frame" hides props cleanly
+- Repeating forbidden concepts in caps reinforces them — omit entirely instead
+
+## Creative Output — Loneliness Video B-Roll Package
+Full cinematic b-roll package generated with Jason's Soul ID:
+- Late night phone glow / insomnia shot (dark living room, lamp, mug)
+- Eating alone at dinner table — phone in hand, food going cold, empty chair
+- Cul-de-sac at dusk — two men getting out of cars, no eye contact (Coen Brothers aesthetic)
+- Office chair / ceiling stare — fluorescent light, corporate-neutral room
+- Resolution shot — man setting phone face-down and rising with purpose
+- BBQ scene — two men at grill, both on phones, grill unattended
+- BONUS: Jason in blacksmith leather apron forging metal, SpaceX rocket launching outside window, completely unbothered
+
+All clips downloaded and dropped into `D:\kre8r\intake` for VaultΩr ingestion.
+
+## Confirmed Working Higgsfield Endpoints
+- Image: `POST platform.higgsfield.ai/v1/text2image/soul` — `{ params: { prompt, width_and_height: '2048x1152', custom_reference_id?, custom_reference_strength: 1 } }`
+- Video: `POST platform.higgsfield.ai/v1/image2video/dop` — `{ params: { model: 'dop-turbo', prompt, input_images: [{ type: 'image_url', image_url }] } }`
+- Poll: `GET platform.higgsfield.ai/requests/{jobSetId}/status` → `images[0].url` / `video.url`
+- Auth: `Authorization: Key KEY_ID:KEY_SECRET`
+
+## Files Changed
+- `src/routes/brollr.js` — two-step pipeline, animate route, timeout fixes, heartbeat, character routes
+- `public/brollr.html` — image preview + refine prompt UI, regenImage(), animateMoment finally block, character tab JS
+- `src/db.js` — brollr_characters notes column migration
+
+---
+
+# Session 74 — ClipsΩr → DaVinci Integration Debug + TikTok Rejection (2026-05-07)
+
+## Goal
+Fix ClipsΩr → DaVinci Resolve pipeline: freeze-frame clips, wrong timestamps, transcription
+path timeouts. Then pivot to TikTok app re-submission after rejection from developer.tiktok.
+
+## What Was Built / Fixed
+
+### ClipsΩr — Timestamp & Transcription Fixes
+
+**`src/vault/clipsr.js`** (analysis engine):
+- Post-processing `lastSpeechEnd` clamp: removed +2s buffer → cut tight to last word.
+  `end > lastSpeechEnd → end = lastSpeechEnd` (no padding; editor adds breathing room in Resolve)
+- Prompt updated: timing rules now explicitly say "no buffer, no padding — cut tight to last word"
+- Added no-overlap rule to prompt: "Clips must NOT overlap. Each clip's start must be after
+  the previous clip's end. If two moments share overlapping time ranges, pick the stronger one."
+- Added hard dedup safety net in post-processing: walks clips in rank order, drops any clip
+  whose start < previous clip's end. Lower-ranked overlapping clip is dropped silently with warning log.
+  Renames internal `clips` to `clampedClips` first, then builds final `clips` array from dedup loop.
+
+**`scripts/davinci/clip-markers.py`**:
+- Added project-level fps lock BEFORE any timeline creation:
+  `project.SetSetting("timelineFrameRate", fps_str)` + `timelinePlaybackFrameRate`
+  Verifies actual fps after setting and warns if mismatch >0.01.
+- Removed per-timeline `SetSetting` (no-op once project rate locked)
+- Added timeline fps verification after each `CreateEmptyTimeline`
+- Fixed `NameError: markers_added` — return dict used old variable names → updated to `clips_added`/`clip_timelines`
+- Added `project.SetCurrentTimeline(clip_tl)` before each `AppendToTimeline` call (was all going to overview)
+- Added `_run_ts` timestamp suffix to all timeline names — prevents name collisions on re-runs
+- Added `--duration` arg and `max_source_frame` clamp — prevents requesting frames past source end
+- Reverted per-iteration `ImportMedia` back to single `source_item` (re-import caused confusion)
+
+**`src/vault/transcribe.js`**:
+- Whisper timeout: 45_000ms (was 10_000 — too short for torch cold-start)
+- `resetWhisperCache()` called before Whisper fallback to clear stale binary detection
+
+**`scripts/davinci/resolve-transcribe.py`**:
+- Added upfront `GetTranscription()` check before calling `TranscribeAudio()` — skip if already transcribed
+- PATH 2 now checks both "caption" AND "subtitle" track types (DaVinci v21 creates "caption" not "subtitle")
+- `_find_best_transcript_track()` logs all track types found
+- `TRANSCRIPTION_TIMEOUT_SEC = 90` (was 300), `TIMELINE_MAX_WAIT = 45` (was 300)
+
+**`src/routes/clipsr.js`**:
+- Slug-file cache clearing when `force_retranscribe=true` (was returning stale timestamps from previous video)
+- Bounds check: clips starting beyond `footage.duration * 1.05` return 400 error
+- Passes `--duration String(footage.duration || 0)` to clip-markers.py
+
+## Freeze-Frame Investigation (UNRESOLVED — paused)
+
+### Root cause candidates exhausted:
+1. **Stale slug-file cache** — fixed (wrong 66-min timestamps were from a different video)
+2. **Timeline name collisions** — fixed (timestamp suffix)
+3. **Wrong current timeline** — fixed (SetCurrentTimeline before each append)
+4. **FPS conform mismatch** (project 24fps vs source 29.97fps) — fixed in code, user confirmed
+   project changed to 29.97 in DaVinci settings, restarted — **still freezes**
+5. **AppendToTimeline non-deterministic failure** — clips 1&2 one run, clips 1&6 next run.
+   Pattern is non-deterministic. Not a frame-math problem.
+
+### Key finding:
+Clips that freeze-frame are always those whose **end times overlap or share the same endFrame**.
+In the latest run: GOLD clip (6:44→7:40) and SOCIAL #6 (7:13→7:40) — both clamped to
+`lastSpeechEnd = 7:40`. Clip 6 is entirely within clip 1's frame range. DaVinci's AppendToTimeline
+has a media engine cache collision when two clips from the same source share overlapping frame ranges.
+
+### No-overlap fix applied (prompt rule + post-processing dedup) but not yet verified — paused.
+
+### Remaining options if overlap fix doesn't resolve it:
+- Try `SetInPoint(frame)` / `SetOutPoint(frame)` on MediaPoolItem then AppendToTimeline without
+  explicit frames — different internal DaVinci code path
+- Revert to **marker approach**: full source on overview timeline, colored duration-span markers
+  per clip, creator blades at boundaries. Zero AppendToTimeline calls. Originally described in
+  file header. Non-destructive, matches how professional editors use Resolve.
+
+## TikTok — App Rejected, Re-submission Needed
+- TikTok developer review rejected the Kre8r app submission
+- User received feedback from developer.tiktok — details TBD next session
+- TikTok OAuth, posting code, and compliance UI already built (Session 49)
+- Likely needs: policy page updates, scope/permission justifications, or app description changes
+
+## Commits This Session
+- `src/vault/clipsr.js` — no-overlap prompt rule + dedup safety net + lastSpeechEnd clamp fix
+- `scripts/davinci/clip-markers.py` — fps lock, SetCurrentTimeline fix, _run_ts suffix, duration clamp
+
+---
+
 # Session 73 — Studio Intel Bridge, Comment Intelligence, CleanΩr fixes (2026-05-05)
 
 ## Goal

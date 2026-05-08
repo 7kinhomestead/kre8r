@@ -2,21 +2,38 @@
 /**
  * BrollΩr — AI b-roll generation via Higgsfield AI
  *
- * POST /api/brollr/analyze          — analyze script → moment cards
- * POST /api/brollr/vault-search     — search vault footage for matching clips
- * POST /api/brollr/generate         — SSE: generate b-roll via Higgsfield (or demo mode)
- * GET  /api/brollr/history          — list all generations (optional ?project_id=X)
- * DELETE /api/brollr/generation/:id — delete a generation record
- * POST /api/brollr/save-to-vault    — save a generation's result_url into footage table
- * GET  /api/brollr/status           — demo_mode flag
+ * POST /api/brollr/analyze                — analyze script → moment cards
+ * POST /api/brollr/vault-search           — search vault footage for matching clips
+ * POST /api/brollr/generate               — SSE: generate b-roll via Higgsfield (or demo mode)
+ * GET  /api/brollr/history                — list all generations (optional ?project_id=X)
+ * DELETE /api/brollr/generation/:id       — delete a generation record
+ * POST /api/brollr/save-to-vault          — save a generation's result_url into footage table
+ * GET  /api/brollr/status                 — demo_mode flag
+ * GET  /api/brollr/characters             — list Soul ID characters
+ * POST /api/brollr/characters             — SSE: upload photos + train Soul ID ($3/character)
+ * PATCH /api/brollr/characters/:id        — update character notes
+ * DELETE /api/brollr/characters/:id       — delete a character record
  */
 
-const express           = require('express');
-const router            = express.Router();
-const { callClaude }    = require('../utils/claude');
-const db                = require('../db');
-const logger            = require('../utils/logger');
+const express              = require('express');
+const router               = express.Router();
+const multer               = require('multer');
+const path                 = require('path');
+const fs                   = require('fs');
+const { callClaude }       = require('../utils/claude');
+const db                   = require('../db');
+const logger               = require('../utils/logger');
 const { startSseResponse } = require('../utils/sse');
+
+// Multer — store character photos in memory for upload to Higgsfield
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits:  { fileSize: 10 * 1024 * 1024, files: 25 },
+  fileFilter: (req, file, cb) => {
+    if (/^image\/(jpeg|jpg|png|webp)$/i.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Only JPEG/PNG/WebP images allowed'));
+  },
+});
 
 // ─────────────────────────────────────────────
 // HIGGSFIELD CLIENT
@@ -76,6 +93,38 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ error: 'script_text or project_id with a script is required' });
     }
 
+    // ── EditΩr Room context injection ──────────────────────────────────────
+    // If the editor was working in EditΩr Room, pull the beat map + assembly
+    // context so BrollΩr suggestions serve the narrative, not just look cool.
+    let editorContext = '';
+    if (project_id) {
+      try {
+        const { readConfig } = require('../pipr/beat-tracker');
+        const piprConfig = readConfig(parseInt(project_id));
+        const selects    = db.getSelectsByProject(parseInt(project_id));
+        const editrKey   = `editr_room_session_${project_id}`;
+        const editrSession = db.getKv(editrKey);
+
+        if (piprConfig?.beats?.length > 0) {
+          editorContext += '\n\nEDIT CONTEXT (from AssemblΩr):\n';
+          for (let i = 0; i < piprConfig.beats.length; i++) {
+            const b   = piprConfig.beats[i];
+            const sel = selects.find(s => s.section_index === i);
+            editorContext += `Beat ${i + 1}: "${b.name}" (${b.emotional_function || ''})`;
+            if (sel?.assembly_note) editorContext += ` — editor note: "${sel.assembly_note}"`;
+            editorContext += '\n';
+          }
+        }
+        if (editrSession?.messages?.length > 0) {
+          const recent = editrSession.messages.slice(-4);
+          editorContext += '\nRECENT EDITΩR ROOM CONVERSATION (context for b-roll ideas):\n';
+          for (const m of recent) {
+            editorContext += `${m.role === 'user' ? 'Creator' : 'Editor'}: ${m.content.slice(0, 150)}${m.content.length > 150 ? '...' : ''}\n`;
+          }
+        }
+      } catch (_) {}
+    }
+
     const prompt = `You are BrollΩr, a b-roll planning AI for a homesteading creator (7 Kin Homestead — off-grid, financial freedom, rock-solid resourcefulness).
 
 Analyze this script/content and identify the key moments that need b-roll coverage. For each moment:
@@ -98,7 +147,7 @@ Return ONLY valid JSON:
 }
 
 Script/content:
-${scriptText}`;
+${scriptText}${editorContext}`;
 
     const result = await callClaude(prompt, 4096, { tool: 'brollr-analyze' });
 
@@ -189,7 +238,7 @@ router.post('/vault-search', (req, res) => {
 // Body: { moment_label, prompt, camera_motion, style, project_id?, duration? }
 // ─────────────────────────────────────────────
 router.post('/generate', async (req, res) => {
-  const { send, end } = startSseResponse(res, { timeoutMs: 5 * 60 * 1000 });
+  const { send, end } = startSseResponse(res, { timeoutMs: 10 * 60 * 1000 });
 
   const {
     moment_label,
@@ -198,6 +247,7 @@ router.post('/generate', async (req, res) => {
     style         = 'documentary',
     project_id    = null,
     duration      = 5,
+    soul_id       = null,
   } = req.body || {};
 
   if (!moment_label || !prompt) {
@@ -248,52 +298,155 @@ router.post('/generate', async (req, res) => {
     return;
   }
 
-  // Live mode — call Higgsfield API via SDK
+  // Live mode — two-step pipeline: text→image (soul) → image→video (dop)
   try {
-    send({ step: 'creating', message: 'Sending to Higgsfield…' });
+    const axios = require('axios');
+    const [apiKey, apiSecret] = getCredentials().split(':');
+    const hfHeaders = { Authorization: `Key ${apiKey}:${apiSecret}`, 'Content-Type': 'application/json' };
 
-    const { higgsfield, config } = require('@higgsfield/client/v2');
-    config({ credentials: getCredentials() });
-
-    const fullPrompt = `${prompt}. Camera motion: ${camera_motion}. Style: ${style}. Homestead setting, authentic, cinematic. Real outdoor environment.`;
-
-    send({ step: 'processing', message: 'AI is generating your clip… (this takes 1–3 min)' });
-
-    const response = await higgsfield.subscribe('/v1/text2video/wan', {
-      input: {
-        prompt:   fullPrompt,
-        model:    'wan-2.5',
-        duration: duration || 5,
-      },
-      withPolling: true,
-    });
-
-    if (response.status === 'nsfw') {
-      throw new Error('Content flagged — try a different prompt description');
-    }
-    if (response.status === 'failed') {
-      throw new Error('Higgsfield generation failed: ' + (response.error || 'unknown'));
+    // Look up character appearance notes if soul_id provided
+    let charNotes = '';
+    if (soul_id) {
+      try {
+        const char = db.prepare('SELECT notes FROM brollr_characters WHERE soul_id = ?').get(soul_id);
+        if (char?.notes) charNotes = char.notes.trim();
+      } catch (_) {}
     }
 
-    const finalUrl = response.results?.raw || response.results?.min || null;
+    const notesClause = charNotes ? ` ${charNotes}.` : '';
+    const imagePrompt = `${prompt}.${notesClause} Style: ${style}. Homestead setting, authentic, cinematic. Real outdoor environment.`;
+    const videoPrompt = `${camera_motion} camera movement. ${prompt}. ${style} style.`;
 
+    // ── STEP 1: Generate still image ─────────────────────────
+    send({ step: 'creating', message: 'Step 1/2 — Generating image with Higgsfield Soul…' });
+
+    const imageParams = {
+      prompt:           imagePrompt,
+      width_and_height: '2048x1152',
+    };
+    if (soul_id) {
+      imageParams.custom_reference_id       = soul_id;
+      imageParams.custom_reference_strength = 1;
+    }
+
+    const imgResp = await axios.post(
+      'https://platform.higgsfield.ai/v1/text2image/soul',
+      { params: imageParams },
+      { headers: hfHeaders }
+    );
+
+    const imgJobSetId = imgResp.data?.id;
+    if (!imgJobSetId) throw new Error('No job ID returned from Higgsfield image step');
+
+    // Poll image to completion
+    let imageUrl = null;
+    const imgPollStart = Date.now();
+    while (Date.now() - imgPollStart < 8 * 60 * 1000) {
+      await new Promise(r => setTimeout(r, 4000));
+      const pollResp = await axios.get(
+        `https://platform.higgsfield.ai/requests/${imgJobSetId}/status`,
+        { headers: hfHeaders }
+      );
+      const d = pollResp.data;
+      if (d.status === 'nsfw')      throw new Error('Image flagged — try a different prompt');
+      if (d.status === 'failed')    throw new Error('Image generation failed');
+      if (d.status === 'completed') { imageUrl = d.images?.[0]?.url; break; }
+    }
+    if (!imageUrl) throw new Error('Image generation timed out');
+
+    // ── Step 1 done — send image to frontend for review ──────
     db.updateBrollGeneration(generationId, {
-      status:            finalUrl ? 'done' : 'processing',
-      higgsfield_job_id: response.request_id || null,
-      result_url:        finalUrl || null,
+      status:            'image_ready',
+      higgsfield_job_id: imgJobSetId,
+      result_url:        imageUrl,
     });
 
     send({
-      step:          'done',
+      step:          'image_ready',
       generation_id: generationId,
-      result_url:    finalUrl,
-      status:        finalUrl ? 'done' : 'processing',
+      image_url:     imageUrl,
+      message:       'Image ready — review and click Animate to Video',
     });
     end();
   } catch (err) {
     logger.error({ module: 'brollr', err: err.message }, 'Higgsfield generate failed');
     try { db.updateBrollGeneration(generationId, { status: 'failed' }); } catch (_) {}
     send({ step: 'error', error: err.message, generation_id: generationId });
+    end();
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/brollr/animate (SSE)
+// Body: { generation_id, image_url, camera_motion, style, moment_label, soul_id? }
+// Step 2: animate an approved still image to video
+// ─────────────────────────────────────────────
+router.post('/animate', async (req, res) => {
+  const { send, end } = startSseResponse(res, { timeoutMs: 12 * 60 * 1000 });
+
+  const {
+    generation_id,
+    image_url,
+    camera_motion = 'handheld',
+    style         = 'documentary',
+    moment_label  = '',
+    soul_id       = null,
+  } = req.body || {};
+
+  if (!generation_id || !image_url) {
+    send({ step: 'error', error: 'generation_id and image_url are required' });
+    end(); return;
+  }
+
+  try {
+    send({ step: 'processing', message: 'Animating to video… (1–3 min)' });
+
+    const axios = require('axios');
+    const [apiKey, apiSecret] = getCredentials().split(':');
+    const hfHeaders = { Authorization: `Key ${apiKey}:${apiSecret}`, 'Content-Type': 'application/json' };
+
+    const videoPrompt = `${camera_motion} camera movement. ${moment_label}. ${style} style. Homestead setting, cinematic.`;
+
+    const vidResp = await axios.post(
+      'https://platform.higgsfield.ai/v1/image2video/dop',
+      { params: {
+        model:        'dop-turbo',
+        prompt:       videoPrompt,
+        input_images: [{ type: 'image_url', image_url }],
+      }},
+      { headers: hfHeaders }
+    );
+
+    const vidJobSetId = vidResp.data?.id;
+    if (!vidJobSetId) throw new Error('No job ID returned from Higgsfield');
+
+    // Poll to completion — video gen can take 7-10 min
+    let finalUrl = null;
+    const pollStart = Date.now();
+    while (Date.now() - pollStart < 10 * 60 * 1000) {
+      await new Promise(r => setTimeout(r, 5000));
+      const pollResp = await axios.get(
+        `https://platform.higgsfield.ai/requests/${vidJobSetId}/status`,
+        { headers: hfHeaders }
+      );
+      const d = pollResp.data;
+      if (d.status === 'nsfw')      throw new Error('Video flagged — try a different prompt');
+      if (d.status === 'failed')    throw new Error('Video generation failed');
+      if (d.status === 'completed') { finalUrl = d.video?.url || d.images?.[0]?.url; break; }
+    }
+    if (!finalUrl) throw new Error('Video generation timed out');
+
+    db.updateBrollGeneration(parseInt(generation_id), {
+      status:     'done',
+      result_url: finalUrl,
+    });
+
+    send({ step: 'done', generation_id, result_url: finalUrl });
+    end();
+  } catch (err) {
+    logger.error({ module: 'brollr', err: err.message }, 'animate failed');
+    try { db.updateBrollGeneration(parseInt(generation_id), { status: 'failed' }); } catch (_) {}
+    send({ step: 'error', error: err.message });
     end();
   }
 });
@@ -356,6 +509,193 @@ router.post('/save-to-vault', (req, res) => {
     res.json({ ok: true, footage_id: footageId });
   } catch (err) {
     logger.error({ module: 'brollr', err: err.message }, 'save-to-vault failed');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/brollr/characters/higgsfield-list
+// Fetch trained Soul IDs from Higgsfield account
+// ─────────────────────────────────────────────
+router.get('/characters/higgsfield-list', async (req, res) => {
+  if (isDemoMode()) return res.status(400).json({ error: 'No Higgsfield credentials configured' });
+  try {
+    const axios = require('axios');
+    const [apiKey, apiSecret] = getCredentials().split(':');
+    const response = await axios.get('https://platform.higgsfield.ai/v1/custom-references', {
+      headers: { Authorization: `Key ${apiKey}:${apiSecret}` },
+      params: { limit: 50 },
+    });
+    const rawItems = response.data?.items || response.data?.data || response.data || [];
+    const itemsArray = Array.isArray(rawItems) ? rawItems : [];
+    const items = itemsArray.map(s => ({
+      id:     s.id   || s.soul_id || s.reference_id,
+      name:   s.name || s.label  || 'Unnamed',
+      status: s.status || 'unknown',
+    }));
+    res.json({ ok: true, items });
+  } catch (err) {
+    logger.error({ module: 'brollr', err: err.message }, 'higgsfield-list failed');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/brollr/characters/import
+// Body: { name, soul_id, notes? }
+// Save an existing Higgsfield Soul ID without training
+// ─────────────────────────────────────────────
+router.post('/characters/import', (req, res) => {
+  try {
+    const { name, soul_id, notes } = req.body || {};
+    if (!name)    return res.status(400).json({ error: 'name is required' });
+    if (!soul_id) return res.status(400).json({ error: 'soul_id is required' });
+    const id = db.createBrollCharacter({ name, soul_id, status: 'ready', photo_count: 0, notes: notes || null });
+    res.json({ ok: true, id });
+  } catch (err) {
+    logger.error({ module: 'brollr', err: err.message }, 'import character failed');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/brollr/characters
+// ─────────────────────────────────────────────
+router.get('/characters', (req, res) => {
+  try {
+    res.json({ characters: db.getBrollCharacters() });
+  } catch (err) {
+    logger.error({ module: 'brollr', err: err.message }, 'list characters failed');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/brollr/characters (SSE)
+// Multipart: name + up to 25 photos
+// Trains a Higgsfield Soul ID ($3/character)
+// ─────────────────────────────────────────────
+router.post('/characters', upload.array('photos', 25), async (req, res) => {
+  const { send, end } = startSseResponse(res, { timeoutMs: 25 * 60 * 1000 });
+
+  const name   = (req.body?.name  || '').trim();
+  const notes  = (req.body?.notes || '').trim();
+  const files  = req.files || [];
+
+  if (!name) {
+    send({ step: 'error', error: 'Character name is required' });
+    end(); return;
+  }
+  if (files.length < 5) {
+    send({ step: 'error', error: `Upload at least 5 photos (you sent ${files.length}). 15–20 recommended for best results.` });
+    end(); return;
+  }
+  if (isDemoMode()) {
+    send({ step: 'error', error: 'Add HIGGSFIELD_API_KEY + HIGGSFIELD_API_SECRET to .env first' });
+    end(); return;
+  }
+
+  // Create DB record immediately
+  let charId;
+  try {
+    charId = db.createBrollCharacter({ name, status: 'training', photo_count: files.length, notes: notes || null });
+  } catch (dbErr) {
+    send({ step: 'error', error: 'DB error: ' + dbErr.message }); end(); return;
+  }
+
+  try {
+    // Soul ID training uses the v1 HiggsfieldClient — it has uploadImage() + createSoulId()
+    // The v2 client only has subscribe() for video generation
+    const { HiggsfieldClient } = require('@higgsfield/client');
+    const [apiKey, apiSecret] = getCredentials().split(':');
+    // Soul ID training can queue for 10+ min then train for 3-5 min — give it 25 min total
+    const client = new HiggsfieldClient({ apiKey, apiSecret, maxPollTime: 25 * 60 * 1000, pollInterval: 8000 });
+
+    send({ step: 'uploading', message: `Uploading ${files.length} photos to Higgsfield…` });
+
+    // Upload each photo to Higgsfield CDN to get hosted URLs
+    const inputImages = [];
+    for (let i = 0; i < files.length; i++) {
+      send({ step: 'uploading', message: `Uploading photo ${i + 1} of ${files.length}…`, index: i });
+      try {
+        const ext    = (files[i].originalname.split('.').pop() || 'jpg').toLowerCase();
+        const format = ext === 'png' ? 'png' : ext === 'webp' ? 'webp' : 'jpeg';
+        const url    = await client.uploadImage(files[i].buffer, format);
+        inputImages.push({ type: 'image_url', image_url: url });
+      } catch (uploadErr) {
+        logger.warn({ module: 'brollr', err: uploadErr.message }, `Photo ${i + 1} upload failed — skipping`);
+      }
+    }
+
+    if (inputImages.length < 5) {
+      throw new Error(`Only ${inputImages.length} photos uploaded successfully — need at least 5`);
+    }
+
+    send({ step: 'training', message: `Training Soul ID on ${inputImages.length} photos… queuing (may wait 10 min before training starts)` });
+
+    // Emit periodic heartbeats so the frontend doesn't look frozen during the queue
+    let heartbeatMin = 0;
+    const heartbeat = setInterval(() => {
+      heartbeatMin++;
+      send({ step: 'training', message: `Training in progress… ${heartbeatMin} min elapsed (queue + training can take 15 min total)` });
+    }, 60 * 1000);
+
+    let soulIdObj;
+    try {
+      soulIdObj = await client.createSoulId({ name, input_images: inputImages }, true);
+    } finally {
+      clearInterval(heartbeat);
+    }
+    const soulIdValue = soulIdObj?.id || (typeof soulIdObj === 'string' ? soulIdObj : JSON.stringify(soulIdObj));
+
+    db.updateBrollCharacter(charId, {
+      status:  'ready',
+      soul_id: soulIdValue,
+    });
+
+    send({
+      step:         'done',
+      character_id: charId,
+      soul_id:      soulIdValue,
+      message:      `Soul ID trained! "${name}" is ready to use in b-roll generation.`,
+    });
+    end();
+  } catch (err) {
+    logger.error({ module: 'brollr', err: err.message }, 'Soul ID training failed');
+    try { db.updateBrollCharacter(charId, { status: 'failed' }); } catch (_) {}
+    send({ step: 'error', error: err.message, character_id: charId });
+    end();
+  }
+});
+
+// ─────────────────────────────────────────────
+// PATCH /api/brollr/characters/:id
+// Body: { notes }
+// ─────────────────────────────────────────────
+router.patch('/characters/:id', (req, res) => {
+  try {
+    const id    = parseInt(req.params.id);
+    const notes = (req.body?.notes ?? '').trim();
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    db.updateBrollCharacter(id, { notes: notes || null });
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ module: 'brollr', err: err.message }, 'patch character failed');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// DELETE /api/brollr/characters/:id
+// ─────────────────────────────────────────────
+router.delete('/characters/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    db.deleteBrollCharacter(id);
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ module: 'brollr', err: err.message }, 'delete character failed');
     res.status(500).json({ error: err.message });
   }
 });

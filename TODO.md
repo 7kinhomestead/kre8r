@@ -13,6 +13,38 @@
 
 ---
 
+## COMPLETED THIS SESSION (Session 76) ✅
+- ~~AssemblΩr Phase 1: VaultΩr auto-transcription queue~~ ✅ `transcribe-queue.js` + watcher wiring
+- ~~AssemblΩr Phase 2: AI assembly re-enabled (Call 2), short-takes prompt, gold merger~~ ✅
+- ~~AssemblΩr Phase 3: Two-panel approval UI (Proposed Sequence + All Takes), inline player~~ ✅
+- ~~AssemblΩr Phase 4: EditΩr Room persistent chat + BrollΩr context injection~~ ✅
+- ~~AssemblΩr Phase 5: DaVinci Output~~ ✅ Already done — build-selects.py handles selected_takes subclips
+- ~~Whisper model re-download bug~~ ✅ Fixed with --download-root cache pin
+
+---
+
+## NEXT TASKS (Session 77)
+
+### 1. Edit loneliness video in EditΩr → ReviewΩr → ClipsΩr
+- Vault has all AI b-roll clips ingested from D:\kre8r\intake
+- Script already written — load project in EditΩr, run SelectsΩr
+- Cut talking-head against AI b-roll package
+- ReviewΩr approval → ClipsΩr for short-form cut → CaptionΩr → PostΩr
+
+### 2. BrollΩr — Save to Vault download helper
+- CDN URLs expire (Higgsfield ~7-30 days) — local copy is the only safe long-term storage
+- Add "⬇ Download to Intake" button on each video result that pipes the URL through
+  the server to D:\kre8r\intake so VaultΩr auto-ingests it (no manual browser download)
+- Route: `POST /api/brollr/download-to-vault` — streams remote URL → local file → triggers watcher
+
+### 3. BrollΩr — Speak endpoint (lip sync)
+- Wire `/v1/speak/higgsfield` — takes input_image + input_audio (WAV only) + prompt
+- UI: upload audio clip + select character image → generate talking-head video
+- Unlocks "talking to younger self" concept: generate younger-Jason image → record VO → lip sync
+- SDK: `client.generate('/v1/speak/higgsfield', { input_image, input_audio, prompt, quality, duration })`
+
+---
+
 ## NEXT TASKS (Session 75)
 
 ### ~~1. TikTok Re-submission~~ ✅ Done Session 74

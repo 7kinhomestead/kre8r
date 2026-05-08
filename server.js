@@ -637,6 +637,7 @@ app.use('/api/markr',             require('./src/routes/markr'));
 app.use('/api/guard',             require('./src/routes/guard'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 app.use('/api/vectr',             require('./src/routes/vectr'));
+app.use('/api/editr-room',        require('./src/routes/editr-room'));
 app.use('/api/studio-intel',      require('./src/routes/studio-intel'));
 app.use('/api/stats-export',      require('./src/routes/stats-export'));
 app.use('/api/analyticr',         require('./src/routes/analyticr'));

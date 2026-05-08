@@ -43,6 +43,7 @@
   /* ── LAYOUT ── */
   .main{max-width:1100px;margin:0 auto;padding:24px 16px 80px;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 
   /* ── PAGE HEADER ── */
   .page-header{margin-bottom:28px;animation:fadeUp 0.4s ease both;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
@@ -457,6 +458,11 @@
       <div class="status-dot" style="background:var(--purple)"></div>
       <span class="label">Talking Head</span>
       <span class="val" id="talkingHeadCount">—</span>
+    </div>
+    <div class="status-pill" id="txQueuePill" style="display:none;cursor:default;" title="Auto-transcription queue">
+      <div class="status-dot" id="txQueueDot" style="background:var(--teal);animation:pulse 1.2s ease-in-out infinite;"></div>
+      <span class="label">Transcribing</span>
+      <span class="val" id="txQueueVal">—</span>
     </div>
   </div>
 
@@ -957,6 +963,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadFootage();
   loadDavinciProjects();
   loadStorageStats();
+  startTxQueueStream();
   prefillWatcherPath();
 
   document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -1429,6 +1436,12 @@ function renderCard(f) {
   const voiceBtnHtml = f.shot_type === 'completed-video'
     ? `<button class="btn-voice-analyze" onclick="event.stopPropagation();analyzeVoice(${f.id}, '${escAttr(f.original_filename)}', '${escAttr(f.file_path)}')" title="Analyze voice profile">🎤 Voice</button>`
     : '';
+  // Show transcribe button on talking-head clips that don't have a transcript yet
+  const txBtnHtml = (f.shot_type === 'talking-head' && !f.transcript_path)
+    ? `<button class="btn-voice-analyze" onclick="event.stopPropagation();enqueueTranscript(${f.id})" title="Queue for auto-transcription" id="txbtn-${f.id}" style="background:rgba(62,207,178,0.12);color:var(--teal);border-color:rgba(62,207,178,0.3);">🎙 Transcribe</button>`
+    : (f.shot_type === 'talking-head' && f.transcript_path)
+      ? `<span style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px;display:block;">✓ Transcribed</span>`
+      : '';
   const dur = f.duration ? formatDuration(f.duration) : null;
   const isSelected = selectedIds.has(f.id);
 
@@ -1458,6 +1471,7 @@ function renderCard(f) {
         })()}
         <div class="dist-dots">${dotHtml}</div>
         ${voiceBtnHtml}
+        ${txBtnHtml}
         ${(f.braw_source_path && f.codec === 'BRAW') ? '<span class="braw-badge">PROXY NEEDED</span>' : ''}
       </div>
     </div>
@@ -2880,6 +2894,104 @@ async function archiveDupeGroup(ids, groupEl) {
   } catch(e) {
     if (btn) { btn.textContent = 'Error'; btn.disabled = false; }
   }
+}
+
+// ── TRANSCRIPTION QUEUE ──────────────────────────────────────────────────────
+
+let txQueueEs = null;
+
+function startTxQueueStream() {
+  if (txQueueEs) { txQueueEs.close(); }
+  txQueueEs = new EventSource('/api/vault/transcribe-queue/stream');
+
+  txQueueEs.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      updateTxQueuePill(data.queue);
+      if (data.type === 'done' || data.type === 'error') {
+        // Refresh the card for the affected footage so the button updates
+        const fid = data.job?.footage_id;
+        if (fid) refreshCardById(fid);
+      }
+    } catch (_) {}
+  };
+
+  txQueueEs.onerror = () => {
+    // Reconnect automatically after 10s
+    setTimeout(() => { if (document.hidden) return; startTxQueueStream(); }, 10000);
+  };
+}
+
+function updateTxQueuePill(queue) {
+  if (!queue) return;
+  const pill = document.getElementById('txQueuePill');
+  const dot  = document.getElementById('txQueueDot');
+  const val  = document.getElementById('txQueueVal');
+  if (!pill) return;
+
+  const { processing, pending_count, active_job } = queue;
+
+  if (processing || pending_count > 0) {
+    pill.style.display = '';
+    dot.style.animation = 'pulse 1.2s ease-in-out infinite';
+    if (active_job) {
+      const pct = active_job.progress?.find(p => p.stage === 'whisper_progress');
+      val.textContent = pending_count > 0 ? `1 active + ${pending_count} waiting` : '1 active';
+    } else {
+      val.textContent = `${pending_count} queued`;
+    }
+  } else {
+    // Queue idle — hide the pill
+    pill.style.display = 'none';
+  }
+}
+
+async function enqueueTranscript(footageId) {
+  const btn = document.getElementById(`txbtn-${footageId}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Queued'; }
+
+  try {
+    const res = await fetch('/api/vault/transcribe-queue/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ footage_id: footageId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if (btn) { btn.textContent = '⏳ In Queue'; }
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = '🎙 Transcribe'; }
+      if (data.reason === 'already transcribed') {
+        // Reload the card — it should show ✓ Transcribed
+        refreshCardById(footageId);
+      } else {
+        alert('Could not queue: ' + (data.reason || data.error || 'unknown'));
+      }
+    }
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = '🎙 Transcribe'; }
+    console.error('[txQueue]', err);
+  }
+}
+
+async function refreshCardById(footageId) {
+  try {
+    const record = await fetch(`/api/vault/footage/${footageId}`).then(r => r.json());
+    if (!record || !record.id) return;
+    // Find all card-wraps for this footage and replace their HTML
+    const wraps = document.querySelectorAll(`.card-wrap`);
+    for (const wrap of wraps) {
+      const cb = wrap.querySelector('.card-checkbox');
+      if (!cb) continue;
+      const onclickAttr = wrap.querySelector('.footage-card')?.getAttribute('onclick') || '';
+      if (onclickAttr.includes(`openModal(${footageId})`)) {
+        wrap.outerHTML = renderCard(record);
+        return;
+      }
+    }
+    // Fallback: full reload
+    loadFootage();
+  } catch (_) {}
 }
 </script>
 <script src="/js/nav.js"></script>

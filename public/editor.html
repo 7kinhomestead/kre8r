@@ -234,6 +234,30 @@
       📄 Read Timeline Transcript
     </button>
     <button class="btn btn-ghost btn-sm" id="clearBtn" disabled style="margin-left:auto">Clear</button>
+    <button class="btn btn-ghost" id="editrRoomBtn" disabled onclick="toggleEditrRoom()" title="Open EditΩr Room — collaborative editing partner" style="background:rgba(62,207,178,0.1);color:var(--teal);border-color:rgba(62,207,178,0.3)">
+      💬 EditΩr Room
+    </button>
+  </div>
+
+  <!-- EDITΩR ROOM SLIDE-OUT -->
+  <div id="editrRoomPanel" style="display:none;position:fixed;top:0;right:0;width:420px;height:100vh;background:#161916;border-left:1px solid #2a2e28;z-index:500;display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,0.5);">
+    <div style="padding:16px 20px;border-bottom:1px solid #2a2e28;display:flex;align-items:center;justify-content:space-between;background:rgba(22,25,22,0.98)">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#e8ebe6">EditΩr Room</div>
+        <div style="font-size:11px;color:#5b9cf6">Your edit partner — story, pacing, b-roll guidance</div>
+      </div>
+      <button onclick="toggleEditrRoom()" style="background:none;border:none;color:#8a9487;cursor:pointer;font-size:20px;line-height:1">✕</button>
+    </div>
+    <div id="editrRoomMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
+    <div style="padding:12px 16px;border-top:1px solid #2a2e28;background:rgba(22,25,22,0.98)">
+      <div style="display:flex;gap:8px">
+        <textarea id="editrRoomInput" rows="2" placeholder="Ask anything about the edit…" style="flex:1;background:#1c1f1b;border:1px solid #2a2e28;border-radius:6px;color:#e8ebe6;font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;resize:none;outline:none;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendEditrRoomMsg();}"></textarea>
+        <button onclick="sendEditrRoomMsg()" style="background:#3ecfb2;color:#0e0f0e;font-weight:700;border:none;border-radius:6px;padding:0 14px;cursor:pointer;font-size:13px">→</button>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px">
+        <button onclick="clearEditrRoomSession()" style="background:none;border:none;color:#4e5349;font-size:11px;cursor:pointer;">Clear session</button>
+      </div>
+    </div>
   </div>
 
   <!-- TIMELINE PICKER -->
@@ -646,6 +670,7 @@ async function onProjectChange(projectId) {
   document.getElementById('clearBtn').disabled = false;
   document.getElementById('davinciBtn').disabled = true;
   document.getElementById('timelineTranscriptBtn').disabled = false;  // always available once project is selected
+  document.getElementById('editrRoomBtn').disabled = false;  // EditΩr Room enabled once project selected
   document.getElementById('timelinePicker').style.display = 'flex';
   document.getElementById('importBrollBtn').disabled = true;
   loadTimelineList(); // populate dropdown from Resolve
@@ -825,14 +850,11 @@ function buildSectionCard(sec) {
   card.dataset.sectionId    = sec.id;
   card.dataset.sectionIndex = sec.section_index;
 
-  const takes      = sec.takes || [];
-  // Use selected_takes[0] as source of truth — identifies winner by both footage_id
-  // AND start time so single-clip shoots (multiple takes in one file) work correctly.
-  const selectedTake = sec.selected_takes?.[0];
-  const winnerTake = selectedTake
-    ? (takes.find(t => t.footage_id === selectedTake.footage_id && t.start === selectedTake.start) || takes[0])
-    : (takes.find(t => t.footage_id === sec.winner_footage_id) || takes[0]);
-  const winnerQ    = winnerTake?.quality || '';
+  const takes        = sec.takes || [];
+  const sequence     = sec.selected_takes || [];
+  const segCount     = sequence.length;
+  const hasSequence  = segCount > 0 && sequence[0]?.level !== 'full_clip';
+  const goldTakes    = takes.filter(t => t.quality === 'gold');
 
   card.innerHTML = `
     <div class="section-head" onclick="toggleSection(this)">
@@ -841,19 +863,57 @@ function buildSectionCard(sec) {
         <div class="section-label">${esc(sec.script_section)}</div>
         <div class="section-meta">
           ${takes.length > 0 ? `<span class="badge badge-takes">${takes.length} take${takes.length !== 1 ? 's' : ''}</span>` : ''}
-          ${winnerQ ? `<span class="badge badge-${winnerQ}">${winnerQ}</span>` : ''}
-          ${sec.gold_nugget ? `<span class="badge badge-gold">gold</span>` : ''}
-          ${takes.length > 1 ? `<span class="badge badge-fire">tap to swap</span>` : ''}
+          ${hasSequence ? `<span class="badge badge-fire">${segCount} seg${segCount !== 1 ? 's' : ''} assembled</span>` : ''}
+          ${sec.gold_nugget ? `<span class="badge badge-gold">⚡ gold</span>` : ''}
         </div>
       </div>
       <button class="section-expand" tabindex="-1">▾</button>
     </div>
     <div class="section-body">
+      ${sec.assembly_note ? `<div style="background:rgba(62,207,178,0.06);border:1px solid rgba(62,207,178,0.2);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--teal);">🧠 <em>${esc(sec.assembly_note)}</em></div>` : ''}
+      ${buildSequenceHTML(sec)}
       ${buildTakesHTML(sec)}
-      ${sec.fire_suggestion ? `<div class="fire-box"><strong>NOTE:</strong> ${esc(sec.fire_suggestion)}</div>` : ''}
+      ${sec.fire_suggestion ? `<div class="fire-box" style="margin-top:8px"><strong>NOTE:</strong> ${esc(sec.fire_suggestion)}</div>` : ''}
     </div>
   `;
   return card;
+}
+
+// ─────────────────────────────────────────────
+// PROPOSED SEQUENCE — Claude's assembled cut list
+// Shows each segment in order with timecode + level + note.
+// ─────────────────────────────────────────────
+function buildSequenceHTML(sec) {
+  const sequence = sec.selected_takes || [];
+  const isOldFullClip = sequence.length === 1 && sequence[0]?.level === 'full_clip';
+  if (sequence.length === 0 || isOldFullClip) return '';
+
+  const rows = sequence.map((seg, i) => {
+    const ts = (seg.start != null && seg.end != null)
+      ? `${fmtTs(seg.start)} → ${fmtTs(seg.end)} (${(seg.end - seg.start).toFixed(1)}s)`
+      : '';
+    const levelColor = { full_take: 'var(--green)', paragraph: 'var(--teal)', sentence: 'var(--amber)', fallback: 'var(--red)' }[seg.level] || 'var(--text-dim)';
+    const proxyPath = seg.proxy_path || '';
+    const playBtn = proxyPath
+      ? `<button onclick="event.stopPropagation();playClipSegment('${escAttr(proxyPath)}', ${seg.start || 0}, ${seg.end || 0})" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--teal);font-size:10px;padding:2px 7px;cursor:pointer;margin-left:6px">▶</button>`
+      : '';
+    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)${i === sequence.length - 1 ? ';border-bottom:none' : ''}">
+      <span style="font-size:10px;font-weight:700;color:var(--text-dimmer);min-width:18px">${i + 1}.</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+          <span style="font-size:11px;color:var(--text)">${ts || `clip #${seg.footage_id}`}</span>
+          <span style="font-size:9px;font-weight:700;color:${levelColor};text-transform:uppercase">${seg.level || ''}</span>
+          ${playBtn}
+        </div>
+        ${seg.note ? `<div style="font-size:10px;color:var(--text-dimmer);margin-top:2px">${esc(seg.note)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div style="margin-bottom:10px">
+    <div class="section-detail-label">PROPOSED SEQUENCE (${sequence.length} cut${sequence.length !== 1 ? 's' : ''})</div>
+    <div style="background:var(--bg-card-2);border:1px solid var(--border);border-radius:6px;padding:6px 10px">${rows}</div>
+  </div>`;
 }
 
 function buildTakesHTML(sec) {
@@ -863,28 +923,35 @@ function buildTakesHTML(sec) {
   const projectId    = currentProjectId;
   const sectionIndex = sec.section_index;
 
-  const selectedTake = sec.selected_takes?.[0];
+  // Check if any take appears in the proposed sequence
+  const sequence = sec.selected_takes || [];
+  const seqIds = new Set(sequence.map(s => `${s.footage_id}:${s.start?.toFixed(1)}`));
+
   const html = takes.map((t, idx) => {
-    const isWinner = selectedTake
-      ? (t.footage_id === selectedTake.footage_id && t.start === selectedTake.start)
-      : (t.footage_id === sec.winner_footage_id);
+    const inSequence = sequence.some(s => s.footage_id === t.footage_id && Math.abs((s.start || 0) - (t.start || 0)) < 1.0);
     const ts = (t.start != null && t.end != null)
       ? `${fmtTs(t.start)} → ${fmtTs(t.end)} (${((t.end - t.start)).toFixed(1)}s)`
       : '';
-    const qualityBadge = t.quality ? `<span class="badge badge-${t.quality}" style="font-size:9px">${t.quality}</span>` : '';
-    const note = t.note ? `<div style="font-size:11px;color:var(--text-dimmer);margin-top:3px">${esc(t.note)}</div>` : '';
+    const qColor = { strong:'var(--green)', clean:'var(--teal)', fumbled:'var(--red)', partial:'var(--amber)', gold:'#f59e0b' }[t.quality] || 'var(--text-dimmer)';
+    const qualityBadge = t.quality ? `<span style="font-size:9px;font-weight:700;color:${qColor};text-transform:uppercase">${t.quality === 'gold' ? '⚡ ' : ''}${t.quality}</span>` : '';
+    const note = t.note ? `<div style="font-size:10px;color:var(--text-dimmer);margin-top:2px">${esc(t.note)}</div>` : '';
+    const proxyPath = t.proxy_path || '';
+    const playBtn = proxyPath
+      ? `<button onclick="event.stopPropagation();playClipSegment('${escAttr(proxyPath)}', ${t.start || 0}, ${t.end || 0})" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--teal);font-size:10px;padding:2px 7px;cursor:pointer">▶</button>`
+      : '';
 
-    return `<div class="take-item${isWinner ? ' is-winner' : ''}" ${!isWinner ? `onclick="swapTake(${projectId}, ${sectionIndex}, ${idx}, this)"` : ''}>
+    return `<div class="take-item${inSequence ? ' is-winner' : ''}" onclick="swapTake(${projectId}, ${sectionIndex}, ${idx}, this)">
       <div class="take-row">
         ${qualityBadge}
-        <span style="color:var(--text)">${ts || `footage #${t.footage_id}`}</span>
-        ${isWinner ? '<span class="take-winner-tag">✓ SELECTED</span>' : '<span class="take-swap-hint">tap to use</span>'}
+        <span style="color:var(--text);flex:1">${ts || `footage #${t.footage_id}`}</span>
+        ${playBtn}
+        ${inSequence ? '<span class="take-winner-tag">✓ IN SEQ</span>' : '<span class="take-swap-hint">use this</span>'}
       </div>
       ${note}
     </div>`;
   }).join('');
 
-  return `<div class="section-detail-label">TAKES</div><div class="takes-list">${html}</div>`;
+  return `<div class="section-detail-label" style="margin-top:8px">ALL TAKES (${takes.length})</div><div class="takes-list">${html}</div>`;
 }
 
 // ─────────────────────────────────────────────
@@ -1528,6 +1595,193 @@ function esc(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function escAttr(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/\\/g, '\\\\');
+}
+
+// ─────────────────────────────────────────────
+// INLINE VIDEO PLAYER
+// Uses Electron file:// protocol — H.264 .mov/.mp4 plays natively.
+// Shows a floating player anchored to the clicked button.
+// ─────────────────────────────────────────────
+
+let _playerEl = null;
+
+function playClipSegment(filePath, startSec, endSec) {
+  // Build file:// URL for Electron — convert Windows backslashes
+  const normalised = filePath.replace(/\\/g, '/');
+  const fileUrl = normalised.startsWith('/')
+    ? 'file://' + normalised
+    : 'file:///' + normalised;
+
+  // Create or reuse player element
+  if (!_playerEl) {
+    _playerEl = document.createElement('div');
+    _playerEl.id = 'inline-player';
+    _playerEl.style.cssText = `position:fixed;bottom:80px;right:20px;width:480px;background:#0e0f0e;border:1px solid #3d4439;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.7);z-index:999;padding:12px;`;
+    _playerEl.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--teal);letter-spacing:1px">PREVIEW</span>
+        <button onclick="closePlayer()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;line-height:1">✕</button>
+      </div>
+      <video id="inline-video" style="width:100%;border-radius:6px;background:#000" controls></video>
+      <div id="inline-player-path" style="font-size:10px;color:var(--text-dimmer);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+    `;
+    document.body.appendChild(_playerEl);
+  }
+
+  const video = document.getElementById('inline-video');
+  const pathEl = document.getElementById('inline-player-path');
+
+  _playerEl.style.display = 'block';
+  video.src = fileUrl + (startSec > 0 ? `#t=${startSec}` : '');
+  pathEl.textContent = normalised;
+
+  // Seek to exact start and auto-stop at end
+  video.onloadedmetadata = () => {
+    video.currentTime = startSec || 0;
+    video.play().catch(() => {});
+  };
+
+  if (endSec && endSec > startSec) {
+    video.ontimeupdate = () => {
+      if (video.currentTime >= endSec) {
+        video.pause();
+        video.ontimeupdate = null;
+      }
+    };
+  }
+}
+
+function closePlayer() {
+  if (_playerEl) _playerEl.style.display = 'none';
+  const video = document.getElementById('inline-video');
+  if (video) { video.pause(); video.src = ''; }
+}
+
+// ─────────────────────────────────────────────
+// EDITΩR ROOM
+// ─────────────────────────────────────────────
+
+let editrRoomOpen = false;
+let editrRoomMessages = [];  // local conversation history
+
+function toggleEditrRoom() {
+  editrRoomOpen = !editrRoomOpen;
+  const panel = document.getElementById('editrRoomPanel');
+  panel.style.display = editrRoomOpen ? 'flex' : 'none';
+
+  // Load session on first open
+  if (editrRoomOpen && currentProjectId && editrRoomMessages.length === 0) {
+    loadEditrRoomSession();
+  }
+}
+
+async function loadEditrRoomSession() {
+  if (!currentProjectId) return;
+  try {
+    const data = await fetch(`/api/editr-room/session/${currentProjectId}`).then(r => r.json());
+    editrRoomMessages = data.messages || [];
+    renderEditrRoomMessages();
+  } catch (_) {}
+}
+
+function renderEditrRoomMessages() {
+  const container = document.getElementById('editrRoomMessages');
+  if (!container) return;
+  if (editrRoomMessages.length === 0) {
+    container.innerHTML = `<div style="color:#4e5349;font-size:12px;text-align:center;margin-top:40px">Start a conversation about your edit.<br><br><em>Ask about pacing, story structure, b-roll ideas, or which take is stronger.</em></div>`;
+    return;
+  }
+  container.innerHTML = editrRoomMessages.map(m => {
+    const isUser = m.role === 'user';
+    return `<div style="display:flex;flex-direction:column;align-items:${isUser ? 'flex-end' : 'flex-start'}">
+      <div style="max-width:90%;background:${isUser ? '#3ecfb2' : '#1c1f1b'};color:${isUser ? '#0e0f0e' : '#e8ebe6'};border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap">${esc(m.content)}</div>
+    </div>`;
+  }).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendEditrRoomMsg() {
+  const input = document.getElementById('editrRoomInput');
+  const text  = input?.value?.trim();
+  if (!text || !currentProjectId) return;
+
+  input.value = '';
+  editrRoomMessages.push({ role: 'user', content: text });
+  renderEditrRoomMessages();
+
+  // Placeholder for streaming response
+  const container = document.getElementById('editrRoomMessages');
+  const streamDiv  = document.createElement('div');
+  streamDiv.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start';
+  streamDiv.innerHTML = `<div style="max-width:90%;background:#1c1f1b;color:#e8ebe6;border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap" id="editr-stream">▋</div>`;
+  container.appendChild(streamDiv);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const res = await fetch('/api/editr-room/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_id: currentProjectId, messages: editrRoomMessages })
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+    const streamEl = document.getElementById('editr-stream');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const evt = JSON.parse(line.slice(6));
+          if (evt.type === 'token') {
+            fullText += evt.text;
+            if (streamEl) streamEl.textContent = fullText + '▋';
+            container.scrollTop = container.scrollHeight;
+          }
+          if (evt.type === 'done') {
+            if (streamEl) streamEl.textContent = fullText;
+            editrRoomMessages.push({ role: 'assistant', content: fullText });
+            // Save session to server
+            fetch(`/api/editr-room/session/${currentProjectId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messages: editrRoomMessages })
+            }).catch(() => {});
+          }
+          if (evt.type === 'error' && streamEl) {
+            streamEl.textContent = '⚠ ' + evt.error;
+            streamEl.style.color = 'var(--red)';
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (err) {
+    const streamEl = document.getElementById('editr-stream');
+    if (streamEl) { streamEl.textContent = '⚠ ' + err.message; streamEl.style.color = 'var(--red)'; }
+  }
+}
+
+async function clearEditrRoomSession() {
+  if (!currentProjectId || !confirm('Clear EditΩr Room conversation?')) return;
+  await fetch(`/api/editr-room/session/${currentProjectId}`, { method: 'DELETE' }).catch(() => {});
+  editrRoomMessages = [];
+  renderEditrRoomMessages();
 }
 
 // ─────────────────────────────────────────────

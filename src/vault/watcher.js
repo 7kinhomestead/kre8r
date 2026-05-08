@@ -18,6 +18,7 @@ const path      = require('path');
 const fs        = require('fs');
 const { ingestFile } = require('./intake');
 const { transcribeFile } = require('./transcribe');
+const txQueue   = require('./transcribe-queue');
 
 const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH || path.join(__dirname, '..', '..', 'creator-profile.json');
 const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv']);
@@ -182,6 +183,19 @@ function startWatcher(overridePath = null) {
       const result = await ingestFile(filePath, { projectId, shot_type_override });
       if (result.ok) {
         console.log(`[VaultΩr Watcher] ✓ Ingested: ${path.basename(filePath)} (id=${result.id}, type=${result.shot_type || 'unclassified'})`);
+
+        // Auto-transcribe talking-head clips via the background queue.
+        // The queue processes one at a time, never blocks the watcher,
+        // and broadcasts progress to any connected VaultΩr SSE clients.
+        if (result.shot_type === 'talking-head' && result.id) {
+          const label = path.basename(filePath);
+          const enqueueResult = txQueue.enqueue(result.id, filePath, label);
+          if (enqueueResult.ok) {
+            console.log(`[VaultΩr Watcher] 🎙 Queued for transcription: ${label} (job=${enqueueResult.job_id})`);
+          } else {
+            console.log(`[VaultΩr Watcher] Transcription skipped for id=${result.id}: ${enqueueResult.reason}`);
+          }
+        }
 
         // Auto-transcribe social clips so CaptionΩr can generate captions
         // from the actual spoken words — no manual matching needed.

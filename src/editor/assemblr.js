@@ -106,17 +106,25 @@ function extractAssemblyJson(raw) {
   }
 }
 
+// Opus model for Call 2 — editorial judgment is creative, not mechanical.
+// Override via CLAUDE_ASSEMBLY_MODEL env var (fall back to Sonnet if not set).
+const ASSEMBLY_MODEL = process.env.CLAUDE_ASSEMBLY_MODEL
+  || process.env.CLAUDE_MODEL
+  || 'claude-sonnet-4-6';
+
 /**
  * Call Claude for assembly (Call 2).
- * Uses a system prompt that strictly enforces JSON-only output,
- * then extracts JSON from whatever Claude returns (handles any preamble text).
+ * Uses Opus (or override) for editorial judgment — picking the best takes
+ * from short 1-3 sentence clips requires creative understanding of flow.
+ * System prompt enforces JSON-only output. extractAssemblyJson handles preamble.
  */
 async function callClaudeAssembly(prompt, beatName, emit) {
-  const system = 'You are a video assembly engine. You output ONLY a single valid JSON object — no explanation, no markdown, no analysis text before or after. Your entire response must be parseable by JSON.parse().';
+  const system = 'You are a video editor assembling the best version of a talking-head beat from multiple short takes. Output ONLY a single valid JSON object — no explanation, no markdown, no analysis text before or after. Your entire response must be parseable by JSON.parse().';
   const rawText = await callClaudeMessages(
     system,
     [{ role: 'user', content: prompt }],
-    4096
+    4096,
+    { model: ASSEMBLY_MODEL, tool: 'assemblr-call2' }
   );
   try {
     return extractAssemblyJson(rawText);
@@ -325,26 +333,30 @@ async function assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit) {
     ? `\nSCRIPT FOR THIS BEAT:\n${writrBeatScript}\n`
     : '';
 
-  const prompt = `You are assembling the best version of the beat "${beat.name}" (${beat.emotional_function || ''}) for ${creatorCtx.creatorName || 'the creator'}.
+  const prompt = `You are a video editor assembling the best version of beat "${beat.name}" (${beat.emotional_function || ''}) for ${creatorCtx.creatorName || 'the creator'}.
 ${scriptSection}
-ALL FOOTAGE — chronological, includes retakes and fumbles:
+CONTEXT: Jason films in short takes — each take is typically 1-3 sentences covering ONE part of the beat. There may be 4-8 takes across all clips. Your job is to pick the BEST ones and order them into a seamless beat.
+
+ALL TAKES — chronological (last take usually most relaxed):
 ${takesText}
 
 ASSEMBLY RULES (priority order):
-1. FULL_TAKE — If any single take delivers the whole beat cleanly, use it whole. Do not split it even if one sentence was slightly better elsewhere.
-2. PARAGRAPH — If no single take covers everything, use the longest clean paragraph-length runs. A complete paragraph from a good take beats cherry-picked sentences.
-3. SENTENCE — Only use sentence-level pieces to fill a specific gap no paragraph covers. A sentence is the absolute minimum — NEVER cut mid-sentence.
+1. FULL_TAKE — Any take that cleanly covers the ENTIRE beat by itself: use it whole. No cuts needed.
+2. PARAGRAPH — Two or more consecutive takes from the SAME clip that flow together naturally: use as a block. Fewer clips = fewer cuts.
+3. SENTENCE — Individual takes that each cover a distinct sentence or thought: pick the best version of each sentence across all takes. This is the normal case when takes are 1-3 sentences each.
 
-KEY PRINCIPLES:
-- Last take = usually most relaxed delivery. Prefer it unless it clearly fumbled.
-- Fewer cuts is always better. Minimise segments.
-- Fumbles: repeated phrases, "let me try that again", incomplete sentences followed by restart. EXCLUDE these fumbled portions.
-- Adlibs that feel on-topic: keep them as part of their surrounding run.
-- FUMBLED TAKES — whole block or nothing: Never extract individual sentences or paragraphs from a fumbled take. If a fumbled take contains content that does not appear in any clean or strong take (e.g. the opening hook), include the ENTIRE fumbled take as one block — the editor will trim around the fumble in Resolve. Sentence-level and paragraph-level extraction is only permitted from clean or strong takes.
+KEY PRINCIPLES FOR SHORT TAKES:
+- Each take is usually 1-3 sentences. Multiple takes often cover the SAME sentence differently — pick the best delivery of each sentence.
+- Last take of each clause is usually the most relaxed and natural. Default to it unless clearly worse.
+- Fumbled takes (false starts, repeated words, "let me try that again"): skip entirely UNLESS that take contains unique content not in any other take.
+- Gold/off-script moments: if a take is tagged quality:"gold", include it — it's a genuine spontaneous moment that earned its spot.
+- Adlibs that feel on-topic: keep them as part of their take.
+- Aim for minimum cuts. If take 6 covers sentences A+B cleanly, don't break it to use take 3 for A and take 8 for B.
+- Dead air at take start/end: your timestamps mark the speech. The editor adds handles in Resolve.
 
 CRITICAL TIMESTAMP RULE:
 - start_ts and end_ts MUST be plain decimal numbers in seconds (e.g. 125.4, 30.0).
-- NEVER use M:SS format. Copy timestamps exactly as they appear in the transcript above (e.g. "125.40s" → use 125.4).
+- Copy timestamps EXACTLY as shown in the transcript. NEVER use M:SS format.
 
 Return ONLY the JSON object below — no explanation, no analysis, no markdown:
 {
@@ -357,25 +369,31 @@ Return ONLY the JSON object below — no explanation, no analysis, no markdown:
       "note": "one sentence — what this covers and why chosen"
     }
   ],
-  "assembly_note": "one sentence describing the strategy used"
+  "assembly_note": "one sentence describing the editorial strategy (e.g. 'Used take 3 for the hook, take 7 for the payoff — cleaner delivery throughout')"
 }`;
 
   try {
     emit({ event: 'status', message: `Beat "${beat.name}": assembling from ${sorted.length} take(s)…` });
     const result = await callClaudeAssembly(prompt, beat.name, emit);
     const assembly = result.assembly || [];
-    emit({ event: 'status', message: `Beat "${beat.name}": ${assembly.length} segment(s) — ${result.assembly_note || ''}` });
+    const note = result.assembly_note || '';
+    emit({ event: 'status', message: `Beat "${beat.name}": ${assembly.length} segment(s) — ${note}` });
+    // Return both the assembly array and the note so the caller can store it
+    // Attach note to returned array as a property (non-enumerable on array)
+    assembly.assembly_note = note;
     return assembly;
   } catch (e) {
     emit({ event: 'warning', message: `Assembly failed for "${beat.name}": ${e.message} — falling back to last non-fumbled take` });
     const fallback = sorted.slice().reverse().find(t => t.quality !== 'fumbled') || sorted[sorted.length - 1];
-    return [{
+    const result = [{
       footage_id: fallback.footage_id,
       start_ts:   fallback.start,
       end_ts:     fallback.end,
       level:      'fallback',
       note:       'Claude assembly failed — using last clean take',
     }];
+    result.assembly_note = 'Assembly failed — fallback to last clean take';
+    return result;
   }
 }
 
@@ -627,14 +645,59 @@ async function buildAssembly(projectId, onProgress) {
     emit({ event: 'status', message: `[Call1] Beat "${beats[i].name}": ${summary}` });
   }
 
-  // ── 8. Build timeline sections — ALL takes per beat, chronological ────────
-  // No AI selection. Every take goes on the timeline. Claude's quality ratings
-  // become markers in Resolve so Jason can do a first pass (accept/reject markers)
-  // rather than having AI make editorial cuts.
-  emit({ event: 'status', message: 'Building timeline — all takes per beat…' });
+  // ── 8. Merge gold moments into the beat pool ────────────────────────────
+  // Gold moments belong next to the beat where they occurred, not in exile.
+  // Add them to the nearest beat's takes array tagged quality:'gold'.
+  // This way Call 2 can include them in the proposed sequence if appropriate.
+  for (const gm of goldPool) {
+    // Find the beat that temporally overlaps this gold moment (or the nearest one)
+    let bestBeatIdx = 0;
+    let bestOverlap = -1;
+    for (let i = 0; i < beats.length; i++) {
+      // Check if any take in this beat pool shares the same clip + temporal proximity
+      for (const t of beatPool[i]) {
+        if (t.footage_id === gm.footage_id) {
+          const overlap = Math.min(gm.end, t.end) - Math.max(gm.start, t.start);
+          if (overlap > bestOverlap) {
+            bestOverlap = overlap;
+            bestBeatIdx = i;
+          }
+        }
+      }
+    }
+    // Add gold moment as a take in that beat with quality:'gold'
+    beatPool[bestBeatIdx].push({
+      footage_id:      gm.footage_id,
+      proxy_path:      gm.proxy_path,
+      clip_duration:   gm.clip_duration || 0,
+      clip_created_at: '',
+      start:           gm.start,
+      end:             gm.end,
+      quality:         'gold',
+      note:            gm.reason || 'Off-script gold moment',
+      beat_name:       beats[bestBeatIdx]?.name || `Beat ${bestBeatIdx + 1}`,
+      segments:        [],
+    });
+    emit({ event: 'status', message: `Gold moment assigned to beat "${beats[bestBeatIdx]?.name}" (${gm.reason?.slice(0, 60) || ''})` });
+  }
+
+  // ── 9. Call 2 — Smart assembly per beat (Opus) ──────────────────────────
+  // For each beat: give Claude all takes + the WritΩr script section.
+  // Claude picks the best sequence using as few cuts as possible.
+  // Takes are short (1-3 sentences each) — Claude sequences them like building blocks.
+  emit({ event: 'status', message: `Assembling beats with AI (${ASSEMBLY_MODEL})…` });
 
   const sections     = [];
   const missingBeats = [];
+
+  // Build per-beat WritΩr script lookup
+  const beatScriptLookup = {};
+  if (writrBeatMap && Array.isArray(writrBeatMap)) {
+    for (const bm of writrBeatMap) {
+      const key = bm.beat_index ?? bm.beat_name;
+      beatScriptLookup[key] = bm.real_moment || bm.coverage_description || null;
+    }
+  }
 
   for (let i = 0; i < beats.length; i++) {
     const beat     = beats[i];
@@ -646,54 +709,66 @@ async function buildAssembly(projectId, onProgress) {
       continue;
     }
 
-    // Sort all takes chronologically
-    const sorted = [...allTakes].sort((a, b) => {
-      if (a.clip_created_at !== b.clip_created_at) {
-        return new Date(a.clip_created_at) - new Date(b.clip_created_at);
-      }
+    emit({ event: 'beat_assembling', beat: beat.name, takes: allTakes.length });
+
+    // Per-beat WritΩr script text
+    const writrBeatScript = beatScriptLookup[i] || beatScriptLookup[beat.name] || null;
+
+    // Call 2 — Claude assembles best sequence from short takes
+    let assembly = [];
+    let assemblyNote = '';
+    try {
+      const raw = await assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit);
+      // assembleBeat returns an array with assembly_note attached as a property
+      assembly = Array.isArray(raw) ? raw : [];
+      assemblyNote = raw.assembly_note || '';
+    } catch (e) {
+      emit({ event: 'warning', message: `Call 2 failed for "${beat.name}": ${e.message} — using best clean take` });
+      // Fallback: last non-fumbled take, full block
+      const sorted = [...allTakes].sort((a, b) => new Date(a.clip_created_at) - new Date(b.clip_created_at));
+      const fallback = sorted.slice().reverse().find(t => t.quality !== 'fumbled') || sorted[sorted.length - 1];
+      assembly = [{ footage_id: fallback.footage_id, start_ts: fallback.start, end_ts: fallback.end, level: 'fallback', note: 'Call 2 failed — last clean take' }];
+      assemblyNote = 'Assembly failed — fallback to last clean take';
+    }
+
+    // Apply handles to the assembly segments
+    const withHandles = applyHandlesToAssembly(assembly, allTakes);
+
+    // Build takes list for display (all tagged takes, sorted chronologically)
+    const sortedTakes = [...allTakes].sort((a, b) => {
+      if (a.clip_created_at !== b.clip_created_at) return new Date(a.clip_created_at) - new Date(b.clip_created_at);
       return a.start - b.start;
     });
 
-    const qualitySummary = sorted.map((t, n) =>
-      `take${n + 1}:${t.quality}`
-    ).join(' ');
-
-    // selected_takes = full clip reference only (no subclipping).
-    // build-selects.py places the clip once in full; all beat/quality data
-    // lives in `takes` and is used exclusively for marker placement.
-    const clipRef = sorted[0];
-    const clipDur = clipRef.clip_duration || 0;
+    const qualitySummary = sortedTakes.map((t, n) => `take${n + 1}:${t.quality}`).join(' ');
+    const hasGold = sortedTakes.some(t => t.quality === 'gold');
 
     sections.push({
       project_id:               projectId,
       script_section:           `Beat ${i + 1} — ${beat.name}`,
       section_index:            i,
-      takes:                    sorted.map(t => ({ footage_id: t.footage_id, proxy_path: t.proxy_path, start: t.start, end: t.end, quality: t.quality, note: t.note })),
-      selected_takes:           [{ footage_id: clipRef.footage_id, proxy_path: clipRef.proxy_path, start: 0, end: clipDur, level: 'full_clip' }],
-      winner_footage_id:        clipRef.footage_id,
-      gold_nugget:              0,
-      fire_suggestion:          `${sorted.length} take(s) — ${qualitySummary}. ${beat.emotional_function || ''}`,
+      // All tagged takes (building blocks) — for approval UI display
+      takes:                    sortedTakes.map(t => ({
+        footage_id:  t.footage_id,
+        proxy_path:  t.proxy_path,
+        start:       t.start,
+        end:         t.end,
+        quality:     t.quality,
+        note:        t.note,
+        beat_name:   t.beat_name,
+        segments:    (t.segments || []).slice(0, 10), // first 10 segments for UI preview
+      })),
+      // Claude's proposed sequence (what actually goes on the timeline)
+      selected_takes:           withHandles,
+      winner_footage_id:        withHandles[0]?.footage_id || sortedTakes[0]?.footage_id || null,
+      gold_nugget:              hasGold ? 1 : 0,
+      fire_suggestion:          `${sortedTakes.length} take(s) — ${qualitySummary}. ${beat.emotional_function || ''}`,
+      assembly_note:            assemblyNote,
+      assembly_mode:            'ai_assembled',
       davinci_timeline_position: sections.length,
     });
 
-    emit({ event: 'beat_mapped', beat: beat.name, takes: sorted.length });
-  }
-
-  // ── 8. Gold moments — marker-only, no clip placement ────────────────────
-  // Gold moments are stored so build-selects.py can add red markers at the
-  // correct timecodes on the already-placed clip. No extra clips added.
-  for (const gm of goldPool) {
-    sections.push({
-      project_id:               projectId,
-      script_section:           '🔴 OFF-SCRIPT GOLD',
-      section_index:            sections.length,
-      takes:                    [{ footage_id: gm.footage_id, proxy_path: gm.proxy_path, start: gm.start, end: gm.end, quality: 'gold', note: gm.reason }],
-      selected_takes:           [],   // empty — no clip placement, markers only
-      winner_footage_id:        gm.footage_id,
-      gold_nugget:              1,
-      fire_suggestion:          gm.reason,
-      davinci_timeline_position: sections.length,
-    });
+    emit({ event: 'beat_mapped', beat: beat.name, takes: sortedTakes.length, segments: withHandles.length });
   }
 
   if (sections.length === 0) {

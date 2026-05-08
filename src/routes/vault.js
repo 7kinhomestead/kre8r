@@ -13,6 +13,7 @@ const db       = require('../db');
 const { ingestFolder, ingestFile, checkFfmpeg, reclassifyById } = require('../vault/intake');
 const { startWatcher, stopWatcher, getWatcherStatus } = require('../vault/watcher');
 const { organizeFile, organizeAll } = require('../vault/organizer');
+const txQueue  = require('../vault/transcribe-queue');
 
 // multer — in-memory, we only need the path sent in the JSON body
 // (actual folder intake uses the File System Access API on the client side)
@@ -920,6 +921,57 @@ router.post('/dedupe', (req, res) => {
   try {
     const result = db.dedupeFootage();
     res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// TRANSCRIPTION QUEUE ROUTES
+// ─────────────────────────────────────────────
+
+// GET /api/vault/transcribe-queue/status — current queue snapshot
+router.get('/transcribe-queue/status', (req, res) => {
+  try {
+    res.json(txQueue.getQueueStatus());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/vault/transcribe-queue/stream — SSE live updates
+// Client connects once; receives { type, job, queue } events as jobs change state.
+router.get('/transcribe-queue/stream', (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  // Keepalive every 20s so nginx / proxies don't drop the connection
+  const hb = setInterval(() => {
+    if (!res.writableEnded) res.write(': keepalive\n\n');
+  }, 20_000);
+
+  req.on('close', () => clearInterval(hb));
+
+  txQueue.connectSse(res);
+});
+
+// POST /api/vault/transcribe-queue/add
+// Body: { footage_id } — manually enqueue a clip for transcription
+router.post('/transcribe-queue/add', (req, res) => {
+  const { footage_id } = req.body;
+  if (!footage_id) return res.status(400).json({ error: 'footage_id required' });
+
+  try {
+    const record = db.getFootageById(parseInt(footage_id));
+    if (!record) return res.status(404).json({ error: 'Footage not found' });
+
+    const filePath = record.proxy_path || record.file_path;
+    if (!filePath) return res.status(400).json({ error: 'No decodable file path on this footage record' });
+
+    const result = txQueue.enqueue(parseInt(footage_id), filePath, record.original_filename);
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

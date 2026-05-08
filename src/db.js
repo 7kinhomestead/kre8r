@@ -1490,6 +1490,20 @@ Partner: {{partner_name}}
   db.exec('CREATE INDEX IF NOT EXISTS idx_brollr_project ON brollr_generations(project_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_brollr_status  ON brollr_generations(status)');
   console.log('[DB] BrollΩr brollr_generations table verified');
+
+  // Soul ID characters
+  db.exec(`CREATE TABLE IF NOT EXISTS brollr_characters (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    soul_id     TEXT,
+    status      TEXT DEFAULT 'training',
+    photo_count INTEGER DEFAULT 0,
+    notes       TEXT,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  // Safe migration — add notes column if it doesn't exist yet
+  try { db.exec(`ALTER TABLE brollr_characters ADD COLUMN notes TEXT`); } catch (_) {}
+  console.log('[DB] BrollΩr brollr_characters table verified');
 }
 
 /**
@@ -1523,6 +1537,10 @@ function bootstrapTenantTables(tdb) {
   addCol('cuts', 'why_it_matters',    'TEXT');
   addCol('cuts', 'suggested_use',     'TEXT');
   addCol('cuts', 'saved_for_later',   'INTEGER NOT NULL DEFAULT 0');
+
+  // AssemblΩr rebuild — assembly strategy note + mode per section
+  addCol('selects', 'assembly_note',  'TEXT');
+  addCol('selects', 'assembly_mode',  'TEXT');
 
   addCol('posts', 'url',              'TEXT');
   addCol('posts', 'angle',            'TEXT');
@@ -3431,8 +3449,9 @@ function insertSelect(section) {
   const result = _run(
     `INSERT INTO selects
        (project_id, script_section, section_index, takes, selected_takes,
-        winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position,
+        assembly_note, assembly_mode)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       section.project_id,
       section.script_section,
@@ -3442,7 +3461,9 @@ function insertSelect(section) {
       section.winner_footage_id         || null,
       section.gold_nugget               ? 1 : 0,
       section.fire_suggestion           || null,
-      section.davinci_timeline_position ?? section.section_index ?? 0
+      section.davinci_timeline_position ?? section.section_index ?? 0,
+      section.assembly_note             || null,
+      section.assembly_mode             || null
     ]
   );
   return result.lastInsertRowid;
@@ -3456,7 +3477,9 @@ function getSelectsByProject(projectId) {
     ...s,
     takes:          JSON.parse(s.takes          || '[]'),
     selected_takes: JSON.parse(s.selected_takes || '[]'),
-    gold_nugget:    !!s.gold_nugget
+    gold_nugget:    !!s.gold_nugget,
+    assembly_note:  s.assembly_note  || null,
+    assembly_mode:  s.assembly_mode  || null
   }));
 }
 
@@ -4919,6 +4942,35 @@ function deleteBrollGeneration(id) {
   _run('DELETE FROM brollr_generations WHERE id = ?', [id]);
 }
 
+// ── BrollΩr Characters (Soul IDs) ─────────────────────────────────────────────
+function getBrollCharacters() {
+  return _all('SELECT * FROM brollr_characters ORDER BY created_at DESC');
+}
+
+function createBrollCharacter({ name, soul_id, status, photo_count, notes }) {
+  const result = _run(
+    `INSERT INTO brollr_characters (name, soul_id, status, photo_count, notes) VALUES (?, ?, ?, ?, ?)`,
+    [name || null, soul_id || null, status || 'training', photo_count || 0, notes || null]
+  );
+  return result.lastInsertRowid;
+}
+
+function updateBrollCharacter(id, data) {
+  const fields = [];
+  const values = [];
+  for (const [k, v] of Object.entries(data)) {
+    fields.push(`${k} = ?`);
+    values.push(v);
+  }
+  if (!fields.length) return;
+  values.push(id);
+  _run(`UPDATE brollr_characters SET ${fields.join(', ')} WHERE id = ?`, values);
+}
+
+function deleteBrollCharacter(id) {
+  _run('DELETE FROM brollr_characters WHERE id = ?', [id]);
+}
+
 module.exports = {
   initDb,
   checkpoint,
@@ -5244,6 +5296,10 @@ module.exports = {
   createBrollGeneration,
   updateBrollGeneration,
   deleteBrollGeneration,
+  getBrollCharacters,
+  createBrollCharacter,
+  updateBrollCharacter,
+  deleteBrollCharacter,
 };
 
 // ─────────────────────────────────────────────

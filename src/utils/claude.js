@@ -160,13 +160,15 @@ async function callClaudeMessages(system, messages, maxTokens = 2048, options = 
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
 
   const { onRetry, tool = 'unknown', session_id = null } = options;
+  // Allow per-call model override — used by AssemblΩr Call 2 (Opus for editorial judgment)
+  const modelToUse = options.model || MODEL;
   const { default: fetch } = await import('node-fetch');
 
   let lastError;
 
   for (let attempt = 0; attempt <= BACKOFF.length; attempt++) {
     try {
-      const body = { model: MODEL, max_tokens: maxTokens, messages };
+      const body = { model: modelToUse, max_tokens: maxTokens, messages };
       if (system) body.system = system;
 
       const ac2 = new AbortController();

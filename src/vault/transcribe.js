@@ -39,6 +39,12 @@ const db = require('../db');
 const WHISPER_MODEL  = process.env.WHISPER_MODEL  || 'medium';
 const TRANSCRIPTS_DIR = path.join(__dirname, '..', '..', 'database', 'transcripts');
 
+// Pin the Whisper model cache to a fixed directory so every Python binary
+// (py / python / python3) shares the same model download.
+// Defaults to database/whisper-model-cache but can be overridden via .env.
+const WHISPER_CACHE_DIR = process.env.WHISPER_CACHE_DIR
+  || path.join(__dirname, '..', '..', 'database', 'whisper-model-cache');
+
 const RESOLVE_TRANSCRIBE_SCRIPT = path.join(
   __dirname, '..', '..', 'scripts', 'davinci', 'resolve-transcribe.py'
 );
@@ -59,7 +65,7 @@ function _testWhisperBinary(bin) {
   return new Promise((resolve) => {
     const proc = spawn(bin, ['-c', 'import whisper; print(whisper.__version__)'], {
       windowsHide: true,
-      timeout: 10_000
+      timeout: 45_000   // torch cold-start can take 20-30s on first import
     });
     let out = '';
     proc.stdout.on('data', d => { out += d.toString(); });
@@ -155,6 +161,9 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
     // Allow per-job model override via options.model, else use server default
     const modelToUse = (options && options.model) || WHISPER_MODEL;
 
+    // Ensure model cache dir exists so --download-root doesn't fail
+    fs.mkdirSync(WHISPER_CACHE_DIR, { recursive: true });
+
     const args = [
       '-m', 'whisper',
       filePath,
@@ -162,6 +171,7 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
       '--output_format',   'json',
       '--word_timestamps', 'True',
       '--output_dir',      TRANSCRIPTS_DIR,
+      '--download-root',   WHISPER_CACHE_DIR,   // pin cache so all Python binaries share same model
       '--verbose',         'False',
     ];
 
@@ -488,6 +498,7 @@ async function transcribeFileSmart(filePath, options = {}) {
     const resolveResult = await transcribeWithResolve(filePath, { footageId, onProgress });
 
     if (resolveResult.ok && resolveResult.segments && resolveResult.segments.length > 0) {
+      const src = resolveResult._source || 'resolve';
       transcript = {
         footage_id: footageId,
         file_path:  filePath,
@@ -495,10 +506,10 @@ async function transcribeFileSmart(filePath, options = {}) {
         text:       resolveResult.text      || '',
         duration:   resolveResult.duration  || 0,
         segments:   resolveResult.segments  || [],
-        _source:    'resolve',
+        _source:    src,
       };
-      usedEngine = 'resolve';
-      onProgress?.({ stage: 'resolve_success', segments: transcript.segments.length });
+      usedEngine = src;
+      onProgress?.({ stage: 'resolve_success', source: src, segments: transcript.segments.length });
     } else {
       // Resolve unavailable or failed — log and fall through to Whisper
       const reason = resolveResult.error || 'unknown';
@@ -508,6 +519,9 @@ async function transcribeFileSmart(filePath, options = {}) {
 
   // ── Fall back to Whisper ─────────────────────────────────────────────────
   if (!transcript) {
+    // Reset detection cache — Resolve path may have set it to "not found" on a
+    // timeout during the DaVinci attempt. Re-probe so Whisper gets a clean shot.
+    resetWhisperCache();
     onProgress?.({ stage: 'whisper_start_fallback' });
     const whisperResult = await _originalTranscribeFile(filePath, options);
     // _originalTranscribeFile already writes the file and updates DB — just return
