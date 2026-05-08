@@ -338,9 +338,15 @@ router.post('/davinci/build/:project_id', (req, res) => {
 
       pushEvent(job, { stage: 'davinci_start', sections: sections.length });
 
-      // Diagnostic — log selected_takes count per section before sending to Python
+      // Diagnostic — log selected_takes for each section before sending to Python
       for (const s of sections) {
-        pushEvent(job, { stage: 'davinci_log', line: `[diag] "${s.script_section}": ${(s.selected_takes||[]).length} selected_takes` });
+        const seq = s.selected_takes || [];
+        if (seq.length === 0) {
+          pushEvent(job, { stage: 'davinci_log', line: `[diag] "${s.script_section}": 0 selected_takes → FULL CLIP fallback` });
+        } else {
+          const seqSummary = seq.map(t => `fid=${t.footage_id} ${(t.start||0).toFixed(1)}→${(t.end||0).toFixed(1)}s`).join(', ');
+          pushEvent(job, { stage: 'davinci_log', line: `[diag] "${s.script_section}": ${seq.length} seg(s) — ${seqSummary}` });
+        }
       }
 
       const proc = spawn(binary, [

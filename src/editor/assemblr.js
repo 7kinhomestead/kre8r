@@ -319,6 +319,17 @@ async function assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit) {
     return [{ footage_id: t.footage_id, start_ts: t.start, end_ts: t.end, level: 'full_take', note: 'only take' }];
   }
 
+  // If NO takes have transcript segments, Claude has nothing to work with —
+  // skip Call 2 entirely and use the best take's occurrence timestamps directly.
+  const anySegments = sorted.some(t => (t.segments || []).length > 0);
+  if (!anySegments) {
+    emit({ event: 'status', message: `Beat "${beat.name}": no transcript segments — using best take directly (no Call 2)` });
+    const best = sorted.slice().reverse().find(t => t.quality === 'strong' || t.quality === 'clean') || sorted[sorted.length - 1];
+    const result = [{ footage_id: best.footage_id, start_ts: best.start, end_ts: best.end, level: 'full_take', note: 'no segments — used best take' }];
+    result.assembly_note = 'No transcript segments — used best available take';
+    return result;
+  }
+
   // Build text block per take including its transcript.
   // IMPORTANT: use decimal seconds in the transcript (not M:SS) so Claude
   // returns decimal seconds back — M:SS in the output breaks JSON parsing.
@@ -326,7 +337,8 @@ async function assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit) {
     const segsText = (take.segments || [])
       .map(s => `  [${s.start.toFixed(2)}s–${s.end.toFixed(2)}s] ${s.text.trim()}`)
       .join('\n');
-    return `=== Take ${i + 1} (footage_id: ${take.footage_id}, quality: ${take.quality || 'clean'}) ===\n${segsText || '  (no transcript segments)'}`;
+    const range = `${take.start.toFixed(2)}s–${take.end.toFixed(2)}s`;
+    return `=== Take ${i + 1} (footage_id: ${take.footage_id}, quality: ${take.quality || 'clean'}, range: ${range}) ===\n${segsText || '  (no transcript segments)'}`;
   }).join('\n\n');
 
   const scriptSection = writrBeatScript
@@ -375,11 +387,17 @@ Return ONLY the JSON object below — no explanation, no analysis, no markdown:
   try {
     emit({ event: 'status', message: `Beat "${beat.name}": assembling from ${sorted.length} take(s)…` });
     const result = await callClaudeAssembly(prompt, beat.name, emit);
-    const assembly = result.assembly || [];
+    let assembly = result.assembly || [];
     const note = result.assembly_note || '';
+
+    // If Claude returned empty assembly, fall back to best take
+    if (assembly.length === 0) {
+      emit({ event: 'warning', message: `Beat "${beat.name}": Claude returned empty assembly — using best take` });
+      const best = sorted.slice().reverse().find(t => t.quality !== 'fumbled') || sorted[sorted.length - 1];
+      assembly = [{ footage_id: best.footage_id, start_ts: best.start, end_ts: best.end, level: 'full_take', note: 'empty assembly — used best take' }];
+    }
+
     emit({ event: 'status', message: `Beat "${beat.name}": ${assembly.length} segment(s) — ${note}` });
-    // Return both the assembly array and the note so the caller can store it
-    // Attach note to returned array as a property (non-enumerable on array)
     assembly.assembly_note = note;
     return assembly;
   } catch (e) {
@@ -406,35 +424,58 @@ Return ONLY the JSON object below — no explanation, no analysis, no markdown:
 // ─────────────────────────────────────────────
 
 function applyHandlesToAssembly(assembly, allTakes) {
-  // Build lookup: footage_id → { clip_duration, proxy_path }
+  // Build lookup: footage_id → { clip_duration, proxy_path, start, end }
+  // Also keep the raw take timestamps so we can fall back when Claude omits them.
   const lookup = {};
   for (const t of allTakes) {
     if (!lookup[t.footage_id]) {
-      lookup[t.footage_id] = { clip_duration: t.clip_duration || 0, proxy_path: t.proxy_path || '' };
+      lookup[t.footage_id] = {
+        clip_duration: t.clip_duration || 0,
+        proxy_path:    t.proxy_path    || '',
+        take_start:    t.start         || 0,
+        take_end:      t.end           || 0,
+      };
     }
   }
 
-  return assembly.map((seg, i) => {
+  const result = [];
+  for (let i = 0; i < assembly.length; i++) {
+    const seg     = assembly[i];
     const isFirst = i === 0;
     const isLast  = i === assembly.length - 1;
     const info    = lookup[seg.footage_id] || {};
     const dur     = info.clip_duration || 0;
 
-    const leadIn  = isFirst ? LEAD_IN_S    : CUT_HANDLE_S;
-    const tail    = isLast  ? TAIL_S       : CUT_HANDLE_S;
+    // Claude uses start_ts/end_ts. Accept start/end as aliases.
+    // Fall back to the take's own occurrence timestamps if both are missing/NaN.
+    let rawStart = seg.start_ts ?? seg.start;
+    let rawEnd   = seg.end_ts   ?? seg.end;
 
-    const start   = clamp(seg.start_ts - leadIn, 0, seg.start_ts);
-    const end     = clamp(seg.end_ts   + tail,   seg.end_ts, dur > 0 ? dur : seg.end_ts + tail);
+    if (typeof rawStart !== 'number' || isNaN(rawStart) || rawStart < 0) rawStart = info.take_start;
+    if (typeof rawEnd   !== 'number' || isNaN(rawEnd)   || rawEnd   < 0) rawEnd   = info.take_end;
 
-    return {
+    // Skip segments where timestamps are still invalid after fallback
+    if (typeof rawStart !== 'number' || typeof rawEnd !== 'number' || rawEnd <= rawStart) {
+      console.warn(`[AssemblΩr] Skipping segment footage_id=${seg.footage_id}: invalid timestamps (${rawStart}→${rawEnd})`);
+      continue;
+    }
+
+    const leadIn = isFirst ? LEAD_IN_S    : CUT_HANDLE_S;
+    const tail   = isLast  ? TAIL_S       : CUT_HANDLE_S;
+
+    const start  = clamp(rawStart - leadIn, 0, rawStart);
+    const end    = clamp(rawEnd   + tail,   rawEnd, dur > 0 ? dur : rawEnd + tail);
+
+    result.push({
       footage_id: seg.footage_id,
       proxy_path: info.proxy_path,
       start,
       end,
       level:      seg.level || 'segment',
       note:       seg.note  || '',
-    };
-  });
+    });
+  }
+  return result;
 }
 
 // ─────────────────────────────────────────────
