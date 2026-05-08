@@ -448,6 +448,13 @@ def run(args):
         # Record where this beat starts on the timeline
         timeline_beat_frame[section_index] = current_frame
 
+        # Build the full clip list for this beat, then place them in ONE
+        # AppendToTimeline call. Batching is more reliable than individual calls —
+        # Resolve processes the list atomically and can't skip individual entries
+        # the way it does with rapid sequential calls.
+        beat_clips = []
+        beat_log   = []
+
         for take in selected_takes:
             fid       = take.get("footage_id")
             t_start   = float(take.get("start", 0))
@@ -471,34 +478,28 @@ def run(args):
             src_in  = max(0, src_in  - 2)
             src_out = src_out + 2
 
-            result = media_pool.AppendToTimeline([{
+            beat_clips.append({
                 "mediaPoolItem": item_cache[fid],
                 "startFrame":    src_in,
                 "endFrame":      src_out,
                 "trackIndex":    1,
-            }])
+            })
+            beat_log.append(f"{t_start:.2f}→{t_end:.2f}s (frames {src_in}→{src_out})")
 
+        if beat_clips:
+            result = media_pool.AppendToTimeline(beat_clips)
             if result:
-                seg_frames = src_out - src_in
-                current_frame += seg_frames
-                clips_placed  += 1
-                print(
-                    f"[cut] beat='{label}' {t_start:.2f}→{t_end:.2f}s "
-                    f"(frames {src_in}→{src_out}, {seg_frames}f)",
-                    file=sys.stderr
-                )
-                # Give Resolve time to process before the next append.
-                # Without this, rapid-fire AppendToTimeline calls are silently dropped.
-                time.sleep(0.15)
+                for entry, log_line in zip(beat_clips, beat_log):
+                    seg_frames = entry["endFrame"] - entry["startFrame"]
+                    current_frame += seg_frames
+                    clips_placed  += 1
+                    print(f"[cut] beat='{label}' {log_line}", file=sys.stderr)
+                # Pause between beats so Resolve settles before the next batch
+                time.sleep(0.5)
             else:
-                warnings.append(
-                    f"Beat '{label}': AppendToTimeline failed for take "
-                    f"{t_start:.2f}→{t_end:.2f}s (footage_id={fid})"
-                )
-                clips_missing += 1
-
-        # Beat boundary — slightly longer pause so Resolve settles before next beat
-        time.sleep(0.3)
+                warnings.append(f"Beat '{label}': AppendToTimeline failed for {len(beat_clips)} clip(s)")
+                clips_missing += len(beat_clips)
+                print(f"[warn] Beat '{label}': batch AppendToTimeline returned None/False", file=sys.stderr)
 
     print(f"[assembly] {clips_placed} subclips placed, {clips_missing} failed/missing", file=sys.stderr)
 
