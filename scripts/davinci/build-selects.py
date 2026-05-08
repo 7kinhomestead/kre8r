@@ -397,126 +397,147 @@ def run(args):
             print(f"[warn] could not resolve clip for footage_id {fid}", file=sys.stderr)
             clips_missing += 1
 
-    # ── Phase 2: place selected_takes as subclips in beat order ──────────────
-    # Each section's selected_takes is an ordered list of segments Claude chose.
-    # We place them sequentially on V1 — this IS the rough cut.
+    # ── Phase 2: per-beat timelines + main assembly timeline ─────────────────
     #
-    # timeline_beat_frame[section_index] = frame position on timeline where
-    #   that beat starts — used by Phase 3 for beat-header markers.
+    # Each beat gets its own isolated timeline (e.g. "BEAT_01_You").
+    # Source clip state is reset per timeline — no cross-beat IN/OUT conflicts.
+    # The main 02_SELECTS timeline then references each beat timeline as a
+    # compound clip in order, giving one clean assembly to work from.
+    #
+    # timeline_beat_frame[section_index] = frame position on main timeline
+    #   where that beat starts — used by Phase 3 for beat-header markers.
     timeline_beat_frame = {}
     current_frame       = 0
-    # Track the last endFrame placed per footage_id.
-    # DaVinci silently rejects AppendToTimeline when the same source clip's
-    # IN point is behind the last OUT point it used — clamp to avoid this.
-    last_end_frame = {}
+    beat_timeline_items = []   # (section_index, label, MediaPoolItem) in order
+
+    # Delete any existing BEAT_xx timelines from a previous run
+    try:
+        tl_count = project.GetTimelineCount()
+        for i in range(tl_count, 0, -1):
+            tl = project.GetTimelineByIndex(i)
+            if tl and tl.GetName().startswith("BEAT_"):
+                try:
+                    project.DeleteTimeline(tl)
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
     for section in beat_sections:
-        label          = section.get("script_section") or f"Section {section.get('section_index', '?')}"
-        section_index  = section.get("section_index", 0)
+        label         = section.get("script_section") or f"Section {section.get('section_index', '?')}"
+        section_index = section.get("section_index", 0)
         selected_takes = section.get("selected_takes") or []
-        fire_note      = section.get("fire_suggestion") or ""
+        beat_num      = section_index + 1
 
-        if not selected_takes:
-            # No selected takes — fall back to full winner clip if available
-            fid = section.get("winner_footage_id")
-            if fid and fid in item_cache:
-                result = media_pool.AppendToTimeline([{
-                    "mediaPoolItem": item_cache[fid],
-                    "trackIndex":    1,
-                }])
-                if result:
-                    timeline_beat_frame[section_index] = current_frame
-                    # Advance by full clip duration
-                    try:
-                        dur_str = item_cache[fid].GetClipProperty("Duration") or ""
-                        if ":" in dur_str:
-                            parts = [int(x) for x in dur_str.split(":")]
-                            dur_f = ((parts[0]*3600 + parts[1]*60 + parts[2]) * fps) + parts[3]
-                        else:
-                            dur_f = int(dur_str) if dur_str else 0
-                    except Exception:
-                        dur_f = 0
-                    current_frame += dur_f
-                    clips_placed  += 1
-                    print(f"[placed] full fallback beat='{label}' footage_id={fid}", file=sys.stderr)
-                    time.sleep(0.3)
-                else:
-                    warnings.append(f"Beat '{label}': AppendToTimeline failed (full clip fallback)")
-                    clips_missing += 1
-            else:
-                warnings.append(f"Beat '{label}': no selected_takes and no winner clip — skipped")
-            continue
+        # Sanitise label for use as a timeline name
+        safe_label = "".join(c if c.isalnum() or c in " _-" else "" for c in label)[:40].strip()
+        beat_tl_name = f"BEAT_{beat_num:02d}_{safe_label}"
 
-        # Record where this beat starts on the timeline
-        timeline_beat_frame[section_index] = current_frame
-
-        # Build the full clip list for this beat, then place them in ONE
-        # AppendToTimeline call. Batching is more reliable than individual calls —
-        # Resolve processes the list atomically and can't skip individual entries
-        # the way it does with rapid sequential calls.
+        # Build clip list for this beat
         beat_clips = []
         beat_log   = []
 
-        for take in selected_takes:
-            fid       = take.get("footage_id")
-            t_start   = float(take.get("start", 0))
-            t_end     = float(take.get("end", t_start))
-            duration  = t_end - t_start
-
-            if duration <= 0:
-                print(f"[warn] Beat '{label}': take has zero/negative duration ({t_start}→{t_end}) — skipped", file=sys.stderr)
-                continue
-
-            if fid not in item_cache:
-                warnings.append(f"Beat '{label}': footage_id {fid} not in cache — take skipped")
-                clips_missing += 1
-                continue
-
-            # Convert seconds → source frames (relative to clip start, frame 0 = first frame)
-            src_in  = ts_to_frame(t_start, fps)
-            src_out = ts_to_frame(t_end,   fps)
-
-            # Add 2-frame handles on both ends where possible (avoids hard flicker cuts)
-            src_in  = max(0, src_in  - 2)
-            src_out = src_out + 2
-
-            # DaVinci silently refuses to place the same source clip when the
-            # new IN point is behind the last OUT point used for that clip.
-            # Clamp src_in to at least last_end + 1 frame to prevent this.
-            prev_end = last_end_frame.get(fid, 0)
-            if src_in <= prev_end:
-                print(f"[clamp] Beat '{label}': src_in {src_in} ≤ last end {prev_end} — clamping to {prev_end + 1}", file=sys.stderr)
-                src_in = prev_end + 1
-            if src_in >= src_out:
-                print(f"[warn] Beat '{label}': clip too short after clamping ({src_in}→{src_out}) — skipped", file=sys.stderr)
-                clips_missing += 1
-                continue
-            last_end_frame[fid] = src_out
-
-            beat_clips.append({
-                "mediaPoolItem": item_cache[fid],
-                "startFrame":    src_in,
-                "endFrame":      src_out,
-                "trackIndex":    1,
-            })
-            beat_log.append(f"{t_start:.2f}→{t_end:.2f}s (frames {src_in}→{src_out})")
-
-        if beat_clips:
-            result = media_pool.AppendToTimeline(beat_clips)
-            if result:
-                for entry, log_line in zip(beat_clips, beat_log):
-                    seg_frames = entry["endFrame"] - entry["startFrame"]
-                    current_frame += seg_frames
-                    clips_placed  += 1
-                    print(f"[cut] beat='{label}' {log_line}", file=sys.stderr)
-                # Pause between beats so Resolve settles before the next batch
-                time.sleep(0.5)
+        if not selected_takes:
+            fid = section.get("winner_footage_id")
+            if fid and fid in item_cache:
+                beat_clips.append({"mediaPoolItem": item_cache[fid], "trackIndex": 1})
+                beat_log.append(f"full clip fallback footage_id={fid}")
             else:
-                warnings.append(f"Beat '{label}': AppendToTimeline failed for {len(beat_clips)} clip(s)")
-                clips_missing += len(beat_clips)
-                print(f"[warn] Beat '{label}': batch AppendToTimeline returned None/False", file=sys.stderr)
+                warnings.append(f"Beat '{label}': no selected_takes and no winner clip — skipped")
+                continue
+        else:
+            for take in selected_takes:
+                fid     = take.get("footage_id")
+                t_start = float(take.get("start", 0))
+                t_end   = float(take.get("end",   t_start))
 
-    print(f"[assembly] {clips_placed} subclips placed, {clips_missing} failed/missing", file=sys.stderr)
+                if t_end - t_start <= 0:
+                    print(f"[warn] Beat '{label}': zero/negative duration ({t_start}→{t_end}) — skipped", file=sys.stderr)
+                    continue
+                if fid not in item_cache:
+                    warnings.append(f"Beat '{label}': footage_id {fid} not in cache — skipped")
+                    clips_missing += 1
+                    continue
+
+                src_in  = max(0, ts_to_frame(t_start, fps) - 2)
+                src_out = ts_to_frame(t_end, fps) + 2
+                beat_clips.append({
+                    "mediaPoolItem": item_cache[fid],
+                    "startFrame":    src_in,
+                    "endFrame":      src_out,
+                    "trackIndex":    1,
+                })
+                beat_log.append(f"{t_start:.2f}→{t_end:.2f}s (frames {src_in}→{src_out})")
+
+        if not beat_clips:
+            continue
+
+        # Create isolated beat timeline
+        beat_tl = media_pool.CreateEmptyTimeline(beat_tl_name)
+        if beat_tl is None:
+            warnings.append(f"Beat '{label}': could not create timeline '{beat_tl_name}' — skipped")
+            continue
+
+        try:
+            beat_tl.SetSetting("timelineFrameRate", str(fps))
+        except Exception:
+            pass
+
+        project.SetCurrentTimeline(beat_tl)
+        time.sleep(0.2)
+
+        result = media_pool.AppendToTimeline(beat_clips)
+        if result:
+            for log_line in beat_log:
+                clips_placed += 1
+                print(f"[beat-tl] '{beat_tl_name}' — {log_line}", file=sys.stderr)
+        else:
+            warnings.append(f"Beat '{label}': AppendToTimeline failed on beat timeline")
+            clips_missing += len(beat_clips)
+            print(f"[warn] '{beat_tl_name}': AppendToTimeline returned None/False", file=sys.stderr)
+            continue
+
+        time.sleep(0.3)
+
+        # Get the beat timeline's MediaPoolItem so we can append it to main timeline
+        beat_mp_item = None
+        try:
+            beat_mp_item = beat_tl.GetMediaPoolItem() if callable(beat_tl.GetMediaPoolItem) else None
+        except Exception:
+            pass
+
+        beat_timeline_items.append((section_index, label, beat_tl_name, beat_mp_item))
+
+    print(f"[assembly] {clips_placed} clips placed across {len(beat_timeline_items)} beat timelines, {clips_missing} failed", file=sys.stderr)
+
+    # ── Phase 2b: assemble beat timelines into main 02_SELECTS timeline ───────
+    project.SetCurrentTimeline(timeline)
+    time.sleep(0.3)
+
+    for section_index, label, beat_tl_name, beat_mp_item in beat_timeline_items:
+        timeline_beat_frame[section_index] = current_frame
+
+        if beat_mp_item is not None:
+            result = media_pool.AppendToTimeline([{
+                "mediaPoolItem": beat_mp_item,
+                "trackIndex":    1,
+            }])
+            if result:
+                # Estimate duration from beat timeline for marker tracking
+                try:
+                    dur_frames = int(beat_mp_item.GetClipProperty("End") or 0) - int(beat_mp_item.GetClipProperty("Start") or 0)
+                except Exception:
+                    dur_frames = 0
+                current_frame += dur_frames
+                print(f"[main-tl] appended beat '{label}' as compound clip", file=sys.stderr)
+                time.sleep(0.2)
+            else:
+                warnings.append(f"Main timeline: could not append beat '{label}' — placing raw clips instead")
+                print(f"[warn] Main timeline: AppendToTimeline for '{beat_tl_name}' returned None/False", file=sys.stderr)
+        else:
+            # GetMediaPoolItem not supported — find the beat timeline in the pool by name
+            print(f"[warn] Beat '{label}': GetMediaPoolItem unavailable — beat timeline placed separately, main timeline incomplete", file=sys.stderr)
+            warnings.append(f"Beat '{label}': compound clip not supported on this Resolve version — open beat timelines manually")
 
     # ── Phase 3: markers — beat headers + gold moments ───────────────────────
     # Beat-header markers sit at the start of each beat on the assembled timeline.
