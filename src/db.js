@@ -3446,27 +3446,59 @@ function updateProjectComposorState(projectId, state) {
 // ─────────────────────────────────────────────
 
 function insertSelect(section) {
-  const result = _run(
-    `INSERT INTO selects
-       (project_id, script_section, section_index, takes, selected_takes,
-        winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position,
-        assembly_note, assembly_mode)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      section.project_id,
-      section.script_section,
-      section.section_index             ?? 0,
-      JSON.stringify(section.takes          || []),
-      JSON.stringify(section.selected_takes || []),
-      section.winner_footage_id         || null,
-      section.gold_nugget               ? 1 : 0,
-      section.fire_suggestion           || null,
-      section.davinci_timeline_position ?? section.section_index ?? 0,
-      section.assembly_note             || null,
-      section.assembly_mode             || null
-    ]
-  );
-  return result.lastInsertRowid;
+  const baseParams = [
+    section.project_id,
+    section.script_section,
+    section.section_index             ?? 0,
+    JSON.stringify(section.takes          || []),
+    JSON.stringify(section.selected_takes || []),
+    section.winner_footage_id         || null,
+    section.gold_nugget               ? 1 : 0,
+    section.fire_suggestion           || null,
+    section.davinci_timeline_position ?? section.section_index ?? 0,
+  ];
+
+  // Try full insert with assembly_note + assembly_mode first.
+  // Falls back to 9-column insert on older Electron DBs that haven't received
+  // the migration yet (column missing error) — migrations run on next full restart.
+  try {
+    const result = _run(
+      `INSERT INTO selects
+         (project_id, script_section, section_index, takes, selected_takes,
+          winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position,
+          assembly_note, assembly_mode)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [...baseParams, section.assembly_note || null, section.assembly_mode || null]
+    );
+    return result.lastInsertRowid;
+  } catch (err) {
+    if (!err.message || !err.message.includes('no column named assembly')) throw err;
+    // Column not yet migrated — force-add them now so subsequent inserts succeed
+    try {
+      const _tdb = tenantContext.getDb() || db;
+      try { _tdb.exec(`ALTER TABLE selects ADD COLUMN assembly_note TEXT`); } catch (_) {}
+      try { _tdb.exec(`ALTER TABLE selects ADD COLUMN assembly_mode TEXT`); } catch (_) {}
+      const result = _run(
+        `INSERT INTO selects
+           (project_id, script_section, section_index, takes, selected_takes,
+            winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position,
+            assembly_note, assembly_mode)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [...baseParams, section.assembly_note || null, section.assembly_mode || null]
+      );
+      return result.lastInsertRowid;
+    } catch (err2) {
+      // Last resort: 9-column insert without the new fields
+      const result = _run(
+        `INSERT INTO selects
+           (project_id, script_section, section_index, takes, selected_takes,
+            winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        baseParams
+      );
+      return result.lastInsertRowid;
+    }
+  }
 }
 
 function getSelectsByProject(projectId) {
