@@ -29,6 +29,7 @@ import os
 import json
 import argparse
 import traceback
+import time
 
 # ---------------------------------------------------------------------------
 # DaVinci Resolve scripting API bootstrap (same pattern as create-project.py)
@@ -436,6 +437,7 @@ def run(args):
                     current_frame += dur_f
                     clips_placed  += 1
                     print(f"[placed] full fallback beat='{label}' footage_id={fid}", file=sys.stderr)
+                    time.sleep(0.3)
                 else:
                     warnings.append(f"Beat '{label}': AppendToTimeline failed (full clip fallback)")
                     clips_missing += 1
@@ -485,12 +487,18 @@ def run(args):
                     f"(frames {src_in}→{src_out}, {seg_frames}f)",
                     file=sys.stderr
                 )
+                # Give Resolve time to process before the next append.
+                # Without this, rapid-fire AppendToTimeline calls are silently dropped.
+                time.sleep(0.15)
             else:
                 warnings.append(
                     f"Beat '{label}': AppendToTimeline failed for take "
                     f"{t_start:.2f}→{t_end:.2f}s (footage_id={fid})"
                 )
                 clips_missing += 1
+
+        # Beat boundary — slightly longer pause so Resolve settles before next beat
+        time.sleep(0.3)
 
     print(f"[assembly] {clips_placed} subclips placed, {clips_missing} failed/missing", file=sys.stderr)
 
