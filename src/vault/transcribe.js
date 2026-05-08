@@ -161,9 +161,6 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
     // Allow per-job model override via options.model, else use server default
     const modelToUse = (options && options.model) || WHISPER_MODEL;
 
-    // Ensure model cache dir exists so --download-root doesn't fail
-    fs.mkdirSync(WHISPER_CACHE_DIR, { recursive: true });
-
     const args = [
       '-m', 'whisper',
       filePath,
@@ -171,7 +168,8 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
       '--output_format',   'json',
       '--word_timestamps', 'True',
       '--output_dir',      TRANSCRIPTS_DIR,
-      '--download-root',   WHISPER_CACHE_DIR,   // pin cache so all Python binaries share same model
+      // NOTE: --download-root was removed — not supported by all Whisper versions.
+      // The model downloads to Whisper's default cache (~/.cache/whisper) on first run.
       '--verbose',         'False',
     ];
 
