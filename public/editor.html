@@ -895,7 +895,7 @@ function buildSequenceHTML(sec) {
     const levelColor = { full_take: 'var(--green)', paragraph: 'var(--teal)', sentence: 'var(--amber)', fallback: 'var(--red)' }[seg.level] || 'var(--text-dim)';
     const proxyPath = seg.proxy_path || '';
     const playBtn = proxyPath
-      ? `<button onclick="event.stopPropagation();playClipSegment('${escAttr(proxyPath)}', ${seg.start || 0}, ${seg.end || 0})" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--teal);font-size:10px;padding:2px 7px;cursor:pointer;margin-left:6px">▶</button>`
+      ? `<button class="play-seg-btn" data-path="${escDataAttr(proxyPath)}" data-start="${seg.start||0}" data-end="${seg.end||0}" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--teal);font-size:10px;padding:2px 7px;cursor:pointer;margin-left:6px">▶</button>`
       : '';
     return `<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)${i === sequence.length - 1 ? ';border-bottom:none' : ''}">
       <span style="font-size:10px;font-weight:700;color:var(--text-dimmer);min-width:18px">${i + 1}.</span>
@@ -937,21 +937,30 @@ function buildTakesHTML(sec) {
     const note = t.note ? `<div style="font-size:10px;color:var(--text-dimmer);margin-top:2px">${esc(t.note)}</div>` : '';
     const proxyPath = t.proxy_path || '';
     const playBtn = proxyPath
-      ? `<button onclick="event.stopPropagation();playClipSegment('${escAttr(proxyPath)}', ${t.start || 0}, ${t.end || 0})" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--teal);font-size:10px;padding:2px 7px;cursor:pointer">▶</button>`
+      ? `<button class="play-seg-btn" data-path="${escDataAttr(proxyPath)}" data-start="${t.start||0}" data-end="${t.end||0}" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--teal);font-size:10px;padding:2px 7px;cursor:pointer">▶</button>`
       : '';
 
-    return `<div class="take-item${inSequence ? ' is-winner' : ''}" onclick="swapTake(${projectId}, ${sectionIndex}, ${idx}, this)">
+    return `<div class="take-item${inSequence ? ' is-winner' : ''}" onclick="toggleTakeCb(this)">
       <div class="take-row">
+        <input type="checkbox" class="take-cb" data-idx="${idx}" ${inSequence ? 'checked' : ''}
+          onclick="event.stopPropagation()"
+          style="accent-color:var(--teal);width:14px;height:14px;flex-shrink:0;margin-right:4px;cursor:pointer">
         ${qualityBadge}
-        <span style="color:var(--text);flex:1">${ts || `footage #${t.footage_id}`}</span>
+        <span style="color:var(--text);flex:1;margin-left:4px">${ts || `footage #${t.footage_id}`}</span>
         ${playBtn}
-        ${inSequence ? '<span class="take-winner-tag">✓ IN SEQ</span>' : '<span class="take-swap-hint">use this</span>'}
+        ${inSequence ? '<span class="take-winner-tag">✓ IN SEQ</span>' : ''}
       </div>
       ${note}
     </div>`;
   }).join('');
 
-  return `<div class="section-detail-label" style="margin-top:8px">ALL TAKES (${takes.length})</div><div class="takes-list">${html}</div>`;
+  return `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:4px">
+    <div class="section-detail-label" style="margin:0">ALL TAKES (${takes.length})</div>
+    <button onclick="applyCheckedTakes(${projectId}, ${sectionIndex}, this)"
+      style="font-size:10px;background:rgba(62,207,178,0.1);border:1px solid rgba(62,207,178,0.3);border-radius:4px;color:var(--teal);padding:3px 9px;cursor:pointer;white-space:nowrap">
+      ✓ Use Checked as Sequence
+    </button>
+  </div><div class="takes-list">${html}</div>`;
 }
 
 // ─────────────────────────────────────────────
@@ -1606,11 +1615,109 @@ function escAttr(str) {
     .replace(/\\/g, '\\\\');
 }
 
+// For data-* attributes — only need to escape " and &.
+// Backslashes are fine in HTML attribute values (no JS parsing).
+function escDataAttr(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+// ─────────────────────────────────────────────
+// TAKE CHECKBOX TOGGLE
+// Clicking the take-item div toggles its checkbox.
+// Play buttons inside stop propagation so they don't toggle.
+// ─────────────────────────────────────────────
+
+function toggleTakeCb(el) {
+  const cb = el.querySelector('.take-cb');
+  if (cb) cb.checked = !cb.checked;
+}
+
+// ─────────────────────────────────────────────
+// APPLY CHECKED TAKES AS SEQUENCE
+// Reads all checked take checkboxes in the section card,
+// builds a sequence in DOM order, saves via PATCH /sequence endpoint.
+// ─────────────────────────────────────────────
+
+async function applyCheckedTakes(projectId, sectionIndex, btnEl) {
+  const card = btnEl.closest('.section-card');
+  if (!card) return;
+
+  const cbs = card.querySelectorAll('.take-cb:checked');
+  if (cbs.length === 0) {
+    const orig = btnEl.textContent;
+    btnEl.textContent = 'Check at least one take';
+    setTimeout(() => { btnEl.textContent = orig; }, 1800);
+    return;
+  }
+
+  // Find the section data
+  const sec = currentSelects?.sections?.find(s => s.section_index === sectionIndex);
+  if (!sec) return;
+
+  // Build sequence in DOM order (cbs are in document order = visual order)
+  const newSeq = [...cbs].map(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    const t   = sec.takes[idx];
+    if (!t) return null;
+    return {
+      footage_id: t.footage_id,
+      proxy_path: t.proxy_path || '',
+      start:      t.start || 0,
+      end:        t.end   || 0,
+      level:      t.quality === 'strong' ? 'full_take' : (t.quality || 'manual'),
+      note:       t.note  || '',
+    };
+  }).filter(Boolean);
+
+  const origText = btnEl.textContent;
+  btnEl.textContent = 'Saving…';
+  btnEl.disabled = true;
+
+  try {
+    const r = await fetch(`/api/editor/selects/${projectId}/${sectionIndex}/sequence`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ selected_takes: newSeq }),
+    });
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Save failed');
+
+    // Update local state + re-render the card
+    sec.selected_takes = newSeq;
+    const wasOpen = card.querySelector('.section-body')?.classList.contains('open');
+    const newCard = buildSectionCard(sec);
+    card.replaceWith(newCard);
+    if (wasOpen) {
+      newCard.querySelector('.section-body')?.classList.add('open');
+      newCard.querySelector('.section-expand')?.classList.add('open');
+    }
+  } catch (e) {
+    btnEl.textContent = 'Error — retry';
+    btnEl.disabled = false;
+    setTimeout(() => { btnEl.textContent = origText; btnEl.disabled = false; }, 2000);
+  }
+}
+
 // ─────────────────────────────────────────────
 // INLINE VIDEO PLAYER
 // Uses Electron file:// protocol — H.264 .mov/.mp4 plays natively.
-// Shows a floating player anchored to the clicked button.
+// Play buttons use data-path/start/end attributes + event delegation —
+// avoids all inline onclick path-escaping issues with Windows backslashes.
 // ─────────────────────────────────────────────
+
+// Event delegation — handles all .play-seg-btn clicks anywhere in the document.
+// CAPTURE phase (3rd arg = true): fires before the event reaches the take-item div,
+// so stopPropagation here prevents toggleTakeCb from also firing on play clicks.
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.play-seg-btn');
+  if (!btn) return;
+  e.stopPropagation(); // prevent take-item onclick (toggleTakeCb) from firing
+  const p     = btn.dataset.path  || '';
+  const start = parseFloat(btn.dataset.start || '0');
+  const end   = parseFloat(btn.dataset.end   || '0');
+  playClipSegment(p, start, end);
+}, true);
 
 let _playerEl = null;
 
@@ -1641,8 +1748,19 @@ function playClipSegment(filePath, startSec, endSec) {
   const pathEl = document.getElementById('inline-player-path');
 
   _playerEl.style.display = 'block';
-  video.src = fileUrl + (startSec > 0 ? `#t=${startSec}` : '');
   pathEl.textContent = normalised;
+  pathEl.style.color = 'var(--text-dimmer)';
+
+  // Clear previous handlers before setting new src
+  video.onloadedmetadata = null;
+  video.ontimeupdate     = null;
+  video.onerror          = null;
+  video.src = fileUrl + (startSec > 0 ? `#t=${startSec}` : '');
+
+  video.onerror = () => {
+    pathEl.textContent = `⚠ Can't load: ${normalised}`;
+    pathEl.style.color = 'var(--red)';
+  };
 
   // Seek to exact start and auto-stop at end
   video.onloadedmetadata = () => {

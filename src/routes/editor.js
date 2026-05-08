@@ -191,6 +191,33 @@ router.patch('/selects/:project_id/:section_index', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// PATCH /api/editor/selects/:project_id/:section_index/sequence
+// Body: { selected_takes: [...] } — replace sequence directly from manual selection
+// Used by the "Use Checked Takes" button in the approval UI
+// ─────────────────────────────────────────────
+
+router.patch('/selects/:project_id/:section_index/sequence', (req, res) => {
+  const projectId    = parseInt(req.params.project_id,    10);
+  const sectionIndex = parseInt(req.params.section_index, 10);
+  const newSeq       = req.body.selected_takes;
+
+  if (!Array.isArray(newSeq) || newSeq.length === 0) {
+    return res.status(400).json({ error: 'selected_takes must be a non-empty array' });
+  }
+
+  const sections = db.getSelectsByProject(projectId);
+  const section  = sections.find(s => s.section_index === sectionIndex);
+  if (!section) return res.status(404).json({ error: `Section ${sectionIndex} not found` });
+
+  db.updateSelectTake(section.id, {
+    winner_footage_id: newSeq[0]?.footage_id || null,
+    selected_takes:    JSON.stringify(newSeq),
+  });
+
+  res.json({ ok: true, section_index: sectionIndex, sequence_length: newSeq.length });
+});
+
+// ─────────────────────────────────────────────
 // DAVINCI — BUILD SELECTS TIMELINE
 // POST /api/editor/davinci/build/:project_id
 // ─────────────────────────────────────────────
