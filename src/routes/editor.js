@@ -20,6 +20,8 @@ const { EventEmitter } = require('events');
 const crypto           = require('crypto');
 const { spawn }        = require('child_process');
 const path             = require('path');
+const fs               = require('fs');
+const os               = require('os');
 
 const { buildSelects }        = require('../editor/selects-new');  // legacy freeform fallback
 const { buildAssembly }       = require('../editor/assemblr');      // AssemblΩr smart engine
@@ -349,13 +351,20 @@ router.post('/davinci/build/:project_id', (req, res) => {
         }
       }
 
+      // Write payload to a temp file — avoids ENAMETOOLONG on Windows
+      // (8191 char command-line limit) when selects_json is large.
+      const tmpFile = path.join(os.tmpdir(), `kre8r-selects-${jobId}.json`);
+      fs.writeFileSync(tmpFile, JSON.stringify({
+        project_id:         projectId,
+        project_name:       davinciName,
+        sections,
+        footage_paths:      footagePaths,
+        fps,
+      }));
+
       const proc = spawn(binary, [
         scriptPath,
-        '--project_id',       String(projectId),
-        '--project_name',     davinciName,
-        '--selects_json',     JSON.stringify(sections),
-        '--footage_paths_json', JSON.stringify(footagePaths),
-        '--fps',              String(fps)
+        '--payload_file', tmpFile,
       ], { windowsHide: true, timeout: 120_000 });
 
       let stdout = '';
@@ -368,9 +377,12 @@ router.post('/davinci/build/:project_id', (req, res) => {
         if (line) pushEvent(job, { stage: 'davinci_log', line });
       });
 
-      proc.on('error', err => failJob(job, `Python spawn failed: ${err.message}`));
+      const cleanupTmp = () => { try { fs.unlinkSync(tmpFile); } catch (_) {} };
+
+      proc.on('error', err => { cleanupTmp(); failJob(job, `Python spawn failed: ${err.message}`); });
 
       proc.on('close', code => {
+        cleanupTmp();
         if (code !== 0) {
           return failJob(job, `build-selects.py exited ${code}: ${stderr.slice(-400)}`);
         }

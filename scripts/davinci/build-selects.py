@@ -642,12 +642,28 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Build 02_SELECTS timeline in an existing DaVinci Resolve project"
     )
-    parser.add_argument("--project_id",          type=int,   required=True)
-    parser.add_argument("--project_name",         type=str,   required=True)
-    parser.add_argument("--selects_json",         type=str,   required=True)
-    parser.add_argument("--footage_paths_json",   type=str,   required=True)
+    # New: single payload file (avoids Windows 8191-char command-line limit)
+    parser.add_argument("--payload_file",         type=str,   default=None)
+    # Legacy individual args (kept for backward compatibility)
+    parser.add_argument("--project_id",          type=int,   default=None)
+    parser.add_argument("--project_name",         type=str,   default=None)
+    parser.add_argument("--selects_json",         type=str,   default=None)
+    parser.add_argument("--footage_paths_json",   type=str,   default=None)
     parser.add_argument("--fps",                  type=float, default=24.0)
-    return parser.parse_args()
+
+    args = parser.parse_args()
+
+    # If payload_file provided, read it and hydrate the individual fields
+    if args.payload_file:
+        with open(args.payload_file, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        args.project_id        = payload["project_id"]
+        args.project_name      = payload["project_name"]
+        args.selects_json      = json.dumps(payload["sections"])
+        args.footage_paths_json = json.dumps(payload["footage_paths"])
+        args.fps               = float(payload.get("fps", 24.0))
+
+    return args
 
 
 if __name__ == "__main__":
