@@ -1722,11 +1722,14 @@ document.addEventListener('click', e => {
 let _playerEl = null;
 
 function playClipSegment(filePath, startSec, endSec) {
-  // Build file:// URL for Electron — convert Windows backslashes
+  // Build file:// URL for Electron — convert Windows backslashes,
+  // then percent-encode characters that are valid in file names but not in URLs.
+  // Don't encode drive-letter colon (D:) or path separators (/).
   const normalised = filePath.replace(/\\/g, '/');
-  const fileUrl = normalised.startsWith('/')
-    ? 'file://' + normalised
-    : 'file:///' + normalised;
+  const encoded = normalised.replace(/[' "()\[\]#?&=+,;@!$]/g, c => encodeURIComponent(c));
+  const fileUrl = encoded.startsWith('/')
+    ? 'file://' + encoded
+    : 'file:///' + encoded;
 
   // Create or reuse player element
   if (!_playerEl) {
@@ -1748,7 +1751,7 @@ function playClipSegment(filePath, startSec, endSec) {
   const pathEl = document.getElementById('inline-player-path');
 
   _playerEl.style.display = 'block';
-  pathEl.textContent = normalised;
+  pathEl.textContent = filePath; // show original path (not encoded) for readability
   pathEl.style.color = 'var(--text-dimmer)';
 
   // Clear previous handlers before setting new src
@@ -1758,7 +1761,7 @@ function playClipSegment(filePath, startSec, endSec) {
   video.src = fileUrl + (startSec > 0 ? `#t=${startSec}` : '');
 
   video.onerror = () => {
-    pathEl.textContent = `⚠ Can't load: ${normalised}`;
+    pathEl.textContent = `⚠ Can't load: ${filePath}`;
     pathEl.style.color = 'var(--red)';
   };
 
