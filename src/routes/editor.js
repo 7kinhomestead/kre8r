@@ -353,7 +353,7 @@ router.post('/davinci/build/:project_id', (req, res) => {
 
       // Write payload to a temp file — avoids ENAMETOOLONG on Windows
       // (8191 char command-line limit) when selects_json is large.
-      const tmpFile = path.join(os.tmpdir(), `kre8r-selects-${jobId}.json`);
+      const tmpFile = path.join(os.tmpdir(), `kre8r-selects-${job.id}.json`);
       fs.writeFileSync(tmpFile, JSON.stringify({
         project_id:         projectId,
         project_name:       davinciName,
