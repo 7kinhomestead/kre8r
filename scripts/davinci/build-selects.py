@@ -375,12 +375,10 @@ def run(args):
     clips_placed  = 0
     clips_missing = 0
 
-    # Sort sections by section_index for assembly order
-    beat_sections = sorted(
-        [s for s in sections if not s.get("gold_nugget")],
-        key=lambda s: s.get("section_index", 0)
-    )
-    gold_sections = [s for s in sections if s.get("gold_nugget")]
+    # ALL sections go on the timeline — gold_nugget just controls marker colour.
+    # Previously gold beats were filtered into a separate list and never placed.
+    beat_sections = sorted(sections, key=lambda s: s.get("section_index", 0))
+    gold_sections = []  # kept for marker phase — no longer used for filtering
 
     # Diagnostic
     print(f"[diag] footage_paths keys: {sorted(footage_paths.keys())}", file=sys.stderr)
