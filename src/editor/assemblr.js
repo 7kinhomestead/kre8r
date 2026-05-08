@@ -691,11 +691,10 @@ async function buildAssembly(projectId, onProgress) {
   // Add them to the nearest beat's takes array tagged quality:'gold'.
   // This way Call 2 can include them in the proposed sequence if appropriate.
   for (const gm of goldPool) {
-    // Find the beat that temporally overlaps this gold moment (or the nearest one)
-    let bestBeatIdx = 0;
+    // Pass 1: find beat with actual temporal overlap (same clip)
+    let bestBeatIdx = -1;
     let bestOverlap = -1;
     for (let i = 0; i < beats.length; i++) {
-      // Check if any take in this beat pool shares the same clip + temporal proximity
       for (const t of beatPool[i]) {
         if (t.footage_id === gm.footage_id) {
           const overlap = Math.min(gm.end, t.end) - Math.max(gm.start, t.start);
@@ -706,7 +705,32 @@ async function buildAssembly(projectId, onProgress) {
         }
       }
     }
-    // Add gold moment as a take in that beat with quality:'gold'
+
+    // Pass 2: no overlap — fall back to nearest beat by timestamp (same clip)
+    // This prevents orphaned gold moments from defaulting to Beat 1 (index 0)
+    if (bestOverlap < 0) {
+      let minDist = Infinity;
+      for (let i = 0; i < beats.length; i++) {
+        for (const t of beatPool[i]) {
+          if (t.footage_id === gm.footage_id) {
+            const dist = Math.min(
+              Math.abs(gm.start - t.start),
+              Math.abs(gm.start - t.end),
+              Math.abs(gm.end   - t.start),
+              Math.abs(gm.end   - t.end)
+            );
+            if (dist < minDist) { minDist = dist; bestBeatIdx = i; }
+          }
+        }
+      }
+      // Still no same-clip takes anywhere — skip (can't attribute safely)
+      if (minDist === Infinity) {
+        emit({ event: 'status', message: `Gold moment skipped — no same-clip takes to anchor to (${gm.reason?.slice(0, 60) || ''})` });
+        continue;
+      }
+    }
+
+    // Add gold moment as a take in the winning beat with quality:'gold'
     beatPool[bestBeatIdx].push({
       footage_id:      gm.footage_id,
       proxy_path:      gm.proxy_path,
