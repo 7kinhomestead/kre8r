@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrollΩr</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--card:#141414;--card2:#1c1c1c;--border:#222;--border2:#333;
+  --off:rgba(255,255,255,.85);--muted:rgba(255,255,255,.45);--faint:rgba(255,255,255,.08);
+  --teal:#14b8a6;--red:#ef4444;--green:#22c55e;--amber:#f59e0b;--blue:#3b82f6;
+  --radius:10px;--radius-sm:6px;
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--off);font-size:14px;min-height:100vh}
+
+/* ── demo banner ───────────────────────────────────────────────────────────── */
+#demo-banner{
+  display:none;align-items:center;gap:10px;padding:10px 20px;
+  background:rgba(245,158,11,.12);border-bottom:1px solid rgba(245,158,11,.3);
+  font-size:13px;color:var(--amber);
+}
+#demo-banner a{color:var(--teal);text-decoration:underline}
+#demo-banner.show{display:flex}
+
+/* ── layout ─────────────────────────────────────────────────────────────────── */
+.layout{
+  display:grid;
+  grid-template-columns:300px 1fr 280px;
+  height:calc(100vh - 54px);
+  overflow:hidden;
+}
+.panel{padding:20px;overflow-y:auto;border-right:1px solid var(--border)}
+.panel:last-child{border-right:none}
+.panel-title{
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+  color:var(--muted);margin-bottom:16px;
+}
+
+/* ── cards ──────────────────────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:700;margin-bottom:4px}
+.card-desc{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* ── form fields ─────────────────────────────────────────────────────────────── */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select,.field textarea{
+  width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  color:var(--off);font-size:13px;padding:7px 10px;outline:none;transition:border .15s;font-family:inherit;
+}
+.field textarea{resize:vertical;min-height:90px}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal)}
+
+/* ── buttons ─────────────────────────────────────────────────────────────────── */
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-secondary{background:var(--card2);color:var(--off);border:1px solid var(--border)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:2px 8px;font-size:11px}
+.btn-full{width:100%;justify-content:center;padding:11px 16px;font-size:14px;font-weight:800}
+
+/* ── moment cards (center panel) ────────────────────────────────────────────── */
+.moment-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;margin-bottom:14px;transition:border .15s;
+}
+.moment-card.generating{border-color:var(--teal)}
+.moment-card.done{border-color:var(--green)}
+.moment-card-header{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;
+}
+.moment-label{font-size:14px;font-weight:700}
+.moment-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.moment-controls .field{margin-bottom:0}
+.duration-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.duration-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-right:4px}
+.dur-btn{
+  background:var(--card2);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  color:var(--muted);font-size:12px;font-weight:700;padding:4px 10px;cursor:pointer;transition:all .15s;
+}
+.dur-btn:hover{border-color:var(--teal);color:var(--teal)}
+.dur-btn.active{border-color:var(--teal);background:rgba(20,184,166,.1);color:var(--teal)}
+.moment-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+/* ── progress bar ─────────────────────────────────────────────────────────── */
+.progress-wrap{margin-top:10px;display:none}
+.progress-wrap.show{display:block}
+.progress-bar-bg{background:var(--faint);border-radius:4px;height:4px;overflow:hidden;margin-bottom:6px}
+.progress-bar-fill{height:100%;background:var(--teal);border-radius:4px;width:0%;transition:width .4s}
+.progress-msg{font-size:12px;color:var(--muted)}
+
+/* ── vault matches ────────────────────────────────────────────────────────── */
+.vault-matches{margin-top:12px;display:none}
+.vault-matches.show{display:block}
+.vault-matches-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.vault-clip-row{
+  display:flex;align-items:center;gap:10px;padding:8px;
+  background:var(--card2);border-radius:var(--radius-sm);margin-bottom:6px;
+}
+.vault-clip-thumb{
+  width:60px;height:36px;object-fit:cover;border-radius:4px;
+  background:var(--border2);flex-shrink:0;
+}
+.vault-clip-info{flex:1;min-width:0}
+.vault-clip-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vault-clip-tags{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vault-use-btn{flex-shrink:0}
+
+/* ── video result ────────────────────────────────────────────────────────── */
+.video-result{margin-top:12px;display:none}
+.video-result.show{display:block}
+.video-result video{width:100%;border-radius:var(--radius-sm);background:#000}
+.video-result-label{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* ── demo placeholder ────────────────────────────────────────────────────── */
+.demo-result{
+  margin-top:12px;display:none;padding:12px;
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);
+  border-radius:var(--radius-sm);font-size:12px;color:var(--amber);
+}
+.demo-result.show{display:block}
+
+/* ── history panel (right) ───────────────────────────────────────────────── */
+.history-item{
+  display:flex;flex-direction:column;gap:4px;padding:10px;
+  background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  margin-bottom:8px;cursor:pointer;transition:border .15s;
+}
+.history-item:hover{border-color:var(--border2)}
+.history-label{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.badge{
+  display:inline-block;font-size:10px;font-weight:700;letter-spacing:.03em;
+  padding:2px 6px;border-radius:20px;text-transform:uppercase;
+}
+.badge-pending{background:rgba(148,163,184,.15);color:rgba(148,163,184,.9)}
+.badge-generating{background:rgba(20,184,166,.15);color:var(--teal)}
+.badge-done{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-demo{background:rgba(245,158,11,.15);color:var(--amber)}
+.badge-failed{background:rgba(239,68,68,.15);color:var(--red)}
+.history-date{font-size:11px;color:var(--muted)}
+.history-delete{align-self:flex-end;margin-top:2px}
+
+/* ── empty state ─────────────────────────────────────────────────────────── */
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:13px;line-height:1.7}
+
+/* ── modal player ────────────────────────────────────────────────────────── */
+#player-modal{
+  display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.85);
+  align-items:center;justify-content:center;
+}
+#player-modal.open{display:flex}
+.modal-inner{background:var(--card);border-radius:var(--radius);padding:20px;width:90%;max-width:720px;position:relative}
+.modal-close{
+  position:absolute;top:12px;right:12px;background:none;border:none;
+  color:var(--muted);font-size:20px;cursor:pointer;line-height:1;
+}
+.modal-close:hover{color:var(--off)}
+#modal-video{width:100%;border-radius:var(--radius-sm);background:#000}
+#modal-label{font-size:14px;font-weight:700;margin-top:10px}
+#modal-prompt{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+/* ── responsive ─────────────────────────────────────────────────────────── */
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr;height:auto}
+  .panel{border-right:none;border-bottom:1px solid var(--border)}
+  .panel:last-child{border-bottom:none}
+}
+</style>
+</head>
+<body>
+<div id="kre8r-nav"></div>
+
+<!-- Demo Mode Banner -->
+<div id="demo-banner">
+  <span>⚠</span>
+  <span>BrollΩr is in <strong>demo mode</strong> — add HIGGSFIELD_API_KEY to .env to generate real clips.
+  Sign up at <a href="https://higgsfield.ai" target="_blank">higgsfield.ai</a></span>
+</div>
+
+<div class="layout">
+
+  <!-- ── LEFT: Input panel ── -->
+  <div class="panel" id="input-panel">
+    <div class="panel-title">BrollΩr</div>
+
+    <div class="field">
+      <label>Project (optional)</label>
+      <select id="project-select">
+        <option value="">— No project —</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Script / Content</label>
+      <textarea id="script-text" placeholder="Paste your script, talking points, or describe what the video is about…"></textarea>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="analyze-btn" onclick="analyzeScript()">
+      Analyze Script
+    </button>
+
+    <div id="analyze-status" style="margin-top:8px;font-size:12px;color:var(--muted);display:none"></div>
+
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="panel-title">Camera Motion</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7">
+        dolly-in · dolly-out · pan-left · pan-right<br>
+        crane-up · crane-down · orbit · fpv-drone<br>
+        handheld · hyperlapse · static
+      </div>
+      <div style="margin-top:12px" class="panel-title">Style</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7">
+        cinematic · documentary · dramatic<br>
+        golden-hour · moody · handheld-realism
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CENTER: Moments panel ── -->
+  <div class="panel" id="moments-panel">
+    <div class="panel-title">Moments</div>
+    <div id="moments-container">
+      <div class="empty" id="moments-empty">
+        Analyze a script to see b-roll moment cards here.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: History panel ── -->
+  <div class="panel" id="history-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="panel-title" style="margin-bottom:0">History</div>
+      <button class="btn btn-secondary btn-xs" onclick="loadHistory()">↺ Refresh</button>
+    </div>
+    <div id="history-container">
+      <div class="empty" id="history-empty">No generations yet.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Video Player Modal ── -->
+<div id="player-modal">
+  <div class="modal-inner">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <video id="modal-video" controls playsinline></video>
+    <div id="modal-label"></div>
+    <div id="modal-prompt"></div>
+  </div>
+</div>
+
+<script src="/js/nav.js" defer></script>
+<script>
+window.addEventListener('load', () => initNav());
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentProjectId = null;
+let moments = [];
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+async function init() {
+  await checkDemoMode();
+  await loadProjects();
+  await loadHistory();
+}
+
+async function checkDemoMode() {
+  try {
+    const r = await fetch('/api/brollr/status');
+    const d = await r.json();
+    if (d.demo_mode) {
+      document.getElementById('demo-banner').classList.add('show');
+    }
+  } catch (_) {}
+}
+
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/projects');
+    const projects = await r.json();
+    const sel = document.getElementById('project-select');
+    (projects || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title || `Project ${p.id}`;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => {
+      currentProjectId = sel.value || null;
+      // If project has a script, auto-populate textarea
+      if (currentProjectId) loadProjectScript(currentProjectId);
+    });
+  } catch (_) {}
+}
+
+async function loadProjectScript(projectId) {
+  // Attempt to pre-fill the script textarea from the project's active script
+  try {
+    const r = await fetch(`/api/projects/${projectId}`);
+    if (!r.ok) return;
+    const p = await r.json();
+    if (p.active_script_id) {
+      const sr = await fetch(`/api/writr/scripts/${p.active_script_id}`);
+      if (sr.ok) {
+        const s = await sr.json();
+        const text = s.generated_script || s.generated_outline || s.raw_input || '';
+        if (text) {
+          const ta = document.getElementById('script-text');
+          if (!ta.value.trim()) ta.value = text;
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────
+// ANALYZE
+// ─────────────────────────────────────────────
+async function analyzeScript() {
+  const scriptText = document.getElementById('script-text').value.trim();
+  const projectId = currentProjectId;
+
+  if (!scriptText && !projectId) {
+    alert('Paste a script or select a project first.');
+    return;
+  }
+
+  const btn = document.getElementById('analyze-btn');
+  const status = document.getElementById('analyze-status');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+  status.style.display = 'block';
+  status.textContent = 'Claude is reading your script…';
+
+  try {
+    const body = {};
+    if (projectId) body.project_id = parseInt(projectId);
+    if (scriptText) body.script_text = scriptText;
+
+    const r = await fetch('/api/brollr/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+
+    if (!r.ok || !d.moments) throw new Error(d.error || 'Analyze failed');
+
+    moments = d.moments;
+    status.textContent = `Found ${moments.length} moments`;
+    renderMoments();
+  } catch (err) {
+    status.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Analyze Script';
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER MOMENTS
+// ─────────────────────────────────────────────
+const CAMERA_MOTIONS = ['dolly-in','dolly-out','pan-left','pan-right','crane-up','crane-down','orbit','fpv-drone','handheld','hyperlapse','static'];
+const STYLES = ['cinematic','documentary','dramatic','golden-hour','moody','handheld-realism'];
+
+function renderMoments() {
+  const container = document.getElementById('moments-container');
+  container.innerHTML = '';
+
+  if (!moments.length) {
+    container.innerHTML = '<div class="empty">No moments found.</div>';
+    return;
+  }
+
+  moments.forEach((m, idx) => {
+    const card = document.createElement('div');
+    card.className = 'moment-card';
+    card.id = `moment-${idx}`;
+    card.dataset.idx = idx;
+
+    const motionOptions = CAMERA_MOTIONS.map(v =>
+      `<option value="${v}"${v === m.suggested_camera_motion ? ' selected' : ''}>${v}</option>`
+    ).join('');
+    const styleOptions = STYLES.map(v =>
+      `<option value="${v}"${v === m.suggested_style ? ' selected' : ''}>${v}</option>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="moment-card-header">
+        <div class="moment-label">${escHtml(m.label)}</div>
+      </div>
+      <div class="field">
+        <label>Prompt</label>
+        <textarea class="moment-prompt" rows="3">${escHtml(m.description)}</textarea>
+      </div>
+      <div class="moment-controls">
+        <div class="field">
+          <label>Camera Motion</label>
+          <select class="moment-motion">${motionOptions}</select>
+        </div>
+        <div class="field">
+          <label>Style</label>
+          <select class="moment-style">${styleOptions}</select>
+        </div>
+      </div>
+      <div class="duration-row">
+        <span class="duration-label">Duration</span>
+        <button class="dur-btn active" data-dur="5" onclick="selectDuration(${idx}, 5, this)">5s</button>
+        <button class="dur-btn" data-dur="10" onclick="selectDuration(${idx}, 10, this)">10s</button>
+        <button class="dur-btn" data-dur="15" onclick="selectDuration(${idx}, 15, this)">15s</button>
+      </div>
+
+      <div class="progress-wrap" id="progress-${idx}">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill-${idx}"></div></div>
+        <div class="progress-msg" id="progress-msg-${idx}"></div>
+      </div>
+
+      <div class="vault-matches" id="vault-${idx}">
+        <div class="vault-matches-title">Vault Matches</div>
+        <div id="vault-clips-${idx}"></div>
+      </div>
+
+      <div class="video-result" id="video-result-${idx}">
+        <video controls playsinline></video>
+        <div class="video-result-label">Generated clip</div>
+      </div>
+
+      <div class="demo-result" id="demo-result-${idx}">
+        Demo mode — add HIGGSFIELD_API_KEY to .env to generate real clips.
+      </div>
+
+      <div class="moment-actions">
+        <button class="btn btn-secondary btn-sm" onclick="checkVault(${idx})">Check Vault</button>
+        <button class="btn btn-primary btn-sm" id="gen-btn-${idx}" onclick="generateMoment(${idx})">Generate with AI</button>
+        <button class="btn btn-secondary btn-sm" id="save-btn-${idx}" style="display:none" onclick="saveToVault(${idx})">Save to Vault</button>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function selectDuration(idx, dur, btn) {
+  const card = document.getElementById(`moment-${idx}`);
+  card.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function getSelectedDuration(idx) {
+  const card = document.getElementById(`moment-${idx}`);
+  const active = card.querySelector('.dur-btn.active');
+  return active ? parseInt(active.dataset.dur) : 5;
+}
+
+// ─────────────────────────────────────────────
+// CHECK VAULT
+// ─────────────────────────────────────────────
+async function checkVault(idx) {
+  const moment = moments[idx];
+  if (!moment) return;
+  const terms = moment.vault_search_terms || [];
+
+  const vaultDiv = document.getElementById(`vault-${idx}`);
+  const clipsDiv = document.getElementById(`vault-clips-${idx}`);
+  vaultDiv.classList.add('show');
+  clipsDiv.innerHTML = '<div style="font-size:12px;color:var(--muted)">Searching vault…</div>';
+
+  try {
+    const r = await fetch('/api/brollr/vault-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ terms, project_id: currentProjectId }),
+    });
+    const d = await r.json();
+    const clips = d.clips || [];
+
+    if (!clips.length) {
+      clipsDiv.innerHTML = '<div style="font-size:12px;color:var(--muted)">No matching vault footage found.</div>';
+      return;
+    }
+
+    clipsDiv.innerHTML = clips.map(c => {
+      const tags = (c.subjects || []).slice(0, 4).join(', ');
+      const thumb = c.thumbnail_path ? `<img class="vault-clip-thumb" src="${c.thumbnail_path}" alt="">` : '<div class="vault-clip-thumb"></div>';
+      const fname = c.file_path ? c.file_path.split(/[\\/]/).pop() : '—';
+      return `<div class="vault-clip-row">
+        ${thumb}
+        <div class="vault-clip-info">
+          <div class="vault-clip-name">${escHtml(fname)}</div>
+          <div class="vault-clip-tags">${escHtml(c.description || tags || c.shot_type || '')}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    clipsDiv.innerHTML = `<div style="font-size:12px;color:var(--red)">Error: ${escHtml(err.message)}</div>`;
+  }
+}
+
+// ─────────────────────────────────────────────
+// GENERATE
+// ─────────────────────────────────────────────
+const generationIds = {}; // idx → id
+
+async function generateMoment(idx) {
+  const card = document.getElementById(`moment-${idx}`);
+  const prompt = card.querySelector('.moment-prompt').value.trim();
+  const camera_motion = card.querySelector('.moment-motion').value;
+  const style = card.querySelector('.moment-style').value;
+  const duration = getSelectedDuration(idx);
+  const moment = moments[idx];
+
+  if (!prompt) { alert('Prompt is empty.'); return; }
+
+  const genBtn = document.getElementById(`gen-btn-${idx}`);
+  const progressWrap = document.getElementById(`progress-${idx}`);
+  const progressFill = document.getElementById(`progress-fill-${idx}`);
+  const progressMsg = document.getElementById(`progress-msg-${idx}`);
+  const videoResult = document.getElementById(`video-result-${idx}`);
+  const demoResult = document.getElementById(`demo-result-${idx}`);
+  const saveBtn = document.getElementById(`save-btn-${idx}`);
+
+  genBtn.disabled = true;
+  genBtn.textContent = 'Generating…';
+  progressWrap.classList.add('show');
+  progressFill.style.width = '10%';
+  progressMsg.textContent = 'Connecting…';
+  card.classList.add('generating');
+  card.classList.remove('done');
+  videoResult.classList.remove('show');
+  demoResult.classList.remove('show');
+
+  const body = {
+    moment_label: moment.label,
+    prompt,
+    camera_motion,
+    style,
+    duration,
+  };
+  if (currentProjectId) body.project_id = parseInt(currentProjectId);
+
+  try {
+    const resp = await fetch('/api/brollr/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        let ev;
+        try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+
+        if (ev.step === 'creating') {
+          progressFill.style.width = '30%';
+          progressMsg.textContent = ev.message || 'Sending to Higgsfield…';
+        } else if (ev.step === 'processing') {
+          progressFill.style.width = '65%';
+          progressMsg.textContent = ev.message || 'AI is generating your clip…';
+        } else if (ev.step === 'done') {
+          progressFill.style.width = '100%';
+          progressMsg.textContent = 'Done!';
+          card.classList.remove('generating');
+          card.classList.add('done');
+          generationIds[idx] = ev.generation_id;
+
+          if (ev.result_url) {
+            videoResult.classList.add('show');
+            videoResult.querySelector('video').src = ev.result_url;
+            saveBtn.style.display = 'inline-flex';
+          }
+          loadHistory();
+        } else if (ev.step === 'demo') {
+          progressFill.style.width = '100%';
+          progressMsg.textContent = 'Demo mode';
+          demoResult.classList.add('show');
+          generationIds[idx] = ev.generation_id;
+          card.classList.remove('generating');
+          loadHistory();
+        } else if (ev.step === 'error') {
+          progressMsg.style.color = 'var(--red)';
+          progressMsg.textContent = 'Error: ' + ev.error;
+          card.classList.remove('generating');
+        }
+      }
+    }
+  } catch (err) {
+    progressMsg.style.color = 'var(--red)';
+    progressMsg.textContent = 'Error: ' + err.message;
+    card.classList.remove('generating');
+  } finally {
+    genBtn.disabled = false;
+    genBtn.textContent = 'Generate with AI';
+  }
+}
+
+// ─────────────────────────────────────────────
+// SAVE TO VAULT
+// ─────────────────────────────────────────────
+async function saveToVault(idx) {
+  const genId = generationIds[idx];
+  if (!genId) return;
+  const saveBtn = document.getElementById(`save-btn-${idx}`);
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+  try {
+    const r = await fetch('/api/brollr/save-to-vault', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ generation_id: genId }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      saveBtn.textContent = 'Saved ✓';
+      saveBtn.style.background = 'var(--green)';
+    } else {
+      throw new Error(d.error);
+    }
+  } catch (err) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save failed — retry';
+    alert('Save to vault failed: ' + err.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+// HISTORY
+// ─────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const url = currentProjectId
+      ? `/api/brollr/history?project_id=${currentProjectId}`
+      : '/api/brollr/history';
+    const r = await fetch(url);
+    const d = await r.json();
+    renderHistory(d.generations || []);
+  } catch (_) {}
+}
+
+function renderHistory(generations) {
+  const container = document.getElementById('history-container');
+  container.innerHTML = '';
+
+  if (!generations.length) {
+    container.innerHTML = '<div class="empty" id="history-empty">No generations yet.</div>';
+    return;
+  }
+
+  generations.forEach(g => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const date = new Date(g.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const badgeClass = `badge badge-${g.status || 'pending'}`;
+
+    item.innerHTML = `
+      <div class="history-label" title="${escHtml(g.moment_label || '')}">${escHtml(g.moment_label || '—')}</div>
+      <div class="history-meta">
+        <span class="${badgeClass}">${g.status || 'pending'}</span>
+        <span class="history-date">${date}</span>
+      </div>
+      ${g.result_url ? `<div class="history-delete"><button class="btn btn-xs" style="background:rgba(34,197,94,.12);color:var(--green)" onclick="openModal('${escHtml(g.result_url)}','${escHtml(g.moment_label||'')}','${escHtml(g.prompt||'')}');event.stopPropagation()">▶ Preview</button></div>` : ''}
+      <div class="history-delete">
+        <button class="btn btn-danger btn-xs" onclick="deleteGeneration(${g.id}, this);event.stopPropagation()">Delete</button>
+      </div>
+    `;
+
+    if (g.result_url) {
+      item.addEventListener('click', () => openModal(g.result_url, g.moment_label, g.prompt));
+    }
+    container.appendChild(item);
+  });
+}
+
+async function deleteGeneration(id, btn) {
+  if (!confirm('Delete this generation record?')) return;
+  btn.disabled = true;
+  try {
+    await fetch(`/api/brollr/generation/${id}`, { method: 'DELETE' });
+    loadHistory();
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+    btn.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────
+function openModal(url, label, prompt) {
+  document.getElementById('modal-video').src = url;
+  document.getElementById('modal-label').textContent = label || '';
+  document.getElementById('modal-prompt').textContent = prompt || '';
+  document.getElementById('player-modal').classList.add('open');
+}
+function closeModal() {
+  const modal = document.getElementById('player-modal');
+  modal.classList.remove('open');
+  const v = document.getElementById('modal-video');
+  v.pause();
+  v.src = '';
+}
+document.getElementById('player-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ─────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

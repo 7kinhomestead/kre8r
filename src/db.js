@@ -1470,6 +1470,26 @@ Partner: {{partner_name}}
       .run('General Affiliate Agreement', DEFAULT_BODY);
     console.log('[DB] Contracts: seeded default General Affiliate Agreement template');
   }
+
+  // ── BrollΩr — AI b-roll generation log ───────────────────────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS brollr_generations (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id        INTEGER,
+    moment_label      TEXT,
+    prompt            TEXT,
+    camera_motion     TEXT,
+    style             TEXT,
+    status            TEXT    NOT NULL DEFAULT 'pending',
+    higgsfield_job_id TEXT,
+    result_url        TEXT,
+    local_path        TEXT,
+    footage_id        INTEGER,
+    duration_s        REAL,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_brollr_project ON brollr_generations(project_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_brollr_status  ON brollr_generations(status)');
+  console.log('[DB] BrollΩr brollr_generations table verified');
 }
 
 /**
@@ -4859,6 +4879,46 @@ function markAgreementSent(id, sentAt) {
   );
 }
 
+// ─────────────────────────────────────────────
+// BrollΩr HELPERS
+// ─────────────────────────────────────────────
+
+function getBrollGenerations(projectId) {
+  if (projectId) {
+    return _all(
+      'SELECT * FROM brollr_generations WHERE project_id = ? ORDER BY created_at DESC',
+      [projectId]
+    );
+  }
+  return _all('SELECT * FROM brollr_generations ORDER BY created_at DESC');
+}
+
+function createBrollGeneration({ project_id, moment_label, prompt, camera_motion, style, status, duration_s }) {
+  const result = _run(
+    `INSERT INTO brollr_generations
+      (project_id, moment_label, prompt, camera_motion, style, status, duration_s)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [project_id || null, moment_label || null, prompt || null, camera_motion || null, style || null, status || 'pending', duration_s || null]
+  );
+  return result.lastInsertRowid;
+}
+
+function updateBrollGeneration(id, data) {
+  const fields = [];
+  const values = [];
+  for (const [k, v] of Object.entries(data)) {
+    fields.push(`${k} = ?`);
+    values.push(v);
+  }
+  if (!fields.length) return;
+  values.push(id);
+  _run(`UPDATE brollr_generations SET ${fields.join(', ')} WHERE id = ?`, values);
+}
+
+function deleteBrollGeneration(id) {
+  _run('DELETE FROM brollr_generations WHERE id = ?', [id]);
+}
+
 module.exports = {
   initDb,
   checkpoint,
@@ -5179,6 +5239,11 @@ module.exports = {
   updateAgreementBodySnapshot,
   updateAgreementStatus,
   markAgreementSent,
+  // BrollΩr
+  getBrollGenerations,
+  createBrollGeneration,
+  updateBrollGeneration,
+  deleteBrollGeneration,
 };
 
 // ─────────────────────────────────────────────

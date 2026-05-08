@@ -57,6 +57,7 @@
           { label: 'ReviewΩr', href: '/reviewr.html' },
           { label: 'ClipsΩr',  href: '/clipsr.html' },
           { label: 'ComposΩr', href: '/composor.html' },
+          { label: 'BrollΩr',  href: '/brollr.html' },
           { label: 'AnimΩr',   href: '/animr.html' },
           { label: 'CleanΩr',  href: '/cleanr.html' },
         ]
