@@ -405,6 +405,10 @@ def run(args):
     #   that beat starts — used by Phase 3 for beat-header markers.
     timeline_beat_frame = {}
     current_frame       = 0
+    # Track the last endFrame placed per footage_id.
+    # DaVinci silently rejects AppendToTimeline when the same source clip's
+    # IN point is behind the last OUT point it used — clamp to avoid this.
+    last_end_frame = {}
 
     for section in beat_sections:
         label          = section.get("script_section") or f"Section {section.get('section_index', '?')}"
@@ -475,6 +479,19 @@ def run(args):
             # Add 2-frame handles on both ends where possible (avoids hard flicker cuts)
             src_in  = max(0, src_in  - 2)
             src_out = src_out + 2
+
+            # DaVinci silently refuses to place the same source clip when the
+            # new IN point is behind the last OUT point used for that clip.
+            # Clamp src_in to at least last_end + 1 frame to prevent this.
+            prev_end = last_end_frame.get(fid, 0)
+            if src_in <= prev_end:
+                print(f"[clamp] Beat '{label}': src_in {src_in} ≤ last end {prev_end} — clamping to {prev_end + 1}", file=sys.stderr)
+                src_in = prev_end + 1
+            if src_in >= src_out:
+                print(f"[warn] Beat '{label}': clip too short after clamping ({src_in}→{src_out}) — skipped", file=sys.stderr)
+                clips_missing += 1
+                continue
+            last_end_frame[fid] = src_out
 
             beat_clips.append({
                 "mediaPoolItem": item_cache[fid],
