@@ -19,17 +19,18 @@ const logger            = require('../utils/logger');
 const { startSseResponse } = require('../utils/sse');
 
 // ─────────────────────────────────────────────
-// HIGGSFIELD CLIENT — graceful import
+// HIGGSFIELD CLIENT
+// Credentials = KEY_ID:KEY_SECRET combined string
 // ─────────────────────────────────────────────
-let higgsfieldClient = null;
-try {
-  higgsfieldClient = require('@higgsfield/client');
-} catch (_) {
-  // Package not installed — fall back to raw fetch in all API calls
+function getCredentials() {
+  const key    = process.env.HIGGSFIELD_API_KEY;
+  const secret = process.env.HIGGSFIELD_API_SECRET;
+  if (!key) return null;
+  return secret ? `${key}:${secret}` : key;
 }
 
 function isDemoMode() {
-  return !process.env.HIGGSFIELD_API_KEY;
+  return !getCredentials();
 }
 
 // ─────────────────────────────────────────────
@@ -247,67 +248,39 @@ router.post('/generate', async (req, res) => {
     return;
   }
 
-  // Live mode — call Higgsfield API
+  // Live mode — call Higgsfield API via SDK
   try {
     send({ step: 'creating', message: 'Sending to Higgsfield…' });
 
-    const fullPrompt = `${prompt}. Camera: ${camera_motion}. Style: ${style}. Homestead setting, authentic, cinematic.`;
+    const { higgsfield, config } = require('@higgsfield/client/v2');
+    config({ credentials: getCredentials() });
 
-    const { default: fetch } = await import('node-fetch');
-    const apiRes = await fetch('https://api.higgsfield.ai/v1/video/generate', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.HIGGSFIELD_API_KEY}`,
-        'Content-Type':  'application/json',
+    const fullPrompt = `${prompt}. Camera motion: ${camera_motion}. Style: ${style}. Homestead setting, authentic, cinematic. Real outdoor environment.`;
+
+    send({ step: 'processing', message: 'AI is generating your clip… (this takes 1–3 min)' });
+
+    const response = await higgsfield.subscribe('/v1/text2video/wan', {
+      input: {
+        prompt:   fullPrompt,
+        model:    'wan-2.5',
+        duration: duration || 5,
       },
-      body: JSON.stringify({
-        prompt:        fullPrompt,
-        duration:      duration || 5,
-        camera_motion: camera_motion,
-      }),
+      withPolling: true,
     });
 
-    if (!apiRes.ok) {
-      const errBody = await apiRes.json().catch(() => ({}));
-      const errMsg = errBody?.error || errBody?.message || `Higgsfield API error ${apiRes.status}`;
-      throw new Error(errMsg);
+    if (response.status === 'nsfw') {
+      throw new Error('Content flagged — try a different prompt description');
+    }
+    if (response.status === 'failed') {
+      throw new Error('Higgsfield generation failed: ' + (response.error || 'unknown'));
     }
 
-    const apiData = await apiRes.json();
-    const jobId   = apiData?.id || apiData?.job_id || null;
-    const resultUrl = apiData?.url || apiData?.video_url || null;
-
-    send({ step: 'processing', message: 'AI is generating your clip…' });
-
-    // If we got a job ID but no URL yet, poll until ready (or timeout)
-    let finalUrl = resultUrl;
-    if (jobId && !finalUrl) {
-      const pollStart = Date.now();
-      const POLL_TIMEOUT = 4 * 60 * 1000; // 4 min
-      while (!finalUrl && (Date.now() - pollStart) < POLL_TIMEOUT) {
-        await new Promise(r => setTimeout(r, 5000));
-        try {
-          const pollRes = await fetch(`https://api.higgsfield.ai/v1/video/${jobId}`, {
-            headers: { 'Authorization': `Bearer ${process.env.HIGGSFIELD_API_KEY}` },
-          });
-          if (pollRes.ok) {
-            const pollData = await pollRes.json();
-            if (pollData?.status === 'completed' || pollData?.status === 'done') {
-              finalUrl = pollData?.url || pollData?.video_url || null;
-            } else if (pollData?.status === 'failed') {
-              throw new Error('Higgsfield generation failed: ' + (pollData?.error || 'unknown'));
-            }
-          }
-        } catch (pollErr) {
-          logger.warn({ module: 'brollr', err: pollErr.message }, 'Poll error (non-fatal)');
-        }
-      }
-    }
+    const finalUrl = response.results?.raw || response.results?.min || null;
 
     db.updateBrollGeneration(generationId, {
-      status:             finalUrl ? 'done' : 'processing',
-      higgsfield_job_id:  jobId,
-      result_url:         finalUrl || null,
+      status:            finalUrl ? 'done' : 'processing',
+      higgsfield_job_id: response.request_id || null,
+      result_url:        finalUrl || null,
     });
 
     send({
@@ -319,9 +292,7 @@ router.post('/generate', async (req, res) => {
     end();
   } catch (err) {
     logger.error({ module: 'brollr', err: err.message }, 'Higgsfield generate failed');
-    try {
-      db.updateBrollGeneration(generationId, { status: 'failed' });
-    } catch (_) {}
+    try { db.updateBrollGeneration(generationId, { status: 'failed' }); } catch (_) {}
     send({ step: 'error', error: err.message, generation_id: generationId });
     end();
   }
