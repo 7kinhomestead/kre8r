@@ -625,7 +625,6 @@ async function buildAssembly(projectId, onProgress) {
 
   // beatPool[beatIndex] = array of all takes for that beat, each with .segments
   const beatPool = beats.map(() => []);
-  const goldPool = [];
 
   for (const clip of transcribed) {
     if (!clip.segments || clip.segments.length === 0) continue;
@@ -634,9 +633,17 @@ async function buildAssembly(projectId, onProgress) {
 
     const result = await mapBeatsInClip(clip, clip.segments, beats, creatorCtx, emit, writrBeatMap, writrScriptText);
 
+    // Build a lookup of beat occurrence windows from THIS clip's Call 1 result.
+    // Keys are beat_index → [{start, end}]. Used below to anchor gold moments
+    // to the beat whose timestamp range contains them — Claude's own boundaries,
+    // not post-hoc heuristics.
+    const beatWindows = {}; // beat_index → [{start, end}]
     for (const bc of (result.beat_coverage || [])) {
       const idx = bc.beat_index;
       if (idx < 0 || idx >= beats.length) continue;
+      beatWindows[idx] = (beatWindows[idx] || []).concat(
+        (bc.occurrences || []).map(o => ({ start: o.start, end: o.end }))
+      );
 
       for (const occ of (bc.occurrences || [])) {
         if (typeof occ.start !== 'number' || typeof occ.end !== 'number') continue;
@@ -663,16 +670,64 @@ async function buildAssembly(projectId, onProgress) {
       }
     }
 
+    // ── Assign gold moments using Call 1's own beat windows ──────────────
+    // Gold moments are anchored to the beat whose occurrence range contains
+    // them — not a post-hoc proximity guess across the whole pool.
+    // Pass 1: overlap with a beat window in this clip.
+    // Pass 2: nearest beat window by timestamp (fallback, same-clip only).
     for (const gm of (result.gold_moments || [])) {
       if (typeof gm.start !== 'number' || typeof gm.end !== 'number') continue;
-      goldPool.push({
-        footage_id:    clip.id,
-        proxy_path:    clip.proxy_path || clip.file_path,
-        clip_duration: clip.duration || 0,
-        start:         gm.start,
-        end:           gm.end,
-        reason:        gm.reason || 'Off-script gold moment',
+
+      let bestBeatIdx = -1;
+      let bestOverlap = -1;
+
+      // Pass 1 — overlap with Claude's beat occurrence windows
+      for (const [idxStr, windows] of Object.entries(beatWindows)) {
+        const idx = parseInt(idxStr, 10);
+        for (const w of windows) {
+          const overlap = Math.min(gm.end, w.end) - Math.max(gm.start, w.start);
+          if (overlap > bestOverlap) { bestOverlap = overlap; bestBeatIdx = idx; }
+        }
+      }
+
+      // Pass 2 — nearest window by timestamp (no overlap but windows exist)
+      if (bestOverlap < 0 && Object.keys(beatWindows).length > 0) {
+        let minDist = Infinity;
+        for (const [idxStr, windows] of Object.entries(beatWindows)) {
+          const idx = parseInt(idxStr, 10);
+          for (const w of windows) {
+            const dist = Math.min(
+              Math.abs(gm.start - w.start),
+              Math.abs(gm.start - w.end),
+              Math.abs(gm.end   - w.start),
+              Math.abs(gm.end   - w.end)
+            );
+            if (dist < minDist) { minDist = dist; bestBeatIdx = idx; }
+          }
+        }
+        // Still no beat windows at all — skip (can't attribute safely)
+        if (minDist === Infinity) {
+          emit({ event: 'status', message: `Gold moment skipped — no beat windows to anchor to (${gm.reason?.slice(0, 60) || ''})` });
+          continue;
+        }
+      }
+
+      if (bestBeatIdx < 0) continue; // safety — no beats at all
+
+      // Add gold moment as a take in the winning beat with quality:'gold'
+      beatPool[bestBeatIdx].push({
+        footage_id:      clip.id,
+        proxy_path:      clip.proxy_path || clip.file_path,
+        clip_duration:   clip.duration || 0,
+        clip_created_at: '',
+        start:           gm.start,
+        end:             gm.end,
+        quality:         'gold',
+        note:            gm.reason || 'Off-script gold moment',
+        beat_name:       beats[bestBeatIdx]?.name || `Beat ${bestBeatIdx + 1}`,
+        segments:        [],
       });
+      emit({ event: 'status', message: `Gold → beat "${beats[bestBeatIdx]?.name}" (${gm.reason?.slice(0, 60) || ''})` });
     }
   }
 
@@ -684,66 +739,6 @@ async function buildAssembly(projectId, onProgress) {
       `take${n + 1}: ${fmtTs(t.start)}–${fmtTs(t.end)} [${t.quality}]`
     ).join(', ');
     emit({ event: 'status', message: `[Call1] Beat "${beats[i].name}": ${summary}` });
-  }
-
-  // ── 8. Merge gold moments into the beat pool ────────────────────────────
-  // Gold moments belong next to the beat where they occurred, not in exile.
-  // Add them to the nearest beat's takes array tagged quality:'gold'.
-  // This way Call 2 can include them in the proposed sequence if appropriate.
-  for (const gm of goldPool) {
-    // Pass 1: find beat with actual temporal overlap (same clip)
-    let bestBeatIdx = -1;
-    let bestOverlap = -1;
-    for (let i = 0; i < beats.length; i++) {
-      for (const t of beatPool[i]) {
-        if (t.footage_id === gm.footage_id) {
-          const overlap = Math.min(gm.end, t.end) - Math.max(gm.start, t.start);
-          if (overlap > bestOverlap) {
-            bestOverlap = overlap;
-            bestBeatIdx = i;
-          }
-        }
-      }
-    }
-
-    // Pass 2: no overlap — fall back to nearest beat by timestamp (same clip)
-    // This prevents orphaned gold moments from defaulting to Beat 1 (index 0)
-    if (bestOverlap < 0) {
-      let minDist = Infinity;
-      for (let i = 0; i < beats.length; i++) {
-        for (const t of beatPool[i]) {
-          if (t.footage_id === gm.footage_id) {
-            const dist = Math.min(
-              Math.abs(gm.start - t.start),
-              Math.abs(gm.start - t.end),
-              Math.abs(gm.end   - t.start),
-              Math.abs(gm.end   - t.end)
-            );
-            if (dist < minDist) { minDist = dist; bestBeatIdx = i; }
-          }
-        }
-      }
-      // Still no same-clip takes anywhere — skip (can't attribute safely)
-      if (minDist === Infinity) {
-        emit({ event: 'status', message: `Gold moment skipped — no same-clip takes to anchor to (${gm.reason?.slice(0, 60) || ''})` });
-        continue;
-      }
-    }
-
-    // Add gold moment as a take in the winning beat with quality:'gold'
-    beatPool[bestBeatIdx].push({
-      footage_id:      gm.footage_id,
-      proxy_path:      gm.proxy_path,
-      clip_duration:   gm.clip_duration || 0,
-      clip_created_at: '',
-      start:           gm.start,
-      end:             gm.end,
-      quality:         'gold',
-      note:            gm.reason || 'Off-script gold moment',
-      beat_name:       beats[bestBeatIdx]?.name || `Beat ${bestBeatIdx + 1}`,
-      segments:        [],
-    });
-    emit({ event: 'status', message: `Gold moment assigned to beat "${beats[bestBeatIdx]?.name}" (${gm.reason?.slice(0, 60) || ''})` });
   }
 
   // ── 9. Call 2 — Smart assembly per beat (Opus) ──────────────────────────
