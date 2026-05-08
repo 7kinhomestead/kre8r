@@ -791,8 +791,12 @@ async function buildAssembly(projectId, onProgress) {
       assemblyNote = 'Assembly failed — fallback to last clean take';
     }
 
-    // Apply handles to the assembly segments
-    const withHandles = applyHandlesToAssembly(assembly, allTakes);
+    // Apply handles to the assembly segments, then sort chronologically.
+    // All takes live in a single long clip — later takes are at higher timestamps.
+    // Sorting by start ensures the DaVinci timeline always moves forward through
+    // the source clip (no backward jumps from e.g. 45:48 back to 3:53).
+    const withHandles = applyHandlesToAssembly(assembly, allTakes)
+      .sort((a, b) => a.start - b.start);
 
     // Build takes list for display (all tagged takes, sorted chronologically)
     const sortedTakes = [...allTakes].sort((a, b) => {
