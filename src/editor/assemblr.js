@@ -347,28 +347,25 @@ async function assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit) {
 
   const prompt = `You are a video editor assembling the best version of beat "${beat.name}" (${beat.emotional_function || ''}) for ${creatorCtx.creatorName || 'the creator'}.
 ${scriptSection}
-CONTEXT: Jason films in short takes — each take is typically 1-3 sentences covering ONE part of the beat. There may be 4-8 takes across all clips. Your job is to pick the BEST ones and order them into a seamless beat.
+CONTEXT: Jason records the FULL VIDEO multiple times in one long session. Each "take" below is one complete recording of this beat — typically 1-4 minutes of continuous delivery. Takes are listed in chronological order (earlier start_ts = filmed earlier in the session). Later takes are usually more relaxed and natural.
 
-ALL TAKES — chronological (last take usually most relaxed):
+ALL TAKES — chronological (range shows where this beat occurs in the source clip):
 ${takesText}
 
-ASSEMBLY RULES (priority order):
-1. FULL_TAKE — Any take that cleanly covers the ENTIRE beat by itself: use it whole. No cuts needed.
-2. PARAGRAPH — Two or more consecutive takes from the SAME clip that flow together naturally: use as a block. Fewer clips = fewer cuts.
-3. SENTENCE — Individual takes that each cover a distinct sentence or thought: pick the best version of each sentence across all takes. This is the normal case when takes are 1-3 sentences each.
+ASSEMBLY RULES — follow in strict priority order:
+1. FULL_TAKE (strongly preferred) — Pick the single best take and use it whole. ONE entry in the assembly. This is the right answer in most cases.
+2. SENTENCE — Only if the best take has a specific problem (fumbled opener, stumbled line): use that take for most of the beat, then swap ONLY the specific bad sentence for the same sentence from another take. Maximum 2 takes total. Keep cuts to a minimum.
 
-KEY PRINCIPLES FOR SHORT TAKES:
-- Each take is usually 1-3 sentences. Multiple takes often cover the SAME sentence differently — pick the best delivery of each sentence.
-- Last take of each clause is usually the most relaxed and natural. Default to it unless clearly worse.
-- Fumbled takes (false starts, repeated words, "let me try that again"): skip entirely UNLESS that take contains unique content not in any other take.
-- Gold/off-script moments: if a take is tagged quality:"gold", include it — it's a genuine spontaneous moment that earned its spot.
-- Adlibs that feel on-topic: keep them as part of their take.
-- Aim for minimum cuts. If take 6 covers sentences A+B cleanly, don't break it to use take 3 for A and take 8 for B.
-- Dead air at take start/end: your timestamps mark the speech. The editor adds handles in Resolve.
+CRITICAL: Do NOT mix sentences freely across multiple takes. Do NOT produce more than 4 assembly entries for a single beat. The goal is a clean single-take delivery, not a Frankenstein edit.
+
+- Last take is usually the best — most relaxed, natural delivery. Start there.
+- Fumbled takes: skip entirely unless they contain a line not delivered in any other take.
+- Gold moments (quality:"gold"): always include — genuine spontaneous moment, use its full range.
+- The timestamps in the "range:" header are the start/end of this beat occurrence in the source clip. Use them as-is for full_take entries.
 
 CRITICAL TIMESTAMP RULE:
 - start_ts and end_ts MUST be plain decimal numbers in seconds (e.g. 125.4, 30.0).
-- Copy timestamps EXACTLY as shown in the transcript. NEVER use M:SS format.
+- For a full_take entry, copy the range timestamps exactly. NEVER use M:SS format.
 
 Return ONLY the JSON object below — no explanation, no analysis, no markdown:
 {
@@ -377,11 +374,11 @@ Return ONLY the JSON object below — no explanation, no analysis, no markdown:
       "footage_id": 42,
       "start_ts": 30.5,
       "end_ts": 120.0,
-      "level": "full_take | paragraph | sentence",
+      "level": "full_take | sentence",
       "note": "one sentence — what this covers and why chosen"
     }
   ],
-  "assembly_note": "one sentence describing the editorial strategy (e.g. 'Used take 3 for the hook, take 7 for the payoff — cleaner delivery throughout')"
+  "assembly_note": "one sentence describing the editorial strategy (e.g. 'Used take 3 — cleanest delivery, natural energy throughout')"
 }`;
 
   try {
