@@ -471,6 +471,25 @@ router.post('/generate', async (req, res) => {
     }
   } catch (_) {}
 
+  // ── VisualΩr Visual Intelligence Profile — inject into all script generation ──
+  try {
+    const visRaw = require('../db').getKv('visual_intelligence_profile');
+    if (visRaw) {
+      const vis = JSON.parse(visRaw);
+      if (vis?.writr_injection) {
+        let vBlock = '\n\n## VISUAL INTELLIGENCE (from VisualΩr channel analysis)';
+        vBlock += `\n${vis.writr_injection}`;
+        if (vis.opening_frame_rules?.length) {
+          vBlock += `\nOpening frame rules: ${vis.opening_frame_rules.join(' | ')}`;
+        }
+        if (vis.contrast_finding) {
+          vBlock += `\nKey contrast finding: ${vis.contrast_finding}`;
+        }
+        id8rBlock += vBlock;
+      }
+    }
+  } catch (_) {}
+
   // Short-form format constraint — injected into every prompt when project.format = 'short'
   if (project.format === 'short') {
     id8rBlock += `\n\n## SHORT-FORM FORMAT — STRICT CONSTRAINTS
@@ -939,6 +958,24 @@ ${voiceCalBlock}`;
       : currentScript;
     prompt += `\n\nCURRENT SCRIPT DRAFT:\n${truncated}`;
   }
+
+  // VisualΩr — inject visual intelligence into room context
+  try {
+    const visRaw = require('../db').getKv('visual_intelligence_profile');
+    if (visRaw) {
+      const vis = JSON.parse(visRaw);
+      if (vis?.writr_injection) {
+        prompt += `\n\n## VISUAL INTELLIGENCE (VisualΩr channel analysis)`;
+        prompt += `\n${vis.writr_injection}`;
+        if (vis.opening_frame_rules?.length) {
+          prompt += `\nOpening frame rules: ${vis.opening_frame_rules.join(' | ')}`;
+        }
+        if (vis.contrast_finding) {
+          prompt += `\nKey contrast finding: ${vis.contrast_finding}`;
+        }
+      }
+    }
+  } catch (_) {}
 
   return prompt;
 }

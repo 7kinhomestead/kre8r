@@ -298,6 +298,23 @@ router.post('/chat', async (req, res) => {
       ? vsc.pushback_triggers.map((t, i) => `${i + 1}. ${t}`).join('\n')
       : '';
 
+    // ── VisualΩr — audience attention profile for strategic context ──────────
+    let visualrBlock = '';
+    try {
+      const visRaw = db.getKv('visual_intelligence_profile');
+      if (visRaw) {
+        const vis = JSON.parse(visRaw);
+        if (vis?.audience_attention_profile || vis?.contrast_finding) {
+          const ageLabel = vis.created_at
+            ? `${Math.floor((Date.now() - new Date(vis.created_at)) / 86400000)}d ago`
+            : '';
+          visualrBlock = `\n\n## VISUAL INTELLIGENCE (VisualΩr — ${vis.videos_analyzed || '?'} videos analyzed${ageLabel ? ', ' + ageLabel : ''})`;
+          if (vis.audience_attention_profile) visualrBlock += `\n${vis.audience_attention_profile}`;
+          if (vis.contrast_finding)           visualrBlock += `\nKey contrast: ${vis.contrast_finding}`;
+        }
+      }
+    } catch (_) {}
+
     // ── Build the system prompt ───────────────────────────────────────────────
     const systemPrompt = `You are the strategic advisor for ${creatorName} at ${brand} — ${followerSummary}.
 
@@ -334,7 +351,7 @@ RESPONSE STYLE:
 - Short paragraphs. No bullet-point avalanches.
 - If you're making a bold recommendation, state it clearly and defend it.
 - Ask one focused question per turn — not five.
-${platformBlock}${coachBlock}${principlesBlock}${prevBriefBlock}${studioIntelBlock}`;
+${platformBlock}${coachBlock}${principlesBlock}${prevBriefBlock}${studioIntelBlock}${visualrBlock}`;
 
     // ── Stream from Anthropic ─────────────────────────────────────────────────
     const apiKey = process.env.ANTHROPIC_API_KEY;

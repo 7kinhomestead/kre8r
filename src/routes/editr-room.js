@@ -67,6 +67,21 @@ function buildSystemPrompt(project, piprConfig, writrScript, selects, creatorCtx
     voiceBlock = `\n\n## VOICE PROFILE\n${voiceSummary}`;
   }
 
+  // VisualΩr — visual intelligence context
+  let visualBlock = '';
+  try {
+    const visRaw = require('../db').getKv('visual_intelligence_profile');
+    if (visRaw) {
+      const vis = JSON.parse(visRaw);
+      if (vis?.writr_injection || vis?.contrast_finding) {
+        visualBlock = '\n\n## VISUAL INTELLIGENCE (channel performance analysis)';
+        if (vis.contrast_finding)       visualBlock += `\n${vis.contrast_finding}`;
+        if (vis.writr_injection)        visualBlock += `\n${vis.writr_injection}`;
+        if (vis.avoid?.length)          visualBlock += `\nVisual patterns to avoid: ${vis.avoid.slice(0, 2).join(' | ')}`;
+      }
+    }
+  } catch (_) {}
+
   return `You are the EditΩr Room — ${creatorName || brand}'s persistent editing partner for the "${project.title}" video.
 
 You know everything about this edit: the beat map, the assembly choices, the script, the voice. Your job is to be a genuine collaborative partner — not a cheerleader. Think like a seasoned editor who has seen thousands of these cuts.
@@ -89,7 +104,7 @@ You know everything about this edit: the beat map, the assembly choices, the scr
 **Story Structure:** ${structure}
 **Story concept:** ${project.high_concept || project.description || '—'}${beatBlock}${scriptBlock}${voiceBlock}
 
-The creator's rule of thumb: "the story comes out in the edit." Your job is to help find it.`;
+The creator's rule of thumb: "the story comes out in the edit." Your job is to help find it.${visualBlock}`;
 }
 
 // ─────────────────────────────────────────────

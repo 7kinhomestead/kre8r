@@ -82,9 +82,8 @@ Rules for revision:
 7. [BEAT NEEDED] placeholders stay unless the creator explicitly resolved them
 8. Never invent new story events to satisfy the feedback
 
-Return ONLY valid JSON:
+Return ONLY valid JSON. Put "script" FIRST so a truncated response is still usable:
 {
-  "changes_made": [string],
   "script": string,
   "beat_map": [
     {
@@ -94,7 +93,8 @@ Return ONLY valid JSON:
       "needs_coverage": boolean
     }
   ],
-  "missing_beats": [string]
+  "missing_beats": [string],
+  "changes_made": [string]
 }`;
 }
 

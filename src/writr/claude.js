@@ -63,7 +63,23 @@ async function callClaude(prompt, { systemPrompt = null, maxTokens = MAX_TOKENS,
 
   try {
     return JSON.parse(cleaned);
-  } catch (_) {
+  } catch (parseErr) {
+    // Fallback 1: try to extract "script" field directly — handles truncated iterate responses
+    // where beat_map / changes_made overflow but the script value itself is complete.
+    // Matches: "script": "...full string..." — stops at the next top-level key or end of object
+    const scriptMatch = cleaned.match(/"script"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/);
+    if (scriptMatch) {
+      let script = '';
+      try { script = JSON.parse('"' + scriptMatch[1] + '"'); } catch (_) { script = scriptMatch[1]; }
+      if (script) {
+        return {
+          script,
+          beat_map:     [],
+          missing_beats: [],
+          changes_made: ['[response truncated — script recovered]'],
+        };
+      }
+    }
     throw new Error(
       `Claude returned non-JSON response. First 400 chars: ${cleaned.slice(0, 400)}`
     );

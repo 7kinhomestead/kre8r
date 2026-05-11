@@ -38,6 +38,48 @@ function findLastCompleteSection(cleaned) {
 function repairJSON(cleaned) {
   try { return JSON.parse(cleaned); } catch (_) {}
 
+  // Strategy 1: truncated top-level object — find the last complete key-value
+  // pair at depth 1 and close the object. Handles { "script": "...", "beat_map": [...
+  if (cleaned.trimStart().startsWith('{')) {
+    // Walk forward collecting complete top-level keys until we can't close anymore
+    // Simple approach: find the deepest balanced close brace we can reach
+    let depth = 0, lastSafeClose = -1, inString = false, escape = false;
+    for (let i = 0; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+      if (escape)      { escape = false; continue; }
+      if (ch === '\\') { escape = true;  continue; }
+      if (ch === '"')  { inString = !inString; continue; }
+      if (inString)    continue;
+      if (ch === '{' || ch === '[') depth++;
+      if (ch === '}' || ch === ']') {
+        depth--;
+        if (depth === 0) lastSafeClose = i;
+      }
+    }
+    // If we never got back to depth 0, the object is truncated — try closing it
+    if (depth > 0 && lastSafeClose !== -1) {
+      // Strip the partial last key (find last complete comma-separated entry)
+      const candidate = cleaned.slice(0, lastSafeClose + 1);
+      // Close unclosed brackets/braces we opened past lastSafeClose
+      const closers = { '{': '}', '[': ']' };
+      const stack = [];
+      let iStr = false, iEsc = false;
+      for (const ch of candidate) {
+        if (iEsc)          { iEsc = false; continue; }
+        if (ch === '\\')   { iEsc = true;  continue; }
+        if (ch === '"')    { iStr = !iStr; continue; }
+        if (iStr)          continue;
+        if (ch === '{' || ch === '[') stack.push(closers[ch]);
+        if (ch === '}' || ch === ']') stack.pop();
+      }
+      const closing = stack.reverse().join('');
+      try { return JSON.parse(candidate + closing); } catch (_) {}
+      // Last resort: strip trailing comma and close
+      try { return JSON.parse(candidate.replace(/,\s*$/, '') + closing); } catch (_) {}
+    }
+  }
+
+  // Strategy 2: truncated top-level array (original behaviour)
   const arrStart = cleaned.indexOf('[');
   if (arrStart === -1) return null;
 
@@ -74,7 +116,7 @@ async function callClaude(prompt, maxTokens = 8192, options = {}) {
           'anthropic-version' : ANTHROPIC_VERSION,
         },
         body: JSON.stringify({
-          model      : MODEL,
+          model      : options.model || MODEL,
           max_tokens : maxTokens,
           messages   : [{ role: 'user', content: prompt }],
         }),

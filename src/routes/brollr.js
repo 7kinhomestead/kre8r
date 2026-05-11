@@ -5,6 +5,7 @@
  * POST /api/brollr/analyze                — analyze script → moment cards
  * POST /api/brollr/vault-search           — search vault footage for matching clips
  * POST /api/brollr/generate               — SSE: generate b-roll via Higgsfield (or demo mode)
+ * POST /api/brollr/speak                  — SSE: ElevenLabs TTS + Higgsfield lip-sync → talking-head video
  * GET  /api/brollr/history                — list all generations (optional ?project_id=X)
  * DELETE /api/brollr/generation/:id       — delete a generation record
  * POST /api/brollr/save-to-vault          — save a generation's result_url into footage table
@@ -148,6 +149,20 @@ Return ONLY valid JSON:
 
 Script/content:
 ${scriptText}${editorContext}`;
+
+    // VisualΩr — inject visual intelligence into b-roll moment analysis
+    try {
+      const visRaw = require('../db').getKv('visual_intelligence_profile');
+      if (visRaw) {
+        const vis = JSON.parse(visRaw);
+        if (vis?.brollr_style_note || vis?.broll_shot_directives?.length) {
+          prompt += '\n\n## VISUAL INTELLIGENCE (from channel performance analysis — let this shape your suggestions)';
+          if (vis.brollr_style_note)            prompt += `\n${vis.brollr_style_note}`;
+          if (vis.broll_shot_directives?.length) prompt += `\nProven shot types: ${vis.broll_shot_directives.slice(0, 3).join(' | ')}`;
+          if (vis.avoid?.length)                prompt += `\nAvoid: ${vis.avoid.slice(0, 2).join(' | ')}`;
+        }
+      }
+    } catch (_) {}
 
     const result = await callClaude(prompt, 4096, { tool: 'brollr-analyze' });
 
@@ -314,8 +329,19 @@ router.post('/generate', async (req, res) => {
     }
 
     const notesClause = charNotes ? ` ${charNotes}.` : '';
-    const imagePrompt = `${prompt}.${notesClause} Style: ${style}. Homestead setting, authentic, cinematic. Real outdoor environment.`;
-    const videoPrompt = `${camera_motion} camera movement. ${prompt}. ${style} style.`;
+
+    // VisualΩr — append style note to generation prompts
+    let visualStyleNote = '';
+    try {
+      const visRaw = require('../db').getKv('visual_intelligence_profile');
+      if (visRaw) {
+        const vis = JSON.parse(visRaw);
+        if (vis?.brollr_style_note) visualStyleNote = ' ' + vis.brollr_style_note;
+      }
+    } catch (_) {}
+
+    const imagePrompt = `${prompt}.${notesClause} Style: ${style}. Homestead setting, authentic, cinematic. Real outdoor environment.${visualStyleNote}`;
+    const videoPrompt = `${camera_motion} camera movement. ${prompt}. ${style} style.${visualStyleNote}`;
 
     // ── STEP 1: Generate still image ─────────────────────────
     send({ step: 'creating', message: 'Step 1/2 — Generating image with Higgsfield Soul…' });
@@ -448,6 +474,156 @@ router.post('/animate', async (req, res) => {
     try { db.updateBrollGeneration(parseInt(generation_id), { status: 'failed' }); } catch (_) {}
     send({ step: 'error', error: err.message });
     end();
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/brollr/speak (SSE)
+// Body: { script_text, image_url, project_id?, voice_id? }
+// Pipeline:
+//   1. ElevenLabs TTS → temp .mp3 file
+//   2. ngrok tunnel so Higgsfield can fetch the audio
+//   3. Higgsfield /v1/speak/higgsfield (input_image + input_audio → lip-sync video)
+//   4. Poll to completion, save result to brollr_generations
+// ─────────────────────────────────────────────
+router.post('/speak', async (req, res) => {
+  const { send, end } = startSseResponse(res, { timeoutMs: 15 * 60 * 1000 });
+
+  const {
+    script_text,
+    image_url,
+    project_id = null,
+    voice_id   = null,
+  } = req.body || {};
+
+  if (!script_text || !script_text.trim()) {
+    send({ step: 'error', error: 'script_text is required' });
+    end(); return;
+  }
+  if (!image_url || !image_url.trim()) {
+    send({ step: 'error', error: 'image_url is required' });
+    end(); return;
+  }
+
+  const elKey     = process.env.ELEVENLABS_API_KEY;
+  const elVoiceId = voice_id || process.env.ELEVENLABS_VOICE_ID;
+
+  if (!elKey) {
+    send({ step: 'error', error: 'ELEVENLABS_API_KEY not set in .env' });
+    end(); return;
+  }
+  if (!elVoiceId) {
+    send({ step: 'error', error: 'ELEVENLABS_VOICE_ID not set in .env (or pass voice_id in body)' });
+    end(); return;
+  }
+  if (isDemoMode()) {
+    send({ step: 'error', error: 'HIGGSFIELD_API_KEY not configured — add to .env' });
+    end(); return;
+  }
+
+  // Create DB record
+  const generationId = db.createBrollGeneration({
+    project_id:   project_id ? parseInt(project_id) : null,
+    moment_label: '🎙 Speak',
+    prompt:       script_text.slice(0, 500),
+    camera_motion: 'static',
+    style:        'speaking',
+    status:       'creating',
+  });
+
+  // Tag as speak type — safe even if column migration not yet applied to Electron AppData DB
+  try { db.updateBrollGeneration(generationId, { generation_type: 'speak' }); } catch (_) {}
+
+  send({ step: 'creating', generation_id: generationId, message: 'Step 1/2 — Generating voice audio with ElevenLabs…' });
+
+  const os       = require('os');
+  const tmpAudio = path.join(os.tmpdir(), `kre8r-speak-${generationId}.mp3`);
+  let tunnelCleanup = null;
+
+  try {
+    const axios = require('axios');
+
+    // ── STEP 1: ElevenLabs TTS ────────────────────────────────────────
+    const elResp = await axios.post(
+      `https://api.elevenlabs.io/v1/text-to-speech/${elVoiceId}`,
+      {
+        text:     script_text,
+        model_id: 'eleven_turbo_v2_5',
+        voice_settings: {
+          stability:         0.5,
+          similarity_boost:  0.75,
+          style:             0.0,
+          use_speaker_boost: true,
+        },
+      },
+      {
+        headers: {
+          'xi-api-key':   elKey,
+          'Content-Type': 'application/json',
+          'Accept':       'audio/mpeg',
+        },
+        responseType: 'arraybuffer',
+      }
+    );
+
+    fs.writeFileSync(tmpAudio, Buffer.from(elResp.data));
+    send({ step: 'audio_ready', generation_id: generationId, message: 'Audio generated — Step 2/2: Creating lip-sync video…' });
+
+    // ── STEP 2: Tunnel the audio so Higgsfield can fetch it ──────────
+    const { createFileTunnel } = require('../postor/video-tunnel');
+    const tunnel = await createFileTunnel(tmpAudio);
+    tunnelCleanup = tunnel.cleanup;
+
+    // ── STEP 3: Higgsfield Speak ─────────────────────────────────────
+    const [apiKey, apiSecret] = getCredentials().split(':');
+    const hfHeaders = { Authorization: `Key ${apiKey}:${apiSecret}`, 'Content-Type': 'application/json' };
+
+    const speakResp = await axios.post(
+      'https://platform.higgsfield.ai/v1/speak/higgsfield',
+      {
+        params: {
+          input_image: { type: 'image_url', image_url: image_url.trim() },
+          input_audio: { type: 'audio_url', audio_url: tunnel.url },
+          prompt:      'Natural talking head delivery, authentic expression, cinematic',
+        },
+      },
+      { headers: hfHeaders }
+    );
+
+    const speakJobId = speakResp.data?.id;
+    if (!speakJobId) throw new Error('No job ID returned from Higgsfield speak');
+
+    db.updateBrollGeneration(generationId, { higgsfield_job_id: speakJobId, status: 'processing' });
+    send({ step: 'processing', generation_id: generationId, message: 'Lip-sync in progress… (1–3 min)' });
+
+    // ── STEP 4: Poll until done ───────────────────────────────────────
+    let finalUrl = null;
+    const pollStart = Date.now();
+    while (Date.now() - pollStart < 8 * 60 * 1000) {
+      await new Promise(r => setTimeout(r, 4000));
+      const pollResp = await axios.get(
+        `https://platform.higgsfield.ai/requests/${speakJobId}/status`,
+        { headers: hfHeaders }
+      );
+      const d = pollResp.data;
+      if (d.status === 'nsfw')      throw new Error('Content flagged — try a different image or script');
+      if (d.status === 'failed')    throw new Error('Higgsfield speak generation failed');
+      if (d.status === 'completed') { finalUrl = d.video?.url || d.images?.[0]?.url; break; }
+    }
+    if (!finalUrl) throw new Error('Speak generation timed out');
+
+    db.updateBrollGeneration(generationId, { status: 'done', result_url: finalUrl });
+    send({ step: 'done', generation_id: generationId, result_url: finalUrl });
+    end();
+
+  } catch (err) {
+    logger.error({ module: 'brollr/speak', err: err.message }, 'speak failed');
+    try { db.updateBrollGeneration(generationId, { status: 'failed' }); } catch (_) {}
+    send({ step: 'error', error: err.message, generation_id: generationId });
+    end();
+  } finally {
+    if (tunnelCleanup) { try { await tunnelCleanup(); } catch (_) {} }
+    try { fs.unlinkSync(tmpAudio); } catch (_) {}
   }
 });
 
