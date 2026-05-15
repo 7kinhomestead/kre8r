@@ -524,4 +524,51 @@ router.get('/tracked-url', (req, res) => {
   res.json({ url });
 });
 
+// ── POST /bulk-seed — batch upsert links from external tools (X-Internal-Key protected) ─────
+// Used by kre8r-land solar tool to seed all solar product links into AffiliateΩr
+router.post('/bulk-seed', (req, res) => {
+  const key = req.headers['x-internal-key'];
+  if (!key || key !== process.env.INTERNAL_API_KEY)
+    return res.status(403).json({ error: 'forbidden' });
+
+  const { links } = req.body;
+  if (!Array.isArray(links) || !links.length)
+    return res.status(400).json({ error: 'links array required' });
+
+  const stmt = db.prepare(`
+    INSERT INTO affiliate_links
+      (partner_key,link_key,label,destination_url,tool,show_on_gear,gear_category,gear_price,gear_emoji,gear_description,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))
+    ON CONFLICT(partner_key,link_key) DO UPDATE SET
+      label=excluded.label, destination_url=excluded.destination_url, tool=excluded.tool,
+      gear_category=excluded.gear_category, gear_price=excluded.gear_price,
+      gear_emoji=excluded.gear_emoji, gear_description=excluded.gear_description,
+      updated_at=datetime('now')
+  `);
+
+  let inserted = 0, updated = 0;
+  const upsertAll = db.transaction(rows => {
+    for (const l of rows) {
+      if (!l.partner_key || !l.link_key || !l.label || !l.destination_url) continue;
+      const r = stmt.run(
+        l.partner_key, l.link_key, l.label, l.destination_url,
+        l.tool || 'solar-designer',
+        l.show_on_gear ? 1 : 0,
+        l.gear_category || null,
+        l.gear_price    || null,
+        l.gear_emoji    || null,
+        l.gear_description || null
+      );
+      if (r.changes > 0) r.lastInsertRowid ? inserted++ : updated++;
+    }
+  });
+
+  try {
+    upsertAll(links);
+    res.json({ ok: true, inserted, total: links.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
