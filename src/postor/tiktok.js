@@ -30,7 +30,9 @@ const TIKTOK_API_BASE   = 'https://open.tiktokapis.com/v2';
 // Switch back to false once TikTok approves the app.
 const SANDBOX = process.env.TIKTOK_SANDBOX === 'true';
 
-const SCOPES = 'user.info.basic,video.publish,video.upload';
+// Sandbox uses video.upload only (inbox/draft) — video.publish requires Content Posting API approval.
+const SCOPES          = 'user.info.basic,video.publish,video.upload';
+const SCOPES_SANDBOX  = 'user.info.basic,video.upload';
 
 // ─── PKCE helpers ────────────────────────────────────────────────────────────
 
@@ -56,7 +58,7 @@ function getAuthUrl(req, state, codeChallenge) {
     client_key:            process.env.TIKTOK_CLIENT_KEY,
     redirect_uri:          getCallbackUrl(req),
     response_type:         'code',
-    scope:                 SCOPES,
+    scope:                 SANDBOX ? SCOPES_SANDBOX : SCOPES,
     state,
     code_challenge:        codeChallenge,
     code_challenge_method: 'S256',
