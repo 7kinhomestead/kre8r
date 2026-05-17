@@ -1455,6 +1455,9 @@
       <!-- TikTok -->
       <div class="override-section" id="tt-override">
         <div class="override-header"><span>🎵</span> TikTok Settings</div>
+        <div id="tt-sandbox-note" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:6px;background:rgba(251,191,36,.1);border:1px solid #fbbf24;color:#fbbf24;font-size:12px;line-height:1.5">
+          🧪 <strong>Sandbox mode active</strong> — video will be sent to your TikTok inbox as a draft (not published). Privacy is forced to <em>Only me</em>. Open the TikTok app after upload to review and post.
+        </div>
         <div class="form-row">
           <label>Who can watch</label>
           <select id="tt-privacy" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;width:100%">
@@ -1887,6 +1890,11 @@ async function loadConnections() {
     renderPlatformCards();
     renderPlatformToggles();
     renderFbPageSelector();
+    // Show sandbox note in TikTok settings panel if sandbox mode is active
+    const ttSandboxNote = document.getElementById('tt-sandbox-note');
+    if (ttSandboxNote) {
+      ttSandboxNote.style.display = connections.tiktok?.sandbox ? 'block' : 'none';
+    }
   } catch (err) {
     toast('Failed to load connections: ' + err.message, 'error');
   }
@@ -2147,6 +2155,11 @@ function renderPlatformCards() {
       accountHtml = `<div class="platform-account">${esc(conn.account_name)}</div>`;
     }
 
+    // Sandbox badge — visible when TIKTOK_SANDBOX=true on the server
+    const sandboxBadge = (platform === 'tiktok' && conn.sandbox)
+      ? `<span style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:4px;background:rgba(251,191,36,.18);border:1px solid #fbbf24;color:#fbbf24;font-size:10px;font-weight:700;letter-spacing:.04em;vertical-align:middle">🧪 SANDBOX</span>`
+      : '';
+
     let btnHtml = '';
     if (needsSetup && !connected) {
       btnHtml = `<button class="btn-connect" disabled title="${esc(conn.reason || '')}">Needs .env setup</button>`;
@@ -2163,7 +2176,7 @@ function renderPlatformCards() {
       <div class="platform-card ${connected ? 'is-connected' : ''} ${needsSetup && !connected ? 'is-soon' : ''}">
         <div class="platform-icon">${meta.icon}</div>
         <div>
-          <div class="platform-name">${meta.label}</div>
+          <div class="platform-name">${meta.label}${sandboxBadge}</div>
           <div class="platform-status">${statusText}</div>
           ${accountHtml}
         </div>

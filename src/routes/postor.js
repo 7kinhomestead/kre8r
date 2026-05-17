@@ -91,6 +91,9 @@ router.get('/connections', (req, res) => {
   // TikTok: live if env vars set, otherwise show setup prompt
   if (!tiktok.isAvailable()) {
     result.tiktok = { connected: false, needs_setup: true, reason: 'Add TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET to .env' };
+  } else if (result.tiktok) {
+    // Surface sandbox mode so the UI can show a badge
+    result.tiktok.sandbox = tiktok.isSandbox();
   }
 
   // Surface which Meta pages are available (if connected)

@@ -24,9 +24,13 @@ const TIKTOK_AUTH_URL   = 'https://www.tiktok.com/v2/auth/authorize/';
 const TIKTOK_TOKEN_URL  = 'https://open.tiktokapis.com/v2/oauth/token/';
 const TIKTOK_API_BASE   = 'https://open.tiktokapis.com/v2';
 
+// Sandbox mode — set TIKTOK_SANDBOX=true in .env while awaiting Content Posting API approval.
+// In sandbox: uses /post/publish/inbox/video/init/ (draft → creator inbox, no approval needed)
+// instead of /post/publish/video/init/ (direct publish, requires approved API access).
+// Switch back to false once TikTok approves the app.
+const SANDBOX = process.env.TIKTOK_SANDBOX === 'true';
+
 const SCOPES = 'user.info.basic,video.publish,video.upload';
-// Temp test scope — swap to SCOPES once Content Posting API is approved:
-// const SCOPES_TEST = 'user.info.basic';
 
 // ─── PKCE helpers ────────────────────────────────────────────────────────────
 
@@ -175,10 +179,19 @@ async function uploadVideo({
   const CHUNK_SIZE      = 64 * 1024 * 1024; // 64 MB
   const totalChunkCount = Math.ceil(videoSize / CHUNK_SIZE);
 
-  onProgress({ stage: 'tiktok_init', platform: 'tiktok', message: `Initialising upload (${(videoSize / 1024 / 1024).toFixed(1)} MB, ${totalChunkCount} chunk${totalChunkCount > 1 ? 's' : ''})` });
+  // Sandbox: inbox endpoint (draft → creator inbox, no API approval needed).
+  // Production: direct endpoint (publishes immediately, requires approved Content Posting API).
+  const initEndpoint = SANDBOX
+    ? `${TIKTOK_API_BASE}/post/publish/inbox/video/init/`
+    : `${TIKTOK_API_BASE}/post/publish/video/init/`;
+
+  // Sandbox forces SELF_ONLY — inbox drafts must use this privacy level.
+  const effectivePrivacy = SANDBOX ? 'SELF_ONLY' : privacyLevel;
+
+  onProgress({ stage: 'tiktok_init', platform: 'tiktok', message: `Initialising upload${SANDBOX ? ' (sandbox — inbox draft)' : ''} (${(videoSize / 1024 / 1024).toFixed(1)} MB, ${totalChunkCount} chunk${totalChunkCount > 1 ? 's' : ''})` });
 
   // ── 2. Init the post ─────────────────────────────────────────────────────────
-  const initRes = await fetch(`${TIKTOK_API_BASE}/post/publish/video/init/`, {
+  const initRes = await fetch(initEndpoint, {
     method:  'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -187,7 +200,7 @@ async function uploadVideo({
     body: JSON.stringify({
       post_info: {
         title:                    title.slice(0, 2200), // TikTok caption limit
-        privacy_level:            privacyLevel,
+        privacy_level:            effectivePrivacy,
         disable_duet:             disableDuet,
         disable_comment:          disableComment,
         disable_stitch:           disableStitch,
@@ -272,7 +285,10 @@ async function uploadVideo({
     const { status, share_url, fail_reason } = statusData.data || {};
 
     if (status === 'PUBLISH_COMPLETE') {
-      onProgress({ stage: 'tiktok_done', platform: 'tiktok', message: 'Published to TikTok ✓', share_url });
+      const doneMsg = SANDBOX
+        ? 'Sent to TikTok inbox as draft ✓ — open TikTok app to publish'
+        : 'Published to TikTok ✓';
+      onProgress({ stage: 'tiktok_done', platform: 'tiktok', message: doneMsg, share_url });
       return {
         post_id:  publish_id,
         post_url: share_url || null,
@@ -307,6 +323,7 @@ async function getUserInfo(accessToken) {
 
 module.exports = {
   isAvailable:      () => !!(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET),
+  isSandbox:        () => SANDBOX,
   generatePkce,
   getAuthUrl,
   exchangeCode,
