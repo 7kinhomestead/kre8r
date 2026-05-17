@@ -19,6 +19,7 @@ const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 const db     = require('../db');
+const log    = require('../utils/logger');
 
 const TIKTOK_AUTH_URL   = 'https://www.tiktok.com/v2/auth/authorize/';
 const TIKTOK_TOKEN_URL  = 'https://open.tiktokapis.com/v2/oauth/token/';
@@ -37,8 +38,13 @@ const SCOPES_SANDBOX  = 'user.info.basic,video.upload';
 // ─── PKCE helpers ────────────────────────────────────────────────────────────
 
 function generatePkce() {
-  const verifier  = crypto.randomBytes(32).toString('base64url');
-  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+  // Verifier: hex string — 64 unreserved chars
+  const verifier = crypto.randomBytes(32).toString('hex');
+  // TikTok uses hex-encoded SHA256 (non-standard — they ignore RFC 7636 base64url).
+  // Ref: developers.tiktok.com/doc/login-kit-desktop
+  //   "code_challenge = CryptoJS.SHA256(code_verifier).toString(CryptoJS.enc.Hex)"
+  const challenge = crypto.createHash('sha256').update(verifier).digest('hex');
+  log.info({ module: 'tiktok', event: 'pkce_generated', verifier_len: verifier.length, challenge_len: challenge.length }, 'PKCE generated');
   return { verifier, challenge };
 }
 
@@ -55,33 +61,55 @@ function getAuthUrl(req, state, codeChallenge) {
     throw new Error('TIKTOK_CLIENT_KEY is not set in your .env file');
   }
   const params = new URLSearchParams({
-    client_key:            process.env.TIKTOK_CLIENT_KEY,
-    redirect_uri:          getCallbackUrl(req),
-    response_type:         'code',
-    scope:                 SANDBOX ? SCOPES_SANDBOX : SCOPES,
+    client_key:    process.env.TIKTOK_CLIENT_KEY,
+    redirect_uri:  getCallbackUrl(req),
+    response_type: 'code',
+    scope:         SANDBOX ? SCOPES_SANDBOX : SCOPES,
     state,
-    code_challenge:        codeChallenge,
-    code_challenge_method: 'S256',
   });
+  // Only include PKCE if a challenge was provided.
+  // TikTok makes PKCE optional for server-side flows.
+  // Some TikTok app states (unreviewed / pending scope approval) reject
+  // the code_challenge even when it's cryptographically correct — so we
+  // allow callers to opt out by passing null.
+  if (codeChallenge) {
+    params.set('code_challenge',        codeChallenge);
+    params.set('code_challenge_method', 'S256');
+  }
   return `${TIKTOK_AUTH_URL}?${params}`;
 }
 
 // ─── Token Exchange ───────────────────────────────────────────────────────────
 
 async function exchangeCode(code, codeVerifier, req) {
+  const body = new URLSearchParams({
+    client_key:    process.env.TIKTOK_CLIENT_KEY,
+    client_secret: process.env.TIKTOK_CLIENT_SECRET,
+    code,
+    grant_type:    'authorization_code',
+    redirect_uri:  getCallbackUrl(req),
+  });
+  // Only include code_verifier if we sent a code_challenge in the auth URL.
+  if (codeVerifier) body.set('code_verifier', codeVerifier);
+
   const res = await fetch(TIKTOK_TOKEN_URL, {
     method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_key:    process.env.TIKTOK_CLIENT_KEY,
-      client_secret: process.env.TIKTOK_CLIENT_SECRET,
-      code,
-      grant_type:    'authorization_code',
-      redirect_uri:  getCallbackUrl(req),
-      code_verifier: codeVerifier,
-    }),
+    body,
   });
-  return res.json();
+  const data = await res.json();
+  log.info({
+    module: 'tiktok',
+    event: 'token_exchange',
+    sandbox: SANDBOX,
+    has_access_token: !!data.access_token,
+    has_refresh_token: !!data.refresh_token,
+    scope: data.scope || null,
+    expires_in: data.expires_in || null,
+    error: data.error || null,
+    error_description: data.error_description || null,
+  }, 'TikTok token exchange response');
+  return data;
 }
 
 async function refreshAccessToken(connection) {
@@ -187,41 +215,71 @@ async function uploadVideo({
     ? `${TIKTOK_API_BASE}/post/publish/inbox/video/init/`
     : `${TIKTOK_API_BASE}/post/publish/video/init/`;
 
-  // Sandbox forces SELF_ONLY — inbox drafts must use this privacy level.
+  // Sandbox forces SELF_ONLY. Production uses user-selected privacy level.
+  // NOTE: unreviewed apps must select SELF_ONLY in the UI until TikTok approves
+  // Content Posting API access — TikTok rejects any other privacy level for unaudited apps.
   const effectivePrivacy = SANDBOX ? 'SELF_ONLY' : privacyLevel;
 
   onProgress({ stage: 'tiktok_init', platform: 'tiktok', message: `Initialising upload${SANDBOX ? ' (sandbox — inbox draft)' : ''} (${(videoSize / 1024 / 1024).toFixed(1)} MB, ${totalChunkCount} chunk${totalChunkCount > 1 ? 's' : ''})` });
 
   // ── 2. Init the post ─────────────────────────────────────────────────────────
+  // The inbox endpoint (/post/publish/inbox/video/init/) accepts ONLY source_info —
+  // sending post_info causes a 400. The publish endpoint accepts both.
+  const initBody = SANDBOX
+    ? {
+        source_info: {
+          source:            'FILE_UPLOAD',
+          video_size:        videoSize,
+          chunk_size:        Math.min(CHUNK_SIZE, videoSize),
+          total_chunk_count: totalChunkCount,
+        },
+      }
+    : {
+        post_info: {
+          title:                    (title || '').slice(0, 2200),
+          privacy_level:            effectivePrivacy,
+          disable_duet:             disableDuet,
+          disable_comment:          disableComment,
+          disable_stitch:           disableStitch,
+          brand_content_toggle:     brandContentToggle,
+          brand_organic_toggle:     brandOrganicToggle,
+          video_cover_timestamp_ms: 1000,
+        },
+        source_info: {
+          source:            'FILE_UPLOAD',
+          video_size:        videoSize,
+          chunk_size:        Math.min(CHUNK_SIZE, videoSize),
+          total_chunk_count: totalChunkCount,
+        },
+      };
+
+  log.info({ module: 'tiktok', event: 'init_request', endpoint: initEndpoint, sandbox: SANDBOX, video_size: videoSize, total_chunk_count: totalChunkCount, body_keys: Object.keys(initBody) }, 'TikTok init request');
+
   const initRes = await fetch(initEndpoint, {
     method:  'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type':  'application/json; charset=UTF-8',
     },
-    body: JSON.stringify({
-      post_info: {
-        title:                    title.slice(0, 2200), // TikTok caption limit
-        privacy_level:            effectivePrivacy,
-        disable_duet:             disableDuet,
-        disable_comment:          disableComment,
-        disable_stitch:           disableStitch,
-        brand_content_toggle:     brandContentToggle,
-        brand_organic_toggle:     brandOrganicToggle,
-        video_cover_timestamp_ms: 1000,
-      },
-      source_info: {
-        source:            'FILE_UPLOAD',
-        video_size:        videoSize,
-        chunk_size:        Math.min(CHUNK_SIZE, videoSize),
-        total_chunk_count: totalChunkCount,
-      },
-    }),
+    body: JSON.stringify(initBody),
   });
 
   const initData = await initRes.json();
+  log.info({ module: 'tiktok', event: 'init_response', status: initRes.status, data: initData }, 'TikTok init response');
   if (initData.error?.code && initData.error.code !== 'ok') {
-    throw new Error(`TikTok init failed: ${initData.error.message || initData.error.code}`);
+    const code = initData.error.code;
+    let hint = '';
+    if (code === 'scope_not_authorized' || code === 'access_token_invalid' || /scope/i.test(initData.error.message || '')) {
+      hint = ' — disconnect + reconnect TikTok in PostΩr to refresh scopes (sandbox needs video.upload)';
+    } else if (code === 'invalid_param') {
+      hint = ' — check video file format (MP4 H.264) and that path exists on disk';
+    } else if (code === 'unaudited_client_can_only_post_to_private_accounts') {
+      hint = ' — TikTok account must be set to Private during sandbox/unaudited app phase';
+    }
+    throw new Error(`TikTok init failed (${code}): ${initData.error.message || code}${hint}`);
+  }
+  if (!initData.data?.publish_id || !initData.data?.upload_url) {
+    throw new Error(`TikTok init returned unexpected structure: ${JSON.stringify(initData)}`);
   }
 
   const { publish_id, upload_url } = initData.data;
@@ -251,8 +309,10 @@ async function uploadVideo({
 
       if (!uploadRes.ok) {
         const text = await uploadRes.text().catch(() => '');
+        log.error({ module: 'tiktok', event: 'chunk_failed', chunk: i + 1, status: uploadRes.status, body: text }, 'TikTok chunk upload failed');
         throw new Error(`TikTok chunk ${i + 1} upload failed (${uploadRes.status}): ${text}`);
       }
+      log.info({ module: 'tiktok', event: 'chunk_ok', chunk: i + 1, total: totalChunkCount, status: uploadRes.status }, 'TikTok chunk uploaded');
 
       const pct = Math.round(((i + 1) / totalChunkCount) * 100);
       onProgress({ stage: 'tiktok_uploading', platform: 'tiktok', message: `Uploading… ${pct}%`, percent: pct });
@@ -279,14 +339,18 @@ async function uploadVideo({
       body: JSON.stringify({ publish_id }),
     });
     const statusData = await statusRes.json();
+    log.info({ module: 'tiktok', event: 'status_poll', attempt: attempt + 1, data: statusData }, 'TikTok status poll');
 
     if (statusData.error?.code && statusData.error.code !== 'ok') {
-      throw new Error(`TikTok status check failed: ${statusData.error.message || statusData.error.code}`);
+      throw new Error(`TikTok status check failed (${statusData.error.code}): ${statusData.error.message || statusData.error.code}`);
     }
 
-    const { status, share_url, fail_reason } = statusData.data || {};
+    const { status, publicaly_available_post_id, fail_reason } = statusData.data || {};
+    const share_url = statusData.data?.share_url || null;
 
-    if (status === 'PUBLISH_COMPLETE') {
+    // Inbox flow terminal state: SEND_TO_USER_INBOX (success — video waiting in creator's inbox)
+    // Direct publish terminal state: PUBLISH_COMPLETE
+    if (status === 'PUBLISH_COMPLETE' || status === 'SEND_TO_USER_INBOX') {
       const doneMsg = SANDBOX
         ? 'Sent to TikTok inbox as draft ✓ — open TikTok app to publish'
         : 'Published to TikTok ✓';

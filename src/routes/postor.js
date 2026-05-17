@@ -30,6 +30,7 @@ const ytAnalytics      = require('../postor/youtube-analytics');
 const meta             = require('../postor/meta');
 const tiktok           = require('../postor/tiktok');
 const { attachSseStream } = require('../utils/sse');
+const log                 = require('../utils/logger');
 
 const router = express.Router();
 
@@ -515,12 +516,14 @@ router.get('/auth/tiktok', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
   const { verifier, challenge } = tiktok.generatePkce();
 
-  req.session.postor_tt_state    = state;
-  req.session.postor_tt_verifier = verifier;
+  // Store verifier in DB keyed by state with 10-min TTL.
+  // Session storage breaks in Electron (navigation loses cookie); DB is reliable.
+  db.setKv(`tiktok_pkce_${state}`, JSON.stringify({ verifier, expires: Date.now() + 10 * 60 * 1000 }));
+  log.info({ module: 'tiktok', event: 'pkce_stored', state_prefix: state.slice(0, 8) }, 'PKCE verifier stored in DB');
 
   try {
     const authUrl = tiktok.getAuthUrl(req, state, challenge);
-    console.log('[tiktok] auth redirect →', authUrl);
+    log.info({ module: 'tiktok', event: 'auth_redirect', sandbox: tiktok.isSandbox() }, 'TikTok auth redirect');
     res.redirect(authUrl);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -533,13 +536,24 @@ router.get('/auth/tiktok/callback', async (req, res) => {
   if (error) {
     return res.redirect('/postor.html?error=' + encodeURIComponent('TikTok auth denied: ' + error));
   }
-  if (!code || state !== req.session.postor_tt_state) {
-    return res.redirect('/postor.html?error=' + encodeURIComponent('Invalid OAuth state — try connecting again'));
+  if (!code || !state) {
+    return res.redirect('/postor.html?error=' + encodeURIComponent('Invalid OAuth callback — try connecting again'));
   }
 
-  const verifier = req.session.postor_tt_verifier;
-  delete req.session.postor_tt_state;
-  delete req.session.postor_tt_verifier;
+  // Retrieve PKCE verifier from DB
+  const pkceRaw = db.getKv(`tiktok_pkce_${state}`);
+  if (!pkceRaw) {
+    log.warn({ module: 'tiktok', event: 'pkce_missing', state_prefix: state.slice(0, 8) }, 'PKCE verifier not found in DB');
+    return res.redirect('/postor.html?error=' + encodeURIComponent('OAuth state expired or invalid — try connecting again'));
+  }
+  const pkce = JSON.parse(pkceRaw);
+  if (Date.now() > pkce.expires) {
+    db.setKv(`tiktok_pkce_${state}`, null);
+    return res.redirect('/postor.html?error=' + encodeURIComponent('OAuth flow timed out — try connecting again'));
+  }
+  const verifier = pkce.verifier;
+  db.setKv(`tiktok_pkce_${state}`, null);
+  log.info({ module: 'tiktok', event: 'pkce_retrieved', verifier_len: verifier.length, verifier_prefix: verifier.slice(0, 8) }, 'PKCE verifier retrieved from DB');
 
   try {
     const tokens = await tiktok.exchangeCode(code, verifier, req);
@@ -555,10 +569,10 @@ router.get('/auth/tiktok/callback', async (req, res) => {
       account_name:     user?.display_name || 'TikTok Account',
     });
 
-    console.log('[postor] TikTok connected:', user?.display_name);
+    log.info({ module: 'postor', event: 'tiktok_connected', display_name: user?.display_name, open_id: user?.open_id, scope: tokens.scope }, 'TikTok connected');
     res.redirect('/postor.html?connected=tiktok');
   } catch (err) {
-    console.error('[postor] TikTok callback error:', err);
+    log.error({ module: 'postor', event: 'tiktok_callback_error', err: err.message, stack: err.stack }, 'TikTok callback failed');
     res.redirect('/postor.html?error=' + encodeURIComponent('TikTok connection failed: ' + err.message));
   }
 });
@@ -774,7 +788,7 @@ router.post('/post', (req, res) => {
           } catch (_) {} // non-fatal if post already exists
         }
       } catch (err) {
-        console.error(`[postor] ${platform} post failed:`, err);
+        log.error({ module: 'postor', event: 'post_failed', platform, err: err.message, stack: err.stack, video_path }, 'Platform post failed');
         db.updatePostorPost(postRowId, { status: 'failed', error: err.message });
         results[platform] = { ok: false, error: err.message };
         pushEvent(job, { stage: 'platform_error', platform, error: err.message });

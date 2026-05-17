@@ -35,22 +35,35 @@
 
 ---
 
-## NEXT TASKS (Session 78)
+## COMPLETED THIS SESSION (Session 78) ✅
+- ~~TikTok OAuth PKCE fix~~ ✅ Root cause: TikTok uses hex-encoded SHA256 for code_challenge (not base64url per RFC 7636). Fixed in `src/postor/tiktok.js` `generatePkce()`. OAuth now connects with full scope (user.info.basic, video.publish, video.upload).
+- ~~TikTok PKCE session loss fix~~ ✅ Verifier moved from `req.session` to `kv_store` keyed by state with 10-min TTL — survives Electron navigation to external domain and back.
 
-### 1. Post-Mortem Brief → WritΩr + Id8Ωr injection
+---
+
+## NEXT TASKS (Session 78/79)
+
+### 1. TikTok — Alt account for posting demo
+- Upload is blocked: `unaudited_client_can_only_post_to_private_accounts` — TikTok restricts unreviewed apps to posting on private accounts only (server-side, no code workaround)
+- Jason's main account (725k TikTok) cannot be set to private even temporarily
+- Fix: create a throwaway alt TikTok account → set it to Private → add it as a tester in TikTok Developer Portal → connect it in PostΩr → record demo upload → submit that as the review video
+- Once TikTok approves the app: add `TIKTOK_APPROVED=true` to `.env` — privacy level will follow UI selection instead of forcing SELF_ONLY
+- Note: `tiktok-reviewer` is a Kre8r.app login only — no TikTok account tied to it
+
+### 2. Post-Mortem Brief → WritΩr + Id8Ωr injection
 - The locked brief has `root_cause`, `adjustments[]`, `avoid` — wire it into:
   - WritΩr `id8rBlock` (same pattern as Strategic Brief): "LAST VIDEO POST-MORTEM: avoid [pattern]"
   - Id8Ωr concept phase: inject the avoid pattern so the next idea doesn't repeat the failure
 - Only inject if brief exists and is < 30 days old
 - Read from `db.getActivePostMortemBrief()` — already in db.js
 
-### 2. BrollΩr — Save to Vault download helper
+### 3. BrollΩr — Save to Vault download helper
 - CDN URLs expire (Higgsfield ~7-30 days) — local copy is the only safe long-term storage
 - Add "⬇ Download to Intake" button on each video result that pipes the URL through
   the server to D:\kre8r\intake so VaultΩr auto-ingests it (no manual browser download)
 - Route: `POST /api/brollr/download-to-vault` — streams remote URL → local file → triggers watcher
 
-### 3. BrollΩr — Speak endpoint (lip sync)
+### 4. BrollΩr — Speak endpoint (lip sync)
 - Wire `/v1/speak/higgsfield` — takes input_image + input_audio (WAV only) + prompt
 - UI: upload audio clip + select character image → generate talking-head video
 - Unlocks "talking to younger self" concept: generate younger-Jason image → record VO → lip sync

@@ -3,6 +3,56 @@
 
 ---
 
+# Session 78 — TikTok OAuth PKCE Fix (2026-05-17)
+
+## Goal
+Get TikTok video posting working end-to-end in PostΩr for the app review demo.
+
+## What Was Fixed
+
+### TikTok PKCE — Root Cause Found
+**`src/postor/tiktok.js`** — `generatePkce()`
+
+TikTok uses **hex-encoded SHA256** for `code_challenge`, not base64url as specified by RFC 7636.
+Their official docs (developers.tiktok.com/doc/login-kit-desktop) show:
+```js
+code_challenge = CryptoJS.SHA256(code_verifier).toString(CryptoJS.enc.Hex)
+```
+Our implementation was producing a 43-char base64url challenge. TikTok expected a 64-char hex string.
+Fixed by switching to `crypto.createHash('sha256').update(verifier).digest('hex')`.
+
+Verifier format: `crypto.randomBytes(32).toString('hex')` — 64 unreserved hex chars.
+
+### TikTok PKCE — Session Loss in Electron
+PKCE verifier was stored in `req.session`. In Electron, the main window navigates to TikTok's
+external domain for OAuth consent. TikTok's consent page opens a `bytedance://` deep link
+(to try to open TikTok desktop app), which triggers navigation state changes that can lose the
+session cookie. Result: verifier was gone by the time the callback arrived.
+
+Fix: store verifier in `kv_store` keyed by `tiktok_pkce_${state}` with 10-minute TTL.
+Callback retrieves by state, cleans up after use. DB is reliable regardless of navigation context.
+
+**`src/routes/postor.js`** — `/auth/tiktok` and `/auth/tiktok/callback` routes updated.
+
+### Upload Blocker — Not Fixed (Needs Alt Account)
+OAuth now connects successfully with full scope (user.info.basic, video.publish, video.upload)
+as 7KinHomestead. Upload fails with:
+```
+unaudited_client_can_only_post_to_private_accounts
+```
+TikTok restricts unreviewed apps to posting on private accounts server-side. No code workaround
+exists. Jason's main account (725k followers, ~1000 views/min) cannot go private temporarily.
+
+**Resolution**: Create a throwaway alt TikTok account → set Private → add as tester in developer
+portal → connect in PostΩr → record demo → submit to TikTok review. See TODO.md Task 1.
+
+## What Was NOT Done
+- Post-Mortem brief → WritΩr/Id8Ωr injection (carried to next session)
+- BrollΩr download-to-vault (carried)
+- BrollΩr Speak endpoint (carried)
+
+---
+
 # Session 77 — VisualΩr Fixes, Post-Mortem Feature, WritΩr JSON Fallback (2026-05-16/17)
 
 ## Goal

@@ -218,7 +218,41 @@ via `processProxyUpdate`.
 
 ## PostΩr / TikTok
 
-TikTok app rejected April 2026: missing ToS/PP links on homepage, login page
+### TikTok PKCE — Hex, Not Base64url (Session 78)
+TikTok's PKCE implementation is non-standard. RFC 7636 S256 method uses base64url encoding.
+TikTok uses **hex encoding** of the SHA256 digest instead.
+
+Official TikTok example (developers.tiktok.com/doc/login-kit-desktop):
+```js
+code_challenge = CryptoJS.SHA256(code_verifier).toString(CryptoJS.enc.Hex)
+```
+
+Correct Node.js implementation in `src/postor/tiktok.js`:
+```js
+const verifier  = crypto.randomBytes(32).toString('hex');          // 64 hex chars
+const challenge = crypto.createHash('sha256').update(verifier).digest('hex'); // 64 hex chars
+```
+Challenge is 64 chars (hex). If you see a 43-char base64url challenge, it's wrong for TikTok.
+
+### TikTok PKCE — Store in DB, Not Session (Session 78)
+In Electron, `req.session`-based PKCE storage breaks. The main window navigates to TikTok's
+external OAuth page; TikTok's consent page fires a `bytedance://` deep-link attempt that
+causes navigation state changes and can lose the session cookie. Verifier is gone by callback.
+
+Fix: store in `kv_store` as `tiktok_pkce_${state}` with 10-min TTL. Never use `req.session`
+for TikTok OAuth state in Electron context.
+
+### TikTok Upload — Unaudited App Restriction (Session 78)
+Unreviewed apps get `unaudited_client_can_only_post_to_private_accounts` (403) from
+`/post/publish/video/init/`. TikTok checks the account's privacy setting server-side —
+no `privacy_level` value in the request body bypasses this. The TikTok ACCOUNT must be
+set to Private for uploads to succeed during the unreviewed phase.
+
+Workaround for demo: create alt TikTok account → set Private → add as tester → use for demo.
+Once TikTok approves Content Posting API access: add `TIKTOK_APPROVED=true` to `.env` — the
+`effectivePrivacy` logic in `uploadVideo()` will then use the user's UI selection.
+
+### TikTok app rejected April 2026: missing ToS/PP links on homepage, login page
 used as homepage URL. Fixed Session 74:
 - `/tos` and `/privacy` routes live (express.static with extensions: ['html'])
 - ToS + PP links added to login page and landing page footer
