@@ -1151,6 +1151,21 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_brief_locked ON strategic_briefs(locked_at)');
   console.log('[DB] VectΩr strategic_briefs table verified');
 
+  // ── Post-Mortem Briefs ────────────────────────────────────────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS post_mortem_briefs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id  INTEGER,
+    video_title TEXT,
+    root_cause  TEXT,
+    adjustments TEXT,
+    avoid       TEXT,
+    status      TEXT NOT NULL DEFAULT 'active',
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_pm_briefs_status  ON post_mortem_briefs(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_pm_briefs_created ON post_mortem_briefs(created_at)');
+  console.log('[DB] post_mortem_briefs table verified');
+
   // ── AffiliateΩr — Seed tracked tool-page links ──────────────────────────────
   // These links power /r/ redirects on kre8r-land tool pages.
   // INSERT OR IGNORE is idempotent — safe to run on every startup.
@@ -1504,6 +1519,9 @@ Partner: {{partner_name}}
   // Safe migration — add notes column if it doesn't exist yet
   try { db.exec(`ALTER TABLE brollr_characters ADD COLUMN notes TEXT`); } catch (_) {}
   console.log('[DB] BrollΩr brollr_characters table verified');
+
+  // Safe migration — add generation_type for speak vs broll distinction
+  try { db.exec(`ALTER TABLE brollr_generations ADD COLUMN generation_type TEXT DEFAULT 'broll'`); } catch (_) {}
 }
 
 /**
@@ -5301,6 +5319,12 @@ module.exports = {
   clearVectrSession,
   getVectrSyncCache,
   setVectrSyncCache,
+  // Post-Mortem
+  insertPostMortemBrief,
+  getActivePostMortemBrief,
+  clearActivePostMortemBrief,
+  getPostMortemVideoList,
+  getFootageByProject,
   // Blog
   insertBlogPost,
   getBlogPost,
@@ -5805,6 +5829,62 @@ function setVectrSyncCache(data) {
     `INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES ('vectr_sync_cache', ?, CURRENT_TIMESTAMP)`,
     [JSON.stringify(data)]
   );
+}
+
+// ─────────────────────────────────────────────
+// Post-Mortem Briefs
+// ─────────────────────────────────────────────
+
+function insertPostMortemBrief({ project_id, video_title, root_cause, adjustments, avoid }) {
+  // Supersede all existing active briefs before inserting the new one
+  _run(`UPDATE post_mortem_briefs SET status = 'superseded' WHERE status = 'active'`);
+  const r = _run(
+    `INSERT INTO post_mortem_briefs (project_id, video_title, root_cause, adjustments, avoid)
+     VALUES (?, ?, ?, ?, ?)`,
+    [project_id || null, video_title || '', root_cause || '',
+     JSON.stringify(adjustments || []), avoid || '']
+  );
+  const row = _get(`SELECT * FROM post_mortem_briefs WHERE id = ?`, [r.lastInsertRowid]);
+  if (row) {
+    try { row.adjustments = JSON.parse(row.adjustments); } catch (_) {}
+  }
+  return row;
+}
+
+function getActivePostMortemBrief() {
+  const row = _get(
+    `SELECT * FROM post_mortem_briefs WHERE status = 'active' ORDER BY created_at DESC LIMIT 1`
+  );
+  if (!row) return null;
+  try { row.adjustments = JSON.parse(row.adjustments); } catch (_) {}
+  return row;
+}
+
+function clearActivePostMortemBrief() {
+  _run(`UPDATE post_mortem_briefs SET status = 'cleared' WHERE status = 'active'`);
+}
+
+function getPostMortemVideoList() {
+  return _all(
+    `SELECT
+       pr.id, pr.title, pr.youtube_video_id, pr.youtube_url,
+       (SELECT MAX(po.posted_at) FROM posts po WHERE po.project_id = pr.id AND po.platform = 'youtube') as published_at,
+       (SELECT SUM(a.metric_value) FROM analytics a JOIN posts po ON po.id = a.post_id
+        WHERE po.project_id = pr.id AND a.metric_name = 'views') as views,
+       (SELECT AVG(a.metric_value) FROM analytics a JOIN posts po ON po.id = a.post_id
+        WHERE po.project_id = pr.id AND a.metric_name = 'completion_rate') as completion_rate
+     FROM projects pr
+     WHERE pr.status != 'archived'
+       AND (pr.source IS NULL OR pr.source NOT IN ('youtube_import','tiktok_import','instagram_import','facebook_import'))
+     ORDER BY
+       (SELECT MAX(po.posted_at) FROM posts po WHERE po.project_id = pr.id) DESC NULLS LAST,
+       pr.created_at DESC
+     LIMIT 150`
+  );
+}
+
+function getFootageByProject(projectId) {
+  return _all(`SELECT * FROM footage WHERE project_id = ? ORDER BY created_at DESC`, [projectId]);
 }
 
 // ─────────────────────────────────────────────

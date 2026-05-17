@@ -23,13 +23,26 @@
 
 ---
 
-## NEXT TASKS (Session 77)
+## COMPLETED THIS SESSION (Session 77) ✅
+- ~~VisualΩr stream fix (revert to --get-url) + merge logic (additive, not replace)~~ ✅
+- ~~Vision token ceiling 2048→4096~~ ✅
+- ~~Visual Intelligence Profile injected into WritΩr, BrollΩr, EditΩr Room, VectΩr~~ ✅
+- ~~WritΩr iterate JSON truncation fix (script-first + regex fallback)~~ ✅
+- ~~TikTok PP/TOS app name fix + Kre8Ωr→Kre8r global replace~~ ✅ Resubmitted
+- ~~Post-Mortem feature (NorthΩr slide-out panel, Opus chat, brief lock)~~ ✅ Live + tested
+- ~~Post-Mortem channel avg bug, transcript URL fallback, brief slice bug~~ ✅ All fixed
+- ~~Clear Brief button (amber, shows if active brief exists)~~ ✅
 
-### 1. Edit loneliness video in EditΩr → ReviewΩr → ClipsΩr
-- Vault has all AI b-roll clips ingested from D:\kre8r\intake
-- Script already written — load project in EditΩr, run SelectsΩr
-- Cut talking-head against AI b-roll package
-- ReviewΩr approval → ClipsΩr for short-form cut → CaptionΩr → PostΩr
+---
+
+## NEXT TASKS (Session 78)
+
+### 1. Post-Mortem Brief → WritΩr + Id8Ωr injection
+- The locked brief has `root_cause`, `adjustments[]`, `avoid` — wire it into:
+  - WritΩr `id8rBlock` (same pattern as Strategic Brief): "LAST VIDEO POST-MORTEM: avoid [pattern]"
+  - Id8Ωr concept phase: inject the avoid pattern so the next idea doesn't repeat the failure
+- Only inject if brief exists and is < 30 days old
+- Read from `db.getActivePostMortemBrief()` — already in db.js
 
 ### 2. BrollΩr — Save to Vault download helper
 - CDN URLs expire (Higgsfield ~7-30 days) — local copy is the only safe long-term storage

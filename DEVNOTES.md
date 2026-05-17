@@ -6,6 +6,77 @@ Future Claude reads this before touching anything related.
 
 ---
 
+## Post-Mortem Feature — Architecture Decisions + Bugs (Session 77)
+
+### getGlobalChannelHealth() return shape
+`getGlobalChannelHealth()` returns `avg_views` at the TOP LEVEL (legacy YouTube field),
+NOT nested under `health.youtube`. The per-platform breakdown is under `health.by_platform`.
+Correct access: `health.avg_views` — NOT `health.youtube.avg_views` (always undefined/0).
+
+### Transcript fetch: youtube_url vs youtube_video_id
+MirrΩr-synced projects have `youtube_video_id` set but `youtube_url` is often null.
+Always fall back: `project.youtube_url || \`https://www.youtube.com/watch?v=${project.youtube_video_id}\``
+yt-dlp VTT caption fetch requires a valid URL — without this fallback transcripts silently
+fail for the majority of the video library.
+
+### Brief generation: slice from END not START
+When locking a Post-Mortem brief, slicing `convText.slice(0, N)` is WRONG. Post-mortems
+naturally start with a first impression that gets revised through dialogue. The real diagnosis
+lives at the END of the conversation, not the start.
+Fix: keep first 1500 chars (context hook) + last 8500 chars (conclusion), with
+`[...conversation continues...]` separator. Also add explicit prompt instruction:
+"base the brief on the FINAL diagnosis reached at the END, not the first impression."
+First live test confirmed this was the bug — brief locked the wrong initial diagnosis.
+
+### Brief clear endpoint (admin escape hatch)
+`DELETE /api/postmortem/brief/active` archives the active brief (status='cleared').
+The `✕ Clear Brief` amber button in the panel shows on open if an active brief exists
+(fetched in parallel with videos load). Also shows immediately after a new lock.
+This exists because Opus can lock the wrong thing — always have a clear path to undo.
+
+---
+
+## VisualΩr — Stream + Token Fixes (Session 77)
+
+### yt-dlp approach: stay with --get-url
+Two approaches were tried for fetching video frames:
+1. `--get-url`: resolves YouTube URL to direct stream URL. Node streams frames directly
+   from the CDN stream. Works reliably. **This is the correct approach.**
+2. Download-first: download full video to disk, then extract frames with ffmpeg.
+   Introduced complexity and errors. Reverted.
+Never go back to download-first for VisualΩr frame extraction.
+
+### Vision token ceiling
+20 frames × ~350 chars/frame ≈ 7000 chars of frame descriptions. 2048 tokens is not
+enough — Claude Vision truncates mid-JSON. Set to 4096. If running more frames, increase
+proportionally: each frame ≈ 200 tokens of response budget.
+
+### Merge logic (additive, not replace)
+`visual_intelligence_video_results` kv key stores raw per-video analysis results array.
+New VisualΩr runs dedupe by `.title` and merge — previous results survive partial re-runs.
+Only the final Opus synthesis (`visual_intelligence_profile`) gets regenerated each run.
+DELETE endpoint clears BOTH keys atomically so they never drift out of sync.
+
+---
+
+## WritΩr Iterate JSON Truncation (Session 77)
+
+### Root cause
+`src/writr/claude.js` has its own Claude caller (not `src/utils/claude.js`) — separate
+file, separate token limit (16384), no repairJSON. When `iterate.js` returned JSON with
+`changes_made` as the FIRST field and `script` last, truncated responses contained only
+the changes array — never the script. JSON.parse failed on the truncated result.
+
+### Fix (two layers)
+1. **Field ordering**: `script` FIRST in JSON schema, `changes_made` LAST. Even if
+   truncated, the script value is always emitted before the array.
+2. **Regex fallback**: if JSON.parse still fails, extract script value directly:
+   `/"script"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/` — handles escaped characters inside
+   the string value. Returns a usable script object with a note in changes_made.
+This pattern should be copied to any other writr prompt that has a `script` field.
+
+---
+
 ## Database
 
 Kre8Ωr uses better-sqlite3 — synchronous, file-based SQLite with WAL mode.
@@ -183,6 +254,21 @@ DigitalOcean console more reliable than SSH for deploy.
 ### Electron DB path
 `app.getPath('userData')` → `AppData\Roaming\kre8r\kre8r.db`
 Reinstalling never overwrites the database. DB_PATH env var set by main.js.
+
+### Gemini / Google AI Studio
+Model set in .env via `GEMINI_MODEL`. Default: `gemini-2.5-flash`. Swap to `gemini-2.5-pro`
+for higher quality at the cost of speed. Used in Id8Ωr research phases 1 & 2 with Google
+Search grounding for live web results. Falls back to Claude training knowledge automatically
+if `GOOGLE_AI_API_KEY` is missing or Gemini fails.
+
+### VisualΩr (planned — needs modal.com account)
+Visual Intelligence module. Lives in MirrΩr tab. Electron-only (needs local footage files).
+Analyzes top-performing videos via Modal.com frame extraction + vision models.
+Outputs Visual Intelligence Profile → stored in kv_store → injects into WritΩr b-roll
+suggestions and BrollΩr prompts. Output travels to kre8r.app even though analysis is
+Electron-only. Avoids all psychology terminology per creator preference.
+
+---
 
 ### PM2 OrgΩr (local)
 ```

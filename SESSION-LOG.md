@@ -3,6 +3,99 @@
 
 ---
 
+# Session 77 — VisualΩr Fixes, Post-Mortem Feature, WritΩr JSON Fallback (2026-05-16/17)
+
+## Goal
+Fix VisualΩr streaming errors and token ceiling. Wire Visual Intelligence Profile into full
+pipeline (WritΩr, BrollΩr, EditΩr Room, VectΩr). Fix WritΩr iterate JSON truncation.
+Build Post-Mortem feature in NorthΩr. Fix TikTok PP/TOS rejection.
+
+## What Was Built / Fixed
+
+### VisualΩr — Stream Fix + Merge Logic
+**`src/routes/visualr.js`**
+- Reverted download-first approach back to `resolveYtUrl` (`--get-url`) — confirmed this
+  was the working approach before the low-quality fix attempt
+- Vision call max tokens: 2048 → 4096 (20 frames × ~350 chars = ~7000 chars needs more headroom)
+- Added merge logic: `visual_intelligence_video_results` kv key is now additive — new runs
+  dedupe by title and merge with previous results instead of replacing them
+- DELETE endpoint now clears both kv keys atomically
+
+### Visual Intelligence Profile — Full Pipeline Injection
+- **WritΩr** (`src/routes/writr.js`): `writr_injection` + `opening_frame_rules` + `contrast_finding`
+  appended to `id8rBlock` in all script generation modes + `buildRoomSystemPrompt()`
+- **BrollΩr** (`src/routes/brollr.js`): `brollr_style_note` appended to every Higgsfield
+  image prompt and video prompt (analyze + generate paths)
+- **EditΩr Room** (`src/routes/editr-room.js`): `contrast_finding` + `writr_injection` + avoid
+  list appended to system prompt
+- **VectΩr** (`src/routes/vectr.js`): `audience_attention_profile` + `contrast_finding` added
+  to strategic session system prompt
+- All injections silently no-op if no Visual Intelligence Profile exists
+
+### WritΩr Iterate JSON Fallback (`src/writr/claude.js` + `src/writr/iterate.js`)
+- Root cause: JSON schema had `changes_made` first — truncated response never reached `script`
+- Fix 1: Reordered JSON fields so `script` is always first in the schema
+- Fix 2: Added regex extraction fallback — if JSON parse fails, extracts `script` value directly
+  via `/"script"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/` regex. Returns partial result with
+  `[response truncated — script recovered]` in changes_made so it's auditable.
+- Result: no more "Claude returned non-JSON response" errors even on truncated Opus responses
+
+### TikTok PP/TOS Fix — App Resubmission
+- Rejection reason: "Privacy Policy and Terms of Service do not mention the app by name"
+- Added explicit opening paragraph naming the app in both documents
+- Then did global replace: all `Kre8Ωr` → `Kre8r` across both files (Ω symbol was causing
+  display resistance and isn't in the URL or app display name anyway)
+- Deployed to kre8r.app — resubmitted May 7 2026, awaiting re-review
+
+### Post-Mortem Feature — NorthΩr Slide-Out Panel
+**`src/routes/postmortem.js`** (NEW FILE)
+- 8 endpoints: videos list, transcript fetch, session CRUD (GET/POST/DELETE), SSE Opus
+  chat, brief lock, brief active GET, brief active DELETE
+- Transcript strategy: vault completed-video first (fast, offline), falls back to yt-dlp
+  `--write-auto-subs --sub-lang en --skip-download --sub-format vtt` + VTT parser
+- VTT parser: strips WEBVTT headers, timestamp lines, `-->` lines, HTML tags, deduplicates
+  consecutive identical lines
+- System prompt: failure taxonomy (hook / thumbnail mismatch / topic-audience / distribution
+  / production / pacing), editor-to-editor tone, no filler phrases
+- `BEGIN_POSTMORTEM` sentinel triggers Opus to open with honest read of the data
+- Session persisted in kv_store — conversation survives panel close/reopen
+- Brief generation: Opus synthesizes root_cause + adjustments + avoid from conversation
+- Model: `VISUALR_MODEL` env var (claude-opus-4-5 default) for both chat and brief
+
+**`src/db.js`**
+- Added `getPostMortemVideoList()` — projects with YouTube analytics, ordered by post date
+- Added `getFootageByProject(projectId)` — all footage records for a project
+- Added `clearActivePostMortemBrief()` — sets status='cleared' on active brief
+- All three exported
+
+**`public/northr.html`** (already had panel HTML/JS from previous session — confirmed wired)
+
+### Post-Mortem Bug Fixes (found during first live test)
+1. **Channel average always 0**: `getGlobalChannelHealth()` returns `health.avg_views` at
+   top level, not `health.youtube.avg_views`. Fixed reference in postmortem route.
+2. **Transcript never fetching**: `youtube_url` is null in DB for MirrΩr-synced projects
+   even when `youtube_video_id` is set. Now constructs URL as fallback:
+   `project.youtube_url || \`https://www.youtube.com/watch?v=${project.youtube_video_id}\``
+3. **Brief locked wrong diagnosis**: Brief prompt sliced `convText.slice(0, 6000)` — only
+   saw the opening wrong impressions, never the corrected final diagnosis. Fixed:
+   - Now keeps first 1500 chars (context) + last 8500 chars (conclusion) for 10k total
+   - Added explicit instruction: "base the brief on the FINAL diagnosis, not first impression"
+4. **Clear Brief button**: Added amber `✕ Clear Brief` button to panel actions bar.
+   Shows on panel open if active brief exists, shows after new lock. Calls
+   `DELETE /api/postmortem/brief/active`.
+
+## Proven in Live Use
+Jason ran a full post-mortem on "The Real Reason People Quit Homesteading" (3,041 views).
+Opus caught the real diagnosis through conversation: "The 340k video is about the viewer.
+The loneliness video is about Jason." — Jason became the main character and didn't hand it
+back. Core subscribers stayed (strong retention). New expanded audience dropped the premise.
+Creator quote: "that was amazing."
+
+## Commits
+- (end-of-session commit pending)
+
+---
+
 # Session 76 — AssemblΩr Full Rebuild: Auto-Transcription, AI Assembly, EditΩr Room (2026-05-08)
 
 ## Goal

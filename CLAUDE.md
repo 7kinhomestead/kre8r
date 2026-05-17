@@ -243,6 +243,18 @@ Direct edits to the file while the server holds a WAL lock can corrupt data.
    System prompt holds strategic_principles from creator-profile.json + pushback_triggers.
    Claude holds positions based on data/brand, only yields with documented reasoning.
 
+✅ Post-Mortem (`/northr.html` slide-out panel — 🔍 button in hero) — Two-way Opus conversation
+   diagnosing why a video underperformed. Video picker shows views + % vs channel average.
+   Transcript: vault completed-video first, then yt-dlp VTT auto-captions fallback.
+   NOTE: constructs YouTube URL from `youtube_video_id` if `youtube_url` is null in DB.
+   Session persisted in kv_store. Failure taxonomy: hook / thumbnail mismatch / topic-audience
+   / distribution / production / pacing. `BEGIN_POSTMORTEM` sentinel triggers Opus opener.
+   Brief lock: synthesizes root_cause + adjustments[] + avoid from FINAL diagnosis
+   (keeps last 8500 chars of conversation, not first 6000 — real diagnosis is always at the end).
+   Amber ✕ Clear Brief button shows if active brief exists. `DELETE /api/postmortem/brief/active`.
+   `src/routes/postmortem.js` — 8 endpoints. Model: VISUALR_MODEL (claude-opus-4-5 default).
+   TODO next: inject active post-mortem brief into WritΩr id8rBlock + Id8Ωr concept phase.
+
 ### INFRASTRUCTURE
 ✅ Privacy + TOS (`/privacy`, `/tos`) — Public legal pages (no auth required). Required for TikTok
    app review. Cover TikTok API, Meta API, YouTube, data retention, contact info (7kinmedia@gmail.com).
