@@ -464,13 +464,16 @@
   // ─────────────────────────────────────────────
   // BUILD NAV HTML
   // ─────────────────────────────────────────────
-  function buildNav() {
+  function buildNav(disabled) {
+    disabled = disabled || [];
     const activePage = getActivePage();
 
     // Desktop category dropdowns
     const categoryHTML = NAV.categories.map(cat => {
-      const catActive = isCategoryActive(cat);
-      const itemsHTML = cat.items.map(item => {
+      const visibleItems = cat.items.filter(item => !disabled.includes(item.href));
+      if (!visibleItems.length) return '';
+      const catActive = visibleItems.some(item => isItemActive(item));
+      const itemsHTML = visibleItems.map(item => {
         const active = isItemActive(item);
         const classes = ['kn-menu-item', active ? 'is-active' : '', item.soon ? 'is-soon' : ''].filter(Boolean).join(' ');
         const sublabelHTML = item.sublabel
@@ -516,7 +519,9 @@
 
     // Mobile overlay sections
     const mobileSections = NAV.categories.map(cat => {
-      const itemsHTML = cat.items.map(item => {
+      const visibleItems = cat.items.filter(item => !disabled.includes(item.href));
+      if (!visibleItems.length) return '';
+      const itemsHTML = visibleItems.map(item => {
         const active = isItemActive(item);
         const classes = ['kn-mobile-item', active ? 'is-active' : '', item.soon ? 'is-soon' : ''].filter(Boolean).join(' ');
         const soonHTML = item.soon ? `<span class="kn-soon-badge">Soon</span>` : '';
@@ -737,34 +742,43 @@
       return;
     }
 
-    container.innerHTML = buildNav();
-    attachEvents(container);
+    // Fetch per-instance feature flags first, then build nav.
+    // Avoids any flash of disabled items appearing then disappearing.
+    // Fallback to empty disabled list on any error (graceful degradation).
+    fetch('/api/profile/features')
+      .then(function(r) { return r.json(); })
+      .catch(function() { return { disabled: [] }; })
+      .then(function(d) {
+        var disabled = d.disabled || [];
+        container.innerHTML = buildNav(disabled);
+        attachEvents(container);
 
-    // Hide ✨ soul badge if creator-profile.json already exists
-    fetch('/api/soul-buildr/status').then(function(r) { return r.json(); }).then(function(d) {
-      if (d.exists) {
-        document.querySelectorAll('[data-soul-badge]').forEach(function(el) {
-          el.style.display = 'none';
-        });
-      }
-    }).catch(function() {});
+        // Hide ✨ soul badge if creator-profile.json already exists
+        fetch('/api/soul-buildr/status').then(function(r) { return r.json(); }).then(function(d) {
+          if (d.exists) {
+            document.querySelectorAll('[data-soul-badge]').forEach(function(el) {
+              el.style.display = 'none';
+            });
+          }
+        }).catch(function() {});
 
-    // NorthΩr alert badge — show count on every page if unread alerts exist
-    fetch('/api/northr/alerts').then(function(r) { return r.json(); }).then(function(d) {
-      var badge = document.getElementById('kn-alert-badge');
-      if (badge && d.unread_count > 0) {
-        badge.textContent = d.unread_count;
-        badge.style.display = 'inline-flex';
-      }
-    }).catch(function() {});
+        // NorthΩr alert badge — show count on every page if unread alerts exist
+        fetch('/api/northr/alerts').then(function(r) { return r.json(); }).then(function(d) {
+          var badge = document.getElementById('kn-alert-badge');
+          if (badge && d.unread_count > 0) {
+            badge.textContent = d.unread_count;
+            badge.style.display = 'inline-flex';
+          }
+        }).catch(function() {});
 
-    // Load tour.js once (idempotent — tour.js guards against double-inject)
-    if (!document.getElementById('kre8r-tour-js')) {
-      var tourScript = document.createElement('script');
-      tourScript.id  = 'kre8r-tour-js';
-      tourScript.src = '/js/tour.js';
-      document.body.appendChild(tourScript);
-    }
+        // Load tour.js once (idempotent — tour.js guards against double-inject)
+        if (!document.getElementById('kre8r-tour-js')) {
+          var tourScript = document.createElement('script');
+          tourScript.id  = 'kre8r-tour-js';
+          tourScript.src = '/js/tour.js';
+          document.body.appendChild(tourScript);
+        }
+      });
   };
 
 })();

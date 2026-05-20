@@ -640,6 +640,7 @@ app.use('/api/markr',             require('./src/routes/markr'));
 app.use('/api/guard',             require('./src/routes/guard'));
 app.use('/api/ideas',             require('./src/routes/ideas'));
 app.use('/api/vectr',             require('./src/routes/vectr'));
+app.use('/api/postmortem',        require('./src/routes/postmortem'));
 app.use('/api/editr-room',        require('./src/routes/editr-room'));
 app.use('/api/studio-intel',      require('./src/routes/studio-intel'));
 app.use('/api/stats-export',      require('./src/routes/stats-export'));
@@ -704,6 +705,22 @@ app.get('/api/creator-profile', (req, res) => {
     console.log('[Profile] Migrations applied:', result.migrations.join(', '));
   }
   res.json(result.profile);
+});
+
+// Profile features — returns disabled nav items for this instance (used by nav.js)
+app.get('/api/profile/features', (req, res) => {
+  try {
+    const tenantProfile = tenantContext.getProfile();
+    const profile = tenantProfile || (() => {
+      const { loadProfile } = require('./src/utils/profile-validator');
+      const r = loadProfile();
+      return r.ok ? r.profile : null;
+    })();
+    const disabled = profile?.features?.disabled || [];
+    res.json({ disabled });
+  } catch (_) {
+    res.json({ disabled: [] });
+  }
 });
 
 // Health check
