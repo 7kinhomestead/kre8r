@@ -239,9 +239,15 @@ app.use((req, res, next) => {
   tenantContext.run({ db: tenantDb, profile: tenantProfile, slug }, next);
 });
 
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+  console.error('[FATAL] SESSION_SECRET not set in .env — refusing to start. Set a random 32+ char string.');
+  process.exit(1);
+}
+
 app.use(session({
   name:   'kre8r.sid',
-  secret: process.env.SESSION_SECRET || 'kre8r-session-secret-change-in-production',
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store:  new SQLiteStore(() => _dbModule.getRawDb()),
@@ -263,6 +269,21 @@ app.use('/api/onboarding', require('./src/routes/onboarding'));
 
 // Admin panel — owner only (enforced inside route)
 app.use('/api/admin', require('./src/routes/admin'));
+
+// Land site pending submissions proxy — keeps LAND_INTERNAL_API_KEY server-side
+app.get('/api/land-pending', async (req, res) => {
+  try {
+    const key = process.env.LAND_INTERNAL_API_KEY || process.env.INTERNAL_API_KEY;
+    const r = await fetch('https://7kinhomestead.land/api/seller/admin/pending-summary', {
+      headers: { 'x-internal-key': key },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) return res.json({ listings: 0, feeds: 0, total: 0 });
+    res.json(await r.json());
+  } catch (_) {
+    res.json({ listings: 0, feeds: 0, total: 0 });
+  }
+});
 
 // ─────────────────────────────────────────────
 // KAJABI WEBHOOK — PUBLIC (no auth)
@@ -361,6 +382,10 @@ app.use((req, res, next) => {
   if (req.hostname === 'guard.kre8r.app') return next();
   // OrgΩr bridge — internal key auth handled inside the route, no session needed
   if (req.path === '/api/stats-export') return next();
+  // Community Intelligence sync — internal key auth handled inside the route
+  if (req.path.startsWith('/api/community/sync')) return next();
+  if (req.path.startsWith('/api/community/tier-correct')) return next();
+  if (req.path.startsWith('/api/community/events') && req.method === 'POST') return next();
   // HarvestΩr membership verification — internal key auth handled inside the route
   if (req.path === '/api/kajabi/member-check') return next();
   // AffiliateΩr Electron sync — internal key auth handled inside the route
@@ -631,6 +656,7 @@ app.use('/api/analytr',      mirrRouter);           // legacy alias — keep so 
 app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
 app.use('/api/project-vault', require('./src/routes/project-vault'));
 app.use('/api/northr',        require('./src/routes/northr'));
+app.use('/api/conductor',     require('./src/routes/conductor'));
 app.use('/api/lab',           require('./src/routes/lab'));
 app.use('/api/local-sync',        require('./src/routes/local-sync'));
 app.use('/api/releases',          require('./src/routes/releases'));
@@ -648,6 +674,8 @@ app.use('/api/analyticr',         require('./src/routes/analyticr'));
 app.use('/api/affiliator',        require('./src/routes/affiliator'));
 app.use('/api/animr',             require('./src/routes/animr'));
 app.use('/api/brollr',            require('./src/routes/brollr'));
+app.use('/api/community',         require('./src/routes/community'));
+app.use('/api/mission',           require('./src/routes/mission'));
 app.use('/api/visualr',           require('./src/routes/visualr'));
 app.use('/api/cleanr',            require('./src/routes/cleanr'));
 // Contracts — authenticated CRUD + public signing page (/sign/:token)

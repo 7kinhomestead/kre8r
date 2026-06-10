@@ -1862,6 +1862,36 @@
     <div id="stalled-list" class="stalled-list"></div>
   </div>
 
+  <!-- ── LAND SITE: Listing Submissions ── -->
+  <div class="section" id="land-submissions-section" style="display:none">
+    <div class="section-head">
+      <div class="section-title">🏕 LAND SUBMISSIONS</div>
+      <a href="https://7kinhomestead.land/admin/listings" target="_blank" style="font-size:12px;color:var(--teal);text-decoration:none;font-weight:600;">Open Admin ↗</a>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;" id="land-pending-row">
+      <div class="alert-card info" style="flex:1;min-width:180px;">
+        <div class="alert-icon">📝</div>
+        <div class="alert-body">
+          <div class="alert-title">Listing Submissions</div>
+          <div class="alert-message" id="land-listings-msg">Checking…</div>
+          <div class="alert-actions">
+            <a href="https://7kinhomestead.land/admin/listings" target="_blank" class="alert-action-link">Review Listings →</a>
+          </div>
+        </div>
+      </div>
+      <div class="alert-card info" style="flex:1;min-width:180px;">
+        <div class="alert-icon">📡</div>
+        <div class="alert-body">
+          <div class="alert-title">Feed Submissions</div>
+          <div class="alert-message" id="land-feeds-msg">Checking…</div>
+          <div class="alert-actions">
+            <a href="https://7kinhomestead.land/admin/listings" target="_blank" class="alert-action-link">Review Feeds →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── SECTION 5: Publishing Consistency ── -->
   <div class="section">
     <div class="section-head">
@@ -1954,6 +1984,33 @@
     <div id="revenue-history-container">
       <div class="empty-state">Loading revenue history…</div>
     </div>
+  </div>
+
+  <!-- ── Community Health ── -->
+  <div class="section" id="community-health-section">
+    <div class="section-head">
+      <div class="section-title">🏕 ROCK RICH COMMUNITY</div>
+      <a href="/audience.html" onclick="setTimeout(()=>switchTabAudience('community'),300)" style="font-size:12px;color:var(--teal);text-decoration:none;font-weight:600;">Open AudiencΩr →</a>
+    </div>
+    <div class="pub-stats" id="community-stats">
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="comm-total">—</div>
+        <div class="pub-stat-label">Total Members</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="comm-garden" style="color:var(--teal)">—</div>
+        <div class="pub-stat-label">Garden 🌿</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="comm-lurkers" style="color:var(--amber)">—</div>
+        <div class="pub-stat-label">Lurkers</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="comm-leads" style="color:var(--green)">—</div>
+        <div class="pub-stat-label">Warm Leads</div>
+      </div>
+    </div>
+    <div id="community-sync-note" style="font-size:12px;color:var(--text-dimmer);margin-top:8px;"></div>
   </div>
 
   <!-- ── Copyright Health ── -->
@@ -2193,6 +2250,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCopyrightHealth();
   loadActiveBrief();
   checkVectrAutoDraft();
+  loadLandPending();
   // Default month picker to current month
   const now = new Date();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -2220,6 +2278,7 @@ async function loadDashboard() {
     }
 
     loadMarkPublished();
+    loadCommunityWidget();
   } catch (e) {
     console.error('[NorthΩr] Dashboard load failed:', e);
     toast('Failed to load dashboard: ' + e.message, 'error');
@@ -2646,6 +2705,25 @@ async function loadThisWeek() {
   } catch (e) {
     console.warn('[NorthΩr] This Week load failed:', e);
   }
+}
+
+// ── Community Widget ───────────────────────────────────────────────────────────
+async function loadCommunityWidget() {
+  try {
+    const d = await fetch('/api/community/health').then(r => r.json());
+    const c = d.counts || {};
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = (val ?? '—').toLocaleString(); };
+    set('comm-total',   c.total);
+    set('comm-garden',  c.garden);
+    set('comm-lurkers', c.lurkers);
+    set('comm-leads',   d.pending_leads);
+    const note = document.getElementById('community-sync-note');
+    if (note && d.latest_snapshot) {
+      note.textContent = `Last synced: ${d.latest_snapshot.snapshot_date}`;
+    } else if (note) {
+      note.textContent = 'No community data yet — run the weekly sync from Claude Desktop.';
+    }
+  } catch (_) {}
 }
 
 // ── Email Performance ──────────────────────────────────────────────────────────
@@ -3485,6 +3563,23 @@ async function loadActiveBrief() {
   } catch (_) {}
 }
 
+// ── Land Site: Pending Submissions ───────────────────────────
+async function loadLandPending() {
+  try {
+    const r = await fetch('/api/land-pending');
+    if (!r.ok) return;
+    const d = await r.json();
+    const section = document.getElementById('land-submissions-section');
+    if (!section) return;
+    if (d.total === 0) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    document.getElementById('land-listings-msg').textContent =
+      d.listings > 0 ? `${d.listings} listing${d.listings !== 1 ? 's' : ''} waiting for review` : 'No pending listings';
+    document.getElementById('land-feeds-msg').textContent =
+      d.feeds > 0 ? `${d.feeds} feed${d.feeds !== 1 ? 's' : ''} waiting for review` : 'No pending feeds';
+  } catch (_) {}
+}
+
 // ── Lock Vector ───────────────────────────────────────────────
 function openLockModal() {
   document.getElementById('vectr-modal-overlay').classList.add('open');
@@ -3579,6 +3674,22 @@ function restoreStudioQueries() {
     document.getElementById('studio-instinct-section').style.display = '';
     document.getElementById('studio-synth-section').style.display = '';
     document.getElementById('studio-generate-btn').textContent = 'Regenerate';
+
+    // SI-1 fix: restore saved responses and instinct after rendering cards
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed._responses) {
+        Object.entries(parsed._responses).forEach(([id, val]) => {
+          const el = document.getElementById(`studio-resp-${id}`);
+          if (el && val) el.value = val;
+        });
+      }
+      if (parsed._instinct) {
+        const instEl = document.getElementById('studio-instinct');
+        if (instEl) instEl.value = parsed._instinct;
+      }
+      checkStudioProgress();
+    } catch (_) {}
   } catch (e) { /* nothing saved — fresh start */ }
 }
 
@@ -3670,6 +3781,20 @@ function checkStudioProgress() {
   }).length;
   const label = document.getElementById('studio-queries-label');
   if (label) label.textContent = `Ask Studio Queries — ${filled} of ${studioQueries.length} answered`;
+
+  // SI-1 fix: persist pasted responses to localStorage on every keystroke
+  // Previously nothing was saved — any navigation, Electron restart, or SSE timeout
+  // wiped all 9 manually-pasted YouTube Studio answers with no recovery path
+  try {
+    const responses = studioQueries.reduce((acc, q) => {
+      const el = document.getElementById(`studio-resp-${q.id}`);
+      if (el) acc[q.id] = el.value;
+      return acc;
+    }, {});
+    const instinct = document.getElementById('studio-instinct')?.value || '';
+    const draft = JSON.parse(localStorage.getItem('studio_intel_queries') || '{}');
+    localStorage.setItem('studio_intel_queries', JSON.stringify({ ...draft, _responses: responses, _instinct: instinct }));
+  } catch (_) {}
 }
 
 function escHtml(str) {
