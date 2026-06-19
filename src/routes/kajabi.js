@@ -314,6 +314,36 @@ const KAJABI_TIER_TAGS = {
 };
 const TIER_PRIORITY = { founding50: 3, garden: 2, greenhouse: 1 };
 
+// Offer IDs → tier. The "<Tier> - Member" tag is added by a Kajabi automation that
+// only fires on a normal checkout — manual/comped grants (esp. the $0 Friends & Family
+// "VIP All Access" Founding 50 offer) never get tagged, so tag-only detection misses
+// them. Offers held are the true source of truth. (Verified live via Kajabi MCP.)
+const KAJABI_TIER_OFFERS = {
+  '2151040759': 'founding50',  // Founding 50 — paid $297 lifetime
+  '2151042381': 'founding50',  // Founding 50 — VIP All Access (Friends & Family) comp
+  '2151041176': 'garden',      // The Garden — $19/mo
+  '2151041075': 'greenhouse',  // The Greenhouse — free
+};
+
+// Resolve the highest tier from the offers a contact holds. Returns null on any error
+// (caller falls back to tag-only detection — no regression).
+async function tierFromOffers(contactId) {
+  try {
+    const data   = await kajabi('GET', `/contacts/${contactId}/offers`);
+    const offers = data?.data || [];
+    let best = null;
+    for (const o of offers) {
+      const id = String(o?.id ?? o?.attributes?.offer_id ?? o?.relationships?.offer?.data?.id ?? '');
+      const t  = KAJABI_TIER_OFFERS[id];
+      if (t && (!best || TIER_PRIORITY[t] > TIER_PRIORITY[best])) best = t;
+    }
+    return best;
+  } catch (e) {
+    console.warn('[member-check] offer lookup failed:', e.message);
+    return null;
+  }
+}
+
 function detectTierFromContact(contact) {
   // Tags are inline in relationships.tags.data — no extra API call needed
   const tagRefs = contact?.relationships?.tags?.data || [];
@@ -465,7 +495,14 @@ router.post('/member-check', async (req, res) => {
       }
     }
 
-    // Contact exists in Kajabi but has no community tier tag — not a member
+    // Reconcile against offers held — catches members granted by offer (esp. the $0
+    // Friends & Family Founding 50 comp) whose tier tag automation never fired.
+    const offerTier = await tierFromOffers(contact.id);
+    if (offerTier && (!tier || TIER_PRIORITY[offerTier] > TIER_PRIORITY[tier])) {
+      tier = offerTier;
+    }
+
+    // Contact exists in Kajabi but holds no community tier (tag or offer) — not a member
     if (!tier) {
       return res.json({ active: false, reason: 'not_a_member' });
     }
