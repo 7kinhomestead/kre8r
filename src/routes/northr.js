@@ -477,4 +477,38 @@ router.get('/growth-plan', (req, res) => {
   }
 });
 
+// ─── GET /course-completions — Pillar 2 beacon data ──────────────────────────
+// Per-lesson funnel + per-member rollup from the Kajabi completion beacon
+// (see src/routes/kajabi-track.js). Session-authed via the /api/northr mount —
+// no internal key needed for the dashboard's own backend.
+router.get('/course-completions', async (req, res) => {
+  try {
+    const stats  = db.getLessonCompletionStats();
+    const recent = db.getRecentLessonCompletions(20);
+
+    // The gate funnel now lives on the always-on land box — the Kajabi beacon posts
+    // there directly (no tunnel into this machine). Pull it; if land is unreachable,
+    // fall back to whatever this box collected locally so the dashboard never breaks.
+    const LAND_URL = process.env.LAND_URL || 'https://7kinhomestead.land';
+    let funnel, funnel_source = 'land';
+    try {
+      const { default: fetch } = await import('node-fetch');
+      const r = await fetch(`${LAND_URL}/api/kajabi-track/funnel`, {
+        headers: { 'X-Internal-Key': process.env.INTERNAL_API_KEY },
+        signal:  AbortSignal.timeout(5000),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      funnel = await r.json();
+    } catch (e) {
+      funnel = db.getLibraryFunnel();
+      funnel_source = 'local';
+    }
+
+    res.json({ ...stats, recent, funnel, funnel_source });
+  } catch (err) {
+    console.error('[northr/course-completions]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
