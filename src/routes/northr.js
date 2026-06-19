@@ -489,12 +489,14 @@ router.get('/course-completions', async (req, res) => {
     // The gate funnel now lives on the always-on land box — the Kajabi beacon posts
     // there directly (no tunnel into this machine). Pull it; if land is unreachable,
     // fall back to whatever this box collected locally so the dashboard never breaks.
-    const LAND_URL = process.env.LAND_URL || 'https://7kinhomestead.land';
+    const LAND_URL = process.env.LAND_URL          || 'https://7kinhomestead.land';
+    const LAND_KEY = process.env.LAND_INTERNAL_KEY || '';
     let funnel, funnel_source = 'land';
     try {
+      if (!LAND_KEY) throw new Error('LAND_INTERNAL_KEY not set');
       const { default: fetch } = await import('node-fetch');
       const r = await fetch(`${LAND_URL}/api/kajabi-track/funnel`, {
-        headers: { 'X-Internal-Key': process.env.INTERNAL_API_KEY },
+        headers: { 'x-internal-key': LAND_KEY },
         signal:  AbortSignal.timeout(5000),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
