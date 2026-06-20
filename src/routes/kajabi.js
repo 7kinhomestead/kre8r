@@ -18,6 +18,7 @@
 const express = require('express');
 const router  = express.Router();
 const logger  = require('../utils/logger');
+const { getDb } = require('../db');
 
 const KAJABI_API  = 'https://api.kajabi.com/v1';
 const TOKEN_URL   = 'https://api.kajabi.com/v1/oauth/token';
@@ -419,6 +420,73 @@ async function findContactByEmailCached(email, { maxAgeMs = 5 * 60 * 1000 } = {}
   return _contactIndex.byEmail.get(email) || null;
 }
 
+// ─── Owned membership mirror (kajabi_members table) ──────────────────────────
+// The durable version of the index above: a table WE own, refreshed daily by the
+// morning sync, that member-check reads first so login never depends on a live
+// Kajabi call. tierFromTags is STRICT (null when no tier tag) — unlike
+// detectTierFromContact which defaults to greenhouse — so plain leads (no
+// community access) are correctly treated as non-members.
+function tierFromTags(contact) {
+  const tagRefs = contact?.relationships?.tags?.data || [];
+  let tier = null;
+  for (const ref of tagRefs) {
+    const t = KAJABI_TIER_TAGS[ref.id];
+    if (t && (!tier || TIER_PRIORITY[t] > TIER_PRIORITY[tier])) tier = t;
+  }
+  return tier;
+}
+
+// Full tier: tags first, then reconcile against offers (catches the $0 Friends &
+// Family Founding 50 comp whose tag automation never fired). One extra Kajabi call.
+async function computeTier(contact) {
+  let tier = tierFromTags(contact);
+  const offerTier = await tierFromOffers(contact.id);
+  if (offerTier && (!tier || TIER_PRIORITY[offerTier] > TIER_PRIORITY[tier])) tier = offerTier;
+  return tier;
+}
+
+function upsertKajabiMember(email, contactId, tier) {
+  if (!email || !contactId || !tier) return;
+  try {
+    getDb().prepare(
+      `INSERT INTO kajabi_members (email, contact_id, tier, synced_at)
+       VALUES (?, ?, ?, datetime('now'))
+       ON CONFLICT(email) DO UPDATE SET contact_id = excluded.contact_id,
+         tier = excluded.tier, synced_at = excluded.synced_at`
+    ).run(String(email).toLowerCase().trim(), String(contactId), tier);
+  } catch (e) {
+    logger.warn({ err: e.message, email }, '[member-check] upsertKajabiMember failed');
+  }
+}
+
+// Rebuild the owned membership table from one bulk pass. Tag-based only (no
+// per-contact offer calls) so it's cheap; offer-only F&F members are caught by
+// member-check's live fallback on first login and cached then. Called daily by
+// runBulkSync.
+async function refreshKajabiMemberTable(contacts) {
+  const all = contacts || await kajabiAllContacts();
+  const db  = getDb();
+  let wrote = 0;
+  const stmt = db.prepare(
+    `INSERT INTO kajabi_members (email, contact_id, tier, synced_at)
+     VALUES (?, ?, ?, datetime('now'))
+     ON CONFLICT(email) DO UPDATE SET contact_id = excluded.contact_id,
+       tier = excluded.tier, synced_at = excluded.synced_at`
+  );
+  const tx = db.transaction(() => {
+    for (const c of all) {
+      const email = String(c?.attributes?.email || '').toLowerCase().trim();
+      const tier  = tierFromTags(c);
+      if (!email || !tier) continue;            // skip non-members (leads)
+      stmt.run(email, String(c.id), tier);
+      wrote++;
+    }
+  });
+  tx();
+  logger.info({ contacts: all.length, members: wrote }, '[member-check] refreshed kajabi_members table');
+  return wrote;
+}
+
 // ─── Core bulk-sync logic (also called by morning scheduler) ─────────────────
 
 async function runBulkSync({ memberOnly = true } = {}) {
@@ -436,6 +504,10 @@ async function runBulkSync({ memberOnly = true } = {}) {
   console.log('[bulk-sync] Fetching all Kajabi contacts...');
   const allContacts = await kajabiAllContacts();
   console.log(`[bulk-sync] Got ${allContacts.length} contacts from Kajabi`);
+
+  // Refresh the owned membership mirror from the same pull (login reads this).
+  try { await refreshKajabiMemberTable(allContacts); }
+  catch (e) { logger.warn({ err: e.message }, '[bulk-sync] kajabi_members refresh failed'); }
 
   const contactTier = {};
   for (const c of allContacts) {
@@ -492,6 +564,20 @@ router.post('/bulk-sync-mailerlite', async (req, res) => {
   }
 });
 
+// ─── POST /api/kajabi/refresh-member-mirror ──────────────────────────────────
+// Rebuild the owned kajabi_members table now (also runs daily inside runBulkSync).
+router.post('/refresh-member-mirror', async (req, res) => {
+  const key = req.headers['x-internal-key'];
+  if (!key || key !== process.env.INTERNAL_API_KEY) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const members = await refreshKajabiMemberTable();
+    res.json({ ok: true, members });
+  } catch (e) {
+    logger.error({ err: e }, '[refresh-member-mirror]');
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── POST /api/kajabi/member-check ───────────────────────────────────────────
 // Internal endpoint for HarvestΩr membership verification.
 // Called during magic-link first-visit flow to confirm a visitor is a paying
@@ -510,22 +596,28 @@ router.post('/member-check', async (req, res) => {
 
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'email required' });
+  const want = String(email).toLowerCase().trim();
 
   try {
-    // Kajabi supports filter[email] — returns matching contacts with tag relationships inline
+    // 1. OWNED MIRROR FIRST — login reads our db, not Kajabi live. Refreshed daily
+    //    by runBulkSync; this is the path that makes login immune to Kajabi outages.
+    const cached = getDb().prepare(
+      `SELECT contact_id, tier FROM kajabi_members WHERE email = ?`
+    ).get(want);
+    if (cached) {
+      return res.json({ active: true, kajabi_contact_id: cached.contact_id, tier: cached.tier });
+    }
+
+    // 2. MISS — likely a same-day joiner not in the last daily snapshot. Resolve live
+    //    (filter, then the in-memory full-contact index), reconcile offers, and cache
+    //    the result into the owned table so the next login is local.
     const data     = await kajabi('GET', `/contacts?filter[email]=${encodeURIComponent(email)}`);
     const contacts = data?.data || [];
 
-    // NEVER blindly trust contacts[0]. If Kajabi ignores filter[email] (it has been
-    // returning ALL contacts, newest-first), contacts[0] is just the newest contact and
-    // maps EVERY email to one account — a catastrophic wrong-account bug. Require the
-    // returned contact's email to actually match what we asked for.
-    const want     = String(email).toLowerCase().trim();
-    let   contact  = contacts.find(c => String(c?.attributes?.email || '').toLowerCase().trim() === want);
-
-    // Filter didn't surface our contact (Kajabi currently ignores filter[email] and
-    // returns the newest page). Fall back to the cached full-contact index, which
-    // finds the contact wherever it is in the list.
+    // NEVER blindly trust contacts[0]: Kajabi has been ignoring filter[email] and
+    // returning the newest page, which would map every email to one account. Require
+    // the returned contact's email to actually match, else use the full index.
+    let contact = contacts.find(c => String(c?.attributes?.email || '').toLowerCase().trim() === want);
     if (!contact) {
       logger.warn({ email, returned: contacts.length }, '[member-check] filter[email] miss — using contact index');
       contact = await findContactByEmailCached(want);
@@ -533,28 +625,14 @@ router.post('/member-check', async (req, res) => {
     if (!contact) {
       return res.json({ active: false, reason: 'not_found' });
     }
-    const tagRefs  = contact?.relationships?.tags?.data || [];
 
-    // Find highest tier tag on this contact
-    let tier = null;
-    for (const ref of tagRefs) {
-      const t = KAJABI_TIER_TAGS[ref.id];
-      if (t && (!tier || TIER_PRIORITY[t] > TIER_PRIORITY[tier])) {
-        tier = t;
-      }
-    }
-
-    // Reconcile against offers held — catches members granted by offer (esp. the $0
-    // Friends & Family Founding 50 comp) whose tier tag automation never fired.
-    const offerTier = await tierFromOffers(contact.id);
-    if (offerTier && (!tier || TIER_PRIORITY[offerTier] > TIER_PRIORITY[tier])) {
-      tier = offerTier;
-    }
-
+    const tier = await computeTier(contact);
     // Contact exists in Kajabi but holds no community tier (tag or offer) — not a member
     if (!tier) {
       return res.json({ active: false, reason: 'not_a_member' });
     }
+
+    upsertKajabiMember(want, contact.id, tier);   // cache for next time
 
     return res.json({
       active             : true,

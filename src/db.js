@@ -182,6 +182,16 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_clip_dist_footage  ON clip_distribution(footage_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_clip_dist_platform ON clip_distribution(platform)');
 
+  // AudiencΩr / Orchard login: owned mirror of Kajabi membership so member-check
+  // reads OUR db, not Kajabi's flaky live filter. Refreshed daily by runBulkSync.
+  db.exec(`CREATE TABLE IF NOT EXISTS kajabi_members (
+    email       TEXT PRIMARY KEY,
+    contact_id  TEXT NOT NULL,
+    tier        TEXT NOT NULL,
+    synced_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_kajabi_members_contact ON kajabi_members(contact_id)');
+
   // AnalytΩr: add url column to posts
   const postsCols = db.pragma('table_info(posts)').map(r => r.name);
   if (!postsCols.includes('url')) {
@@ -1522,6 +1532,262 @@ Partner: {{partner_name}}
 
   // Safe migration — add generation_type for speak vs broll distinction
   try { db.exec(`ALTER TABLE brollr_generations ADD COLUMN generation_type TEXT DEFAULT 'broll'`); } catch (_) {}
+
+  // ── Frame analysis + AssemblΩr Threadline (Session 79) ─────────────────────
+  try { db.exec(`ALTER TABLE footage  ADD COLUMN visual_description  TEXT`);    } catch (_) {}
+  try { db.exec(`ALTER TABLE footage  ADD COLUMN visual_analyzed_at  DATETIME`); } catch (_) {}
+  try { db.exec(`ALTER TABLE selects  ADD COLUMN beat_brief          TEXT`);    } catch (_) {}
+  try { db.exec(`ALTER TABLE selects  ADD COLUMN critique_note       TEXT`);    } catch (_) {}
+  try { db.exec(`ALTER TABLE selects  ADD COLUMN coverage_confidence TEXT`);    } catch (_) {}
+  console.log('[DB] Frame analysis + AssemblΩr Threadline columns verified');
+
+  // ── Community Intelligence — AudiencΩr (Session 81) ────────────────────────
+  db.exec(`CREATE TABLE IF NOT EXISTS community_members (
+    id                    TEXT PRIMARY KEY,
+    kajabi_user_id        TEXT,
+    first_name            TEXT,
+    last_name             TEXT,
+    email                 TEXT,
+    role                  TEXT DEFAULT 'member',
+    tier                  TEXT DEFAULT 'greenhouse',
+    joined_at             DATETIME,
+    last_active_at        DATETIME,
+    progress_score        INTEGER DEFAULT 0,
+    posts_count           INTEGER DEFAULT 0,
+    comments_count        INTEGER DEFAULT 0,
+    posts_30d             INTEGER DEFAULT 0,
+    comments_30d          INTEGER DEFAULT 0,
+    onboarding_status     TEXT DEFAULT 'not_started',
+    tags_json             TEXT,
+    last_synced_at        DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS community_snapshots (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_date         DATE NOT NULL,
+    total_members         INTEGER DEFAULT 0,
+    greenhouse_count      INTEGER DEFAULT 0,
+    garden_count          INTEGER DEFAULT 0,
+    founding50_count      INTEGER DEFAULT 0,
+    new_members_7d        INTEGER DEFAULT 0,
+    active_users_7d       INTEGER DEFAULT 0,
+    challenge_completions INTEGER DEFAULT 0,
+    lurker_count          INTEGER DEFAULT 0,
+    engaged_count         INTEGER DEFAULT 0,
+    fully_onboarded       INTEGER DEFAULT 0,
+    created_at            DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_community_snapshots_date ON community_snapshots(snapshot_date)`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS community_member_history (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id       TEXT NOT NULL,
+    kajabi_user_id  TEXT,
+    snapshot_date   DATE NOT NULL,
+    progress_score  INTEGER DEFAULT 0,
+    posts_count     INTEGER DEFAULT 0,
+    comments_count  INTEGER DEFAULT 0,
+    last_active_at  DATETIME,
+    tags_json       TEXT
+  )`);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cmh_member ON community_member_history(member_id, snapshot_date)`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS warm_leads (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id       TEXT NOT NULL,
+    kajabi_user_id  TEXT,
+    name            TEXT,
+    email           TEXT,
+    signals_json    TEXT,
+    dm_draft        TEXT,
+    dm_status       TEXT DEFAULT 'draft',
+    dm_sent_at      DATETIME,
+    outcome         TEXT,
+    outcome_at      DATETIME,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_warm_leads_member ON warm_leads(member_id)`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS community_events (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type      TEXT NOT NULL,
+    member_id       TEXT,
+    kajabi_user_id  TEXT,
+    member_name     TEXT,
+    metadata_json   TEXT,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_community_events_type ON community_events(event_type, created_at)`);
+
+  // ── Course completion beacon (Pillar 2) — per-lesson completion events from Kajabi ──
+  // Kajabi exposes no per-member completion via its API; a JS beacon embedded in a lesson's
+  // custom-code block posts events here. Join key = contact_id (the Kajabi CRM contactId read
+  // from window.Kajabi.currentSiteUser). We also keep site_user_id for flexible joins to
+  // community_members (the sync may key on either). See src/routes/kajabi-track.js.
+  db.exec(`CREATE TABLE IF NOT EXISTS lesson_completions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id    TEXT,
+    site_user_id  TEXT,
+    member_type   TEXT,
+    product_slug  TEXT,
+    category_id   TEXT,
+    post_id       TEXT,
+    lesson_title  TEXT,
+    event         TEXT NOT NULL,
+    progress      INTEGER,
+    url           TEXT,
+    ua_short      TEXT,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_completions_contact ON lesson_completions(contact_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_completions_post    ON lesson_completions(post_id, event)`);
+
+  // ── Member navigation events (Pillar 2b) — the library → community front-door funnel ──
+  // Fired by the Library "front door" custom-code block: library_view / enter_click / bookmark_click,
+  // tagged with the member's tier. Kept separate from lesson_completions (different funnel).
+  db.exec(`CREATE TABLE IF NOT EXISTS member_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id    TEXT,
+    site_user_id  TEXT,
+    member_type   TEXT,
+    surface       TEXT,
+    event         TEXT NOT NULL,
+    tier          TEXT,
+    url           TEXT,
+    ua_short      TEXT,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_member_events_contact ON member_events(contact_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_member_events_event   ON member_events(event, surface)`);
+  console.log('[DB] Community Intelligence tables verified');
+
+  // ── Mission Control — attention item dismiss / snooze state (Session 83) ───
+  db.exec(`CREATE TABLE IF NOT EXISTS mission_attention_state (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id             TEXT NOT NULL UNIQUE,
+    dismissed_at        TEXT,
+    snooze_until        TEXT,
+    resolved_signature  TEXT,
+    created_at          TEXT DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_mas_item ON mission_attention_state(item_id)');
+  console.log('[DB] Mission Control: mission_attention_state table verified');
+
+  // ── ConductΩr — YouTube video history table ──────────────────────────────────
+  // Separate from MirrΩr — this is the classification data source, not analytics import
+  // Stores every published/unlisted video with full API data + conductor_goal classification
+  db.exec(`CREATE TABLE IF NOT EXISTS youtube_videos (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id         TEXT    NOT NULL UNIQUE,
+    title            TEXT    NOT NULL,
+    description      TEXT,
+    published_at     DATETIME,
+    privacy_status   TEXT    DEFAULT 'public',
+    duration_seconds INTEGER,
+    view_count       INTEGER DEFAULT 0,
+    like_count       INTEGER DEFAULT 0,
+    comment_count    INTEGER DEFAULT 0,
+    favorite_count   INTEGER DEFAULT 0,
+    thumbnail_url    TEXT,
+    tags             TEXT,
+    category_id      TEXT,
+    conductor_goal   TEXT,
+    conductor_goal_ai TEXT,
+    project_id       INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    synced_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at       DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_yt_videos_published ON youtube_videos(published_at DESC)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_yt_videos_goal ON youtube_videos(conductor_goal)');
+  console.log('[DB] ConductΩr: youtube_videos table verified');
+
+  // ── ConductΩr — content goal classification on projects ─────────────────────
+  const projColsConductor = db.pragma('table_info(projects)').map(r => r.name);
+  if (!projColsConductor.includes('conductor_goal')) {
+    db.exec('ALTER TABLE projects ADD COLUMN conductor_goal TEXT');
+    console.log('[DB] Migration: added projects.conductor_goal');
+  }
+  if (!projColsConductor.includes('conductor_goal_ai')) {
+    db.exec('ALTER TABLE projects ADD COLUMN conductor_goal_ai TEXT');
+    console.log('[DB] Migration: added projects.conductor_goal_ai');
+  }
+
+  // ── SeedΩr ideas table — missing columns (Session 91 audit) ─────────────────
+  const ideasCols = db.pragma('table_info(ideas)').map(r => r.name);
+  if (!ideasCols.includes('source')) {
+    db.exec("ALTER TABLE ideas ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
+    console.log('[DB] Migration: added ideas.source');
+  }
+  if (!ideasCols.includes('cluster')) {
+    db.exec('ALTER TABLE ideas ADD COLUMN cluster TEXT');
+    console.log('[DB] Migration: added ideas.cluster');
+  }
+  if (!ideasCols.includes('deleted_at')) {
+    db.exec('ALTER TABLE ideas ADD COLUMN deleted_at DATETIME');
+    console.log('[DB] Migration: added ideas.deleted_at (soft-delete)');
+  }
+  // Backfill: 'vault' was the wrong default — these are raw unstarted ideas
+  const vaultCount = db.prepare("SELECT COUNT(*) as n FROM ideas WHERE status = 'vault'").get();
+  if (vaultCount && vaultCount.n > 0) {
+    db.prepare("UPDATE ideas SET status = 'raw' WHERE status = 'vault'").run();
+    console.log(`[DB] Migration: backfilled ${vaultCount.n} ideas status vault→raw`);
+  }
+
+  // ShowΩr — Rock Rich episode pipeline columns
+  const epCols = db.pragma('table_info(show_episodes)').map(r => r.name);
+  if (!epCols.includes('pipeline_stage')) {
+    db.exec("ALTER TABLE show_episodes ADD COLUMN pipeline_stage TEXT NOT NULL DEFAULT 'outlining'");
+    console.log('[DB] Migration: added show_episodes.pipeline_stage');
+  }
+  if (!epCols.includes('outline_text')) {
+    db.exec('ALTER TABLE show_episodes ADD COLUMN outline_text TEXT');
+    console.log('[DB] Migration: added show_episodes.outline_text');
+  }
+  if (!epCols.includes('shot_list_json')) {
+    db.exec('ALTER TABLE show_episodes ADD COLUMN shot_list_json TEXT');
+    console.log('[DB] Migration: added show_episodes.shot_list_json');
+  }
+  if (!epCols.includes('interview_qs_json')) {
+    db.exec('ALTER TABLE show_episodes ADD COLUMN interview_qs_json TEXT');
+    console.log('[DB] Migration: added show_episodes.interview_qs_json');
+  }
+
+  // MissionΩr — crew dispatch log (standing orders system)
+  db.exec(`CREATE TABLE IF NOT EXISTS crew_dispatch (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    crew_id     TEXT    NOT NULL,
+    trigger_id  TEXT    NOT NULL,
+    skin_id     TEXT    NOT NULL DEFAULT 'starfleet-command',
+    body        TEXT    NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at     DATETIME
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_crew_dispatch_crew   ON crew_dispatch(crew_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_crew_dispatch_unread ON crew_dispatch(read_at)');
+  console.log('[DB] crew_dispatch table verified');
+
+  // TikTok native-vertical series scripts — generated from approved WritΩr scripts
+  db.exec(`CREATE TABLE IF NOT EXISTS tiktok_scripts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id      INTEGER NOT NULL,
+    slot            INTEGER NOT NULL,
+    format_type     TEXT    NOT NULL,
+    energy_order    INTEGER NOT NULL DEFAULT 3,
+    hook_variants   TEXT,
+    beat_spine      TEXT,
+    closing_line    TEXT,
+    caption         TEXT,
+    on_screen_text  TEXT,
+    pillar          TEXT,
+    series_name     TEXT,
+    status          TEXT    NOT NULL DEFAULT 'pending',
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    filmed_at       DATETIME,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_tiktok_scripts_project ON tiktok_scripts(project_id)');
+  console.log('[DB] tiktok_scripts table verified');
 }
 
 /**
@@ -1548,6 +1814,10 @@ function bootstrapTenantTables(tdb) {
   addCol('footage', 'proxy_path',          'TEXT');
   addCol('footage', 'subjects',            'TEXT');
 
+  // Visual frame perception — frame analysis result + timestamp
+  addCol('footage', 'visual_description',  'TEXT');     // JSON from Claude Vision frame pass
+  addCol('footage', 'visual_analyzed_at',  'DATETIME'); // null = not yet analyzed
+
   addCol('cuts', 'reasoning',         'TEXT');
   addCol('cuts', 'clip_path',         'TEXT');
   addCol('cuts', 'rank',              'INTEGER');
@@ -1559,6 +1829,11 @@ function bootstrapTenantTables(tdb) {
   // AssemblΩr rebuild — assembly strategy note + mode per section
   addCol('selects', 'assembly_note',  'TEXT');
   addCol('selects', 'assembly_mode',  'TEXT');
+
+  // AssemblΩr Threadline improvements — beat brief + self-critique per section
+  addCol('selects', 'beat_brief',           'TEXT');
+  addCol('selects', 'critique_note',        'TEXT');
+  addCol('selects', 'coverage_confidence',  'TEXT');
 
   addCol('posts', 'url',              'TEXT');
   addCol('posts', 'angle',            'TEXT');
@@ -1588,6 +1863,46 @@ function bootstrapTenantTables(tdb) {
   addCol('projects', 'format',                       "TEXT NOT NULL DEFAULT 'long'");
   addCol('projects', 'high_concept_angles',          'TEXT');
   addCol('projects', 'research_bundle_json',         'TEXT');
+
+  // ConductΩr — YouTube video history
+  exec(`CREATE TABLE IF NOT EXISTS youtube_videos (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id         TEXT    NOT NULL UNIQUE,
+    title            TEXT    NOT NULL,
+    description      TEXT,
+    published_at     DATETIME,
+    privacy_status   TEXT    DEFAULT 'public',
+    duration_seconds INTEGER,
+    view_count       INTEGER DEFAULT 0,
+    like_count       INTEGER DEFAULT 0,
+    comment_count    INTEGER DEFAULT 0,
+    favorite_count   INTEGER DEFAULT 0,
+    thumbnail_url    TEXT,
+    tags             TEXT,
+    category_id      TEXT,
+    conductor_goal   TEXT,
+    conductor_goal_ai TEXT,
+    project_id       INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    synced_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at       DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_yt_videos_published ON youtube_videos(published_at DESC)');
+  exec('CREATE INDEX IF NOT EXISTS idx_yt_videos_goal ON youtube_videos(conductor_goal)');
+
+  // ConductΩr — content goal classification (REACH/AUTHORITY/CONVERT/SERVE/RETAIN)
+  addCol('projects', 'conductor_goal',    'TEXT');  // the primary business goal of this video
+  addCol('projects', 'conductor_goal_ai', 'TEXT');  // AI-suggested goal before Jason confirms
+
+  // ideas table — columns added after initial schema
+  addCol('ideas', 'source',     "TEXT NOT NULL DEFAULT 'manual'");
+  addCol('ideas', 'cluster',    'TEXT');
+  addCol('ideas', 'deleted_at', 'DATETIME');
+
+  // ShowΩr — Rock Rich episode pipeline columns
+  addCol('show_episodes', 'pipeline_stage',    "TEXT NOT NULL DEFAULT 'outlining'");
+  addCol('show_episodes', 'outline_text',      'TEXT');
+  addCol('show_episodes', 'shot_list_json',    'TEXT');
+  addCol('show_episodes', 'interview_qs_json', 'TEXT');
 
   // ── Tables added by migrations (not in base schema.sql) ───────────────────
   exec(`CREATE TABLE IF NOT EXISTS davinci_timelines (
@@ -2019,10 +2334,13 @@ function bootstrapTenantTables(tdb) {
     angle       TEXT,
     hook        TEXT,
     notes       TEXT,
-    status      TEXT    NOT NULL DEFAULT 'vault',
+    status      TEXT    NOT NULL DEFAULT 'raw',
+    source      TEXT    NOT NULL DEFAULT 'manual',
+    cluster     TEXT,
     brief_data  TEXT,
     project_id  INTEGER REFERENCES projects(id),
     connections TEXT,
+    deleted_at  DATETIME,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
@@ -2131,6 +2449,162 @@ function bootstrapTenantTables(tdb) {
   exec('CREATE INDEX IF NOT EXISTS idx_blog_status    ON blog_posts(status)');
   exec('CREATE INDEX IF NOT EXISTS idx_blog_published ON blog_posts(published_at DESC)');
   exec('CREATE INDEX IF NOT EXISTS idx_blog_project   ON blog_posts(project_id)');
+
+  // ── Community Intelligence — AudiencΩr (Session 81) ──────────────────────
+  exec(`CREATE TABLE IF NOT EXISTS community_members (
+    id                TEXT PRIMARY KEY,
+    kajabi_user_id    TEXT,
+    first_name        TEXT,
+    last_name         TEXT,
+    email             TEXT,
+    role              TEXT DEFAULT 'member',
+    tier              TEXT DEFAULT 'greenhouse',
+    joined_at         DATETIME,
+    last_active_at    DATETIME,
+    progress_score    INTEGER DEFAULT 0,
+    posts_count       INTEGER DEFAULT 0,
+    comments_count    INTEGER DEFAULT 0,
+    posts_30d         INTEGER DEFAULT 0,
+    comments_30d      INTEGER DEFAULT 0,
+    onboarding_status TEXT DEFAULT 'not_started',
+    tags_json         TEXT,
+    last_synced_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec(`CREATE TABLE IF NOT EXISTS community_snapshots (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_date         DATE NOT NULL,
+    total_members         INTEGER DEFAULT 0,
+    greenhouse_count      INTEGER DEFAULT 0,
+    garden_count          INTEGER DEFAULT 0,
+    founding50_count      INTEGER DEFAULT 0,
+    new_members_7d        INTEGER DEFAULT 0,
+    active_users_7d       INTEGER DEFAULT 0,
+    challenge_completions INTEGER DEFAULT 0,
+    lurker_count          INTEGER DEFAULT 0,
+    engaged_count         INTEGER DEFAULT 0,
+    fully_onboarded       INTEGER DEFAULT 0,
+    created_at            DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_community_snapshots_date ON community_snapshots(snapshot_date)`);
+  exec(`CREATE TABLE IF NOT EXISTS community_member_history (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id       TEXT NOT NULL,
+    kajabi_user_id  TEXT,
+    snapshot_date   DATE NOT NULL,
+    progress_score  INTEGER DEFAULT 0,
+    posts_count     INTEGER DEFAULT 0,
+    comments_count  INTEGER DEFAULT 0,
+    last_active_at  DATETIME,
+    tags_json       TEXT
+  )`);
+  exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cmh_member ON community_member_history(member_id, snapshot_date)`);
+  exec(`CREATE TABLE IF NOT EXISTS warm_leads (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id       TEXT NOT NULL,
+    kajabi_user_id  TEXT,
+    name            TEXT,
+    email           TEXT,
+    signals_json    TEXT,
+    dm_draft        TEXT,
+    dm_status       TEXT DEFAULT 'draft',
+    dm_sent_at      DATETIME,
+    outcome         TEXT,
+    outcome_at      DATETIME,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_warm_leads_member ON warm_leads(member_id)`);
+  exec(`CREATE TABLE IF NOT EXISTS community_events (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type      TEXT NOT NULL,
+    member_id       TEXT,
+    kajabi_user_id  TEXT,
+    member_name     TEXT,
+    metadata_json   TEXT,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec(`CREATE INDEX IF NOT EXISTS idx_community_events_type ON community_events(event_type, created_at)`);
+
+  // ── Course completion beacon (Pillar 2) — per-lesson completion events from Kajabi ──
+  // Mirror of the runMigrations definition. Join key = contact_id (Kajabi CRM contactId from
+  // window.Kajabi.currentSiteUser). See src/routes/kajabi-track.js.
+  exec(`CREATE TABLE IF NOT EXISTS lesson_completions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id    TEXT,
+    site_user_id  TEXT,
+    member_type   TEXT,
+    product_slug  TEXT,
+    category_id   TEXT,
+    post_id       TEXT,
+    lesson_title  TEXT,
+    event         TEXT NOT NULL,
+    progress      INTEGER,
+    url           TEXT,
+    ua_short      TEXT,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec(`CREATE INDEX IF NOT EXISTS idx_lesson_completions_contact ON lesson_completions(contact_id)`);
+  exec(`CREATE INDEX IF NOT EXISTS idx_lesson_completions_post    ON lesson_completions(post_id, event)`);
+
+  // ── Member navigation events (Pillar 2b) — library → community front-door funnel ──
+  exec(`CREATE TABLE IF NOT EXISTS member_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id    TEXT,
+    site_user_id  TEXT,
+    member_type   TEXT,
+    surface       TEXT,
+    event         TEXT NOT NULL,
+    tier          TEXT,
+    url           TEXT,
+    ua_short      TEXT,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  exec(`CREATE INDEX IF NOT EXISTS idx_member_events_contact ON member_events(contact_id)`);
+  exec(`CREATE INDEX IF NOT EXISTS idx_member_events_event   ON member_events(event, surface)`);
+
+  // ── Mission Control — attention item dismiss / snooze state ─────────────────
+  exec(`CREATE TABLE IF NOT EXISTS mission_attention_state (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id             TEXT NOT NULL UNIQUE,
+    dismissed_at        TEXT,
+    snooze_until        TEXT,
+    resolved_signature  TEXT,
+    created_at          TEXT DEFAULT (datetime('now'))
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_mas_item ON mission_attention_state(item_id)');
+
+  // MissionΩr — crew dispatch log (standing orders system)
+  exec(`CREATE TABLE IF NOT EXISTS crew_dispatch (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    crew_id     TEXT    NOT NULL,
+    trigger_id  TEXT    NOT NULL,
+    skin_id     TEXT    NOT NULL DEFAULT 'starfleet-command',
+    body        TEXT    NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at     DATETIME
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_crew_dispatch_crew   ON crew_dispatch(crew_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_crew_dispatch_unread ON crew_dispatch(read_at)');
+
+  exec(`CREATE TABLE IF NOT EXISTS tiktok_scripts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id      INTEGER NOT NULL,
+    slot            INTEGER NOT NULL,
+    format_type     TEXT    NOT NULL,
+    energy_order    INTEGER NOT NULL DEFAULT 3,
+    hook_variants   TEXT,
+    beat_spine      TEXT,
+    closing_line    TEXT,
+    caption         TEXT,
+    on_screen_text  TEXT,
+    pillar          TEXT,
+    series_name     TEXT,
+    status          TEXT    NOT NULL DEFAULT 'pending',
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    filmed_at       DATETIME,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_tiktok_scripts_project ON tiktok_scripts(project_id)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -2487,7 +2961,34 @@ function approveAllCaptions(projectId) {
 // ─────────────────────────────────────────────
 
 function saveEmails(projectId, emailData) {
-  _run(`DELETE FROM emails WHERE project_id = ?`, [projectId]);
+  // mailor-2 fix: do NOT DELETE if only a broadcast is being saved — the unconditional
+  // DELETE was destroying the Day 0/3/7 sequence when a broadcast was generated,
+  // and the broadcast was never saved (no matching branch below)
+  const isBroadcastOnly = emailData.broadcast && !emailData.day0 && !emailData.day3 && !emailData.day7;
+
+  if (!isBroadcastOnly) {
+    _run(`DELETE FROM emails WHERE project_id = ?`, [projectId]);
+  }
+
+  // Broadcast email (one-shot send, not a day sequence)
+  if (emailData.broadcast) {
+    const b = emailData.broadcast;
+    const va = b.version_a || b;
+    const vb = b.version_b || null;
+    if (va?.subject || va?.body) {
+      _run(
+        `INSERT OR REPLACE INTO emails (project_id, send_day, tier, subject, body) VALUES (?, ?, ?, ?, ?)`,
+        [projectId, -1, 'broadcast_a', va.subject || '', va.body || '']
+      );
+    }
+    if (vb?.subject || vb?.body) {
+      _run(
+        `INSERT OR REPLACE INTO emails (project_id, send_day, tier, subject, body) VALUES (?, ?, ?, ?, ?)`,
+        [projectId, -2, 'broadcast_b', vb.subject || '', vb.body || '']
+      );
+    }
+    return; // don't touch the sequence
+  }
 
   // Day 0
   if (emailData.day0?.everyone) {
@@ -2572,7 +3073,11 @@ function updateFootage(id, fields) {
     'organized_path', 'thumbnail_path', 'project_id', 'used_in', 'transcript_path',
     'orientation', 'braw_source_path', 'is_proxy', 'resolution', 'codec',
     'duration', 'file_size', 'creation_timestamp', 'transcript', 'off_script_gold',
-    'proxy_path', 'subjects'
+    'proxy_path', 'subjects',
+    // VAULT-001 FIX: these were missing — frame analysis results were silently discarded
+    // Every frame analysis (Opus live + Haiku batch) burned API cost and wrote NOTHING.
+    // The idempotency cursor (visual_analyzed_at IS NULL) never cleared → infinite re-analysis.
+    'visual_description', 'visual_analyzed_at'
   ];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return;
@@ -2690,6 +3195,51 @@ function getFootageStats() {
   const byType   = _all(`SELECT shot_type, COUNT(*) as n FROM footage GROUP BY shot_type`);
   const byQuality = _all(`SELECT quality_flag, COUNT(*) as n FROM footage GROUP BY quality_flag`);
   return { total: total?.n || 0, by_shot_type: byType, by_quality: byQuality };
+}
+
+/**
+ * Returns footage records that have never been analyzed by frame-analysis-queue.
+ * Used by the batch backfill endpoint.
+ * @param {object} opts
+ * @param {string[]} [opts.shot_types]  — filter by shot_type (default: all)
+ * @param {number}   [opts.project_id] — filter to one project
+ * @param {number}   [opts.limit]      — cap result count (default: 100)
+ */
+function getUnanalyzedFootage({ shot_types, project_id, limit = 100 } = {}) {
+  let sql = `SELECT id, file_path, proxy_path, shot_type, original_filename, duration
+             FROM footage
+             WHERE visual_analyzed_at IS NULL
+               AND quality_flag != 'archived'`;
+  const params = [];
+  if (shot_types && shot_types.length > 0) {
+    sql += ` AND shot_type IN (${shot_types.map(() => '?').join(',')})`;
+    params.push(...shot_types);
+  }
+  if (project_id != null) {
+    sql += ` AND project_id = ?`;
+    params.push(project_id);
+  }
+  sql += ` ORDER BY ingested_at ASC LIMIT ?`;
+  params.push(limit);
+  return _all(sql, params);
+}
+
+/**
+ * Returns aggregate stats for the frame analysis batch progress panel.
+ */
+function getFrameAnalysisStats() {
+  const total     = (_get(`SELECT COUNT(*) AS n FROM footage WHERE quality_flag != 'archived'`))?.n || 0;
+  const analyzed  = (_get(`SELECT COUNT(*) AS n FROM footage WHERE visual_analyzed_at IS NOT NULL AND quality_flag != 'archived'`))?.n || 0;
+  const byType    = _all(`
+    SELECT shot_type,
+           COUNT(*) AS total,
+           SUM(CASE WHEN visual_analyzed_at IS NOT NULL THEN 1 ELSE 0 END) AS done
+    FROM footage
+    WHERE quality_flag != 'archived'
+    GROUP BY shot_type
+    ORDER BY total DESC
+  `);
+  return { total, analyzed, remaining: total - analyzed, by_shot_type: byType };
 }
 
 function footageFilePathExists(filePath) {
@@ -3476,45 +4026,60 @@ function insertSelect(section) {
     section.davinci_timeline_position ?? section.section_index ?? 0,
   ];
 
-  // Try full insert with assembly_note + assembly_mode first.
-  // Falls back to 9-column insert on older Electron DBs that haven't received
-  // the migration yet (column missing error) — migrations run on next full restart.
+  // Attempt 1: full 14-col insert (all fields including Threadline beat brief + critique)
   try {
-    const result = _run(
+    return _run(
+      `INSERT INTO selects
+         (project_id, script_section, section_index, takes, selected_takes,
+          winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position,
+          assembly_note, assembly_mode, beat_brief, critique_note, coverage_confidence)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [...baseParams,
+       section.assembly_note        || null, section.assembly_mode       || null,
+       section.beat_brief           || null, section.critique_note       || null,
+       section.coverage_confidence  || null]
+    ).lastInsertRowid;
+  } catch (e1) {
+    if (!e1.message?.includes('no column named')) throw e1;
+    // H3 fix: log the degraded write so beat_brief/critique_note/coverage_confidence
+    // drop is never silent — check both migration paths (bootstrapTenantTables + runMigrations)
+    try { require('./utils/logger').warn({ module: 'insertSelect', err: e1.message }, 'Degraded insert: missing column — beat_brief/critique_note/coverage_confidence will not be written. Check both DB migration paths.'); } catch (_) {}
+  }
+
+  // Attempt 2: 11-col insert without Threadline cols (older DB not yet migrated)
+  try {
+    return _run(
       `INSERT INTO selects
          (project_id, script_section, section_index, takes, selected_takes,
           winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position,
           assembly_note, assembly_mode)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [...baseParams, section.assembly_note || null, section.assembly_mode || null]
-    );
-    return result.lastInsertRowid;
-  } catch (err) {
-    if (!err.message || !err.message.includes('no column named assembly')) throw err;
-    // Column not yet migrated — force-add them now so subsequent inserts succeed
+    ).lastInsertRowid;
+  } catch (e2) {
+    if (!e2.message?.includes('no column named assembly')) throw e2;
+    // assembly_note cols also missing — force-add them for legacy Electron DBs
+    const _tdb = tenantContext.getDb() || db;
+    try { _tdb.exec(`ALTER TABLE selects ADD COLUMN assembly_note TEXT`); } catch (_) {}
+    try { _tdb.exec(`ALTER TABLE selects ADD COLUMN assembly_mode TEXT`); } catch (_) {}
     try {
-      const _tdb = tenantContext.getDb() || db;
-      try { _tdb.exec(`ALTER TABLE selects ADD COLUMN assembly_note TEXT`); } catch (_) {}
-      try { _tdb.exec(`ALTER TABLE selects ADD COLUMN assembly_mode TEXT`); } catch (_) {}
-      const result = _run(
+      return _run(
         `INSERT INTO selects
            (project_id, script_section, section_index, takes, selected_takes,
             winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position,
             assembly_note, assembly_mode)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [...baseParams, section.assembly_note || null, section.assembly_mode || null]
-      );
-      return result.lastInsertRowid;
-    } catch (err2) {
-      // Last resort: 9-column insert without the new fields
-      const result = _run(
+      ).lastInsertRowid;
+    } catch (_) {
+      // Last resort: 9-column insert
+      return _run(
         `INSERT INTO selects
            (project_id, script_section, section_index, takes, selected_takes,
             winner_footage_id, gold_nugget, fire_suggestion, davinci_timeline_position)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         baseParams
-      );
-      return result.lastInsertRowid;
+      ).lastInsertRowid;
     }
   }
 }
@@ -3525,11 +4090,14 @@ function getSelectsByProject(projectId) {
     [projectId]
   ).map(s => ({
     ...s,
-    takes:          JSON.parse(s.takes          || '[]'),
-    selected_takes: JSON.parse(s.selected_takes || '[]'),
-    gold_nugget:    !!s.gold_nugget,
-    assembly_note:  s.assembly_note  || null,
-    assembly_mode:  s.assembly_mode  || null
+    takes:               JSON.parse(s.takes          || '[]'),
+    selected_takes:      JSON.parse(s.selected_takes || '[]'),
+    gold_nugget:         !!s.gold_nugget,
+    assembly_note:       s.assembly_note       || null,
+    assembly_mode:       s.assembly_mode       || null,
+    beat_brief:          s.beat_brief          || null,
+    critique_note:       s.critique_note       || null,
+    coverage_confidence: s.coverage_confidence || null,
   }));
 }
 
@@ -3645,7 +4213,8 @@ function updateProjectPipr(projectId, fields) {
     'high_concept', 'estimated_duration_minutes', 'pipr_complete',
     'shoot_folder', 'folder_path', 'archive_state', 'archived_at', 'format'
   ];
-  const updates = Object.keys(fields).filter(k => allowed.includes(k));
+  // Filter by allowed list AND exclude undefined values (e.g. PIPR-3 passes undefined to skip write)
+  const updates = Object.keys(fields).filter(k => allowed.includes(k) && fields[k] !== undefined);
   if (!updates.length) return;
   const setClauses = updates.map(k => `${k} = ?`).join(', ');
   _run(`UPDATE projects SET ${setClauses} WHERE id = ?`, [...updates.map(k => fields[k]), projectId]);
@@ -3714,13 +4283,16 @@ function getApprovedWritrScript(projectId) {
 
 function _parseWritrScript(row) {
   if (!row) return null;
+  // H3: safe JSON parse — one corrupt/truncated column must never crash ALL script reads for a project
+  // Pattern already used at db.js:6108 — applied consistently here
+  const safe = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (_) { return d; } };
   return {
     ...row,
     approved:        !!row.approved,
-    beat_map_json:   row.beat_map_json   ? JSON.parse(row.beat_map_json)   : null,
-    hook_variations: row.hook_variations ? JSON.parse(row.hook_variations) : null,
-    anchor_moment:   row.anchor_moment   ? JSON.parse(row.anchor_moment)   : null,
-    missing_beats:   row.missing_beats   ? JSON.parse(row.missing_beats)   : null
+    beat_map_json:   safe(row.beat_map_json,   null),
+    hook_variations: safe(row.hook_variations, null),
+    anchor_moment:   safe(row.anchor_moment,   null),
+    missing_beats:   safe(row.missing_beats,   null),
   };
 }
 
@@ -4123,9 +4695,13 @@ function upsertShootTake(projectId, beatIndex, beatName, status, note) {
     [projectId, beatIndex]
   );
   if (existing) {
-    const newTake = status === 'needed'
-      ? existing.take_number              // reset doesn't increment
-      : (existing.take_number + 1);      // good/skip = new take attempt
+    // SD-2 fix: only increment take_number on 'good' — skip/undo do not count as a take attempt
+    // Previously incremented on both good AND skip, causing client/server disagreement
+    const newTake = status === 'good'
+      ? (existing.take_number + 1)        // new take successfully shot
+      : status === 'needed'
+        ? existing.take_number            // reset — preserve count
+        : existing.take_number;           // skip — no new take, count unchanged
     _run(
       `UPDATE shoot_takes SET status = ?, note = ?, take_number = ?,
          beat_name = ?, updated_at = CURRENT_TIMESTAMP
@@ -4147,6 +4723,52 @@ function upsertShootTake(projectId, beatIndex, beatName, status, note) {
 
 function resetShootTakes(projectId) {
   _run(`DELETE FROM shoot_takes WHERE project_id = ?`, [projectId]);
+}
+
+// ─────────────────────────────────────────────
+// TIKTOK SCRIPTS
+// ─────────────────────────────────────────────
+
+function getTikTokScripts(projectId) {
+  return _all(
+    'SELECT * FROM tiktok_scripts WHERE project_id = ? ORDER BY energy_order ASC, slot ASC',
+    [projectId]
+  );
+}
+
+function deleteTikTokScripts(projectId) {
+  _run('DELETE FROM tiktok_scripts WHERE project_id = ?', [projectId]);
+}
+
+function insertTikTokScript(data) {
+  const result = _run(
+    `INSERT INTO tiktok_scripts
+       (project_id, slot, format_type, energy_order, hook_variants, beat_spine,
+        closing_line, caption, on_screen_text, pillar, series_name)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      data.project_id,
+      data.slot,
+      data.format_type,
+      data.energy_order || 3,
+      JSON.stringify(data.hook_variants  || []),
+      JSON.stringify(data.beat_spine     || []),
+      data.closing_line   || null,
+      data.caption        || null,
+      JSON.stringify(data.on_screen_text || []),
+      data.pillar         || null,
+      data.series_name    || null,
+    ]
+  );
+  return _get('SELECT * FROM tiktok_scripts WHERE id = ?', [result.lastInsertRowid]);
+}
+
+function updateTikTokScriptStatus(id, status) {
+  const filmed_at = status === 'filmed' ? new Date().toISOString() : null;
+  _run(
+    'UPDATE tiktok_scripts SET status = ?, filmed_at = COALESCE(?, filmed_at) WHERE id = ?',
+    [status, filmed_at, id]
+  );
 }
 
 // ─────────────────────────────────────────────
@@ -4261,6 +4883,7 @@ function updateShowEpisode(id, data) {
     'character_moments', 'central_question_status', 'episode_summary', 'status',
     'project_id', 'episode_number', 'what_next_episode_should_address',
     'youtube_url', 'themes', 'audience_signals',
+    'pipeline_stage', 'outline_text', 'shot_list_json', 'interview_qs_json',
   ];
   const fields = Object.keys(data).filter(k => allowed.includes(k));
   if (!fields.length) return;
@@ -4827,9 +5450,10 @@ function getIdea(id) {
   return _get('SELECT * FROM ideas WHERE id = ?', [id]);
 }
 
-function getAllIdeas({ status, angle, search } = {}) {
+function getAllIdeas({ status, angle, search, includeDeleted = false } = {}) {
   let sql = 'SELECT * FROM ideas WHERE 1=1';
   const params = [];
+  if (!includeDeleted) sql += ' AND deleted_at IS NULL'; // SEEDR-04: soft-delete filter
   if (status) { sql += ' AND status = ?'; params.push(status); }
   if (angle)  { sql += ' AND angle = ?';  params.push(angle);  }
   if (search) {
@@ -4857,7 +5481,12 @@ function updateIdea(id, fields) {
 }
 
 function deleteIdea(id) {
-  _run('DELETE FROM ideas WHERE id = ?', [id]);
+  // SEEDR-04: soft-delete — set deleted_at instead of destroying the row
+  _run("UPDATE ideas SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", [id]);
+}
+
+function restoreIdea(id) {
+  _run('UPDATE ideas SET deleted_at = NULL WHERE id = ?', [id]);
 }
 
 function bulkCreateIdeas(ideas) {
@@ -5095,6 +5724,8 @@ module.exports = {
   purgeArchivedFootage,
   searchFootageByWhere,
   getFootageStats,
+  getUnanalyzedFootage,
+  getFrameAnalysisStats,
   footageFilePathExists,
   findDuplicateFootage,
   archiveFootage,
@@ -5193,6 +5824,11 @@ module.exports = {
   getShootTakes,
   upsertShootTake,
   resetShootTakes,
+  // TikTok Scripts
+  getTikTokScripts,
+  deleteTikTokScripts,
+  insertTikTokScript,
+  updateTikTokScriptStatus,
   // Beta Applications
   insertBetaApplication,
   getAllBetaApplications,
@@ -5288,6 +5924,7 @@ module.exports = {
   getAllIdeas,
   updateIdea,
   deleteIdea,
+  restoreIdea,
   bulkCreateIdeas,
   // MarkΩr
   insertWatermark,
@@ -5356,6 +5993,30 @@ module.exports = {
   createBrollCharacter,
   updateBrollCharacter,
   deleteBrollCharacter,
+  // Community Intelligence
+  upsertCommunityMember,
+  getCommunityMember,
+  getAllCommunityMembers,
+  getCommunityMemberCount,
+  upsertCommunitySnapshot,
+  getLatestCommunitySnapshot,
+  getCommunitySnapshots,
+  insertCommunityMemberHistory,
+  getCommunityMemberHistory,
+  detectScoreMovers,
+  upsertWarmLead,
+  getWarmLeads,
+  updateWarmLead,
+  insertCommunityEvent,
+  getRecentCommunityEvents,
+  getCommunityHealth,
+  // Course completion beacon (Pillar 2)
+  insertLessonCompletion,
+  getLessonCompletionStats,
+  getRecentLessonCompletions,
+  // Member navigation events (Pillar 2b) — library → community funnel
+  insertMemberEvent,
+  getLibraryFunnel,
 };
 
 // ─────────────────────────────────────────────
@@ -5973,5 +6634,296 @@ function unpublishBlogPost(id) {
 
 function deleteBlogPost(id) {
   _run('DELETE FROM blog_posts WHERE id = ?', [id]);
+}
+
+// ─────────────────────────────────────────────
+// Community Intelligence — AudiencΩr (Session 81)
+// ─────────────────────────────────────────────
+
+function upsertCommunityMember(m) {
+  _run(`
+    INSERT INTO community_members
+      (id, kajabi_user_id, first_name, last_name, email, role, tier,
+       joined_at, last_active_at, progress_score, posts_count, comments_count,
+       posts_30d, comments_30d, onboarding_status, tags_json, last_synced_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      kajabi_user_id    = excluded.kajabi_user_id,
+      first_name        = excluded.first_name,
+      last_name         = excluded.last_name,
+      email             = excluded.email,
+      role              = excluded.role,
+      tier              = excluded.tier,
+      joined_at         = excluded.joined_at,
+      last_active_at    = excluded.last_active_at,
+      progress_score    = excluded.progress_score,
+      posts_count       = excluded.posts_count,
+      comments_count    = excluded.comments_count,
+      posts_30d         = excluded.posts_30d,
+      comments_30d      = excluded.comments_30d,
+      onboarding_status = excluded.onboarding_status,
+      tags_json         = excluded.tags_json,
+      last_synced_at    = CURRENT_TIMESTAMP
+  `, [
+    m.id, m.kajabi_user_id, m.first_name, m.last_name, m.email,
+    m.role || 'member', m.tier || 'greenhouse',
+    m.joined_at, m.last_active_at,
+    m.progress_score || 0, m.posts_count || 0, m.comments_count || 0,
+    m.posts_30d || 0, m.comments_30d || 0,
+    m.onboarding_status || 'not_started',
+    m.tags_json || null,
+  ]);
+}
+
+function getCommunityMember(id) {
+  return _get('SELECT * FROM community_members WHERE id = ?', [id]);
+}
+
+function getAllCommunityMembers({ tier, min_score, max_score, limit = 500, offset = 0 } = {}) {
+  let sql = 'SELECT * FROM community_members WHERE 1=1';
+  const params = [];
+  if (tier)       { sql += ' AND tier = ?';            params.push(tier); }
+  if (min_score != null) { sql += ' AND progress_score >= ?'; params.push(min_score); }
+  if (max_score != null) { sql += ' AND progress_score <= ?'; params.push(max_score); }
+  sql += ' ORDER BY joined_at DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+  return _all(sql, params);
+}
+
+function getCommunityMemberCount() {
+  const total      = _get('SELECT COUNT(*) AS n FROM community_members')?.n || 0;
+  const greenhouse = _get("SELECT COUNT(*) AS n FROM community_members WHERE tier = 'greenhouse'")?.n || 0;
+  const garden     = _get("SELECT COUNT(*) AS n FROM community_members WHERE tier = 'garden'")?.n || 0;
+  const founding50 = _get("SELECT COUNT(*) AS n FROM community_members WHERE tier = 'founding50'")?.n || 0;
+  const lurkers    = _get('SELECT COUNT(*) AS n FROM community_members WHERE progress_score <= 25')?.n || 0;
+  const engaged    = _get('SELECT COUNT(*) AS n FROM community_members WHERE progress_score > 25 AND progress_score < 100')?.n || 0;
+  const full       = _get('SELECT COUNT(*) AS n FROM community_members WHERE progress_score = 100')?.n || 0;
+  return { total, greenhouse, garden, founding50, lurkers, engaged, fully_onboarded: full };
+}
+
+function upsertCommunitySnapshot(s) {
+  _run(`
+    INSERT INTO community_snapshots
+      (snapshot_date, total_members, greenhouse_count, garden_count, founding50_count,
+       new_members_7d, active_users_7d, challenge_completions, lurker_count, engaged_count, fully_onboarded)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(snapshot_date) DO UPDATE SET
+      total_members         = excluded.total_members,
+      greenhouse_count      = excluded.greenhouse_count,
+      garden_count          = excluded.garden_count,
+      founding50_count      = excluded.founding50_count,
+      new_members_7d        = excluded.new_members_7d,
+      active_users_7d       = excluded.active_users_7d,
+      challenge_completions = excluded.challenge_completions,
+      lurker_count          = excluded.lurker_count,
+      engaged_count         = excluded.engaged_count,
+      fully_onboarded       = excluded.fully_onboarded
+  `, [
+    s.snapshot_date, s.total_members, s.greenhouse_count, s.garden_count, s.founding50_count,
+    s.new_members_7d || 0, s.active_users_7d || 0, s.challenge_completions || 0,
+    s.lurker_count || 0, s.engaged_count || 0, s.fully_onboarded || 0,
+  ]);
+}
+
+function getLatestCommunitySnapshot() {
+  return _get('SELECT * FROM community_snapshots ORDER BY snapshot_date DESC LIMIT 1');
+}
+
+function getCommunitySnapshots(limit = 12) {
+  return _all('SELECT * FROM community_snapshots ORDER BY snapshot_date DESC LIMIT ?', [limit]);
+}
+
+function insertCommunityMemberHistory(h) {
+  // AUD-3 fix: INSERT OR REPLACE — re-running a sync on the same date was creating duplicate
+  // rows that made detectScoreMovers() self-cartesian-join and produce garbage results
+  _run(`
+    INSERT OR REPLACE INTO community_member_history
+      (member_id, kajabi_user_id, snapshot_date, progress_score, posts_count, comments_count, last_active_at, tags_json)
+    VALUES (?,?,?,?,?,?,?,?)
+  `, [h.member_id, h.kajabi_user_id, h.snapshot_date, h.progress_score, h.posts_count,
+      h.comments_count, h.last_active_at, h.tags_json || null]);
+}
+
+function getCommunityMemberHistory(member_id, limit = 12) {
+  return _all(`
+    SELECT * FROM community_member_history WHERE member_id = ?
+    ORDER BY snapshot_date DESC LIMIT ?
+  `, [member_id, limit]);
+}
+
+/**
+ * Detect members whose progress_score changed between the last two snapshots.
+ * Returns members who moved upward (lurker graduations) and downward (relapses).
+ */
+function detectScoreMovers() {
+  const rows = _all(`
+    SELECT
+      a.member_id,
+      a.progress_score AS score_now,
+      b.progress_score AS score_prev,
+      a.progress_score - b.progress_score AS delta,
+      cm.first_name, cm.last_name, cm.email, cm.tier
+    FROM community_member_history a
+    JOIN community_member_history b ON a.member_id = b.member_id
+    JOIN community_members cm ON a.member_id = cm.id
+    WHERE a.snapshot_date = (SELECT MAX(snapshot_date) FROM community_member_history)
+      AND b.snapshot_date = (
+        SELECT MAX(snapshot_date) FROM community_member_history
+        WHERE snapshot_date < (SELECT MAX(snapshot_date) FROM community_member_history)
+      )
+      AND a.progress_score != b.progress_score
+    ORDER BY delta DESC
+  `);
+  return rows;
+}
+
+function upsertWarmLead(w) {
+  _run(`
+    INSERT INTO warm_leads
+      (member_id, kajabi_user_id, name, email, signals_json, dm_draft, dm_status)
+    VALUES (?,?,?,?,?,?,?)
+    ON CONFLICT(member_id) DO UPDATE SET
+      signals_json = excluded.signals_json,
+      dm_draft     = COALESCE(excluded.dm_draft, dm_draft),
+      updated_at   = CURRENT_TIMESTAMP
+  `, [w.member_id, w.kajabi_user_id, w.name, w.email,
+      JSON.stringify(w.signals || []), w.dm_draft || null, w.dm_status || 'draft']);
+}
+
+function getWarmLeads({ status } = {}) {
+  let sql = 'SELECT * FROM warm_leads WHERE 1=1';
+  const params = [];
+  if (status) { sql += ' AND dm_status = ?'; params.push(status); }
+  sql += ' ORDER BY created_at DESC';
+  return _all(sql, params);
+}
+
+function updateWarmLead(id, updates) {
+  const fields = ['dm_draft', 'dm_status', 'dm_sent_at', 'outcome', 'outcome_at'];
+  const sets = []; const vals = [];
+  fields.forEach(f => { if (updates[f] !== undefined) { sets.push(`${f} = ?`); vals.push(updates[f]); } });
+  if (!sets.length) return;
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  vals.push(id);
+  _run(`UPDATE warm_leads SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+function insertCommunityEvent(e) {
+  return _run(`
+    INSERT INTO community_events (event_type, member_id, kajabi_user_id, member_name, metadata_json)
+    VALUES (?,?,?,?,?)
+  `, [e.event_type, e.member_id || null, e.kajabi_user_id || null,
+      e.member_name || null, e.metadata ? JSON.stringify(e.metadata) : null]);
+}
+
+function getRecentCommunityEvents(limit = 50) {
+  return _all('SELECT * FROM community_events ORDER BY created_at DESC LIMIT ?', [limit]);
+}
+
+// ── Course completion beacon (Pillar 2) ──────────────────────────────────────
+// Insert a lesson event from the Kajabi beacon. Deduped: the same
+// (contact_id, post_id, event) within the last hour is ignored so page reloads
+// don't spam the table. Returns { inserted: bool, lastInsertRowid? }.
+function insertLessonCompletion(e) {
+  const dup = _get(
+    `SELECT 1 FROM lesson_completions
+      WHERE IFNULL(contact_id,'') = IFNULL(?, '')
+        AND IFNULL(post_id,'')    = IFNULL(?, '')
+        AND event = ?
+        AND created_at > datetime('now','-1 hour') LIMIT 1`,
+    [e.contact_id || null, e.post_id || null, e.event]
+  );
+  if (dup) return { inserted: false };
+  const r = _run(
+    `INSERT INTO lesson_completions
+       (contact_id, site_user_id, member_type, product_slug, category_id, post_id, lesson_title, event, progress, url, ua_short)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    [e.contact_id || null, e.site_user_id || null, e.member_type || null,
+     e.product_slug || null, e.category_id || null, e.post_id || null,
+     e.lesson_title || null, e.event, (e.progress != null ? e.progress : null),
+     e.url || null, e.ua_short || null]
+  );
+  return { inserted: true, lastInsertRowid: r.lastInsertRowid };
+}
+
+// Analytics for NorthΩr / MissionΩr: totals, per-lesson funnel, per-member rollup, recent.
+function getLessonCompletionStats() {
+  const totals = _get(`
+    SELECT COUNT(*) AS events,
+           COUNT(DISTINCT contact_id) AS members,
+           COUNT(DISTINCT post_id)    AS lessons_touched,
+           COUNT(CASE WHEN event='mark_complete' THEN 1 END) AS completions,
+           COUNT(CASE WHEN event='mark_complete' AND created_at >= datetime('now','-7 days') THEN 1 END) AS completions_7d
+    FROM lesson_completions`);
+  const byLesson = _all(`
+    SELECT product_slug, post_id,
+           MAX(lesson_title) AS lesson_title,
+           COUNT(DISTINCT contact_id) AS uniq_members,
+           COUNT(CASE WHEN event='lesson_view'   THEN 1 END) AS views,
+           COUNT(CASE WHEN event='mark_complete' THEN 1 END) AS completes,
+           COUNT(CASE WHEN event='video_end'     THEN 1 END) AS video_ends,
+           MAX(created_at) AS last_seen
+    FROM lesson_completions
+    GROUP BY product_slug, post_id
+    ORDER BY completes DESC, views DESC`);
+  const byMember = _all(`
+    SELECT contact_id, site_user_id,
+           COUNT(CASE WHEN event='mark_complete' THEN 1 END) AS lessons_completed,
+           COUNT(DISTINCT post_id) AS lessons_touched,
+           MAX(created_at) AS last_seen
+    FROM lesson_completions
+    WHERE contact_id IS NOT NULL
+    GROUP BY contact_id
+    ORDER BY lessons_completed DESC, last_seen DESC`);
+  return { totals, byLesson, byMember };
+}
+
+function getRecentLessonCompletions(limit = 50) {
+  return _all('SELECT * FROM lesson_completions ORDER BY created_at DESC LIMIT ?', [limit]);
+}
+
+// ── Member navigation events (Pillar 2b) — library → community front-door funnel ──
+// Deduped: same (contact_id, event, surface) within the last hour is ignored.
+function insertMemberEvent(e) {
+  const dup = _get(
+    `SELECT 1 FROM member_events
+      WHERE IFNULL(contact_id,'') = IFNULL(?, '') AND event = ? AND IFNULL(surface,'') = IFNULL(?, '')
+        AND created_at > datetime('now','-1 hour') LIMIT 1`,
+    [e.contact_id || null, e.event, e.surface || null]
+  );
+  if (dup) return { inserted: false };
+  const r = _run(
+    `INSERT INTO member_events (contact_id, site_user_id, member_type, surface, event, tier, url, ua_short)
+     VALUES (?,?,?,?,?,?,?,?)`,
+    [e.contact_id || null, e.site_user_id || null, e.member_type || null,
+     e.surface || null, e.event, e.tier || null, e.url || null, e.ua_short || null]
+  );
+  return { inserted: true, lastInsertRowid: r.lastInsertRowid };
+}
+
+// Library → community funnel: distinct members who landed, entered, and bookmarked — overall + by tier.
+function getLibraryFunnel() {
+  const totals = _get(`
+    SELECT COUNT(DISTINCT CASE WHEN event='library_view'   THEN contact_id END) AS landed,
+           COUNT(DISTINCT CASE WHEN event='enter_click'    THEN contact_id END) AS entered,
+           COUNT(DISTINCT CASE WHEN event='bookmark_click' THEN contact_id END) AS bookmarked,
+           COUNT(DISTINCT CASE WHEN event='enter_click' AND created_at >= datetime('now','-7 days') THEN contact_id END) AS entered_7d
+    FROM member_events WHERE surface='library'`);
+  const byTier = _all(`
+    SELECT IFNULL(tier,'unknown') AS tier,
+           COUNT(DISTINCT CASE WHEN event='library_view' THEN contact_id END) AS landed,
+           COUNT(DISTINCT CASE WHEN event='enter_click'  THEN contact_id END) AS entered
+    FROM member_events WHERE surface='library'
+    GROUP BY tier ORDER BY landed DESC`);
+  return { totals, byTier };
+}
+
+function getCommunityHealth() {
+  const counts  = getCommunityMemberCount();
+  const snap    = getLatestCommunitySnapshot();
+  const events  = getRecentCommunityEvents(10);
+  const leads   = getWarmLeads({ status: 'draft' });
+  const snaps   = getCommunitySnapshots(8);
+  return { counts, latest_snapshot: snap, recent_events: events, pending_leads: leads.length, snapshots: snaps };
 }
 
