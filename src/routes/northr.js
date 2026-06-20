@@ -483,18 +483,31 @@ router.get('/growth-plan', (req, res) => {
 // no internal key needed for the dashboard's own backend.
 router.get('/course-completions', async (req, res) => {
   try {
-    const stats  = db.getLessonCompletionStats();
-    const recent = db.getRecentLessonCompletions(20);
-
-    // The gate funnel now lives on the always-on land box — the Kajabi beacon posts
-    // there directly (no tunnel into this machine). Pull it; if land is unreachable,
-    // fall back to whatever this box collected locally so the dashboard never breaks.
+    // Both the lesson completions AND the front-door funnel now post to the
+    // always-on land box (the Kajabi beacon points there — no tunnel into this
+    // machine). Pull each; if land is unreachable, fall back to whatever this
+    // box happened to collect locally so the dashboard never goes blank.
     const LAND_URL = process.env.LAND_URL          || 'https://7kinhomestead.land';
     const LAND_KEY = process.env.LAND_INTERNAL_KEY || '';
+    const { default: fetch } = await import('node-fetch');
+
+    let completions, completions_source = 'land';
+    try {
+      if (!LAND_KEY) throw new Error('LAND_INTERNAL_KEY not set');
+      const r = await fetch(`${LAND_URL}/api/kajabi-track/admin`, {
+        headers: { 'x-internal-key': LAND_KEY },
+        signal:  AbortSignal.timeout(5000),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      completions = await r.json();              // { totals, byLesson, byMember, recent }
+    } catch (e) {
+      completions = { ...db.getLessonCompletionStats(), recent: db.getRecentLessonCompletions(20) };
+      completions_source = 'local';
+    }
+
     let funnel, funnel_source = 'land';
     try {
       if (!LAND_KEY) throw new Error('LAND_INTERNAL_KEY not set');
-      const { default: fetch } = await import('node-fetch');
       const r = await fetch(`${LAND_URL}/api/kajabi-track/funnel`, {
         headers: { 'x-internal-key': LAND_KEY },
         signal:  AbortSignal.timeout(5000),
@@ -506,7 +519,7 @@ router.get('/course-completions', async (req, res) => {
       funnel_source = 'local';
     }
 
-    res.json({ ...stats, recent, funnel, funnel_source });
+    res.json({ ...completions, funnel, funnel_source, completions_source });
   } catch (err) {
     console.error('[northr/course-completions]', err);
     res.status(500).json({ error: err.message });
