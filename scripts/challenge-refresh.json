@@ -1,0 +1,60 @@
+{
+  "challenges": [
+    {
+      "id": 1,
+      "position": 1,
+      "points": 25,
+      "description": "Go to war with one bill this week — but keep your receipts to yourself. We're not after proof you paid something; your finances are your business. We're after the better thing you'll do INSTEAD. Pick a recurring cost you could live without (gym, streaming, lawn service, meal kit, water delivery), then find or make the replacement and snap a picture of it. What bill are you replacing, and what's taking its place? A dollar you stop needing is one you never have to go earn again — and the thing you do instead is usually better anyway.",
+      "campfire_copy": "🐉 This week: Kill One Bill. Pick a recurring cost you could live without — then show us the better thing you'll do instead (the trail instead of the gym, the rain barrel instead of the water delivery). Keep your finances private; we just want the replacement. Log it in The Orchard for the Kill the Bill badge. 👇"
+    },
+    {
+      "id": 2,
+      "position": 2,
+      "points": 25,
+      "description": "Before you buy a single thing this week, walk your junk pile first. That scrap wood, the busted pallet, the bucket with the cracked lid, the parts bin you keep meaning to sort — turn something you were about to throw away into something useful. A fix, a tool, a feeder, a planter, whatever your place needs. Post the before-and-after: what'd you make, and what was it headed for — the dump or the burn pile? Your junk pile is a hardware store you already paid for.",
+      "campfire_copy": "♻️ This week: Shop the Junk Pile First. Before you buy anything, make something useful out of what you were about to toss. Post the before-and-after for the Junk Pile Wizard badge. 👇"
+    },
+    {
+      "id": 3,
+      "position": 3,
+      "points": 25,
+      "description": "You know the one — the gate that won't latch, the drip under the sink, the gap in the chicken wire you keep walking past saying 'I'll get to that.' This week, get to it. Fix one nagging thing and show us the before and the after. People don't quit this life because the work's too hard; they quit when the sweat stops showing up as something real. Fix that gate and the gate works — every time you walk through it. That's a return you can feel.",
+      "campfire_copy": "🔧 This week: Fix the Thing That's Been Nagging You. One nagging repair, before-and-after. Earn The Fixer badge. 👇"
+    },
+    {
+      "id": 4,
+      "position": 4,
+      "points": 50,
+      "description": "Do one thing this week that connects you to somebody else. Lend a tool. Trade eggs for a hand on a project. Give away your surplus. Or swallow your pride and ask a neighbor for help with something you can't do alone — any direction counts. Who'd you connect with, and what moved between you? A fortress only takes from itself; a node trades a surplus, and that's what keeps you plugged in and supplied when you need it. Three neighbors who show up beat a town of three thousand who don't.",
+      "campfire_copy": "🤝 This week: Be a Node. Lend, trade, give, or ask — connect with one neighbor. Tell us what moved between you for the Good Neighbor badge. 👇"
+    },
+    {
+      "id": 5,
+      "position": 5,
+      "points": 50,
+      "description": "You've figured something out the hard way. This week, turn it into a step somebody else can follow. Pick one thing you know how to do — doesn't have to be fancy — and lay it out step by step. The how, not the highlight reel. A repair, a recipe, a system, a shortcut. Photos help; imperfect is fine. What'd you teach, and what wrong turn does it save the next person? The teaching IS the product around here — your mistakes are somebody else's shortcut, and nobody should pay your tuition twice.",
+      "campfire_copy": "📋 This week: Show the How. Teach one thing, step by step — the how, not the highlight reel. Earn The Teacher badge. 👇"
+    },
+    {
+      "id": 6,
+      "position": 6,
+      "points": 25,
+      "description": "This one's the shortest to do and the hardest to mean. What are you actually building toward — not what you're running FROM, but what you're running TO? Write it down this week. One sentence is plenty. Post it where we can all see it. What's the life on the other side of all this work? Pain gets you off the couch, but it won't keep you in the field when it's cold and muddy and nothing's going right. Only a thing you're moving toward does that. Say it out loud, and let us hold you to it.",
+      "campfire_copy": "🎯 This week: Name Your Game. One sentence — what are you building toward? Say it out loud and let us hold you to it. Earn the Name Your Game badge. 👇"
+    },
+    {
+      "id": 7,
+      "position": 7,
+      "points": 25,
+      "description": "Do one thing this week that leaves your patch better than you found it. Start a compost pile. Plant something. Mulch a bed. Catch some rainwater. Throw down a cover crop. Anything that builds the soil, the water, or the place up instead of drawing it down. Show us what you put back, and tell us what it's going to give back a season or two from now. Just about everything in this world mines what it uses — this is the one kind of growth that compounds in YOUR favor.",
+      "campfire_copy": "🌱 This week: Leave It Richer. Compost, plant, mulch, catch rainwater — leave your patch better than you found it. Earn the Leave It Richer badge. 👇"
+    },
+    {
+      "id": 8,
+      "position": 8,
+      "points": 50,
+      "description": "Everybody's got the one thing they'd trade anywhere. This week, make it sharper. Welding. Canning. Wiring. Small engines. Butchering. Whatever's YOURS — put an honest hour into leveling it up a notch. A tutorial, a practice run, a harder version of something you can already do. What'd you work on, and what can you do now that you couldn't last week? Be the T: broad enough across the basics to keep yourself safe, deep enough on one thing to carry it anywhere and trade it for whatever you need.",
+      "campfire_copy": "🛠️ This week: Sharpen Your One Skill. Put an honest hour into the thing you'd trade anywhere. Earn the Sharpen a Skill badge. 👇"
+    }
+  ]
+}
