@@ -363,7 +363,7 @@ async function kajabiAllContacts() {
   let pageNum = 1;
   let hasMore = true;
   while (hasMore) {
-    const path = `/contacts?page[number]=${pageNum}`;
+    const path = `/contacts?page[size]=100&page[number]=${pageNum}`;
     let data;
     try {
       data = await kajabi('GET', path);
@@ -380,6 +380,43 @@ async function kajabiAllContacts() {
     if (hasMore) await new Promise(r => setTimeout(r, 100));
   }
   return contacts;
+}
+
+// ─── Email → contact index (fallback for Kajabi's broken filter[email]) ──────
+// Kajabi's `filter[email]` has been intermittently IGNORED — it returns the newest
+// page of contacts regardless of the email asked, so a non-newest member's contact
+// never appears in the filtered result and member-check can't find them. Paginating
+// the full contact list on every login would hammer Kajabi, so we keep a short-lived
+// in-memory index (email → full contact, tags inline) built from one bulk pass and
+// shared across all logins. A single in-flight refresh promise prevents a login wave
+// from stampeding Kajabi. Auto-rebuilds when stale or empty; survives the filter
+// healing on its own (member-check tries the live filter first).
+let _contactIndex        = { at: 0, byEmail: new Map() };
+let _contactIndexRefresh = null;
+
+async function buildContactIndex() {
+  const all     = await kajabiAllContacts();
+  const byEmail = new Map();
+  for (const c of all) {
+    const e = String(c?.attributes?.email || '').toLowerCase().trim();
+    if (e) byEmail.set(e, c);
+  }
+  _contactIndex = { at: Date.now(), byEmail };
+  logger.info({ contacts: byEmail.size }, '[member-check] rebuilt contact index');
+  return _contactIndex;
+}
+
+async function findContactByEmailCached(email, { maxAgeMs = 5 * 60 * 1000 } = {}) {
+  const fresh = _contactIndex.byEmail.size > 0 && (Date.now() - _contactIndex.at) < maxAgeMs;
+  if (!fresh) {
+    if (!_contactIndexRefresh) {
+      _contactIndexRefresh = buildContactIndex().finally(() => { _contactIndexRefresh = null; });
+    }
+    try { await _contactIndexRefresh; } catch (e) {
+      logger.warn({ err: e.message }, '[member-check] contact index rebuild failed');
+    }
+  }
+  return _contactIndex.byEmail.get(email) || null;
 }
 
 // ─── Core bulk-sync logic (also called by morning scheduler) ─────────────────
@@ -479,18 +516,21 @@ router.post('/member-check', async (req, res) => {
     const data     = await kajabi('GET', `/contacts?filter[email]=${encodeURIComponent(email)}`);
     const contacts = data?.data || [];
 
-    if (!contacts.length) {
-      return res.json({ active: false, reason: 'not_found' });
-    }
-
     // NEVER blindly trust contacts[0]. If Kajabi ignores filter[email] (it has been
     // returning ALL contacts, newest-first), contacts[0] is just the newest contact and
     // maps EVERY email to one account — a catastrophic wrong-account bug. Require the
     // returned contact's email to actually match what we asked for.
     const want     = String(email).toLowerCase().trim();
-    const contact  = contacts.find(c => String(c?.attributes?.email || '').toLowerCase().trim() === want);
+    let   contact  = contacts.find(c => String(c?.attributes?.email || '').toLowerCase().trim() === want);
+
+    // Filter didn't surface our contact (Kajabi currently ignores filter[email] and
+    // returns the newest page). Fall back to the cached full-contact index, which
+    // finds the contact wherever it is in the list.
     if (!contact) {
-      logger.warn({ email, returned: contacts.length }, '[member-check] filter[email] returned no matching contact');
+      logger.warn({ email, returned: contacts.length }, '[member-check] filter[email] miss — using contact index');
+      contact = await findContactByEmailCached(want);
+    }
+    if (!contact) {
       return res.json({ active: false, reason: 'not_found' });
     }
     const tagRefs  = contact?.relationships?.tags?.data || [];
