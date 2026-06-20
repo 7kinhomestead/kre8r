@@ -386,8 +386,15 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/community/sync')) return next();
   if (req.path.startsWith('/api/community/tier-correct')) return next();
   if (req.path.startsWith('/api/community/events') && req.method === 'POST') return next();
+  // Course completion beacon (Pillar 2) — public POST from Kajabi lesson pages (no session);
+  // the route sanitizes its own input. Reads (admin/health) require the internal key.
+  if ((req.path === '/api/kajabi-track' || req.path === '/api/kajabi-track/') && req.method === 'POST') return next();
+  if (req.path.startsWith('/api/kajabi-track/') &&
+      req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY) return next();
   // HarvestΩr membership verification — internal key auth handled inside the route
   if (req.path === '/api/kajabi/member-check') return next();
+  // Owned-membership-mirror rebuild — internal key auth handled inside the route
+  if (req.path === '/api/kajabi/refresh-member-mirror') return next();
   // AffiliateΩr Electron sync — internal key auth handled inside the route
   if (req.path === '/api/affiliator/sync-from-electron') return next();
   if (req.path === '/api/affiliator/gear-export') return next();
@@ -647,12 +654,13 @@ app.use('/api/voice-library', require('./src/routes/voice-library'));
 app.use('/api/mailor',       require('./src/routes/mailor'));
 app.use('/api/sequences',    require('./src/routes/sequence-builder'));
 app.use('/api/kajabi',       require('./src/routes/kajabi'));
+app.use('/api/kajabi-track', require('./src/routes/kajabi-track'));  // course completion beacon (Pillar 2)
 app.use('/api/mailerlite',   require('./src/routes/mailerlite'));
 app.use('/api/id8r',         require('./src/routes/id8r'));
 app.use('/api/playwright',   require('./src/routes/playwright'));
 const mirrRouter = require('./src/routes/mirrr');
 app.use('/api/mirrr',        mirrRouter);          // MirrΩr (new canonical)
-app.use('/api/analytr',      mirrRouter);           // legacy alias — keep so old bookmarks don't 404
+app.use('/api/analytr',      mirrRouter);           // legacy alias — keep so old bookmarks don't 404 (src/routes/analytr.js was deleted; mirrr.js is the only implementation)
 app.use('/api/soul-buildr',  require('./src/routes/soul-buildr'));
 app.use('/api/project-vault', require('./src/routes/project-vault'));
 app.use('/api/northr',        require('./src/routes/northr'));

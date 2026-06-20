@@ -18,7 +18,7 @@
 const express = require('express');
 const router  = express.Router();
 const logger  = require('../utils/logger');
-const { getDb } = require('../db');
+const db      = require('../db');   // exposes .prepare / .transaction (tenant-aware)
 
 const KAJABI_API  = 'https://api.kajabi.com/v1';
 const TOKEN_URL   = 'https://api.kajabi.com/v1/oauth/token';
@@ -448,7 +448,7 @@ async function computeTier(contact) {
 function upsertKajabiMember(email, contactId, tier) {
   if (!email || !contactId || !tier) return;
   try {
-    getDb().prepare(
+    db.prepare(
       `INSERT INTO kajabi_members (email, contact_id, tier, synced_at)
        VALUES (?, ?, ?, datetime('now'))
        ON CONFLICT(email) DO UPDATE SET contact_id = excluded.contact_id,
@@ -465,7 +465,6 @@ function upsertKajabiMember(email, contactId, tier) {
 // runBulkSync.
 async function refreshKajabiMemberTable(contacts) {
   const all = contacts || await kajabiAllContacts();
-  const db  = getDb();
   let wrote = 0;
   const stmt = db.prepare(
     `INSERT INTO kajabi_members (email, contact_id, tier, synced_at)
@@ -601,7 +600,7 @@ router.post('/member-check', async (req, res) => {
   try {
     // 1. OWNED MIRROR FIRST — login reads our db, not Kajabi live. Refreshed daily
     //    by runBulkSync; this is the path that makes login immune to Kajabi outages.
-    const cached = getDb().prepare(
+    const cached = db.prepare(
       `SELECT contact_id, tier FROM kajabi_members WHERE email = ?`
     ).get(want);
     if (cached) {
