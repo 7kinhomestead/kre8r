@@ -1,435 +1,150 @@
 # Kre8Ωr — Claude Code Session Context
 
 ## What This Project Is
-Kre8Ωr is a complete AI-native content production OS for solo creators. Built
-for 7 Kin Homestead — an off-grid homesteading creator with 725k TikTok, 54k YouTube,
-80k Lemon8, and a paid Kajabi community called ROCK RICH. Built in ~3 weeks with
-Claude Code. No prior coding experience.
-
-The system eliminates the administrative layer between having an idea and that idea
-reaching an audience. Every feature must protect the creator's creative thread and
-reduce decisions, never add them.
+AI-native content production OS for solo creators. Built for Jason Rutland — 7 Kin Homestead
+(725k TikTok, 54k YouTube, 80k Lemon8, ROCK RICH Kajabi community). Built with Claude Code,
+no prior coding experience. Eliminates the admin layer between idea and audience.
 
 ## Prime Directive
 **Never lose creative state. Never break the creative thread without a recovery path.**
-
-A creator's momentum, context, and direction are the most valuable things in the
-system. Code, data, and features exist to protect them. When anything fails — API
-call, crash, network drop, wrong button — the creator should be able to pick up
-exactly where they were, with everything intact.
-
-Ask of every feature and every failure mode: *if this goes wrong right now, what
-does the creator lose, and how do they get it back?* If the answer is "they lose
-everything and start over" — redesign it.
+Ask of every feature: *if this goes wrong right now, what does the creator lose, and how do they get it back?*
 
 ## Secondary Directive
-Does this feature reduce the number of decisions the creator has to make, or does it
-add one? If it adds one — redesign it.
+Does this feature reduce decisions or add one? If it adds one — redesign it.
 
-Decision count matters, but it is downstream of the Prime Directive. A feature that
-adds zero decisions but silently destroys creative state on failure violates the
-Prime Directive. Protect the thread first. Minimize decisions second.
-
-## The Engine vs Soul Principle
-Engine (pipeline logic) is always separate from Soul (creator-profile.json).
-creator-profile.json is the injectable "soul" of any instance — voice profiles,
-community tiers, content angles, platform data, vault paths. This is the foundation
-of future multi-tenancy. Never hardcode creator-specific data anywhere in the engine.
+## Engine vs Soul
+Engine (pipeline logic) always separate from Soul (creator-profile.json). Never hardcode
+creator-specific data. Foundation of future multi-tenancy.
 
 ## Tech Stack
-- Runtime: Node.js 18+
-- Server: Express.js on port 3000
-- Database: SQLite via better-sqlite3 (synchronous, WAL mode, file-based)
-- AI: Anthropic Claude API (claude-sonnet-4-6), shared caller in src/utils/claude.js
-- Video processing: ffmpeg + ffprobe via ffmpeg-static + ffprobe-static (bundled cross-platform binaries)
-  FFMPEG_PATH / FFPROBE_PATH env vars bootstrapped in server.js — set before any route loads
-- Transcription: Whisper (local Python)
-- DaVinci integration: Python scripting API (port 9237, Local mode, Windows only)
-- Music: Suno API (when configured) or Prompt Mode
-- Social publishing: Meta Graph API (Instagram/Facebook), YouTube Data API v3
-- ngrok: video/image tunnel for Meta API uploads (NGROK_AUTHTOKEN in .env, required for Instagram + FB image posts)
-- Email: MailerLite v2 API (src/routes/mailerlite.js) — broadcast send + scheduling
-- Audience: Kajabi Public API (OAuth2 client_credentials)
-- Auth: express-session + better-sqlite3 session store, bcrypt password hashing
-- Frontend: Vanilla HTML/CSS/JS, dark theme, teal (#14b8a6) accents
-- Desktop: Electron (electron/main.js) — wraps Express server, 5-min rolling SQLite backup
-- Process manager: PM2 (local dev / DigitalOcean)
+- Node.js 18+ / Express on port 3000 / SQLite via better-sqlite3 (WAL mode)
+- AI: Anthropic Claude API — shared caller `src/utils/claude.js` (use this everywhere)
+- Video: ffmpeg/ffprobe via ffmpeg-static (FFMPEG_PATH/FFPROBE_PATH set in server.js before routes load)
+- Transcription: Whisper (local Python). DaVinci: Python scripting API (port 9237, Windows only)
+- Social: Meta Graph API, YouTube Data API v3, TikTok (pending review)
+- Email: MailerLite v2. Audience: Kajabi Public API + Kajabi MCP (Claude Desktop)
+- Auth: express-session + better-sqlite3 store, bcrypt. Frontend: Vanilla HTML/CSS/JS, teal accents
+- Desktop: Electron (electron/main.js) wraps Express, 5-min rolling SQLite backup
+- ngrok: required for Instagram/Facebook image uploads (NGROK_AUTHTOKEN in .env)
 
 ## CRITICAL DATABASE RULE
-Kre8Ωr uses better-sqlite3 — synchronous, file-based SQLite with WAL mode.
-NEVER edit the .db file directly with sqlite3 CLI or any external tool while
-the server is running. All reads and writes MUST go through the live server API.
-Direct edits to the file while the server holds a WAL lock can corrupt data.
+better-sqlite3 + WAL mode. NEVER edit .db directly while server runs — WAL lock = corruption.
+All reads/writes through live server API. Electron DB: `AppData\Roaming\kre8r\kre8r.db` (NOT database/kre8r.db).
+**New columns MUST go in BOTH `bootstrapTenantTables()` (tenant DBs) AND `runMigrations()` (Jason's AppData DB). These are separate code paths.**
 
 ## Project Structure
-- `server.js` — Express server, mounts all routes
-- `src/db.js` — SQLite database, all migrations
-- `src/routes/` — API route handlers (one file per module)
-- `src/vault/` — VaultΩr intake, watcher, search, organizer
-- `src/editor/` — SelectsΩr v2 engine, b-roll bridge
-- `src/composor/` — ComposΩr scene analyzer, Suno client
-- `src/writr/` — WritΩr script generation, voice analyzer
-- `src/pipr/` — PipΩr beat tracker, config
-- `src/postor/` — PostΩr publishing engine: meta.js, youtube.js, queue-processor.js, video-tunnel.js
-- `src/utils/claude.js` — Shared Claude API caller (use this everywhere)
-- `src/utils/sse.js` — SSE helpers (attachSseStream, startSseResponse) — use for all SSE endpoints
-- `src/utils/logger.js` — pino logger — use everywhere, never console.error in new code
-- `src/utils/profile-validator.js` — load/validate creator-profile.json — never raw JSON.parse
-- `scripts/davinci/` — Python scripts for DaVinci Resolve integration
-- `public/` — All frontend HTML files (one per module)
-- `public/js/nav.js` — Shared nav component (kre8r-nav div + initNav())
-- `electron/main.js` — Electron main process (wraps Express, opens BrowserWindow)
-- `database/` — SQLite db file + kre8r-electron-backup.db (5-min rolling backup)
-- `creator-profile.json` — Soul config for 7 Kin Homestead instance
-- `DEVNOTES.md` — Critical dev notes including DB write rule
-- `OPUS_REVIEW.md` — First senior architecture review (Sessions 1–24)
-- `OPUS_REVIEW_V2.md` — Second Opus review (Sessions 25–31, pre-V1.0 desktop app)
+- `server.js` — Express, mounts all routes, startup logic
+- `src/db.js` — SQLite schema + all migrations
+- `src/routes/` — one file per module
+- `src/vault/` — VaultΩr: intake.js, watcher.js, transcribe-queue.js, frame-analysis-queue.js
+- `src/editor/` — assemblr.js (SelectsΩr v2 engine)
+- `src/postor/` — meta.js, youtube.js, queue-processor.js, video-tunnel.js
+- `src/utils/claude.js` — shared Claude caller. `src/utils/sse.js` — SSE helpers. `src/utils/logger.js` — pino
+- `src/utils/profile-validator.js` — always use this, never raw JSON.parse for creator-profile.json
+- `public/js/nav.js` — shared nav component
+- `creator-profile.json` — soul config. `DEVNOTES.md` — hard-won fixes. `SESSION-LOG.md` — history
 
-## Full Pipeline (Current Build State)
+## Pipeline (All Built)
+**PRE-PRODUCTION:** SeedΩr (ideas + ConstellΩr) → Id8Ωr (ideation, web research) → PipΩr (project, beat map) → WritΩr (scripts in Jason's voice) → DirectΩr (shot list) → ShootDay → TeleprΩmpter (3-device)
 
-### PRE-PRODUCTION
-✅ SeedΩr (`/seedr.html`) — Idea vault. `ideas` table: title, concept, angle, notes, status.
-   Bulk entry mode (paste 23 ideas → AI parses all). "Promote to Project" → pre-fills PipΩr.
-   ConstellΩr view: Three.js 3D constellation graph, semantic clusters, color-coded by angle.
-   Ideas persist forever, never tied to a session.
-   💬 From Comments: paste raw YouTube comments → Claude mines fear language, unanswered
-   questions, emotional signals → generates 6-8 video idea cards with the specific comment
-   signal that inspired each. Select/deselect, save tagged `source: comment_intelligence`.
-   `POST /api/ideas/from-comments` in `src/routes/ideas.js`. Studio Intel content gaps
-   injected as context if brief exists.
+**POST-PRODUCTION:** VaultΩr (footage DB, frame analysis, watcher D:\kre8r\intake) → EditΩr/AssemblΩr (beat-mapped selects, visual perception) → ReviewΩr → ComposΩr → ClipsΩr
 
-✅ Id8Ωr (`/id8r.html`) — Ideation engine. 3 modes: Shape It / Find It / Deep Dive.
-   Conversation → sequential web research → package (3 titles, 3 thumbnails, 3 hooks)
-   → Vision Brief → pipeline handoff to PipΩr/WritΩr.
-   Session persisted in sessionStorage. Known issue: rate limiting on research phase.
-   REDESIGN PLANNED: cut mind map, add fast concept pass → creator chooses → deep research.
+**DISTRIBUTION:** GateΩr → PackageΩr → CaptionΩr → MailΩr (MailerLite + blog) → PostΩr (YT/FB/IG/TikTok pending) → AudiencΩr
 
-✅ PipΩr (`/pipr.html`) — Project creation, story structure (Save the Cat / Story Circle
-   / VSL / Freeform / SHORT FORM), beat map, pipeline state tracking.
-   Short-form sub-structures: Hook→Tension→Payoff, Open Loop, PAS, Before→Bridge→After, etc.
+**ANALYTICS:** MirrΩr (YouTube) → NorthΩr (dashboard) → VectΩr (strategy) → Post-Mortem → StudioΩr
 
-✅ WritΩr (`/writr.html`) — Script generation in Jason's actual voice using analyzed
-   voice profiles. 3 modes: full script / bullets / hybrid. Voice blend slider.
-   Beat cards show emotional_function descriptions. Short-form mode: 150–300 words, timing per beat.
-   Voice calibration: 190 transcripts analyzed via Opus → `data/voice-calibration.json` + kv_store.
-   `loadVoiceCalibrationBlock()` in src/writr/claude.js injected into all 5 prompt builders
-   (script-first, shoot-first, hybrid, iterate, writr route room prompt).
+**INFRASTRUCTURE:** Auth, SyncΩr, Electron desktop, CleanΩr, OrgΩr bridge, HarvestΩr bridge, AffiliateΩr, MarkΩr/GuardΩr, Privacy/TOS pages
 
-✅ DirectΩr (`/director.html`) — Shot list and crew brief generation.
+## Key Module Notes
 
-✅ ShootDay (`/shootday.html`) — Day-of checklist, offline QR package for Cari's phone.
+**VaultΩr:** Frame analysis queue: FRAME_ANALYSIS_MODEL (live/Opus) vs BATCH_ANALYSIS_MODEL (batch/Haiku).
+`visual_analyzed_at IS NULL` = idempotency cursor for batch. Batch UI panel in vault.html above Footage Library.
+BRAW proxy: findBrawByBasename, _proxy.mp4 convention. Watcher: D:\kre8r\intake, depth 5.
 
-✅ TeleprΩmpter (`/teleprompter.html`) — 3-device system: display / control / voice.
-   QR codes on setup screen for voice device and control device (deep-link with ?mode=).
-   Voice device: mic drives scroll speed. Session code required on voice device load.
-   Field workflow: Phone 1 hotspot → teleprompter.kre8r.app for all 3 devices.
-   Known issue: No back button from display screen — only exit is "📋 Scripts" button (hidden by default).
-   ~~Solo tab crashes app~~ — FIXED Session 48 (early-return guard + cloudLaunchActive reset).
+**AssemblΩr:** 2-call architecture. Call 1: maps beats + injects visual_description signals (⚡ peak energy zone, b-roll anchors). Call 2: returns coverage_confidence + critique_note. Beat cards show beat_brief badge in editor.html. DB: selects.beat_brief, critique_note, coverage_confidence.
 
-### PRODUCTION
-- Blackmagic camera shoots .braw files
-- BRAW files go to: H:\ (camera SSD) or production folder
-- Proxy export: DaVinci → H.264 MP4 → D:\kre8r\intake → VaultΩr watcher picks up
+**PostΩr:** TikTok full OAuth+PKCE built, awaiting review. PKCE verifier stored in kv_store (not session) — survives Electron navigation. ngrok tunnel required for Meta uploads. Queue processor: setInterval 60s (⚠️ no overlap guard — see DEVNOTES).
 
-### POST-PRODUCTION
-✅ VaultΩr (`/vault.html`) — Footage intelligence database. Watches D:\kre8r\intake.
-   Supports: talking-head, b-roll, action, dialogue, completed-video, unusable.
-   BRAW proxy workflow: BRAW record created → DaVinci exports proxy → proxy links back
-   to BRAW record via _proxy.mp4 naming convention (findBrawByBasename).
-   Voice analysis button on completed-video cards → feeds WritΩr voice library.
-   Tag chip filtering: clicking a subject tag does instant client-side filtering (activeFilters.tag).
-   Active tag pill shown below filter bar. Filter persists in session. Tag cloud highlights active.
-   NOTE: subject tags generated at ingest via Claude Vision — ingest-time tagging is live,
-   client-side filter is live. Semantic search across all tags is a future TODO item.
-   PROXY DEDUP: footageFilePathExists checks both file_path AND proxy_path — prevents
-   re-ingestion loop on server restart for proxies already linked to a BRAW record.
-   PROJECT ASSIGNMENT: processProxyUpdate propagates project_id to the BRAW record if
-   BRAW had none. For old projects (pre-folder convention): use VaultΩr bulk-assign or
-   name the intake subfolder [project_id]_anything for watcher auto-assignment.
+**WritΩr:** Voice calibration from 190 transcripts in data/voice-calibration.json. loadVoiceCalibrationBlock() injected into all 5 prompt builders.
 
-✅ EditΩr (`/editor.html`) — SelectsΩr v2 engine (selects-new.js).
-   Three shoot modes: SCRIPTED / HYBRID / FREEFORM.
-   Decision gate: classifies clips by shot_type before any selection logic.
-   Accepts both talking-head (hyphen) and talking_head (underscore) — normalized at intake.
-   Confidence check removed — routes purely on shot_type.
-   Known issue: proxy_path must be set before transcription can run.
+**MailΩr:** MailerLite v2. Blog: TITLE:/--- delimiter format. Push-to-live proxies via INTERNAL_API_KEY.
 
-✅ ReviewΩr (`/reviewr.html`) — Rough cut approval UI. Pure rough cut approval only.
-   Selects list (approve/skip/reorder), extract approved clips (ffmpeg stream copy).
-   CutΩr removed from ReviewΩr — now lives in ClipsΩr.
+## Kajabi MCP (Claude Desktop — Session 80)
+Site ID: 2148808568. Community ID: 972809 (Rock Rich).
+Enable toolsets before use (max 3 active): communities, contacts, analytics, emails, etc.
 
-✅ ComposΩr (`/composor.html`) — Scene analysis, Suno prompt generation.
+⚠️ **create_announcement + create_post SILENT SUCCESS BUG:** Both return "Unexpected response shape"
+even when they SUCCEED. Post IS created, notifications sent. NEVER retry — check Kajabi admin first.
 
-✅ ClipsΩr — Viral clip extraction. Accepts approved cuts from ReviewΩr.
-   For short-form: role flips to validator (checks hook timing, retention arc, CTA, loop-ability).
-   `cuts` table + `/api/cutor/` routes.
-   ClipsΩr → CaptionΩr → PostΩr is the short-form exit path.
+**Community Game Strategy:** 1,332/1,366 members at progress_score 25 (lurkers). No native Kajabi
+"first post" trigger. Solution: tag `lurker-nurture` → nurture sequence → weekly MCP delta check
+(score 25→50 = unsub signal). Challenge: Rock Rich Starting Line (ID: deb3ff8d, runs to June 12 2026).
+Badge awarded manually at close (Kajabi badge-on-completion feature is buggy). MVPs: Joleen Sims (anchor).
+MCP can: read members/posts/challenges, create_post, send_dm, tag/untag contacts, create sequences+emails.
 
-### DISTRIBUTION
-✅ GateΩr (`/m1-approval-dashboard.html`) — Community gating.
-✅ PackageΩr (`/m2-package-generator.html`) — Platform packaging.
+**Bridge Design Spec:** C:/Users/18054/kre8r/BRIDGE-DESIGN-SPEC.md — 46K word Opus spec.
+Three Laws: Calm at rest / Shape before number / Never lose the thread.
+Contract: "The ship kept the watch. Now the Captain is aboard."
+Session roadmap: A(layout✅) → B(instruments✅) → C(skins✅) → D(holograms) → E(living universe) → F(crew)
+Skins: public/js/skin-manager.js + public/js/skins/*.js + public/refit-bay.html
+Active skins: starfleet-command(free), lcars-classic($10), hearth($12), nostromo(inline), omega-directive(inline)
+Key bug: CSS must use var(--mc-bg)/var(--mc-panel) not hardcoded hex for skins to work
+SkinManager fix: never call SkinManager.load(default) if localStorage has a saved skin — overwrites preference
 
-✅ CaptionΩr (`/m3-caption-generator.html`) — AI captions per platform (TikTok, Instagram,
-   Facebook, YouTube, Lemon8). Per-clip results. "📤 Send to PostΩr" button on each clip:
-   writes { ig_caption, fb_caption, description, clip_label } to localStorage → opens PostΩr
-   in new tab → PostΩr reads + clears on load (one-shot prefill, zero copy/paste).
+**Full community snapshot process (run at start of fresh session):**
+1. Enable communities toolset (must re-enable every ~2-3 MCP calls — it evicts)
+2. Pull ALL members paginated (list_members, 100/page, sort_by=joined_at_asc, ~14 pages)
+   - Results save to tool-results/ files automatically (too large for context)
+   - Slim + accumulate to C:/Users/18054/kre8r/scripts/sync-members.json via Bash
+   - Extract cursor from each file to continue pagination
+3. Transform all members (map onboarding.progress_score, engagement fields)
+4. POST to http://localhost:3000/api/community/sync with x-internal-key header
+   Body: { members, metrics, snapshot_date, founding50_ids: [], garden_ids: [] }
+5. Server auto-detects warm leads, events, tier corrections, score movers
 
-✅ MailΩr (`/mailor.html`) — Broadcast A/B emails, blog posts, community posts, Facebook posts.
-   Voice blend slider. Kajabi connection banner. Blog + community post checkboxes.
-   📘 Facebook Post checkbox: Claude generates FB caption + hashtags → editable card with
-   Post Now or Schedule tabs → calls /api/postor/fb-post or /api/postor/queue.
-   Email send: MailerLite v2 API. "Send in ~10 min" or "📅 Schedule" tabs with date/time picker
-   and quick buttons (+1d/+2d/+3d/+1wk). sends_at ISO string passed to /api/mailerlite/send.
-   Blog post: plain-text TITLE:/--- delimiter format (not JSON) via callClaudeRaw + parseBlogResponse.
-   Blog body is contenteditable — edit in-browser before publishing. Publish button reads live DOM.
-   📋 Manage Posts button: modal lists all live posts, inline YouTube URL editor per post, delete,
-   and ✏ body editor (loads raw HTML lazily via /api/blog/body-live/:id, saves via patch-to-live).
-   CAN-SPAM compliance tags ({$unsubscribe}, {$company_address}) added to wrappedHtml template.
-   Deep dive blog prompt: explicit no-<iframe> rule — YouTube linked as <a href> only.
-   Blog YouTube embed (kre8r-land blog-post.html): updated to current YouTube spec —
-   web-share in allow, referrerpolicy="strict-origin-when-cross-origin", youtube.com (not nocookie),
-   no deprecated modestbranding. Missing web-share was causing Error 153 "Video player config error".
-   Push-to-live proxies: push-to-live (POST), patch-to-live/:id (PATCH), delete-live/:id (DELETE),
-   list-live (GET admin) — all proxy to kre8r.app via INTERNAL_API_KEY, whitelisted in server.js.
-   Old M4 page still exists at /m4-email-generator.html (legacy, keep for now).
-
-✅ PostΩr (`/postor.html`) — Multi-platform social publishing.
-   Platforms live: YouTube ✅, Facebook video ✅, Facebook text/image post ✅, Instagram Reels ✅, TikTok ✅ (built, pending approval)
-   TikTok: full OAuth 2.0 + PKCE + FILE_UPLOAD posting built. App rejected April 2026 (missing ToS/PP
-   links on homepage, login page as homepage URL). Fixed Session 74: /tos + /privacy routes live,
-   links added to login + landing pages, homepage URL changed to /landing, test account provided.
-   Resubmitted May 7 2026 — awaiting re-review.
-   Compliance UI: privacy level, duet/comment/stitch toggles, brand_content/brand_organic disclosure.
-   NOTE: getCallbackUrl() reads x-forwarded-proto header for https detection behind nginx proxy.
-   Post Now / 📅 Schedule toggle. Schedule: queue table + 60s processor (setInterval in server.js).
-   Week/day calendar view with status-coded chips (pending/posting/posted/failed). Cancel option.
-   CaptionΩr prefill: reads localStorage.captionr_prefill on load, auto-fills ig-caption,
-   fb-description, description fields, clears entry immediately (one-shot).
-   ngrok tunnel (video-tunnel.js / createFileTunnel): spins up per-upload HTTP server + ngrok
-   tunnel so Meta API can reach local files. Required for Instagram and Facebook image posts.
-   `src/postor/`: meta.js (Instagram + Facebook), youtube.js (YouTube), queue-processor.js,
-   video-tunnel.js (createFileTunnel — supports video + image MIME types).
-   DB: postor_queue table (id, video_path, image_path, platforms JSON, captions, scheduled_at, status).
-   Connections stored in postor_connections table (youtube, facebook, instagram).
-
-✅ AudiencΩr (`/audience.html`) — Kajabi contacts, tags, offers, broadcast-tag SSE.
-   Contacts load via GET /contacts (no pagination params — Kajabi returns all at once).
-   Tag filter: known issue, Kajabi 500s on filtered requests.
-
-### ANALYTICS & INTELLIGENCE
-✅ MirrΩr (`/mirrr.html`) — YouTube Analytics. 313 videos, 2504 metrics synced.
-   `viral_clips` table. Click-to-edit on clip cards (hook, why_it_works, caption, hashtags).
-   Auto-save on blur → PATCH /api/mirrr/viral-clips/:id.
-   MirrΩr calibration context injected into WritΩr and Id8Ωr prompts.
-
-✅ NorthΩr (`/northr.html`) — Creator dashboard. Email performance (last 5 campaigns,
-   open/click rates). Publishing calendar (real publish dates). Days Since Last Email.
-   Evaluate Last Month: score + weight badges. Copyright Health stats (live — MarkΩr/GuardΩr).
-   VectΩr panel: amber ⬡ button in hero opens 460px slide-out strategic session. Syncs all
-   platform data (YouTube, MailerLite, Kajabi, pipeline health), streams Claude strategic
-   debrief, locks a Strategic Brief that injects into Id8Ωr and WritΩr for next N weeks.
-   Active brief banner shows current vector + direction on dashboard.
-   StudioΩr panel: teal 📊 Studio Intel button in hero opens slide-out. Claude generates 9
-   targeted Ask Studio queries (YouTube's internal data, not API) → Jason runs in YouTube
-   Studio → pastes responses + audience instinct → Claude synthesizes 7-section Intelligence
-   Brief. Brief saved to kv_store (`studio_intel_brief`) indefinitely — no hard expiry.
-   Auto-injected into VectΩr + Id8Ωr (both concept phases) + SeedΩr comment analysis.
-   Query cards persist in localStorage across restarts. 30-day amber advisory only.
-   `src/routes/studio-intel.js` — queries, synthesize (SSE), brief GET/DELETE.
-
-✅ VectΩr (`/northr.html` slide-out panel) — Weekly strategic session with pushback mechanic.
-   `src/routes/vectr.js`: sync, SSE chat, session persistence (kv_store), brief lock/history.
-   `strategic_briefs` table. Active brief auto-injected into Id8Ωr mirrrBlock and WritΩr id8rBlock.
-   System prompt holds strategic_principles from creator-profile.json + pushback_triggers.
-   Claude holds positions based on data/brand, only yields with documented reasoning.
-
-✅ Post-Mortem (`/northr.html` slide-out panel — 🔍 button in hero) — Two-way Opus conversation
-   diagnosing why a video underperformed. Video picker shows views + % vs channel average.
-   Transcript: vault completed-video first, then yt-dlp VTT auto-captions fallback.
-   NOTE: constructs YouTube URL from `youtube_video_id` if `youtube_url` is null in DB.
-   Session persisted in kv_store. Failure taxonomy: hook / thumbnail mismatch / topic-audience
-   / distribution / production / pacing. `BEGIN_POSTMORTEM` sentinel triggers Opus opener.
-   Brief lock: synthesizes root_cause + adjustments[] + avoid from FINAL diagnosis
-   (keeps last 8500 chars of conversation, not first 6000 — real diagnosis is always at the end).
-   Amber ✕ Clear Brief button shows if active brief exists. `DELETE /api/postmortem/brief/active`.
-   `src/routes/postmortem.js` — 8 endpoints. Model: VISUALR_MODEL (claude-opus-4-5 default).
-   TODO next: inject active post-mortem brief into WritΩr id8rBlock + Id8Ωr concept phase.
-
-### INFRASTRUCTURE
-✅ Privacy + TOS (`/privacy`, `/tos`) — Public legal pages (no auth required). Required for TikTok
-   app review. Cover TikTok API, Meta API, YouTube, data retention, contact info (7kinmedia@gmail.com).
-   Whitelisted in auth middleware alongside /landing, /download, etc.
-
-✅ Auth (`/login`) — Session-based login (express-session + better-sqlite3 store).
-   `users` table (bcrypt passwords), `sessions` table. Owner / viewer roles.
-   First run: seeds default owner from KRE8R_OWNER_PW env var.
-   kre8r.app protected by this auth (replaces old nginx basic auth).
-
-✅ SyncΩr (`/sync.html`) — Cross-device project sync.
-   `src/routes/local-sync.js` — local proxy (config, push, pull, import).
-   createProjectFromSnapshot: non-destructive, ID-preserving import.
-   replaceProjectFromSnapshot: overwrite mode — deletes FK children + re-inserts from snapshot.
-   Import accepts `overwrite: true` param. Amber checkbox in UI for teleprompter/read-only devices.
-   Desktop → kre8r.app → Laptop confirmed working end-to-end.
-
-✅ Electron Desktop App — `electron/main.js` wraps Express server in BrowserWindow.
-   Setup wizard on first run (getUserCount() === 0 → /setup). Diagnostic error dialog on failure.
-   5-min rolling SQLite backup → database/kre8r-electron-backup.db (git-ignored — not tracked).
-   NOTE: Electron DB lives at AppData\Roaming\kre8r\kre8r.db (NOT database/kre8r.db in project folder).
-   Production DB backup: daily 3am cron on kre8r.app droplet → /home/kre8r/backups/ (14-day rolling).
-   Installer: `npm run dist:win` → `dist/Kre8Ωr Setup 1.0.7.exe` (~238MB).
-   Latest installer live at kre8r.app/download — served via /api/releases/upload pipeline.
-   `window.__KRE8R_ELECTRON` flag set by main.js — use this to detect Electron context in frontend.
-   DB stored at app.getPath('userData') (AppData) — reinstalling never overwrites the database.
-
-✅ CleanΩr (`/cleanr.html`) — Disk cleanup + performance snapshot tool. Windows-only.
-   Junk scan (SSE): temp files, old logs, node_modules, large files. Move to D:\ (true move —
-   copy then delete). Delete selected. Drive space overview. Top processes. Startup programs.
-   Driver Audit: scans Win32_PnPSignedDriver via PowerShell `-File` temp script (not `-Command`
-   — avoids nested quote mangling). Sorts oldest-first. NOTE: 2006-06-21 date on Windows inbox
-   drivers is a WMI quirk, not real outdated dates — only third-party drivers matter.
-   `src/routes/cleanr.js` — scan (SSE), drives, processes, startup, drivers, delete, move.
-
-✅ OrgΩr Bridge — `src/routes/stats-export.js` — internal stats export for the OrgΩr bridge.
-   GET /api/stats-export — requires X-Internal-Key header (INTERNAL_API_KEY env var).
-   Exports: pipeline health, publishing stats (30d), vault counts, projects, ideas, viral clips,
-   copyright marks, active strategic brief, live MailerLite email metrics (latest + avg rates).
-   Auth-whitelisted in server.js middleware. All stat fetches wrapped in try/catch — partial
-   failures never crash the endpoint. Key shared with OrgΩr via KRE8R_INTERNAL_KEY env var.
-   OrgΩr runs on port 3002. KinOS runs on port 3001 (kinos.life — family operating system).
-
-✅ HarvestΩr Bridge — `src/routes/kajabi.js` → `POST /api/kajabi/member-check`
-   Internal endpoint for HarvestΩr (Rock Rich member gamification app) membership verification.
-   Auth: X-Internal-Key header. Body: { email }. Returns kajabi_contact_id + tier on success.
-   Tier priority: founding50 > garden > greenhouse (reuses KAJABI_TIER_TAGS + TIER_PRIORITY constants).
-   Whitelisted in server.js global auth guard. HarvestΩr lives at C:\Users\18054\harvestomr\
-   (separate repo, port 3011 on 7kinhomestead droplet, rockrich.7kinhomestead.land).
-   Magic link auth via MailerSend (free tier, same login as MailerLite at mailersend.com).
+**Tier detection:** list_members has NO access_group_ids filter (earlier note was wrong).
+Tiers live as CRM tags on contacts. Tag IDs:
+- Founding 50 = 2150101640 (33 members, $297 one-time)
+- Garden = 2150101641 (36 members, $19/mo — includes F50 overlap, ~3-4 Garden-only)
+- Greenhouse = 2150101628 (1,357 free members)
+search_contacts filters are BROKEN in MCP beta (filters_applied: null always).
+Tier correction: page contacts client-side, filter by tag name, match by email.
+**INTERNAL_API_KEY** is in C:\Users\18054\kre8r\.env
 
 ## Creator Profile
-**Jason Rutland** — 7 Kin Homestead
-- Voice: Straight-talking, warm, funny, never corporate. "Sharp-tongued neighbor
-  talks over a fence." Goes off-script often — those moments are frequently better.
-- 6 analyzed voice profiles from real videos in WritΩr voice library
-- Partner: Cari — camera operator and director. Cari profile planned for Rock Rich Shows.
-- Kids: 5. House: 700 sq ft. Shoots outdoors only.
-
-## Content Angles (creator-profile.json)
-- `financial` — Real numbers, cost breakdowns, ROI math
-- `system` — System Is Rigged, opt out and win
-- `rockrich` — Rock Rich Episode: doing a lot with a little. Resourcefulness as superpower.
-  **SHOW FORMAT**: Gold Rush meets How the Universe Works, off-grid edition.
-  Narrative spine: "Today Jason set out to ___ and the environment ___ed him."
-  Short doc style. Tension arc. Discovery Channel DNA.
-  Rock Rich Episodes planned to be heavily produced again using Kre8Ωr tools.
-  Format analysis pipeline planned: analyze 3-4 best episodes → store as format profile.
-- `howto` — Practical how-to, step by step
-- `mistakes` — Hard-won lessons
-- `lifestyle` — Day in the life on the homestead
-- `viral` — High curiosity, counterintuitive, scroll-stopping
-
-## ROCK RICH Community (Kajabi)
-- The Greenhouse 🌱 — free tier
-- The Garden 🌿 — $19/month
-- The Founding 50 🏆 — $297 one-time (limited spots, inner circle)
-- Kajabi API: OAuth2 connected. Contacts/tags/offers live. Broadcasts: copy/paste only
-  (Kajabi API has no broadcast endpoint yet).
-
-## Camera and Footage
-- Primary: Blackmagic (shoots .braw) — BRAW requires DaVinci proxy export before processing
-- Proxy output: D:\kre8r\intake (VaultΩr watcher)
-- Production footage: H:\ (camera SSD, external)
-- Large archive: D:\ (Big Ol' Storage Drive — all VaultΩr paths point here)
-- Main drive C:\ has limited space — never write footage or proxies there
-
-## DaVinci Integration (Windows only)
-- Resolve Studio 20.3.2.9 must be running before any DaVinci API calls
-- Python path detection: detectPython() tries python3, python, py in order
-- All 6 Python scripts use callable() guards for Resolve 20 API compatibility
-- stdout = JSON only, stderr = logs (Node.js reads stdout)
-- create-project.py known issue: defaults to 4K DCI instead of reading footage resolution
-- Unicode charmap fix applied: encoding="utf-8" in metadata doc write
-
-## Nav Component
-Every HTML page must use:
-```html
-<div id="kre8r-nav"></div>
-<!-- at bottom of body: -->
-<script src="/js/nav.js" defer></script>
-<script>window.addEventListener('load', () => initNav())</script>
-```
-NOT <nav id="main-nav"> — that pattern doesn't work.
+**Jason Rutland** — 7 Kin Homestead. Voice: straight-talking, warm, funny, never corporate.
+"Sharp-tongued neighbor talks over a fence." Goes off-script — those moments are often better.
+Partner: Cari (camera). 5 kids. 700 sq ft. Shoots outdoors only.
+Content angles: financial, system, rockrich (Gold Rush meets How the Universe Works), howto, mistakes, lifestyle, viral.
+ROCK RICH tiers: Greenhouse 🌱 (free) / Garden 🌿 ($19/mo) / Founding 50 🏆 ($297 one-time).
+Camera: Blackmagic BRAW → DaVinci proxy → D:\kre8r\intake. Archive: D:\. Never write to C:\.
 
 ## Coding Conventions
-- Use async/await throughout, never callbacks
-- Always use try/catch on database operations
-- SSE for all long-running operations — never block HTTP response
-- Rate limit Claude Vision: max 3 concurrent, 1 second between batches
-- All DB writes must go through live server API (see CRITICAL DATABASE RULE)
-- Use src/utils/claude.js for all Claude API calls — never inline the fetch
-- Shared callClaude(prompt, maxTokens = 8192) — always pass explicit maxTokens
-- Never hardcode creator data — always read from creator-profile.json
-- All SSE endpoints must use src/utils/sse.js (attachSseStream or startSseResponse)
-- Load/validate creator-profile.json through src/utils/profile-validator.js — never raw JSON.parse
-- Log errors via src/utils/logger.js (pino) — never console.error in new code
-- Commit at end of every session with SESSION-LOG.md updated
+- async/await everywhere, try/catch on all DB ops
+- SSE for all long-running ops — use src/utils/sse.js (attachSseStream or startSseResponse)
+- src/utils/claude.js for all Claude calls — never inline fetch. Always pass explicit maxTokens.
+- src/utils/logger.js (pino) for errors — never console.error in new code
+- Nav pattern: `<div id="kre8r-nav"></div>` + initNav() — NOT `<nav id="main-nav">`
+- Never hardcode creator data — always from creator-profile.json via profile-validator.js
 
-## Known Issues / Technical Debt (Priority Order)
-1. Id8Ωr redesign: cut mind map, add fast concept pass → choose → deep research
-2. VaultΩr semantic search across all tags (ingest tagging ✅, chip filter ✅, full-text tag search: TODO)
-3. AudiencΩr tag filter (Kajabi 500 on filtered requests)
-4. BRAW proxy timeout — 30min per job too short for large files
-5. Project resolution defaults to 4K DCI instead of reading footage resolution
-6. ~~No automated tests, no error monitoring, no structured logging~~ — FIXED Session 32 (pino logging, test-sse.js, DIAG button)
-7. ~~No backup strategy for SQLite file~~ — Electron 5-min rolling backup to database/kre8r-electron-backup.db
-8. ~~Hardcoded Windows paths~~ — FIXED Session 31 (DB_PATH, FFMPEG_PATH, CREATOR_PROFILE_PATH all env-var driven)
-9. ~~Whisper model download has no progress indicator on first transcription run (looks like hang)~~ — FIXED Session 48 (8s hint timer + spread-clobbers-stage fix + frontend sub-event handler)
-10. ~~MirrΩr: `no such column: pr.angle` and `TypeError: Assignment to constant variable`~~ — FIXED
-11. ~~TeleprΩmpter: Solo tab crashes the app~~ — FIXED Session 48 (early-return guard in launchViaCloud + cloudLaunchActive reset in backToSelector)
-12. TeleprΩmpter: No back button from display screen — only exit is "📋 Scripts" button (hidden by default)
-13. ~~PostΩr: TikTok platform stub~~ — BUILT Session 49. Full OAuth + posting live. App rejected (missing ToS/PP on homepage) → fixed + resubmitted Session 74. Awaiting re-review.
-14. MirrΩr: no "last synced" indicator — YouTube data can go stale silently. Sync Now button needed.
-15. ~~VaultΩr proxy re-ingest loop~~ — FIXED Session 62b. footageFilePathExists now checks proxy_path column; processProxyUpdate propagates project_id to BRAW record.
+## Active Known Issues (not yet fixed)
+1. SESSION_SECRET hardcoded fallback in server.js — fail-fast needed before beta
+2. PostΩr queue processor no overlap guard — double-fire on slow uploads
+3. OAuth tokens plaintext in platform_connections — needs aes-256-gcm
+4. Background workers tenant-blind (watcher, queues, cron) — biggest multi-tenancy gap
+5. Post-Mortem brief not yet injected into WritΩr/Id8Ωr
+6. TikTok app review pending (resubmitted May 7 2026)
+7. TeleprΩmpter: no back button from display screen
+8. Id8Ωr redesign planned (cut mind map, fast concept pass first)
+9. Frame analysis batch on existing 4k clips — run manually in VaultΩr 👁 panel
 
-## Planned Features (Not Yet Built)
-- ~~VectΩr — Weekly strategic session~~ — BUILT Session 55. Live on NorthΩr.
-- ~~MarkΩr + GuardΩr — Copyright protection + community enforcement~~ — BUILT Sessions 51-54. Live.
-- TikTok Content Posting API — resubmitted May 7 2026 after rejection fix (ToS/PP/homepage). Awaiting re-review.
-- TikTok Analytics module (TikTΩkr) — separate from MirrΩr. Wire after TikTok app approved.
-- Rock Rich Episode format profile (analyze best episodes → WritΩr show mode)
-- Cari creator profile (second voice profile for Rock Rich Shows)
-- RetentΩr — viral clip / retention cut module (post-edit, split from SelectsΩr)
-- ~~AffiliateΩr — track links, commissions, video placement, performance~~ — BUILT Session 61. Partners/links/clicks/analytics live. Commission→TreasΩr bridge built Session 62.
-  Two-way sync built Session 65: 📤 Push to Live + 📥 Pull from Live buttons in Tracked Links tab.
-  `POST /push-to-live` (local→production), `GET /gear-export` + `POST /pull-from-live` (production→local).
-  `applySyncBatch()`: upsert with last-write-wins on `updated_at`. Soft-delete via `active=0`.
-  Auth: `X-Internal-Key` header + `INTERNAL_API_KEY` env var (server-side only, never in renderer).
-  Cari edits kre8r.app directly; Jason pulls before working, pushes after. Path A (Cari Electron) planned.
-- VaultΩr full-text tag search across vault (ingest tagging + chip filter already live)
-- Analytics feedback loop (TikTok/YouTube performance → Id8Ωr recommendations)
-- Multi-tenant creator profiles (auth infrastructure in place, tenant isolation not built)
-- Playwright automation for Kajabi (broadcasts, sequences, community posts)
-- Android APK for field TeleprΩmpter (zero-signal fallback, sideload)
-- NotebookLM/Gamma integration in Id8Ωr research phase
-- Configurable workflow order (onboarding wizard)
-- Desktop-only feature gates (PostΩr upload, VaultΩr watcher, DaVinci) need "Desktop App Only"
-  banners before beta launch on web version (detect via window.__KRE8R_ELECTRON)
-
-## Commercialization Notes
-- kre8r.app — live on DigitalOcean, SSL, nginx, session-based auth (owner login via KRE8R_OWNER_PW)
-- Deploy: cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master &&
-  sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r
-- DigitalOcean console more reliable than SSH
-- Domain: kre8r.app (purchased)
-- GitHub: github.com/7kinhomestead/kre8r (private, master branch)
-- Target: use it publicly → document publicly → find operator partner
-- Founding 50 developer member also interested
-- Read OPUS_REVIEW_V2.md for current senior architecture assessment (updated pre-V1.0)
+## Commercialization
+- kre8r.app on DigitalOcean. Deploy: `cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r npm install --production && sudo -u kre8r pm2 restart kre8r`
+- GitHub: github.com/7kinhomestead/kre8r (private, master). Domain: kre8r.app.
+- OPUS_REVIEW_V3.md — pre-Trav architectural review (co-founder conversation prep).
+- Multi-tenancy: request path isolated (AsyncLocalStorage ✅). Background workers NOT yet tenant-aware.
 
 ## Session Start Checklist
 1. Read SESSION-LOG.md and TODO.md
-2. Read OPUS_REVIEW_V2.md for architectural context (current); OPUS_REVIEW.md for original
-3. Check PM2 status: pm2 status
-4. Open DaVinci Resolve if doing video work
-5. Confirm VaultΩr watcher path in startup log (should say D:/kre8r/intake)
-6. Tell creator current state and ask what to hit first
+2. Check PM2 / confirm Electron is running
+3. Tell creator current state, ask what to hit first

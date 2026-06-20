@@ -6,6 +6,331 @@ Future Claude reads this before touching anything related.
 
 ---
 
+## kre8r-land deploy + sitemap — hard-won facts (Session 95, 2026-06-19)
+
+Building the `.land` `/about` page surfaced two things worth never re-learning:
+
+1. **The `.land` sitemap is GENERATED, not hand-edited.** `public/sitemap-hubs.xml` (and `sitemap.xml`,
+   `sitemap-listings-*.xml`) are written by `src/utils/sitemap.js` → `generateSitemaps()`, run from the
+   pipeline cron. They're **gitignored**, so editing the XML by hand does nothing — the cron overwrites it.
+   To add a static page to the sitemap, add its path to the `STATIC_PAGES` array in `src/utils/sitemap.js`.
+   It appears on the next pipeline regen (not instantly on deploy).
+2. **The land droplet rejects my SSH key for root — I cannot deploy it.** Of the DO boxes in
+   `~/.ssh/known_hosts`, my key only opens `143.244.179.113` (hostname `kinOS`, which does NOT host
+   kre8r-land). The land box (one of `64.23.152.96` / `64.23.158.236`) returns `Permission denied
+   (publickey)` for root. So **kre8r-land deploys must be handed to Jason** to run — give him the
+   canonical `sudo -iu landapp …` one-liner (memory `project_land_deploy.md`); don't try to SSH-deploy it.
+   `7kinhomestead.land` is behind Cloudflare now, so the hostname no longer resolves to the droplet.
+
+For new `.land` pages: deploy first, confirm the URL returns 200 live, **then** Search Console → URL
+Inspection → Request Indexing. Requesting before it's live makes Google cache a 404. The sitemap is
+passive/slow discovery; Request Indexing is the fast lane.
+
+---
+
+## Kajabi course beacon + theme — hard-won fixes (Session 94, 2026-06-18)
+
+**Context:** The Rock Rich free course + completion beacon live on Kajabi (theme = the rebuilt
+`D:\Downloads\7kin-course-template.zip`). Full narrative in memory `project_kajabi_game.md`.
+
+1. **Beacon TIMING bug (the big one).** The completion beacon (in the theme's `templates/post.liquid`)
+   was firing **before** `window.RR_COURSE` existed. `RR_COURSE` is injected near the page bottom
+   (`layouts/theme.liquid` footer) but the beacon renders in the lesson content, which the browser
+   parses earlier → at beacon-init `RR_COURSE` was `undefined` → it fell through to the hardcoded
+   `'https://kre8r.app/api/kajabi-track'` default → 401, nothing recorded. The tell: console showed
+   `window.RR_COURSE.trackEndpoint` = the right (ngrok) URL when typed manually post-load, yet the
+   POST fired to kre8r.app **before** `scripts.js` logged. **FIX: wrap the beacon body in
+   `initBeacon()` gated on `DOMContentLoaded`** so it reads `RR_COURSE` after the footer defines it.
+   Lesson for any theme-injected script that depends on `RR_COURSE`: defer it, or inject `RR_COURSE`
+   into `<head>`.
+
+2. **Kajabi themes: every zip upload is a NEW immutable VERSION; the LATEST is always active.**
+   (Confirmed by Jason, Jun 18.) These are custom-uploaded themes (not marketplace), so there is NO
+   "update" and NO delete — uploading a zip creates a new theme id, old versions pile up forever, and the
+   newest upload is the one that's live. **Operating rule: ALWAYS edit the LATEST version.** Two edit paths:
+     - Theme SETTINGS (player_type, track_endpoint, colors, section copy) → edit the latest version IN
+       PLACE via Customize or MCP `update_theme_content`. No upload needed, no new version.
+     - Theme FILES (*.liquid, scripts.js) → can ONLY change by uploading a new zip = new latest version,
+       and that RESETS all settings to the zip's `settings_data.json` defaults.
+   So get the live id from a fresh `get_course` `active_theme_id` every time before editing — do NOT trust a
+   cached id (we watched it churn 2166563771 → 2166563978 → 2166564468 across uploads). Because a
+   file-change upload wipes settings back to zip defaults, the canonical `D:\Downloads\7kin-course-template.zip`
+   bakes the correct defaults (ngrok track_endpoint + player_type:inline) so a fresh upload comes up working
+   with zero reconfiguration.
+
+3. **ngrok free "dev domain" is permanent, not random.** Every ngrok account gets one free static
+   *dev domain* (`<words>.ngrok-free.dev`) that is reused every restart — it is NOT a throwaway URL.
+   Pinned it via `NGROK_DOMAIN` in `.env`; `scripts/beacon-tunnel.js` now passes `domain` and prints
+   the exact `/api/kajabi-track` endpoint. Paste-into-Kajabi-once. (Tunnel + local server must be UP for
+   completions to record — MissionΩr reads the LOCAL Electron DB, not the droplet.)
+
+4. **Theme zip must be built from the original Kajabi export.** A from-scratch .NET zip got rejected
+   ("you can only upload .zip"); PowerShell `Compress-Archive` writes backslash entry paths Kajabi
+   (Linux) won't import. Working method: COPY the original `7kin-solar-v1-3-*.zip` and swap only the
+   edited files via `System.IO.Compression` Update mode (forward-slash entry names preserved).
+
+5. **Can't inline-embed a 7kinhomestead.land tool in Kajabi** — kre8r-land `helmet` sends
+   `X-Frame-Options: SAMEORIGIN` (CSP is off but frameguard isn't). So the Freedom Calculator module
+   uses a launch-in-new-tab button + bookmark coaching, not an iframe. To embed later, set
+   `frameguard:false` on the kre8r-land server.
+
+6. **`node --check` every inline-JS paste before shipping** (already a guardrail) — and remember a
+   *successful* `sendBeacon`/no-cors POST is SILENT in the console; only failures log. "Nothing thrown"
+   after a beacon = success, not nothing happening. Verify by reading the DB, not the console.
+
+---
+
+## Grand Synthesis — Senior Engineering Assessment (Session 91)
+
+**READ THIS FIRST before any architectural work.**
+`C:\Users\18054\kre8r\docs\tool-reviews\grand-synthesis.md`
+
+The most complete picture of Kre8r ever produced. Covers all 5 Tier-1 tools (SeedΩr,
+Id8Ωr, WritΩr, VaultΩr, AssemblΩr) with 4 Opus agents per tool + cross-tool synthesis.
+
+**The 7 systemic findings (apply across the whole codebase):**
+1. False Success — operations report completion they didn't achieve. Fix: read-back before success.
+2. Silent Column Drop — writes vanish through whitelists/unguarded parses. Fix: log unknown keys.
+3. Dual Schema Paths — columns in one migration but not both. Fix: always bootstrapTenant + runMigrations.
+4. Two Co-Equal Machines — two paths per tool, intelligence injected into only one.
+5. Lossy One-Directional Handoffs — seams drop structured data; no backward feedback loops.
+6. visual_description Under-Distribution — paid on 4000 clips, reaches 2/12 tools.
+7. Inconsistent Object Shapes — selected_takes, beat_map_json, id8r_data all have multiple shapes.
+
+**Critical path (priority order):**
+1. Instrument silent-drop layer (log allow-list misses, read-back before success)
+2. VaultΩr dedicated session (server-side filters, indexes, layout inversion)
+3. Publish fan-out event ✅ DONE — idea.status='produced', Post-Mortem seeded on ship
+4. AssemblΩr MVP rewrite (direct subclips, DaVinci read-back, one button)
+5. One shared context builder per tool (WritΩr storyboard gets all intelligence)
+6. Distribute visual_description ✅ DONE — WritΩr shoot_first + PostΩr captions
+7. Pre-multi-tenancy gates (SESSION_SECRET, queue overlap, OAuth encryption)
+
+**Verdict (Opus):** "The soul is sound, the engine is real, the gauges lie — and fixing the
+gauges is now the highest-leverage work left. A quarter of focused work, not a rebuild."
+
+**Individual tool reviews:** `docs/tool-reviews/` — seedr, id8r, writr, vaultr, assemblr
+**Fixes applied Session 91:** `docs/tool-reviews/fixes-implemented.md`
+
+---
+
+## Mission Control Remote Proxy — Hard-Won Patterns (Session 84)
+
+### The snapshot had the wrong endpoints (and nobody noticed)
+The `/api/mission/snapshot` endpoint was calling `${ORG_URL}/api/treasor/summary`
+(doesn't exist) and `${KINOS_URL}/api/today` (doesn't exist), with `x-internal-key`
+(wrong header). The dedicated `/api/mission/org` and `/api/mission/kinos` routes
+had been fixed correctly but the snapshot never called them — it had its own inline
+fetches that were still wrong.
+LESSON: When fixing proxy endpoints, grep for ALL places the old URL appears, not just
+the named proxy route.
+
+### OrgΩr + KinOS auth: x-internal-token NOT x-internal-key
+Both sibling apps use `x-internal-token` header with `ORGR_INTERNAL_TOKEN` /
+`KINOS_INTERNAL_TOKEN` env vars. kre8r uses `x-internal-key` with `INTERNAL_API_KEY`.
+These are DIFFERENT. Never mix them up.
+Token: 91117b0fcda79005f8cabac4b3eed09b95875bcfbf6d9343 (set in all three apps)
+
+### Remote HTTPS calls need longer timeouts
+fetchWithTimeout defaults to 2000ms. HTTPS calls to kinos.life droplet take 2-5s.
+Always pass 8000 (8s) for any fetchWithTimeout call to ORG_URL or KINOS_URL.
+Local calls (localhost:3000) can stay at default 2000ms.
+
+### OrgΩr dashboard response shape
+GET /api/treasor/dashboard/:orgId returns:
+{ balances: { reserves: {id, available, allocated, spent}, wages: {...}, ... } }
+NOT: { gross_income, reserves, tax_setaside } — those field names don't exist.
+Map from balances.reserves.available etc.
+
+### KinOS real endpoints (on kinos.life)
+- Events: GET /api/schedule/upcoming?days=1 → array of event objects
+- Tasks: GET /api/tasks → array (filter overdue client-side)
+- Inventory low: GET /api/inventory/low → array
+- Morning brief: POST /api/ai/morning-briefing (X-Member-Id: 1 for Jason)
+All protected by x-internal-token header.
+
+### AppData .env is what Electron reads
+kre8r's Electron app reads env from `AppData\Roaming\kre8r\.env`, NOT the project
+`.env`. Any env changes MUST go in both places, or only AppData if Electron-only.
+Path: C:\Users\18054\AppData\Roaming\kre8r\.env
+
+### msedge-tts API: toStream returns object not readable
+msedge-tts `tts.toStream(text)` returns `{ audioStream, metadataStream, requestId }`.
+The audio IS NOT the return value itself — use `const { audioStream } = tts.toStream(text)`.
+Using `tts.toStream(text).on(...)` fails silently (no error, just nothing plays).
+
+### Number One SSE: backend sends {type:'token', text:'...'} not {token:'...'}
+Frontend was checking `parsed.token` but backend sends `parsed.text`.
+Always check: `var token = parsed.text || parsed.token || null`.
+
+---
+
+## Kajabi MCP — Hard-Won Patterns (Sessions 80-82)
+
+### Toolset eviction — must re-enable constantly
+The Kajabi MCP evicts inactive toolsets after ~2-3 uses. Max 3 active at once.
+Pattern for bulk member pulls: enable_toolset → list_members (saves to file) →
+bash (process file, extract cursor) → list_members → repeat.
+The enable_toolset call itself takes one of the 3 slots — if you have analytics +
+contacts + communities active, adding a 4th evicts the LRU. Always call
+enable_toolset at the start of each message turn before any community tool use.
+
+### list_members pagination — all results save to tool-result files
+When list_members result > 200k chars, it saves to:
+C:/Users/18054/.claude/projects/C--Users-18054-kre8r/{session-id}/tool-results/
+Use `fs.readdirSync(BASE).filter(f=>f.includes('list_members')).sort()` to get
+the latest file. Parse with JSON.parse(fs.readFileSync(latest)).
+Slim the data immediately (only keep needed fields) to avoid context bloat.
+Accumulate pages to: C:/Users/18054/kre8r/scripts/sync-members.json
+
+### Full 1,366-member sync pattern (14 pages)
+1. enable_toolset communities
+2. list_members per=100, sort_by=joined_at_asc (no cursor = page 1)
+3. bash: extract cursor + slim + append to sync-members.json
+4. Repeat steps 1-3 with cursor from previous page
+5. Final page: has_more=false, no cursor
+6. Process sync-members.json and POST to /api/community/sync
+
+Toolset is evicted between turns (messages). Re-enable at start of each turn.
+Each turn can handle 2-3 list_members calls before eviction.
+Total time for 14 pages: ~10 minutes.
+
+### search_contacts filters are BROKEN (MCP beta)
+All filter parameters (has_tag_id, net_revenue_greater_than, has_offer_id, etc.)
+are silently ignored. Response always shows `filters_applied: null` and
+returns all 5,564 contacts sorted newest-first.
+DO NOT try to filter contacts via search_contacts until Kajabi fixes this.
+
+### Tier detection — use contact tags, NOT access_group_ids
+Kajabi stores tier as CRM tags on contacts:
+- "Greenhouse - Member" → tag ID 2150101628 (1,357 contacts)
+- "Garden - Member"     → tag ID 2150101641 (36 contacts)
+- "Founding 50 - Member" → tag ID 2150101640 (33 contacts)
+
+Founding 50 members also have Garden + Greenhouse tags (cumulative access).
+Net unique paying members: ~36 (Garden 36 - overlap with F50 ≈ 35-37 total).
+
+list_members has NO access_group_ids filter — the CLAUDE.md note saying
+"list_members filtered by access_group_ids" was wrong. Correct approach:
+page through contacts, filter client-side by tag name, match to community_members
+by email, UPDATE tier. ~223 pages of contacts at 25/page to scan.
+Better approach: use a custom /api/community/update-tiers endpoint that accepts
+{ founding50_emails, garden_emails } arrays after client-side filtering.
+
+### create_announcement and create_post — silent success bug (CRITICAL)
+Both return "Unexpected response shape from communities service" even when
+they SUCCEED. Post IS created, notifications sent. NEVER retry.
+Always check Kajabi admin or list_posts/list_announcements to verify before retry.
+Retrying creates duplicates blasted to all 1,366 members.
+
+### Community sync route whitelist (server.js)
+/api/community/sync is whitelisted from session auth:
+`if (req.path.startsWith('/api/community/sync')) return next();`
+GET routes (/api/community/health, /warm-leads, /events, /movers) require
+normal session auth — they're only accessed from the logged-in AudiencΩr UI.
+
+### Warm lead detection — greenhouse only
+warm_leads table only gets populated with `tier = 'greenhouse'` members.
+Garden and Founding 50 members never appear in warm_leads regardless of score.
+This prevents DM pitches to people who are already paying.
+
+---
+
+## Frame Analysis Queue — Architecture Decisions (Session 79)
+
+### activeCount pattern replaces processing boolean
+Original queue used `let processing = false` — works for 1 concurrent job but can't be
+extended to N concurrent without a rewrite. Replaced with:
+```js
+let activeCount = 0;
+function maxConcurrent() {
+  const hasLive = Array.from(jobs.values()).some(j => j.status === 'processing' && !j.batch);
+  return hasLive ? 1 : MAX_BATCH_CONCURRENT;
+}
+```
+Live (watcher-triggered) jobs always run solo. Once only batch jobs are active, up to
+`MAX_BATCH_CONCURRENT` (default 3, env: `FRAME_BATCH_CONCURRENCY`) run in parallel.
+The `batch: true` flag is set at enqueue time. Never mix patterns — always use `activeCount`
+for any new queue that might need concurrency later.
+
+### Per-job model override for batch backfill
+Live jobs use `FRAME_ANALYSIS_MODEL` (Opus — best editorial judgment).
+Batch backfill uses `BATCH_ANALYSIS_MODEL` (Haiku — ~$0.004/clip vs ~$0.23 Opus).
+Model stored on the job object at enqueue time, not at processing time. This means
+a job queued as batch stays batch even if concurrency mode changes before it runs.
+Default BATCH_ANALYSIS_MODEL: `claude-haiku-4-5`.
+
+### visual_analyzed_at IS NULL as idempotency cursor
+No separate job/cursor table needed for batch backfill.
+`getUnanalyzedFootage({ shot_types, project_id, limit })` uses `visual_analyzed_at IS NULL`
+as the natural cursor. Call the batch endpoint again after a restart and it automatically
+resumes from where the DB left off — already-done clips are skipped, nothing to track.
+
+### Circular dependency: intake.js → frame-analysis-queue.js
+`watcher.js` requires `intake.js`. `intake.js` would require `frame-analysis-queue.js`.
+`frame-analysis-queue.js` requires `db.js`. No circular deps there. But if `watcher.js`
+ever required `frame-analysis-queue.js` AND `intake.js` required it too, there could be
+issues depending on module load order. Safe solution: in `intake.js:processProxyUpdate()`,
+use a lazy require inside the function:
+```js
+const fxQueue = require('./frame-analysis-queue');
+```
+This avoids any top-level circular at module load time.
+
+---
+
+## SaaS Hardening — Critical Findings from Opus Review V3 (Session 79)
+
+These items need fixing before kre8r goes multi-tenant. See OPUS_REVIEW_V3.md for full context.
+
+### 1. SESSION_SECRET hardcoded fallback (server.js:244)
+```js
+// CURRENT (dangerous):
+secret: process.env.SESSION_SECRET || 'kre8r-session-secret-change-in-production'
+// FIX:
+if (!process.env.SESSION_SECRET) throw new Error('SESSION_SECRET env var is required');
+```
+Any deploy that forgets the env var runs on a known-public string, making all sessions forgeable.
+Fix before any beta opens.
+
+### 2. PostΩr double-fire race (src/postor/queue-processor.js:158)
+`setInterval(run, 60_000)` + `await processItem` inside `run`. If an Instagram upload
+takes > 60s (common), the next tick starts a parallel `run()` and the same post fires twice.
+Fix: `let running = false` guard at top of `run()`, set `true` on entry, `false` in `finally`.
+Also: update status to `'posting'` in DB BEFORE the await — so a crash-restart can't re-fire.
+
+### 3. OAuth tokens plaintext in platform_connections
+Fine for single-creator desktop (same OS trust boundary). Not acceptable for multi-tenant SaaS.
+Encrypt with `aes-256-gcm`. Key: `crypto.scryptSync(SESSION_SECRET, tenant_slug, 32)`.
+~50 lines in `src/utils/token-crypto.js`. Include a one-time migration on startup.
+See TODO.md Task 2 for full spec.
+
+### 4. trust proxy not set (server.js)
+`app.set('trust proxy', 1)` is missing. Behind nginx, `req.protocol`, `req.ip`, and any
+rate-limit middleware all read wrong values. The Meta OAuth callback works around this
+manually (`x-forwarded-proto` direct read) — that's the symptom. Add the one-liner.
+
+### 5. searchFootageByWhere SQL injection surface (src/db.js:2688)
+Claude-generated WHERE clause interpolated into SQL with a regex blocklist sanitizer.
+Blocklist is bypassable (e.g. `REPLACE INTO`, nested CTEs, `PRAGMA writable_schema=1`).
+Fix: have Claude return `{filters: [{col, op, val}]}` JSON → server builds safe parameterized SQL.
+Don't touch until you're ready to rewrite the VaultΩr search prompt too.
+
+### 6. Background workers are tenant-blind
+The biggest multi-tenancy gap. VaultΩr watcher, transcribe-queue, frame-analysis-queue,
+postor queue-processor, scheduleMorningSync, scheduleVectrAutoRun all fire outside any
+`tenantContext.run()`. They silently operate on Jason's singleton DB even on multi-tenant hosts.
+Fix pattern: each periodic job must iterate `db.getAllTenants()` and wrap per-tenant work in
+`tenantContext.run({ db: tenantDb, profile, slug }, async () => { ... })`.
+See TODO.md Task 5 for full spec. This is ~2 sessions of work.
+
+### 7. SSE sseClients Sets are global across tenants
+Both `transcribe-queue.js` and `frame-analysis-queue.js` use a module-level `Set` for
+SSE clients. In multi-tenant mode, tenant B's vault page receives tenant A's ingest events.
+Fix: key the Sets by tenant slug. `Map<slug, Set<res>>`.
+
+---
+
 ## Post-Mortem Feature — Architecture Decisions + Bugs (Session 77)
 
 ### getGlobalChannelHealth() return shape

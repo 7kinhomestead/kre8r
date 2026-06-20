@@ -3,6 +3,1065 @@
 
 ---
 
+# Session 95 — Rock Rich ecosystem: tier fix, gate beacon de-tunnel, Orchard badge economy, .land /about (2026-06-19)
+Worked across three repos — **kre8r** (502 fix, MissionΩr funnel pull), **kre8r-land** (gate beacon catcher, /about), **harvestomr** (badges). Full detail in memory: `project_kajabi_tier_detection.md`, `project_gate_beacon.md`, `project_kajabi_game.md` (badge economy), `project_land_about_page.md`.
+
+## What Was Built / Fixed
+- **Kajabi tier detection made offer-aware.** Member-check mis-read tags (even tagged Founding 50 showed greenhouse). Now reads tier from Kajabi offers; F&F = the $0 "VIP All Access (Friends & Family)" Founding 50 offer `2151042381` (no tag). harvestomr re-verify made **raise-only / never auto-lapse** so a bad read can't demote. New bridge `POST /api/bridge/tiers` reconcile (raise-only) — ran clean, all 13 already correct.
+- **kre8r.app 502 crash-loop fixed.** Crashed on `Cannot find module './src/routes/conductor'` — 8 local-only files `server.js` requires were never committed. Committed all 8 (commit `f144270`).
+- **Gate beacon de-tunneled.** Moved the Kajabi library front-door beacon off the home ngrok tunnel onto the always-on **land box** (`kre8r-land /api/kajabi-track`). MissionΩr pulls the funnel from land via **LAND_INTERNAL_KEY** (NOT the shared key — land has its own). Beacon swapped in Kajabi Encore theme custom-code block; verified live (funnel landed/entered 1/1).
+- **Orchard badge economy (harvestomr).** Full build: `harvest_badges` / `harvest_member_badges` / `harvest_pending_badges` schema; `badges.js` (award/pending/claim, idempotent); trophy case (private, profile.html), public crest wall (member.html), one-time reveal ceremony (`badge-ceremony.js`, greyscale→desaturate+confetti, gated by `celebrated_at`); **pending badges** auto-claim on join (the magnet). 9 crests, art slug-named in `public/badges/`. Bridge `POST /api/bridge/award-badge`.
+- **Starting Line backfill.** Awarded the Starting Line crest to the 15 Kajabi challenge completers: 6 in the Orchard → awarded, 9 not → pending (auto-claim on join).
+- **.land /about page** — owns brand-name searches (Search Console showed first organic terms were ~all "where is 7 Kin Homestead located"). Public location = "Pacific Northwest mountains, coordinates private" (owns Google's inferred snippet); dropped "700 sq ft" framing (read as justification); Organization + FAQPage JSON-LD. Committed `d8a40f0` + `42a01ab`, deployed live (200).
+
+## Scheduled (automated)
+- `orchard-starting-line-invites` fires **Jun 20 ~noon (UTC-7)**: 9 invite DMs (not-in-Orchard) + 6 celebration DMs (already-in), via Kajabi MCP `send_dm`. "Jason here" opener dropped per Jason; never blind-retry (silent-success bug).
+
+## Next
+1. Bridge sync job: Kajabi challenge entries → Orchard wins + weekly batched "graduation post" (@-naming completers; one post, not per-completion).
+2. Email backstop for the Starting Line invites.
+3. Request Indexing for /about in Search Console (after Jason confirms live).
+
+---
+
+# Session 94 — Kajabi Conversion Engine: free course LIVE + reusable theme + completion tracking end-to-end (2026-06-18)
+**Full detail in memory: `project_kajabi_game.md`.** This is the activation/instrumentation initiative for Rock Rich (Kajabi). Worked in the kre8r repo (dashboard + beacon + INTERNAL_API_KEY live here).
+
+## What Was Built / Fixed
+- **PILLAR 1 — Free course is LIVE.** "Rock Rich Starting System" (course id 2149485754, evergreen, free offer attached) — **3 modules / 10 lessons**, all built programmatically via Kajabi MCP `update_course_content`:
+  - M1 "Decide You Can Do This" (3 mindset lessons) · M2 **"See Your Number"** (3-lesson Freedom Calculator walkthrough, NEW, the believe→personalize→act hinge) · M3 "Take Your First Real Step" (4 lessons).
+  - Lesson bodies written from the real transcript corpus (`data/course-corpus.json`) in Jason's voice; video lessons = youtube-nocookie iframe in body + "What you'll take" + "Your move this week". Freedom module embeds the live tool via launch button (not iframe — site blocks framing) at https://7kinhomestead.land/freedom + bookmark coaching.
+  - ⚠️ MCP gotcha: new modules/lessons default to DRAFT — must pass `publishing_option:"published"` or the theme renders an empty map.
+- **Reusable embed-native course THEME** (rebuilt from the hand-made Solar theme → `D:\Downloads\7kin-course-template.zip`). Fully data-driven: reads the course, never the reverse. Hero/title/stats/modules/badges all from `current_product.*`; `--accent` green #22c55e; XP/badges engine (`scripts.js`) driven by injected `window.RR_COURSE`; player set to "None" (video lives in body); Mark-As-Complete moved to bottom; purged a stale per-course XP engine left in `embedded_scripts`.
+- **PILLAR 2 — Completion beacon BAKED INTO THE THEME + verified end-to-end.** Every lesson now auto-reports `lesson_view` + `mark_complete` → `/api/kajabi-track` → DB → MissionΩr, no per-lesson code. Endpoint from theme setting "Kre8r Analytics → Completion Tracking Endpoint" (`window.RR_COURSE.trackEndpoint`), default = Jason's permanent ngrok dev domain.
+- **Front gate → community** funnel already live (100% walk-in) from prior session; MissionΩr shows FRONT GATE + COURSE COMPLETIONS panels.
+
+## The big debug (see DEVNOTES) — beacon TIMING bug
+Completions weren't landing. Proved server/route/DB/tunnel/identity/theme-setting all fine; root cause was the beacon firing **before** `window.RR_COURSE` was defined (injected lower in the page) → fell back to the hardcoded `kre8r.app` default → 401. **Fix: defer the beacon to DOMContentLoaded.** After the fix, a real test member's `lesson_view` + `mark_complete` landed automatically.
+
+## Verified Evidence
+- DB (`/api/kajabi-track/admin`): real contact 2706860152 → automatic `lesson_view` + `mark_complete` for "The Self-Sufficiency Mistake to Avoid" and "How Do You Afford Off-Grid Living?" (no manual trigger).
+
+## Next (tomorrow)
+1. **Activation** — route the ~1,512 lurkers to the live course (front-gate link + community announcement). The real lever now.
+2. **Production endpoint hardening** — beacon currently needs Jason's local server + ngrok tunnel up to record (MissionΩr reads the LOCAL DB). Long-term: deploy the route to the kre8r.app droplet + give MissionΩr a droplet read path, or rely on the always-on tunnel.
+3. Parked: test-row cleanup (add admin DELETE to kajabi-track), tier-pricing thread (close $297 Founding 50, recurring tier, annual Garden), 7-Day Ignition email sequence, Garden $19 value features.
+
+---
+
+# Session 93 — kre8r-land BLAST-OFF Phase 0 + Phase 1 (2026-06-10)
+
+## What Was Built / Fixed
+
+### Phase 0 (complete — Fable verified)
+- Fence event-loop block fixed (precomputed DOCS/DOC_LEN/AVG_LEN at load time)
+- Daily Claude spend cap via kv_store (`fence_daily_YYYY-MM-DD`)
+- Cache-Control headers on listings + isochrone routes
+- Isochrone cache table (30-day TTL, rounded coords)
+- Seller 1mb body parser registered before global 32kb parser
+- Cloudflare setup: Full strict SSL, Brotli, cache rules, real IP restoration via nginx
+
+### Phase 1 (complete — production verified)
+- **Revenue leak fixed**: alert emails now link to `/api/land/go/:id` tracking URL, not raw source URL
+- **Queue drain loop**: `flushAlertQueue` loops up to 20 iterations (was LIMIT 100 once)
+- **MailerSend swap**: alert transactional emails switched from MailerLite to MailerSend (already live for magic links)
+- **Unconditional queue drain**: queue drains any unsent backlog at end of every run regardless of new matches
+- **URL alias**: `/api/land/go/:id` → `/api/land/listings/go/:id` permanent redirect (heals first email batch)
+- **MailerLite intent tags**: `subscribeMailerLite` now passes `land_state` + `land_max_price` from criteria
+- **Fence free-question ladder**: 3 free/day → email gate → 15/day after; members (?tier=) bypass
+- **verdict_text column**: parser prompt extended, `updateParsed` updated, listings SELECT updated
+- **Finder member verdict**: "Jason's Take" section in parcel panel, gated by `?member=1`
+- **Backfill endpoint**: `/api/admin/backfill-verdicts?limit=20` (use 20, not 50 — nginx 504 risk)
+
+### PM2 re-registered from ecosystem.config.js
+- Was running `server.js` directly with default 1600ms kill_timeout → EADDRINUSE crash loops
+- Now runs via `scripts/start-server.sh` wrapper (fuser -k before bind) with 15s kill_timeout, 4s restart_delay
+- Restart counter reset to 0
+
+## Production Evidence
+- `alerts: transactional email sent via MailerSend → evansville28@yahoo.com, count: 5` in pm2 logs
+- `/api/land/go/12612` → 302 → `/api/land/listings/go/12612` → 302 → landstruck.com (Fable verified live)
+- Queue drain: "no new parsed listings" followed immediately by MailerSend send (new code path proven)
+
+## Key Lessons
+- MailerLite = campaigns/newsletters. MailerSend = transactional. Same pattern as magic links.
+- `pm2 restart kre8r-land` does NOT re-read ecosystem.config.js unless process was started from it
+- Correct deploy: `sudo -u landapp git pull origin master && sudo -u landapp pm2 restart kre8r-land`
+- Deploy path: `/home/landapp/kre8r-land` (not /home/kre8r/)
+
+## Next Session
+Phase 2 — inventory engine (seller/flipper supply). See TODO.md for task list.
+
+---
+
+# Session 92 — Tier 2-6 Reviews + ConductΩr Build (2026-06-06)
+
+## What Was Built
+
+### Tier 2-6 Tool Reviews (all complete)
+Full Opus architectural reviews across all 36 tools. Reviews saved to `docs/tool-reviews/`.
+Key findings fixed across PipΩr, TeleprΩmpter, ShootDay, LabΩr, DirectΩr, PostΩr, BrollΩr, ClipsΩr, ComposΩr, EditΩr Room, AnimΩr, CutΩr, GateΩr, PackageΩr, CaptionΩr, MailΩr, AudiencΩr, MirrΩr, NorthΩr, StudioΩr, MarkΩr, GuardΩr.
+
+### Grand Synthesis v2
+`docs/tool-reviews/grand-synthesis-v2.md` — all 36 tools, honest verdict.
+Verdict: "The soul is sound, the engine is real, the gauges lie."
+Critical path identified. See DEVNOTES.md for summary.
+
+### ConductΩr — Business Cockpit (NEW TOOL)
+`/conductor.html` + `src/routes/conductor.js` + `src/utils/cylinder-health.js`
+Replaces NorthΩr as the pinned header button. NorthΩr/VectΩr still accessible in dropdown.
+
+**The Five Cylinders:**
+- REACH — top-of-funnel growth (YouTube metrics)
+- AUTHORITY — niche credibility (CTR, retention)
+- CONVERT — affiliate/purchase intent (affiliate clicks, video recency)
+- SERVE — community warming (Greenhouse→Garden)
+- RETAIN — membership health (community mentions, tier stability)
+
+**What it does:**
+- Firing Score (0-100) from all 5 cylinders
+- "Make Next" recommendation with income stream + revenue lag explanation
+- "Why this?" panel with styled modal (replaced browser alert)
+- YouTube video sync (204→151 public long-form after filtering shorts/unlisted)
+- Batch classification of 151 videos using title + description
+- Thresholds calibrated for 1 video/week publishing cadence
+- Content goals stored in `youtube_videos.conductor_goal`
+
+**Key data:**
+- CONVERT showed 176d gap (December 2025 was last affiliate video) — confirmed real signal
+- Jason classified today's video (Signature Solar) as CONVERT → Firing Score jumped to 87
+- REACH and AUTHORITY green, SERVE green, RETAIN green
+
+### Nav Order Fixed
+Post-Production reordered: AssemblΩr → BrollΩr → AnimΩr → ReviewΩr → ComposΩr → ClipsΩr
+Distribution: PostΩr promoted to M5 position
+
+### GeneratΩr (BrollΩr + AnimΩr unified output)
+`src/utils/generator-output.js` — downloads to `{intake}\{project_id}_{slug}\generated\`
+VaultΩr watcher now recognizes `generated/` subfolder as broll shot type
+
+### Consolidation Plan
+- LabΩr → merge into WritΩr's CollaboratΩr
+- AnalytrΩr → fold into NorthΩr/ConductΩr
+- CutΩr vs ClipsΩr → keep separate, rename CutΩr to EditΩr Cuts
+
+### Key Fixes (Session 92)
+- MarkΩr: "Post now" never watermarked — fixed to use effectiveVideoPath
+- GuardΩr: DMCA confidence showed 8500% — fixed scale mismatch
+- ComposΩr: SSE shape mismatch — entire progress bar was broken
+- BrollΩr: `const prompt` → `let prompt` — analyze() crashed when VisualΩr configured
+- CutΩr: `MODEL` undefined — 100% non-functional, fixed
+- MailΩr: Sends live textarea content not raw AI output
+- AudiencΩr: `first_post` delta detection, community_member_history UNIQUE constraint
+- PostΩr: TikTok always showed failed, YouTube always published public, overlap guard
+
+## Pending (Session 94)
+1. VaultΩr dedicated session (F2 filters server-side, F4 indexes, F17 layout)
+2. AssemblΩr MVP rewrite
+3. CollaboratΩr consolidation (LabΩr + WritΩr Room + EditΩr Room)
+4. ConductΩr — "Why this?" richer reason from updated prompt (needs cache refresh)
+5. ConductΩr — VectΩr integration (strategic direction as constraint)
+6. Instrument silent-drop layer across codebase
+7. Google Analytics MCP (add to .env when quota resets)
+8. June 12 challenge closeout
+9. **kre8r-land BLAST-OFF Phase 0** — see `C:\Users\18054\kre8r-land\BLAST-OFF-PLAN.md`
+
+---
+
+# Session 93 — kre8r-land: Security Hardening + Flipper Portal + Fable Launch Audit (2026-06-10)
+
+## What Was Built
+
+### kre8r-land Security + Reliability Hardening (13 issues fixed)
+Full Sonnet code review pass. Files touched: `src/routes/alerts.js`, `src/routes/isochrone.js`,
+`src/routes/listings.js`, `public/finder.html`, `src/aggregator/landlimited.js`,
+`src/aggregator/known-feeds.js`, `src/aggregator/billyland.js`.
+Key fixes: XSS escaping in finder.html, BLOCKED_FEED_NAMES normalization, AbortSignal.timeout()
+on all external fetches, isochrone mode whitelist, min_score filter logic corrected,
+unsubscribe token added to saved_searches, dedup check on alert creation.
+
+### Flipper Listing Portal (new supply channel)
+`src/routes/seller.js` — public submit + admin approval API (440 lines).
+`public/list-your-land.html` — public flipper submission page (single / CSV / feed URL).
+`public/admin-listings.html` — admin approval queue with feature/verify buttons.
+`docs/list-your-land-guide.md` — how-to video script reference for future TikTok/YouTube.
+Database: sellers table, submitted_feeds table, listing_leads table, 6 new columns on
+land_listings (seller_id, listing_tier, featured_until, verified_at, seller_note, contact_email).
+All future monetization hooks (featured placement, 7Kin Verified, lead delivery) stubbed
+in DB and API from day one.
+
+### Kre8r NorthΩr — Land Submissions Widget
+`public/northr.html` — new "Land Submissions" section polling `/api/land-pending`.
+`server.js` — `/api/land-pending` proxy route (keeps INTERNAL_API_KEY server-side).
+Widget auto-hides when queue is empty (zero noise when nothing pending).
+
+### Kre8r Nav — Sites Category
+`public/js/nav.js` — new "Sites" dropdown with 5 external links to 7kinhomestead.land pages
+(Land Finder, List Your Land, Land Admin, The Fence, Land Home). Opens in new tab.
+`target="_blank"` support added to both desktop and mobile link renderers via `item.external` flag.
+
+### Fable 5 Launch Audit + BLAST-OFF-PLAN
+Full Fable architectural audit of kre8r-land. Verdict: foundation is solid.
+Four real gaps identified (Fence event-loop block, no HTTP caching, isochrone quota,
+no Claude spend ceiling). Full phase-by-phase execution roadmap written to
+`BLAST-OFF-PLAN.md` in kre8r-land repo root. Committed.
+
+### Community Helper County-Strip Fix (committed)
+`src/routes/community.js` — strips county/parish/borough/township suffix from city input
+in `/nonprofits` and `/fire-departments` endpoints. Fixes "Elko County" → "elko" mismatch.
+`public/community_helper.html` — Leaflet isochrone map (was staged, now committed).
+
+## Strategy Context
+Fable analysis: gate the judgment, never the inventory or calculators.
+Almost everything goes wide. Email ladder is the universal gate.
+Community stops being a turnstile, becomes the destination at the top of every ladder.
+Key sequencing before launch: rotate MailerSend key → Fence Haiku swap + 3-free limit →
+Freedom Calculator community bridge → Solar affiliate link audit → MailerLite intent tags.
+
+## Commits (kre8r-land)
+- `feat: flipper listing portal — list-your-land + admin approval queue`
+- `fix: land finder security + reliability hardening (13 issues)`
+- `fix: strip county/parish/borough/township suffix from city input`
+- `docs: Fable 5 launch audit + BLAST-OFF-PLAN — phase-by-phase execution roadmap`
+- `feat: Phase 0 blast-off hardening — Fence event-loop fix, daily spend cap, cache headers, isochrone cache + rate limits, seller 1mb body limit`
+
+## Phase 0 Status — ✅ COMPLETE (Fable verified June 10 2026)
+- Fence precomputed DOCS/DOC_LEN/AVG_LEN — event-loop block eliminated
+- Daily Claude spend cap via kv_store (FENCE_DAILY_CAP env var, default 1500)
+- Cache-Control headers on all listing read routes
+- Isochrone cache table + rate limiting on isochrone + geocode
+- Seller CSV 413 bug fixed (1mb body limit before global 32kb)
+- Cloudflare live: Full (strict) SSL, Always HTTPS, bypass rule for dynamic routes, opt-in cache rule for listings/isochrone
+- nginx real_ip restored from CF-Connecting-IP — rate limiters see real visitor IPs
+- Verified: `Cf-Cache-Status: HIT` on listings, real IPs in nginx access log
+
+## Next: Phase 1 (see TODO.md for exact order — Fable's instructions)
+
+---
+
+# Session 91 — Grand Synthesis + Tier-1 Pipeline Audit (2026-06-05)
+
+## What Was Built
+
+### Tier-1 Tool Reviews (5 tools, 4 Opus agents each)
+Full architectural audit of every tool that touches every video:
+- `docs/tool-reviews/seedr-review.md` — SeedΩr
+- `docs/tool-reviews/id8r-review.md` — Id8Ωr
+- `docs/tool-reviews/writr-review.md` — WritΩr
+- `docs/tool-reviews/vaultr-review.md` — VaultΩr
+- `docs/tool-reviews/assemblr-review.md` — AssemblΩr (+ DaVinci 21 API compat + opportunities)
+- `docs/tool-reviews/grand-synthesis.md` — **Full system assessment (READ FIRST)**
+- `docs/tool-reviews/fixes-implemented.md` — All fixes applied this session
+
+### Critical Fixes (from audit findings)
+
+**VAULT-001 — Frame analysis was a paid no-op (CRITICAL)**
+`visual_description` and `visual_analyzed_at` were missing from `updateFootage` allowed list.
+Every frame analysis ever run burned API cost and wrote nothing. Now fixed. AssemblΩr and VisualΩr
+finally receive real visual signals. The idempotency cursor now advances.
+
+**SeedΩr — Day-one data-loss bugs closed**
+- `source` + `cluster` columns added to CREATE TABLE + both migration paths
+- Status default `vault`→`raw` with backfill migration
+- Bulk import double-insert fixed (was the primary duplicate ideas cause)
+- Hard delete → soft-delete with 6s undo toast
+- Promote wrapped in db.transaction()
+- Constellation cache reconciled; invalidates on edit/delete
+
+**Id8Ωr — Checkpoint recovery + learning loop**
+- Checkpoint recovery banner reads correct keys (`researchResults.{youtube,data,vault}`)
+- Voice calibration (190 transcripts) now injected into concept generation
+- Post-Mortem brief injected into both `/fast-concepts` and `/concepts` (known issue #5 CLOSED)
+- Research citations now rendered to creator (clickable domain list)
+- SSE watchdog (60s stall detection)
+- Package screen pre-selects AI's top pick — Continue enabled immediately
+- Brief auto-saves to SeedΩr on render
+- Phase 1 Gemini sources now merged into citations (not dropped)
+- content_angle no longer written into wrong column
+- Original seed pinned in prompt window
+- Concept choice range fixed (cards 4+5 now work)
+- SeedΩr→Id8Ωr handoff includes notes + cluster + connections
+
+**WritΩr — Persistence + false approval bugs**
+- paste-in `finishJob(job)` ReferenceError fixed
+- Bullets/Hybrid tab can never be approved as canonical script (always approves full sibling)
+- `_parseWritrScript` safe JSON parse — corrupt row can no longer crash all script reads
+- Room /approve validates beat markers + extracts beat_map_json
+- Post-Mortem brief injected into generate route + Room (known issue #5 CLOSED)
+- Voice calibration suppressed when library profiles selected (no triple-voice conflict)
+- Vault crash-recovery save moved before DB inserts
+- Iterate preserves beat map across truncations + updates active_script_id
+
+**VaultΩr — VAULT-001 + model hardcoding**
+- VAULT-001: visual_description/visual_analyzed_at added to updateFootage whitelist
+- Model hardcoding fixed across mission.js, markr.js, postmortem.js
+
+**DaVinci 21 compatibility fixes (from official May 2026 README)**
+- `GetItemsInTrack` → `GetItemListInTrack` in resolve-timeline-transcript.py + resolve-transcribe.py
+- `GetRenderPresets` → `GetRenderPresetList` in braw-proxy-export.py
+- `GetItemInTrack`/`GetTrackItemCount` replaced with `GetItemListInTrack` pattern in add-timeline.py
+- Curly quote SyntaxError fixed in create-project.py
+
+**Publish Fan-Out — Three dead feedback loops closed**
+`src/postor/queue-processor.js` — `firePublishFanOut()` fires on every successful ship:
+1. `ideas.status = 'produced'` — originating seed reflects real output
+2. Post-Mortem blank brief seeded — creator has somewhere to reflect after performance data arrives
+
+**visual_description Distribution — Vision spend pays off across more tools**
+- `src/writr/shoot-first.js` — per-clip `⚡ Visual:` signal injected into transcript block
+- `src/routes/postor.js` — visual signal injected into caption generation prompt
+Both gated on `visual_analyzed_at IS NOT NULL` — degrades gracefully for unanalyzed clips.
+
+## Grand Synthesis Verdict (Opus)
+"Kre8Ωr is a genuinely ambitious, mostly-built AI content production OS whose reasoning quality
+is excellent and whose plumbing is leakier than its dashboards admit. The soul is sound, the
+engine is real, the gauges lie — and fixing the gauges is now the highest-leverage work left.
+A quarter of focused work, not a rebuild — and this session already started it."
+
+## Pending (carry to Session 92)
+1. VaultΩr dedicated session — server-side filters, indexes, layout inversion (F2, F4, F17)
+2. AssemblΩr MVP rewrite — direct subclips on 02_SELECTS, DaVinci read-back, one button
+3. Instrument silent-drop layer — log allow-list misses, read-back before success
+4. One shared context builder per tool — WritΩr storyboard gets all intelligence
+5. Pre-multi-tenancy gates — SESSION_SECRET fail-fast, PostΩr overlap, OAuth encryption
+6. AssemblΩr structural fixes — C1 empty timeline, H2 gold markers, H4/H5 duplicate buttons
+7. Panels 4 & 6 parchment in western skin
+
+---
+
+# Session 90 — Western Crew Complete + Publish Celebration Cutscene (2026-06-04)
+
+## What Was Built
+
+### Persona Plumbing Architecture Fix (McCandless / western Grex)
+- Root cause identified: western skin used local Claude while sci-fi proxied through OrgΩr — so McCandless had no financial data
+- Fix: `src/routes/mission.js` western grex-chat now proxies to OrgΩr `/api/cfo/chat/:orgId` with `persona_prefix` param
+- OrgΩr `src/routes/cfo.js` updated to accept `persona_prefix` — replaces `CFO_SYSTEM` when provided
+- Pattern: data engine (OrgΩr CFO) stays the same, persona is just a wrapper injected at call time
+- OrgΩr restarted via PM2, confirmed live on kinos.life
+
+### Draw Iron Cutscene
+- Multi-frame Beaumont gunfight sequence generated in Higgsfield — bandits on roof, street duel, water trough
+- Edited + rendered as `public/skins/western/draw-iron.mp4`
+- Wired to western FIRE button via `getSkinLanguage('cutsceneFile')`
+- `getSkinLanguage()` extended with `cutsceneFile` key for skin-aware cutscene routing
+
+### Western Crew — All Five Complete
+
+**Belle Cavendish (Vaelyn)**
+- Still generated (conservative costume — high collar, long sleeves to pass Higgsfield filter)
+- Voice: Annie-Beth Southern `c4TutCiAuWP4vwb1xebb` — warm, motherly, dramatic
+- Clips: `belle-idle.mp4` (glass-cleaning bartender listen), `belle-speaking.mp4`
+- Wired in SKIN_PERSONAS with full manifest entry
+- `ELEVENLABS_VOICE_BELLE` added to AppData .env
+
+**Deputy Fitch (Dale)**
+- Still generated — DEPUTY FITCH nameplate on desk, wanted posters, jail bars, star badge
+- Voice: Wesley Southern `L7tnZ2Iaul3XxXEBVYoz` — warm, conversational
+- Clips: `fitch-idle.mp4` (shuffling warrants), `fitch-speaking.mp4` (leaning in, urgent)
+- Wired in SKIN_PERSONAS with full manifest entry
+- `ELEVENLABS_VOICE_FITCH` added to AppData .env
+
+**Ada Lovejoy (Axiom)**
+- Character: 28-year-old blonde telegraph operator, Western Union, green visor + arm garters
+- Name: Ada Lovejoy (Lovelace nod, not on-the-nose)
+- Still generated — Clayton N.M. station, dispatch board, brass key, "All messages must be written plainly"
+- Voice: Cassie Sassy Southern Gal `qqKpdUwkD3h8VyDLKQyz` — sharp, impatient, competent
+- Clips: `ada-idle.mp4` (reading tape, assessing glance), `ada-speaking.mp4` (direct, efficient)
+- Wired in SKIN_PERSONAS: name 'ADA LOVEJOY', title 'WIRE OPERATOR · WESTERN UNION'
+- `ELEVENLABS_VOICE_ADA` added to AppData .env
+- Opener updated: *"Wire just came in from three territories, Sheriff. I've already decoded two of 'em. You want the good news or the complicated news first?"*
+
+### Video Publish Celebration Cutscene
+- Group still generated: all five crew at Belle's bar, shot glasses raised toward camera, Fitch laughing
+- Animated as `public/skins/western/video-publish-cut-scene.mp4`
+- `getSkinLanguage()` extended with `publishCutsceneFile` key
+- `playPublishCutscene()` function added to mission-control.html — uses existing cutscene overlay
+- BroadcastChannel `kre8r_publish` wired: postor.html fires `video_posted` on all-platforms-success
+- mission-control.html listens and triggers celebration cutscene automatically
+- Sci-fi + other skins: graceful no-op (no publishCutsceneFile defined)
+
+### Kajabi 6am Routine — Score Mover Detection
+- Added Step 5: `list_members` with `onboarding_status=in_progress` + `last_active_after: yesterday`
+- Catches existing members progressing toward score 50 (not just new joins)
+- Score-50 crossers flagged as warm leads for Garden DMs
+- SKILL.md updated in `.claude/scheduled-tasks/kajabi-daily-community-sync/`
+
+## Files Changed
+- `src/routes/mission.js` — western grex-chat proxied through OrgΩr with persona_prefix
+- `/root/orgr/src/routes/cfo.js` — persona_prefix param accepted, replaces CFO_SYSTEM when provided
+- `public/mission-control.html` — Ada/Fitch wired in SKIN_PERSONAS, Ada opener updated, publishCutsceneFile added, playPublishCutscene() + BroadcastChannel listener added
+- `public/postor.html` — BroadcastChannel broadcast on all-platforms-posted success
+- `public/skins/western/draw-iron.mp4` — Draw Iron gunfight cutscene
+- `public/skins/western/video-publish-cut-scene.mp4` — crew celebration cutscene
+- `public/crew/belle-idle.mp4`, `belle-speaking.mp4` — Belle Cavendish clips
+- `public/crew/fitch-idle.mp4`, `fitch-speaking.mp4` — Deputy Fitch clips
+- `public/crew/ada-idle.mp4`, `ada-speaking.mp4` — Ada Lovejoy clips
+- `AppData\Roaming\kre8r\.env` — ELEVENLABS_VOICE_BELLE/FITCH/ADA added
+
+## Western Crew Final Roster
+| Role | Character | Voice | Status |
+|------|-----------|-------|--------|
+| Number One | Beaumont | Burt Reynolds `lnbHqRFwMGU7M66Bf2ny` | ✅ Complete |
+| Grex (CFO) | Banker McCandless | `acrqYoDVmcpJemOxjC39` | ✅ Complete + OrgΩr data |
+| Dale (AIE) | Deputy Fitch | Wesley `L7tnZ2Iaul3XxXEBVYoz` | ✅ Complete |
+| Vaelyn | Belle Cavendish | Annie-Beth `c4TutCiAuWP4vwb1xebb` | ✅ Complete |
+| Axiom | Ada Lovejoy | Cassie `qqKpdUwkD3h8VyDLKQyz` | ✅ Complete |
+
+## Pending (carry to Session 91)
+- Deputy Fitch AIE architecture fix — same persona_prefix pattern needed for AIE Job 64 endpoint (Dale still uses local Claude, not real task data)
+- Panels 4 & 6 (Audience, Family) parchment background not showing in western skin
+- Session E — Living Three.js universe
+- Session B.5 — Tertiary hover reveals
+
+---
+
+# Session 89 — Mission Control Session D: Holographic Crew + Western Skin (2026-06-03)
+
+## What Was Built
+
+### Session D — Holographic Comm Windows (complete)
+- `CommManager` singleton — `hail(crewId)`, open/close with entrance/exit animations, Web Audio comm chime + static hiss
+- 5 crew members fully wired with Higgsfield video clips + ElevenLabs TTS voices (auto-dub architecture):
+  - **Number One** — Burt Reynolds voice 1.2x, briefing mode, briefing streams then auto-dubs
+  - **Grex** — Ferengi CFO, OrgΩr proxy, Higgsfield clips, violet accent
+  - **Dale McGillicutty** — Disheveled engineer, AIE Job 64, frantic idle clip
+  - **Vaelyn** — Tactical Officer with bioluminescent markings, live community data injected, Australian voice
+  - **Axiom** — Science Officer android, no contractions + no compound words, YouTube analytics injected
+- Markdown renderer (`_md()`) applied on stream completion — bold, bullets, numbered lists
+- Idle↔speaking clip swap on stream start/end; tactical table dims 15% when comm open
+- Stop audio button (■ STOP) appears when TTS is playing
+
+### New crew endpoints
+- `/api/mission/vaelyn-chat` — live community data (member counts, lurker rate, warm leads) injected
+- `/api/mission/axiom-chat` — live YouTube data (subscribers, recent videos) injected
+- `/api/mission/fire-youtube` — synchronous YouTube channel stats + last 10 videos fetch, writes `yt_channel_stats` + `yt_recent_videos` to kv_store
+
+### TARGET LOCK → FIRE system
+- 🎯 TARGET LOCK button → pulsing red FIRE button overlay
+- FIRE → plays `public/cutscenes/target-lock-battle.mp4` fullscreen while 8 API calls run in parallel
+- DIRECT HIT overlay on completion: "ALL ENEMY VESSELS DESTROYED · X OF 8 SYSTEMS UPDATED"
+- `fire-treasor` endpoint — syncs OrgΩr Plaid + crypto FIRST, then pulls full TreasΩr snapshot
+- `fire-youtube` — synchronous YouTube refresh, no background job dependency
+
+### Data fixes
+- `YOUTUBE_API_KEY` + `YOUTUBE_CHANNEL_HANDLE` added to AppData .env (were missing)
+- Double-encoding bug fixed in `getAudienceData()` — `setKv` already JSON-stringifies, raw reads double-parsed
+- `fire-youtube` endpoint makes YouTube data work after single FIRE with no extra steps
+- `SESSION_SECRET` fail-fast added (no more hardcoded fallback)
+- XSS in `_addActionCard` fixed — DOM construction replaces innerHTML
+- `fire-treasor` timeout added (Plaid 12s, crypto 8s)
+- TTS audio URL leak fixed in `_doClose`
+
+### Persona Plumbing — Narrative Skin Universes
+- `CREW_PERSONAS` registry in `mission.js` — skin-specific character definitions per crew member
+- `getPersona(skinId, crewId)` helper
+- All crew endpoints skin-aware via `req.body.skin_id`
+- `CommManager` reads `SKIN_PERSONAS` + `SKIN_OPENERS` for visual overrides per skin
+- `_sendChat` and `_streamBriefing` pass `skin_id` to backend
+
+### Western Skin (fully implemented)
+- `public/js/skins/western.js` — complete western narrative universe
+- Skin IDs renamed: `starfleet-command` → `sci-fi`, `tombstone` → `western` (no IP in identifiers)
+- `public/skins/western/tactical-bg.mp4` — marshal's office desk looping background
+- `public/skins/western/panel-post-left.png` + `panel-post-right.png` — parchment on posts
+- CSS: lantern flicker animation, daguerreotype vignette, `[data-skin="western"]` overrides for all 6 panels
+- CSS variable override: `--mc-teal → amber`, `--mc-green → olive` etc. throughout
+- Broadside typography: `Rye` + `Special Elite` Google Fonts injected via `@import`
+- Panel polish: post positions tuned individually, overflow hidden, padding for post clearance
+- Bridge Crew → **"The Posse"** (CSS rename via `::after`)
+
+### Western crew characters
+- **Beaumont** — First Gun (Number One), Golden Spur Saloon, lnbHqRFwMGU7M66Bf2ny voice, clips wired
+- **Banker McCandless** — McCandless & Co. Bankers (Grex), iron bars + vault, acrqYoDVmcpJemOxjC39 voice, clips wired, falls back to OrgΩr CFO if snapshot empty
+- Deputy Fitch, Belle Cavendish, Wire Operator — images/clips/voices pending
+
+### USS Kre8r
+- NX-9250 "Vanguard" chosen as the ship
+- Warp bubble still + animated warp sequence prompted
+- Departure + warp cutscene generated in Higgsfield
+- Warp launch trigger planned for video publish event (CutsceneManager TODO)
+
+### Product Vision captured
+- Narrative Skin Universes — each skin is a complete story universe (Sci-Fi, Western, Spy, Jumanji, Romance, etc.)
+- The retrospective frame: "an older creator telling the story to the next generation"
+- Every skin = a different answer to "when you tell this story later, what story was it?"
+- TOMBSTONE Western skin cutscene backlog logged in TODO.md
+
+## Bugs Fixed
+- YouTube data pipeline end-to-end (API key env gap, double-encoding, sync endpoint bypass)
+- OrgΩr/TreasΩr fire-treasor with Plaid sync + crypto revalue before data pull
+- Axiom/Vaelyn opener text hardcoded to "Message Dale..." — fixed to crew-specific
+- Duplicate Axiom button in crew panel
+- SESSION_SECRET, XSS, fire-treasor timeout, TTS audio bleed (all 4 Opus V4 fixes)
+
+---
+
+# Session 87 — Mission Control Session C: Skins System (2026-06-01)
+
+## What Was Built
+
+### Skins System — fully operational
+- `public/js/skin-manager.js` — SkinManager class: token validation, fallback chains, `[data-skin]` injection, sound hooks, crew persona overrides, localStorage persistence, refit transition animation
+- `public/js/skins/starfleet-command.js` — Default skin (foundation, free)
+- `public/js/skins/lcars-classic.js` — TNG 1987 orange/flat aesthetic ($10)
+- `public/js/skins/hearth.js` — Homestead warm amber ($12)
+- Two bonus skins built inline in refit-bay.html: **Nostromo** (green CRT phosphor, Alien aesthetic) and **Omega Directive** (blood red, Section 31)
+- `public/refit-bay.html` — Skin browser: HANGAR/STORE/SUBMIT tabs, skin cards with preview emoji + tier badges + descriptions + APPLY buttons, SYSTEM REFIT overlay animation
+
+### Skins wired and working ✅
+All four skins confirmed working: Hearth (amber), Nostromo (green CRT), Omega Directive (red), Starfleet Command (teal default)
+
+### Key bugs fixed
+1. `export default SkinManager` → caused SyntaxError in non-module script → removed, window global only
+2. Hardcoded hex colors (`#060c0e`, `#0d1e20` etc.) in mission-control.html CSS → replaced with `var(--mc-bg)`, `var(--mc-panel)` so tokens actually affect the visual
+3. `SkinManager.load(SKIN_STARFLEET_COMMAND)` in inline init was overwriting localStorage preference → fixed to only load default when nothing stored
+4. Refit Bay didn't navigate to Mission Control after apply → added `window.location.href = '/mission-control.html'` at 1100ms
+5. Refit Bay saved skin AFTER animation, not BEFORE → moved save to immediate click handler
+
+### nav.js
+`RefitΩr` (🎨) link added between Lab and existing items — visible in nav
+
+### ElevenLabs Sound Effects API noted
+Text prompts ready in all skin sound maps. `POST /v1/sound-generation` when ready.
+
+---
+
+# Session 86 — Mission Control Session B: Instruments (2026-06-01)
+
+## Goal
+Session B of the Bridge Design Spec — replace flat panel displays with real instruments.
+
+## What Was Built
+
+### New Instrument Widgets (mission-control.html — 3,407 → 4,294 lines)
+
+**OPS/Business:**
+- Runway as 270° fuel gauge arc (SVG dasharray/dashoffset math, zones red/amber/teal)
+- Income as oscilloscope waveform (13-week weekly_gi as teal SVG trace)
+- Bucket shield bars (5 vertical fill bars, floor-alert flash)
+- Crypto lateral bars (XRP/ADA with individual fill + value)
+- All numerals with holographic glow (`text-shadow: 0 0 8px currentColor`)
+
+**TACTICAL/Community:**
+- Three nested shield rings (Founding50 OUTER violet / Garden MIDDLE amber / Greenhouse INNER teal)
+- Warm leads reframed as "BOARDING OPS"
+- Lurker velocity bar
+- Challenge rail kept + restyled
+
+**CONN/Content:**
+- Days since last video as draining countdown ring (fills toward red past cadence target)
+- Script readiness pips (teal=WritΩr done, hollow=not)
+- Funnel grid cells (busiest stage highlights amber)
+
+**SCIENCE/Audience:**
+- Sensor contact styling, email open rate arc, signal-age indicator
+
+**COMMS/Family:**
+- Events as "transmissions", NO CONFLICTS as green beacon
+
+**Shared:** `.holo-num` glow, `.instr-label`, `.instr-divider`, flex panel sizing
+
+### Shield Ring Direction Fix
+Corrected tier order: Founding 50 (most exclusive) = OUTER ring, Garden = MIDDLE, Greenhouse (entry) = INNER. Reads as a conversion target / crown, not inverted funnel.
+
+### Data Pipeline Fixes
+- `getPipelineData()` now calls `getPublishingStats()` and returns `days_since_last_video`
+- `getAudienceData()` added fallback lookups for yt_subscribers (mirrr_channel_stats, analytics table)
+- Added `yt_last_video_pct` and `ml_last_campaign` to audience response
+
+### Noted for Future Sessions
+- **Tertiary hover reveals** — mechanical panel expansions per station (iris open / slide out / slide down / radial expand / sensor scan). Each station gets its own reveal personality. Builds after Session B stabilizes.
+- **ElevenLabs Sound Effects API** — can generate comm chimes, static bursts, LCARS chirps from text descriptions. Wire into Skins SoundManager in Session C. Endpoint: `POST /v1/sound-generation`.
+
+---
+
+# Session 85 — Mission Control Session A: The Bridge (2026-06-01)
+
+## Goal
+Execute Session A of the Bridge Design Spec — restructure 5-panel grid to full bridge architecture.
+
+## What Was Built
+
+### The Bridge Design Spec (BRIDGE-DESIGN-SPEC.md)
+46,000-word Opus grand design specification covering:
+- The Design Philosophy (3 laws + the contract)
+- Full bridge instrument cluster architecture with Tactical Table
+- Panel-by-panel instrument specs for all 6 stations + 2 new stations
+- The Skins System (.k8skin bundle format, 5 example skins)
+- Holographic Crew System with Crew Briefing concept
+- Living Three.js universe (data-reactive)
+- 7-session implementation roadmap
+- The Design Manifesto
+
+### Session A — Bridge Layout (mission-control.html)
+Complete layout restructure from 5-panel horizontal grid to bridge architecture:
+
+**New CSS layout:**
+- `#domain-grid` → `grid-template-columns: 280px 1fr 280px`
+- `#port-bank` (left, 280px) — CONN + OPS + CREW — vertical flex stack
+- `#tactical-table` (center) — starfield galaxy, grid overlay, ship silhouette, projects counter
+- `#starboard-bank` (right, 280px) — SCIENCE + TACTICAL + COMMS — vertical flex stack
+
+**New elements:**
+- CREW station (port bank bottom) — BRIEFING/DALE/GREX buttons, crew roster
+- Tactical Table overlays: grid pattern, radial glow, "TACTICAL TABLE · USS KRE8Ωr" label, ship silhouette (visible only when no stalled projects), "N PROJECTS IN FLIGHT" counter
+- Nominal hairline: Alert deck collapses to 12px "ALL SYSTEMS NOMINAL · STANDING BY" pulse when 0 alerts, expands to 116px when alerts exist
+
+**Three.js relocation:**
+- Canvas moved from `position: fixed` full-window to `position: absolute` within `#tactical-table`
+- Sensor sweep relocated to tactical table
+- Three.js renderer now sizes to tactical-table dimensions (not window)
+
+**Bug fixes:**
+- NaN runway — parseFloat + isNaN guard + better label formatting (Xd vs X.Xmo)
+- Ship silhouette toggles hidden when any project is stalled
+- Projects counter updates from real pipeline data
+
+### Number One voice + persona
+- Updated persona from Vulcan to Riker-archetype (warm but decisive, "already three steps ahead")
+- ElevenLabs wired: voice ID `qNkzaJoHLLdpvgh5tISm`, model `eleven_flash_v2_5`
+- Added `optimize_streaming_latency: 4` + `speed: 1.15` for faster delivery
+- Root .env fix: blank ELEVENLABS_API_KEY was overriding AppData value (override:true loads first)
+
+### OrgΩr + KinOS data flowing
+- OrgΩr: real data live ($4,043 net worth, $826/month, $1.6K liquid, $2.4K crypto, XRP+ADA)
+- Fixed snapshot endpoint: was calling wrong URLs + wrong auth header (`x-internal-key` → `x-internal-token`)
+- Grex chat channel wired (`POST /api/mission/grex-chat` → OrgΩr `/api/cfo/chat/4`)
+- Business panel redesigned: net worth hero, liquid/crypto side by side, runway bar, forecast 30d, bucket warnings, ⚕ GREX button
+
+### Edge TTS + ElevenLabs
+- `msedge-tts` npm package installed
+- TTS endpoint uses Edge TTS by default, falls back to ElevenLabs when key set
+- Fixed `tts.toStream()` — returns `{ audioStream }` not a direct readable
+
+## What the bridge looks like now
+- Left: CONN (pipeline distribution, stall detection) + OPS (net worth, crypto, runway, forecast) + CREW (briefing/comms buttons)
+- Center: Starfield galaxy framed by banks, tactical grid overlay, ship silhouette
+- Right: SCIENCE (audience/YouTube) + TACTICAL (community shields, warm leads) + COMMS (family)
+- Alert deck breathes — collapses to hairline when nominal, expands with real warnings
+
+---
+
+# Session 84 — Mission Control Live Data + Number One + Dale + Voice (2026-05-31)
+
+## What Was Built / Fixed
+
+### Tier Correction — email tag issue resolved
+- Root cause: MCP returns emails wrapped in `<user-supplied>` tags — sync-members.json had dirty emails
+- Fixed: stripped tags, re-synced 1,366 clean emails, re-ran tier correction
+- Result: 33 founding50 + 2 garden + 1,331 greenhouse correctly set in DB
+- 5 warm leads removed (paying members incorrectly flagged)
+
+### Number One — Vulcan First Officer Brief
+- `POST /api/mission/number-one` — SSE streaming, aggregates all mission data + KinOS brief
+- Full Vulcan character prompt — dry wit, "...Logical." pauses, one recommended action
+- Comm tablet UI: page dims, hex-grid overlay, tablet materializes center screen
+- Typewriter streaming effect with 400ms pause before "...Logical" tokens
+- Recommended action card extracts and surfaces at end of brief
+- Edge TTS voice: `en-GB-RyanNeural` via `msedge-tts` npm package (free, no API key)
+- Frontend bug fixed: was checking `parsed.token` but backend sends `parsed.text`
+
+### Dale — AIE Comm Channel
+- `POST /api/mission/aie-chat` — proxies to OrgΩr's Dale AIE (job ID 64, org 4)
+- Right-side slide-out panel, full two-way streaming chat
+- Action proposal cards with approve/reject
+- `DALE_JOB_ID = 64` — Dale McGillicutty, Executive Director AIE
+- `⚡ OPEN CHANNEL` button in command bar
+
+### ElevenLabs TTS (stubbed, ready)
+- `POST /api/mission/tts` — tries ElevenLabs if key set, falls back to Edge TTS
+- `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_NUMBER_ONE` env vars when ready
+
+### OrgΩr + KinOS Remote Wiring
+- Both apps on kinos.life droplet: orgr at `/root/orgr/`, kinos at `/var/www/kinos/`
+- PM2 names: `orgr` (id 1) and `kinos` (id 0)
+- Auth: `x-internal-token` header (NOT `x-internal-key`)
+- Token `91117b0fcda79005f8cabac4b3eed09b95875bcfbf6d9343` set in all three apps
+- OrgΩr correct endpoint: `GET /api/treasor/dashboard/4`
+- KinOS correct endpoint: `GET /api/schedule/upcoming?days=1`
+- AppData env: ORG_URL=https://orgr.kinos.life, KINOS_URL=https://kinos.life
+- Snapshot bug fixed: was using wrong endpoints + wrong auth header
+- Timeout increased to 8s for remote calls (was 2s — too short for HTTPS)
+- OrgΩr OPEN → link: `https://orgr.kinos.life/board?org=4`
+- OrgΩr password reset on droplet (`Brooklynn1015$`)
+
+### Cari LAN Setup
+- Video streaming endpoint added: `GET /api/vault/stream/:id` (HTTP Range requests)
+- Cari account created (owner role) with browser console fetch
+- Firewall rule: `netsh advfirewall firewall add rule name="kre8r" dir=in action=allow protocol=TCP localport=3000`
+- Sibling app launcher: `ipcMain.handle('launch-app', ...)` in electron/main.js
+
+### Mission Control aesthetic
+- Star Trek HUD: CONN/TACTICAL/OPS/SCIENCE/COMMS station callsigns
+- Two-layer Three.js starfield + DRADIS sensor sweep + scanlines
+- Sequential station engagement (chevron-lock) on load
+- Corner targeting reticles on all panels
+- Orbitron + Exo 2 + Bebas Neue typography stack
+- Comm tablet: page dim + hex-grid overlay + materializing tablet
+
+## Coming Up
+- The Doctor CFO agent (OrgΩr + Plaid integration — building in OrgΩr conversation)
+- Mission Control Business panel upgrade when Plaid + Doctor ready
+- KinOS data still not populating (snapshot endpoint fixed but needs verification)
+- OrgΩr Business panel still showing offline (timeout/routing — next session)
+
+---
+
+# Session 83 — Mission Control + Tier Correction + Community Game (2026-05-30)
+
+## What Was Built
+
+### Tier Correction (community_members)
+- Added `/api/community/tier-correct` endpoint + server.js whitelist
+- Jason exported Founding 50 (33) and Garden (2) CSVs from Kajabi admin
+- Root cause found: MCP returns emails wrapped in `<user-supplied>` tags — sync-members.json had dirty emails
+- Fixed: stripped tags from all 1,366 emails in sync-members.json, re-synced clean data
+- Result: 33 founding50 + 2 garden + 1,331 greenhouse correctly set
+- 5 warm leads removed (were paying members incorrectly flagged for Garden DMs)
+
+### Mission Control — Full Build
+**Backend (`src/routes/mission.js` NEW, 350 lines):**
+- GET /api/mission/snapshot — unified data fetch (pipeline, community, audience, system)
+- GET /api/mission/system — queue depths, worker heartbeats
+- GET /api/mission/attention — 8-rule attention engine (2 critical, 4 warning, 2 nudge)
+- POST /api/mission/attention/dismiss — snooze/dismiss with persistence
+- GET /api/mission/org — OrgΩr proxy (2s timeout, graceful degradation)
+- GET /api/mission/kinos — KinOS proxy (2s timeout, graceful degradation)
+
+**DB (`src/db.js`):**
+- `mission_attention_state` table added to BOTH runMigrations() and bootstrapTenantTables()
+
+**Nav (`public/js/nav.js`):**
+- 🚀 MissionΩr added between NorthΩr and Lab in command bar
+
+**Design mockups:**
+- `public/mission-control-mockup.html` — Star Trek HUD aesthetic, 1,903 lines
+  - Two-layer Three.js starfield (400 stars + 40 sensor contacts + constellation lines)
+  - Full-page scanline texture + DRADIS sensor sweep (8s cycle)
+  - CONN/TACTICAL/OPS/SCIENCE/COMMS station callsigns with accent colors
+  - Corner targeting reticles on panels (expand on hover)
+  - PRIORITY ONE / ADVISORY attention card language
+  - Rotating targeting arcs around the "9" days hero numeral
+  - 10-segment shield strength bars for community tiers
+  - Sequential station engagement animation on load (chevron-lock effect)
+  - Orbitron + Exo 2 + Bebas Neue typography stack
+- `public/mission-control.html` — working shell connected to real API
+
+### Aesthetic Direction Established
+Station metaphor: CONN (pipeline) / TACTICAL (community) / OPS (business) / SCIENCE (audience) / COMMS (family)
+Star Trek Discovery/Picard/SNW era + Stargate Atlantis sensibility.
+This is the crowning aesthetic direction for all kre8r tools going forward.
+
+## What Was NOT Done
+- Mission Control wired to real data (mockup phase — next dedicated session)
+- Lurker tagging, warm lead DMs, June 12 challenge closeout — still pending
+
+---
+
+# Session 82 — Full Community Snapshot (1,366 members) + Tier Detection (2026-05-30)
+
+## Goal
+Run the first full community snapshot — pull all 1,366 members via Kajabi MCP,
+push to kre8r with correct tier data, activate warm lead detection.
+
+## What Was Done
+
+### Full Member Sync
+- Pulled all 1,366 members across 14 MCP pages (100/page, joined_at_asc sort)
+- Each page saved to C:/Users/18054/kre8r/scripts/sync-members.json incrementally
+- Toolset evicts after ~3 uses — must re-enable communities between batches
+- Final push: 1,366 upserted, 24 warm leads detected, 1,362 events logged
+
+### Results
+- Lurkers (score ≤25): 1,226
+- Engaged (score 26-99): 106
+- Fully onboarded (score 100): 34
+- Warm leads auto-detected: 24 (greenhouse + 2+ signals + 14+ days + posts_30d > 0)
+
+### Tier Detection
+- Contacts toolset confirmed tag IDs: Founding 50 = 2150101640 (33 members), Garden = 2150101641 (36 members)
+- search_contacts filter parameters not working (filters_applied: null in all responses) — MCP beta limitation
+- Net unique paying members to correct: ~35-37 (Founding 50 includes Garden, so overlap reduces total)
+- Caleb Cluck confirmed Founding 50 ($297 revenue, tags: Garden + Founding 50 + Greenhouse)
+- Tier correction TODO: scan contacts page-by-page client-side for paying tags on next sync
+
+### Key Discovery: Tier Tag Strategy
+Contact tier data lives in Kajabi tags ("Founding 50 - Member", "Garden - Member", "Greenhouse - Member").
+For future tier detection: page through all contacts, filter client-side by tag name, match to 
+community_members by email, correct tiers. Better than access_group_ids (which aren't filterable in list_members).
+
+### Warm Lead Detection Working
+24 warm leads sitting in warm_leads table, ready for personalized Garden DMs.
+AudiencΩr → Community tab shows them with signals, days since join, DM status.
+Human review required before any DM sends — zero risk of sending to paying members.
+
+## What Was NOT Done
+- Tier corrections (contacts filter broken — ~35-37 to fix)
+- Lurker-nurture tagging (1,226 members) — next session
+- Email sequences via MCP — next session
+
+---
+
+# Session 81 — Community Intelligence System Built + AudiencΩr Community Tab (2026-05-30)
+
+## Goal
+Build the full community intelligence system from OrgΩr hat → kre8r DB → AudiencΩr UI.
+
+## What Was Built
+
+### OrgΩr Community Manager Hat Analysis
+- Pulled all 9 policy documents from OrgΩr DB for the Community Manager role (Maya Rutland)
+- Mapped every function against Kajabi MCP capabilities
+- Key finding: email sequence already live in MailerLite (8 emails, 40% open → 0.16% click on conversion email)
+- Diagnosis: emails fire but don't convert because 96% of members are lurkers who've never posted
+- The fix: Starting Line Challenge creates community experience → THEN Garden conversion DM
+
+### Greenhouse → Garden Conversion Protocol (RRCM-005) Analysis
+- Three conversion pathways: Automated email, Warm Lead DM, Jason-Initiated
+- Warm lead signals (need 2+): posted, multiple posts, attended live call, asked deep questions, etc.
+- Personal DM format: specific observation + one relevant Garden feature + no pressure
+- The MCP's `send_dm` + my ability to read their posts = Pathway 2 automated
+
+### kre8r Community Intelligence System
+**`src/db.js`** — 5 new tables (in both runMigrations AND bootstrapTenantTables):
+- `community_members` — live snapshot of every member with progress_score
+- `community_snapshots` — weekly aggregate history for trend charts
+- `community_member_history` — per-member score history (powers delta detection)
+- `warm_leads` — DM pipeline: signals, draft, status, outcome
+- `community_events` — new_member, first_post, score_moved, challenge_complete
+
+**`src/routes/community.js`** — 7 endpoints:
+- POST /sync (INTERNAL_KEY) — receives Claude's MCP push, auto-detects warm leads + events
+- GET /health — dashboard summary
+- GET /warm-leads — leads table with signals + DM status
+- PATCH /warm-leads/:id — update DM status/outcome
+- GET /events — event log
+- GET /movers — score delta between snapshots
+- GET /members — paginated member list
+
+**`server.js`** — mounted /api/community, whitelisted /api/community/sync from session auth
+
+**`public/audience.html`** — New 🏕 Community tab:
+- Health strip (by tier: Greenhouse/Garden/Founding50, plus Lurkers/Engaged/Full)
+- Data status + Claude Desktop sync instructions
+- Warm leads table with signals, DM status, days since created
+- Score movers panel (who graduated from lurker this week)
+- Recent events feed (new members, first posts, score changes)
+
+**`public/northr.html`** — Community widget:
+- Total members, Garden count, Lurker count, Warm leads pending
+
+**`scripts/community-sync.js`** — standalone script for future REST API sync attempts
+
+### First Sync Completed
+- 100 members pushed (May cohort sample from session tool-result files)
+- 104 events detected and logged
+- Dashboard live and showing real data ✅
+- Caleb Cluck's first post correctly detected as an event
+
+### What the Full Sync Needs (Next Session)
+- 1,366 total members require 14 MCP pages (100/page)
+- Must be done at START of fresh session before reading any files
+- Command: "Run the full community snapshot" — I pull all members via MCP, push to /api/community/sync
+- Once full sync is done: warm leads will populate, score distribution complete, Garden pipeline actionable
+
+## What Was NOT Done
+- Full 1,366-member sync (context was too full — do first thing next session)
+- Email sequences for lurker nurture + new member welcome (next session)
+- Joleen Sims Community Leader promotion (Jason does in Kajabi admin)
+- SaaS hardening quick fixes (SESSION_SECRET, PostΩr guard)
+
+---
+
+# Session 80 — Kajabi MCP Discovery + Rock Rich Community Game (2026-05-30)
+
+## Goal
+Fix frame analysis migration bug (visual_analyzed_at missing from runMigrations). 
+Explore newly connected Kajabi MCP server. Take first real community actions.
+
+## Critical Bug Fixed
+**`src/db.js`** — `visual_analyzed_at` and `visual_description` columns were added to
+`bootstrapTenantTables()` but NOT to `runMigrations()`. The Electron AppData DB runs
+`runMigrations()` at boot — it never got the columns. Added 5 explicit `ALTER TABLE`
+statements at the end of `runMigrations()`:
+```js
+try { db.exec(`ALTER TABLE footage  ADD COLUMN visual_description  TEXT`);    } catch (_) {}
+try { db.exec(`ALTER TABLE footage  ADD COLUMN visual_analyzed_at  DATETIME`); } catch (_) {}
+try { db.exec(`ALTER TABLE selects  ADD COLUMN beat_brief          TEXT`);    } catch (_) {}
+try { db.exec(`ALTER TABLE selects  ADD COLUMN critique_note       TEXT`);    } catch (_) {}
+try { db.exec(`ALTER TABLE selects  ADD COLUMN coverage_confidence TEXT`);    } catch (_) {}
+```
+**Rule going forward:** Any new column MUST be added to BOTH `bootstrapTenantTables()`
+(tenant DBs) AND `runMigrations()` (Jason's AppData DB). These are separate code paths.
+
+## Kajabi MCP — First Session
+Kajabi exposed an MCP server, now connected to Claude Desktop. Full access to:
+Site ID: 2148808568 / Community ID: 972809 (Rock Rich Community)
+
+### Community snapshot pulled:
+- **1,366 total members**. **929 joined in May** (3.7× growth spike — YouTube/TikTok video).
+- **1,332 members at onboarding_status: in_progress** (stuck at progress_score 25 — lurkers)
+- Active users May: 1,429 user-days (vs 507 prior period — 2.8×)
+- Revenue peaks: ~$2,400 week of Apr 6 + $2,100 week of May 4
+- 78 meetup RSVPs (vs 42 prior)
+- **Challenges: 0** going into today
+
+### Community MVPs identified:
+- **Joleen Sims** — 24 posts, 75 comments, 8 posts + 47 comments in last 30 days. The anchor.
+- Jason Rutland — 47 posts, 307 comments (16 posts + 141 comments this month)
+- Gary Iverson, Will Lambirth, John Spencer Isaacson — 7 posts each this month
+
+### Actions taken today:
+1. **Pinned announcement posted** — "Welcome to the wave 🌊" — hit all 1,366 members.
+   ⚠️ SILENT SUCCESS BUG: `create_announcement` returns error even when it succeeds.
+   Jason accidentally posted 3 duplicates. Deleted extras in Kajabi admin.
+   RULE: Never retry create_announcement — check Kajabi admin first.
+
+2. **Campfire post live** — Challenge announcement with share link posted to The Campfire
+   (channel id: be502bcc-a9a3-4c33-968c-519afcffe228). Same silent success pattern.
+
+3. **Rock Rich Starting Line Challenge launched**:
+   - Challenge ID: deb3ff8d-c081-470d-8b53-e0d24a20fc9b
+   - Badge: custom shield/racing flags image (looks great)
+   - Runs May 29 → June 12, 2026
+   - Access: The Greenhouse (Free) — all members eligible
+   - Ask: post a photo of your starting line + where you are + where you want to go
+   - ⚠️ Kajabi bug found: new "badge on challenge completion" feature is buggy —
+     was applying the badge to ALL posts community-wide. Reported to senior support.
+     Badge being removed from Gamification and will be awarded manually via segmentation.
+
+### The Community Game Strategy:
+**Goal:** Turn 1,332 lurkers into participants.
+**Opponent:** Kajabi's missing automation triggers (no "first post" trigger yet — confirmed
+by both us and Kajabi's own AI "Co-Founder").
+**The insight:** progress_score is the playing field.
+  - Score 25 = lurker (joined channels, nothing else)
+  - Score 50+ = did something (posted OR completed profile)
+  - Delta 25→50 = the unsub signal we've been looking for
+
+**The bootstrapped system:**
+1. Tag all 1,332 score-25 members with `lurker-nurture`
+2. Lurker nurture email sequence fires (3 emails, Starting Line Challenge as CTA)
+3. Weekly: I pull tagged members, check who moved to 50+ → untag them → they graduate
+4. MCP tools confirmed available: create_sequence, add_sequence_email, tag_contact,
+   untag_contact, create_segment, create_broadcast (drafts)
+5. One Kajabi Automation needed: "tag applied → start sequence" (Jason sets up once)
+
+**Playing field needed (next session):**
+- Tags: `lurker-nurture`, `starting-line-done`, `engaged`
+- Sequences: Lurker Nurture (3 emails) + New Member Welcome
+- kre8r community_snapshots table for historical paper trail
+
+### The OrgΩr Community Manager Hat:
+Jason has a "hat pack" in OrgΩr for a community manager role. Key insight:
+many of those functions can now be run directly through the Kajabi MCP.
+**TODO next session:** Grab the community manager hat from OrgΩr, map each function
+against what the MCP can actually do today, identify what's now automated vs what
+still needs a human.
+
+## What Was NOT Done
+- kre8r community_snapshots table (next session)
+- Email sequences not yet created (next session)
+- Tags not yet applied (next session)
+- Frame analysis batch on existing vault (still pending — run manually in VaultΩr)
+
+---
+
+# Session 79 — AssemblΩr Visual Perception + Frame Analysis Batch Backfill + Opus V3 Review (2026-05-28)
+
+## Goal
+Complete the visual frame perception system started at end of Session 78 context window.
+Add batch backfill for 4k existing clips. Run Opus architectural review ahead of potential
+technical co-founder (Trav) conversation.
+
+## What Was Built
+
+### 1. AssemblΩr Visual Frame Perception (completing Session 78 work)
+**`src/vault/frame-analysis-queue.js`** (new file, full implementation)
+- Background queue that extracts sample frames via ffmpeg and sends them to Claude Vision
+- Produces per-clip: overall_quality, eye_contact_consistency, energy_arc, peak_energy_range,
+  physical_demonstration (+description), background_consistency, lighting_quality, posture_energy,
+  recommended_start/end_pct, editorial_notes
+- Stored as `footage.visual_description` JSON + `footage.visual_analyzed_at` timestamp
+- Proxy-first: always uses proxy_path over file_path, skips .braw/.r3d/.ari (undecoded RAW)
+- Frame sampling: <2min→15s intervals, 2-10min→30s, >10min→60s, max 20 frames
+- SSE broadcast to connected vault clients (frame_enqueued/started/done/error events)
+
+**`src/db.js`** — new columns added to migrations:
+- `footage.visual_description TEXT` — Claude Vision JSON result
+- `footage.visual_analyzed_at DATETIME` — idempotency cursor for batch
+- `selects.beat_brief TEXT` — beat's emotional_function shown in UI
+- `selects.critique_note TEXT` — Claude self-critique of its own assembly
+- `selects.coverage_confidence TEXT` — high/medium/low confidence badge per beat
+
+**`src/editor/assemblr.js`** — visual signals wired into AssemblΩr pipeline:
+- Call 1 (`mapBeatsInClip`): parses `visual_description` from footage record, builds `visualBlock`
+  injected into prompt. When `physical_demonstration=true`, tags beat occurrence as b-roll anchor.
+- Call 2 (`assembleBeat`): extended JSON schema with `coverage_confidence` and `critique_note`.
+  `takesText` annotates each take with `⚡ IN PEAK ENERGY ZONE` when take.start falls inside
+  `peak_energy_range` percentile window.
+- Fast-path (single clean take): `coverage_confidence = 'high'` automatically.
+- `buildAssembly()` step 9: extracts both fields, passes to section push as `beat_brief`, `critique_note`, `coverage_confidence`.
+
+**`src/vault/watcher.js`** — after auto-transcribe queue for talking-head, also enqueues `fxQueue`
+**`src/vault/intake.js`** — in `processProxyUpdate()`, lazy-requires `frame-analysis-queue` (avoids
+  circular dep) and enqueues talking-head proxies when they link up
+
+**`src/routes/vault.js`** — new routes:
+- `GET /api/vault/frame-queue/status`
+- `GET /api/vault/frame-queue/stream` (SSE with 20s keepalive)
+- `POST /api/vault/frame-queue/add` (manual single-clip enqueue)
+
+**`public/editor.html`** — `confidenceBadge()` helper + beat cards show beat_brief, confidence
+badge, and critique note
+
+### 2. Batch Frame Analysis Backfill
+Frame analysis queue upgraded for batch processing of ~4k existing clips.
+
+**`src/vault/frame-analysis-queue.js`** — major upgrades:
+- Replaced `processing` boolean with `activeCount` integer + `maxConcurrent()` function
+- `maxConcurrent()`: returns 1 if any live (non-batch) job is active, else MAX_BATCH_CONCURRENT (default 3)
+- Per-job `model` field: live jobs use `FRAME_ANALYSIS_MODEL` (Opus), batch uses `BATCH_ANALYSIS_MODEL` (Haiku)
+- `BATCH_ANALYSIS_MODEL` env var (default: `claude-haiku-4-5`) — ~$0.004/clip vs ~$0.23 Opus
+- New `enqueueBatch({ shot_types, project_id, limit, force, model })` — loads unanalyzed from DB
+- New exports: `enqueueBatch`, `BATCH_ANALYSIS_MODEL`, `FRAME_ANALYSIS_MODEL`
+
+**`src/db.js`** — new functions + exports:
+- `getUnanalyzedFootage({ shot_types, project_id, limit })` — `visual_analyzed_at IS NULL` cursor
+- `getFrameAnalysisStats()` — aggregate progress by shot_type for UI progress bar
+
+**`src/routes/vault.js`** — new routes:
+- `POST /api/vault/frame-queue/batch` — bulk enqueue with shot_types/limit/model/force options
+- `GET /api/vault/frame-queue/progress` — DB-level stats + live queue state
+
+**`public/vault.html`** — new UI above Footage Library section:
+- `👁 Frame Analysis` status pill (shows active/pending count, scrolls to panel on click)
+- `Frame Analysis Backfill` panel: progress bar (real DB counts), per-shot-type breakdown chips,
+  shot type multi-select, batch size picker, model selector, live cost estimate, ▶ Analyze button,
+  collapsible queue log (SSE events, last 100 lines)
+- Both pills + panel wired into `startFxQueueStream()` + `loadFxProgress()` on page init
+
+### 3. Opus Architectural Review V3
+**`OPUS_REVIEW_V3.md`** — written by Opus agent, pre-co-founder review covering:
+- Code correctness & silent failure risks (6 findings, 3 critical)
+- Multi-tenancy honest assessment (request path isolated, background workers not)
+- Architecture & scalability (SQLite ceiling, queue persistence, ngrok limits)
+- Workflow & nav logic (wired vs manual handoffs, nav confusions)
+- Security & auth (OAuth plaintext, SESSION_SECRET fallback, PostΩr double-fire, trust proxy)
+- What's missing / better approaches
+- 10 genuine strengths
+- Q&A prep for co-founder conversation ("what scares you most about the codebase?")
+
+## What Was NOT Done
+- Post-Mortem brief → WritΩr/Id8Ωr injection (still pending from Session 78)
+- BrollΩr download-to-vault (carried)
+- BrollΩr Speak endpoint (carried)
+- SaaS hardening tasks surfaced by Opus review (SESSION_SECRET fail-fast, OAuth encryption,
+  PostΩr overlap guard, background worker tenant context) — all logged in TODO.md
+
+---
+
 # Session 78 — TikTok OAuth PKCE Fix (2026-05-17)
 
 ## Goal

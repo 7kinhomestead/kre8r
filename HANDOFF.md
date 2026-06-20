@@ -61,7 +61,6 @@ Solution: checkpoint after every phase_result. Recovery banner on next page load
 | AudiencΩr | /audience.html | Active | Kajabi contacts, tags, offers, broadcast-tag SSE |
 | MirrΩr | /mirrr.html | Active | Channel intelligence, YouTube sync as background job |
 | NorthΩr | /northr.html | Active | Content strategy, goal-setting, gap analysis |
-| AnalytΩr | /analytr.html | Active | Analytics |
 | ShowsΩr | /shows.html | Active | Rock Rich show format tracking |
 | Soul BuildΩr | /soul-buildr.html | Active | creator-profile.json wizard (no JSON, native pickers) |
 | Lab | /lab.html | Active | Experimental features |
