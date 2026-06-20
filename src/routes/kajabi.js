@@ -483,7 +483,16 @@ router.post('/member-check', async (req, res) => {
       return res.json({ active: false, reason: 'not_found' });
     }
 
-    const contact  = contacts[0];
+    // NEVER blindly trust contacts[0]. If Kajabi ignores filter[email] (it has been
+    // returning ALL contacts, newest-first), contacts[0] is just the newest contact and
+    // maps EVERY email to one account — a catastrophic wrong-account bug. Require the
+    // returned contact's email to actually match what we asked for.
+    const want     = String(email).toLowerCase().trim();
+    const contact  = contacts.find(c => String(c?.attributes?.email || '').toLowerCase().trim() === want);
+    if (!contact) {
+      logger.warn({ email, returned: contacts.length }, '[member-check] filter[email] returned no matching contact');
+      return res.json({ active: false, reason: 'not_found' });
+    }
     const tagRefs  = contact?.relationships?.tags?.data || [];
 
     // Find highest tier tag on this contact
