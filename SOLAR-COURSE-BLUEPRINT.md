@@ -3,6 +3,8 @@
 
 **The promise:** *"Design and build YOUR off-grid system — hands in the wire."* Past the free basics, short of NABCEP-pro (that's Rock Rich S2's 15kW/40kWh build). Target rig: **~5kW solar / 12kWh LiFePO4 / 48V**, plus **RV/van** and **solar generators**.
 
+**⚓ ANCHOR SYSTEM (real, on the property, running):** Jason's **SunGold Power inverter + 4× LiTime 230Ah @ 48V (~12kWh)** — the exact intermediate-sized rig, genuinely his, and it's **about to become his mother-in-law's lived-in RV power** → Module 6 (RV/Van) is a real case study, not theory. The big **EG4 12k + EG4 batteries + 35× CW 450W panels = the ADVANCED Rock Rich S2 build (15kW/40kWh)** — deliberately OUT of this course. Clean ladder. *(This means the course builds on SunGold/LiTime gear; the EG4 examples in the research stay as spec-sheet teaching examples / the "step-up" path — see affiliate note below.)*
+
 **Why it's worth $19** (the rule for every lesson): the *video* shows Jason doing it; the **written supplement + diagram** is the thing a video can't be — searchable, on your phone in the field, the part you re-read mid-build. Don't re-teach the free *Understanding* course (components 101, batteries 101, basic cost) — **assume it.**
 
 Source tags: 📹 Jason video · 🔬 research finding · ✏️ new writing · 📊 diagram (Claude builds the SVG) · 🔧 live tool · 🛒 affiliate.
