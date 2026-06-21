@@ -1,0 +1,35 @@
+<div class="pag">
+  <div class="pag__cell pag__cell--prev">
+    {% if paginate.previous %}
+      <a class="pag__link pag__link--prev" href="{{ paginate.previous.url }}">
+        <i class="fa fa-chevron-left"></i>
+      </a>
+    {% else %}
+      <p class="pag__link pagination__link--prev pag__link--disabled">
+        <i class="fa fa-chevron-left"></i>
+      </p>
+    {% endif %}
+  </div>
+  {% unless simple == true %}
+    <div class="pag__cell pag__cell--pages">
+      {% for i in (1..paginate.pages) %}
+        {% if i == paginate.current_page %}
+          <a class="pag__link pag__link--current" href="?page={{ i }}{% if tags.current %}&amp;tag={{ tags.current }}{% endif %}">{{ i }}</a>
+        {% else %}
+          <a class="pag__link" href="?page={{ i }}{% if tags.current %}&amp;tag={{ tags.current }}{% endif %}">{{ i }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endunless %}
+  <div class="pag__cell pag__cell--next">
+    {% if paginate.next %}
+      <a class="pag__link pag__link--next" href="{{ paginate.next.url }}">
+        <i class="fa fa-chevron-right"></i>
+      </a>
+    {% else %}
+      <p class="pag__link pag__link--next pag__link--disabled">
+        <i class="fa fa-chevron-right"></i>
+      </p>
+    {% endif %}
+  </div>
+</div>

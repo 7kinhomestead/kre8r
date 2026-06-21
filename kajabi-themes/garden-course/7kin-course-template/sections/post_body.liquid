@@ -1,0 +1,456 @@
+{% if section.blocks.size > 0 %}
+  <div class="panel panel--{{ p-AutoTextColor }} panel--{{ p-ID }}" style="text-align: {{ section.settings.alignment }}"  kjb-settings-id="{{ 'alignment' | settings_id: section: section }}">
+    <div class="panel__body">
+      {% if section.settings.mark_as_complete_position == "top" %}
+        {% include "post_mark_as_complete" %}
+      {% endif %}
+      {% for block in section.blocks %}
+        {% case block.type %}
+          {% when 'post_info' %}
+            {% include "post_info" %}
+          {% when 'post_downloads' %}
+            {% include "post_downloads" %}
+          {% when 'post_audio' %}
+            {% include "post_audio" %}
+          {% when 'post_video_download' %}
+            {% include "post_video_download" %}
+          {% when 'post_cta' %}
+            {% include "panel_cta" %}
+          {% when 'post_code' %}
+            {% include "panel_code" %}
+          {% when 'coaching_scheduling_widget' %}
+            {% include "coaching_scheduling_widget", sectionType: 'body' %}
+        {% endcase %}
+      {% endfor %}
+      {% if section.settings.mark_as_complete_position == "bottom" %}
+        {% include "post_mark_as_complete" %}
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+  {
+    "name": "Post Body",
+    "blocks": [
+      {
+        "type": "post_info",
+        "name": "Post Info",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Post Info"
+          },
+          {
+            "type": "checkbox",
+            "label": "Show Description",
+            "id": "show_desc",
+            "default": "true"
+          },
+          {
+            "type": "checkbox",
+            "label": "Show Title",
+            "id": "show_title",
+            "default": "true"
+          },
+          {
+            "type": "checkbox",
+            "label": "Show Category",
+            "id": "show_category",
+            "default": "true"
+          }
+        ]
+      },
+      {
+        "type": "post_downloads",
+        "name": "Post Downloads",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Post Downloads"
+          },
+          {
+            "type": "text",
+            "id": "language_downloads",
+            "label": "Downloads Title",
+            "default": "Downloads"
+          }
+        ]
+      },
+      {
+        "type": "post_audio",
+        "name": "Post Audio Player",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Post Audio Player"
+          },
+          {
+            "type": "color",
+            "id": "player_color",
+            "label": "Player Color Override",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "icon_color",
+            "label": "Icon Color Override",
+            "allow_blank": true
+          }
+        ]
+      },
+      {
+        "type": "post_video_download",
+        "name": "Video Download",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Video Download"
+          },
+          {
+            "type": "text",
+            "id": "language_download",
+            "label": "Download Text",
+            "default": "Download Video"
+          },
+          {
+            "type": "color",
+            "id": "btn_background_color",
+            "label": "Button Color Override",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "btn_text_color",
+            "label": "Button Text Color Override",
+            "allow_blank": true
+          }
+        ]
+      },
+      {
+        "type": "post_cta",
+        "name": "Call To Action",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Call To Action"
+          },
+          {
+            "type": "text",
+            "id": "btn_text",
+            "label": "CTA Text",
+            "default": "Call To Action"
+          },
+          {
+            "type": "action",
+            "id": "btn_action",
+            "label": "CTA Action",
+            "default": "http://www.kajabi.com"
+          },
+          {
+            "type": "checkbox",
+            "id": "btn_target",
+            "label": "Open In New Window",
+            "default": "false"
+          },
+          {
+            "type": "radio",
+            "id": "btn_style",
+            "label": "CTA Style",
+            "default": "solid",
+            "options": [
+              { "label": "Solid", "value": "solid" },
+              { "label": "Outline", "value": "outline" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_size",
+            "label": "CTA Size",
+            "default": "med",
+            "options": [
+              { "label": "Small", "value": "small" },
+              { "label": "Medium", "value": "med" },
+              { "label": "Large", "value": "large" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_width",
+            "label": "Button Width",
+            "default": "block",
+            "options": [
+              { "label": "Auto", "value": "auto" },
+              { "label": "Full Width", "value": "block" }
+            ]
+          },
+          {
+            "type": "color",
+            "id": "btn_background_color",
+            "label": "Button Color",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "btn_text_color",
+            "label": "Button Text Color",
+            "allow_blank": true,
+            "info": "For solid buttons only"
+          }
+        ]
+      },
+      {
+        "type": "post_code",
+        "name": "Code",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Code"
+          },
+          {
+            "type": "textarea",
+            "id": "code",
+            "label": "Code",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "type": "coaching_scheduling_widget",
+        "name": "Coaching Scheduling Widget",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Coaching Scheduling Widget"
+          },
+          {
+            "type": "coaching_program_for_scheduling_widget",
+            "id": "coaching_program",
+            "label": "Select Your Coaching Program",
+            "preset": ""
+          },
+          {
+            "type": "offer_for_productizable",
+            "id": "offer",
+            "label": "Select Your Offer",
+            "preset": "",
+            "hide_if": {
+              "coaching_program": ""
+            }
+          },
+          {
+            "type": "checkbox",
+            "id": "link_to_program_details",
+            "label": "Link to Program Details",
+            "default": "true"
+          },
+          {
+            "type": "text",
+            "id": "title_text",
+            "label": "Title text",
+            "default": "Program Title",
+            "hide_if": {
+              "link_to_program_details": true
+            }
+          },
+          {
+            "type": "text",
+            "id": "description_text",
+            "label": "Description text",
+            "default": "Program Description",
+            "hide_if": {
+              "link_to_program_details": true
+            }
+          },
+          {
+            "type": "image_picker",
+            "id": "thumbnail_image",
+            "label": "Thumbnail image",
+            "info": "Image must be square, with a maximum size of 1280 x 720 pixels",
+            "fit": "crop",
+            "width": 1280,
+            "height": 720,
+            "hide_if": {
+              "link_to_program_details": true
+            }
+          },
+          {
+            "type": "checkbox",
+            "id": "show_thumbnail",
+            "label": "Show thumbnail",
+            "default": "true"
+          },
+          {
+            "type": "checkbox",
+            "id": "show_price",
+            "label": "Show price",
+            "default": "true"
+          },
+          {
+            "type": "checkbox",
+            "id": "show_duration",
+            "label": "Show duration",
+            "default": "true"
+          },
+          {
+            "type": "text",
+            "id": "cta_text",
+            "label": "CTA Text",
+            "default": "Call To Action"
+          },
+          {
+            "type": "radio",
+            "id": "btn_style",
+            "label": "Button Style",
+            "default": "solid",
+            "options": [
+              { "label": "Solid", "value": "solid" },
+              { "label": "Outline", "value": "outline" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_size",
+            "label": "Button Size",
+            "default": "small",
+            "options": [
+              { "label": "Small", "value": "small" },
+              { "label": "Medium", "value": "med" },
+              { "label": "Large", "value": "large" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_width",
+            "label": "Button Width",
+            "default": "block",
+            "options": [
+              { "label": "Auto", "value": "auto" },
+              { "label": "Full Width", "value": "block" }
+            ]
+          },
+          {
+            "type": "color",
+            "id": "background_color",
+            "label": "Background Color Override",
+            "default": "",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "cta_color",
+            "label": "CTA Color Override",
+            "default": "",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "cta_text_color",
+            "label": "Text Color Override",
+            "default": "",
+            "allow_blank": true
+          }
+        ]
+      }
+    ],
+    "elements": [
+      {
+        "type": "radio",
+        "id": "alignment",
+        "label": "Text Alignment",
+        "default": "left",
+        "options": [
+          { "label": "Left", "value": "left" },
+          { "label": "Center", "value": "center" },
+          { "label": "Right", "value": "right" }
+        ]
+      },
+      {
+        "type": "header",
+        "content": "Mark As Complete"
+      },
+      {
+        "type": "checkbox",
+        "id": "hide_mark_as_complete",
+        "label": "Hide Mark as Complete",
+        "default": "false"
+      },
+      {
+        "type": "radio",
+        "id": "mark_as_complete_position",
+        "label": "Position in Post Body",
+        "default": "top",
+        "options": [
+          { "label": "Top", "value": "top" },
+          { "label": "Bottom", "value": "bottom" }
+        ]
+      },
+      {
+        "type": "text",
+        "id": "language_complete",
+        "label": "Complete Text",
+        "default": "Complete"
+      },
+      {
+        "type": "text",
+        "id": "language_mark_as_complete",
+        "label": "Mark As Complete Text",
+        "default": "Mark As Complete"
+      },
+      {
+        "type": "color",
+        "id": "btn_background_color",
+        "label": "Button Color",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "id": "btn_text_color",
+        "label": "Button Text Color",
+        "allow_blank": true,
+        "info": "For solid buttons only"
+      },
+      {
+        "type": "header",
+        "content": "Smart Next Button",
+        "style": "subheading"
+      },
+      {
+        "type": "checkbox",
+        "id": "use_next",
+        "label": "Use Smart Next Button",
+        "default": "true"
+      },
+      {
+        "type": "text",
+        "label": "Encouragement",
+        "id": "encouragement",
+        "default": "Great Job! Keep Going!"
+      },
+      {
+        "type": "text",
+        "label": "Next Link",
+        "id": "next",
+        "default": "Next Lesson"
+      },
+      {
+        "type": "color",
+        "id": "smart_next_background",
+        "label": "Background Color",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "id": "smart_next_color",
+        "label": "Text Color",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "id": "smart_next_link",
+        "label": "Link Color",
+        "allow_blank": true
+      }
+    ]
+  }
+{% endschema %}

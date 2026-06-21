@@ -1,0 +1,46 @@
+<!-- User Dropdown Variables -->
+{% assign ud-LangLibrary      =  section.settings.language_library %}
+{% assign ud-LangSettings     = section.settings.language_settings | member_settings_link %}
+{% assign ud-LangLogout       = section.settings.language_logout | member_logout_link %}
+{% assign ud-LangLogin        = section.settings.language_login | member_login_link %}
+{% assign ud-Position         = h-HeightString | plus: 31 %}
+{% assign ud-BgColor          = section.settings.background_color_user | default: "#fff" %}
+{% assign ud-AutoTextColor    = ud-BgColor | color_scheme_class %}
+{% assign ud-TextColor        = section.settings.text_color_user | default: "" %}
+
+<!-- KJB Settings Variables -->
+{% assign kjb-ud-LangLibrary  = 'language_library' | settings_id: section: section %}
+{% assign kjb-ud-LangSettings = 'language_settings' | settings_id: section: section %}
+{% assign kjb-ud-LangLogout   = 'language_logout' | settings_id: section: section %}
+{% assign kjb-ud-LangLogin    = 'language_login' | settings_id: section: section %}
+
+<style>
+  /*============================================================================
+    #Header User Menu Styles
+  ==============================================================================*/
+  .header .user__dropdown {
+    background: {{ ud-BgColor }};
+    top: {{ ud-Position }}px;
+  }
+  .header--center .user__dropdown {
+    top: 50px;
+  }
+  {% if ud-TextColor != "" %}
+    .header .user__dropdown a {
+      color: {{ ud-TextColor }};
+    }
+  {% endif %}
+</style>
+
+{% if current_site_user %}
+  <span class="user">
+    <img class="user__avatar" src="{{ current_site_user | avatar_url }}"/>
+    <div class="user__dropdown user__dropdown--{{ ud-AutoTextColor }}">
+      <a href="/library" kjb-settings-id="{{ kjb-ud-LangLibrary }}">{{ ud-LangLibrary }}</a>
+      <span kjb-settings-id="{{ kjb-ud-LangSettings }}">{{ ud-LangSettings }}</span>
+      <span kjb-settings-id="{{ kjb-ud-LangLogout }}">{{ ud-LangLogout }}</span>
+    </div>
+  </span>
+{% else %}
+  <span kjb-settings-id="{{ kjb-ud-LangLogin }}">{{ section.settings.language_login | member_login_link }}</span>
+{% endif %}

@@ -1,0 +1,101 @@
+{% assign completeBtnColor      = section.settings.btn_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign completeBtnTextColor  = section.settings.btn_text_color | default: settings.text_color_light %}
+{% assign completeNext          = post.next.url %}
+
+{% assign sn-Use           = section.settings.use_next %}
+{% assign sn-Title         = post.next.title %}
+{% assign sn-Img           = post.next.poster_image_url %}
+{% assign sn-Url           = post.next.url %}
+{% assign sn-Encouragement = section.settings.encouragement %}
+{% assign sn-Next          = section.settings.next %}
+{% assign sn-Background    = section.settings.smart_next_background | default: "#f9f9f9" %}
+{% assign sn-Text          = section.settings.smart_next_color | default: settings.text_color %}
+{% assign sn-Link          = section.settings.smart_next_link | default: settings.color_primary | default: settings.brand.primary_color %}
+
+<style>
+  .mark-as-complete .btn {
+    margin: 0;
+  }
+  {% if section.settings.hide_mark_as_complete %}
+    .mark-as-complete {
+      display: none;
+    }
+    .mark-as-complete + .panel__block {
+      margin-top: 0;
+    }
+  {% endif %}
+  {% if section.settings.mark_as_complete_position == "bottom" and section.settings.hide_mark_as_complete %}
+    .panel__body > .panel__block:nth-last-child(4) {
+      margin-bottom: 0;
+    }
+  {% endif %}
+  /*============================================================================
+    #Completion Btn Style
+  ==============================================================================*/
+  .btn--completion {
+    border-color: {{ completeBtnColor }} !important;
+    color: {{ completeBtnColor }} !important;
+    margin-bottom: 0;
+  }
+  .btn--completion[data-post-completion-toggle="true"] {
+    background: {{ completeBtnColor }} !important;
+    border-color: {{ completeBtnColor }} !important;
+    color: {{ completeBtnTextColor }} !important;
+  }
+  .btn--completion[data-post-completion-toggle="true"]:hover {
+    color: {{ completeBtnTextColor }} !important;
+  }
+  .btn--completion:hover {
+    color: {{ btnColor }} !important;
+  }
+</style>
+{% if sn-Use %}
+  <style>
+    /*============================================================================
+      #Smart Next Styles
+    ==============================================================================*/
+    .smart-next {
+      background: {{ sn-Background }};
+      color: {{ sn-Text }};
+    }
+    .smart-next__link, .smart-next__link:hover {
+      color: {{ sn-Text }};
+    }
+    .smart-next__link--small, .smart-next__link--small:hover {
+      color: {{ sn-Link }};
+    }
+  </style>
+{% endif %}
+
+<div class="mark-as-complete">
+  <a kjb-settings-id="{{ 'language_mark_as_complete' | settings_id: section: section }}" class="btn btn--completion btn--outline btn--med btn--block" href="#" data-complete-text="{{ section.settings.language_mark_as_complete }}" data-incomplete-text="{{ section.settings.language_complete }}" data-post-completion-toggle="{{ post.completed? }}" data-token="{{ post.completion_token }}" data-page="{{ completeNext }}">
+    {% if post.completed? %}
+      {{ section.settings.language_complete }}
+    {% else %}
+      {{ section.settings.language_mark_as_complete }}
+    {% endif %}
+  </a>
+  {% if sn-Use %}
+    {% if post.next %}
+    <div class="smart-next">
+      <div class="smart-next__block smart-next__block--left">
+        {% if sn-Img  %}
+          <img src="{{ sn-Img }}" class="smart-next__img" />
+        {% else %}
+          <img src="{{ 'placeholder.png' | asset_url }}" class="smart-next__img" />
+        {% endif %}
+      </div>
+      <div class="smart-next__block smart-next__block--middle">
+        <span class="smart-next__text" kjb-settings-id="{{ 'encouragement' | settings_id: section: section }}">{{ sn-Encouragement }}</span>
+        <a class="smart-next__link" kjb-settings-id="{{ 'next' | settings_id: section: section }}" href="{{ sn-Url }}">{{ sn-Title }}</a>
+      </div>
+      <div class="smart-next__block smart-next__block--right">
+        <a class="smart-next__link smart-next__link--small" kjb-settings-id="{{ 'next' | settings_id: section: section }}" href="{{ sn-Url }}">
+          {% element "section.settings.next" %}{{ section.settings.next }}{% endelement %}
+          <i class="fa fa-chevron-right" aria-hidden="true"></i>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  {% endif %}
+</div>

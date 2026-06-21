@@ -1,0 +1,19 @@
+{% assign p-ID            = block.id %}
+{% assign p-BgColor       = block.settings.background_color | default: bgColor %}
+{% assign p-AutoTextColor = p-BgColor | color_scheme_class %}
+{% assign p-TextColor     = block.settings.text_color | default: "" %}
+
+<style>
+  .panel--{{ p-ID }} {
+    /*============================================================================
+      #Background Color Override
+    ==============================================================================*/
+    background: {{ p-BgColor }};
+    {% if p-TextColor != "" %}
+      /*============================================================================
+        #Text Color Override
+      ==============================================================================*/
+      color: {{ p-TextColor }};
+    {% endif %}
+  }
+</style>

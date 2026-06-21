@@ -1,0 +1,7 @@
+{% if category.drip_release_date %}
+  <span class="drip-tooltip" data-tooltip="{{ category.drip_release_date | date: '%b %d, %Y' }}">
+    <i class="fa fa-calendar"></i>
+  </span>
+{% else %}
+  <i class="fa fa-calendar"></i>
+{% endif %}

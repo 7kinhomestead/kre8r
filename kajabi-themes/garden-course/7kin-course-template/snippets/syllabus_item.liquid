@@ -1,0 +1,25 @@
+{% assign s-Truncate     = section.settings.truncate | default: "100" %}
+
+<div class="syllabus__item" id="post-{{ post.id }}">
+  <a href="{{ post.url }}">
+
+    <div class="media">
+      <div class="media-left">
+        <div class="syllabus__img">
+          {% if post.poster_image_url %}
+            <img src="{{ post.poster_image_url }}" class="thumb" />
+          {% else %}
+            <img src="{{ 'placeholder.png' | asset_url }}" class="thumb" />
+          {% endif %}
+        </div>
+      </div>
+      <div class="media-body media-middle">
+        <p class="syllabus__title">{{ post.title }}</p>
+        <p class="syllabus__text">{{ post.body | strip_html | truncate: s-Truncate }}</p>
+      </div>
+      <div class="media-right media-middle">
+        {% include "progress", is_completed: post.completed?, percent_complete: post.progress_percent %}
+      </div>
+    </div>
+  </a>
+</div>

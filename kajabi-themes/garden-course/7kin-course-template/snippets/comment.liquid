@@ -1,0 +1,29 @@
+{% assign section = settings.sections.post_comments %}
+<div class="comment" data-comment="{{ comment.id }}">
+  <div class="media">
+    <div class="media-left media-middle">
+      <img class="comment__avatar" src="{{ comment.author | avatar_url: 40 }}"/>
+    </div>
+    <div class="media-body media-middle">
+      <p class="comment__name">{{ comment.author.name }}</p>
+    </div>
+    <div class="media-right media-middle">
+      <p class="comment__date">{{ comment.created_at | local_time_ago }}</p>
+    </div>
+  </div>
+  <div class="comment__body" data-comment-body>{{ comment.body | simple_format }}</div>
+  {% unless current_site_user.muted? %}
+    {% if post.comments_mode_visible? %}
+      <a kjb-settings-id="{{ 'language_comment_reply' | settings_id: section: section }}" class="comment__reply" data-remote="true" href="{{ post.comment_new_url }}?parent_comment={{ comment.id }}">{{ section.settings.language_comment_reply }}</a>
+    {% endif %}
+    {% if comment.author.id == current_site_user.id and comment.author.type == current_site_user.type %}
+      <a kjb-settings-id="{{ 'language_comment_edit' | settings_id: section: section }}" class="comment__edit" data-remote="true" href="{{ comment.edit_url }}">{{ section.settings.language_comment_edit }}</a>
+    {% endif %}
+  {% endunless %}
+  <div class="comment--reply" data-comment-replies="{{ comment.id }}">
+    {% for comment in comment.comments %}
+      {% include "comment" %}
+    {% endfor %}
+  </div>
+  <div data-comment-reply="{{ comment.id }}"></div>
+</div>

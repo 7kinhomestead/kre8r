@@ -1,0 +1,8 @@
+<div class="panel__block" id="block-{{ block.id }}" {% block_attributes %}>
+  {% if block.settings.show_title %}
+    <h1 kjb-settings-id="{{ 'show_title' | settings_id: section: section, block: block }}">{{ current_product.title }}</h1>
+  {% endif %}
+  {% if block.settings.show_desc %}
+    <p kjb-settings-id="{{ 'show_desc' | settings_id: section: section, block: block }}">{{ current_product.description }}</p>
+  {% endif %}
+</div>

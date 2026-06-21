@@ -1,0 +1,51 @@
+<div class="syllabus__item">
+  {% if category.pending_drip? %}
+    <div class="media" id="category-{{ category.id }}">
+      <div class="media-left">
+        <div class="syllabus__img">
+          {% if category.poster_image_url %}
+            <img src="{{ category.poster_image_url }}" class="thumb">
+          {% else %}
+            <img src="{{ 'placeholder.png' | asset_url }}" class="thumb">
+          {% endif %}
+        </div>
+      </div>
+      <div class="media-body">
+        <p class="syllabus__title">
+          {{ category.title }}
+          {% if category.show_as_paywalled? %}
+            {% include "icon_paywall" %}
+          {% endif %}
+          
+          {% include "drip_date" %}
+        </p>
+      </div>
+    </div>
+  {% else %}
+    <a href="{{ category.url }}" id="category-{{ category.id }}">
+      <div class="media">
+        <div class="media-left">
+          <div class="syllabus__img">
+            {% if category.poster_image_url %}
+              <img class="img-responsive" src="{{ category.poster_image_url }}">
+            {% else %}
+              <img class="img-responsive" src="{{ 'placeholder.png' | asset_url }}">
+            {% endif %}
+          </div>
+        </div>
+        <div class="media-body">
+          <p class="syllabus__title">
+            {{ category.title }}
+            {% if category.show_as_paywalled? %}
+              {% include "icon_paywall" %}
+            {% endif %}
+          </p>
+          <p class="syllabus__text">{{ category.description }}</p>
+        </div>
+        <div class="media-right media-middle">
+          {% include "progress", is_completed: category.completed?, percent_complete: category.completion.percent %}
+        </div>
+      </div>
+    </a>
+  {% endif %}
+</div>

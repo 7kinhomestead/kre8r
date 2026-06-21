@@ -1,0 +1,162 @@
+<!-- Section Variables -->
+{% assign si-Show        = section.settings.show_social_icons %}
+{% assign si-newWindow   = section.settings.social_icons_new_window %}
+{% assign si-TextColor   = section.settings.social_icons_text_color | default: "#ffffff" %}
+{% assign si-BgColor     = section.settings.social_icons_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign si-Style       = section.settings.social_icon_background_style %}
+{% assign si-Alignment   = section.settings.social_icon_alignment %}
+{% assign si-Facebook    = section.settings.social_icon_link_facebook | default: settings.brand.social.facebook %}
+{% assign si-Twitter     = section.settings.social_icon_link_twitter | default: settings.brand.social.x %}
+{% assign si-Instagram   = section.settings.social_icon_link_instagram | default: settings.brand.social.instagram %}
+{% assign si-Youtube     = section.settings.social_icon_link_youtube | default: settings.brand.social.youtube %}
+{% assign si-Pinterest   = section.settings.social_icon_link_pinterest %}
+{% assign si-Google      = section.settings.social_icon_link_google_plus %}
+{% assign si-Vimeo       = section.settings.social_icon_link_vimeo %}
+{% assign si-Github      = section.settings.social_icon_link_github %}
+{% assign si-Apple       = section.settings.social_icon_link_itunes %}
+{% assign si-Linkedin    = section.settings.social_icon_link_linkedin %}
+{% assign si-Soundcloud  = section.settings.social_icon_link_soundcloud %}
+{% assign si-Yelp        = section.settings.social_icon_link_yelp %}
+{% assign si-Tumblr      = section.settings.social_icon_link_tumblr %}
+{% assign si-Slack       = section.settings.social_icon_link_slack %}
+{% assign si-Flickr      = section.settings.social_icon_link_flickr %}
+{% assign si-Dribbble    = section.settings.social_icon_link_dribbble %}
+
+<!-- KJB Settings Variables -->
+{% assign kjb-Facebook   = 'social_icon_link_facebook' | settings_id: section: section %}
+{% assign kjb-Twitter    = 'social_icon_link_twitter' | settings_id: section: section %}
+{% assign kjb-Instagram  = 'social_icon_link_instagram' | settings_id: section: section %}
+{% assign kjb-Youtube    = 'social_icon_link_youtube' | settings_id: section: section %}
+{% assign kjb-Pinterest  = 'social_icon_link_pinterest' | settings_id: section: section %}
+{% assign kjb-Google     = 'social_icon_link_google_plus' | settings_id: section: section %}
+{% assign kjb-Vimeo      = 'social_icon_link_vimeo' | settings_id: section: section %}
+{% assign kjb-Github     = 'social_icon_link_github' | settings_id: section: section %}
+{% assign kjb-Apple      = 'social_icon_link_itunes' | settings_id: section: section %}
+{% assign kjb-Linkedin   = 'social_icon_link_linkedin' | settings_id: section: section %}
+{% assign kjb-Soundcloud = 'social_icon_link_soundcloud' | settings_id: section: section %}
+{% assign kjb-Yelp       = 'social_icon_link_yelp' | settings_id: section: section %}
+{% assign kjb-Tumblr     = 'social_icon_link_tumblr' | settings_id: section: section %}
+{% assign kjb-Slack      = 'social_icon_link_slack' | settings_id: section: section %}
+{% assign kjb-Flickr     = 'social_icon_link_flickr' | settings_id: section: section %}
+{% assign kjb-Dribbble   = 'social_icon_link_dribbble' | settings_id: section: section %}
+
+<style>
+  .footer .social-icons__icon,
+  .footer .social-icons__icon:hover {
+    color: {{ si-TextColor }};
+  }
+  .footer .social-icons--round .social-icons__icon ,
+  .footer .social-icons--square .social-icons__icon {
+    background-color: {{ si-BgColor }};
+  }
+</style>
+
+{% if si-Show %}
+  {% if si-newWindow %}
+  <div class="social-icons {{ si-Style }} {{ si-Alignment }}">
+    <div class="social-icons__row">
+      {% if si-Facebook and si-Facebook != "" %}
+        <a class="social-icons__icon fa fa-facebook" a target="_blank" href="{{ si-Facebook }}" kjb-settings-id="{{ kjb-Facebook }}"></a>
+      {% endif %}
+      {% if si-Twitter and si-Twitter != "" %}
+        <a class="social-icons__icon fa fa-twitter" a target="_blank" href="{{ si-Twitter }}" kjb-settings-id="{{ kjb-Twitter }}"></a>
+      {% endif %}
+      {% if si-Instagram and si-Instagram != "" %}
+        <a class="social-icons__icon fa fa-instagram" a target="_blank" href="{{ si-Instagram }}" kjb-settings-id="{{ kjb-Instagram }}"></a>
+      {% endif %}
+      {% if si-Youtube and si-Youtube != "" %}
+        <a class="social-icons__icon fa fa-youtube" a target="_blank" href="{{ si-Youtube }}" kjb-settings-id="{{ kjb-Youtube }}"></a>
+      {% endif %}
+      {% if si-Pinterest and si-Pinterest != "" %}
+        <a class="social-icons__icon fa fa-pinterest" a target="_blank" href="{{ si-Pinterest }}" kjb-settings-id="{{ kjb-Pinterest }}"></a>
+      {% endif %}
+      {% if si-Google and si-Google != "" %}
+        <a class="social-icons__icon fa fa-google-plus" a target="_blank" href="{{ si-Google }}" kjb-settings-id="{{ kjb-Google }}"></a>
+      {% endif %}
+      {% if si-Vimeo and si-Vimeo != "" %}
+        <a class="social-icons__icon fa fa-vimeo" a target="_blank" href="{{ si-Vimeo }}" kjb-settings-id="{{ kjb-Vimeo }}"></a>
+      {% endif %}
+      {% if si-Github and si-Github != "" %}
+        <a class="social-icons__icon fa fa-github" a target="_blank" href="{{ si-Github }}" kjb-settings-id="{{ kjb-Github }}"></a>
+      {% endif %}
+      {% if si-Apple and si-Apple != "" %}
+        <a class="social-icons__icon fa fa-apple" a target="_blank" href="{{ si-Apple }}" kjb-settings-id="{{ kjb-Apple }}"></a>
+      {% endif %}
+      {% if si-Linkedin and si-Linkedin != "" %}
+        <a class="social-icons__icon fa fa-linkedin" a target="_blank" href="{{ si-Linkedin }}" kjb-settings-id="{{ kjb-Linkedin }}"></a>
+      {% endif %}
+      {% if si-Soundcloud and si-Soundcloud != "" %}
+        <a class="social-icons__icon fa fa-soundcloud" a target="_blank" href="{{ si-Soundcloud }}" kjb-settings-id="{{ kjb-Soundcloud }}"></a>
+      {% endif %}
+      {% if si-Yelp and si-Yelp != "" %}
+        <a class="social-icons__icon fa fa-yelp" a target="_blank" href="{{ si-Yelp }}" kjb-settings-id="{{ kjb-Yelp }}"></a>
+      {% endif %}
+      {% if si-Tumblr and si-Tumblr != "" %}
+        <a class="social-icons__icon fa fa-tumblr" a target="_blank" href="{{ si-Tumblr }}" kjb-settings-id="{{ kjb-Tumblr }}"></a>
+      {% endif %}
+      {% if si-Slack and si-Slack != "" %}
+        <a class="social-icons__icon fa fa-slack" a target="_blank" href="{{ si-Slack }}" kjb-settings-id="{{ kjb-Slack }}"></a>
+      {% endif %}
+      {% if si-Flickr and si-Flickr != "" %}
+        <a class="social-icons__icon fa fa-flickr"  a target="_blank"href="{{ si-Flickr }}" kjb-settings-id="{{ kjb-Flickr }}"></a>
+      {% endif %}
+      {% if si-Dribbble and si-Dribbble != "" %}
+        <a class="social-icons__icon fa fa-dribbble" href="{{ si-Dribbble }}" kjb-settings-id="{{ kjb-Dribbble }}"></a>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <div class="social-icons {{ si-Style }} {{ si-Alignment }}">
+    <div class="social-icons__row">
+      {% if si-Facebook and si-Facebook != "" %}
+        <a class="social-icons__icon fa fa-facebook" href="{{ si-Facebook }}" kjb-settings-id="{{ kjb-Facebook }}"></a>
+      {% endif %}
+      {% if si-Twitter and si-Twitter != "" %}
+        <a class="social-icons__icon fa fa-twitter" href="{{ si-Twitter }}" kjb-settings-id="{{ kjb-Twitter }}"></a>
+      {% endif %}
+      {% if si-Instagram and si-Instagram != "" %}
+        <a class="social-icons__icon fa fa-instagram" href="{{ si-Instagram }}" kjb-settings-id="{{ kjb-Instagram }}"></a>
+      {% endif %}
+      {% if si-Youtube and si-Youtube != "" %}
+        <a class="social-icons__icon fa fa-youtube" href="{{ si-Youtube }}" kjb-settings-id="{{ kjb-Youtube }}"></a>
+      {% endif %}
+      {% if si-Pinterest and si-Pinterest != "" %}
+        <a class="social-icons__icon fa fa-pinterest" href="{{ si-Pinterest }}" kjb-settings-id="{{ kjb-Pinterest }}"></a>
+      {% endif %}
+      {% if si-Google and si-Google != "" %}
+        <a class="social-icons__icon fa fa-google-plus" href="{{ si-Google }}" kjb-settings-id="{{ kjb-Google }}"></a>
+      {% endif %}
+      {% if si-Vimeo and si-Vimeo != "" %}
+        <a class="social-icons__icon fa fa-vimeo" href="{{ si-Vimeo }}" kjb-settings-id="{{ kjb-Vimeo }}"></a>
+      {% endif %}
+      {% if si-Github and si-Github != "" %}
+        <a class="social-icons__icon fa fa-github" href="{{ si-Github }}" kjb-settings-id="{{ kjb-Github }}"></a>
+      {% endif %}
+      {% if si-Apple and si-Apple != "" %}
+        <a class="social-icons__icon fa fa-apple" href="{{ si-Apple }}" kjb-settings-id="{{ kjb-Apple }}"></a>
+      {% endif %}
+      {% if si-Linkedin and si-Linkedin != "" %}
+        <a class="social-icons__icon fa fa-linkedin" href="{{ si-Linkedin }}" kjb-settings-id="{{ kjb-Linkedin }}"></a>
+      {% endif %}
+      {% if si-Soundcloud and si-Soundcloud != "" %}
+        <a class="social-icons__icon fa fa-soundcloud" href="{{ si-Soundcloud }}" kjb-settings-id="{{ kjb-Soundcloud }}"></a>
+      {% endif %}
+      {% if si-Yelp and si-Yelp != "" %}
+        <a class="social-icons__icon fa fa-yelp" href="{{ si-Yelp }}" kjb-settings-id="{{ kjb-Yelp }}"></a>
+      {% endif %}
+      {% if si-Tumblr and si-Tumblr != "" %}
+        <a class="social-icons__icon fa fa-tumblr" href="{{ si-Tumblr }}" kjb-settings-id="{{ kjb-Tumblr }}"></a>
+      {% endif %}
+      {% if si-Slack and si-Slack != "" %}
+        <a class="social-icons__icon fa fa-slack" href="{{ si-Slack }}" kjb-settings-id="{{ kjb-Slack }}"></a>
+      {% endif %}
+      {% if si-Flickr and si-Flickr != "" %}
+        <a class="social-icons__icon fa fa-flickr" href="{{ si-Flickr }}" kjb-settings-id="{{ kjb-Flickr }}"></a>
+      {% endif %}
+      {% if si-Dribbble and si-Dribbble != "" %}
+        <a class="social-icons__icon fa fa-dribbble" href="{{ si-Dribbble }}" kjb-settings-id="{{ kjb-Dribbble }}"></a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+{% endif %}

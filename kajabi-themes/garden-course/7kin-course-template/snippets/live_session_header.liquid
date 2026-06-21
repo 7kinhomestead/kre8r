@@ -1,0 +1,136 @@
+{% assign page_state = live_session.page_state[section.settings.page_state] %}
+{% assign datetime_background_color = section.settings.datetime_background_color %}
+{% assign datetime_style = section.settings.datetime_style %}
+{% assign datetime_text_color = section.settings.datetime_text_color %}
+{% assign datetime_border_radius = section.settings.datetime_border_radius | default: 50 | remove: "px" | append: "px" %}
+{% assign cta_btn_width = section.settings.cta_btn_width | default: settings.btn_width %}
+{% assign coaching_header_background_color = section.settings.header_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign header_scheduled_full_date = live_session.scheduled_at | default: page_state.fallback_scheduled_at | local_time: user: current_site_user, format: "%A, %B %d, %Y" %}
+{% assign header_scheduled_date = live_session.scheduled_at | default: page_state.fallback_scheduled_at | local_time: user: current_site_user, format: "%B %d, %Y" %}
+{% assign scheduled_end_at = live_session.scheduled_end_at | default: page_state.fallback_scheduled_end_at %}
+{% if scheduled_end_at != blank %}
+  {% assign start_time = live_session.scheduled_at | default: page_state.fallback_scheduled_at | local_time: user: current_site_user, format: "default" %}
+  {% assign end_time = scheduled_end_at | local_time: user: current_site_user, format: "default_with_timezone" %}
+  {% assign header_scheduled_time = start_time | append: " - " | append: end_time %}
+{% else %}
+  {% assign header_scheduled_time = live_session.scheduled_at | default: page_state.fallback_scheduled_at | local_time: user: current_site_user, format: "default_with_timezone" %}
+{% endif %}
+
+<style>
+  .live-session-details-header {
+     border-color: {{ section.settings.header_border_color }};
+     border-radius: {{ section.settings.header_border_radius | remove: "px" | append: "px" }};
+     border-style: {{ section.settings.header_border_type }};
+     border-width: {{ section.settings.header_border_width | remove: "px" | append: "px" }};
+     {% if section.settings.header_bg_image != blank %}
+      background-image: url({{ section.settings.header_bg_image | image_picker_url }});
+     {% endif %}
+   }
+
+   .live-session-details-header__overlay {
+      background-color: {{ coaching_header_background_color }};
+   }
+
+   .live-session-details-header__datetime {
+      border-radius: {{ datetime_border_radius }};
+      background: {{ datetime_background_color }};
+      color: {{ datetime_text_color }};
+   }
+
+   .live-session-details-header__datetime--outline {
+      border: 2px solid {{ datetime_background_color }};
+      background: transparent;
+      color: {{ datetime_background_color }};
+   }
+</style>
+<div class="live-session-details-header bg-adaptive box-shadow-{{ section.settings.header_box_shadow }} {% if coaching_header_background_color != blank %}background-{{ coaching_header_background_color | color_scheme_class }}{% endif %}" kjb-settings-id="{{ 'header_show_date' | settings_id: section: section }}">
+  <div class="live-session-details-header__overlay"></div>
+  {% if page_state.scheduled_or_completed? %}
+    <div class="live-session-details-header__row live-session-details-header__row--date">
+      {% if section.settings.header_show_date and header_scheduled_full_date != blank %}
+        <span class="live-session-details-header__datetime live-session-details-header__datetime--{{ datetime_style }} hidden--mobile" kjb-settings-id="{{ 'header_show_date' | settings_id: section: section }}">
+          {{ header_scheduled_full_date }}
+        </span>
+        <span class="live-session-details-header__datetime live-session-details-header__datetime--{{ datetime_style }} hidden--desktop" kjb-settings-id="{{ 'header_show_date' | settings_id: section: section }}">
+          {{ header_scheduled_date }}
+        </span>
+      {% endif %}
+      {% if section.settings.header_show_time and header_scheduled_time != blank %}
+        <span class="live-session-details-header__datetime live-session-details-header__datetime--{{ datetime_style }}" kjb-settings-id="{{ 'header_show_time' | settings_id: section: section }}">
+          {{ header_scheduled_time }}
+        </span>
+      {% endif %}
+    </div>
+  {% endif %}
+  <div class="live-session-details-header__row live-session-details-header__row--content">
+    {% if section.settings.header_show_logo %}
+      <div class="live-session-details-header__logo">
+        {% include "live_session_logo" %}
+      </div>
+    {% endif %}
+
+    {% if section.settings.header_show_title %}
+      <h1 class="live-session-details-header__title text-{{ section.settings.header_text_align }}" kjb-settings-id="{{ 'header_show_title' | settings_id: section: section }}">{{ live_session.title }}</h1>
+    {% endif %}
+
+    {% if section.settings.header_show_description %}
+      <div class="live-session-details-header__description text-{{ section.settings.header_text_align }}" kjb-settings-id="{{ 'header_show_description' | settings_id: section: section }}">
+        {{ live_session.description }}
+      </div>
+    {% endif %}
+  </div>
+  {% if page_state.unscheduled_and_not_completed? %}
+    <div class="live-session-details-header__row">
+      {% if section.settings.header_show_participants %}
+        {% include "live_session_participants",
+          participant_text: section.settings.header_participants_text,
+          participant_text_setting: "header_participants_text"
+        %}
+      {% endif %}
+    </div>
+  {% elsif page_state.scheduled_and_not_completed? %}
+    <div
+      class="
+        live-session-details-header__row
+        live-session-details-header__row--space-between
+        live-session-details-header__row--{{ cta_btn_width }}
+        {% if section.settings.header_show_participants %}
+          live-session-details-header__row--with-participants
+        {% endif %}
+      "
+    >
+      {% if section.settings.header_show_participants %}
+        {% include "live_session_participants", participant_text: section.settings.header_participants_text, participant_text_setting: "header_participants_text" %}
+      {% endif %}
+      {% if live_session.show_join_button? %}
+        <div class="live-session-details-header__cta-wrapper live-session-details-header__cta-wrapper--{{ cta_btn_width }}">
+          <div
+            kjb-settings-id="{{ 'pending_to_join_text' | settings_id: section: section }}"
+            {% element_attributes "section.settings.pending_to_join_text" %}
+            class="hidden--mobile"
+          >
+            {{ section.settings.pending_to_join_text }}
+          </div>
+          <div>
+            {% include "live_session_cta" %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% elsif page_state.completed? %}
+    <div class="live-session-details-header__row live-session-details-header__row--space-between {% unless section.settings.header_show_participants %}live-session-details-header__row--full{% endunless %}">
+      {% if section.settings.header_show_participants %}
+        {% include "live_session_participants", participant_text: section.settings.header_participants_text, participant_text_setting: "header_participants_text" %}
+      {% endif %}
+      <div
+        kjb-settings-id="{{ 'session_completed_text' | settings_id: section: section }}"
+        {% element_attributes "section.settings.session_completed_text" %}
+        {% if section.settings.header_show_participants %}
+          class="hidden--mobile"
+        {% endif %}
+      >
+        {{ section.settings.session_completed_text }}
+      </div>
+    </div>
+  {% endif %}
+</div>

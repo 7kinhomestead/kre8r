@@ -1,0 +1,54 @@
+{% assign page_state = live_session.page_state[section.settings.page_state] %}
+
+<style>
+  {% if section.settings.agenda_strikethrough %}
+    .live-session-details-agenda__row--completed .live-session-details-agenda__label {
+      text-decoration: line-through;
+    }
+  {% endif %}
+</style>
+
+<div class="live-session-details-agenda">
+  <h3 kjb-settings-id="{{ 'agenda_title' | settings_id: section: section }}" {% element_attributes "section.settings.agenda_title" %}>
+    {{ section.settings.agenda_title }}
+  </h3>
+  <div>
+    {% if live_session.has_agenda_items? %}
+      <ul class="live-session-details-agenda__list">
+        {% for agenda_item in live_session.agenda_items %}
+          <li
+            class="live-session-details-agenda__row
+            {% if agenda_item.completed? %}
+              live-session-details-agenda__row--completed
+            {% endif %}
+            {% if forloop.first and page_state.previewing_in_editor? %}
+              live-session-details-agenda__row--completed
+            {% endif %}
+            "
+          >
+            <input class="live-session-details-agenda__input"
+              id="product_agenda_item_{{ agenda_item.id }}"
+              type="checkbox"
+              {% if agenda_item.completed? %}
+                checked
+              {% endif %}
+              {% if forloop.first and page_state.previewing_in_editor? %}
+                checked
+              {% endif %}
+              {% unless agenda_item.can_be_marked_as_completed? %}
+                disabled
+              {% endunless %}
+            />
+            <label class="live-session-details-agenda__label" for="product_agenda_item_{{ agenda_item.id }}">
+              {{ agenda_item.title }}
+            </label>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="live-session-details-agenda__empty-state" kjb-settings-id="{{ 'agenda_empty_state_text' | settings_id: section: section }}" {% element_attributes "section.settings.agenda_empty_state_text" %}>
+        {{ section.settings.agenda_empty_state_text }}
+      </div>
+    {% endif %}
+  </div>
+</div>

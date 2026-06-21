@@ -1,0 +1,30 @@
+<div class="panel syllabus">
+  <div class="panel__body">
+    <h5 class="syllabus__heading" kjb-settings-id="{{ 'categories' | settings_id: section: section }}">
+      {% element "section.settings.categories" %}{{ section.settings.categories }}{% endelement %}
+      <span class="pull-right">{{ current_product.categories.size }}</span>
+    </h5>
+    {% paginate current_product.categories by 10 %}
+      {% for category in paginate.collection %}
+        {% include "category" %}
+      {% endfor %}
+      {% if paginate.pages > 1 %}
+        {% include "pagination" %}
+      {% endif %}
+    {% endpaginate %}
+  </div>
+</div>
+
+{% schema %}
+  {
+    "name": "Categories Body",
+    "elements": [
+      {
+        "type": "text",
+        "default": "Categories",
+        "label": "Categories Text",
+        "id": "categories"
+      }
+    ]
+  }
+{% endschema %}

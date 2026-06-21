@@ -1,0 +1,57 @@
+{% include "panel_style", bgColor: "#fff" %}
+{% assign offer = current_site.find_offer[block.settings.offer_id] %}
+
+<style>
+  .panel--{{ p-ID }} img {
+    margin: 0 0 0 0;
+  }
+  .panel--{{ p-ID }} .btn {
+    margin: 0 0 0 0;
+  }
+</style>
+
+<div class="panel panel--{{ p-AutoTextColor }} panel--{{ p-ID }}" kjb-settings-id="{{ 'background_color' | settings_id: section: section, block: block }}" id="block-{{ block.id }}" {% block_attributes %}>
+  {% if block.settings.show_img %}
+    <a href="{{ offer.checkout_url }}">
+      {% if offer.image_url %}
+        <img class="img-fluid" src="{{ offer.image_url }}" kjb-settings-id="{{ 'show_img' | settings_id: section: section, block: block }}"/>
+      {% else %}
+        <img class="img-fluid" src="{{ "placeholder.png" | asset_url }}"/>
+      {% endif %}
+    </a>
+  {% endif %}
+  <div class="panel__body">
+    <h6 class="panel__heading">{{ offer.title }}</h6>
+    {% if block.settings.show_price %}
+      <h6 class="panel__heading" kjb-settings-id="{{ 'show_price' | settings_id: section: section, block: block }}">{{ offer.offers.first | display_price }}</h6>
+    {% endif %}
+    <div class="panel__copy">{{ offer.description | strip_html | truncate: 120 }}</div>
+    {% assign btnId        = 'btn_text' | settings_id: section: section, block: block %}
+    {% assign btnText      = block.settings.btn_text  %}
+    {% assign btnColor     = block.settings.btn_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+    {% assign btnTextColor = block.settings.btn_text_color | default: settings.text_color_light %}
+    {% assign btnStyle     = block.settings.btn_style  %}
+    {% assign btnWidth     = block.settings.btn_width  %}
+    {% assign btnSize      = block.settings.btn_size  %}
+
+    <style>
+      /*============================================================================
+        #Individual CTA Style
+      ==============================================================================*/
+      #{{ btnId }}.btn--solid {
+        background: {{ btnColor }};
+        border-color: {{ btnColor }};
+        color: {{ btnTextColor }};
+      }
+      #{{ btnId }}.btn--outline {
+        border-color: {{ btnColor }};
+        color: {{ btnColor }};
+      }
+    </style>
+    <a href="{{ offer.checkout_url }}" class="btn btn--{{ btnWidth }} btn--{{ btnStyle }} btn--{{ btnSize }} btn-cta" data-num-seconds="{{ btnReveal }}" id="{{ btnId }}" kjb-settings-id="{{ btnId }}">
+      {%- element "block.settings.btn_text" -%}
+        {{ block.settings.btn_text }}
+      {%- endelement -%}
+    </a>
+  </div>
+</div>

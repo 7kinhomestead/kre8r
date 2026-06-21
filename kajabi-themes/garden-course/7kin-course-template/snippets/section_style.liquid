@@ -1,0 +1,29 @@
+{% assign s-ID            = section.id %}
+{% assign s-BgColor       = section.settings.background_color | default: bgColor %}
+{% assign s-AutoTextColor = s-BgColor | color_scheme_class %}
+{% assign s-TextColor     = section.settings.text_color | default: "" %}
+{% assign s-Spacing       = section.settings.spacing %}
+{% assign s-VertAlign     = vertAlign %}
+
+<style>
+  .section--{{ s-ID }} {
+    /*============================================================================
+      #Background Color Override
+    ==============================================================================*/
+    background: {{ s-BgColor }};
+    {% if s-TextColor != "" %}
+      /*============================================================================
+        #Text Color Override
+      ==============================================================================*/
+      color: {{ s-TextColor }};
+    {% endif %}
+  }
+  .section--link_list.section--dark.section--{{ s-ID }} a, .section--link_list.section--light.section--{{ s-ID }} a, .section--blog_posts.section--dark.section--{{ s-ID }} a, .section--blog_posts.section--light.section--{{ s-ID }} a, .section--feature.section--dark.section--{{ s-ID }} a, .section--feature.section--light.section--{{ s-ID }} a {
+    {% if s-TextColor != "" %}
+      /*============================================================================
+        #Text Color Override
+      ==============================================================================*/
+      color: {{ s-TextColor }};
+    {% endif %}
+  }
+</style>

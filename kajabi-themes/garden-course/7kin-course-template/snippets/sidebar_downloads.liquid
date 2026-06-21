@@ -1,0 +1,53 @@
+{% if post.downloads.count > 0 %}
+  <div class="panel" kjb-settings-id="{{ 'language_downloads' | settings_id: section: section,block: block }}" id="block-{{ block.id }}" {% block_attributes %}>
+    <div class="panel__body">
+      <p class="panel__heading" kjb-settings-id="{{ 'language_downloads' | settings_id: section: section,block: block }}">
+        {%- element "block.settings.language_downloads" -%}
+          {{ block.settings.language_downloads }}
+        {%- endelement -%}
+      </p>
+      <div class="downloads">
+        {% for download in post.downloads %}
+          <a class="downloads__download" href="{{ download.url }}">
+            <div class="media">
+              <div class="media-left media-middle">
+                {% if download.extension == '.doc' or download.extension == '.docx' %}
+                  <img class="downloads__icon" src="{{ 'word.png' | asset_url }}" />
+                {% elsif download.extension == '.gif' or download.extension == '.jpeg' or download.extension == '.jpg' or download.extension == '.png' %}
+                  <img class="downloads__icon" src="{{ 'image.png' | asset_url }}" />
+                {% elsif download.extension == '.mp3' or download.extension == '.wav' or download.extension == '.m4a' or download.extension == '.wma' %}
+                  <img class="downloads__icon" src="{{ 'audio.png' | asset_url }}" />
+                {% elsif download.extension == '.mp4' or download.extension == '.mov' or download.extension == '.3g2' or download.extension == '.3gp' or download.extension == '.avi' or download.extension == '.flv' or download.extension == '.mpg' or download.extension == '.ogv' or download.extension == '.wmv' %}
+                  <img class="downloads__icon" src="{{ 'vid.png' | asset_url }}" />
+                {% elsif download.extension == '.zip' %}
+                  <img class="downloads__icon" src="{{ 'zip.png' | asset_url }}" />
+                {% elsif download.extension == '.xlsx' or download.extension == '.xls' %}
+                  <img class="downloads__icon" src="{{ 'excel.png' | asset_url }}" />
+                {% elsif download.extension == '.pptx' or download.extension == '.ppt' %}
+                  <img class="downloads__icon" src="{{ 'powerpoint.png' | asset_url }}" />
+                {% elsif download.extension == '.txt' or download.extension == '.rtf' or download.extension == '.odt' %}
+                  <img class="downloads__icon" src="{{ 'text.png' | asset_url }}" />
+                {% elsif download.extension == '.html' %}
+                  <img class="downloads__icon" src="{{ 'code.png' | asset_url }}" />
+                {% elsif download.extension == '.pdf' %}
+                  <img class="downloads__icon" src="{{ 'acrobat.png' | asset_url }}" />
+                {% else %}
+                  <img class="downloads__icon" src="{{ 'file.png' | asset_url }}" />
+                {% endif %}
+              </div>
+              <div class="media-body media-middle">
+                {{ download.display_name }}
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% else %}
+  {% if editor %}
+    <div class="editor-null" kjb-settings-id="{{ 'language_downloads' | settings_id: section: section,block: block }}" id="block-{{ block.id }}" {% block_attributes %}>
+      Post Downloads Will Show Here
+    </div>
+  {% endif %}
+{% endif %}

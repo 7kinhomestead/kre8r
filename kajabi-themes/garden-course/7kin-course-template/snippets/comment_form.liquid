@@ -1,0 +1,8 @@
+{% form 'comment', comment %}
+  <textarea kjb-settings-id="language_comment_placeholder" id="comment-reply-body" rows="5" placeholder="{{ settings.language_comment_placeholder }}" name="comment[body]" class="form-control">{{ comment.body }}</textarea>
+  {% if comment.id %}
+    <input kjb-settings-id="{{ 'language_comment_add' | settings_id: section: section }}" class="btn btn--comment btn--small btn--solid" type="submit" name="commit" data-disable-with="Submitting" value="Post Comment">
+  {% else %}
+    <input kjb-settings-id="{{ 'language_comment_add' | settings_id: section: section }}" class="btn btn--comment btn--small btn--solid" type="submit" name="commit" data-disable-with="Submitting" value="Post Comment">
+  {% endif %}
+{% endform %}

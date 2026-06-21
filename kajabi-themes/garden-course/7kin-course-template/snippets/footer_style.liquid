@@ -1,0 +1,32 @@
+<!-- Footer Variables -->
+{% assign f-Show          = section.settings.show_footer %}
+{% assign f-BgColor       = section.settings.background_color | default: settings.color_darker %}
+{% assign f-TextColor     = section.settings.text_color | default: "" %}
+{% assign f-AutoTextColor = f-BgColor | color_scheme_class %}
+{% assign f-Alignment = section.settings.align_logo %}
+{% assign f-ShowLogo = section.settings.show_logo %}
+{% assign f-Logo = section.settings.logo | default: settings.brand.logo | image_picker_url: 'logo.png' %}
+{% assign f-ShowCopy = section.settings.show_copyright %}
+{% assign f-Copy = section.settings.copyright %}
+{% assign f-ShowMenu = section.settings.show_menu %}
+{% assign f-Menu = section.settings.menu %}
+
+<!-- KJB Settings Variables -->
+{% assign kjb-f-BgColor = 'background_color' | settings_id: section: section %}
+{% assign kjb-f-Logo = 'logo' | settings_id: section: section %}
+{% assign kjb-f-Copy = 'copyright' | settings_id: section: section %}
+{% assign kjb-f-Menu = 'menu' | settings_id: section: section %}
+
+<style>
+  .footer {
+    background: {{ f-BgColor }};
+  }
+  {% if f-TextColor != "" %}
+    .footer, .footer--dark a, .footer--dark a:hover, .footer--dark a:not([href]):not([tabindex]) {
+      color: {{ f-TextColor }};
+    }
+    .footer, .footer--light a, .footer--light a:hover, .footer--light a:not([href]):not([tabindex]) {
+      color: {{ f-TextColor }};
+    }
+  {% endif %}
+</style>

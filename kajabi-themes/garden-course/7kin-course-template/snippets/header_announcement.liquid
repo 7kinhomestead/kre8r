@@ -1,0 +1,39 @@
+<!-- Announcement Variables -->
+{% assign A-Show     = section.settings.show_header_announcement %}
+{% assign A-Text     = section.settings.announcement_text %}
+{% assign A-Link     = section.settings.announcement_link %}
+{% assign A-Target   = section.settings.link_target %}
+{% if A-Target %}
+  {% assign A-Target = "_blank" %}
+{% else %}
+  {% assign A-Target = "" %}
+{% endif %}
+
+<!-- KJB Settings Variables -->
+{% assign kjb-A-Show = 'show_header_announcement' | settings_id: section: section %}
+
+<style>
+  .announcement {
+    background: {{ section.settings.announcement_color }};
+    color: {{ section.settings.announcement_text_color }};
+  }
+  a.announcement:hover {
+    color: {{ section.settings.announcement_text_color }};
+  }
+</style>
+
+{% if A-Show %}
+  {% if A-Link == "" %}
+    <div class="announcement" kjb-settings-id="{{ kjb-A-Show }}">
+      {%- element "section.settings.announcement_text" -%}
+        {{ section.settings.announcement_text }}
+      {%- endelement -%}
+    </div>
+  {% else %}
+    <a href="{{ A-Link }}" class="announcement" kjb-settings-id="{{ kjb-A-Show }}" target="{{ A-Target }}">
+      {%- element "section.settings.announcement_text" -%}
+        {{ section.settings.announcement_text }}
+      {%- endelement -%}
+    </a>
+  {% endif %}
+{% endif %}

@@ -1,0 +1,9 @@
+<div class="live-session-details-status__container">
+  <i class="fa fa-calendar live-session-details-status__icon"></i>
+  <div>
+    <div kjb-settings-id="{{ 'completed_text' | settings_id: section: section }}">
+      <span {% element_attributes "section.settings.completed_text" %}>{{ section.settings.completed_text }}</span>
+      <span>{{ live_session.completed_at | default: page_state.fallback_completed_at | local_time: user: current_site_user, format: "%A, %B %d, %Y, %l:%M%p %Z" }}</span>
+    </div>
+  </div>
+</div>

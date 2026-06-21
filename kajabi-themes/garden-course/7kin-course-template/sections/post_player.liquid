@@ -1,0 +1,222 @@
+{% assign player-Type          = section.settings.player_type %}
+{% assign player-Color         = section.settings.player_color | default: "" %}
+{% assign player-Accent        = section.settings.player_accent | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign player-AutoTextColor = player-Color | color_scheme_class %}
+
+<style>
+  {% if player-Color != "" %}
+    .player {
+      background: {{ player-Color }};
+    }
+    .playlist {
+      background: {{ player-Color }};
+      filter: brightness(110%);
+    }
+    .playlist__title {
+      background: {{ player-Color }};
+    }
+    .track {
+      background: {{ player-Color }};
+      filter: brightness(110%);
+    }
+    .track--active {
+      filter: brightness(115%);
+    }
+    .track:hover {
+      filter: brightness(115%);
+    }
+    .player__playlist::-webkit-scrollbar-track {
+    }
+    .player__playlist::-webkit-scrollbar-thumb {
+      background: {{ player-Color }};
+    }
+    .track__more {
+      background: {{ player-Color }};
+      filter: brightness(110%);
+    }
+  {% endif %}
+  .track__count i {
+    color: {{ player-Accent }};
+  }
+  .playlist .progress__icon {
+    color: {{ player-Accent }};
+  }
+  {% if player-Type == "none" %}
+    .player--none__nav {
+      display: inline-block;
+    }
+  {% endif %}
+</style>
+
+{% if player-Type != "none" %}
+  <div class="col-sm-12">
+    <div class="player player--{{ player-Type }} player--{{ player-AutoTextColor }}" kjb-settings-id="{{ 'player_type' | settings_id: section: section }}">
+      <div class="player__video">
+        {% include "post_media" with post.video, color: player-Accent, thumbnail: post.poster_image_url, showThumbnail: true %}
+      </div>
+      {% include "post_player_playlist" %}
+      {% include "post_player_simple" %}
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+  {
+    "name": "Post Player",
+    "elements": [
+      {
+        "type": "radio",
+        "id": "player_type",
+        "label": "Player Type",
+        "default": "inline",
+        "options": [
+          { "value": "inline", "label": "Inline" },
+          { "value": "simple", "label": "Simple" },
+          { "value": "none", "label": "None" }
+        ],
+        "info": "Be careful with using inline setting on larger categories with a post count over 50 as it can cause a liquid error."
+      },
+      {
+        "type": "color",
+        "label": "Player Color",
+        "id": "player_accent",
+        "default": "",
+        "allow_blank": true,
+        "default_global_settings_attribute": "color_primary"
+      },
+      {
+        "type": "color",
+        "label": "Player Background Color",
+        "id": "player_color",
+        "default": "",
+        "allow_blank": true
+      },
+      {
+        "type": "header",
+        "content": "Post Player Language"
+      },
+      {
+        "type": "text",
+        "label": "Count Text Singular",
+        "id": "count_text_singular",
+        "default": "Lesson"
+      },
+      {
+        "type": "text",
+        "label": "Count Text Plural",
+        "id": "count_text_plural",
+        "default": "Lessons"
+      },
+      {
+        "type": "text",
+        "label": "Next Category",
+        "id": "next_cat",
+        "default": "Next Category"
+      },
+      {
+        "type": "header",
+        "content": "Post Player Pagination"
+      },
+      {
+        "type": "text",
+        "label": "Next",
+        "id": "next",
+        "default": "Next"
+      },
+      {
+        "type": "text",
+        "label": "Previous",
+        "id": "previous",
+        "default": "Back"
+      },
+      {
+        "type": "radio",
+        "id": "btn_style",
+        "label": "Button Style",
+        "default": "solid",
+        "options": [
+          { "label": "Solid", "value": "solid" },
+          { "label": "Outline", "value": "outline" }
+        ]
+      },
+      {
+        "type": "radio",
+        "id": "btn_size",
+        "label": "Button Size",
+        "default": "med",
+        "options": [
+          { "label": "Small", "value": "small" },
+          { "label": "Medium", "value": "med" },
+          { "label": "Large", "value": "large" }
+        ]
+      },
+      {
+        "type": "color",
+        "id": "btn_background_color",
+        "label": "Button Color",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "id": "btn_text_color",
+        "label": "Button Text Color",
+        "allow_blank": true,
+        "info": "For solid buttons only"
+      },
+      {
+        "type": "header",
+        "content": "Post Player Auto Advance"
+      },
+      {
+        "type": "checkbox",
+        "id": "auto_advance",
+        "label": "Use Auto Advance",
+        "default": true
+      },
+      {
+        "type": "select",
+        "id": "timer",
+        "label": "Time Delay",
+        "default": "20",
+        "options": [
+          { "label": "5 Seconds", "value": "5" },
+          { "label": "10 Seconds", "value": "10" },
+          { "label": "15 Seconds", "value": "15" },
+          { "label": "20 Seconds", "value": "20" },
+          { "label": "25 Seconds", "value": "25" },
+          { "label": "30 Seconds", "value": "30" }
+        ]
+      },
+      {
+        "type": "color",
+        "id": "accent_color",
+        "label": "Accent Color",
+        "allow_blank": true
+      },
+      {
+        "type": "text",
+        "label": "Will Begin Text",
+        "id": "begin",
+        "default": "Will Begin In"
+      },
+      {
+        "type": "text",
+        "label": "Seconds Text",
+        "id": "seconds",
+        "default": "Seconds"
+      },
+      {
+        "type": "text",
+        "label": "Play Text",
+        "id": "play",
+        "default": "Play Now"
+      },
+      {
+        "type": "text",
+        "label": "Cancel Text",
+        "id": "cancel",
+        "default": "Cancel"
+      }
+    ]
+  }
+{% endschema %}

@@ -1,0 +1,25 @@
+{% assign showConfigurationBanner = current_site.instructor.show_configuration_banner? %}
+{% assign instructorProfileImg = current_site.instructor.image_url %}
+{% assign instructorName = current_site.instructor.name %}
+{% assign instructorTitle = current_site.instructor.title %}
+{% assign instructorBio = current_site.instructor.bio %}
+
+{% if showConfigurationBanner %}
+  <div class="config-banner">
+    <div class="config-banner__text">
+      Configure values in <a href="{{ current_site.instructor.app_settings_url }}" target="_blank" data-kjb-clickable>site settings</a>
+    </div>
+    <div class="config-banner__subtext">If Profile image and Name are not configured, this block will not be displayed.</div>
+  </div>
+{% else %}
+  <div class="media">
+    <div class="media-left">
+      <img src="{{ instructorProfileImg | image_picker_url: 'avatar.png'}}" class="img-circle instructor__image" />
+    </div>
+    <div class="media-body media-middle">
+      <p class="instructor__name">{{ instructorName }}</p>
+      <p class="instructor__title">{{ instructorTitle }}</p>
+    </div>
+  </div>
+  <p class="panel__copy">{{ instructorBio }}</p>
+{% endif %}

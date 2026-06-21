@@ -1,0 +1,19 @@
+{% assign videoImg = block.settings.image | image_picker_url: 'video.png' %}
+{% assign p-ID = block.id %}
+{% unless block.settings.autoplay %}
+<style>
+  .panel--{{ p-ID }} .video__wrapper {
+    background-image: url({{ videoImg }});
+  }
+</style>
+{% endunless %}
+
+<div class="panel__block panel--{{ p-ID }}" id="block-{{ block.id }}" {% block_attributes %}>
+  <div class="video" kjb-settings-id="{{ 'video' | settings_id: section: section,block: block }}">
+    <div class="video__wrapper">
+      {% assign v = current_site.find_video[block.settings.video] %}
+      {% assign poster_image = block.settings.image | image_picker_url: 'video.png' %}
+      {{ v | wistia_video: player_color: block.settings.video_color, auto_play: block.settings.autoplay, still_url: poster_image, playerPreference: "html5" }}
+    </div>
+  </div>
+</div>

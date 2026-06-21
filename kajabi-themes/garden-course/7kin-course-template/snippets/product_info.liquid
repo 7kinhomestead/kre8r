@@ -1,0 +1,15 @@
+<div class="panel__block" id="block-{{ block.id }}" {% block_attributes %}>
+  {% if block.settings.show_img %}
+    {% if current_product.thumbnail_url %}
+      <img class="img-fluid" src="{{ current_product.thumbnail_url }}" kjb-settings-id="{{ 'show_img' | settings_id: section: section, block: block }}">
+    {% else %}
+      <img class="img-fluid" src="{{ 'placeholder.png' | asset_url }}" kjb-settings-id="{{ 'show_img' | settings_id: section: section, block: block }}"/>
+    {% endif %}
+  {% endif %}
+  {% if block.settings.show_title %}
+    <h1 class="panel__title" kjb-settings-id="{{ 'show_title' | settings_id: section: section, block: block }}">{{ current_product.title }}</h1>
+  {% endif %}
+  {% if block.settings.show_desc %}
+    <p class="panel__text" kjb-settings-id="{{ 'show_desc' | settings_id: section: section, block: block }}">{{ current_product.description }}</p>
+  {% endif %}
+</div>

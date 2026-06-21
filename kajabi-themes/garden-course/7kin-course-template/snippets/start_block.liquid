@@ -1,0 +1,59 @@
+{% assign btnId         = block.id %}
+{% assign btnSettingsId = 'start_text' | settings_id: section: section, block: block %}
+{% assign btnText       = block.settings.btn_text  %}
+{% assign btnElementProp = "block.settings.btn_text" %}
+{% assign btnColor      = block.settings.btn_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign btnTextColor  = block.settings.btn_text_color | default: settings.text_color_light %}
+{% assign btnStyle      = block.settings.btn_style  %}
+{% assign btnWidth      = block.settings.btn_width  %}
+{% assign btnSize       = block.settings.btn_size  %}
+{% assign btnProgress   = current_product.completion.percent %}
+{% assign btnAction   = current_product.completion.next_post.url %}
+
+{% if btnProgress == 0 %}
+  {% assign btnText     = block.settings.start_text  %}
+  {% assign btnElementProp = "block.settings.start_text" %}
+{% elsif btnProgress == 100 %}
+  {% assign btnText     = block.settings.again_text  %}
+  {% assign btnElementProp = "block.settings.again_text" %}
+  {% assign btnAction   = current_product.categories.first.posts.first.url %}
+{% else %}
+  {% assign btnText     = block.settings.resume_text  %}
+  {% assign btnElementProp = "block.settings.resume_text" %}
+{% endif %}
+
+<style>
+  /*============================================================================
+    #Individual CTA Style
+  ==============================================================================*/
+  .btn--solid.btn--{{ btnId }} {
+    background: {{ btnColor }} !important;
+    border-color: {{ btnColor }} !important;
+    color: {{ btnTextColor }} !important;
+  }
+  .btn--solid.btn--{{ btnId }}:hover {
+    color: {{ btnTextColor }} !important;
+  }
+  .btn--outline.btn--{{ btnId }} {
+    border-color: {{ btnColor }} !important;
+    color: {{ btnColor }} !important;
+  }
+  .btn--outline.btn--{{ btnId }}:hover {
+    color: {{ btnColor }} !important;
+  }
+</style>
+{% if wrapper %}
+  <div class="panel__block" id="block-{{ block.id }}" {% block_attributes %}>
+    <a href="{{ btnAction }}" class="btn btn-cta btn--{{ btnWidth }} btn--{{ btnStyle }} btn--{{ btnSize }} btn--{{ btnId }}" id="" kjb-settings-id="{{ btnSettingsId }}">
+      {%- element btnElementProp -%}
+        {{ btnText }}
+      {%- endelement -%}
+    </a>
+  </div>
+{% else %}
+  <a href="{{ btnAction }}" class="btn btn-cta btn--{{ btnWidth }} btn--{{ btnStyle }} btn--{{ btnSize }} btn--{{ btnId }}" id="block-{{ block.id }}" kjb-settings-id="{{ btnSettingsId }}" {% block_attributes %}>
+    {%- element btnElementProp -%}
+      {{ btnText }}
+    {%- endelement -%}
+  </a>
+{% endif %}

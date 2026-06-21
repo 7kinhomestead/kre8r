@@ -1,0 +1,113 @@
+{% assign showConfigurationBanner   = current_product.course_access_group.show_configuration_banner? %}
+{% assign widgetConfigured          = current_product.course_access_group.widget_configured? %}
+{% assign hasCommunity              = current_product.course_access_group.site_has_community? %}
+{% assign course_product_type_name  = current_product.course_product_type_name %}
+{% assign settings_url              = current_product.settings_url %}
+{% assign circleId                  = section.settings.circle_id %}
+{% assign circleTitle               = section.settings.circle_title %}
+{% assign primaryColor              = section.settings.primary_color %}
+{% assign communityWidgetImage      = section.settings.community_widget_image %}
+{% assign headingFontFamily         = section.settings.heading_font_family | default: settings.heading_font_family | default: settings.brand.font_family_heading %}
+{% assign baseFontFamily            = section.settings.base_font_family | default: settings.font_family | default: settings.brand.font_family_body %}
+{% assign linkToCommunitySettings   = section.settings.link_to_community_settings %}
+
+<style>
+  .community-widget__iframe {
+    aspect-ratio: 3/4;
+    width: 100%;
+    min-width: 300px;
+    min-height: 400px;
+  }
+</style>
+
+<div class="panel">
+  {% if showConfigurationBanner %}
+    <div class="panel__body">
+      <div class="config-banner">
+        {% if hasCommunity == false %}
+          <div class="config-banner__text">
+            Create a <a href="{{ current_product.create_community_url }}" target="_blank" data-kjb-clickable>community</a> to use this feature!
+          </div>
+          <div class="config-banner__subtext">Then enable community for this {{ course_product_type_name }} in your <a href="{{ settings_url }}" target="_blank" data-kjb-clickable>{{ course_product_type_name }} settings</a>.</div>
+        {% elsif widgetConfigured == false %}
+          <div class="config-banner__text">
+            Enable the community widget in your <a href="{{ settings_url }}" target="_blank" data-kjb-clickable>{{ course_product_type_name }} settings</a>.
+          </div>
+          <div class="config-banner__subtext">If community is not enabled for this {{ course_product_type_name }}, this block will not be displayed.</div>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div kjb-settings-id="{{ 'circle_id' | settings_id: section: section }}">
+      {{ circleId | community_circle: link_to_community_settings: linkToCommunitySettings, circle_title: circleTitle, primary_color: primaryColor, community_widget_image: communityWidgetImage, heading_font_family: headingFontFamily, base_font_family: baseFontFamily}}
+    </div>
+  {% endif %}
+</div>
+
+{% schema %}
+  {
+    "name": "Community Widget",
+    "elements": [
+      {
+        "type": "circle",
+        "id": "circle_id",
+        "label": "Circles"
+      },
+      {
+        "type": "checkbox",
+        "id": "link_to_community_settings",
+        "label": "Link to community circle settings",
+        "default": "false"
+      },
+      {
+        "type": "image_picker",
+        "id": "community_widget_image",
+        "label": "Image",
+        "hide_if": {
+          "link_to_community_settings": true
+        }
+      },
+      {
+        "type": "text",
+        "id": "circle_title",
+        "label": "Title",
+        "info": "Edit to adjust the circle title within the course.",
+        "hide_if": {
+          "link_to_community_settings": true
+        }
+      }, {
+        "type": "color",
+        "id": "primary_color",
+        "label": "Primary Color",
+        "default": "rgba(0, 114, 239, 1)",
+        "hide_if": {
+          "link_to_community_settings": true
+        }
+      }, {
+        "type": "font_select",
+        "id": "heading_font_family",
+        "label": "Heading Font Family",
+        "default": "",
+        "allow_blank": true,
+        "default_global_settings_attribute": "font_family_heading",
+        "preset": "google_fonts",
+        "options": [],
+        "hide_if": {
+          "link_to_community_settings": true
+        }
+      }, {
+        "type": "font_select",
+        "id": "base_font_family",
+        "label": "Base Font Family",
+        "default": "",
+        "allow_blank": true,
+        "default_global_settings_attribute": "font_family",
+        "preset": "google_fonts",
+        "options": [],
+        "hide_if": {
+          "link_to_community_settings": true
+        }
+      }
+    ]
+  }
+{% endschema %}

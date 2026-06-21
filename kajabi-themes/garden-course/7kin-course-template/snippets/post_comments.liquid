@@ -1,0 +1,87 @@
+
+{% assign commentBtnColor      = section.settings.comment_btn_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign commentBtnTextColor  = section.settings.comment_btn_text_color | default: "#fff" %}
+
+{% assign moreBtnColor      = section.settings.comment_btn_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign languageCommentElementPath = "section.settings.language_comment_singular" %}
+
+{%- if post.comments.size > 1 -%}
+  {% assign languageCommentElementPath = "section.settings.language_comment_plural" %}
+{%- endif -%}
+
+<style>
+  .panel .btn--comment {
+    background: {{ commentBtnColor }};
+    border-color: {{ commentBtnColor }};
+    color: {{ commentBtnTextColor }};
+    margin-bottom: 1.5rem;
+    margin-top: .75rem;
+  }
+  .btn--more {
+    border-color: {{ moreBtnColor }};
+    color: {{ moreBtnColor }};
+    margin-bottom: 1.5rem;
+    margin-top: .5rem;
+  }
+  .btn--more:hover {
+    color: {{ moreBtnColor }};
+  }
+</style>
+
+{% unless post.comments_mode_hidden? %}
+  <div class="panel" kjb-settings-id="{{ 'language_comment_singular' | settings_id: section: section }}">
+    <div class="panel__body">
+      <h5 class="panel__heading" kjb-settings-id="{{ 'language_comment_plural' | settings_id: section: section }}">
+        {% element languageCommentElementPath %}
+          {{ post.comments.size | pluralize: section.settings.language_comment_singular, section.settings.language_comment_plural }}
+        {% endelement %}
+        &nbsp; <span class="muted">{{ post.comments.size }}</span>
+      </h5>
+      {% if post.comments_mode_locked? %}
+        <h4 kjb-settings-id="{{ 'language_comment_locked' | settings_id: section: section }}">
+          <i class="fa fa-lock"></i>
+          {% element "section.settings.language_comment_locked" %}
+            {{ section.settings.language_comment_locked }}
+          {% endelement %}
+        </h4>
+      {% elsif current_site_user.muted? != true %}
+        {% form "comment", post %}
+          <textarea kjb-settings-id="{{ 'language_comment_placeholder' | settings_id: section: section }}" rows="5" placeholder="{{ section.settings.language_comment_placeholder }}" name="comment[body]" id="comment_body" class="form-control"></textarea>
+          <button
+            kjb-settings-id="{{ 'language_comment_add' | settings_id: section: section }}"
+            class="btn btn--comment btn--small btn--solid" type="submit"
+            name="commit" data-disable-with="Submitting"
+          >
+            {%- element "section.settings.language_comment_add" -%}
+              {{ section.settings.language_comment_add }}
+            {%- endelement -%}
+          </button>
+        {% endform %}
+      {% endif %}
+      {% if post.comments.size >= 0 %}
+        {% assign per_page = 5 %}
+        {% paginate post.comments_toplevel by per_page %}
+          <div class="comments" data-comments-list>
+            {% for comment in paginate.collection %}
+              {% include "comment" %}
+            {% endfor %}
+          </div>
+          {% if paginate.pages > 1 %}
+            <a
+              kjb-settings-id="{{ 'language_comment_show_more' | settings_id: section: section }}"
+              class="btn btn--more btn--med btn--outline btn--block"
+              href="{{post.comment_show_more_url}}?per={{ per_page }}&desc_from={{ paginate.collection.last.id | minus: 1 }}"
+              id="show-more-comments-btn"
+              data-remote="true"
+              data-disable-with="{{ section.settings.language_comment_show_more_loading }}"
+            >
+              {%- element "section.settings.language_comment_show_more" -%}
+                {{ section.settings.language_comment_show_more }}
+              {%- endelement -%}
+            </a>
+          {% endif %}
+        {% endpaginate %}
+      {% endif %}
+    </div>
+  </div>
+{% endunless %}

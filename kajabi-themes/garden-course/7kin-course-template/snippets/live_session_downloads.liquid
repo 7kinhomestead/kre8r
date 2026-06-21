@@ -1,0 +1,44 @@
+<div class="live-session-details-downloads">
+  <h3 kjb-settings-id="{{ 'downloads_title' | settings_id: section: section, block: block }}" {% element_attributes "block.settings.downloads_title" %}>
+    {{ block.settings.downloads_title }}
+  </h3>
+  <div class="downloads">
+    {% if live_session.downloads.size > 0 %}
+      <ul class="live-session-details-downloads__list">
+        {% for download in live_session.downloads %}
+          <li class="live-session-details-downloads__row">
+            <div class="live-session-details-downloads__content">
+              <a
+                href="{{ download.url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <h5 class="live-session-details-downloads__name">{{ download.display_name }}</h5>
+              </a>
+              <div class="live-session-details-downloads__type">
+                  {{ download.file_type }}
+              </div>
+            </div>
+            <div class="live-session-details-downloads__icon">
+              <a
+                href="{{ download.url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <i class="fa fa-download"></i>
+              </a>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div
+        class="live-session-details-downloads__empty-state"
+        kjb-settings-id="{{ 'downloads_empty_state_text' | settings_id: section: section, block: block }}"
+        {% element_attributes "block.settings.downloads_empty_state_text" %}
+      >
+        {{ block.settings.downloads_empty_state_text }}
+      </div>
+    {% endif %}
+  </div>
+</div>

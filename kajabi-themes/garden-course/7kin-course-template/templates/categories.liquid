@@ -1,0 +1,38 @@
+<div class="game-layout">
+  <aside class="game-sidebar">
+    <div class="sidebar-mod-header">
+      <div>All Modules</div>
+      <div class="sidebar-mod-title">{{ current_product.title }}</div>
+    </div>
+    <div class="sidebar-progress">
+      <div class="sp-row">
+        <span class="sp-label">Course Progress</span>
+        <span class="sp-val">{{ current_product.completion.completed }} / {{ current_product.completion.total }}</span>
+      </div>
+      <div class="sp-bar">
+        <div class="sp-fill" style="width:{{ current_product.completion.percent }}%"></div>
+      </div>
+    </div>
+    <div class="sidebar-lessons">
+      {% for category in current_product.categories %}
+        <div class="sidebar-mod-divider">{{ category.title }}</div>
+        {% for lesson in category.posts %}
+          <a href="{{ lesson.url }}" class="sl-item{% if lesson.completed? %} completed{% endif %}">
+            <span class="sl-icon">{% if lesson.completed? %}✓{% else %}○{% endif %}</span>
+            <span class="sl-name">{{ lesson.title }}</span>
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </aside>
+  <main class="game-main">
+    <div class="game-breadcrumb">
+      <a href="{{ current_product.url }}">🗺 Map</a>
+      <span class="bc-sep">›</span>
+      <span>All Modules</span>
+    </div>
+    <div style="padding:24px">
+      {% section "categories_body" %}
+    </div>
+  </main>
+</div>

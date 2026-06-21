@@ -1,0 +1,12 @@
+{% assign showThumb = block.settings.show_thumb %}
+{% if post.video %}
+  <div class="panel__block">
+    {% include "post_media" with post.video, color: player-Accent, thumbnail: post.poster_image_url, showThumbnail: showThumb %}
+  </div>
+{% else %}
+  {% if showThumb %}
+    <div class="panel__block">
+      {% include "post_media" with post.video, color: player-Accent, thumbnail: post.poster_image_url, showThumbnail: showThumb %}
+    </div>
+  {% endif %}
+{% endif %}

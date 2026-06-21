@@ -1,0 +1,14 @@
+{% for block in section.blocks %}
+  {% case block.type %}
+    {% when 'product_info' %}
+      {% include "hero_info" %}
+    {% when 'product_text' %}
+      {% include "panel_text" %}
+    {% when 'hero_cta' %}
+      {% include "cta_block", is_block: true %}
+    {% when 'product_start' %}
+      {% include "start_block" %}
+    {% when 'coaching_scheduling_widget' %}
+      {% include "coaching_scheduling_widget", sectionType: 'hero' %}
+  {% endcase %}
+{% endfor %}

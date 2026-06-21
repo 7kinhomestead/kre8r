@@ -1,0 +1,11 @@
+<div class="progress">
+  {% if is_completed %}
+    <div class="progress__icon">
+      <i class="fa fa-check"></i>
+    </div>
+  {% elsif percent_complete %}
+    <div class="progress__bar">
+      <div class="progress__fill" role="progressbar" aria-valuenow="{{ percent_complete }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ percent_complete }}%;"></div>
+    </div>
+  {% endif %}
+</div>

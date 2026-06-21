@@ -1,0 +1,81 @@
+{% include "section_style", bgColor: "#f9f9f9", vertAlign: "middle" %}
+
+<style>
+  .section--{{ s-ID }} ::-webkit-input-placeholder {
+    color: {{ s-TextColor  }};
+  }
+  .section--{{ s-ID }} ::-moz-placeholder {
+    color: {{ s-TextColor  }};
+  }
+  .section--{{ s-ID }} :-ms-input-placeholder {
+    color: {{ s-TextColor  }};
+  }
+  .section--{{ s-ID }} :-moz-placeholder {
+    color: {{ s-TextColor  }};
+  }
+  .section--{{ s-ID }} .search__icon {
+    color: {{ s-TextColor  }};
+  }
+  .section--{{ s-ID }} .search__input {
+    color: {{ s-TextColor  }};
+  }
+</style>
+
+{% if section.settings.show_search %}
+  <div class="section section--search section--{{ s-VertAlign }} section--{{ s-AutoTextColor }} section--{{ s-ID }}" kjb-settings-id="{{ 'background_color' | settings_id: section: section }}">
+    <div class="container">
+      <form action="{{ current_product.search_url }}" method="get" role="search">
+        <div class="input-group search">
+          <span class="input-group-addon search__icon"><i class="fa fa-search"></i></span>
+          <input class="form-control search__input" type="search" name="q" placeholder="{{ section.settings.search_text }}" kjb-settings-id="{{ 'search_text' | settings_id: section: section }}">
+          <span class="input-group-addon search__icon search__icon--close"><i class="fa fa-times" aria-hidden="true"></i></span>
+        </div>
+      </form>
+    </div>
+  </div>
+{% else %}
+  <style>
+    .header .header-menu a.search__toggle {
+      display: none;
+    }
+  </style>
+{% endif %}
+
+{% schema %}
+  {
+    "name": "Search Bar",
+    "elements": [
+      {
+        "type": "checkbox",
+        "id": "show_search",
+        "label": "Include Search",
+        "default": "true"
+      },
+      {
+        "type": "text",
+        "default": "Search for something...",
+        "label": "Search Text",
+        "id": "search_text"
+      },
+      {
+        "type": "header",
+        "content": "Section Appearance",
+        "style": "subheading"
+      },
+      {
+        "type": "color",
+        "label": "Background Color Override",
+        "id": "background_color",
+        "default": "#92969c",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "label": "Text Color Override",
+        "id": "text_color",
+        "default": "#ffffff",
+        "allow_blank": true
+      }
+    ]
+  }
+{% endschema %}

@@ -1,0 +1,69 @@
+<div class="panel syllabus">
+  <div class="panel__body">
+    <h5 class="syllabus__heading">
+      {{ category.title }}
+      {% if category.show_as_paywalled? %}
+        {% include "icon_paywall" %}
+      {% endif %}
+      {% if category.pending_drip? %}
+        {% include "drip_date" %}
+      {% endif %}
+    </h5>
+    {% unless category.pending_drip? %}
+      {% paginate category.posts by 10 %}
+        {% for post in paginate.collection %}
+          {% include "syllabus_item" %}
+        {% endfor %}
+        {% if paginate.pages > 1 %}
+          {% include "pagination" %}
+        {% endif %}
+      {% endpaginate %}
+      {% if category.children? %}
+        {% for category in category.subcategories %}
+          {% if category.pending_drip? %}
+            <div class="syllabus__item syllabus__item--sub" id="category-{{ category.id }}">
+              <h5 class="syllabus__heading">
+                {{ category.title }}
+                {% if category.show_as_paywalled? %}
+                  {% include "icon_paywall" %}
+                {% endif %}
+                {% include "drip_date" %}
+              </h5>
+            </div>
+          {% else %}
+            <div class="syllabus__item syllabus__item--sub" id="category-{{ category.id }}">
+              <h5 class="syllabus__heading">
+                {{ category.title }}
+                {% if category.show_as_paywalled? %}
+                  {% include "icon_paywall" %}
+                {% endif %}
+              </h5>
+              {% for post in category.posts limit:10 %}
+                {% include "syllabus_item" %}
+              {% endfor %}
+              {% if category.posts.size > 10 %}
+                <div class="syllabus__item">
+                  <a href="{{ category.url }}" kjb-settings-id="{{ 'show_more' | settings_id: section: section }}" {% element_attributes "section.settings.show_more" %}>{{ section.settings.show_more }}</a>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    {% endunless %}
+  </div>
+</div>
+
+{% schema %}
+  {
+    "name": "Category Body",
+    "elements": [
+      {
+        "type": "text",
+        "id": "show_more",
+        "label": "Show More Text",
+        "default": "Show More"
+      }
+    ]
+  }
+{% endschema %}

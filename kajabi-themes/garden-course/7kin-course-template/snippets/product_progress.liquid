@@ -1,0 +1,10 @@
+{% assign p-AccentColor   = block.settings.accent_color | default: "" %}
+{% assign completion = current_product.completion %}
+<div class="panel__block" id="block-{{ block.id }}" {% block_attributes %}>
+  <h5 kjb-settings-id="{{ 'completed' | settings_id: section: section, block: block }}">
+    {{ completion.completed }}&nbsp;of&nbsp;{{ completion.total }} {% element "block.settings.completed" %}{{ block.settings.completed }}{% endelement %}
+  </h5>
+  <div class="progress__bar" kjb-settings-id="{{ 'accent_color' | settings_id: section: section, block: block }}">
+    <div class="progress__fill" role="progressbar" aria-valuenow="{{ completion.percent }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ completion.percent }}%;background:{{ p-AccentColor }};"></div>
+  </div>
+</div>

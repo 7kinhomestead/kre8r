@@ -1,0 +1,1606 @@
+{% assign page_state = live_session.page_state[section.settings.page_state] %}
+
+<style>
+  .live-session__details.row {
+    display: flex;
+    flex-direction: column;
+  }
+  @media (min-width: 1200px) {
+    .live-session__details.row {
+      flex-direction: row;
+    }
+  }
+
+  .live-session__details .live-session__session-column {
+    order: 1;
+  }
+  .live-session__details .live-session__sidebar-column {
+    order: 2;
+  }
+
+  {% unless section.settings.place_sidebar_right_on_desktop %}
+    @media (min-width: 1200px) {
+      .live-session__details .live-session__session-column {
+        order: 2;
+      }
+      .live-session__details .live-session__sidebar-column {
+        order: 1;
+      }
+    }
+  {% endunless %}
+
+  {% unless section.settings.show_sidebar_on_desktop %}
+    @media (min-width: 1200px) {
+      .live-session__details .live-session__session-column {
+        width: 100%;
+      }
+      .live-session__details .live-session__sidebar-column {
+        display: none;
+      }
+    }
+  {% endunless %}
+
+  {% unless section.settings.place_sidebar_bottom_on_mobile %}
+    @media (max-width: 1199px) {
+      .live-session__details .live-session__session-column {
+        order: 2;
+      }
+      .live-session__details .live-session__sidebar-column {
+        order: 1;
+      }
+    }
+  {% endunless %}
+
+  {% unless section.settings.show_sidebar_on_mobile %}
+    @media (max-width: 1199px) {
+      .live-session__details .live-session__sidebar-column {
+        display: none;
+      }
+    }
+  {% endunless %}
+</style>
+
+<div
+  class="live-session__details row section__row"
+  kjb-settings-id="{{ 'page_state' | settings_id: section: section }}"
+>
+  {% if section.blocks.size > 0 %}
+    <div
+      class="
+        live-session__session-column
+        col-xl-8
+      "
+    >
+  {% else %}
+    <div
+      class="
+        live-session__session-column
+        section__body
+        col-xl-12
+      "
+    >
+  {% endif %}
+    {% if live_session.show_video? %}
+      {% include "live_session_video", video: live_session.video %}
+    {% else %}
+      {% include "live_session_header" %}
+    {% endif %}
+    <div class="panel">
+      {% include "live_session_body" %}
+    </div>
+    <div class="panel">
+      {% include "live_session_agenda_items" %}
+    </div>
+  </div>
+  {% if section.blocks.size > 0 %}
+    <div
+      class="
+        live-session__sidebar-column
+        section__sidebar
+        col-xl-4
+      "
+    >
+      {% include "live_session_sidebar" %}
+    </div>
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "Live Session",
+  "deletable": "false",
+  "duplicatable": "false",
+  "hideable": "false",
+  "saveable": "false",
+  "elements": [
+    {
+      "type": "select",
+      "id": "page_state",
+      "label": "Page state",
+      "info": "Select a value to see how the section will look in different states.",
+      "default": "scheduled",
+      "options": [
+        {
+          "value": "unscheduled",
+          "label": "Unscheduled"
+        },
+        {
+          "value": "scheduled",
+          "label": "Scheduled"
+        },
+        {
+          "value": "completed",
+          "label": "Completed"
+        },
+        {
+          "value": "recording",
+          "label": "Recording uploaded"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Sidebar"
+    },
+    {
+      "type": "info",
+      "info": "Add blocks to show sidebar",
+      "hide_if": {
+        "__section_has_blocks__": true
+      }
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sidebar_on_desktop",
+      "label": "Show sidebar on desktop",
+      "default": "true",
+      "hide_if": {
+        "__section_has_blocks__": false
+      }
+    },
+    {
+      "type": "pill_tabs",
+      "id": "place_sidebar_right_on_desktop",
+      "label": "Desktop position",
+      "default": "true",
+      "options": [
+        {
+          "value": "false",
+          "label": "Left"
+        },
+        {
+          "value": "true",
+          "label": "Right"
+        }
+      ],
+      "hide_if": {
+        "__section_has_blocks__": false,
+        "show_sidebar_on_desktop": false,
+        "operator": "or"
+      }
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sidebar_on_mobile",
+      "label": "Show sidebar on mobile",
+      "default": "true",
+      "hide_if": {
+        "__section_has_blocks__": false
+      }
+    },
+    {
+      "type": "pill_tabs",
+      "id": "place_sidebar_bottom_on_mobile",
+      "label": "Mobile position",
+      "default": "true",
+      "options": [
+        {
+          "value": "false",
+          "label": "Top"
+        },
+        {
+          "value": "true",
+          "label": "Bottom"
+        }
+      ],
+      "hide_if": {
+        "__section_has_blocks__": false,
+        "show_sidebar_on_mobile": false,
+        "operator": "or"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "Session header",
+      "elements": [
+        {
+          "type": "header",
+          "content": "Basic Settings",
+          "style": "subheading",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "header_show_logo",
+          "label": "Show logo",
+          "default": "true",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "header_show_title",
+          "label": "Show session title",
+          "default": "false",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "header_show_description",
+          "label": "Show session description",
+          "default": "false",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "header_show_participants",
+          "label": "Show participants",
+          "default": "false",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "text",
+          "id": "header_participants_text",
+          "label": "Participants",
+          "default": "participants",
+          "hide_if": {
+            "header_show_participants": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "session_completed_text",
+          "label": "Session completed",
+          "default": "Your session has been completed",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "scheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "align",
+          "id": "header_text_align",
+          "label": "Text alignment",
+          "default": "left",
+          "direction": "horizontal",
+          "hide_if": {
+            "header_show_title": false,
+            "header_show_description": false
+          }
+        },
+        {
+          "type": "header",
+          "content": "Logo",
+          "style": "subheading",
+          "hide_if": {
+            "header_show_logo": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "pill_tabs",
+          "id": "header_logo_type",
+          "label": "Logo type",
+          "default": "image",
+          "options": [
+            {
+              "label": "Image",
+              "value": "image"
+            },
+            {
+              "label": "Text",
+              "value": "text"
+            }
+          ],
+          "hide_if": {
+            "header_show_logo": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "image_picker",
+          "id": "header_logo",
+          "label": "Logo image",
+          "fit": "max",
+          "width": 1000,
+          "height": 1000,
+          "info": "Suggested dimensions: 360x80",
+          "default_global_settings_attribute": "brand.logo",
+          "hide_if": {
+            "header_logo_type": "text",
+            "header_show_logo": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "header_logo_alt",
+          "label": "Alt text",
+          "default": "Header logo",
+          "hide_if": {
+            "header_logo_type": "text",
+            "header_show_logo": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "header_logo_width",
+          "label": "Logo image width",
+          "default": "150",
+          "hide_if": {
+            "header_logo_type": "text",
+            "header_show_logo": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "header_logo_text",
+          "label": "Logo text",
+          "default": "Your logo",
+          "hide_if": {
+            "header_logo_type": "image",
+            "header_show_logo": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "color",
+          "label": "Logo text",
+          "id": "header_logo_text_color",
+          "default": "#FFFFFF",
+          "allow_blank": "true",
+          "hide_if": {
+            "header_logo_type": "image",
+            "header_show_logo": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "align",
+          "id": "header_logo_alignment",
+          "label": "Logo alignment",
+          "default": "center",
+          "direction": "horizontal",
+          "category": "block",
+          "hide_if": {
+            "header_show_logo": false,
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "header",
+          "content": "Dates",
+          "style": "subheading",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "header_show_date",
+          "label": "Show date",
+          "default": "true",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "header_show_time",
+          "label": "Show time",
+          "default": "true",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "pill_tabs",
+          "id": "datetime_style",
+          "label": "Style",
+          "default": "solid",
+          "options": [
+            {
+              "label": "Solid",
+              "value": "solid"
+            },
+            {
+              "label": "Outline",
+              "value": "outline"
+            }
+          ],
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "range",
+          "id": "datetime_border_radius",
+          "label": "Border radius",
+          "default": "50",
+          "min": "0",
+          "max": "50",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "color",
+          "id": "datetime_text_color",
+          "label": "Text color",
+          "default": "#ffffff",
+          "allow_blank": true,
+          "info": "For solid style only",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "color",
+          "id": "datetime_background_color",
+          "label": "Background color",
+          "default": "#FFFFFF66",
+          "allow_blank": true,
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "header",
+          "content": "Call to action",
+          "style": "subheading",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "pending_to_join_text",
+          "label": "Pending to join",
+          "default": "Hang tight for instructor to join...",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "cta_btn_text",
+          "label": "Join text",
+          "default": "Join session ›",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "pill_tabs",
+          "id": "cta_btn_width",
+          "label": "Button width",
+          "default": "auto",
+          "allow_blank": true,
+          "options": [
+            {
+              "value": "full",
+              "label": "Full"
+            },
+            {
+              "value": "auto",
+              "label": "Auto"
+            }
+          ],
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "pill_tabs",
+          "id": "cta_btn_style",
+          "label": "Button style",
+          "default": "solid",
+          "allow_blank": true,
+          "options": [
+            {
+              "label": "Solid",
+              "value": "solid"
+            },
+            {
+              "label": "Outline",
+              "value": "outline"
+            }
+          ],
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "pill_tabs",
+          "id": "cta_btn_size",
+          "label": "Button size",
+          "default": "medium",
+          "allow_blank": true,
+          "options": [
+            {
+              "label": "Sm",
+              "value": "small"
+            },
+            {
+              "label": "Md",
+              "value": "medium"
+            },
+            {
+              "label": "Lg",
+              "value": "large"
+            }
+          ],
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "range",
+          "id": "cta_btn_border_radius",
+          "label": "Border radius",
+          "default": "4",
+          "min": "0",
+          "max": "50",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "color",
+          "id": "cta_btn_text_color",
+          "label": "Text color",
+          "default": "",
+          "allow_blank": true,
+          "info": "For solid buttons only",
+          "default_global_settings_attribute": "text_color",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "cta_btn_style": [
+              "outline",
+              "subtle"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "color",
+          "id": "cta_btn_background_color",
+          "label": "Button color",
+          "default": "",
+          "allow_blank": true,
+          "default_global_settings_attribute": "color_offset",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "header",
+          "content": "Background",
+          "style": "subheading",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "color",
+          "id": "header_background_color",
+          "label": "Color",
+          "default": "",
+          "allow_blank": true,
+          "default_global_settings_attribute": "color_primary",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "image_picker",
+          "id": "header_bg_image",
+          "label": "Image",
+          "fit": "max",
+          "width": 3000,
+          "height": 3000,
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "header",
+          "content": "Border",
+          "style": "subheading",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "select",
+          "id": "header_border_type",
+          "label": "Border type",
+          "default": "none",
+          "options": [
+            {
+              "value": "none",
+              "label": "None"
+            },
+            {
+              "value": "solid",
+              "label": "Solid"
+            },
+            {
+              "value": "dotted",
+              "label": "Dotted"
+            },
+            {
+              "value": "dashed",
+              "label": "Dashed"
+            },
+            {
+              "value": "double",
+              "label": "Double"
+            },
+            {
+              "value": "ridge",
+              "label": "Ridge"
+            }
+          ],
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "range",
+          "id": "header_border_width",
+          "label": "Border width",
+          "default": "",
+          "min": "0",
+          "max": "50",
+          "hide_if": {
+            "header_border_type": "none",
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "color",
+          "id": "header_border_color",
+          "label": "Border",
+          "default": "",
+          "allow_blank": true,
+          "hide_if": {
+            "header_border_type": "none",
+            "page_state": "recording",
+            "operator": "or"
+          }
+        },
+        {
+          "type": "range",
+          "id": "header_border_radius",
+          "label": "Border radius",
+          "default": "16",
+          "min": "0",
+          "max": "50",
+          "hide_if": {
+            "page_state": "recording"
+          }
+        },
+        {
+          "type": "select",
+          "id": "header_box_shadow",
+          "label": "Box shadow",
+          "default": "medium",
+          "options": [
+            {
+              "label": "None",
+              "value": "none"
+            },
+            {
+              "label": "Small",
+              "value": "small"
+            },
+            {
+              "label": "Medium",
+              "value": "medium"
+            },
+            {
+              "label": "Large",
+              "value": "large"
+            }
+          ],
+          "hide_if": {
+            "page_state": "recording"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session body",
+      "elements": [
+        {
+          "type": "checkbox",
+          "id": "body_show_title",
+          "label": "Show session title",
+          "default": "true"
+        },
+        {
+          "type": "checkbox",
+          "id": "body_show_description",
+          "label": "Show session description",
+          "default": "true"
+        },
+        {
+          "type": "checkbox",
+          "id": "body_show_participants",
+          "label": "Show participants",
+          "default": "true"
+        },
+        {
+          "type": "text",
+          "id": "body_participants_text",
+          "label": "Participants",
+          "default": "participants",
+          "hide_if": {
+            "body_show_participants": false
+          }
+        },
+        {
+          "type": "align",
+          "id": "body_text_align",
+          "label": "Text alignment",
+          "default": "left",
+          "direction": "horizontal"
+        }
+      ]
+    },
+    {
+      "name": "Session scheduled status",
+      "elements": [
+        {
+          "type": "info",
+          "info": "Use the Page state dropdown to view settings for each session state"
+        },
+        {
+          "type": "color",
+          "label": "Divider color",
+          "id": "scheduling_divider_color",
+          "default": "#D2D1D1",
+          "allow_blank": true,
+          "hide_if": {
+            "page_state": "unscheduled"
+          }
+        },
+        {
+          "type": "header",
+          "content": "Unscheduled status",
+          "style": "subheading",
+          "hide_if": {
+            "page_state": [
+              "scheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "unscheduled_title",
+          "label": "Title",
+          "default": "Session not scheduled yet",
+          "hide_if": {
+            "page_state": [
+              "scheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "unscheduled_text",
+          "label": "Text",
+          "default": "This session is pending. Your instructor will schedule it.",
+          "hide_if": {
+            "page_state": [
+              "scheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "range",
+          "id": "unscheduled_border_radius",
+          "label": "Border radius",
+          "default": "12",
+          "min": "0",
+          "max": "50",
+          "hide_if": {
+            "page_state": [
+              "scheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "color",
+          "label": "Background",
+          "id": "unscheduled_background_color",
+          "default": "#FFFFFF",
+          "allow_blank": true,
+          "hide_if": {
+            "page_state": [
+              "scheduled",
+              "completed",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "header",
+          "content": "Scheduled status",
+          "style": "subheading",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "scheduled_text",
+          "label": "Scheduled",
+          "default": "Session is scheduled for",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "join_btn_text",
+          "label": "Join button",
+          "default": "Join session",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "completed"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "header",
+          "content": "Completed status",
+          "style": "subheading",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "scheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        },
+        {
+          "type": "text",
+          "id": "completed_text",
+          "label": "Completed",
+          "default": "Session was completed on",
+          "hide_if": {
+            "page_state": [
+              "unscheduled",
+              "scheduled",
+              "recording"
+            ],
+            "operator": "or"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agenda",
+      "elements": [
+        {
+          "type": "text",
+          "id": "agenda_title",
+          "label": "Title",
+          "default": "Agenda"
+        },
+        {
+          "type": "text",
+          "id": "agenda_empty_state_text",
+          "label": "Empty state text",
+          "default": "Agenda items will appear here"
+        },
+        {
+          "type": "checkbox",
+          "id": "agenda_strikethrough",
+          "label": "Strikethrough on complete",
+          "default": "true"
+        }
+      ]
+    },
+    {
+      "name": "Player settings",
+      "elements": [
+        {
+          "type": "color",
+          "id": "video_color",
+          "label": "Player color",
+          "allow_blank": "true",
+          "default": "",
+          "default_global_settings_attribute": "color_primary"
+        },
+        {
+          "type": "header",
+          "content": "Video player controls",
+          "info": "Select which controls you want your viewer to have. Save to view changes."
+        },
+        {
+          "type": "checkbox",
+          "id": "controls_on_load",
+          "label": "Display controls",
+          "default": "true",
+          "info": "Display player controls when autoplay is disabled."
+        },
+        {
+          "type": "checkbox",
+          "id": "auto_play",
+          "label": "Autoplay",
+          "default": "false",
+          "info": "Autoplay a muted video when the page loads."
+        },
+        {
+          "type": "checkbox",
+          "id": "play_button",
+          "label": "Play button",
+          "default": "true",
+          "info": "Displays a play button when autoplay is disabled or the volume badge when autoplay is enabled."
+        },
+        {
+          "type": "checkbox",
+          "id": "full_screen",
+          "label": "Allow full screen",
+          "default": "false",
+          "info": "Allows your viewers to watch the video in fullscreen."
+        },
+        {
+          "type": "checkbox",
+          "id": "small_play_button",
+          "label": "Small play button",
+          "default": "true",
+          "info": "Display a small play button in the bottom left corner of the video."
+        },
+        {
+          "type": "checkbox",
+          "id": "playbar",
+          "label": "Show playbar",
+          "default": "true",
+          "info": "Display a playbar that displays a visual timeline of the video."
+        },
+        {
+          "type": "checkbox",
+          "id": "video_settings",
+          "label": "Video settings",
+          "default": "false",
+          "info": "Displays video settings like quality control and playback rate."
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "type": "live_session_downloads",
+      "name": "Downloads",
+      "elements": [
+        {
+          "type": "text",
+          "id": "downloads_title",
+          "label": "Downloads Title",
+          "default": "Downloads"
+        },
+        {
+          "type": "text",
+          "id": "downloads_empty_state_text",
+          "label": "Downloads Empty State Text",
+          "default": "Downloads will appear here"
+        }
+      ]
+    },
+    {
+      "type": "cross_sell",
+      "name": "Cross Sell",
+      "elements": [
+        {
+          "type": "header",
+          "content": "Cross Sell"
+        },
+        {
+          "type": "offer",
+          "id": "offer_id",
+          "label": "Offer"
+        },
+        {
+          "type": "text",
+          "id": "btn_text",
+          "label": "Button Text",
+          "default": "Learn More"
+        },
+        {
+          "type": "radio",
+          "id": "btn_style",
+          "label": "Button Style",
+          "default": "solid",
+          "options": [
+            { "label": "Solid", "value": "solid" },
+            { "label": "Outline", "value": "outline" }
+          ]
+        },
+        {
+          "type": "radio",
+          "id": "btn_size",
+          "label": "Button Size",
+          "default": "small",
+          "options": [
+            { "label": "Small", "value": "small" },
+            { "label": "Medium", "value": "med" },
+            { "label": "Large", "value": "large" }
+          ]
+        },
+        {
+          "type": "radio",
+          "id": "btn_width",
+          "label": "Button Width",
+          "default": "auto",
+          "options": [
+            { "label": "Auto", "value": "auto" },
+            { "label": "Full Width", "value": "block" }
+          ]
+        },
+        {
+          "type": "color",
+          "id": "btn_background_color",
+          "label": "Button Color",
+          "allow_blank": true
+        },
+        {
+          "type": "color",
+          "id": "btn_text_color",
+          "label": "Button Text Color",
+          "allow_blank": true,
+          "info": "For solid buttons only"
+        },
+        {
+          "type": "header",
+          "content": "Block Appearance",
+          "style": "subheading"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_img",
+          "label": "Show Image",
+          "default": "true"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_price",
+          "label": "Show First Offer Price",
+          "default": "false"
+        },
+        {
+          "type": "color",
+          "label": "Background Color Override",
+          "id": "background_color",
+          "allow_blank": true
+        },
+        {
+          "type": "color",
+          "label": "Text Color Override",
+          "id": "text_color",
+          "allow_blank": true
+        }
+      ]
+    },
+    {
+      "type": "custom_sidebar_block",
+      "name": "Custom Block",
+      "elements": [
+        {
+          "type": "header",
+          "content": "Custom Block"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Custom Content Goes Here"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_img",
+          "label": "Show Image",
+          "default": "true"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Suggested dimensions 600px x 300px"
+        },
+        {
+          "type": "rich_text",
+          "id": "content",
+          "label": "Content",
+          "default": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed sapien quam. Sed dapibus est id enim facilisis, at posuere turpis adipiscing. Quisque sit amet dui dui."
+        },
+        {
+          "type": "checkbox",
+          "id": "show_cta",
+          "label": "Show CTA",
+          "default": "true"
+        },
+        {
+          "type": "text",
+          "id": "btn_text",
+          "label": "CTA Text",
+          "default": "Call To Action"
+        },
+        {
+          "type": "action",
+          "id": "btn_action",
+          "label": "CTA Action",
+          "default": "http://www.kajabi.com"
+        },
+        {
+          "type": "checkbox",
+          "id": "btn_target",
+          "label": "Open In New Window",
+          "default": "false"
+        },
+        {
+          "type": "radio",
+          "id": "btn_style",
+          "label": "CTA Style",
+          "default": "solid",
+          "options": [
+            { "label": "Solid", "value": "solid" },
+            { "label": "Outline", "value": "outline" }
+          ]
+        },
+        {
+          "type": "radio",
+          "id": "btn_size",
+          "label": "CTA Size",
+          "default": "small",
+          "options": [
+            { "label": "Small", "value": "small" },
+            { "label": "Medium", "value": "med" },
+            { "label": "Large", "value": "large" }
+          ]
+        },
+        {
+          "type": "radio",
+          "id": "btn_width",
+          "label": "Button Width",
+          "default": "auto",
+          "options": [
+            { "label": "Auto", "value": "auto" },
+            { "label": "Full Width", "value": "block" }
+          ]
+        },
+        {
+          "type": "color",
+          "id": "btn_background_color",
+          "label": "Button Color",
+          "allow_blank": true
+        },
+        {
+          "type": "color",
+          "id": "btn_text_color",
+          "label": "Button Text Color",
+          "allow_blank": true,
+          "info": "For solid buttons only"
+        },
+        {
+          "type": "header",
+          "content": "Block Appearance",
+          "style": "subheading"
+        },
+        {
+          "type": "radio",
+          "id": "alignment",
+          "label": "Text Alignment",
+          "default": "left",
+          "options": [
+            { "label": "Left", "value": "left" },
+            { "label": "Center", "value": "center" },
+            { "label": "Right", "value": "right" }
+          ]
+        },
+        {
+          "type": "color",
+          "label": "Background Color Override",
+          "id": "background_color",
+          "allow_blank": true
+        },
+        {
+          "type": "color",
+          "label": "Text Color Override",
+          "id": "text_color",
+          "allow_blank": true
+        }
+      ]
+    },
+    {
+      "type": "sidebar_img",
+      "name": "Image",
+      "elements": [
+        {
+          "type": "header",
+          "content": "Image"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "width": 2300,
+          "height": 2300,
+          "info": "Suggested dimensions: 1856 × 1044"
+        },
+        {
+          "type": "action",
+          "id": "img_action",
+          "label": "Image Action",
+          "default": ""
+        },
+        {
+          "type": "checkbox",
+          "id": "link_target",
+          "label": "Open In New Window",
+          "default": "false"
+        }
+      ]
+    },
+    {
+      "type": "instructor",
+      "name": "Instructor",
+      "elements": [
+        {
+          "type": "header",
+          "content": "Instructor"
+        },
+        {
+          "type": "info",
+          "id": "config",
+          "info": "Configure default values in [site settings](#app-link-instructor-settings)",
+          "hide_if": {
+            "instructor_is_linked": false
+          }
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Instructor"
+        },
+        {
+          "type": "checkbox",
+          "id": "instructor_is_linked",
+          "label": "Link to instructor bio site settings",
+          "default": "false"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_img",
+          "label": "Show profile image",
+          "default": "true",
+          "hide_if": {
+            "instructor_is_linked": true
+          }
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Profile image",
+          "info": "Suggested dimensions 300px x 300px",
+          "hide_if": {
+            "instructor_is_linked": true
+          }
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Name",
+          "default": "John Doe",
+          "hide_if": {
+            "instructor_is_linked": true
+          }
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Instructor",
+          "hide_if": {
+            "instructor_is_linked": true
+          }
+        },
+        {
+          "type": "textarea",
+          "id": "bio",
+          "label": "Bio",
+          "default": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed sapien quam. Sed dapibus est id enim facilisis, at posuere turpis adipiscing. Quisque sit amet dui dui.",
+          "hide_if": {
+            "instructor_is_linked": true
+          }
+        },
+        {
+          "type": "header",
+          "content": "Block Appearance",
+          "style": "subheading"
+        },
+        {
+          "type": "color",
+          "label": "Accent Color Override",
+          "id": "accent_color",
+          "allow_blank": true
+        }
+      ]
+    },
+    {
+      "type": "coaching_scheduling_widget",
+      "name": "Coaching Scheduling Widget",
+      "elements": [
+        {
+          "type": "header",
+          "content": "Coaching Scheduling Widget"
+        },
+        {
+          "type": "coaching_program_for_scheduling_widget",
+          "id": "coaching_program",
+          "label": "Select Your Coaching Program",
+          "preset": ""
+        },
+        {
+          "type": "offer_for_productizable",
+          "id": "offer",
+          "label": "Select Your Offer",
+          "preset": "",
+          "hide_if": {
+            "coaching_program": ""
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "link_to_program_details",
+          "label": "Link to Program Details",
+          "default": "true"
+        },
+        {
+          "type": "text",
+          "id": "title_text",
+          "label": "Title text",
+          "default": "Program Title",
+          "hide_if": {
+            "link_to_program_details": true
+          }
+        },
+        {
+          "type": "text",
+          "id": "description_text",
+          "label": "Description text",
+          "default": "Program Description",
+          "hide_if": {
+            "link_to_program_details": true
+          }
+        },
+        {
+          "type": "image_picker",
+          "id": "thumbnail_image",
+          "label": "Thumbnail image",
+          "info": "Image must be square, with a maximum size of 1280 x 720 pixels",
+          "fit": "crop",
+          "width": 1280,
+          "height": 720,
+          "hide_if": {
+            "link_to_program_details": true
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "show_thumbnail",
+          "label": "Show thumbnail",
+          "default": "true"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_price",
+          "label": "Show price",
+          "default": "true"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_duration",
+          "label": "Show duration",
+          "default": "true"
+        },
+        {
+          "type": "text",
+          "id": "cta_text",
+          "label": "CTA Text",
+          "default": "Call To Action"
+        },
+        {
+          "type": "radio",
+          "id": "btn_style",
+          "label": "Button Style",
+          "default": "solid",
+          "options": [
+            { "label": "Solid", "value": "solid" },
+            { "label": "Outline", "value": "outline" }
+          ]
+        },
+        {
+          "type": "radio",
+          "id": "btn_size",
+          "label": "Button Size",
+          "default": "small",
+          "options": [
+            { "label": "Small", "value": "small" },
+            { "label": "Medium", "value": "med" },
+            { "label": "Large", "value": "large" }
+          ]
+        },
+        {
+          "type": "radio",
+          "id": "btn_width",
+          "label": "Button Width",
+          "default": "block",
+          "options": [
+            { "label": "Auto", "value": "auto" },
+            { "label": "Full Width", "value": "block" }
+          ]
+        },
+        {
+          "type": "color",
+          "id": "background_color",
+          "label": "Background Color Override",
+          "default": "",
+          "allow_blank": true
+        },
+        {
+          "type": "color",
+          "id": "cta_color",
+          "label": "CTA Color Override",
+          "default": "",
+          "allow_blank": true
+        },
+        {
+          "type": "color",
+          "id": "cta_text_color",
+          "label": "Text Color Override",
+          "default": "",
+          "allow_blank": true
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

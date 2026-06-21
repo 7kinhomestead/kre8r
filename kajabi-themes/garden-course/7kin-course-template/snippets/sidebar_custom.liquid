@@ -1,0 +1,26 @@
+{% include "panel_style", bgColor: "#fff" %}
+{% assign p-Alignment = block.settings.alignment %}
+<style>
+  .panel--{{ p-ID }} img {
+    margin: 0 0 0 0;
+    width: 100%;
+  }
+  .panel--{{ p-ID }} .btn {
+    margin: 0 0 0 0;
+  }
+</style>
+
+<div class="panel panel--{{ p-AutoTextColor }} panel--{{ p-ID }}" style="text-align: {{ p-Alignment }}" kjb-settings-id="{{ 'background_color' | settings_id: section: section, block: block }}" id="block-{{ block.id }}" {% block_attributes %}>
+  {% if block.settings.show_img %}
+    <img src="{{ block.settings.image | image_picker_url: 'placeholder.png'}}" class="img-fluid" kjb-settings-id="{{ 'image' | settings_id: section: section, block: block }}"/>
+  {% endif %}
+  <div class="panel__body">
+    {% if block.settings.heading != "" %}
+      <h6 class="panel__heading" kjb-settings-id="{{ 'heading' | settings_id: section: section, block: block }}" {% element_attributes "block.settings.heading" %}>{{ block.settings.heading }}</h6>
+    {% endif %}
+    <div class="panel__copy" kjb-settings-id="{{ 'content' | settings_id: section: section, block: block }}" {% element_attributes "block.settings.content" %}>{{ block.settings.content }}</div>
+    {% if block.settings.show_cta %}
+      {% include "cta_block" %}
+    {% endif %}
+  </div>
+</div>

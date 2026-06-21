@@ -1,0 +1,59 @@
+{% assign page_state = live_session.page_state[section.settings.page_state] %}
+
+<style>
+  .live-session-details-status {
+    {% if page_state.unscheduled_and_not_completed? %}
+      background-color: {{ section.settings.unscheduled_background_color }};
+      padding: 24px;
+      border-radius: {{ section.settings.unscheduled_border_radius | default: 50 | remove: "px" | append: "px" }};
+    {% else %}
+      {% if section.settings.scheduling_divider_color != blank %}
+        border-top: 1px solid {{ section.settings.scheduling_divider_color }};
+      {% endif %}
+      padding-block-start: 8px;
+    {% endif %}
+  }
+</style>
+<div class="live-session-details-body text-{{ section.settings.body_text_align }}">
+  {% if section.settings.body_show_title %}
+    <h1
+      class="live-session-details-body__title"
+      kjb-settings-id="{{ 'body_show_title' | settings_id: section: section }}"
+    >
+      {{ live_session.title }}
+    </h1>
+  {% endif %}
+  {% if section.settings.body_show_description %}
+    <p
+      class="live-session-details-body__description"
+      kjb-settings-id="{{ 'body_show_description' | settings_id: section: section }}"
+    >
+      {{ live_session.description }}
+    </p>
+  {% endif %}
+  <div
+    class="
+      live-session-details-status
+      bg-adaptive
+      {% if page_state.unscheduled_and_not_completed? and section.settings.unscheduled_background_color != blank %}
+        background-{{ section.settings.unscheduled_background_color | color_scheme_class }}
+      {% endif %}
+    "
+  >
+    {% if page_state.unscheduled_and_not_completed? %}
+      {% include "live_session_status_unscheduled" %}
+    {% elsif page_state.scheduled_and_not_completed? %}
+      {% include "live_session_status_scheduled" %}
+    {% elsif page_state.completed? %}
+      {% include "live_session_status_completed" %}
+    {% endif %}
+  </div>
+  {% if section.settings.body_show_participants %}
+    <div class="live-session-details-body__participants">
+      {% include "live_session_participants",
+        participant_text: section.settings.body_participants_text,
+        participant_text_setting: "body_participants_text"
+      %}
+    </div>
+  {% endif %}
+</div>

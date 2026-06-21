@@ -1,0 +1,16 @@
+{% assign b-Target     = block.settings.link_target %}
+{% if b-Target %}
+  {% assign b-Target   = "_blank" %}
+{% else %}
+  {% assign b-Target   = "" %}
+{% endif %}
+
+<div class="panel__block" id="block-{{ block.id }}" {% block_attributes %}>
+  {% if block.settings.img_action == "" %}
+    <img src="{{ block.settings.image | image_picker_url: 'placeholder.png'}}" class="img-fluid" kjb-settings-id="{{ 'image' | settings_id: section: section, block: block }}"/>
+  {% else %}
+    <a href="{{ block.settings.img_action }}" target="{{ b-Target }}">
+      <img src="{{ block.settings.image | image_picker_url: 'placeholder.png'}}" class="img-fluid" kjb-settings-id="{{ 'image' | settings_id: section: section, block: block }}"/>
+    </a>
+  {% endif %}
+</div>

@@ -1,0 +1,23 @@
+{% assign autoPlay = section.settings.auto_play %}
+{% assign playButton = section.settings.play_button %}
+{% assign smallPlayButton = section.settings.small_play_button %}
+{% assign fullScreen = section.settings.full_screen %}
+{% assign playbar = section.settings.playbar %}
+{% assign videoSettings = section.settings.video_settings %}
+{% assign controlsOnLoad = section.settings.controls_on_load %}
+{% assign playerColor = section.settings.video_color | default: settings.color_primary | default: settings.brand.primary_color %}
+
+{{ video | wistia_video:
+  playerPreference: "html5",
+  player_color: playerColor,
+  auto_play: autoPlay,
+  controls_visible_on_load: controlsOnLoad,
+  playbar: playbar,
+  fullscreen_button: fullScreen,
+  playback_rate_control: videoSettings,
+  quality_control: videoSettings,
+  settings_control: videoSettings,
+  small_play_button: smallPlayButton,
+  volume_control: autoPlay,
+  play_button: playButton
+}}

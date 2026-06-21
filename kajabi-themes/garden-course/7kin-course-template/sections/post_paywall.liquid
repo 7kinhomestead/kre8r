@@ -1,0 +1,337 @@
+{% assign show_paywall = post.show_as_paywalled? %}
+{% if editor and section.settings.edit_paywall_modal %}
+  {% assign edit_paywall_modal = true %}
+{% else %}
+  {% assign edit_paywall_modal = false %}
+{% endif %}
+{% assign back_to_course_path = post.paywall_back_to_course_path %}
+{% assign popup_checkout_offer_token = post.paywall_purchase_cta_popup_checkout_offer_token %}
+{% assign popup_checkout_offer_payload = post.paywall_popup_checkout_offer_payload %}
+{% assign cta_clicked_event_properties_json = post.paywall_purchase_cta_clicked_event_properties_json %}
+
+{% assign show_purchase_cta = section.settings.show_purchase_cta %}
+{% assign alignment = section.settings.alignment %}
+
+{% assign KJB_purchase_cta_settings_id = 'purchase_cta_text' | settings_id: section: section %}
+{% assign KJB_alignment = 'alignment' | settings_id: section: section %}
+
+{% assign show_or_edit_paywall_modal = false %}
+{% if show_paywall or edit_paywall_modal %}
+  {% assign show_or_edit_paywall_modal = true %}
+{% endif %}
+
+{% if show_or_edit_paywall_modal %}
+  <div
+    data-post-paywall
+    class="themeable-courses-posts-show-paywall"
+    data-controller="courses-posts-show-paywall"
+    data-courses-posts-show-paywall-overlay-anchor-selectors-value="[&quot;.main-content&quot;]"
+    data-courses-posts-show-paywall-shown-value="{{ show_or_edit_paywall_modal }}"
+    data-courses-posts-show-paywall-auto-activate-value="{{ edit_paywall_modal }}"
+  >
+    <div
+      class="website-course-lesson-paywall__overlay themeable"
+      style="display: {% if show_or_edit_paywall_modal %}block{% else %}none{% endif%}"
+      data-courses-posts-show-paywall-target="overlay"
+    >
+      <div
+        class="website-course-lesson-paywall__modal themeable"
+        data-courses-posts-show-paywall-target="modal"
+      >
+        <div>
+          <a href="{{ back_to_course_path }}" class="link cta-link">
+            <pds-box
+              display="flex"
+              align-items="center"
+              justify-content="end"
+            >
+              <pds-icon name="remove"></pds-icon>
+            </pds-box>
+          </a>
+        </div>
+
+        <div class="website-course-lesson-paywall__content">
+          {% if section.blocks.size > 0 %}
+            {% for block in section.blocks %}
+              {% case block.type %}
+                {% when 'paywall_text' %}
+                  {% include "paywall_text" %}
+                {% when 'paywall_video' %}
+                  {% include "paywall_video" %}
+                {% when 'paywall_image' %}
+                  {% include "paywall_image" %}
+                {% when 'cta_block' %}
+                  {% include "cta_block" %}
+              {% endcase %}
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        {% if show_purchase_cta %}
+          <div class="default-cta-btn-row">
+            <a
+              href="#popup_checkout_{{ popup_checkout_offer_token }}"
+              class="btn btn-cta"
+              kjb-settings-id="{{ KJB_purchase_cta_settings_id }}"
+              data-popup-checkout="{{ popup_checkout_offer_payload }}"
+            >
+              {%- element "section.settings.purchase_cta_text" -%}
+                {{ section.settings.purchase_cta_text }}
+              {%- endelement -%}
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+  {
+    "name": "Paywall",
+    "elements": [
+      {
+        "type": "header",
+        "content": "Modal Settings",
+        "info": "The Paywall modal is only used if a Paywall is enabled in the course settings."
+      },
+      {
+        "type": "checkbox",
+        "id": "edit_paywall_modal",
+        "label": "Edit paywall modal",
+        "default": "false",
+        "info": "Toggle this to show the paywall modal while you edit. Just remember to uncheck when you're done."
+      },
+      {
+        "type": "text",
+        "id": "purchase_cta_text",
+        "label": "Purchase CTA Text",
+        "default": "Purchase"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_purchase_cta",
+        "label": "Show Purchase CTA",
+        "default": "true"
+      }
+    ],
+    "blocks": [
+      {
+        "type": "paywall_text",
+        "name": "Text",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Text"
+          },
+          {
+            "type": "rich_text",
+            "id": "content",
+            "label": "Content",
+            "default": "<h2 style=\"text-align: center;\">Upgrade to unlock</h2>\n<p>Upgrade now to instantly unlock this content and all other locked content.</p>\n<p>In this course you will get:</p>\n<ol class=\"p-rich_text_list p-rich_text_list__ordered p-rich_text_list--nested\">\n<li>Value Prop 1</li>\n<li>Value Prop 2</li>\n<li>Value Prop 3</li>\n</ol>"
+          },
+          {
+            "type": "align",
+            "id": "alignment",
+            "label": "Text Alignment",
+            "default": "left",
+            "direction": "horizontal"
+          },
+          {
+            "type": "spacer",
+            "id": "margin",
+            "label": "Outside Spacing",
+            "info": "Adjust the spacing of elements outside of the block. Hold shift to increment/decrement by 10.",
+            "placeholder": {
+              "top": "1",
+              "right": "0",
+              "bottom": "1",
+              "left": "0"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paywall_video",
+        "name": "Video",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Video"
+          },
+          {
+            "type": "checkbox",
+            "label": "Autoplay",
+            "id": "autoplay",
+            "default": "false"
+          },
+          {
+            "type": "video",
+            "id": "video",
+            "label": "Video"
+          },
+          {
+            "type": "image_picker",
+            "id": "image",
+            "label": "Image",
+            "info": "Suggested dimensions: 1856 × 1044"
+          },
+          {
+            "type": "spacer",
+            "id": "margin",
+            "label": "Outside Spacing",
+            "info": "Adjust the spacing of elements outside of the block. Hold shift to increment/decrement by 10.",
+            "placeholder": {
+              "top": "1",
+              "right": "0",
+              "bottom": "1",
+              "left": "0"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paywall_image",
+        "name": "Image",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Image"
+          },
+          {
+            "type": "image_picker",
+            "id": "image",
+            "label": "Image",
+            "width": 2300,
+            "height": 2300,
+            "info": "Suggested dimensions: 1856 × 1044"
+          },
+          {
+            "type": "action",
+            "id": "image_action",
+            "label": "Image Action",
+            "default": ""
+          },
+          {
+            "type": "checkbox",
+            "id": "link_target",
+            "label": "Open In New Window",
+            "default": "false"
+          },
+          {
+            "type": "align",
+            "id": "alignment",
+            "label": "Text Alignment",
+            "default": "center",
+            "direction": "horizontal"
+          },
+          {
+            "type": "spacer",
+            "id": "margin",
+            "label": "Outside Spacing",
+            "info": "Adjust the spacing of elements outside of the block. Hold shift to increment/decrement by 10.",
+            "placeholder": {
+              "top": "1",
+              "right": "0",
+              "bottom": "1",
+              "left": "0"
+            }
+          }
+        ]
+      },
+      {
+        "type": "cta_block",
+        "name": "Call to Action",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Call To Action"
+          },
+          {
+            "type": "text",
+            "id": "btn_text",
+            "label": "Text",
+            "default": "Call To Action"
+          },
+          {
+            "type": "action",
+            "id": "btn_action",
+            "label": "Button Action",
+            "anchor": true,
+            "two_step": true,
+            "default": ""
+          },
+          {
+            "type": "checkbox",
+            "id": "btn_target",
+            "label": "Open In New Tab",
+            "default": ""
+          },
+          {
+            "type": "color",
+            "id": "btn_background_color",
+            "label": "Button Background Color",
+            "default": "",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "btn_text_color",
+            "label": "Button Text Color",
+            "default": "",
+            "allow_blank": true,
+            "info": "For solid buttons only"
+          },
+          {
+            "type": "radio",
+            "id": "btn_width",
+            "label": "Button Width",
+            "default": "block",
+            "allow_blank": true,
+            "options": [
+              {
+                "value": "block",
+                "label": "Full"
+              },
+              {
+                "value": "auto",
+                "label": "Auto"
+              }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_style",
+            "label": "Button Style",
+            "default": "solid",
+            "allow_blank": true,
+            "options": [
+              { "label": "Solid", "value": "solid" },
+              { "label": "Outline", "value": "outline" },
+              { "label": "Subtle", "value": "subtle" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_size",
+            "label": "Button Size",
+            "default": "medium",
+            "allow_blank": true,
+            "options": [
+              { "label": "Small", "value": "small" },
+              { "label": "Medium", "value": "medium" },
+              { "label": "Large", "value": "large" }
+            ]
+          },
+          {
+            "type": "align",
+            "id": "btn_alignment",
+            "label": "Text Alignment",
+            "default": "center",
+            "direction": "horizontal"
+          }
+        ]
+      }
+    ]
+  }
+{% endschema %}

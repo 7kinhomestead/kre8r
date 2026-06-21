@@ -1,0 +1,14 @@
+{% assign participant_text_settings_id = participant_text_setting | settings_id: section: section %}
+{% assign participant_text_attribute_path = "section.settings." | append: participant_text_setting %}
+
+<div class="live-session-details-participants">
+  {% if live_session.participants_count > 0 %}
+    {% include "live_session_participant_avatar_row", participants: live_session.participants, max_visible: 4 %}
+  {% endif %}
+  {% if participant_text != blank %}
+    {{ live_session.participants_count }}
+    <span kjb-settings-id="{{ participant_text_settings_id }}" {% element_attributes participant_text_attribute_path %}>
+      {{ participant_text }}
+    </span>
+  {% endif %}
+</div>

@@ -1,0 +1,51 @@
+{% assign btnId         = block.id %}
+{% assign btnSettingsId = 'btn_action' | settings_id: section: section, block: block %}
+{% assign btnAction     = block.settings.btn_action  %}
+{% assign btnText       = block.settings.btn_text  %}
+{% assign btnColor      = block.settings.btn_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign btnTextColor  = block.settings.btn_text_color | default: settings.text_color_light %}
+{% assign btnStyle      = block.settings.btn_style  %}
+{% assign btnWidth      = block.settings.btn_width  %}
+{% assign btnSize       = block.settings.btn_size  %}
+{% assign btnReveal     = block.settings.btn_Reveal  %}
+{% assign btnTarget     = block.settings.btn_target %}
+{% if btnTarget %}
+  {% assign btnTarget   = "_blank" %}
+{% else %}
+  {% assign btnTarget   = "" %}
+{% endif %}
+
+<style>
+  /*============================================================================
+    #Individual CTA Style
+  ==============================================================================*/
+  .btn--solid.btn--{{ btnId }} {
+    background: {{ btnColor }} !important;
+    border-color: {{ btnColor }} !important;
+    color: {{ btnTextColor }} !important;
+  }
+  .btn--solid.btn--{{ btnId }}:hover {
+    color: {{ btnTextColor }} !important;
+  }
+  .btn--outline.btn--{{ btnId }} {
+    border-color: {{ btnColor }} !important;
+    color: {{ btnColor }} !important;
+  }
+  .btn--outline.btn--{{ btnId }}:hover {
+    color: {{ btnColor }} !important;
+  }
+</style>
+<div class="panel__block" id="block-{{ block.id }}" {% block_attributes %}>
+  <a
+    href="{{ btnAction }}"
+    class="btn btn-cta btn--{{ btnWidth }} btn--{{ btnStyle }} btn--{{ btnSize }} btn--{{ btnId }}"
+    data-num-seconds="{{ btnReveal }}"
+    id=""
+    kjb-settings-id="{{ btnSettingsId }}"
+    target="{{ btnTarget }}"
+  >
+    {%- element "block.settings.btn_text" -%}
+      {{ block.settings.btn_text }}
+    {%- endelement -%}
+  </a>
+</div>

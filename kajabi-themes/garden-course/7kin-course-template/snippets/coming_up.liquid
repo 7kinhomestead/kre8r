@@ -1,0 +1,41 @@
+{% assign cUp-Image         = post.next.poster_image_url %}
+{% assign cUp-Title         = post.next.title %}
+{% assign cUp-Url           = post.next.url %}
+{% assign cUp-Begin         = section.settings.begin %}
+{% assign cUp-Timer         = section.settings.timer %}
+{% assign cUp-Seconds       = section.settings.seconds %}
+{% assign cUp-Play          = section.settings.play %}
+{% assign cUp-Cancel        = section.settings.cancel %}
+{% assign cUp-AccentColor   = section.settings.accent_color %}
+{% assign cUp-AutoTextColor = cUp-AccentColor | color_scheme_class %}
+
+<style>
+  .coming-up__countdown--highlight {
+    color: {{ cUp-AccentColor }};
+  }
+  .coming-up .btn--skip {
+    background: {{ cUp-AccentColor }};
+  }
+  @media (max-width: 767px) {
+    .coming-up .btn--skip {
+      width: auto;
+      margin-top: 0;
+    }
+  }
+</style>
+
+<div class="coming-up" data-page="{{ cUp-Url }}" data-counter="{{ cUp-Timer }}">
+  <div class="coming-up__overlay">
+    <div class="coming-up__info">
+      <p class="coming-up__title hidden-xs">{{ cUp-Title }}</p>
+      <p class="coming-up__countdown">{{ cUp-Begin }} <strong class="coming-up__countdown--highlight"><span class="ticker">{{ cUp-Timer }}</span> {{ cUp-Seconds }}</strong></p>
+      {% if cUp-Image %}
+        <img class="coming-up__img hidden-sm-down" src="{{ cUp-Image }}" />
+      {% else %}
+        <img class="coming-up__img hidden-sm-down" src="{{ 'placeholder.png' | asset_url }}" />
+      {% endif %}
+      <a href="{{ cUp-Url }}" class="btn btn--small btn--skip btn--skip--{{ cUp-AutoTextColor }}">{{ cUp-Play }}</a>
+      <a href="#" class="coming-up__cancel">{{ cUp-Cancel }}</a>
+    </div>
+  </div>
+</div>

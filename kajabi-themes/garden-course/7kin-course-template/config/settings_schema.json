@@ -1,0 +1,223 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Premier",
+    "theme_version": "7.9.3",
+    "theme_author": "Kajabi",
+    "theme_documentation_url": "https://themes.kajabi.com/changelog/product-themes/premier",
+    "theme_support_url": "https://learn.kajabi.com"
+  },
+  {
+    "name": "Favicon",
+    "elements": [
+      {
+        "type": "header",
+        "content": "Favicon"
+      },
+      {
+        "type": "image_picker",
+        "id": "favicon",
+        "label": "Favicon Image",
+        "fit": "crop",
+        "width": 32,
+        "height": 32,
+        "info": "Must be a 32x32 PNG file. Transparency is supported. Please allow some time for favicon to change.",
+        "default_global_settings_attribute": "brand.favicon"
+      }
+    ]
+  },
+
+  {
+    "name": "Typography",
+    "elements": [
+      {
+        "type": "header",
+        "content": "Typography"
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "color",
+        "id": "text_color",
+        "label": "Dark Font Color",
+        "default": "#000"
+      },
+      {
+        "type": "color",
+        "id": "text_color_light",
+        "label": "Light Font Color",
+        "default": "#fff"
+      },
+      {
+        "type": "font_select",
+        "label": "Base Font Family",
+        "id": "font_family",
+        "default": "",
+        "allow_blank": true,
+        "default_global_settings_attribute": "brand.font_family_body",
+        "preset": "google_fonts",
+        "options": []
+      },
+      {
+        "type": "font_select",
+        "label": "Heading Font Family",
+        "id": "heading_font_family",
+        "default": "",
+        "allow_blank": true,
+        "default_global_settings_attribute": "brand.font_family_heading",
+        "preset": "google_fonts",
+        "options": []
+      }
+    ]
+  },
+  {
+    "name": "Color Scheme",
+    "elements": [
+      {
+        "type": "header",
+        "content": "Color Scheme"
+      },
+      {
+        "type": "color",
+        "id": "color_primary",
+        "label": "Primary",
+        "allow_blank": true,
+        "default": "",
+        "default_global_settings_attribute": "brand.primary_color"
+      },
+      {
+        "type": "color",
+        "id": "color_offset",
+        "label": "Offset",
+        "allow_blank": true,
+        "default": "",
+        "default_global_settings_attribute": "brand.accent_color"
+      },
+      {
+        "type": "color",
+        "id": "color_dark",
+        "label": "Dark",
+        "default": "#30373e"
+      },
+      {
+        "type": "color",
+        "id": "color_darker",
+        "label": "Darker",
+        "default": "#272d34"
+      }
+    ]
+  },
+  {
+    "name": "Message Colors",
+    "elements": [
+      {
+        "type": "header",
+        "content": "Message Colors"
+      },
+      {
+        "type": "color",
+        "id": "color_success",
+        "label": "Success",
+        "default": "#1abc9c"
+      },
+      {
+        "type": "color",
+        "id": "color_info",
+        "label": "Info",
+        "default": "#34495e"
+      },
+      {
+        "type": "color",
+        "id": "color_warning",
+        "label": "Warning",
+        "default": "#f39c12"
+      },
+      {
+        "type": "color",
+        "id": "color_danger",
+        "label": "Danger",
+        "default": "#e74c3c"
+      }
+    ]
+  },
+  {
+    "name": "General Appearance",
+    "elements": [
+      {
+        "type": "header",
+        "content": "General Appearance"
+      },
+      {
+        "type": "color",
+        "id": "color_container_bg",
+        "label": "Background",
+        "default": "#f9f9f9"
+      },
+      {
+        "type": "checkbox",
+        "id": "use_bg_img",
+        "label": "Use Background Image",
+        "default": "false"
+      },
+      {
+        "type": "image_picker",
+        "id": "page_background_img",
+        "label": "Page Background Image",
+        "info": "Suggested dimensions: 2500 × 2500"
+      },
+      {
+        "type": "radio",
+        "id": "v_align",
+        "label": "Vertical Alignment",
+        "default": "top",
+        "options": [
+          { "label": "Top", "value": "top" },
+          { "label": "Middle", "value": "middle" }
+        ]
+      },
+      {
+        "type": "radio",
+        "id": "body_width",
+        "label": "Body Column Width",
+        "default": "auto",
+        "options": [
+          { "label": "Auto", "value": "auto" },
+          { "label": "Small", "value": "small" }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Custom Code",
+    "elements": [
+      {
+        "type": "header",
+        "content": "Custom Code"
+      },
+      {
+        "type": "textarea",
+        "id": "embedded_scripts",
+        "label": "Embedded Scripts",
+        "default": "<!-- Embedded '<script>' tags go here -->",
+        "info": ""
+      }
+    ]
+  },
+  {
+    "name": "Kre8r Analytics",
+    "elements": [
+      {
+        "type": "header",
+        "content": "Kre8r Analytics"
+      },
+      {
+        "type": "text",
+        "id": "track_endpoint",
+        "label": "Completion Tracking Endpoint",
+        "default": "https://7kinhomestead.land/api/kajabi-track",
+        "info": "Where lesson views + completions are reported (feeds the Orchard points bridge + MissionΩr). Production = the always-on land box https://7kinhomestead.land/api/kajabi-track. For local testing, paste an ngrok tunnel URL ending in /api/kajabi-track."
+      }
+    ]
+  }
+]

@@ -1,0 +1,26 @@
+{% assign b-ID         = block.id %}
+{% assign b-BgColor    = block.settings.btn_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign b-TextColor  = block.settings.btn_text_color | default: settings.text_color_light %}
+
+<style>
+  .btn--{{ b-ID }}, .btn--{{ b-ID }}:hover {
+    background: {{ b-BgColor }};
+    border-color: {{ b-BgColor }};
+    color: {{ b-TextColor }};
+  }
+</style>
+{% if post.video.ready? %}
+  <div class="panel__block" id="block-{{ b-ID }}" {% block_attributes %}>
+    <a kjb-settings-id="{{ 'language_download' | settings_id: section: section,block: block }}" href="{{ post.video.url }}" class="btn btn--block btn--solid btn--med btn--{{ b-ID }}" download>
+      {% element "block.settings.language_download" %}
+        {{ block.settings.language_download }}
+      {% endelement %}
+    </a>
+  </div>
+{% else %}
+  {% if editor %}
+    <div class="panel__block editor-null" id="block-{{ b-ID }}" {% block_attributes %}>
+      Post Video Download Will Show Here
+    </div>
+  {% endif %}
+{% endif %}

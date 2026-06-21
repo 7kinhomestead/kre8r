@@ -1,0 +1,78 @@
+<div class="game-home">
+
+  <!-- Hero (image + title + description pulled from the course itself) -->
+  <div class="game-hero" style="background-image:url('{{ current_product.thumbnail_url }}')">
+    <div class="game-hero-content">
+      <div class="game-hero-tag" style="color:var(--gold)">7 Kin Homestead</div>
+      <h1 class="game-hero-title bb">{{ current_product.title }}</h1>
+      <p class="game-hero-sub">{{ current_product.description }}</p>
+      <div class="game-stats">
+        <div class="game-stat">
+          <span class="game-stat-n bb">{{ current_product.categories.size }}</span>
+          <span class="game-stat-l">Modules</span>
+        </div>
+        <div class="game-stat">
+          <span class="game-stat-n bb">{{ current_product.completion.total | times: 40 }}</span>
+          <span class="game-stat-l">XP to Earn</span>
+        </div>
+        <div class="game-stat">
+          <span class="game-stat-n bb">{{ current_product.categories.size }}</span>
+          <span class="game-stat-l">Badges</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-modules-section">
+
+    <!-- Overall progress -->
+    <div class="overall-progress">
+      <div class="op-row">
+        <span class="op-label">Overall Course Progress</span>
+        <span class="op-val">{{ current_product.completion.completed }} of {{ current_product.completion.total }} lessons</span>
+      </div>
+      <div class="op-bar">
+        <div class="op-fill" style="width:{{ current_product.completion.percent }}%"></div>
+      </div>
+    </div>
+
+    <!-- Module map (one card per real module) -->
+    <div class="game-section-label">Course Map — Select a Module</div>
+    <div class="module-grid">
+      {% assign mod_emojis = "🌱,⛏️,🧭,🔋,🏆,⚡,🛠️,🌾,🏡,🔥,🚜,🪵" | split: "," %}
+      {% for category in current_product.categories %}
+        {% assign cat_index = forloop.index0 %}
+        <a href="{{ category.url }}" class="module-card{% if category.completion.percent == 100 %} completed{% elsif category.completion.percent > 0 %} current{% endif %}">
+          <span class="mc-em">{{ mod_emojis[cat_index] }}</span>
+          <span class="mc-name">{{ category.title }}</span>
+          {% if category.completion.percent == 100 %}
+            <span class="mc-check">✓</span>
+          {% endif %}
+        </a>
+      {% endfor %}
+    </div>
+
+    <!-- Badges (one per module, named after the module — matches the XP engine) -->
+    <div class="game-section-label">Badges</div>
+    <div class="badges-row" id="badges-display">
+      {% assign badge_emojis = "🌱,⛏️,🧭,🔋,🏆,⚡,🛠️,🌾,🏡,🔥,🚜,🪵" | split: "," %}
+      {% for category in current_product.categories %}
+        <span class="badge-chip" data-badge="{{ category.title | replace: '"','' }}">{{ badge_emojis[forloop.index0] }} {{ category.title }}</span>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var key=(window.RR_COURSE&&window.RR_COURSE.storeKey)||'7kin_course';
+  var S;try{S=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){S={};}
+  var badges=S.badges||[];
+  document.querySelectorAll('.badge-chip').forEach(function(el){
+    if(badges.indexOf(el.getAttribute('data-badge'))>-1){
+      el.classList.add('earned');
+    }
+  });
+})();
+</script>

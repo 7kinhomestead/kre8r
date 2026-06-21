@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="{{ current_site.locale | default: 'en' }}">
+<head>
+  {% csrf_meta_tags %}
+  <title>{% if page_title %}{{ page_title }} | {% endif %}{{ current_site.title }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  {% if page_description %}<meta name="description" content="{{ page_description | escape }}">{% endif %}
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- Kajabi Core -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.5/css/bootstrap.min.css" integrity="sha384-AysaV+vQoT3kOAXZkl02PThvDr8HYKPZhNT5h/CXfBThSRXQ6jW5DO2ekP5ViFdi" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+  {{ 'core.css' | kajabi_asset_url | stylesheet_tag }}
+  {{ 'styles.css' | asset_url | stylesheet_tag }}
+
+  {% content_for_header %}
+
+  <style>
+    /* ============================================================
+       7 KIN HOMESTEAD — GAME TEMPLATE
+       Out of Your Own Way: 10 Module Gamified Course
+       ============================================================ */
+    *{box-sizing:border-box}
+    :root{
+      --bg:#080808;--c1:#161616;--c2:#1e1e1e;--b1:#252525;--b2:#333;
+      --t1:#fff;--t2:rgba(255,255,255,.82);--t3:rgba(255,255,255,.38);
+      /* Per-course accent — set via the theme's Primary Color setting (Theme Builder) */
+      --accent:{{ settings.color_primary | default: '#ffb400' }};
+      --gold:var(--accent);
+      --gt:color-mix(in srgb, var(--accent) 14%, transparent);
+      --green:#22c55e;--grt:rgba(34,197,94,.13);
+      --red:#E03030;
+    }
+    /* Responsive embedded video helper for programmatic lessons */
+    .rr-embed{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;margin:0 0 20px}
+    .rr-embed iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+    .game-lesson-body iframe{max-width:100%}
+    body{
+      font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:300;
+      background:var(--bg);color:var(--t1);margin:0;padding:0;
+    }
+    .bb{font-family:'Bebas Neue',sans-serif;letter-spacing:.04em}
+
+    /* ── GAME NAV ── */
+    .game-nav{
+      background:var(--c1);border-bottom:1px solid var(--b1);
+      height:52px;display:flex;align-items:center;justify-content:space-between;
+      padding:0 20px;position:sticky;top:0;z-index:100;gap:16px;
+    }
+    .game-nav-left{display:flex;align-items:center;gap:12px;min-width:0}
+    .game-logo{width:32px;height:32px;object-fit:contain;flex-shrink:0}
+    .game-course-title{font-size:11px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+    .game-nav-center{flex:1;max-width:300px;display:flex;align-items:center;gap:8px}
+    .xp-track{flex:1;height:4px;background:var(--b2);border-radius:2px;overflow:hidden}
+    .xp-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .6s ease}
+    .xp-label{font-size:11px;font-weight:500;color:var(--gold);white-space:nowrap}
+    .game-nav-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+    .badge-pill{display:flex;align-items:center;gap:4px;background:rgba(255,180,0,.13);border:1px solid rgba(255,180,0,.3);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--gold)}
+    .map-btn{background:var(--gt);border:1px solid rgba(255,180,0,.3);color:var(--gold);border-radius:4px;padding:5px 12px;font-size:11px;font-weight:500;font-family:'DM Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;text-decoration:none}
+    .map-btn:hover{background:var(--gold);color:#fff;text-decoration:none}
+    .user-name{font-size:12px;color:var(--t3);white-space:nowrap}
+
+    /* ── LESSON LAYOUT ── */
+    .game-layout{display:flex;min-height:calc(100vh - 52px)}
+
+    /* ── SIDEBAR ── */
+    .game-sidebar{
+      width:280px;flex-shrink:0;background:var(--c1);border-right:1px solid var(--b1);
+      overflow-y:auto;position:sticky;top:52px;height:calc(100vh - 52px);
+    }
+    .sidebar-mod-header{
+      padding:12px 16px;border-bottom:1px solid var(--b1);
+      font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;
+    }
+    .sidebar-mod-title{font-size:14px;font-weight:500;color:var(--t1);margin-top:4px;line-height:1.3}
+    .sidebar-progress{padding:12px 16px;border-bottom:1px solid var(--b1)}
+    .sp-row{display:flex;justify-content:space-between;margin-bottom:6px}
+    .sp-label{font-size:10px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase}
+    .sp-val{font-size:11px;color:var(--gold);font-weight:500}
+    .sp-bar{height:3px;background:var(--b2);border-radius:2px;overflow:hidden}
+    .sp-fill{height:100%;background:var(--gold);border-radius:2px}
+    .sidebar-lessons{padding:8px 0}
+    .sl-item{
+      display:flex;align-items:center;gap:10px;padding:10px 16px;
+      border-left:2px solid transparent;cursor:pointer;
+      transition:background .15s,border-color .15s;text-decoration:none;
+    }
+    .sl-item:hover{background:var(--c2);text-decoration:none}
+    .sl-item.active{background:var(--gt);border-left-color:var(--gold)}
+    .sl-item.completed{border-left-color:var(--green)}
+    .sl-icon{font-size:13px;flex-shrink:0;width:18px;text-align:center}
+    .sl-name{font-size:12px;color:var(--t2);line-height:1.3;flex:1;min-width:0}
+    .sl-item.active .sl-name{color:var(--gold)}
+    .sl-item.completed .sl-name{color:var(--t3)}
+    .sl-xp{font-size:10px;color:var(--t3);flex-shrink:0}
+    .sl-check{font-size:11px;color:var(--green);flex-shrink:0}
+    .sidebar-mod-divider{
+      padding:8px 16px 4px;font-size:10px;color:var(--t3);
+      letter-spacing:.1em;text-transform:uppercase;
+      border-top:1px solid var(--b1);margin-top:4px;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .game-main{flex:1;min-width:0;overflow-y:auto}
+    .game-breadcrumb{
+      padding:10px 24px;font-size:11px;color:var(--t3);
+      border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px;
+    }
+    .game-breadcrumb a{color:var(--t3);text-decoration:none}
+    .game-breadcrumb a:hover{color:var(--t1)}
+    .bc-sep{color:var(--b2)}
+
+    /* ── VIDEO AREA ── */
+    .game-video-wrap{background:#000;width:100%}
+    .game-video-wrap .player,.game-video-wrap .wistia_embed{width:100%!important}
+
+    /* ── LESSON BODY ── */
+    .game-lesson-body{padding:24px;max-width:800px}
+    .lesson-module-tag{font-size:10px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+    .lesson-title{font-size:28px;line-height:1.1;color:var(--t1);margin-bottom:8px}
+    .lesson-complete-wrap{margin:16px 0}
+
+    /* Override Kajabi's default completion button with our style */
+    .btn--completion{
+      background:transparent!important;
+      border:1px solid var(--gold)!important;
+      color:var(--gold)!important;
+      font-family:'DM Sans',sans-serif!important;
+      font-size:12px!important;font-weight:500!important;
+      letter-spacing:.08em!important;text-transform:uppercase!important;
+      padding:10px 28px!important;border-radius:4px!important;
+      cursor:pointer!important;transition:all .18s!important;
+      display:inline-block!important;
+    }
+    .btn--completion:hover{background:var(--gold)!important;color:#fff!important}
+    .btn--completion[data-post-completion-toggle="true"]{
+      background:var(--green)!important;
+      border-color:var(--green)!important;
+      color:#fff!important;
+    }
+    .mark-as-complete{margin:16px 0}
+    .smart-next{
+      background:var(--c2)!important;border:1px solid var(--b1);border-radius:4px;
+      margin-top:12px;padding:14px!important;
+    }
+    .smart-next__text{color:var(--t3)!important;font-size:11px!important}
+    .smart-next__link{color:var(--t1)!important;font-size:13px!important}
+
+    /* ── POST BODY CONTENT ── */
+    .post-content{color:var(--t2);line-height:1.75;font-size:14px}
+    .post-content h1,.post-content h2,.post-content h3{color:var(--t1)}
+    .post-content a{color:var(--gold)}
+    .panel{background:var(--c1)!important;border:1px solid var(--b1)!important;border-radius:4px}
+    .panel__body{color:var(--t2)}
+
+    /* ── LESSON NAV ── */
+    .lesson-nav{
+      display:flex;justify-content:space-between;padding:16px 24px;
+      border-top:1px solid var(--b1);margin-top:24px;
+    }
+    .ln-btn{
+      display:inline-flex;align-items:center;gap:6px;
+      background:var(--c2);border:1px solid var(--b2);color:var(--t2);
+      border-radius:4px;padding:8px 16px;font-size:11px;font-weight:400;
+      font-family:'DM Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;
+      text-decoration:none;transition:border-color .15s,color .15s;
+    }
+    .ln-btn:hover{border-color:var(--t2);color:var(--t1);text-decoration:none}
+    .ln-btn-next{background:var(--gold);border-color:var(--gold);color:#fff}
+    .ln-btn-next:hover{opacity:.88;color:#fff}
+
+    /* ── PRODUCT HOME (categories page) ── */
+    .game-home{padding:0}
+    .game-hero{
+      position:relative;width:100%;
+      background-color:#0a0a0a;
+      background-size:cover;background-position:center 40%;
+      min-height:420px;display:flex;align-items:flex-end;
+    }
+    .game-hero::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(to bottom,rgba(8,8,8,.55) 0%,rgba(8,8,8,.1) 20%,rgba(8,8,8,.0) 38%,rgba(8,8,8,.15) 52%,rgba(8,8,8,.55) 68%,rgba(8,8,8,.9) 84%,rgba(8,8,8,1) 100%),linear-gradient(to right,rgba(8,8,8,.4) 0%,transparent 20%,transparent 80%,rgba(8,8,8,.4) 100%);
+    }
+    .game-hero-content{position:relative;z-index:2;padding:32px;width:100%}
+    .game-hero-tag{font-size:10px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+    .game-hero-title{font-size:52px;line-height:1;color:var(--t1);margin-bottom:6px}
+    .game-hero-title em{color:var(--gold);font-style:normal}
+    .game-hero-sub{font-size:14px;color:var(--t2);margin-bottom:20px;font-weight:300}
+    .game-stats{display:flex;gap:24px;margin-bottom:0}
+    .game-stat{text-align:left}
+    .game-stat-n{font-size:28px;color:var(--gold);font-weight:700;display:block;line-height:1}
+    .game-stat-l{font-size:10px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase}
+
+    /* ── MODULE GRID ── */
+    .game-modules-section{padding:24px}
+    .game-section-label{font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+    .module-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:24px}
+    .module-card{
+      background:var(--c1);border:1px solid var(--b1);border-radius:6px;
+      padding:14px 8px;text-align:center;text-decoration:none;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      aspect-ratio:1;transition:border-color .18s,background .18s;position:relative;
+    }
+    .module-card:hover{background:var(--c2);border-color:var(--gold);text-decoration:none}
+    .module-card.completed{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.06)}
+    .module-card.current{border-color:var(--gold);background:var(--gt)}
+    .module-card.locked{opacity:.3;pointer-events:none}
+    .mc-em{font-size:22px;margin-bottom:4px;display:block}
+    .mc-name{font-size:10px;color:var(--t3);line-height:1.2}
+    .module-card.completed .mc-name{color:var(--green)}
+    .module-card.current .mc-name{color:var(--gold)}
+    .mc-check{position:absolute;top:5px;right:6px;font-size:10px;color:var(--green)}
+    .mc-lock{position:absolute;top:5px;right:6px;font-size:10px;color:var(--t3)}
+
+    /* Overall progress */
+    .overall-progress{background:var(--c1);border:1px solid var(--b1);border-radius:6px;padding:16px;margin-bottom:16px}
+    .op-row{display:flex;justify-content:space-between;margin-bottom:8px}
+    .op-label{font-size:11px;color:var(--t3)}
+    .op-val{font-size:12px;color:var(--gold);font-weight:500}
+    .op-bar{height:4px;background:var(--b2);border-radius:2px;overflow:hidden}
+    .op-fill{height:100%;background:var(--gold);border-radius:2px}
+
+    /* Badges */
+    .badges-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+    .badge-chip{
+      display:flex;align-items:center;gap:5px;border-radius:20px;
+      padding:4px 12px;font-size:11px;font-weight:300;
+      background:var(--c2);border:1px solid var(--b1);color:var(--t3);
+    }
+    .badge-chip.earned{background:var(--gt);border-color:rgba(255,180,0,.35);color:var(--gold)}
+
+    /* ── XP TOAST ── */
+    .xp-toast{
+      position:fixed;bottom:24px;right:24px;z-index:99999;
+      background:var(--c1);border-radius:8px;padding:14px 18px;
+      font-family:'DM Sans',sans-serif;color:var(--t1);
+      box-shadow:0 4px 24px rgba(0,0,0,.5);max-width:280px;
+      transform:translateX(120%);transition:transform .35s cubic-bezier(.175,.885,.32,1.275);
+    }
+    .xp-toast.show{transform:translateX(0)}
+    .xp-toast.blue{border:1px solid var(--gold)}
+    .xp-toast.gold{border:1px solid var(--gold)}
+    .xp-toast-tag{font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+    .xp-toast.blue .xp-toast-tag{color:var(--gold)}
+    .xp-toast.gold .xp-toast-tag{color:var(--gold)}
+    .xp-toast-name{font-size:13px;margin-bottom:2px}
+    .xp-toast-amount{font-size:22px;font-weight:700}
+    .xp-toast.blue .xp-toast-amount{color:var(--gold)}
+    .xp-toast.gold .xp-toast-amount{color:var(--gold)}
+    .xp-toast-sub{font-size:10px;color:var(--t3);margin-top:3px}
+
+    /* ── QUIZ PAGE — nuclear dark override ── */
+    body.background-light,
+    body.background-light html,
+    .background-light {
+      background: var(--bg) !important;
+      background-color: var(--bg) !important;
+    }
+    body.background-light *:not(.game-nav):not(.game-nav *):not(.xp-toast):not(.xp-toast *) {
+      background-color: transparent !important;
+      color: var(--t1) !important;
+    }
+    body.background-light .container,
+    body.background-light .container-fluid,
+    body.background-light .section,
+    body.background-light .section--global,
+    body.background-light .content-wrap,
+    body.background-light .section-wrap {
+      background: var(--bg) !important;
+      background-color: var(--bg) !important;
+    }
+    body.background-light .card,
+    body.background-light .panel,
+    body.background-light .quiz-choice,
+    body.background-light .choice,
+    body.background-light [class*="choice"],
+    body.background-light [class*="question"],
+    body.background-light [class*="quiz"],
+    body.background-light [class*="assessment"] {
+      background: var(--c1) !important;
+      background-color: var(--c1) !important;
+      border-color: var(--b1) !important;
+      color: var(--t1) !important;
+    }
+    .section__overlay,
+    .assessment,
+    .assessment__body,
+    .assessment__header,
+    .assessment__question,
+    .assessment__answer,
+    .assessment__choice,
+    .assessment__choice-label,
+    .assessment__choice-input,
+    .quiz,
+    .quiz__body,
+    .quiz__question,
+    .quiz__choice,
+    .quiz__choice-label {
+      background: var(--c1) !important;
+      background-color: var(--c1) !important;
+      color: var(--t1) !important;
+      border-color: var(--b1) !important;
+    }
+    /* Quiz radio buttons and labels */
+    body.background-light label,
+    body.background-light p,
+    body.background-light h1,
+    body.background-light h2,
+    body.background-light h3,
+    body.background-light span,
+    body.background-light div {
+      color: var(--t1) !important;
+    }
+    body.background-light input[type="radio"],
+    body.background-light input[type="checkbox"] {
+      accent-color: var(--gold);
+    }
+    /* Quiz card containers */
+    body.background-light .card,
+    body.background-light .panel,
+    body.background-light [class*="card"],
+    body.background-light [class*="question"],
+    body.background-light [class*="choice"],
+    body.background-light [class*="answer"] {
+      background: var(--c1) !important;
+      border-color: var(--b1) !important;
+      color: var(--t1) !important;
+    }
+
+    /* ── FORCE WHITE TEXT throughout ── */
+    /* Exact Kajabi syllabus/category classes */
+    .syllabus__title,
+    .syllabus__text,
+    .syllabus__meta,
+    .syllabus__duration,
+    .syllabus__count,
+    .syllabus__item,
+    .syllabus__header,
+    .syllabus__category,
+    .category__title,
+    .category__description,
+    .post__title,
+    .post__description,
+    .post__meta,
+    .track__title,
+    .track__description,
+    .track__meta,
+    .bc-sep { color: var(--t1) !important; }
+    body, p, span, div, li, td, th, label, h1, h2, h3, h4, h5, h6 {
+      color: var(--t1);
+    }
+    a { color: var(--gold); }
+    a:hover { color: var(--t1); }
+
+    /* Category / module page lesson list */
+    .category__post-title,
+    .category__post-description,
+    .category__post-meta,
+    .post-card__title,
+    .post-card__description,
+    .post-card__meta,
+    .panel__heading,
+    .panel__body,
+    .panel__title,
+    .section__title,
+    .section__subtitle,
+    .product__title,
+    .product__description,
+    .category-post__title,
+    .category-post__description {
+      color: var(--t1) !important;
+    }
+
+    /* Override any white backgrounds on cards */
+    .post-card, .category-post, .panel {
+      background: var(--c1) !important;
+      border-color: var(--b1) !important;
+    }
+
+    /* Kajabi's core category listing */
+    .section--categories, .section--category {
+      background: var(--bg) !important;
+      color: var(--t1) !important;
+    }
+    .section--categories *, .section--category * {
+      color: var(--t1);
+    }
+    .section--categories a, .section--category a {
+      color: var(--t2);
+      text-decoration: none;
+    }
+    .section--categories a:hover, .section--category a:hover {
+      color: var(--t1);
+    }
+
+    /* ── KAJABI QUIZ CONTAINER ── */
+    #quizzes-website-container,
+    #quizzes-website-container *,
+    .player,
+    .player__nav,
+    .player__nav * {
+      background: var(--c1) !important;
+      background-color: var(--c1) !important;
+      color: var(--t1) !important;
+      border-color: var(--b1) !important;
+    }
+    #quizzes-website-container input,
+    #quizzes-website-container textarea,
+    #quizzes-website-container select {
+      background: var(--c2) !important;
+      color: var(--t1) !important;
+      border-color: var(--b2) !important;
+    }
+    #quizzes-website-container .btn,
+    #quizzes-website-container button {
+      background: var(--gold) !important;
+      color: #fff !important;
+      border-color: var(--gold) !important;
+    }
+    /* Quiz choice items */
+    #quizzes-website-container label,
+    #quizzes-website-container li,
+    #quizzes-website-container p,
+    #quizzes-website-container h1,
+    #quizzes-website-container h2,
+    #quizzes-website-container h3,
+    #quizzes-website-container span,
+    #quizzes-website-container div {
+      color: var(--t1) !important;
+    }
+    #quizzes-website-container input[type="radio"],
+    #quizzes-website-container input[type="checkbox"] {
+      accent-color: var(--gold) !important;
+    }
+    /* Player nav arrows */
+    .player__nav {
+      background: var(--c1) !important;
+    }
+    .player {
+      background: var(--c1) !important;
+    }
+
+    /* ── KAJABI SAGE QUIZ MODAL ── */
+    .sage-modal__container,
+    .sage-modal__header,
+    .sage-modal__content,
+    .sage-modal__footer,
+    .sage-card,
+    .quiz-question-card,
+    [class*="sage-modal"],
+    [class*="sage-card"] {
+      background: var(--c1) !important;
+      background-color: var(--c1) !important;
+      color: var(--t1) !important;
+      border-color: var(--b1) !important;
+    }
+    .sage-modal__container *,
+    .sage-card *,
+    .quiz-question-card * {
+      color: var(--t1) !important;
+    }
+    /* Quiz radio inputs */
+    .sage-radio__input,
+    .sage-radio__label,
+    [class*="sage-radio"] {
+      background: var(--c2) !important;
+      border-color: var(--b2) !important;
+      color: var(--t1) !important;
+      accent-color: var(--gold) !important;
+    }
+    /* Sage buttons in quiz */
+    .sage-btn--primary {
+      background: var(--gold) !important;
+      border-color: var(--gold) !important;
+      color: #fff !important;
+    }
+    .sage-btn--secondary {
+      background: var(--c2) !important;
+      border-color: var(--b2) !important;
+      color: var(--t1) !important;
+    }
+
+    /* ── SEARCH / COMMENTS hidden on game ── */
+    .section--search{display:none}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:900px){
+      .game-sidebar{display:none}
+      .module-grid{grid-template-columns:repeat(3,1fr)}
+    }
+    @media(max-width:600px){
+      .game-hero-title{font-size:36px}
+      .module-grid{grid-template-columns:repeat(2,1fr)}
+      .game-nav-center{display:none}
+    }
+  </style>
+</head>
+<body class="sage-excluded">
+
+<!-- XP Toast -->
+<div class="xp-toast blue" id="xp-toast">
+  <div class="xp-toast-tag" id="xp-toast-tag">Solar XP</div>
+  <div class="xp-toast-name" id="xp-toast-name"></div>
+  <div class="xp-toast-amount" id="xp-toast-amount">+0 XP</div>
+  <div class="xp-toast-sub" id="xp-toast-sub"></div>
+</div>
+
+<!-- Game Nav -->
+<nav class="game-nav">
+  <div class="game-nav-left">
+    <img class="game-logo" src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/sites/2148808568/brand_styleguide/images/aca75c2-82b1-76f2-757c-7ef3bfbecb70_Untitled_design_29_.png" alt="7 Kin">
+    <span class="game-course-title">{{ current_product.title }}</span>
+  </div>
+  <div class="game-nav-center">
+    <div class="xp-track"><div class="xp-fill" id="nav-xp-fill" style="width:0%"></div></div>
+    <span class="xp-label" id="nav-xp-label">0 XP</span>
+  </div>
+  <div class="game-nav-right">
+    <span class="badge-pill" id="nav-badge-count">🏅 0 badges</span>
+    <a href="{{ current_product.url }}" class="map-btn">☀️ Map</a>
+    {% if current_site_user %}
+      <span class="user-name">{{ current_site_user.first_name }}</span>
+    {% endif %}
+  </div>
+</nav>
+
+{{ content_for_layout }}
+
+<!-- Scripts -->
+{{ 'core.js' | kajabi_asset_url | script_tag }}
+<script charset='ISO-8859-1' src='https://fast.wistia.com/assets/external/E-v1.js'></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/js/bootstrap.min.js" integrity="sha384-VjEeINv9OSwtWFLAtmc4JCtEJXXBub00gtSnszmspDLCtC0I4z4nqz7rEFbIZLLU" crossorigin="anonymous"></script>
+<script>
+window.RR_COURSE = {
+  storeKey: "7kin_course_{{ current_product.id }}",
+  courseId: "{{ current_product.id }}",
+  courseTitle: "{{ current_product.title | replace: '"', '' }}",
+  trackEndpoint: "{{ settings.track_endpoint }}",
+  xpPerLesson: 40,
+  modules: [
+    {%- for category in current_product.categories -%}
+    "{{ category.title | replace: '"', '' }}",
+    {%- endfor -%}
+  ],
+  lessons: [
+    {%- for category in current_product.categories -%}
+    {%- assign mi = forloop.index0 -%}
+    {%- for lesson in category.posts -%}
+    { id: "{{ lesson.id }}", mod: {{ mi }}, label: "{{ lesson.title | replace: '"', '' }}" },
+    {%- endfor -%}
+    {%- endfor -%}
+  ]
+};
+</script>
+{{ 'scripts.js' | asset_url | script_tag }}
+
+<script>
+
+
+{{ settings.embedded_scripts }}
+</body>
+</html>

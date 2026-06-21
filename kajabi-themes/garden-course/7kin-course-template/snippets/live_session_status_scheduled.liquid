@@ -1,0 +1,36 @@
+<div class="live-session-details-status__container">
+  <i class="fa fa-calendar live-session-details-status__icon"></i>
+  <div>
+    <div kjb-settings-id="{{ 'scheduled_text' | settings_id: section: section }}">
+      <span {% element_attributes "section.settings.scheduled_text" %}>{{ section.settings.scheduled_text }}</span>
+      {% assign scheduled_end_at = live_session.scheduled_end_at | default: page_state.fallback_scheduled_end_at %}
+      {% if scheduled_end_at != blank %}
+        {% assign start_time = live_session.scheduled_at | default: page_state.fallback_scheduled_at | local_time: user: current_site_user, format: "default" %}
+        {% assign end_time = scheduled_end_at | local_time: user: current_site_user, format: "default_with_timezone" %}
+        {% assign scheduled_time = start_time | append: " - " | append: end_time %}
+      {% else %}
+        {% assign scheduled_time = live_session.scheduled_at | default: page_state.fallback_scheduled_at | local_time: user: current_site_user, format: "default_with_timezone" %}
+      {% endif %}
+      <span>{{ live_session.scheduled_at | default: page_state.fallback_scheduled_at | local_time: user: current_site_user, format: "%A, %B %d, %Y" }}, {{ scheduled_time }}</span>
+    </div>
+    {% if live_session.show_video? and live_session.show_join_button? %}
+      <div class="live-session-details-status__row live-session-details-status__row--actions">
+        <a
+          href="{{ live_session.join_button_link_href }}"
+          target="_blank"
+          kjb-settings-id="{{ 'join_btn_text' | settings_id: section: section }}"
+        >
+          {% element "section.settings.join_btn_text" %}
+            {{ section.settings.join_btn_text }}
+          {% endelement %}
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% if live_session.show_location_text? %}
+  <div class="live-session-details-status__container">
+    <i class="fas fa-map-marker-alt live-session-details-status__icon"></i>
+    <div>{{ live_session.location_text }}</div>
+  </div>
+{% endif %}

@@ -1,0 +1,59 @@
+{% assign btnText       = section.settings.btn_text  %}
+{% assign btnColor      = section.settings.btn_background_color | default: settings.color_primary | default: settings.brand.primary_color %}
+{% assign btnTextColor  = section.settings.btn_text_color | default: settings.text_color_light %}
+{% assign btnStyle      = section.settings.btn_style  %}
+{% assign btnSize       = section.settings.btn_size  %}
+
+<style>
+  /*============================================================================
+    #Individual CTA Style
+  ==============================================================================*/
+  .btn--solid.btn--simple-player {
+    background: {{ btnColor }} !important;
+    border-color: {{ btnColor }} !important;
+    color: {{ btnTextColor }} !important;
+  }
+  .btn--solid.btn--simple-player:hover {
+    color: {{ btnTextColor }} !important;
+  }
+  .btn--outline.btn--simple-player {
+    border-color: {{ btnColor }} !important;
+    color: {{ btnColor }} !important;
+  }
+  .btn--outline.btn--simple-player:hover {
+    color: {{ btnColor }} !important;
+  }
+</style>
+<div class="player__nav">
+  <div class="media">
+    <div class="media-left">
+      {% if post.previous %}
+        <a class="btn btn-prev btn--simple-player btn--{{ btnStyle }} btn--{{ btnSize }}" href="{{ post.previous.url }}">
+          <i class="fa fa-chevron-left" aria-hidden="true"></i>
+          {% element "section.settings.previous" %}{{ section.settings.previous }}{% endelement %}
+        </a>
+      {% else  %}
+        <a class="btn btn-prev btn--simple-player btn--{{ btnStyle }} btn--{{ btnSize }}" disabled href="#">
+          <i class="fa fa-chevron-left" aria-hidden="true"></i>
+          {% element "section.settings.previous" %}{{ section.settings.previous }}{% endelement %}
+        </a>
+      {% endif %}
+    </div>
+    <div class="media-body media-middle">
+      <p class="hidden-xs-down">{% element "section.settings.count_text_singular" %}{{ section.settings.count_text_singular }}{% endelement %} {{ postNumber }} of {{ post.category.posts.count }}</p>
+    </div>
+    <div class="media-right">
+      {% if post.next %}
+        <a class="btn btn-next btn--simple-player btn--{{ btnStyle }} btn--{{ btnSize }}" href="{{ post.next.url }}">
+          {% element "section.settings.next" %}{{ section.settings.next }}{% endelement %}
+          <i class="fa fa-chevron-right" aria-hidden="true"></i>
+        </a>
+      {% else  %}
+        <a class="btn btn-next btn--simple-player btn--{{ btnStyle }} btn--{{ btnSize }}" disabled href="#">
+          {% element "section.settings.next" %}{{ section.settings.next }}{% endelement %}
+          <i class="fa fa-chevron-right" aria-hidden="true"></i>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>

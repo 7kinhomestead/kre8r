@@ -1,0 +1,32 @@
+{% include "panel_style", bgColor: "#fff" %}
+
+{% assign p-AccentColor   = block.settings.accent_color | default: "" %}
+<style>
+  .panel--{{ p-ID }} img {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+  .panel--{{ p-ID }} .panel__body {
+    padding-bottom: 2rem;
+  }
+  .panel--{{ p-ID }} .progress__fill {
+    background: {{ p-AccentColor }};
+  }
+</style>
+
+{% assign completion = current_product.completion %}
+<div class="panel panel--{{ p-AutoTextColor }} panel--{{ p-ID }}" id="block-{{ block.id }}" {% block_attributes %}>
+  {% if block.settings.show_img %}
+    {% if current_product.thumbnail_url %}
+      <img class="img-fluid" src="{{ current_product.thumbnail_url }}" kjb-settings-id="{{ 'show_img' | settings_id: section: section, block: block }}">
+    {% endif %}
+  {% endif %}
+  <div class="panel__body">
+    <h6 class="panel__heading" kjb-settings-id="{{ 'completed' | settings_id: section: section, block: block }}">
+      {{ completion.completed }}&nbsp;of&nbsp;{{ completion.total }} {% element "block.settings.completed" %}{{ block.settings.completed }}{% endelement %}
+    </h6>
+    <div class="progress__bar" kjb-settings-id="{{ 'accent_color' | settings_id: section: section, block: block }}">
+      <div class="progress__fill" role="progressbar" aria-valuenow="{{ completion.percent }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ completion.percent }}%;"></div>
+    </div>
+  </div>
+</div>

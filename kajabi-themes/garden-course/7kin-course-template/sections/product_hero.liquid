@@ -1,0 +1,419 @@
+{% include "section_style_hero", vertAlign: "middle", defaultImg: "hero.jpg", defaultVideo: "aifhr9jyfk" %}
+
+{% if section.settings.show_hero %}
+  <div class="hero-background background-image background-image--{{ s-ID }}">
+    <div class="section section--hero section--{{ s-VertAlign }} section--{{ s-Spacing }} section--{{ s-ID }}" kjb-settings-id="{{ 'overlay' | settings_id: section: section }}">
+      <div class="container">
+        <div class="row">
+          {% if section.settings.alignment == "left" %}
+            <div class="col-sm-6 text-xs-left btn__spacing btn__spacing--left">
+              {% include "hero_text" %}
+            </div>
+            <div class="col-sm-6">
+            </div>
+          {% elsif section.settings.alignment == "right" %}
+            <div class="col-sm-6">
+            </div>
+            <div class="col-sm-6 text-xs-left btn__spacing btn__spacing--left">
+              {% include "hero_text" %}
+            </div>
+          {% else %}
+            <div class="col-sm-8 btn__spacing btn__spacing--center">
+              {% include "hero_text" %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+  {
+    "name": "Hero",
+    "blocks": [
+      {
+        "type": "hero_cta",
+        "name": "Call To Action",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Call To Action"
+          },
+          {
+            "type": "text",
+            "id": "btn_text",
+            "label": "CTA Text",
+            "default": "Call To Action"
+          },
+          {
+            "type": "action",
+            "id": "btn_action",
+            "label": "CTA Action",
+            "default": "http://www.kajabi.com"
+          },
+          {
+            "type": "checkbox",
+            "id": "btn_target",
+            "label": "Open In New Window",
+            "default": "false"
+          },
+          {
+            "type": "radio",
+            "id": "btn_style",
+            "label": "CTA Style",
+            "default": "solid",
+            "options": [
+              { "label": "Solid", "value": "solid" },
+              { "label": "Outline", "value": "outline" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_size",
+            "label": "CTA Size",
+            "default": "med",
+            "options": [
+              { "label": "Small", "value": "small" },
+              { "label": "Medium", "value": "med" },
+              { "label": "Large", "value": "large" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_width",
+            "label": "Button Width",
+            "default": "auto",
+            "options": [
+              { "label": "Auto", "value": "auto" },
+              { "label": "Full Width", "value": "block" }
+            ]
+          },
+          {
+            "type": "color",
+            "id": "btn_background_color",
+            "label": "Button Color",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "btn_text_color",
+            "label": "Button Text Color",
+            "allow_blank": true,
+            "info": "For solid buttons only"
+          },
+          {
+            "type": "text",
+            "id": "btn_Reveal",
+            "label": "CTA Timed Reveal",
+            "default": "0",
+            "info": "Use seconds. (For example, 5 minutes x 60 seconds = 300 seconds). Leave at 0 to disable timed reveal."
+          }
+        ]
+      },
+      {
+        "type": "product_info",
+        "name": "Product Info",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Product Info"
+          },
+          {
+            "id": "show_title",
+            "type": "checkbox",
+            "label": "Show Title",
+            "default": "true"
+          },
+          {
+            "id": "show_desc",
+            "type": "checkbox",
+            "label": "Show Description",
+            "default": "true",
+            "info": "Please note that this information is pulled from the Edit Product Details page"
+          }
+        ]
+      },
+      {
+        "type": "product_text",
+        "name": "Text",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Text"
+          },
+          {
+            "type": "rich_text",
+            "id": "content",
+            "label": "Content",
+            "default": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed sapien quam. Sed dapibus est id enim facilisis, at posuere turpis adipiscing. Quisque sit amet dui dui."
+          }
+        ]
+      },
+      {
+        "type": "product_start",
+        "name": "Start Button",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Start Button",
+            "info": "This button will track the progress of your users so they can click to continue where they left off."
+          },
+          {
+            "type": "text",
+            "id": "start_text",
+            "label": "Start Text",
+            "default": "Start Course"
+          },
+          {
+            "type": "text",
+            "id": "resume_text",
+            "label": "Resume Text",
+            "default": "Resume Course"
+          },
+          {
+            "type": "text",
+            "id": "again_text",
+            "label": "Start Over Text",
+            "default": "Start Course Over"
+          },
+          {
+            "type": "radio",
+            "id": "btn_style",
+            "label": "CTA Style",
+            "default": "solid",
+            "options": [
+              { "label": "Solid", "value": "solid" },
+              { "label": "Outline", "value": "outline" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_size",
+            "label": "CTA Size",
+            "default": "med",
+            "options": [
+              { "label": "Small", "value": "small" },
+              { "label": "Medium", "value": "med" },
+              { "label": "Large", "value": "large" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_width",
+            "label": "Button Width",
+            "default": "auto",
+            "options": [
+              { "label": "Auto", "value": "auto" },
+              { "label": "Full Width", "value": "block" }
+            ]
+          },
+          {
+            "type": "color",
+            "id": "btn_background_color",
+            "label": "Button Color",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "btn_text_color",
+            "label": "Button Text Color",
+            "allow_blank": true,
+            "info": "For solid buttons only"
+          }
+        ]
+      },
+      {
+        "type": "coaching_scheduling_widget",
+        "name": "Coaching Scheduling Widget",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Coaching Scheduling Widget"
+          },
+          {
+            "type": "coaching_program_for_scheduling_widget",
+            "id": "coaching_program",
+            "label": "Select Your Coaching Program",
+            "preset": ""
+          },
+          {
+            "type": "offer_for_productizable",
+            "id": "offer",
+            "label": "Select Your Offer",
+            "preset": "",
+            "hide_if": {
+              "coaching_program": ""
+            }
+          },
+          {
+            "type": "checkbox",
+            "id": "link_to_program_details",
+            "label": "Link to Program Details",
+            "default": "true"
+          },
+          {
+            "type": "text",
+            "id": "title_text",
+            "label": "Title text",
+            "default": "Program Title",
+            "hide_if": {
+              "link_to_program_details": true
+            }
+          },
+          {
+            "type": "text",
+            "id": "description_text",
+            "label": "Description text",
+            "default": "Program Description",
+            "hide_if": {
+              "link_to_program_details": true
+            }
+          },
+          {
+            "type": "image_picker",
+            "id": "thumbnail_image",
+            "label": "Thumbnail image",
+            "info": "Image must be square, with a maximum size of 1280 x 720 pixels",
+            "fit": "crop",
+            "width": 1280,
+            "height": 720,
+            "hide_if": {
+              "link_to_program_details": true
+            }
+          },
+          {
+            "type": "checkbox",
+            "id": "show_thumbnail",
+            "label": "Show thumbnail",
+            "default": "true"
+          },
+          {
+            "type": "checkbox",
+            "id": "show_price",
+            "label": "Show price",
+            "default": "true"
+          },
+          {
+            "type": "checkbox",
+            "id": "show_duration",
+            "label": "Show duration",
+            "default": "true"
+          },
+          {
+            "type": "text",
+            "id": "cta_text",
+            "label": "CTA Text",
+            "default": "Call To Action"
+          },
+          {
+            "type": "radio",
+            "id": "btn_style",
+            "label": "Button Style",
+            "default": "solid",
+            "options": [
+              { "label": "Solid", "value": "solid" },
+              { "label": "Outline", "value": "outline" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_size",
+            "label": "Button Size",
+            "default": "small",
+            "options": [
+              { "label": "Small", "value": "small" },
+              { "label": "Medium", "value": "med" },
+              { "label": "Large", "value": "large" }
+            ]
+          },
+          {
+            "type": "radio",
+            "id": "btn_width",
+            "label": "Button Width",
+            "default": "block",
+            "options": [
+              { "label": "Auto", "value": "auto" },
+              { "label": "Full Width", "value": "block" }
+            ]
+          },
+          {
+            "type": "color",
+            "id": "background_color",
+            "label": "Background Color Override",
+            "default": "",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "cta_color",
+            "label": "CTA Color Override",
+            "default": "",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "cta_text_color",
+            "label": "Text Color Override",
+            "default": "",
+            "allow_blank": true
+          }
+        ]
+      }
+    ],
+    "elements": [
+      {
+        "type": "checkbox",
+        "id": "show_hero",
+        "label": "Show Hero",
+        "default": "true"
+      },
+      {
+        "type": "header",
+        "content": "Section Appearance",
+        "style": "subheading"
+      },
+      {
+        "type": "image_picker",
+        "id": "bg_image",
+        "label": "Background Image",
+        "info": "Suggested dimensions: 2880 × 1200"
+      },
+      {
+        "type": "color",
+        "id": "overlay",
+        "label": "Overlay Color",
+        "default": "rgba(0,0,0,.5)"
+      },
+      {
+        "type": "color",
+        "id": "text_color",
+        "label": "Text Color",
+        "default": "#ffffff"
+      },
+      {
+        "type": "radio",
+        "id": "alignment",
+        "label": "Alignment",
+        "default": "center",
+        "options": [
+          {"value": "left", "label": "Left"},
+          {"value": "center", "label": "Centered"},
+          {"value": "right", "label": "Right"}
+        ]
+      },
+      {
+        "type": "select",
+        "id": "spacing",
+        "label": "Spacing",
+        "default": "medium",
+        "options": [
+          { "label": "Extra Small", "value": "xs-small" },
+          { "label": "Small", "value": "small" },
+          { "label": "Medium", "value": "medium" },
+          { "label": "Large", "value": "large" }
+        ]
+      }
+    ]
+  }
+{% endschema %}

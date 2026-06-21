@@ -1,0 +1,382 @@
+{
+  "current": {
+    "sections": {
+      "footer": {
+        "type": "footer",
+        "hidden": "false",
+        "settings": {
+          "logo": "file-uploads/sites/2148808568/brand_styleguide/images/aca75c2-82b1-76f2-757c-7ef3bfbecb70_Untitled_design_29_.png",
+          "menu": "footer",
+          "copyright": "Kajabi",
+          "show_logo": "false",
+          "show_menu": "true",
+          "align_logo": "left",
+          "text_color": "",
+          "show_footer": "true",
+          "show_copyright": "true",
+          "background_color": "",
+          "show_social_icons": "true",
+          "social_icon_alignment": "social-icons--left",
+          "social_icon_link_yelp": "",
+          "social_icon_link_slack": "",
+          "social_icon_link_vimeo": "",
+          "social_icon_link_flickr": "",
+          "social_icon_link_github": "",
+          "social_icon_link_itunes": "",
+          "social_icon_link_tumblr": "",
+          "social_icons_text_color": "",
+          "social_icon_link_twitter": "https://www.twitter.com/kajabi",
+          "social_icon_link_youtube": "",
+          "social_icon_link_dribbble": "",
+          "social_icon_link_facebook": "https://www.facebook.com/kajabi",
+          "social_icon_link_linkedin": "",
+          "social_icon_link_instagram": "https://www.instagram.com/kajabi/",
+          "social_icon_link_pinterest": "",
+          "social_icon_link_soundcloud": "",
+          "social_icon_background_style": "social-icons--none",
+          "social_icon_link_google_plus": "",
+          "social_icons_background_color": ""
+        }
+      },
+      "header": {
+        "type": "header",
+        "hidden": "false",
+        "settings": {
+          "logo": "file-uploads/sites/2148808568/brand_styleguide/images/aca75c2-82b1-76f2-757c-7ef3bfbecb70_Untitled_design_29_.png",
+          "menu": "main-menu",
+          "logo_text": "PREMIER",
+          "logo_type": "image",
+          "show_menu": "true",
+          "align_logo": "left",
+          "text_color": "",
+          "link_target": "false",
+          "logo_action": "site",
+          "show_header": "true",
+          "header_height": "",
+          "search_toggle": "Search",
+          "language_logout": "Logout",
+          "text_color_user": "",
+          "background_color": "",
+          "language_library": "My Library",
+          "announcement_link": "",
+          "announcement_text": "Announcement",
+          "language_settings": "Settings",
+          "announcement_color": "#1abc9c",
+          "background_color_user": "",
+          "language_announcements": "Announcements",
+          "announcement_text_color": "#fff",
+          "show_header_announcement": "false"
+        }
+      },
+      "search": {
+        "type": "search",
+        "hidden": "false",
+        "settings": {
+          "text_color": "#ffffff",
+          "search_text": "Search for something...",
+          "show_search": "true",
+          "background_color": "#92969c"
+        }
+      },
+      "post_body": {
+        "type": "post_body",
+        "blocks": {
+          "1481845691504": {
+            "type": "post_info",
+            "settings": {
+              "show_desc": "true",
+              "show_title": "true",
+              "show_category": "true"
+            }
+          }
+        },
+        "settings": {
+          "next": "Next Lesson",
+          "use_next": "true",
+          "alignment": "left",
+          "encouragement": "Great Job! Keep Going!",
+          "btn_text_color": "",
+          "smart_next_link": "",
+          "smart_next_color": "",
+          "language_complete": "Complete",
+          "btn_background_color": "",
+          "hide_mark_as_complete": "false",
+          "smart_next_background": "",
+          "language_mark_as_complete": "Mark As Complete",
+          "mark_as_complete_position": "bottom"
+        },
+        "block_order": [
+          "1481845691504"
+        ]
+      },
+      "pop_upsell": {
+        "type": "pop_upsell",
+        "settings": {
+          "show": "false",
+          "text": "<h1>Course Complete</h1>\r\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.Lorem ipsum dolor sit amet.</p>",
+          "image": "",
+          "enabled": "false",
+          "show_img": "false",
+          "overlay_color": "",
+          "background_color": ""
+        }
+      },
+      "breadcrumbs": {
+        "type": "breadcrumbs",
+        "settings": {
+          "color": "",
+          "search": "Search",
+          "divider": "/",
+          "categories": "Modules",
+          "color_active": "",
+          "show_breadcrumbs": "true"
+        }
+      },
+      "post_player": {
+        "type": "post_player",
+        "settings": {
+          "next": "Next",
+          "play": "Play Now",
+          "begin": "Will Begin In",
+          "timer": "20",
+          "cancel": "Cancel",
+          "seconds": "Seconds",
+          "btn_size": "med",
+          "next_cat": "Next Module",
+          "previous": "Back",
+          "btn_style": "solid",
+          "show_more": "Show More",
+          "player_type": "inline",
+          "accent_color": "",
+          "auto_advance": "true",
+          "player_color": "",
+          "player_accent": "",
+          "btn_text_color": "",
+          "count_text_plural": "Lessons",
+          "count_text_singular": "Lesson",
+          "btn_background_color": ""
+        }
+      },
+      "post_sidebar": {
+        "type": "post_sidebar",
+        "blocks": {
+          "1481845715286": {
+            "type": "post_downloads",
+            "settings": {
+              "language_downloads": "Downloads"
+            }
+          }
+        },
+        "settings": {
+          "show_sidebar": "true"
+        },
+        "block_order": [
+          "1481845715286"
+        ]
+      },
+      "product_body": {
+        "type": "product_body",
+        "blocks": {
+          "1481845625971": {
+            "type": "product_info",
+            "settings": {
+              "show_img": "false",
+              "show_desc": "true",
+              "show_title": "true"
+            }
+          },
+          "1481845632476": {
+            "type": "product_video",
+            "settings": {
+              "image": "",
+              "video": "",
+              "autoplay": "false",
+              "video_color": "#2e91fc"
+            }
+          }
+        },
+        "hidden": "false",
+        "settings": {
+          "alignment": "left",
+          "show_welcome": "false"
+        },
+        "block_order": [
+          "1481845632476",
+          "1481845625971"
+        ]
+      },
+      "product_hero": {
+        "type": "product_hero",
+        "blocks": {
+          "1481845615592": {
+            "type": "product_start",
+            "settings": {
+              "btn_size": "med",
+              "btn_style": "solid",
+              "btn_width": "auto",
+              "again_text": "Start Course Over",
+              "start_text": "Start Course",
+              "resume_text": "Resume Course",
+              "btn_text_color": "",
+              "btn_background_color": "#53d8fb"
+            },
+            "id": "1481845615592",
+            "name": "Start Button",
+            "hidden": "false",
+            "deletable": true,
+            "duplicatable": true,
+            "hideable": true,
+            "schemaName": "Start Button",
+            "sectionId": "product_hero",
+            "sectionType": "product_hero"
+          },
+          "1484781342623": {
+            "type": "product_info",
+            "settings": {
+              "show_desc": true,
+              "show_title": true
+            },
+            "id": "1484781342623",
+            "name": "Product Info",
+            "hidden": "false",
+            "deletable": true,
+            "duplicatable": true,
+            "hideable": true,
+            "schemaName": "Product Info",
+            "sectionId": "product_hero",
+            "sectionType": "product_hero"
+          }
+        },
+        "hidden": "false",
+        "settings": {
+          "overlay": "rgba(0, 0, 0, 0.22)",
+          "spacing": "medium",
+          "bg_image": "file-uploads/themes/2165321142/settings_images/53eece8-b062-75e2-12e3-b1fa4731d4f5_6a200855-eba0-48fa-96f5-6ced288d705f.webp",
+          "alignment": "center",
+          "show_hero": true,
+          "text_color": "#ffffff"
+        },
+        "block_order": [
+          "1484781342623",
+          "1481845615592"
+        ],
+        "name": "Hero",
+        "hideable": true,
+        "saveable": true
+      },
+      "post_comments": {
+        "type": "post_comments",
+        "settings": {
+          "language_comment_add": "Post Comment",
+          "language_comment_edit": "EDIT",
+          "comment_btn_text_color": "",
+          "language_comment_reply": "REPLY",
+          "language_comment_locked": "Comments Locked",
+          "language_comment_plural": "Comments",
+          "language_comment_singular": "Comment",
+          "language_comment_show_more": "Show More",
+          "comment_btn_background_color": "",
+          "language_comment_placeholder": "Say Something...",
+          "language_comment_show_more_loading": "Loading More Comments..."
+        }
+      },
+      "categories_body": {
+        "type": "categories_body",
+        "settings": {
+          "categories": "Modules"
+        }
+      },
+      "product_sidebar": {
+        "type": "product_sidebar",
+        "blocks": {
+          "1481845656651": {
+            "type": "course_progress",
+            "settings": {
+              "show_img": "true",
+              "completed": "Lessons Completed",
+              "accent_color": ""
+            }
+          }
+        },
+        "hidden": "false",
+        "settings": {
+          "show_sidebar": "true"
+        },
+        "block_order": [
+          "1481845656651"
+        ]
+      },
+      "product_syllabus": {
+        "type": "product_syllabus",
+        "hidden": "false",
+        "settings": {
+          "type": "posts",
+          "truncate": "",
+          "show_more": "Show More",
+          "categories": "Modules",
+          "coming_soon": "Coming Soon",
+          "show_syllabus": "true"
+        }
+      },
+      "live_session_details": {
+        "name": "Live Session",
+        "type": "live_session_details",
+        "blocks": {
+          "1752627922324": {
+            "id": "1752627922324",
+            "name": "Downloads",
+            "type": "live_session_downloads",
+            "hidden": "false",
+            "hideable": true,
+            "settings": {
+            },
+            "deletable": true,
+            "sectionId": "live_session_details",
+            "duplicatable": true
+          }
+        },
+        "settings": {
+        },
+        "block_order": [
+          "1752627922324"
+        ]
+      }
+    },
+    "text_color": "#000",
+    "text_color_light": "#fff",
+    "font_family": "",
+    "heading_font_family": "",
+    "color_success": "#1abc9c",
+    "color_info": "#34495e",
+    "color_warning": "#f39c12",
+    "color_danger": "#e74c3c",
+    "color_container_bg": "#f9f9f9",
+    "color_primary": "#00C4B4",
+    "color_offset": "",
+    "use_bg_img": false,
+    "page_background_img": "",
+    "v_align": "top",
+    "body_width": "auto",
+    "favicon": "file-uploads/sites/2148808568/brand_styleguide/images/a31dcee-36-cb8f-63ae-465fbc3e178_Untitled_design_26_.png",
+    "color_dark": "#ecf0f1",
+    "color_darker": "#272d34",
+    "track_endpoint": "https://7kinhomestead.land/api/kajabi-track",
+    "embedded_scripts": "<!-- Embedded '<script>' tags go here -->",
+    "brand": {
+      "primary_color": "#00C4B4",
+      "accent_color": "#b3001b",
+      "logo": "https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/sites/2148808568/brand_styleguide/images/aca75c2-82b1-76f2-757c-7ef3bfbecb70_Untitled_design_29_.png",
+      "favicon": "https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/sites/2148808568/brand_styleguide/images/a31dcee-36-cb8f-63ae-465fbc3e178_Untitled_design_26_.png",
+      "font_family_heading": "Fira Sans",
+      "font_family_body": "Fira Sans Extra Condensed",
+      "social": {
+        "facebook": "https://www.facebook.com/7kinhomestead",
+        "instagram": null,
+        "x": null,
+        "youtube": "https://www.youtube.com/@7kinhomestead",
+        "linkedin": null,
+        "tiktok": "https://www.tiktok.com/@7kinhomestead"
+      }
+    }
+  }
+}

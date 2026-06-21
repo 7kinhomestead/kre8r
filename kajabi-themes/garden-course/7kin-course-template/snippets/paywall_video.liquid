@@ -1,0 +1,39 @@
+{% assign video = current_site.find_video[block.settings.video] %}
+{% assign image = block.settings.image | image_picker_url: 'placeholder.png' %}
+{% assign autoplay = block.settings.autoplay %}
+{% assign color = settings.color_primary %}
+
+{% assign margin_top = block.settings.margin.top | default: '0' %}
+{% assign margin_right = block.settings.margin.right | default: '0' %}
+{% assign margin_bottom = block.settings.margin.bottom | default: '0' %}
+{% assign margin_left = block.settings.margin.left | default: '0' %}
+
+{% assign KJB_settings_id = 'video' | settings_id: section: section,block: block %}
+
+{% unless autoplay %}
+  <style>
+    .video-{{ block.id }} .video__wrapper {
+      background-image: url({{ image }});
+    }
+  </style>
+{% endunless %}
+
+<div
+  class="
+    paywall-video
+    video-{{ block.id }}
+  "
+  style="
+    margin-top: {{ margin_top }}rem;
+    margin-right: {{ margin_right }}rem;
+    margin-bottom: {{ margin_bottom }}rem;
+    margin-left: {{ margin_left }}rem;
+  "
+  kjb-settings-id="{{ KJB_settings_id }}"
+  id="block-{{ block.id }}"
+  {% block_attributes %}
+>
+  <div class="video__wrapper">
+    {{ video | wistia_video: player_color: color, auto_play: autoplay, still_url: image, playerPreference: "html5" }}
+  </div>
+</div>

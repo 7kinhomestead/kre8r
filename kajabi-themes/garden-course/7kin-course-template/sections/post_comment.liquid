@@ -1,0 +1,27 @@
+{% include "comment" %}
+
+{% schema %}
+  {
+    "name": "Post Comment",
+    "elements": [
+      {
+        "type": "text",
+        "id": "language_comment_add",
+        "label": "Comment Submit",
+        "default": "Post Comment"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_reply",
+        "label": "Comment Reply",
+        "default": "REPLY"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_edit",
+        "label": "Comment Edit",
+        "default": "EDIT"
+      }
+    ]
+  }
+{% endschema %}

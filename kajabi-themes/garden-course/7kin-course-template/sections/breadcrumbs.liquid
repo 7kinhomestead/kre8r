@@ -1,0 +1,134 @@
+{% if section.settings.show_breadcrumbs %}
+  {% assign crumb-Color  = section.settings.color | default: "#666" %}
+  {% assign crumb-ColorActive  = section.settings.color_active | default: "#111" %}
+  <style>
+    .breadcrumbs__crumb {
+      color: {{ crumb-ColorActive }};
+    }
+    .breadcrumbs__crumb a, .breadcrumbs__crumb--divider {
+      color: {{ crumb-Color }};
+    }
+  </style>
+
+  <div class="col-sm-12">
+    <div class="breadcrumbs" kjb-settings-id="{{ 'color' | settings_id: section: section }}">
+      <div class="breadcrumbs__crumb">
+        <a href="{{ current_product.url }}">{{ current_product.title }}</a>
+      </div>
+      <div class="breadcrumbs__crumb breadcrumbs__crumb--divider" kjb-settings-id="{{ 'divider' | settings_id: section: section }}">
+        {{ section.settings.divider }}
+      </div>
+      {% if post %}
+        <div class="breadcrumbs__crumb" kjb-settings-id="{{ 'categories' | settings_id: section: section }}">
+          <a href="{{ current_product.categories_url }}">{{ section.settings.categories }}</a>
+        </div>
+        <div class="breadcrumbs__crumb breadcrumbs__crumb--divider" kjb-settings-id="{{ 'divider' | settings_id: section: section }}">
+          {{ section.settings.divider }}
+        </div>
+        <div class="breadcrumbs__crumb">
+          <a href="{{ post.category.url }}">{{ post.category.title }}</a>
+        </div>
+        <div class="breadcrumbs__crumb breadcrumbs__crumb--divider" kjb-settings-id="{{ 'divider' | settings_id: section: section }}">
+          {{ section.settings.divider }}
+        </div>
+        <div class="breadcrumbs__crumb" kjb-settings-id="{{ 'color_active' | settings_id: section: section }}">
+          {{ post.title }}
+        </div>
+      {% elsif category %}
+        <div class="breadcrumbs__crumb" kjb-settings-id="{{ 'categories' | settings_id: section: section }}">
+          <a href="{{ current_product.categories_url }}">{{ section.settings.categories }}</a>
+        </div>
+        <div class="breadcrumbs__crumb breadcrumbs__crumb--divider" kjb-settings-id="{{ 'divider' | settings_id: section: section }}">
+          {{ section.settings.divider }}
+        </div>
+        <div class="breadcrumbs__crumb">
+          {{ category.title }}
+        </div>
+      {% elsif search %}
+        <div class="breadcrumbs__crumb">
+          {{ section.settings.search }}
+        </div>
+      {% elsif a-Page %}
+        <div class="breadcrumbs__crumb">
+          {{ section.settings.announcements }}
+        </div>
+      {% else %}
+        <div class="breadcrumbs__crumb" kjb-settings-id="{{ 'categories' | settings_id: section: section }}">
+          {{ section.settings.categories }}
+        </div>
+      {% endif %}
+      <span class="player--none__nav">
+        {% if post.previous %}
+          <a href="{{ post.previous.url }}">
+            <i class="fa fa-chevron-left" aria-hidden="true"></i>
+          </a>
+        {% else  %}
+          <a disabled href="#">
+            <i class="fa fa-chevron-left" aria-hidden="true"></i>
+          </a>
+        {% endif %}
+        {% if post.next %}
+          <a href="{{ post.next.url }}">
+            {{ section.settings.next }}
+            <i class="fa fa-chevron-right" aria-hidden="true"></i>
+          </a>
+        {% else  %}
+          <a disabled href="#">
+            {{ section.settings.next }}
+            <i class="fa fa-chevron-right" aria-hidden="true"></i>
+          </a>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+  {
+    "name": "Breadcrumbs",
+    "elements": [
+      {
+        "type": "checkbox",
+        "id": "show_breadcrumbs",
+        "label": "Show Breadcrumbs",
+        "default": "true"
+      },
+      {
+        "type": "text",
+        "id": "categories",
+        "default": "Categories",
+        "label": "Categories Text"
+      },
+      {
+        "type": "text",
+        "id": "search",
+        "default": "Search",
+        "label": "Search Text"
+      },
+      {
+        "type": "text",
+        "id": "announcements",
+        "default": "Announcements",
+        "label": "Announcements Text"
+      },
+      {
+        "type": "text",
+        "id": "divider",
+        "default": "/",
+        "label": "Divider"
+      },
+      {
+        "type": "color",
+        "id": "color",
+        "label": "Breadcrumb Color",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "id": "color_active",
+        "label": "Breadcrumb Active Color",
+        "allow_blank": true
+      }
+    ]
+  }
+{% endschema %}

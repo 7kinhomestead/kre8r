@@ -1,0 +1,13 @@
+{% if participant != blank %}
+  <span class="live-session-participant-avatar {% if with_border %}live-session-participant-avatar--with-border{% endif %}">
+    {% if participant.has_avatar? %}
+      {{ participant | avatar_url | image_tag: alt: participant.initials }}
+    {% else %}
+      <svg class="live-session-participant-avatar__initials" viewBox="0 0 24 24">
+        <text x="50%" y="50%" dominant-baseline="middle">{{ participant.initials }}</text>
+      </svg>
+    {% endif %}
+  </span>
+{% else %}
+  <span class="live-session-participant-avatar live-session-participant-avatar--empty {% if with_border %}live-session-participant-avatar--with-border{% endif %}"></span>
+{% endif %}

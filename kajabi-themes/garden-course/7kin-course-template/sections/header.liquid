@@ -1,0 +1,294 @@
+{% include "header_style" %}
+{% if h-Show %}
+  {% include "header_announcement" %}
+  <div class="header header--{{ h-AutoTextColor }} header--{{ h-Alignment }}" kjb-settings-id="{{ kjb-H-BgColor }}">
+    <div class="container">
+      {% if h-LogoType == "text" %}
+        <h1 class="logo logo--text">
+          {% if h-LogoAction == "product" %}
+            <a href="{{ current_product.url }}" kjb-settings-id="{{ kjb-H-LogoText }}">
+              {{ h-LogoText }}
+            </a>
+          {% elsif h-LogoAction == "site" %}
+            <a href="/" kjb-settings-id="{{ kjb-H-LogoText }}">
+              {{ h-LogoText }}
+            </a>
+          {% endif %}
+        </h1>
+      {% else %}
+        {% if h-LogoAction == "product" %}
+          <a href="{{ current_product.url }}" class="logo logo--image">
+            <img src="{{ h-LogoImg }}" kjb-settings-id="{{ kjb-H-LogoImg }}"/>
+          </a>
+        {% elsif h-LogoAction == "site" %}
+          <a href="/" class="logo logo--image">
+            <img src="{{ h-LogoImg }}" kjb-settings-id="{{ kjb-H-LogoImg }}"/>
+          </a>
+        {% endif %}
+      {% endif %}
+      <div class="header-ham">
+          <span></span>
+          <span></span>
+          <span></span>
+      </div>
+      <div kjb-settings-id="{{ kjb-H-Menu }}" class="header-menu">
+        {% if h-ShowMenu %}
+          {% for link in current_site.link_lists[h-Menu].links %}
+            <a href="{{ link.url }}">{{ link.name }}</a>
+          {% endfor %}
+        {% endif %}
+        <a class="search__toggle" kjb-settings-id="{{ kjb-H-SearchToggle }}">{{ h-SeachToggle }}</a>
+        {% for block in section.blocks %}
+          {% include "cta_block", is_block: true %}
+        {% endfor %}
+        {% include "user_dropdown" %}
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+  {
+    "name": "Header",
+    "blocks": [
+      {
+        "type": "hero_cta",
+        "name": "Call To Action",
+        "elements": [
+          {
+            "type": "header",
+            "content": "Call To Action"
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "id": "btn_text",
+            "label": "CTA Text",
+            "default": "CALL TO ACTION"
+          },
+          {
+            "type": "action",
+            "id": "btn_action",
+            "label": "CTA Action",
+            "two_step": true,
+            "default": "http://www.kajabi.com"
+          },
+          {
+            "type": "checkbox",
+            "id": "btn_target",
+            "label": "Open In New Window",
+            "default": "false"
+          },
+          {
+            "type": "radio",
+            "id": "btn_style",
+            "label": "CTA Style",
+            "default": "solid",
+            "options": [
+              { "label": "Solid", "value": "solid" },
+              { "label": "Outline", "value": "outline" }
+            ]
+          },
+          {
+            "type": "color",
+            "id": "btn_background_color",
+            "label": "Button Color",
+            "allow_blank": true
+          },
+          {
+            "type": "color",
+            "id": "btn_text_color",
+            "label": "Button Text Color",
+            "allow_blank": true,
+            "info": "For solid buttons only"
+          }
+        ]
+      }
+    ],
+    "elements": [
+      {
+        "type": "checkbox",
+        "id": "show_header",
+        "label": "Show Header",
+        "default": "true"
+      },
+      {
+        "type": "header",
+        "content": "Logo",
+        "style": "subheading"
+      },
+      {
+        "type": "radio",
+        "id": "logo_type",
+        "label": "Logo Type",
+        "default": "image",
+        "options": [
+          {"value": "text", "label": "Text"},
+          {"value": "image", "label": "Image"}
+        ]
+      },
+      {
+        "type": "radio",
+        "id": "logo_action",
+        "label": "Logo Action",
+        "default": "site",
+        "options": [
+          {"value": "site", "label": "Site Home"},
+          {"value": "product", "label": "Product Home"}
+        ]
+      },
+      {
+        "type": "text",
+        "label": "Logo Text",
+        "id": "logo_text",
+        "default": "PREMIER"
+      },
+      {
+        "type": "image_picker",
+        "id": "logo",
+        "label": "Logo Image",
+        "fit": "max",
+        "width": 1000,
+        "height": 1000,
+        "info": "Suggested dimensions: 360x80",
+        "default_global_settings_attribute": "brand.logo"
+      },
+      {
+        "type": "text",
+        "id": "header_height",
+        "label": "Custom Logo Height",
+        "info": "You may use the format 10px or simply 10. Works Best Between 30 and 100.",
+        "default": ""
+      },
+      {
+        "type": "header",
+        "content": "Menu",
+        "style": "subheading"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_menu",
+        "label": "Show Menu",
+        "default": "true"
+      },
+      {
+        "type": "link_list",
+        "id": "menu",
+        "label": "Menu",
+        "info": "The topmost menu for the site.",
+        "default": "main-menu"
+      },
+      {
+        "type": "text",
+        "id": "search_toggle",
+        "label": "Search Toggle Text",
+        "default": "Search"
+      },
+      {
+        "type": "header",
+        "content": "User Menu",
+        "style": "subheading"
+      },
+      {
+        "type": "text",
+        "id": "language_logout",
+        "label": "Logout Text",
+        "default": "Logout"
+      },
+      {
+        "type": "text",
+        "id": "language_settings",
+        "label": "Settings Text",
+        "default": "Settings"
+      },
+      {
+        "type": "text",
+        "id": "language_library",
+        "label": "Library Text",
+        "default": "My Library"
+      },
+      {
+        "type": "color",
+        "label": "Background Color Override",
+        "id": "background_color_user",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "label": "Text Color Override",
+        "id": "text_color_user",
+        "allow_blank": true
+      },
+      {
+        "type": "header",
+        "content": "Optional Announcement",
+        "style": "subheading"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_header_announcement",
+        "label": "Show Announcement",
+        "default": "false"
+      },
+      {
+        "type": "text",
+        "label": "Announcement text",
+        "id": "announcement_text",
+        "default": "Announcement"
+      },
+      {
+        "type": "action",
+        "label": "Announcement link URL",
+        "id": "announcement_link",
+        "default": ""
+      },
+      {
+        "type": "checkbox",
+        "id": "link_target",
+        "label": "Open In New Window",
+        "default": "false"
+      },
+      {
+        "type": "color",
+        "id": "announcement_color",
+        "label": "Announcement Color",
+        "default": "#1abc9c"
+      },
+      {
+        "type": "color",
+        "id": "announcement_text_color",
+        "label": "Announcement Text Color",
+        "default": "#fff"
+      },
+      {
+        "type": "header",
+        "content": "Section Appearance",
+        "style": "subheading"
+      },
+      {
+        "type": "color",
+        "label": "Background Color Override",
+        "id": "background_color",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "label": "Text Color Override",
+        "id": "text_color",
+        "allow_blank": true
+      },
+      {
+        "type": "radio",
+        "id": "align_logo",
+        "label": "Alignment",
+        "default": "left",
+        "options": [
+          {"value": "left", "label": "Inline"},
+          {"value": "center", "label": "Stacked"}
+        ]
+      }
+    ]
+  }
+{% endschema %}

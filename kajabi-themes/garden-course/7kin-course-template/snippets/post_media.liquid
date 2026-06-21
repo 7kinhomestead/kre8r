@@ -1,0 +1,27 @@
+{% if post.assessment %}
+  {{ post.assessment | assessment: color: color }}
+{% elsif post.audio %}
+  {{ post.audio | wistia_audio: player_color: color, still_url: thumbnail }}
+{% else %}
+  {% if post.video %}
+    <div class="video--player">
+      {{ post.video | wistia_video: player_color: color, still_url: thumbnail, playerPreference: "html5" }}
+    </div>
+  {% else %}
+    {% if showThumbnail %}
+      {% if thumbnail %}
+        <img src="{{ thumbnail }}" class="thumb" />
+      {% else %}
+        <img src="{{ 'placeholder.png' | asset_url }}" class="thumb" />
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endif %}
+
+{% unless post.assessment %}
+  {% if post.next %}
+    {% if section.settings.auto_advance and post.show_as_paywalled? == false %}
+      {% include "coming_up" %}
+    {% endif %}
+  {% endif %}
+{% endunless %}

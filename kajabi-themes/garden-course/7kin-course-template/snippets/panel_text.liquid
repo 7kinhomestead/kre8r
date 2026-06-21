@@ -1,0 +1,5 @@
+<div class="panel__block" kjb-settings-id="{{ 'content' | settings_id: section: section, block: block }}" id="block-{{ block.id }}" {% block_attributes %}>
+  {%- element "block.settings.content" -%}
+    {{ block.settings.content }}
+  {%- endelement -%}
+</div>

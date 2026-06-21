@@ -1,0 +1,30 @@
+{% assign live_session_logo_settings_id = 'header_logo_type' | settings_id: section: section %}
+
+<style>
+  .live-session-details-header__logo {
+    display: block;
+    text-align: {{ section.settings.header_logo_alignment }};
+  }
+  .live-session-details-header__logo .logo__image {
+    display: inline-block;
+    width: {{ section.settings.header_logo_width | remove: "px" | default: 40 | append: "px" }};
+    text-align: {{ section.settings.header_logo_alignment }};
+  }
+  .live-session-details-header__logo .logo__text {
+    color: {{ section.settings.header_logo_text_color }};
+  }
+</style>
+
+<div class="live-session-details-header__logo" kjb-settings-id="{{ live_session_logo_settings_id }}">
+  {% if section.settings.header_logo_type == "image" %}
+    {% if current_site.logo_image != blank and section.settings.header_logo == blank %}
+      {{ current_site.logo_image | image_picker_url: 'logo-flat.png' | image_tag: class: "logo__image", alt: section.settings.header_logo_alt, kjb_settings_id: live_session_logo_settings_id }}
+    {% else %}
+      {{ section.settings.header_logo | image_picker_url: 'logo-flat.png' | image_tag: class: "logo__image", alt: section.settings.header_logo_alt, kjb_settings_id: live_session_logo_settings_id }}
+    {% endif %}
+  {% elsif section.settings.header_logo_type == "text" %}
+    <p class="logo__text" kjb-settings-id="{{ 'header_logo_text' | settings_id: section: section }}" {% element_attributes "section.settings.header_logo_text" %}>
+      {{ section.settings.header_logo_text }}
+    </p>
+  {% endif %}
+</div>

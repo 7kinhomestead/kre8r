@@ -1,0 +1,53 @@
+{% assign audioPlayerColor = block.settings.player_color | default: "" %}
+{% assign iconColor        = block.settings.icon_color | default: settings.color_primary | default: settings.brand.primary_color %}
+
+<style>
+  .audio__playlist li.playing:before {
+    color: {{ iconColor }};
+  }
+  {% if audioPlayerColor != "" %}
+    .audiojs {
+      background: {{ audioPlayerColor }};
+    }
+    .audiojs .scrubber {
+      background: {{ audioPlayerColor }};
+      filter: brightness(110%);
+    }
+    .audiojs .loaded {
+      background: {{ audioPlayerColor }};
+      filter: brightness(105%);
+    }
+    .audio__playlist {
+      background: {{ audioPlayerColor }};
+      border-color: {{ audioPlayerColor }};
+    }
+  {% endif %}
+</style>
+
+{% if post.downloads.size > 0 %}
+  <div class="panel__block" id="block-{{ block.id }}" {% block_attributes %}>
+    <div class="audio">
+      {% for download in post.downloads %}
+        {% if download.extension == '.mp3' %}
+          <div style="display:none;">{% increment audio_count %}</div>
+        {% endif %}
+      {% endfor %}
+      {% if audio_count > 0 %}
+        <audio preload="auto"></audio>
+        <ol class="audio__playlist">
+          {% for download in post.downloads %}
+            {% if download.extension == '.mp3' %}
+              <li><a href="#" data-src="{{ download.url }}">{{ download.display_name }}</a></li>
+            {% endif %}
+          {% endfor %}
+        </ol>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  {% if editor %}
+    <div class="panel__block editor-null" id="block-{{ block.id }}" {% block_attributes %}>
+      Audio Player Will Show Here
+    </div>
+  {% endif %}
+{% endif %}

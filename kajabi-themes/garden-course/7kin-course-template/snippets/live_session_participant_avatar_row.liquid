@@ -1,0 +1,19 @@
+{% assign live_session_participants_max_visible = max_visible | default: 4 %}
+{% assign coaching_total_participants = participants.size %}
+{% assign live_session_participants_remaining_count = coaching_total_participants | minus: live_session_participants_max_visible | at_least: 0 %}
+
+<div class="live-session-participant-avatar-row">
+  {% for participant in participants limit: live_session_participants_max_visible %}
+    <div class="live-session-participant-avatar-wrapper">
+      {% include 'live_session_participant_avatar', participant: participant, with_border: true %}
+    </div>
+  {% endfor %}
+
+  {% if live_session_participants_remaining_count > 0 %}
+    <div class="live-session-participant-avatar-wrapper live-session-participant-avatar-wrapper--overlay">
+      <div class="live-session-participant-avatar live-session-participant-avatar--overlay">
+        <span class="live-session-participant-avatar__remaining-count">+{{ live_session_participants_remaining_count | plus: 1 }}</span>
+      </div>
+    </div>
+  {% endif %}
+</div>

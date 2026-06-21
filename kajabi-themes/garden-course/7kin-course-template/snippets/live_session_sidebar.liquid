@@ -1,0 +1,22 @@
+{% for block in section.blocks %}
+  {% case block.type %}
+    {% when 'post_info' %}
+      {% include "post_info" %}
+    {% when 'post_downloads' %}
+      {% include "sidebar_downloads" %}
+    {% when 'post_video_download' %}
+      {% include "sidebar_video_download" %}
+    {% when 'custom_sidebar_block' %}
+      {% include "sidebar_custom" %}
+    {% when 'instructor' %}
+      {% include "sidebar_instructor" %}
+    {% when 'sidebar_img' %}
+      {% include "sidebar_img" %}
+    {% when 'cross_sell' %}
+      {% include "sidebar_cross_sell" %}
+    {% when 'coaching_scheduling_widget' %}
+      {% include "coaching_scheduling_widget", sectionType: 'sidebar' %}
+    {% when 'live_session_downloads' %}
+      {% include "live_session_downloads" %}
+  {% endcase %}
+{% endfor %}

@@ -1,0 +1,70 @@
+<!-- Header Variables -->
+{% assign h-Show                  = section.settings.show_header %}
+{% assign h-ShowMenu              = section.settings.show_menu %}
+{% assign h-Menu                  = section.settings.menu %}
+{% assign h-BgColor               = section.settings.background_color | default: "#fff" %}
+{% assign h-AutoTextColor         = h-BgColor | color_scheme_class %}
+{% assign h-TextColor             = section.settings.text_color | default: "" %}
+{% assign h-Alignment             = section.settings.align_logo %}
+{% assign h-LogoType              = section.settings.logo_type %}
+{% assign h-LogoText              = section.settings.logo_text %}
+{% assign h-LogoAction            = section.settings.logo_action %}
+{% assign h-LogoImg               = section.settings.logo | default: settings.brand.logo | image_picker_url: 'logo.png' %}
+{% assign h-HeightString          = section.settings.header_height | remove: "px" | default: 40 %}
+{% assign h-HeightNumber          = h-HeightString | times: 1 %}
+{% assign h-SeachToggle           = section.settings.search_toggle %}
+
+{% if h-HeightNumber < 100 %}
+  {% assign h-HeightMobile        = h-HeightNumber | append: "px" %}
+  {% assign h-HalfHeight          = h-HeightNumber | divided_by: 2 | append: "px" %}
+{% else %}
+  {% assign h-HeightMobile        = 100 | append: "px" %}
+  {% assign h-HalfHeight          = 100 | divided_by: 2 | append: "px" %}
+{% endif %}
+
+<!-- KJB Settings Variables -->
+{% assign kjb-H-BgColor           = 'background_color' | settings_id: section: section %}
+{% assign kjb-H-LogoText          = 'logo_text' | settings_id: section: section %}
+{% assign kjb-H-LogoImg           = 'logo' | settings_id: section: section %}
+{% assign kjb-H-Menu              = 'menu' | settings_id: section: section %}
+{% assign kjb-H-SearchToggle      = 'search_toggle' | settings_id: section: section %}
+
+<style>
+  .header {
+    background: {{ h-BgColor }};
+  }
+  {% if h-TextColor != "" %}
+    .header--dark a, .header--dark a:hover, .header--dark a:not([href]):not([tabindex]) {
+      color: {{ h-TextColor }};
+    }
+    .header--light a, .header--light a:hover, .header--light a:not([href]):not([tabindex]) {
+      color: {{ h-TextColor }};
+    }
+  {% endif %}
+  .header .logo--text, .header--left .header-menu a {
+    line-height: {{ h-HeightNumber }}px;
+  }
+  .header .logo--image {
+    height: {{ h-HeightNumber }}px;
+  }
+  .header .logo img {
+    max-height: {{ h-HeightNumber }}px;
+  }
+  /*============================================================================
+    #Header Responsive Styles
+  ==============================================================================*/
+  @media (max-width: 767px) {
+    .header .logo--text {
+      line-height: {{ h-HeightMobile }};
+    }
+    .header .logo--image {
+      max-height: {{ h-HeightMobile }};
+    }
+    .header .logo img {
+      max-height: {{ h-HeightMobile }};
+    }
+    .header .header-ham {
+      top: {{ h-HalfHeight }};
+    }
+  }
+</style>

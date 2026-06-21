@@ -1,0 +1,94 @@
+{% include "panel_style", bgColor: "#fff" %}
+
+{% if section.settings.show_syllabus %}
+  {% if section.settings.type == "posts" %}
+    {% paginate product.categories by 10 %}
+      {% for category in paginate.collection %}
+        {% if category.pending_drip? %}
+          <div class="panel syllabus" kjb-settings-id="{{ 'type' | settings_id: section: section }}">
+            <div class="panel__body">
+              <h5 class="syllabus__heading">
+                {{ category.title }}
+                {% if category.show_as_paywalled? %}
+                  {% include "icon_paywall" %}
+                {% endif %}
+                {% include "drip_date" %}
+              </h5>
+            </div>
+          </div>
+        {% else %}
+          <div class="panel syllabus" kjb-settings-id="{{ 'type' | settings_id: section: section }}">
+            <div class="panel__body">
+              <h5 class="syllabus__heading">
+                {{ category.title }}
+                {% if category.show_as_paywalled? %}
+                  {% include "icon_paywall" %}
+                {% endif %}
+              </h5>
+              {% for post in category.posts limit:10%}
+                {% include "syllabus_item" %}
+              {% endfor %}
+              {% if category.posts.size >= 10 %}
+                <div class="syllabus__item">
+                  <a href="{{ category.url }}" kjb-settings-id="{{ 'show_more' | settings_id: section: section }}">
+                    {%- element "section.settings.show_more" -%}
+                      {{ section.settings.show_more }}
+                    {%- endelement -%}
+                  </a>
+                </div>
+              {% endif %}
+              {% if category.children? %}
+                {% for category in category.subcategories %}
+                  {% if category.pending_drip? %}
+                    <div class="syllabus__item syllabus__item--sub" id="category-{{ category.id }}">
+                      <h5 class="syllabus__heading">
+                        {{ category.title }}
+                        {% if category.show_as_paywalled? %}
+                          {% include "icon_paywall" %}
+                        {% endif %}
+                        {% include "drip_date" %}
+                      </h5>
+                    </div>
+                  {% else %}
+                    <div class="syllabus__item syllabus__item--sub" id="category-{{ category.id }}">
+                      <h5 class="syllabus__heading">
+                        {{ category.title }}
+                        {% if category.show_as_paywalled? %}
+                          {% include "icon_paywall" %}
+                        {% endif %}
+                      </h5>
+                      {% for post in category.posts %}
+                        {% include "syllabus_item" %}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+      {% if paginate.pages > 1 %}
+        <div class="pag__wrapper">
+          {% include "pagination" %}
+        </div>
+      {% endif %}
+    {% endpaginate %}
+  {% else %}
+    <div class="panel syllabus" kjb-settings-id="{{ 'type' | settings_id: section: section }}">
+      <div class="panel__body">
+        <h5 class="syllabus__heading" kjb-settings-id="{{ 'categories' | settings_id: section: section }}">
+          {% element "section.settings.categories" %}{{ section.settings.categories }}{% endelement %}<span class="pull-right">{{ current_product.categories.size }}</span>
+        </h5>
+        {% paginate current_product.categories by 10 %}
+          {% for category in paginate.collection %}
+            {% include "category" %}
+          {% endfor %}
+          {% if paginate.pages > 1 %}
+            {% include "pagination" %}
+          {% endif %}
+        {% endpaginate %}
+      </div>
+    </div>
+  {% endif %}
+{% endif %}

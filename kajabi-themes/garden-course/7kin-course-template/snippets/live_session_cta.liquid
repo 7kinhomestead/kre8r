@@ -1,0 +1,34 @@
+{% assign btn_background_color = section.settings.cta_btn_background_color | default: settings.color_offset | default: settings.brand.accent_color %}
+{% assign btn_text_color = section.settings.cta_btn_text_color | default: settings.text_color %}
+{% assign btn_border_radius = section.settings.cta_btn_border_radius | append: "px" %}
+{% assign btn_style = section.settings.cta_btn_style %}
+{% assign btn_size = section.settings.cta_btn_size %}
+{% assign btn_width = section.settings.cta_btn_width %}
+
+<style>
+  .bg-adaptive .live-session-details-cta-button.btn,
+  .live-session-details-cta-button.btn {
+    color: {{ btn_text_color }};
+    border-color: {{ btn_background_color }};
+    border-radius: {{ btn_border_radius }};
+    background-color: {{ btn_background_color }};
+  }
+  .bg-adaptive .live-session-details-cta-button.btn--outline,
+  .live-session-details-cta-button.btn--outline {
+    background: transparent;
+    color: {{ btn_background_color }};
+  }
+</style>
+
+<a
+  class="live-session-details-cta-button btn btn--{{ btn_style }} btn--{{ btn_size }} btn--{{ btn_width }}"
+  href="{{ live_session.join_button_link_href }}"
+  target="_blank"
+  rel="noopener"
+  kjb-settings-id="{{ 'cta_btn_background_color' | settings_id: section: section }}"
+  role="button"
+>
+  {%- element "section.settings.cta_btn_text" -%}
+    {{ section.settings.cta_btn_text }}
+  {%- endelement -%}
+</a>

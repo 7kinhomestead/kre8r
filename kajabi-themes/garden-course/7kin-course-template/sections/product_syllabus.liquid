@@ -1,0 +1,45 @@
+{% include "product_syllabus" %}
+
+{% schema %}
+  {
+    "name": "Product Syllabus",
+    "elements": [
+      {
+        "type": "checkbox",
+        "id": "show_syllabus",
+        "label": "Show Syllabus",
+        "default": "true"
+      },
+      {
+        "type": "radio",
+        "id": "type",
+        "label": "Syllabus Type",
+        "default": "categories",
+        "info": "Be careful with using post setting on larger products as it can cause a liquid error.",
+        "options": [
+          { "label": "Categories", "value": "categories" },
+          { "label": "Posts", "value": "posts" }
+        ]
+      },
+      {
+        "type": "text",
+        "default": "",
+        "label": "Truncate At",
+        "id": "truncate",
+        "info": "Insert a custom number if you would like to override the standard 100 character truncation. Only applies to post type syllabus."
+      },
+      {
+        "type": "text",
+        "default": "Categories",
+        "label": "Categories Text",
+        "id": "categories"
+      },
+      {
+        "type": "text",
+        "id": "show_more",
+        "label": "Show More Text",
+        "default": "Show More"
+      }
+    ]
+  }
+{% endschema %}

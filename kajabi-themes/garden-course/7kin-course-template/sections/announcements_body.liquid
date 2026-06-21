@@ -1,0 +1,37 @@
+<div class="panel syllabus">
+  <div class="panel__body">
+    {% if current_product.announcements.size > 0 %}
+      <h4 class="panel__heading" kjb-settings-id="{{ 'announcements' | settings_id: section: section }}" {% element_attributes "section.settings.announcements" %}>{{ section.settings.announcements }}</h4>
+    {% else %}
+      <h4 class="panel__heading" kjb-settings-id="{{ 'no_announcements' | settings_id: section: section }}" {% element_attributes "section.settings.no_announcements" %}>{{ section.settings.no_announcements }}</h4>
+    {% endif %}
+    {% paginate current_product.announcements by 10 %}
+      {% for announcement in paginate.collection %}
+        {% include "announcement" %}
+      {% endfor %}
+      {% if paginate.pages > 1 %}
+        {% include "pagination" %}
+      {% endif %}
+    {% endpaginate %}
+  </div>
+</div>
+
+{% schema %}
+  {
+    "name": "Announcements Body",
+    "elements": [
+      {
+        "type": "text",
+        "id": "announcements",
+        "label": "Announcements",
+        "default": "Announcements"
+      },
+      {
+        "type": "text",
+        "id": "no_announcements",
+        "label": "No Announcements",
+        "default": "You Have No Announcements"
+      }
+    ]
+  }
+{% endschema %}

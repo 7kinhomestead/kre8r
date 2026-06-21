@@ -1,0 +1,75 @@
+{% include "post_comments" %}
+
+{% schema %}
+  {
+    "name": "Post Comments",
+    "elements": [
+      {
+        "type": "text",
+        "id": "language_comment_singular",
+        "label": "Comments Singular",
+        "default": "Comment"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_plural",
+        "label": "Comments Plural",
+        "default": "Comments"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_locked",
+        "label": "Comments Locked",
+        "default": "Comments Locked"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_placeholder",
+        "label": "Comments Placeholder",
+        "default": "Say Something..."
+      },
+      {
+        "type": "text",
+        "id": "language_comment_add",
+        "label": "Comment Submit",
+        "default": "Post Comment"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_reply",
+        "label": "Comment Reply",
+        "default": "REPLY"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_edit",
+        "label": "Comment Edit",
+        "default": "EDIT"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_show_more",
+        "label": "Show More Comments",
+        "default": "Show More"
+      },
+      {
+        "type": "text",
+        "id": "language_comment_show_more_loading",
+        "label": "Show More Comments Loading",
+        "default": "Loading More Comments..."
+      },
+      {
+        "type": "color",
+        "id": "comment_btn_background_color",
+        "label": "Button Color",
+        "allow_blank": true
+      },
+      {
+        "type": "color",
+        "id": "comment_btn_text_color",
+        "label": "Button Text Color",
+        "allow_blank": true
+      }
+    ]
+  }
+{% endschema %}

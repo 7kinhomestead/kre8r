@@ -1,0 +1,51 @@
+{% if post.downloads.count > 0 %}
+  <div class="panel__block" id="block-{{ block.id }}" {% block_attributes %}>
+    <h5 class="panel__heading" kjb-settings-id="{{ 'language_downloads' | settings_id: section: section,block: block }}">
+      {%- element "block.settings.language_downloads" -%}
+        {{ block.settings.language_downloads }}
+      {%- endelement -%}
+    </h5>
+    <div class="downloads">
+      {% for download in post.downloads %}
+        <a class="downloads__download" href="{{ download.url }}">
+          <div class="media">
+            <div class="media-left media-middle">
+              {% if download.extension == '.doc' or download.extension == '.docx' %}
+                <i class="fa fa-file-word-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.gif' or download.extension == '.jpeg' or download.extension == '.jpg' or download.extension == '.png' %}
+                <i class="fa fa-file-image-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.mp3' or download.extension == '.wav' or download.extension == '.m4a' or download.extension == '.wma' %}
+                <i class="fa fa-file-audio-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.mp4' or download.extension == '.mov' or download.extension == '.3g2' or download.extension == '.3gp' or download.extension == '.avi' or download.extension == '.flv' or download.extension == '.mpg' or download.extension == '.ogv' or download.extension == '.wmv' %}
+                <i class="fa fa-file-video-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.zip' %}
+                <i class="fa fa-file-archive-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.xlsx' or download.extension == '.xls' %}
+                <i class="fa fa-file-excel-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.pptx' or download.extension == '.ppt' %}
+                <i class="fa fa-file-powerpoint-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.txt' or download.extension == '.rtf' or download.extension == '.odt' %}
+                <i class="fa fa-file-text-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.html' %}
+                <i class="fa fa-file-code-o" aria-hidden="true"></i>
+              {% elsif download.extension == '.pdf' %}
+                <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
+              {% else %}
+                <i class="fa fa-file-o" aria-hidden="true"></i>
+              {% endif %}
+            </div>
+            <div class="media-body media-middle">
+              {{ download.display_name }}
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+{% else %}
+  {% if editor %}
+    <div class="panel__block editor-null" id="block-{{ block.id }}" kjb-settings-id="{{ 'language_downloads' | settings_id: section: section,block: block }}" {% block_attributes %}>
+      Post Downloads Will Show Here
+    </div>
+  {% endif %}
+{% endif %}

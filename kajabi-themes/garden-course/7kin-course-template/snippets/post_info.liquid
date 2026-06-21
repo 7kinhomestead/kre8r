@@ -1,0 +1,15 @@
+<div class="panel__block" kjb-settings-id="{{ 'show_desc' | settings_id: section: section, block: block }}" id="block-{{ block.id }}" {% block_attributes %}>
+  {% if block.settings.show_title %}
+    <h1 class="panel__title" kjb-settings-id="{{ 'show_title' | settings_id: section: section, block: block }}">{{ post.title }}</h1>
+  {% endif %}
+  {% if block.settings.show_category %}
+    <h5 class="panel__sub-title" kjb-settings-id="{{ 'show_category' | settings_id: section: section, block: block }}"><a href="{{ post.category.url }}">{{ post.category.title }}</a></h5>
+  {% endif %}
+  {% if block.settings.show_desc %}
+    {% if post.show_as_paywalled? %}
+      {{ post.body | lorem_replace_html }}
+    {% else %}
+      {{ post.body }}
+    {% endif %}
+  {% endif %}
+</div>

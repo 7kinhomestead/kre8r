@@ -1,0 +1,286 @@
+{% include "footer_style" %}
+
+{% if f-Show  %}
+  {% unless settings.use_bg_img or settings.v_align == "middle" %}
+    <style>
+      .container--main {
+        background-color: {{ f-BgColor }};
+      }
+    </style>
+  {% endunless %}
+  <footer class="footer footer--{{ f-AutoTextColor }} footer--{{ f-Alignment }}" kjb-settings-id="{{ kjb-f-BgColor }}">
+    <div class="container">
+      <div class="footer__text-container">
+        {% if f-ShowLogo %}
+          <img src="{{ f-Logo }}" class="logo footer__logo" kjb-settings-id="{{ kjb-f-Logo }}"/>
+        {% endif %}
+        {% if f-ShowCopy %}
+          <span kjb-settings-id="{{ kjb-f-Copy }}" class="footer__copyright">&copy; {{ 'now' | date: "%Y" }} {{ f-Copy }}</span>
+        {% endif %}
+        {% if current_site.display_powered_by_link? %}
+          <div class="footer__powered-by">
+            {{ powered_by_link }}
+          </div>
+        {% endif %}
+        {% if f-ShowMenu %}
+          <div kjb-settings-id="{{ kjb-f-Menu }}" class="footer__menu">
+            {% for link in current_site.link_lists[f-Menu].links %}
+              <a class="footer__menu-item" href="{{ link.url }}">{{ link.name }}</a>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      {% include "social_icons" %}
+    </div>
+  </footer>
+{% endif %}
+
+{% schema %}
+  {
+    "name": "Footer",
+    "elements": [
+      {
+        "type": "checkbox",
+        "id": "show_footer",
+        "label": "Show Footer",
+        "default": "true"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_copyright",
+        "label": "Show Copyright",
+        "default": "true"
+      },
+      {
+        "type": "text",
+        "id": "copyright",
+        "label": "Copyright",
+        "default": "Kajabi"
+      },
+      {
+        "type": "header",
+        "content": "Logo",
+        "style": "subheading"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_logo",
+        "label": "Show Logo",
+        "default": "false"
+      },
+      {
+        "type": "image_picker",
+        "id": "logo",
+        "label": "Logo Image",
+        "fit": "max",
+        "width": 1000,
+        "height": 1000,
+        "info": "Suggested dimensions: 360x80",
+        "default_global_settings_attribute": "brand.logo"
+      },
+      {
+        "type": "header",
+        "content": "Menu",
+        "style": "subheading"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_menu",
+        "label": "Show Menu",
+        "default": "true"
+      },
+      {
+        "type": "link_list",
+        "id": "menu",
+        "label": "Menu",
+        "info": "The menu at the bottom footer.",
+        "default": "footer"
+      },
+      {
+        "type": "header",
+        "content": "Section Appearance",
+        "style": "subheading"
+      },
+      {
+        "type": "color",
+        "label": "Background Color",
+        "id": "background_color",
+        "allow_blank": true,
+        "info": "Will be used as overlay if settings for background image selected. Use Opacity slider."
+      },
+      {
+        "type": "color",
+        "label": "Text Color",
+        "id": "text_color",
+        "allow_blank": true,
+        "info": "Text color will change automatically based on the brightness of your background color. Use this setting if you would like to override with a custom color."
+      },
+      {
+        "type": "radio",
+        "id": "align_logo",
+        "label": "Alignment",
+        "default": "left",
+        "options": [
+          {"value": "left", "label": "Inline"},
+          {"value": "center", "label": "Stacked"}
+        ]
+      },
+      {
+        "type": "header",
+        "id": "social_icons",
+        "content": "Social Icons",
+        "style": "subheading",
+        "info": "Link to your social media accounts. Leaving a field blank will hide that icon. Please use the full URL, for example, https://www.facebook.com/kajabi"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_social_icons",
+        "label": "Show Social Icons",
+        "default": "true"
+      },
+      {
+        "type": "checkbox",
+        "id": "social_icons_new_window",
+        "label": "Open Links in New Window",
+        "default": "false"
+      },
+      {
+        "type": "select",
+        "id": "social_icon_background_style",
+        "label": "Social Icon Background Style",
+        "default": "social-icons--none",
+        "options": [
+          { "label": "Round", "value": "social-icons--round" },
+          { "label": "Square", "value": "social-icons--square" },
+          { "label": "None", "value": "social-icons--none" }
+        ]
+      },
+      {
+        "type": "select",
+        "id": "social_icon_alignment",
+        "label": "Social Icon Alignment",
+        "default": "social-icons--left",
+        "options": [
+          { "label": "Left", "value": "social-icons--left" },
+          { "label": "Center", "value": "social-icons--center" },
+          { "label": "Right", "value": "social-icons--right" }
+        ]
+      },
+      {
+        "type": "color",
+        "label": "Social Icon Color",
+        "id": "social_icons_text_color",
+        "allow_blank": true,
+        "info": "Change the color for the social icons."
+      },
+      {
+        "type": "color",
+        "label": "Social Icon Background Color",
+        "id": "social_icons_background_color",
+        "allow_blank": true,
+        "info": "Change the background color for the social icon containers."
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_facebook",
+        "label": "Facebook",
+        "default": "",
+        "default_global_settings_attribute": "brand.social.facebook"
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_twitter",
+        "label": "Twitter",
+        "default": "",
+        "default_global_settings_attribute": "brand.social.x"
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_instagram",
+        "label": "Instagram",
+        "default": "",
+        "default_global_settings_attribute": "brand.social.instagram"
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_youtube",
+        "label": "YouTube",
+        "default": "",
+        "default_global_settings_attribute": "brand.social.youtube"
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_pinterest",
+        "label": "Pinterest",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_google_plus",
+        "label": "Google Plus",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_vimeo",
+        "label": "Vimeo",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_github",
+        "label": "Github",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_itunes",
+        "label": "iTunes",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_linkedin",
+        "label": "LinkedIn",
+        "default": "",
+        "default_global_settings_attribute": "brand.social.linkedin"
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_soundcloud",
+        "label": "Soundcloud",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_yelp",
+        "label": "Yelp",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_tumblr",
+        "label": "Tumblr",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_slack",
+        "label": "Slack",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_flickr",
+        "label": "Flickr",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "social_icon_link_dribbble",
+        "label": "Dribbble",
+        "default": ""
+      }
+    ]
+  }
+{% endschema %}

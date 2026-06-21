@@ -1,0 +1,25 @@
+{% assign alignment = block.settings.alignment %}
+{% assign margin_top = block.settings.margin.top | default: '0' %}
+{% assign margin_right = block.settings.margin.right | default: '0' %}
+{% assign margin_bottom = block.settings.margin.bottom | default: '0' %}
+{% assign margin_left = block.settings.margin.left | default: '0' %}
+
+{% assign KJB_settings_id = 'content' | settings_id: section: section, block: block %}
+
+<div
+  class="paywall-text"
+  style="
+    text-align: {{ alignment }};
+    margin-top: {{ margin_top }}rem;
+    margin-right: {{ margin_right }}rem;
+    margin-bottom: {{ margin_bottom }}rem;
+    margin-left: {{ margin_left }}rem;
+  "
+  kjb-settings-id="{{ KJB_settings_id }}"
+  id="block-{{ block.id }}"
+  {% block_attributes %}
+>
+  {%- element "block.settings.content" -%}
+    {{ block.settings.content }}
+  {%- endelement -%}
+</div>

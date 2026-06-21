@@ -1,0 +1,77 @@
+{% assign countTextElementPath = "section.settings.count_text_singular" %}
+{% if post.category.posts.count > 1 %}
+  {% assign countTextElementPath = "section.settings.count_text_plural" %}
+{% endif %}
+
+<div class="player__playlist">
+  <div class="playlist">
+    <div class="playlist__title">
+      <div class="media">
+        <div class="media-body media-middle">
+          <h2>{{ post.category.title }}</h2>
+        </div>
+        <div class="media-right" kjb-settings-id="{{ 'count_text_plural' | settings_id: section: section }}">
+          <h3>{{ post.category.posts.count }}
+            {% element countTextElementPath %}
+              {{ post.category.posts.count | pluralize: section.settings.count_text_singular, section.settings.count_text_plural }}
+            {% endelement %}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="playlist__body">
+      {% for p in post.category.posts %}
+        {% if post.id == p.id %}
+          {% assign postNumber = forloop.index %}
+          <a href="{{ p.url }}" class="media track track--active">
+        {% else %}
+          <a href="{{ p.url }}" class="media track">
+        {% endif %}
+          <div class="media-left media-middle">
+            {% if post.id == p.id %}
+              <p class="track__count active">
+                {% if post.video %}
+                  <i class="fa fa-play" aria-hidden="true"></i>
+                {% else %}
+                  {{ forloop.index }}
+                {% endif %}
+              </p>
+            {% else %}
+              <p class="track__count">{{ forloop.index }}</p>
+            {% endif %}
+          </div>
+          <div class="media-left media-middle">
+            {% if p.poster_image_url  %}
+              <img src="{{ p.poster_image_url  }}" class="track__thumb" />
+            {% else %}
+              <img src="{{ 'placeholder.png' | asset_url }}" class="track__thumb" />
+            {% endif %}
+          </div>
+          <div class="media-body media-middle">
+            <p class="track__title">{{ p.title }}</p>
+              {% if p.completed? %}
+              {% elsif p.progress_percent %}
+                <div class="progress__bar">
+                  <div class="progress__fill" role="progressbar" aria-valuenow="{{ post.progress_percent }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ p.progress_percent }}%;"></div>
+                </div>
+              {% endif %}
+          </div>
+          <div class="media-right media-middle">
+            {% if p.completed? %}
+              <div class="progress__icon">
+                <i class="fa fa-check"></i>
+              </div>
+            {% endif %}
+          </div>
+        </a>
+        {% assign last-post = p %}
+      {% endfor %}
+      {% if last-post.next.url %}
+        <a class="media track track--more" href="{{ last-post.next.url }}">
+          <div class="media-body media-middle">
+            <p class="track__more" kjb-settings-id="{{ 'next_cat' | settings_id: section: section }}" {% element_attributes "section.settings.next_cat" %}>{{ section.settings.next_cat }}</p>
+          </div>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
