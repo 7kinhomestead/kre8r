@@ -29,7 +29,8 @@ Source tags: 📹 Jason video · 🔬 research finding · ✏️ new writing · 
 *The second big written supplement — turn a datasheet from marketing into a decision.*
 - 📹 `2qyyDvAC2Yk` "Testing The Ampeak 3000w Inverter" (real-gear eval)
 - 🔬 **PV-input vs AC-output** (EG4 12000XP: 24kW PV in / 12kW AC out = 2×), **continuous vs surge** watts, **Voc cold-weather rise** that fries controllers, **BMS current limit** bottleneck, Ah-needs-voltage, power-station inflation
-- ✏️ "anatomy of a spec sheet" walkthrough · 📊 **annotated spec-sheet diagram** (call out the numbers that actually bind) · 🛒 **Signature Solar / EG4** (the "billyland" of solar)
+- ✏️ "anatomy of a spec sheet" walkthrough · 📊 **annotated spec-sheet diagram** (call out the numbers that actually bind)
+- 🛒 **AFFILIATE (locked):** the exact build gear → **SunGold** (inverter) + **LiTime** (batteries) links; **Signature Solar / EG4** for everything else (panels, wire, breakers, racking — they carry basically all of it) AND the "step-up" path to the S2-class EG4 rig. Frame honestly: "here's my exact rig + where I got it; for the rest, and for when you go bigger, here's the one-stop shop."
 
 ## Module 4 — Build It: Mount the Array & Set the Gear
 *Hands-on assembly — racking, panels, battery, mounting the all-in-one.*
