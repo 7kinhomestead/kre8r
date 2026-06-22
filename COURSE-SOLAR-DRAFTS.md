@@ -682,3 +682,7 @@ And here's the closer, from a former solar professional who'll say it plain: thi
 **Your move this week:** Put two recurring reminders on your phone — *"check panels & re-torque lugs"* on a season you'll remember, and *"glance at battery health."* Then go build something out of your junk pile. You've got the whole skill now. Skills are extremely lightweight — easy to pack, very difficult to steal. Go use it.
 
 > I'll catch you in the next one.
+
+The case you opened in Module 1 — *how do I power this life myself?* — you just closed it with your own two hands. The lights are on because you put them there.
+
+**Shine a light on the darkness. Case closed.**
