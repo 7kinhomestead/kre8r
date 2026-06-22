@@ -60,6 +60,14 @@ from `COURSE-SOLAR-DRAFTS.md` once the draft is locked. Source clips: `D:\kajabi
 - Linked from the landing page tools section.
 - ⚠️ These callouts + the glossary lesson are **only in Kajabi, not in COURSE-SOLAR-DRAFTS.md** — a full re-pour from the draft would drop them. Re-add after any re-pour (or fold into the draft).
 
+## ⚠️ Kajabi BODY-SIZE gotcha (learned the hard way)
+Kajabi **silently drops** a lesson `body` that's too large — `update_course_content` returns
+"success" but the old body stays. **~12.5 KB persists; ~26 KB fails.** Keep each lesson body
+**under ~18–20 KB**. That's why the embedded glossary is split into **two lessons**:
+- Part 1 (Units, Panels, Controller, Batteries) = lesson `2198302713` (~12.5 KB)
+- Part 2 (Wiring, Grounding, Rigs, Troubleshooting) = lesson `2198303358` (~10.8 KB)
+Always `get_lesson` to confirm a large body actually persisted — don't trust the success envelope.
+
 ## ⚠️ Kajabi TABLE gotcha (learned the hard way)
 Kajabi's markdown converter **does NOT render pipe tables** — it strips `<table>` tags too
 (in markdown mode). Any lesson with a table must be poured as **full HTML** with
