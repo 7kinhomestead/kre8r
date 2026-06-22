@@ -217,3 +217,17 @@
 - https://www.victronenergy.com/live/drafts:off-grid_documents:choosing_dc_and_or_ac_solar
 - https://www.victronenergy.com/live/mppt-error-codes
 - https://www.victronenergy.com/media/pg/Inverter_RS_Smart_Solar/en/technical-specifications.html
+---
+
+## Pass 4 — SunGold inverter + LiTime battery docs (the anchor gear) — added Jun 21 2026
+*(Targeted pass for the troubleshooting module: the first 3 passes covered the common brands but not Jason's actual gear. Synthesis wrapper came back garbled/rate-limited but the verified findings + primary source links are intact: 25 claims confirmed, 0 killed.)*
+
+**SunGold Power — fault codes (PRIMARY, from their own manuals):**
+- **SPH 48V split-phase line (SPH5048P / SPH6548P / SPH8-10KW):** manual §7.1 numeric fault table 01–64. Key codes: 01 Battery Voltage Low · 06 Battery Over-Voltage · 09 PV Voltage High · 14 Inverter Overload · 17 Inverter Short · 19/20 Over-Temperature · 58 BMS Comm Error · 64 BMS Over-Voltage. Thresholds: grid-in ~90–140 VAC, over-temp ~90°C/3s, tiered overload.
+- **8K–12KW LFPV hybrid line:** "F-code" LCD table (Voltronic/Axpert-derived). F02 over-temp ~100°C · F03 batt over-volt ~63V · F04 batt under-volt ~46/42.8/40.4 VDC (by model) · F56 low batt ~36V · F07 overload 110%/150% · F08 bus high ~500V · F10 PV over-current ~40A · F12 DC-DC over-current ~35A. F51–F58 larger models only.
+- Manuals hub: https://sungoldpower.com/pages/user-manual · SPH8-10KW V1.3 PDF · SPH6548P PDF · LFPV8-12K PDF.
+
+**LiTime LiFePO4 — manuals + BMS behavior:** exact BMS threshold table is **NOT** in a single primary doc (do not publish specific numbers; link the model manual). Verified: LiTime publishes per-model user manuals; BMS protects by disconnecting (OCP/OVP/UVP/OTP) and recovers when back in range; LiFePO4 must NOT be charged below freezing (BMS blocks charging cold — discharge generally fine); 4×12V in series → 48V per LiTime's series/parallel guidance (matching/limits/balancing).
+- Links: https://www.litime.com/pages/user-manuals · https://www.litime.com/products/12v-230ah-plus-lifepo4-battery · https://au.litime.com/pages/litime-lithium-battery-user-manual · https://ca.litime.com/blogs/tips-and-tricks/batteries-in-series-vs-parallel
+
+> NOTE: this also closes the Module 4 [VERIFY] flag on the LiFePO4 low-temp charge cutoff — taught as the principle ("don't charge below freezing; exact cutoff is in your LiTime manual") with the manual linked, rather than an unverified number.

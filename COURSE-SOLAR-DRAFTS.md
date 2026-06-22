@@ -477,7 +477,7 @@ Before I hand you the lookup table — and I will, it's the next lesson and it's
 
 ### Lesson 7.3 — The Fault-Code Field Reference (the third big written supplement)
 
-> ‹SOURCE — PULL BEFORE PUBLISH: ✏️🔬 THE PAID-VALUE SUPPLEMENT. Every code below traces to Research Pass 3 with its finding number. NO invented codes. Brands a DIYer actually owns: Victron Err, MPP Solar/Voltronic numeric table, EG4 alarms, Growatt, plus the universal symptom-first entries. Every entry: code → what it means → first move. Lead with the hard "consult YOUR manual, codes vary by firmware" warning. This is a reference, not prose — keep it scannable.›
+> ‹SOURCE — PULL BEFORE PUBLISH: ✏️🔬 THE PAID-VALUE SUPPLEMENT. Every code below traces to Research Pass 3 with its finding number. NO invented codes. Brands a DIYer actually owns: **SunGold (the anchor gear — Pass 4, primary manuals) + LiTime battery BMS (Pass 4)**, Victron Err, MPP Solar/Voltronic numeric table, EG4 alarms, Growatt, plus the universal symptom-first entries. Every entry: code → what it means → first move. Lead with the hard "consult YOUR manual, codes vary by firmware" warning. This is a reference, not prose — keep it scannable.›
 
 This is the part you'll have open on your phone in the cold with a headlamp on, and it's the part a video could never be. Bookmark it. **Read this warning first, every time:**
 
@@ -492,6 +492,39 @@ And before any table — the **symptom-first** entries, because the worst faults
 | **Overload fault (any brand)** | You're pulling more than it can hold | Shed load — switch off equipment until it clears *(#6, #7)* |
 | **"Comms" / battery-not-talking fault** | Wrong battery type on LCD, or wrong comms-cable pinout | Set correct battery brand on the LCD; verify cable pinout *(#8, #12)* |
 | **One panel underperforming** | Failed bypass diode / broken cell string | In full sun, measure each panel's Voc; the one ~>10% below its siblings is the suspect *(#16, #17)* |
+
+#### SunGold Power — YOUR inverter (and most of these builds) ⭐
+*The anchor gear for this whole course. SunGold's manuals are free PDFs — download yours from **sungoldpower.com/pages/user-manual**. Two code families depending on your model. (Primary: SunGold's own manuals + the Voltronic/Axpert lineage they share. Pass 4.)*
+
+**SPH 48V split-phase line (SPH5048P / SPH6548P / SPH8-10KW) — numeric table (manual §7.1, codes 01–64):**
+
+| Code | Meaning | First move |
+|---|---|---|
+| **01** | Battery voltage low | Charge the battery; check for a loose or undersized battery cable |
+| **06** | Battery over-voltage | Check your charge settings + actual battery voltage |
+| **09** | PV voltage high | Your string Voc is too high — recheck panel count / cold-weather Voc (Module 3) |
+| **14** | Inverter overload | **Shed load** |
+| **17** | Inverter short circuit | Kill power; find the short on the AC output *before* you restart |
+| **19 / 20** | Over-temperature | Clear airflow / move out of direct sun (trips ~90°C for 3s) |
+| **58** | BMS communication error | Check the battery comms cable + the battery-type setting on the LCD |
+| **64** | BMS over-voltage | The battery's BMS is reporting over-voltage — check charge settings |
+
+*(Thresholds in the manual: grid-in window ~90–140 VAC, over-temp ~90°C/3s, tiered overload. The full 01–64 table is in your PDF — this is the greatest-hits.)*
+
+**8K–12KW LFPV hybrid line — "F-code" LCD table (Voltronic/Axpert-derived, so it matches the MPP table below):**
+
+| Code | Meaning | First move |
+|---|---|---|
+| **F02** | Over-temperature (~100°C) | Clear airflow, cool it down |
+| **F03** | Battery over-voltage (~63V) | Check charge settings |
+| **F04** | Battery under-voltage (~46 / 42.8 / 40.4 VDC by model) | Charge the battery |
+| **F56** | Low battery (~36V) | Charge *now* — you're at the edge of cutoff |
+| **F07** | Overload (110% / 150%) | **Shed load** |
+| **F08** | Bus voltage high (~500V) | Internal — restart; service if it persists |
+| **F10** | PV over-current (~40A) | Check the array/string configuration |
+| **F12** | DC-DC over-current (~35A) | Internal — restart; service if it persists |
+
+*(F51–F58 appear on larger models only. Manuals: SPH8-10KW, SPH6548P, and LFPV 8-12K PDFs — all linked off sungoldpower.com/pages/user-manual.)*
 
 #### Victron (MPPT / Inverter RS / Orion) — "Err" codes
 *Read via the VictronConnect app, a remote panel, or the Toolkit App for LED-blink codes. The same Err list spans the whole MPPT/RS/Orion line. (Pass 3, #1.)*
@@ -544,6 +577,13 @@ And before any table — the **symptom-first** entries, because the worst faults
 | **Error 302** | No AC connection | Check AC wiring and the AC breaker status *(#18)* |
 | **Error 116** | EEPROM fault | Morning-only → contact Growatt; all-day → restart first, then service if it persists *(#19)* |
 | **Error 405** | Relay fault | Restart; if it continues, contact Growatt (often a control-board issue) *(#19)* |
+
+#### LiTime LiFePO4 batteries — YOUR battery ⭐
+*LiTime (formerly Ampere Time) publishes user manuals at **litime.com/pages/user-manuals** — download the one for your exact model (e.g. the 12V 230Ah). Unlike the inverters, LiTime doesn't flash a screen code — the BMS just **acts.** Here's what it does and why. (Pass 4: manuals are primary; LiTime doesn't publish one tidy threshold table, so for exact numbers go to your model's PDF — not a forum.)*
+
+- **The BMS protects by disconnecting.** See over-current, over- or under-voltage, or out-of-range temperature, and it cuts the battery off to save the cells. The pack "going dead" or "disappearing from the inverter" is *usually the BMS doing its job, not a failure* — it reconnects once conditions are back in range (or after a charge/reset, per the manual). The seatbelt working isn't a crash.
+- **The cold-charging cutoff is the big one** *(and it's the answer to the question Module 4 left open).* LiFePO4 cells get damaged if you **charge** them below freezing, so the BMS blocks *charging* when it's too cold — your panels are making power and the battery just won't take it on a frosty morning. **Discharging in the cold is generally fine; charging is what gets blocked.** The exact cutoff temperature is in your LiTime manual — pull it up and write it on the battery.
+- **Wiring four in series for 48V** (your rig, and most of these builds): four 12V batteries in series make your 48V bank — but read **LiTime's series/parallel guide** first (matching, count limits, balancing). A mismatched series string is how you cook a BMS. *(Links: litime.com/pages/user-manuals · the 12V 230Ah page · LiTime's "series vs parallel" guide.)*
 
 **A word on BMS faults across all brands:** when the *battery's* brain throws the fault, it's almost always one of three things — a comms cable that's loose or wrong-pinout, the wrong battery type selected on the inverter, or the BMS protecting itself (over/under voltage, over-current, over-temp) by cutting off. Check the cable and the setting first *(#8, #12)*. The BMS doing its job and shutting down is not a malfunction — it's the seatbelt working.
 
