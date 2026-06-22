@@ -5,15 +5,15 @@
 <!-- ground -->
 <line x1="60" y1="240" x2="500" y2="240" stroke="#5b6068" stroke-width="2"/>
 <!-- high-side upright -->
-<line x1="430" y1="240" x2="430" y2="120" stroke="#a86a1a" stroke-width="6"/><text x="442" y="160" class="s">high-side uprights</text>
+<line x1="430" y1="240" x2="430" y2="120" stroke="#a86a1a" stroke-width="6"/><text x="440" y="150" class="s">high-side posts</text>
 <!-- low-side post -->
 <line x1="130" y1="240" x2="130" y2="200" stroke="#a86a1a" stroke-width="6"/><text x="60" y="195" class="s">low-side 4x4 posts</text>
 <!-- tilted panel surface -->
-<line x1="120" y1="208" x2="440" y2="112" stroke="#ffb400" stroke-width="8"/><text x="250" y="150" class="a">panels — tilt toward the sun</text>
+<line x1="120" y1="208" x2="440" y2="112" stroke="#ffb400" stroke-width="8"/><text x="250" y="124" class="a">panels — tilt toward the sun</text>
 <!-- tilt angle arc -->
-<path d="M180 200 A 40 40 0 0 1 200 184" fill="none" stroke="#34d27b" stroke-width="2"/><text x="200" y="218" class="s" fill="#34d27b">tilt angle (steeper for winter)</text>
+<path d="M180 200 A 40 40 0 0 1 200 184" fill="none" stroke="#34d27b" stroke-width="2"/><text x="150" y="226" class="s" fill="#34d27b">tilt angle (steeper for winter)</text>
 <!-- hanger detail -->
-<rect x="300" y="150" width="10" height="10" fill="#ff7070"/><text x="316" y="160" class="s" fill="#ffb3b3">CHECK SQUARE before fastening 2x6 hangers</text>
+<rect x="300" y="150" width="10" height="10" fill="#ff7070"/><text x="210" y="200" class="s" fill="#ffb3b3">CHECK SQUARE before fastening 2x6 hangers</text>
 <!-- shed-water double duty -->
 <rect x="520" y="60" width="192" height="180" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="536" y="84" class="a">Double-duty trick</text><text x="536" y="106" class="s">Frame it to SHED water off the</text><text x="536" y="120" class="s">low side →</text><text x="536" y="144" class="s">• rain catchment below</text><text x="536" y="162" class="s">• dry covered storage / garden</text><text x="536" y="180" class="s">  under the panels</text><text x="536" y="210" class="s" fill="#ffd98a">"voids the panel warranty but</text><text x="536" y="224" class="s" fill="#ffd98a">solves a bigger problem" — your call</text>
 <text x="28" y="284" class="s">Build the bones square and solid off a junk-pile 4x6, tilt toward the sun, and let the rack earn a second job.</text>

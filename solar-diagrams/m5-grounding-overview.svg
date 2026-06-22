@@ -12,11 +12,11 @@
 <!-- inverter with N-G bond -->
 <rect x="430" y="150" width="180" height="70" rx="9" fill="#1c1812" stroke="#ffb400" stroke-width="1.4"/><text x="520" y="178" text-anchor="middle" class="ttl" fill="#ffb400">All-in-One inverter</text>
 <text x="520" y="200" text-anchor="middle" class="star">★ ONE neutral-ground bond</text>
-<text x="430" y="240" class="s" fill="#ffd98a">enabled for off-grid · bonded HERE and ONLY here</text>
+<text x="520" y="214" text-anchor="middle" class="s" fill="#ffd98a">enabled for off-grid — bonded HERE only</text>
 <!-- grounding bus + rod -->
-<line x1="80" y1="130" x2="660" y2="130" stroke="#34d27b" stroke-width="2.5"/>
-<text x="600" y="124" text-anchor="end" class="grn">grounding bus</text>
-<line x1="520" y1="150" x2="520" y2="130" stroke="#34d27b" stroke-width="2"/>
+<line x1="80" y1="130" x2="360" y2="130" stroke="#34d27b" stroke-width="2.5"/>
+<text x="350" y="124" text-anchor="end" class="grn">grounding bus</text>
+<line x1="520" y1="220" x2="520" y2="252" stroke="#34d27b" stroke-width="2.5"/><line x1="360" y1="252" x2="520" y2="252" stroke="#34d27b" stroke-width="2.5"/><circle cx="360" cy="252" r="3.5" fill="#34d27b"/><text x="392" y="246" class="grn">inverter chassis → rod</text>
 <line x1="360" y1="130" x2="360" y2="260" stroke="#34d27b" stroke-width="2.5"/>
 <path d="M350 260 H370 M353 268 H367 M356 276 H364" stroke="#34d27b" stroke-width="2" fill="none"/>
 <text x="378" y="268" class="grn">driven ground rod + clamp</text>
