@@ -11,11 +11,11 @@
 <rect x="28" y="142" width="664" height="40" fill="#111" stroke="#2a2a2a"/>
 <text x="44" y="167" class="c">48V</text><text x="230" y="167" class="c">3,000 W</text><text x="420" y="167" class="c">2/0 AWG</text><text x="560" y="167" class="c">110 A</text>
 <rect x="28" y="182" width="664" height="40" fill="#1c1812" stroke="#ffb400"/>
-<text x="44" y="207" class="c" fill="#ffb400">48V ★</text><text x="230" y="207" class="c" fill="#ffb400">5,500 W</text><text x="420" y="207" class="c" fill="#ffb400">4/0 AWG</text><text x="560" y="207" class="c" fill="#ffb400">400 A fuse / 250 A breaker</text>
+<text x="44" y="207" class="c" fill="#ffb400">48V ★</text><text x="230" y="207" class="c" fill="#ffb400">5,500 W</text><text x="420" y="207" class="c" fill="#ffb400">4/0 AWG</text><text x="560" y="207" class="c" fill="#ffb400">400A fuse · 250A bkr</text>
 <rect x="28" y="222" width="664" height="40" fill="#111" stroke="#2a2a2a"/>
 <text x="44" y="247" class="c">12V</text><text x="230" y="247" class="c">3,000 W</text><text x="420" y="247" class="c">4/0 AWG</text><text x="560" y="247" class="c">400 A</text>
 </g>
 <text x="44" y="290" class="m">Note: 12V @ 3,000W needs the SAME fat 4/0 cable that 48V only needs at 5,500W — that's the 48V payoff.</text>
 <rect x="28" y="305" width="664" height="38" rx="8" fill="#241a10" stroke="#a86a1a"/>
-<text x="44" y="329" class="c" fill="#ffd98a">⚠ RULES OF THUMB — adjust for cable run length, ambient temp, and YOUR gear's datasheet. Never go thinner than the manual.</text>
+<text x="44" y="328" class="m" fill="#ffd98a">⚠ RULES OF THUMB — adjust for cable run length, ambient temp, and YOUR gear's datasheet. Never go thinner than the manual.</text>
 </svg>

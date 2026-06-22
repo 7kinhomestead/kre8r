@@ -17,6 +17,6 @@
 <line x1="430" y1="135" x2="540" y2="85" stroke="#5b6068" stroke-width="2"/>
 <line x1="430" y1="155" x2="540" y2="205" stroke="#5b6068" stroke-width="2"/>
 <text x="455" y="120" class="s">straight to 12V</text><text x="455" y="185" class="s">up through inverter</text>
-<rect x="28" y="252" width="684" height="50" rx="9" fill="#241a10" stroke="#a86a1a"/><text x="44" y="274" class="new">The two boxes a house build doesn't have:</text><text x="44" y="292" class="s" fill="#ffd98a">① DC-DC charger (charges the house battery off the engine alternator while you drive) · ② shore-power inlet (plug into a campground/grid to charge). Plus tight space &amp; weight limits → smaller array.</text>
+<rect x="28" y="252" width="684" height="50" rx="9" fill="#241a10" stroke="#a86a1a"/><text x="44" y="274" class="new">The two boxes a house build doesn't have:</text><text x="44" y="292" class="s" fill="#ffd98a">① DC-DC charger — charges off the alternator as you drive. ② shore-power inlet — plug into the grid. Tight space → smaller array.</text>
 <text x="28" y="332" class="s">Same five-box spine you already know — the house just has wheels and a temper.</text>
 </svg>

@@ -18,5 +18,5 @@
 <rect x="430" y="244" width="92" height="50" rx="6" fill="#161616" stroke="#2a2a2a"/><text x="476" y="266" text-anchor="middle" class="s">1 battery BMS</text><text x="476" y="282" text-anchor="middle" class="v">100A ≈ 5.1kW</text>
 <rect x="522" y="262" width="38" height="14" fill="#ff7070"/>
 <rect x="560" y="244" width="124" height="50" rx="6" fill="#161616" stroke="#2a2a2a"/><text x="622" y="266" text-anchor="middle" class="s">12-15kW inverter</text><text x="622" y="282" text-anchor="middle" class="v" fill="#ff9a9a">STARVED</text>
-<text x="430" y="324" class="s" fill="#ff9a9a">One battery's BMS is a narrow pipe — parallel batteries to feed the inverter.</text>
+<text x="360" y="324" class="s" fill="#ff9a9a">One BMS is a narrow pipe — parallel batteries to feed your inverter.</text>
 </svg>

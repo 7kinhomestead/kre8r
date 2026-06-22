@@ -22,6 +22,6 @@
 <!-- RED off-ramps -->
 <rect x="40" y="300" width="320" height="50" rx="9" fill="#1c0e0e" stroke="#ff7070" stroke-width="1.5"/><text x="56" y="322" class="red">⛔ STOP — call a licensed electrician:</text><text x="56" y="340" class="q" fill="#ffb3b3">arc fault / AFCI alarm</text>
 <rect x="380" y="300" width="320" height="50" rx="9" fill="#1c0e0e" stroke="#ff7070" stroke-width="1.5"/><text x="396" y="322" class="red">⛔ STOP — call a licensed electrician:</text><text x="396" y="340" class="q" fill="#ffb3b3">ground fault / GFCI · burning smell · melted lugs</text>
-<text x="28" y="384" class="q">Most codes resolve to airflow, shed-load, a loose wire, or a wrong setting. The two RED boxes are the only ones you don't troubleshoot — you stop.</text>
+<text x="28" y="384" class="q">Most codes resolve to airflow, shed-load, a loose wire, or a wrong setting. The two RED boxes you don't troubleshoot — you stop.</text>
 <text x="28" y="406" class="q" fill="#8a8f98">Codes vary by brand/model/firmware — confirm in YOUR unit's manual.</text>
 </svg>

@@ -20,5 +20,5 @@
 <line x1="360" y1="130" x2="360" y2="260" stroke="#34d27b" stroke-width="2.5"/>
 <path d="M350 260 H370 M353 268 H367 M356 276 H364" stroke="#34d27b" stroke-width="2" fill="none"/>
 <text x="378" y="268" class="grn">driven ground rod + clamp</text>
-<rect x="28" y="296" width="684" height="32" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="44" y="316" class="s">All metal gets bonded together and tied to the rod. The neutral-to-ground bond happens at exactly ONE point — two bonds is the classic, dangerous DIY mistake. Confirm the bond location in your inverter's manual.</text>
+<rect x="28" y="296" width="684" height="32" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="44" y="316" class="s">All metal bonds to the rod. The neutral-ground bond is ONE point only — two bonds is the classic DIY mistake. Check your manual.</text>
 </svg>
