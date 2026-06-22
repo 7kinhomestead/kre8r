@@ -63,10 +63,11 @@ from `COURSE-SOLAR-DRAFTS.md` once the draft is locked. Source clips: `D:\kajabi
 ## ⚠️ Kajabi BODY-SIZE gotcha (learned the hard way)
 Kajabi **silently drops** a lesson `body` that's too large — `update_course_content` returns
 "success" but the old body stays. **~12.5 KB persists; ~26 KB fails.** Keep each lesson body
-**under ~18–20 KB**. That's why the embedded glossary is split into **two lessons**:
-- Part 1 (Units, Panels, Controller, Batteries) = lesson `2198302713` (~12.5 KB)
-- Part 2 (Wiring, Grounding, Rigs, Troubleshooting) = lesson `2198303358` (~10.8 KB)
-Always `get_lesson` to confirm a large body actually persisted — don't trust the success envelope.
+**under ~18–20 KB**, and always `get_lesson` to confirm a large body persisted — don't trust the
+success envelope. (We tried embedding the full glossary; the size limit forced a 2-lesson split,
+which Jason found over-complicated — so the in-course glossary is now a **single LINK lesson**
+`2198302713` → the public searchable page. Lesson `2198303358` is a leftover stub marked for
+manual deletion in the admin.)
 
 ## ⚠️ Kajabi TABLE gotcha (learned the hard way)
 Kajabi's markdown converter **does NOT render pipe tables** — it strips `<table>` tags too
