@@ -477,7 +477,7 @@ So you've now seen three shapes of the same idea: the full built-out house syste
 ---
 
 # Module 7 — Case Closed: Turn It On, Troubleshoot & Grow
-*Case File 07 — This is where the clues come together: you throw the switch, the system breathes, and the only thing left to take down is the silence. Case closed.*
+*Case File 07 — This is where the clues come together: you throw the switch, the lights come up, and the dark that ran your nights finally loses. Shine a light on the darkness. Case closed.*
 
 ### Lesson 7.1 — Commissioning: the boring checklist that saves your system
 
