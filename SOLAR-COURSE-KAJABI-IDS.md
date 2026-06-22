@@ -60,6 +60,15 @@ from `COURSE-SOLAR-DRAFTS.md` once the draft is locked. Source clips: `D:\kajabi
 - Linked from the landing page tools section.
 - ⚠️ These callouts + the glossary lesson are **only in Kajabi, not in COURSE-SOLAR-DRAFTS.md** — a full re-pour from the draft would drop them. Re-add after any re-pour (or fold into the draft).
 
+## ⚠️ Kajabi TABLE gotcha (learned the hard way)
+Kajabi's markdown converter **does NOT render pipe tables** — it strips `<table>` tags too
+(in markdown mode). Any lesson with a table must be poured as **full HTML** with
+`lesson_body_format: 'html'` (prose as `<p>`, headings `<h2>/<h4>`, tables `<table>`, etc.).
+Affected lessons (now fixed as HTML): the **Glossary** (2198302713), **5.3** wire-sizing
+(2198298707), **7.3** fault-code reference (2198298714). The node md→HTML converter that built
+these lives in the chat history (handles tables/blockquotes/lists/images/inline). Prose-only
+lessons are fine as markdown (images `![](url)` → `<img>` convert correctly).
+
 ## Re-pour note
 To re-sync after red-pen edits to COURSE-SOLAR-DRAFTS.md: re-run the cleaning script
 (parses `### Lesson N.N` headers, strips ‹SOURCE›/[VERIFY]/diagram-build/research-ref/watch-note
