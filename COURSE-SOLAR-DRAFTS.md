@@ -1,4 +1,5 @@
-# Intermediate Off-Grid Solar — Module Drafts
+# The Mysteries of Off-Grid Solar — Module Drafts
+*(intermediate-level course — whodunit/detective theme: "Some cases aren't solved. They're designed.")*
 *Draft for Jason's review. Voice: Jason Rutland. Blueprint: `SOLAR-COURSE-BLUEPRINT.md`. Research: `SOLAR-COURSE-RESEARCH.md`.*
 
 > **CONVENTION:** every lesson opens with a `‹SOURCE — PULL BEFORE PUBLISH›` tag (strip before publish). `📊 [DIAGRAM — Claude builds: …]` marks where an SVG diagram goes (Claude builds those, not the draft). 📹 video · 🔬 research · ✏️ writing · 🔧 tool · 🛒 affiliate · ⚖️ disclaimer.

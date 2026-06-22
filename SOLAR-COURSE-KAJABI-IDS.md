@@ -1,4 +1,5 @@
-# Intermediate Off-Grid Solar — Kajabi IDs
+# The Mysteries of Off-Grid Solar — Kajabi IDs
+*(public name; intermediate-level. Detective/whodunit theme. Poster art → upload as thumbnail in admin.)*
 
 Site ID: `2148808568`
 Course (product) ID: **`2149490461`**
