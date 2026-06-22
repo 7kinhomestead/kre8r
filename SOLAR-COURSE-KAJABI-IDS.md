@@ -42,10 +42,18 @@ from `COURSE-SOLAR-DRAFTS.md` once the draft is locked. Source clips: `D:\kajabi
 | 7.3 | The Fault-Code Field Reference | | `2198298714` |
 | 7.4 | STOP signs, upkeep, growing | | `2198298715` |
 
-## Remaining build steps
-1. Pour lesson bodies from COURSE-SOLAR-DRAFTS.md (strip ‹SOURCE› tags; embed the SVG diagrams)
-2. Upload the source videos per lesson (Kajabi admin — MCP can't upload media)
-3. Apply the gold course theme (7kin-course-template, color_primary gold) + track_endpoint beacon
-4. Build the course landing page
-5. Attach to the Garden offer (needs Jason's go — commercial action)
-6. Publish lessons (publishing_option: 'published') once content + video are in
+## Build status
+- ✅ Shell: 7 modules / 23 lessons (detective case-file titles)
+- ✅ **Lesson bodies poured** (all 23) from COURSE-SOLAR-DRAFTS.md — scaffolding stripped, diagrams referenced by hosted URL
+- ✅ Diagrams hosted: 17 SVGs in `kre8r-land/public/solar-diagrams/` → render at `https://7kinhomestead.land/solar-diagrams/*.svg` **once the land box deploys** (committed kre8r-land fd38712; until deploy they 404 in Kajabi)
+- ✅ Landing page: `/solar-course` (noir poster hero) — committed, not yet deployed
+- ⏳ Gold theme: zip handed to Jason to import + assign (manual)
+- ⏳ Thumbnail: poster set by Jason ✅
+- ⏳ Videos: 15 staged in `D:\kajabi-course\` — upload per lesson in Kajabi admin (MCP can't upload media)
+- ⏳ Garden offer attach — needs Jason's go (commercial)
+- ⏳ Publish lessons (publishing_option: 'published') once content + video confirmed
+
+## Re-pour note
+To re-sync after red-pen edits to COURSE-SOLAR-DRAFTS.md: re-run the cleaning script
+(parses `### Lesson N.N` headers, strips ‹SOURCE›/[VERIFY]/diagram-build/research-ref/watch-note
+lines, rewrites `solar-diagrams/x.svg` → hosted URL) and update_course_content by lesson ID.
