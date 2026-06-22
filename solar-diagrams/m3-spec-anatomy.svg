@@ -1,0 +1,25 @@
+<svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Anatomy of a spec sheet</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.hero{font-size:30px;font-weight:800;fill:#5b6068}.cap{font-size:12px;fill:#ffb400;font-weight:700}.sub{font-size:10.5px;fill:#8a8f98}.row{font-size:11px;fill:#6b7079}.hit{font-size:11px;fill:#fff;font-weight:600}</style>
+<rect width="720" height="380" fill="#0d0d0d"/>
+<text x="28" y="34" class="lbl">MODULE 3 · ANATOMY OF A SPEC SHEET</text>
+<!-- fake datasheet -->
+<rect x="28" y="50" width="320" height="300" rx="8" fill="#161616" stroke="#2a2a2a"/>
+<text x="48" y="92" class="hero">12000XP</text>
+<line x1="48" y1="84" x2="232" y2="84" stroke="#5b6068" stroke-width="2"/>
+<text x="48" y="120" class="row">Model name ……… the magician's patter</text>
+<rect x="44" y="138" width="288" height="26" fill="#1c1812" stroke="#ffb400"/><text x="54" y="156" class="hit">Continuous output: 12,000 W</text>
+<rect x="44" y="170" width="288" height="26" fill="#1c1812" stroke="#ffb400"/><text x="54" y="188" class="hit">Max PV input: 24,000 W / 500 VDC</text>
+<rect x="44" y="202" width="288" height="26" fill="#1c1812" stroke="#ffb400"/><text x="54" y="220" class="hit">Battery / usable kWh: nameplate × DoD</text>
+<rect x="44" y="234" width="288" height="26" fill="#1c1812" stroke="#ffb400"/><text x="54" y="252" class="hit">Temp coeff / Voc note (cold = higher V)</text>
+<text x="48" y="284" class="row">Peak/surge ……… 10s only, don't size to it</text>
+<text x="48" y="304" class="row">Efficiency, idle draw, waveform …</text>
+<text x="48" y="330" class="sub">(the name is grey on purpose — read the OTHER hand)</text>
+<!-- callouts -->
+<g>
+<text x="380" y="150" class="cap">① CONTINUOUS watts</text><text x="380" y="166" class="sub">what it holds all day (not surge)</text>
+<text x="380" y="196" class="cap">② PV-IN ≠ AC-OUT</text><text x="380" y="212" class="sub">two separate lines — PV often ~2× the AC</text>
+<text x="380" y="242" class="cap">③ USABLE kWh</text><text x="380" y="258" class="sub">Ah × V × depth-of-discharge, not nameplate</text>
+<text x="380" y="288" class="cap">④ Voc &amp; temperature</text><text x="380" y="304" class="sub">cold mornings push voltage UP — see M3 trap</text>
+</g>
+<line x1="332" y1="151" x2="376" y2="148" stroke="#ffb400" stroke-width="1"/><line x1="332" y1="183" x2="376" y2="194" stroke="#ffb400" stroke-width="1"/><line x1="332" y1="215" x2="376" y2="240" stroke="#ffb400" stroke-width="1"/><line x1="332" y1="247" x2="376" y2="286" stroke="#ffb400" stroke-width="1"/>
+</svg>

@@ -1,0 +1,36 @@
+<svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ttl desc">
+<title id="ttl">Off-grid solar — the power flow</title>
+<desc id="desc">Five stages left to right: solar array, charge controller, 48-volt battery bank, inverter, and your AC loads. The battery-to-inverter DC bus carries the highest current.</desc>
+<style>
+  text{font-family:'DM Sans',system-ui,sans-serif;fill:#ffffff}
+  .ttl{font-size:14.5px;font-weight:600}
+  .sub{font-size:10.5px;fill:#8a8f98}
+  .lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}
+  .badge{font-size:11px;font-weight:700;fill:#0d0d0d}
+  .cax{font-size:13px;font-weight:700;fill:#ffb400;letter-spacing:.08em}
+  .cbody{font-size:12.5px;fill:#d7d9dd}
+  .hi{font-size:10px;font-weight:700;fill:#ffb400;letter-spacing:.06em}
+</style>
+<defs>
+  <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4a4f57"/></marker>
+  <marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ffb400"/></marker>
+</defs>
+<rect width="760" height="360" fill="#0d0d0d"/>
+<text x="30" y="34" class="lbl">MODULE 1 · HOW THE POWER FLOWS</text>
+<line x1="136" y1="135" x2="162" y2="135" stroke="#4a4f57" stroke-width="2" marker-end="url(#ar)"/>
+<line x1="284" y1="135" x2="310" y2="135" stroke="#4a4f57" stroke-width="2" marker-end="url(#ar)"/>
+<line x1="432" y1="135" x2="458" y2="135" stroke="#ffb400" stroke-width="5" marker-end="url(#arg)"/>
+<line x1="580" y1="135" x2="606" y2="135" stroke="#4a4f57" stroke-width="2" marker-end="url(#ar)"/>
+<text x="445" y="86" class="hi" text-anchor="middle">⚡ HIGH CURRENT</text>
+<text x="445" y="190" class="sub" text-anchor="middle" fill="#ffb400">thick cable + main fuse</text>
+<rect x="16" y="98" width="120" height="74" rx="9" fill="#161616" stroke="#2a2a2a"/><circle cx="76" cy="98" r="11" fill="#8a8f98"/><text x="76" y="102" class="badge" text-anchor="middle">1</text><text x="76" y="132" class="ttl" text-anchor="middle">Solar Array</text><text x="76" y="150" class="sub" text-anchor="middle">~5 kW of panels</text>
+<rect x="164" y="98" width="120" height="74" rx="9" fill="#161616" stroke="#2a2a2a"/><circle cx="224" cy="98" r="11" fill="#8a8f98"/><text x="224" y="102" class="badge" text-anchor="middle">2</text><text x="224" y="132" class="ttl" text-anchor="middle">Charge Ctrl</text><text x="224" y="150" class="sub" text-anchor="middle">MPPT</text>
+<rect x="312" y="98" width="120" height="74" rx="9" fill="#1c1812" stroke="#ffb400" stroke-width="1.5"/><circle cx="372" cy="98" r="11" fill="#ffb400"/><text x="372" y="102" class="badge" text-anchor="middle">3</text><text x="372" y="132" class="ttl" text-anchor="middle">Battery Bank</text><text x="372" y="150" class="sub" text-anchor="middle" fill="#ffb400">48V · ~12 kWh</text>
+<rect x="460" y="98" width="120" height="74" rx="9" fill="#161616" stroke="#2a2a2a"/><circle cx="520" cy="98" r="11" fill="#8a8f98"/><text x="520" y="102" class="badge" text-anchor="middle">4</text><text x="520" y="132" class="ttl" text-anchor="middle">Inverter</text><text x="520" y="150" class="sub" text-anchor="middle">48V → 120/240V</text>
+<rect x="608" y="98" width="120" height="74" rx="9" fill="#161616" stroke="#2a2a2a"/><circle cx="668" cy="98" r="11" fill="#8a8f98"/><text x="668" y="102" class="badge" text-anchor="middle">5</text><text x="668" y="132" class="ttl" text-anchor="middle">Your Loads</text><text x="668" y="150" class="sub" text-anchor="middle">120/240V AC</text>
+<text x="372" y="216" class="sub" text-anchor="middle">Boxes 2 + 4 often come as one all-in-one unit (e.g. your SunGold)</text>
+<rect x="80" y="244" width="600" height="92" rx="11" fill="#161616" stroke="#ffb400" stroke-width="1.5"/>
+<text x="104" y="278" class="cax">WHY 48V?</text>
+<text x="104" y="302" class="cbody">At 48V, a 5,000W load draws ~104 A. At 12V it'd be ~417 A —</text>
+<text x="104" y="321" class="cbody">4x the current. Lower current = smaller, cheaper, safer wire. That's the whole reason.</text>
+</svg>

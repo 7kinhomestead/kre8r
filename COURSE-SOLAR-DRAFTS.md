@@ -2,6 +2,8 @@
 *Draft for Jason's review. Voice: Jason Rutland. Blueprint: `SOLAR-COURSE-BLUEPRINT.md`. Research: `SOLAR-COURSE-RESEARCH.md`.*
 
 > **CONVENTION:** every lesson opens with a `‹SOURCE — PULL BEFORE PUBLISH›` tag (strip before publish). `📊 [DIAGRAM — Claude builds: …]` marks where an SVG diagram goes (Claude builds those, not the draft). 📹 video · 🔬 research · ✏️ writing · 🔧 tool · 🛒 affiliate · ⚖️ disclaimer.
+
+> ⚠️ (diagram not auto-matched — check)
 > **ANCHOR SYSTEM:** Jason's real rig = SunGold Power inverter + 4× LiTime 230Ah @ 48V (~12kWh), becoming his mother-in-law's RV power. EG4 12k / 35× CW 450W = Rock Rich S2 (advanced), kept OUT. **Affiliate:** SunGold + LiTime for the build gear; Signature Solar/EG4 for everything else + the step-up. **Don't re-teach the free *Understanding* course** (components/batteries/cost 101) — assume it. **The paid value = the written supplements** (BOM decoded, spec-sheet guide, fault-code lookup) a video can't be.
 
 ---
@@ -17,7 +19,7 @@ So I built one that does it right, it's free, and it takes about five minutes. Y
 
 **What you'll take:** The number that matters isn't your house's square footage — it's what *you* actually run. A design built on real loads is the difference between lights that stay on and a system you cuss at every cloudy week.
 
-**Your move this week:** 🔧 Open the **Solar Sizer**, run your appliance list, and screenshot the design it spits out. That's our starting point — the next lesson shows you the math under the hood so you know it's not lying to you.
+**Your move this week:** 🔧 Open the **[Solar Sizer](https://7kinhomestead.land/solar)**, run your appliance list, and screenshot the design it spits out. That's our starting point — the next lesson shows you the math under the hood so you know it's not lying to you.
 
 ### Lesson 1.2 — Run the numbers yourself (so you know the tool isn't lying)
 > ‹SOURCE — PULL BEFORE PUBLISH: `_tZdSuMgyYo` "How Much Solar Will You Need To Live Off Grid?" — data plate (V×A=W); duty cycle (fridge runs ~30% → 120W×7.2h=864Wh/day); sum all → daily Wh; ÷ average irradiance (sun-hours, ~6 in his area); ×125% for inefficiency/cloudy days; STC ~80% real-world rule → panel count.›
@@ -35,6 +37,8 @@ Now divide by your **sun-hours** — how many good hours of sun your spot actual
 ### Lesson 1.3 — The shape of your system (and why 48V)
 > ‹SOURCE — PULL BEFORE PUBLISH: ✏️🔬 research (48V cuts current ~4× vs 12V → smaller/cheaper/safer wire; DC-coupled architecture; the four pieces sized to the load) + 📊 system-flow diagram + anchor on Jason's SunGold + 4× LiTime 230Ah @ 48V rig.›
 > 📊 [DIAGRAM — Claude builds: the 5-stage system flow (Solar → Charge Ctrl → 48V Battery → Inverter → Loads) with the high-current battery→inverter bus highlighted gold + the "5,000W = 104A@48V vs 417A@12V" callout. **BUILT.**]
+
+![m1-system-flow.svg](solar-diagrams/m1-system-flow.svg)
 
 Look at the diagram up top — that's every off-grid system that's ever existed, in five boxes. Sun hits the **panels**, a **charge controller** turns that into something your **battery** can drink, the battery feeds an **inverter**, and the inverter hands your house regular 120/240-volt power. On my rig — the one this whole course is built around — that's a SunGold inverter and four LiTime batteries at 48 volts, and a couple of those boxes (the controller and the inverter) live in one all-in-one case.
 
@@ -61,6 +65,8 @@ One rule before we start handling parts. Look at my actual array — the one out
 
 📊 [DIAGRAM — Claude builds: annotated BOM exploded view — the five "core" boxes (panels / charge controller / battery+BMS / inverter / distribution) drawn large and in color, with the "glue & seatbelts" parts (combiner, DC disconnect, AC disconnect, fuses/breakers, SPD, busbars, shunt, ground rod, cable) called out in a second tier connecting them. Each part tagged CORE / SAFETY / PLUMBING.]
 
+![m2-bom-exploded.svg](solar-diagrams/m2-bom-exploded.svg)
+
 **What you'll take:** A complete off-grid system is five working parts plus the safety and plumbing that join them. The skill isn't buying everything — it's knowing which line items keep your family alive and which ones are just somebody's commission.
 
 **Your move this week:** Print your Solar Sizer materials list and put one of three letters next to every line — **C** for core, **S** for safety, **P** for plumbing. You won't know all of them yet. That's fine — that blank spot is exactly the lesson you're about to read. By the end of this module every line has a letter and you'll know why it's there.
@@ -83,6 +89,8 @@ Two numbers to get right on the brain so you don't cuss it later. **Size the inv
 **The battery bank.** What it is: your savings account. The panels are the paycheck; the battery is what you live on after dark and during that cloudy week in February. Now — full honesty, because that's the deal between us — the battery on my array in that old video is a string of Duracell golf-cart batteries, 6-volt lead-acid wired in series up to 48 volts. They worked. But **this course is built around the rig I'd actually tell you to buy: four LiTime 230Ah LiFePO4 batteries at 48 volts — about 12 kilowatt-hours.** Why LiFePO4 and not the golf-cart route? The research is lopsided: LiFePO4 runs **4,000 to 8,000-plus cycles,** it'll take a deeper discharge without complaining, and a typical off-grid home wants 10–30 kWh of storage — so a ~12kWh bank gives you roughly a day-plus of autonomy depending on how frugal you run. *Need-it-or-skip-it:* you cannot skip a battery on a true off-grid system. But you **can and should skip lead-acid** for a new build — the lithium costs more up front and saves you money and headaches across its life. A dollar saved across 6,000 cycles is worth more than a dollar earned. **Need: always lithium for a new off-grid build.**
 
 📊 [DIAGRAM — Claude builds: the four "core" boxes laid out left-to-right — Panels (+ racking under them), the all-in-one brain (showing the three functions folded inside: charge controller + inverter + AC charger), and the 48V LiFePO4 bank — with the key sizing numbers pinned to each (panels = spec-sheet driven, inverter = 1.2× load & derates with heat, controller = rated by output amps ≈ 4,800W@48V, battery = ~12kWh / 4,000–8,000 cycles).]
+
+![m2-four-core-sizing.svg](solar-diagrams/m2-four-core-sizing.svg)
 
 **What you'll take:** Panels are income, the all-in-one is the brain (buy one box, not three, under ~6kW), the battery is savings — and for a new build it's lithium, full stop. Size the inverter 1.2× over your load and expect it to lose some muscle in the heat.
 
@@ -115,6 +123,8 @@ I'm going to go fast and honest, need-it-or-skip-it on each. And the disclaimer 
 
 📊 [DIAGRAM — Claude builds: "Do I actually need this component?" decision tree. One entry node per safety/plumbing part, each flowing to a NEED / SKIP / SITUATIONAL leaf with the deciding question on the branch — e.g. Combiner → "More than one PV string?" Yes=NEED / No=SKIP; SPD → "Exposed/high-lightning site?" Yes=NEED / No=optional; Shunt → "Want a real fuel gauge?" → strongly-recommended; Cable/Breakers/Disconnects/Grounding all hard-wired to NEED with their sizing rule on the leaf (4/0 & ~250–400A @ 5.5kW/48V, one neutral-ground bond, frames always bonded).]
 
+![m2-need-it-decision-tree.svg](solar-diagrams/m2-need-it-decision-tree.svg)
+
 **What you'll take:** Cable, overcurrent protection, both disconnects, and grounding are never-skip — they're the seatbelts. The combiner and SPD are situational, the shunt is sanity-not-survival, and the busbar is the cheap neat-junk-pile move. Knowing the four you can't skip is most of staying alive.
 
 **Your move this week:** Go back to your three-letter list from Lesson 2.1 and finish it — every line now gets C, S, or P, and every S (safety) line gets a checkmark only once you've confirmed its size against your gear's manual. Anything you can't size yet is a Module 3 problem, which is exactly where we're headed: learning to read the spec sheet so the catalog stops lying to you. I'll catch you in the next one.
@@ -136,6 +146,8 @@ Here's the through-line for the whole module, so write it on your hand: **compar
 
 📊 [DIAGRAM — Claude builds: "Anatomy of a spec sheet" — a stylized inverter/battery datasheet with the BIG hero number (the product name, e.g. "12000XP") greyed/struck, and bright callout arrows to the four numbers that actually bind: CONTINUOUS output watts, MAX PV INPUT (voltage + watts) as a separate line from AC OUTPUT, USABLE kWh (nameplate × DoD), and the temperature/Voc note. Caption: "the name is the magician's patter — read the other hand."]
 
+![m3-spec-anatomy.svg](solar-diagrams/m3-spec-anatomy.svg)
+
 **What you'll take:** The number in the product name is bait; the binding spec is somewhere lower on the sheet. Four habits decode any datasheet — continuous not peak, usable not nameplate, PV-input separate from AC-output, and temperature-correct your voltage. And only ever buy pure sine.
 
 **Your move this week:** Pull the actual PDF spec sheet for the inverter you're eyeing. Don't read it yet — just find it and save it. Next lesson we read it together, and you'll spot the trap before I point at it.
@@ -155,6 +167,8 @@ One honest caveat that *is* the lesson: these exact numbers are specific to thes
 
 📊 [DIAGRAM — Claude builds: two side-by-side "trap" panels. LEFT (PV-in ≠ AC-out): EG4 12000XP bar showing 24kW PV-IN towering over 12kW AC-OUT (≈2×), beside Victron RS showing 4,000W PV-IN shorter than ~5,300W AC-OUT — caption "two separate lines, every time." RIGHT (continuous ≠ surge): a timeline bar for each unit — continuous rating as the long steady band vs surge as a tiny 3–10 second spike (labeled "battery only"), with Victron's heat-derate steps (5,300W→4,500W@40°C→3,000W@65°C) shown shrinking the steady band.]
 
+![m3-traps-pv-surge.svg](solar-diagrams/m3-traps-pv-surge.svg)
+
 **What you'll take:** PV-input and AC-output are two different lines that can differ by 2×; size your array to the right one. Continuous is the system you own — surge is a few-second motor-starting burst you never build around. And continuous itself shrinks in the heat.
 
 **Your move this week:** On the spec sheet you saved last lesson, find and write down four numbers: continuous AC watts, surge watts (and how many seconds), max PV input watts, and max PV input *voltage.* That last one is a killer all its own — it's the whole next lesson.
@@ -170,9 +184,11 @@ Two of the meanest traps left, and then I'll tell you exactly where I bought my 
 
 **The battery lie — Ah is meaningless without voltage.** A battery listed at "100Ah" tells you *nothing* about how much energy it stores until you know its voltage, because **Amp-hours × Volts = Watt-hours.** A 100Ah battery at 12V is 1.28kWh. A 100Ah battery at 48V is **5.12kWh** — same Ah, **four times** the energy. The EG4 LifePower4 spells it out: 51.2V × 100Ah = 5.12kWh nameplate. So when you compare batteries, **convert everything to watt-hours** or you're comparing nonsense. And one more that bites people pairing a small battery to a big inverter: **the BMS sets a continuous-current limit that can bottleneck your whole system.** That LifePower4's BMS caps at 100A — which at 51.2V is only about **5.1kW** in or out of a *single* battery, no matter how big your inverter is. Bolt one of those to a 12–15kW inverter and you've starved it. That's *why* you parallel batteries — so the total BMS current actually feeds the inverter you bought. (It's also exactly why my anchor rig runs **four** LiTime 230Ah batteries, not one big number on a box.)
 
-**Now — where I actually bought my rig, straight.** Here's the deal between us, no corporate fog: the **inverter on my build is a SunGold** and the **batteries are four LiTime 230Ah at 48V.** That's the real gear, genuinely on my property, genuinely about to go run my mother-in-law's RV. So if you want to copy *exactly* what I built, those are the two links — 🛒 **SunGold** for the inverter, 🛒 **LiTime** for the batteries. For everything else — your panels, wire, breakers, racking, disconnects, all of it — and for the day you outgrow this and want to step up to the bigger 12kW-class EG4 rig, 🛒 **Signature Solar / EG4** carries basically the whole list under one roof. So the honest version is: *here's my exact rig and where I got it; for the rest of the parts, and for when you go bigger, here's the one-stop shop.* I'm not the boss of you — buy wherever you want. But you asked what's actually behind my chickens, and that's it.
+**Now — where I actually bought my rig, straight.** Here's the deal between us, no corporate fog: the **inverter on my build is a SunGold** and the **batteries are four LiTime 230Ah at 48V.** That's the real gear, genuinely on my property, genuinely about to go run my mother-in-law's RV. So if you want to copy *exactly* what I built, those are the two links — 🛒 **[SunGold](https://www.amazon.com/s?k=SunGold+Power+inverter&tag=jasonrutland-20)** for the inverter, 🛒 **[LiTime](https://www.amazon.com/s?k=LiTime+48V+battery&tag=jasonrutland-20)** for the batteries. For everything else — your panels, wire, breakers, racking, disconnects, all of it — and for the day you outgrow this and want to step up to the bigger 12kW-class EG4 rig, 🛒 **[Signature Solar / EG4](https://signaturesolar.com/?ref=7kinhomestead)** carries basically the whole list under one roof. (And the fastest way to get *your* exact parts list with these links baked in is to run the **[Solar Sizer](https://7kinhomestead.land/solar)** — it builds the whole BOM for your system.) So the honest version is: *here's my exact rig and where I got it; for the rest of the parts, and for when you go bigger, here's the one-stop shop.* I'm not the boss of you — buy wherever you want. But you asked what's actually behind my chickens, and that's it.
 
 📊 [DIAGRAM — Claude builds: two stacked panels. TOP (cold-Voc trap): a thermometer axis from warm→cold with a panel-string voltage line RISING as temperature drops, crossing a red "MAX PV INPUT VOLTAGE (e.g. 500V) — WARRANTY VOID ABOVE" ceiling on the coldest morning; the Victron worked example (66.6V@25°C → 74.5V@−10°C) annotated on the curve. BOTTOM (Ah lie + BMS bottleneck): same "100Ah" battery shown at 12V=1.28kWh vs 48V=5.12kWh (×4), plus a single 48V/100Ah battery's 100A BMS (~5.1kW) drawn as a narrow pipe choking a 12–15kW inverter, with four batteries in parallel widening the pipe to feed it.]
+
+![m3-voc-ah-bms.svg](solar-diagrams/m3-voc-ah-bms.svg)
 
 **What you'll take:** Cold makes panel voltage rise — temperature-correct your Voc against your record low or the controller dies (and voids warranty). Ah means nothing without voltage; always convert to watt-hours. And a single battery's BMS current can choke a big inverter, which is why you parallel them. My real rig: SunGold inverter, four LiTime 230Ah at 48V.
 
@@ -200,6 +216,8 @@ And here's the one that'll save you an afternoon of cussing: **check square befo
 
 📊 [DIAGRAM — Claude builds: a labeled side-and-front view of a tilted ground-mount wood rack — high-side uprights, low-side posts, the tilt angle called out, the 2×6 panel-seat hangers, and the "shed water → catchment + dry storage underneath" double-duty annotated. Show "CHECK SQUARE HERE" on the hanger detail.]
 
+![m4-rack-build.svg](solar-diagrams/m4-rack-build.svg)
+
 **What you'll take:** Frame first, and build it strong and *square* before a single panel touches it — because everything downstream inherits whatever you got wrong here. And if your rack can pull a second job — water off the garden, dry storage under — let it.
 
 **Your move this week:** Decide your mounting surface and your tilt before you buy a thing. Walk your spot at the time of day and the season you need power most, and watch where the shadows fall. Sketch the rack. Count your junk pile. That sketch is your cut list.
@@ -207,6 +225,8 @@ And here's the one that'll save you an afternoon of cussing: **check square befo
 ### Lesson 4.2 — Set the panels & set the gear (and why you wire it LAST)
 > ‹SOURCE — PULL BEFORE PUBLISH: 📹 `2gpl_eOaKvw` (heavy, awkward 590W bifacial panels — two-person lift; "the last connection is the only live one — run the wire first"; two isolated PV strings on the SunGold inverter let him mix old + new panels; "electrically similar" rule for adding to an existing string; all-in-one = controller + inverter in one case). 🔬 all-in-one/DC-coupled architecture (research Pass 1 #2,#3); bifacial. Anchor: SunGold inverter + the array it feeds.›
 > 📊 [DIAGRAM — Claude builds: array layout / panel-placement diagram — the 4-panel SunGold rack from the front, the two ISOLATED PV strings color-coded back to the all-in-one's two MPPT inputs, the battery bank and the all-in-one box sited near each other on a wall, and the high-current battery↔inverter run kept SHORT. Mark "string A" / "string B" and "do NOT mix dissimilar panels within one string."]
+
+![m4-array-layout.svg](solar-diagrams/m4-array-layout.svg)
 
 Now we hang the glass and set the boxes. Two things to get straight before you lift anything.
 
@@ -271,6 +291,8 @@ Every single time I talk about solar online, an electrician or a solar installer
 > ‹SOURCE — PULL BEFORE PUBLISH: 📹 `Upjc6UuEYpE` "How to Make DIY Solar Safe and Easy" (bonding the panel frames together with green ground wire + ring terminals; "touch grass" = grounding; do ALL safety before any power connection) + 📹 `QusVSSZeZsw` "Remember This Step…" (driving the ground rod — 4 methods, SDS-Max spike is his favorite; ground clamp → wire → grounding bus in the controller; "do the bonding, do the grounding, THEN make connections with no power run to them"). 🔬 Pass 1 #10 (ONE neutral-ground bond, enabled off-grid), #11 (functionally-grounded inverter eliminates separate DC grounding ELECTRODE, NOT module-frame EGC bonding — verify your inverter's UL1741 listing). EGC bonding.›
 > 📊 [DIAGRAM — Claude builds: a grounding/bonding overview — panel frames daisy-chained with a green EGC bonding jumper (panel→panel→panel), that EGC running to the grounding point, a driven ground rod with clamp, and a single clearly-flagged ⭐ NEUTRAL-GROUND BOND inside the inverter labeled "EXACTLY ONE — enabled for off-grid." Keep it conceptual, mark "verify location in YOUR inverter's manual."]
 
+![m5-grounding-overview.svg](solar-diagrams/m5-grounding-overview.svg)
+
 Here's the part of a DIY build almost everybody fumbles: they hang the panels and immediately start clicking wires together to "see it work." Wrong order. **Bonding and grounding come FIRST**, while there's no power anywhere, so that by the time you make the one live connection, every bit of safety is already standing.
 
 Two words, and they're different things people mush together:
@@ -294,6 +316,8 @@ One modern wrinkle worth knowing: a lot of today's inverters are "functionally g
 ### Lesson 5.3 — Size the wire & the overcurrent protection (the method, not just my numbers)
 > ‹SOURCE — PULL BEFORE PUBLISH: 🔬 Pass 1 #1 (48V cuts current ~4× vs 12V — 4000W = ~333A@12V vs ~83A@48V), #4 (inverter ≥1.2× continuous load, derates with heat), #5 (AltE table: 48V/3000W = 2/0 AWG + 110A; 48V/5500W = 4/0 AWG + 400A fuse / 250A breaker; same 3000W needs 4/0 at 12V but 2/0 at 48V), #6 (MPPT rated by output amps: 100A ≈ 4800W @48V), #8 (combiner box: per-string fuses, busbars, optional SPD/disconnect). Fuses sized ~125-175% of load. ✏️ teach the METHOD. Anchor: the ~5.5kW SunGold @48V rig.›
 > 📊 [DIAGRAM — Claude builds: a wire-and-fuse sizing reference card — the AltE-derived table (48V 3000W → 2/0 AWG, 110A; 48V 5500W → 4/0 AWG, 400A fuse / 250A breaker; vs 12V 3000W → 4/0 AWG, 400A) shown as a clean grid, with the "I = Watts ÷ Volts" formula up top and a flag: "RULES OF THUMB — adjust for cable run length, ambient temp, and YOUR gear's datasheet."]
+
+![m5-wire-fuse-card.svg](solar-diagrams/m5-wire-fuse-card.svg)
 
 This is where the 48-volt decision from Module 1 pays for itself in copper. Watts equals volts times amps — flip it around: **amps equals watts divided by volts.** Same power, the higher your voltage, the lower your current, and **current is what sets your wire size and your fuse.** A 4,000-watt load is a brutal ~333 amps at 12 volts but only ~83 amps at 48 volts. That four-to-one cut is the whole reason your wire bill and your big scary fuses stay sane. *That's just science.*
 
@@ -326,6 +350,8 @@ Two more sizing notes:
 ### Lesson 5.4 — The final DC connections: order, polarity, torque, and the live-last click
 > ‹SOURCE — PULL BEFORE PUBLISH: 📹 `kAF3bgcY9mk` "Making Electrical Connections Safely…" (parallel vs series; determine +/− with a multimeter; wire-nut every conductor you're NOT working on so + can't touch −; MC4 click→tighten the gland→pull test; "never connect/disconnect under load"). 📹 `wGXEGchY2bc` "The Final DC Connections…" (series math 20V→39→59→79V; battery+ / battery− and PV+ / PV− into the controller; THE reverse-polarity trap — the wire you extend as positive gets a NEGATIVE MC4 end; insulated 1000V screwdriver; cut conductors individually; torque lugs to spec so they don't arc; on-board AFCI/GFCI, add DC breakers on bigger systems). 📹 `QusVSSZeZsw` (the safe sequence restated). 🔬 Pass 1 #9 (manual DC + AC disconnects required, both sides). Anchor: SunGold all-in-one.›
 > 📊 [DIAGRAM — Claude builds: ★ THE CENTERPIECE — the full fused-and-grounded 48V off-grid wiring diagram. PV strings → combiner (per-string fuses) → DC DISCONNECT → all-in-one (MPPT + inverter, with the ⭐ single neutral-ground bond flagged) → 4/0 battery cable with main DC fuse/breaker → 48V LiFePO4 bank; AC side → AC DISCONNECT → loads/sub-panel; green EGC bonding all metal + run to the ground rod. Label every overcurrent device, both disconnects, the single N-G bond, polarity on the DC runs, and "connect in this numbered order." This is the diagram people screenshot to their phone.]
+
+![m5-wiring-centerpiece.svg](solar-diagrams/m5-wiring-centerpiece.svg)
 
 Everything in this module has been building to a sequence. Do it in this order and the only live moment is the very last click, with your hands clear. Look at the centerpiece diagram up top the whole time — that's every connection in this lesson, numbered.
 
@@ -377,6 +403,8 @@ The real enemy in a rolling rig isn't voltage. It's **space and weight.** A roof
 
 📊 [DIAGRAM — Claude builds: the RV/van power system — same five-box spine as Module 1 but mobile, showing the THREE charge sources feeding one battery (roof solar → MPPT, alternator → DC-DC charger, shore-power plug → inverter/charger) and the battery splitting two ways: straight to 12V house loads (lights/pump/fans) AND up through the inverter to 120V outlets. Label the DC-DC charger and shore-power inlet as "the two boxes a house build doesn't have."]
 
+![m6-rv-system.svg](solar-diagrams/m6-rv-system.svg)
+
 **What you'll take:** A rolling rig is the same five boxes plus three rules — a DC-DC charger so the engine can charge you, a shore-power tap for when you're plugged in, and a pile of 12V loads that skip the inverter entirely. Space and weight are the real budget, not voltage.
 
 **Your move this week:** Walk your RV (or the one you're dreaming about) and split every load into two columns: *runs on 12V straight off the battery* vs *needs the inverter and 120V*. That single list tells you how small your inverter can be and how hard you'll lean on DC — and it's the same load-audit muscle you built in Module 1.
@@ -399,6 +427,8 @@ But here's where folks get robbed, so lean in. **A power station's name is a mar
 
 📊 [DIAGRAM — Claude builds: a "spec-sheet trap" callout for a portable power station — one box, three labeled numbers pulled apart: (1) RATED/continuous output watts [the name on the box], (2) SURGE watts [bigger, time-limited, "do NOT size to this"], (3) MAX SOLAR INPUT watts [separate and usually much smaller, "this caps how fast the sun refills it"]. Same visual language as the Module 3 anatomy-of-a-spec-sheet diagram so the reader connects them.]
 
+![m6-powerstation-trap.svg](solar-diagrams/m6-powerstation-trap.svg)
+
 **What you'll take:** A power station is plug-and-play freedom with no wiring — but its name is the *output* number. Size your loads to its continuous (not surge) rating, and check the *solar-input* limit before you dream of refilling it off the sun, because that's a separate and usually much smaller number.
 
 **Your move this week:** Find the spec sheet for whatever power station you own or want, and write down three numbers in a row: continuous watts, surge watts, and max solar input watts. If you can't find that third number on the listing, that's the listing telling you something. 🛒
@@ -418,6 +448,8 @@ So you've now seen three shapes of the same idea: the full built-out house syste
 **And the RV/van rig sits right in the middle** — it's a *built* system (it's wired, it's bonded, it lives there) that happens to roll. If your "homestead" has wheels, that's your answer, and Lesson 6.1 is your blueprint.
 
 📊 [DIAGRAM — Claude builds: a decision tree / chart — top question "Does it need to MOVE?" → YES branches to "is it a vehicle you live in?" (→ RV/van built rig, Lesson 6.1) vs "carry it by hand?" (→ power station). NO branch → "what's the total daily need?" small/temporary/can't-wire → power station; runs a household (fridge/freezer/well/lights, ~10-30kWh) → full built 48V system (M1-M5). Each leaf labeled with the trade-off: power station = no install / capped capacity / capped solar input; built system = most capacity & cheapest per kWh / you wire it.]
+
+![m6-which-rig-tree.svg](solar-diagrams/m6-which-rig-tree.svg)
 
 **What you'll take:** Three rigs, three jobs. Power station for small/temporary/mobile and grab-and-go outages; RV/van for a home with wheels; full built 48V system for a household that needs 10-30kWh and a real day of autonomy. Match the rig to the job and you never overpay or undersize.
 
@@ -470,6 +502,8 @@ Before I hand you the lookup table — and I will, it's the next lesson and it's
 ⚠️ **Codes vary by brand, model, AND firmware version — the same number can mean different things on two different units.** The order in *this* lesson is universal; the specific code in the *next* one is only as good as your owner's manual. Always confirm against YOUR unit's manual.
 
 📊 [DIAGRAM — Claude builds: the troubleshooting decision tree — top node "It's not working / it threw a code." First branch: "Is the display ON?" NO → battery/DC path (check battery voltage w/ multimeter → DC switch → terminal polarity & torque). YES → walk the SUN → WIRING → SETTING → GEAR spine as four sequential gates, each with its check and its "if clean, go deeper." Two clearly-marked RED off-ramp nodes that dump straight out of the tree to "STOP — call a licensed electrician": (a) arc-fault / AFCI, (b) ground-fault / GFCI / burning smell / melted lugs. This tree is the visual centerpiece of the module.]
+
+![m7-troubleshoot-tree.svg](solar-diagrams/m7-troubleshoot-tree.svg)
 
 **What you'll take:** Diagnose in order — **sun, wiring, setting, gear** — cheapest and most-likely first. A dead screen means check DC; a comms fault usually means a wrong setting, not dead hardware; and you *measure* with a multimeter and clamp meter before you ever condemn a part.
 
@@ -588,6 +622,8 @@ And before any table — the **symptom-first** entries, because the worst faults
 **A word on BMS faults across all brands:** when the *battery's* brain throws the fault, it's almost always one of three things — a comms cable that's loose or wrong-pinout, the wrong battery type selected on the inverter, or the BMS protecting itself (over/under voltage, over-current, over-temp) by cutting off. Check the cable and the setting first *(#8, #12)*. The BMS doing its job and shutting down is not a malfunction — it's the seatbelt working.
 
 📊 [DIAGRAM — Claude builds: a one-page "fault-code quick card" — a clean printable grid grouping the symptom-first row, then Victron / MPP-Voltronic / EG4 / Growatt blocks, color-coded by severity (green = setting/shed-load fix-it-yourself, amber = wiring/measure, RED = AFCI/GFCI/burning/melted → STOP). Designed to be screenshot-and-keep-on-your-phone. This is the artifact the lesson is built to produce.]
+
+![m7-faultcode-card.svg](solar-diagrams/m7-faultcode-card.svg)
 
 **What you'll take:** A real, scannable field reference — symptom-first entries plus the actual code tables for the gear a DIYer owns. Most codes resolve to *airflow, shed-load, a loose wire, or a wrong setting.* And the same number can mean different things across brands and firmware, so this points you at the neighborhood — your manual names the house.
 

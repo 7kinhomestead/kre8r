@@ -1,0 +1,20 @@
+<svg viewBox="0 0 740 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Inverter spec traps: PV-in vs AC-out, continuous vs surge</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.h{font-size:12px;font-weight:700;fill:#ffb400}.s{font-size:10px;fill:#8a8f98}.v{font-size:11px;font-weight:700;fill:#fff}</style>
+<rect width="740" height="360" fill="#0d0d0d"/>
+<text x="28" y="30" class="lbl">MODULE 3 · TWO INVERTER TRAPS</text>
+<text x="28" y="60" class="h">1 · PV-INPUT is a SEPARATE line from AC-OUTPUT</text>
+<text x="40" y="86" class="s">EG4 12000XP</text>
+<rect x="40" y="92" width="150" height="22" fill="#ffb400"/><text x="196" y="108" class="v">24kW PV-IN</text>
+<rect x="40" y="118" width="75" height="22" fill="#5b6068"/><text x="121" y="134" class="v">12kW AC-OUT</text>
+<text x="340" y="86" class="s">Victron RS</text>
+<rect x="340" y="92" width="70" height="22" fill="#5b6068"/><text x="416" y="108" class="v">4,000W PV-IN</text>
+<rect x="340" y="118" width="93" height="22" fill="#34d27b"/><text x="439" y="134" class="v">5,300W AC-OUT</text>
+<text x="40" y="166" class="s">Same box, two different numbers — read them apart, every time.</text>
+<line x1="28" y1="184" x2="712" y2="184" stroke="#2a2a2a"/>
+<text x="28" y="212" class="h">2 · CONTINUOUS is not SURGE (never size to the spike)</text>
+<text x="40" y="240" class="s">Continuous — size to THIS</text>
+<rect x="40" y="246" width="430" height="20" fill="#34d27b"/><text x="480" y="261" class="v">5,300W steady</text>
+<text x="40" y="286" class="s">Surge — a blink, battery only</text>
+<rect x="40" y="292" width="40" height="20" fill="#ffb400"/><text x="90" y="307" class="v">9,000W for 3 sec</text>
+<text x="40" y="340" class="s" fill="#ff9a9a">Heat derates the steady band: 5,300W at 25C to 4,500W at 40C to 3,000W at 65C. Ratings are at 25C.</text>
+</svg>

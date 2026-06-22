@@ -1,0 +1,43 @@
+<svg viewBox="0 0 780 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ttl desc">
+<title id="ttl">Off-grid 48V solar — fused and grounded wiring diagram</title>
+<desc id="desc">Solar array and a 48V battery bank feed an all-in-one inverter/charger that outputs 120/240V AC to a main panel. Each source has a disconnect and overcurrent protection; the battery-to-inverter run uses 4/0 cable and a 250-400 amp fuse. A grounding bus ties every chassis to a ground rod, with one neutral-ground bond.</desc>
+<style>
+  text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}
+  .lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.ttl{font-size:14px;font-weight:600}.sub{font-size:10px;fill:#8a8f98}
+  .pill{font-size:9.5px;font-weight:600;fill:#cfd2d6}.pillg{font-size:9.5px;font-weight:700;fill:#0d0d0d}
+  .grn{font-size:10px;fill:#34d27b;font-weight:600}.hi{font-size:9.5px;font-weight:700;fill:#ffb400;letter-spacing:.05em}
+  .leg{font-size:10px;fill:#b6b9bd}.star{font-size:11px;font-weight:700;fill:#ffb400}
+</style>
+<defs>
+  <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5b6068"/></marker>
+  <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ffb400"/></marker>
+</defs>
+<rect width="780" height="520" fill="#0d0d0d"/>
+<text x="28" y="34" class="lbl">MODULE 5 · WIRE IT SAFE — THE FULL PICTURE</text>
+<line x1="470" y1="30" x2="500" y2="30" stroke="#ffb400" stroke-width="4"/><text x="506" y="34" class="leg">High-current DC · 4/0 + main fuse</text>
+<line x1="470" y1="48" x2="500" y2="48" stroke="#34d27b" stroke-width="2.5" stroke-dasharray="4 3"/><text x="506" y="52" class="leg">Ground &amp; bonding (EGC)</text>
+<path d="M84,140 V214 H310" fill="none" stroke="#5b6068" stroke-width="2.5" marker-end="url(#a)"/>
+<rect x="150" y="204" width="120" height="19" rx="9.5" fill="#22262b" stroke="#3a3f46"/><text x="210" y="217" class="pill" text-anchor="middle">PV DISCONNECT + FUSE</text>
+<path d="M168,330 H286 V262 H310" fill="none" stroke="#ffb400" stroke-width="5" marker-end="url(#ag)"/>
+<rect x="176" y="320" width="150" height="20" rx="10" fill="#ffb400"/><text x="251" y="334" class="pillg" text-anchor="middle">FUSE 250-400A · 4/0 AWG</text>
+<text x="251" y="300" class="hi" text-anchor="middle">⚡ HIGH CURRENT</text>
+<path d="M482,232 H582" fill="none" stroke="#5b6068" stroke-width="2.5" marker-end="url(#a)"/>
+<rect x="486" y="222" width="92" height="19" rx="9.5" fill="#22262b" stroke="#3a3f46"/><text x="532" y="235" class="pill" text-anchor="middle">AC BREAKER</text>
+<line x1="60" y1="430" x2="700" y2="430" stroke="#34d27b" stroke-width="2.5"/>
+<text x="612" y="424" class="grn" text-anchor="end">Grounding / bonding bus</text>
+<line x1="84" y1="430" x2="84" y2="140" stroke="#34d27b" stroke-width="1.6" stroke-dasharray="4 3"/>
+<line x1="396" y1="430" x2="396" y2="292" stroke="#34d27b" stroke-width="1.6" stroke-dasharray="4 3"/>
+<line x1="150" y1="430" x2="150" y2="366" stroke="#34d27b" stroke-width="1.6" stroke-dasharray="4 3"/>
+<line x1="664" y1="430" x2="664" y2="264" stroke="#34d27b" stroke-width="1.6" stroke-dasharray="4 3"/>
+<line x1="380" y1="430" x2="380" y2="470" stroke="#34d27b" stroke-width="2.5"/>
+<path d="M370 470 H390 M373 478 H387 M376 486 H384" stroke="#34d27b" stroke-width="2" fill="none"/>
+<text x="398" y="478" class="grn">GROUND ROD</text>
+<text x="500" y="318" class="star">★ ONE neutral-ground bond</text>
+<text x="500" y="333" class="sub" fill="#ffd98a">bonded here, and ONLY here (off-grid)</text>
+<line x1="498" y1="314" x2="430" y2="292" stroke="#ffb400" stroke-width="1" stroke-dasharray="3 2"/>
+<rect x="24" y="82" width="120" height="58" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="84" y="108" class="ttl" text-anchor="middle">Solar Array</text><text x="84" y="126" class="sub" text-anchor="middle">~5 kW</text>
+<rect x="310" y="172" width="172" height="120" rx="10" fill="#1c1812" stroke="#ffb400" stroke-width="1.5"/><text x="396" y="214" class="ttl" text-anchor="middle">All-in-One (SunGold)</text><text x="396" y="234" class="sub" text-anchor="middle">MPPT · Inverter · Charger</text><text x="396" y="252" class="sub" text-anchor="middle" fill="#ffb400">48V → 120/240V</text>
+<rect x="24" y="300" width="144" height="66" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="96" y="328" class="ttl" text-anchor="middle">Battery Bank</text><text x="96" y="346" class="sub" text-anchor="middle">48V · 4x LiTime 230Ah</text>
+<rect x="584" y="198" width="160" height="66" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="664" y="226" class="ttl" text-anchor="middle">Main AC Panel</text><text x="664" y="244" class="sub" text-anchor="middle">120/240V loads</text>
+<text x="28" y="502" class="sub">Rule-of-thumb values — size to YOUR gear's manual and verify NEC + your local AHJ. DC arcs kill.</text>
+</svg>

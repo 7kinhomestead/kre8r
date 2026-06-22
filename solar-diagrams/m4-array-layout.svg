@@ -1,0 +1,20 @@
+<svg viewBox="0 0 740 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Array layout and two isolated PV strings</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.s{font-size:10px;fill:#8a8f98}.a{font-size:10px;fill:#ffb400;font-weight:600}.b{font-size:10px;fill:#53d8fb;font-weight:600}.ttl{font-size:12px;font-weight:700}</style>
+<rect width="740" height="330" fill="#0d0d0d"/>
+<text x="28" y="28" class="lbl">MODULE 4 · ARRAY LAYOUT — TWO ISOLATED STRINGS, ONE BRAIN</text>
+<!-- panels: string A (gold) -->
+<rect x="40" y="50" width="70" height="44" rx="4" fill="#161616" stroke="#ffb400"/><rect x="118" y="50" width="70" height="44" rx="4" fill="#161616" stroke="#ffb400"/>
+<text x="114" y="110" text-anchor="middle" class="a">String A — new 590W</text>
+<!-- panels: string B (blue) -->
+<rect x="40" y="130" width="70" height="44" rx="4" fill="#161616" stroke="#53d8fb"/><rect x="118" y="130" width="70" height="44" rx="4" fill="#161616" stroke="#53d8fb"/>
+<text x="114" y="190" text-anchor="middle" class="b">String B — old 400W</text>
+<!-- all-in-one with 2 MPPT -->
+<rect x="330" y="70" width="150" height="110" rx="9" fill="#1c1812" stroke="#ffb400" stroke-width="1.4"/><text x="405" y="110" text-anchor="middle" class="ttl" fill="#ffb400">All-in-One</text><text x="405" y="130" text-anchor="middle" class="s">MPPT 1  ·  MPPT 2</text><text x="405" y="150" text-anchor="middle" class="s">SunGold</text>
+<line x1="188" y1="72" x2="330" y2="100" stroke="#ffb400" stroke-width="2.5"/>
+<line x1="188" y1="152" x2="330" y2="150" stroke="#53d8fb" stroke-width="2.5"/>
+<!-- battery near -->
+<rect x="330" y="210" width="150" height="56" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="405" y="234" text-anchor="middle" class="ttl">48V battery bank</text><text x="405" y="252" text-anchor="middle" class="s">sited close to the brain</text>
+<line x1="405" y1="180" x2="405" y2="210" stroke="#ffb400" stroke-width="5"/><text x="415" y="200" class="a">SHORT high-current run</text>
+<rect x="520" y="60" width="192" height="120" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="536" y="84" class="ttl">The rule</text><text x="536" y="106" class="s">Two isolated strings let you mix</text><text x="536" y="120" class="s">old + new panels — each on its</text><text x="536" y="134" class="s">own MPPT.</text><text x="536" y="160" class="a">Do NOT mix dissimilar panels</text><text x="536" y="174" class="a">within ONE string.</text>
+<text x="28" y="300" class="s">Keep the battery and the all-in-one close together so the heavy DC cable run stays short — that's where the cost and the danger live.</text>
+</svg>

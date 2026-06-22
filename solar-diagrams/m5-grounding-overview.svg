@@ -1,0 +1,24 @@
+<svg viewBox="0 0 740 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Grounding and bonding overview</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.ttl{font-size:12px;font-weight:700}.s{font-size:10px;fill:#8a8f98}.grn{font-size:10px;fill:#34d27b;font-weight:600}.star{font-size:11px;font-weight:700;fill:#ffb400}</style>
+<rect width="740" height="340" fill="#0d0d0d"/>
+<text x="28" y="28" class="lbl">MODULE 5 · GROUNDING &amp; BONDING (conceptual — verify in YOUR manual)</text>
+<text x="500" y="20" class="grn">— green = EGC bonding —</text>
+<!-- panel frames daisy chained -->
+<rect x="40" y="60" width="80" height="44" rx="6" fill="#161616" stroke="#2a2a2a"/><text x="80" y="86" text-anchor="middle" class="s">panel</text>
+<rect x="140" y="60" width="80" height="44" rx="6" fill="#161616" stroke="#2a2a2a"/><text x="180" y="86" text-anchor="middle" class="s">panel</text>
+<rect x="240" y="60" width="80" height="44" rx="6" fill="#161616" stroke="#2a2a2a"/><text x="280" y="86" text-anchor="middle" class="s">panel</text>
+<line x1="80" y1="104" x2="80" y2="130" stroke="#34d27b" stroke-width="2"/><line x1="180" y1="104" x2="180" y2="130" stroke="#34d27b" stroke-width="2"/><line x1="280" y1="104" x2="280" y2="130" stroke="#34d27b" stroke-width="2"/>
+<text x="330" y="86" class="grn">frames daisy-chained</text><text x="330" y="100" class="s">panel → panel → panel with an EGC jumper</text>
+<!-- inverter with N-G bond -->
+<rect x="430" y="150" width="180" height="70" rx="9" fill="#1c1812" stroke="#ffb400" stroke-width="1.4"/><text x="520" y="178" text-anchor="middle" class="ttl" fill="#ffb400">All-in-One inverter</text>
+<text x="520" y="200" text-anchor="middle" class="star">★ ONE neutral-ground bond</text>
+<text x="430" y="240" class="s" fill="#ffd98a">enabled for off-grid · bonded HERE and ONLY here</text>
+<!-- grounding bus + rod -->
+<line x1="80" y1="130" x2="660" y2="130" stroke="#34d27b" stroke-width="2.5"/>
+<text x="600" y="124" text-anchor="end" class="grn">grounding bus</text>
+<line x1="520" y1="150" x2="520" y2="130" stroke="#34d27b" stroke-width="2"/>
+<line x1="360" y1="130" x2="360" y2="260" stroke="#34d27b" stroke-width="2.5"/>
+<path d="M350 260 H370 M353 268 H367 M356 276 H364" stroke="#34d27b" stroke-width="2" fill="none"/>
+<text x="378" y="268" class="grn">driven ground rod + clamp</text>
+<rect x="28" y="296" width="684" height="32" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="44" y="316" class="s">All metal gets bonded together and tied to the rod. The neutral-to-ground bond happens at exactly ONE point — two bonds is the classic, dangerous DIY mistake. Confirm the bond location in your inverter's manual.</text>
+</svg>

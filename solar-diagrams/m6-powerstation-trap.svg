@@ -1,0 +1,23 @@
+<svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Power station spec-sheet trap</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.n{font-size:22px;font-weight:800}.h{font-size:13px;font-weight:700;fill:#fff}.s{font-size:10.5px;fill:#8a8f98}</style>
+<rect width="720" height="320" fill="#0d0d0d"/>
+<text x="28" y="34" class="lbl">MODULE 6 · WHAT A "2000W" POWER STATION REALLY MEANS</text>
+<rect x="40" y="60" width="180" height="200" rx="12" fill="#161616" stroke="#2a2a2a"/>
+<text x="130" y="130" text-anchor="middle" class="n" fill="#34d27b">2000W</text>
+<text x="130" y="156" text-anchor="middle" class="h">① RATED / continuous</text>
+<text x="130" y="174" text-anchor="middle" class="s">the name on the box —</text>
+<text x="130" y="190" text-anchor="middle" class="s">what it actually holds</text>
+<text x="130" y="232" text-anchor="middle" class="s">🔌 the one real number</text>
+<rect x="270" y="60" width="180" height="200" rx="12" fill="#1c1410" stroke="#a86a1a"/>
+<text x="360" y="130" text-anchor="middle" class="n" fill="#ffb400">~4000W</text>
+<text x="360" y="156" text-anchor="middle" class="h">② SURGE</text>
+<text x="360" y="174" text-anchor="middle" class="s">bigger, time-limited</text>
+<text x="360" y="200" text-anchor="middle" class="s" fill="#ffb400">⚠ do NOT size to this</text>
+<rect x="500" y="60" width="180" height="200" rx="12" fill="#16110c" stroke="#7a3" stroke-opacity="0.3"/>
+<text x="590" y="130" text-anchor="middle" class="n" fill="#ff7070">~500W</text>
+<text x="590" y="156" text-anchor="middle" class="h">③ MAX SOLAR INPUT</text>
+<text x="590" y="174" text-anchor="middle" class="s">separate &amp; much smaller</text>
+<text x="590" y="200" text-anchor="middle" class="s" fill="#ff9a9a">caps how fast the sun</text>
+<text x="590" y="214" text-anchor="middle" class="s" fill="#ff9a9a">can refill it</text>
+<text x="40" y="292" class="s">Three different numbers wearing one name. The sticker shows ①. ② tricks you on capacity. ③ — the one they bury — decides whether the sun can keep up.</text>
+</svg>

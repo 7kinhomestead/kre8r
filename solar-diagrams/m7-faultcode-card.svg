@@ -1,0 +1,43 @@
+<svg viewBox="0 0 740 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Fault-code quick card</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.h{font-size:11px;font-weight:700;fill:#ffb400}.r{font-size:10px;fill:#d7d9dd}.s{font-size:9.5px;fill:#8a8f98}</style>
+<rect width="740" height="380" fill="#0d0d0d"/>
+<text x="28" y="28" class="lbl">MODULE 7 · FAULT-CODE QUICK CARD (screenshot me)</text>
+<!-- legend -->
+<rect x="500" y="16" width="12" height="12" fill="#34d27b"/><text x="516" y="26" class="s">DIY fix (setting/load)</text>
+<rect x="500" y="32" width="12" height="12" fill="#ffb400"/><text x="516" y="42" class="s">measure/wiring</text>
+<rect x="640" y="16" width="12" height="12" fill="#ff7070"/><text x="656" y="26" class="s">STOP — get help</text>
+<!-- SunGold -->
+<text x="28" y="64" class="h">SUNGOLD ⭐ (your gear)</text>
+<rect x="28" y="72" width="220" height="2" fill="#ffb400"/>
+<text x="28" y="92" class="r">01 batt low · 06 over-volt · 09 PV high</text>
+<text x="28" y="108" class="r">14 overload (shed) · 19/20 over-temp (airflow)</text>
+<text x="28" y="124" class="r">58 BMS comms · 64 BMS over-volt</text>
+<text x="28" y="140" class="s">LFPV: F02 temp · F03/F04 batt V · F07 overload · F10 PV</text>
+<!-- Victron -->
+<text x="270" y="64" class="h">VICTRON (Err)</text><rect x="270" y="72" width="200" height="2" fill="#5b6068"/>
+<text x="270" y="92" class="r">Err 11 ripple → loose/thin DC wire</text>
+<text x="270" y="108" class="r">Err 67 → lost BMS comms</text>
+<text x="270" y="124" class="r">Err 1 temp · Err 2 high V</text>
+<text x="270" y="140" class="s">full list: victronenergy.com</text>
+<!-- MPP/Voltronic -->
+<text x="500" y="64" class="h">MPP / VOLTRONIC</text><rect x="500" y="72" width="210" height="2" fill="#5b6068"/>
+<text x="500" y="92" class="r">02 over-temp · 05 short · 07 overload</text>
+<text x="500" y="108" class="r">61/80 BMS comms · F72 parallel</text>
+<text x="500" y="124" class="s">solid=fault, flashing=warning</text>
+<!-- EG4 -->
+<text x="28" y="176" class="h">EG4 (words)</text><rect x="28" y="184" width="220" height="2" fill="#5b6068"/>
+<text x="28" y="204" class="r">Temp fault · Bat com failure · Bat Fault</text>
+<rect x="28" y="214" width="280" height="20" fill="#1c0e0e" stroke="#ff7070"/><text x="36" y="228" class="r" fill="#ffb3b3">AFCI high (arc) · GFCI high (ground) → STOP</text>
+<!-- LiTime -->
+<text x="340" y="176" class="h">LITIME BATTERY ⭐</text><rect x="340" y="184" width="220" height="2" fill="#ffb400"/>
+<text x="340" y="204" class="r">No code — the BMS just disconnects.</text>
+<text x="340" y="220" class="r">Won't charge in the cold = working as designed</text>
+<text x="340" y="236" class="s">exact cutoff in your LiTime manual</text>
+<!-- symptom-first -->
+<rect x="28" y="252" width="684" height="76" rx="9" fill="#161616" stroke="#2a2a2a"/>
+<text x="44" y="272" class="h">SYMPTOM-FIRST</text>
+<text x="44" y="292" class="r">Blank screen → meter the battery + DC switch FIRST (the screen runs on battery power)</text>
+<text x="44" y="308" class="r">Over-temp → clear airflow · Overload → shed load · "Comms" → battery type on LCD + cable pinout</text>
+<text x="44" y="322" class="s" fill="#ffb3b3">RED off-ramps (AFCI/GFCI/burning/melted) → stop and call a pro.</text>
+<text x="28" y="352" class="s">Same number can mean different things across brands &amp; firmware — this points you at the neighborhood; your manual names the house.</text>
+</svg>

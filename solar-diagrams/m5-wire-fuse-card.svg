@@ -1,0 +1,21 @@
+<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Wire and fuse sizing reference card</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.h{font-size:13px;font-weight:700;fill:#ffb400}.c{font-size:13px;fill:#d7d9dd}.m{font-size:10.5px;fill:#8a8f98}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}</style>
+<rect width="720" height="360" fill="#0d0d0d"/>
+<text x="28" y="34" class="lbl">MODULE 5 · WIRE &amp; OVERCURRENT SIZING</text>
+<rect x="28" y="50" width="664" height="40" rx="8" fill="#1c1812" stroke="#ffb400" stroke-width="1.3"/>
+<text x="44" y="75" class="h">I = Watts ÷ Volts</text><text x="200" y="75" class="c">More volts → less current → smaller, cheaper, safer wire.</text>
+<!-- table -->
+<g>
+<rect x="28" y="108" width="664" height="34" fill="#161616" stroke="#2a2a2a"/>
+<text x="44" y="130" class="m">SYSTEM</text><text x="230" y="130" class="m">CONTINUOUS LOAD</text><text x="420" y="130" class="m">WIRE (battery run)</text><text x="560" y="130" class="m">OVERCURRENT</text>
+<rect x="28" y="142" width="664" height="40" fill="#111" stroke="#2a2a2a"/>
+<text x="44" y="167" class="c">48V</text><text x="230" y="167" class="c">3,000 W</text><text x="420" y="167" class="c">2/0 AWG</text><text x="560" y="167" class="c">110 A</text>
+<rect x="28" y="182" width="664" height="40" fill="#1c1812" stroke="#ffb400"/>
+<text x="44" y="207" class="c" fill="#ffb400">48V ★</text><text x="230" y="207" class="c" fill="#ffb400">5,500 W</text><text x="420" y="207" class="c" fill="#ffb400">4/0 AWG</text><text x="560" y="207" class="c" fill="#ffb400">400 A fuse / 250 A breaker</text>
+<rect x="28" y="222" width="664" height="40" fill="#111" stroke="#2a2a2a"/>
+<text x="44" y="247" class="c">12V</text><text x="230" y="247" class="c">3,000 W</text><text x="420" y="247" class="c">4/0 AWG</text><text x="560" y="247" class="c">400 A</text>
+</g>
+<text x="44" y="290" class="m">Note: 12V @ 3,000W needs the SAME fat 4/0 cable that 48V only needs at 5,500W — that's the 48V payoff.</text>
+<rect x="28" y="305" width="664" height="38" rx="8" fill="#241a10" stroke="#a86a1a"/>
+<text x="44" y="329" class="c" fill="#ffd98a">⚠ RULES OF THUMB — adjust for cable run length, ambient temp, and YOUR gear's datasheet. Never go thinner than the manual.</text>
+</svg>

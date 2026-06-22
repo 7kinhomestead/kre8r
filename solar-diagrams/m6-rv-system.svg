@@ -1,0 +1,22 @@
+<svg viewBox="0 0 740 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">RV and van off-grid power system</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.ttl{font-size:12px;font-weight:700}.s{font-size:9.5px;fill:#8a8f98}.new{font-size:9.5px;fill:#ffb400}</style>
+<rect width="740" height="360" fill="#0d0d0d"/>
+<text x="28" y="30" class="lbl">MODULE 6 · RV / VAN — SAME SPINE, THREE CHARGE SOURCES, ONE BATTERY</text>
+<!-- three sources on the left -->
+<rect x="28" y="56" width="150" height="44" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="103" y="78" text-anchor="middle" class="ttl">Roof solar</text><text x="103" y="93" text-anchor="middle" class="s">→ MPPT</text>
+<rect x="28" y="118" width="150" height="44" rx="8" fill="#1c1812" stroke="#ffb400"/><text x="103" y="138" text-anchor="middle" class="ttl" fill="#ffb400">Alternator</text><text x="103" y="153" text-anchor="middle" class="new">→ DC-DC charger ★</text>
+<rect x="28" y="180" width="150" height="44" rx="8" fill="#1c1812" stroke="#ffb400"/><text x="103" y="200" text-anchor="middle" class="ttl" fill="#ffb400">Shore power</text><text x="103" y="215" text-anchor="middle" class="new">→ inverter/charger ★</text>
+<!-- battery center -->
+<rect x="280" y="110" width="150" height="70" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="355" y="138" text-anchor="middle" class="ttl">12V house battery</text><text x="355" y="156" text-anchor="middle" class="s">LiFePO4</text>
+<line x1="178" y1="78" x2="280" y2="128" stroke="#5b6068" stroke-width="2"/>
+<line x1="178" y1="140" x2="280" y2="145" stroke="#ffb400" stroke-width="2.5"/>
+<line x1="178" y1="202" x2="280" y2="162" stroke="#ffb400" stroke-width="2.5"/>
+<!-- two outputs -->
+<rect x="540" y="60" width="170" height="50" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="625" y="82" text-anchor="middle" class="ttl">12V house loads</text><text x="625" y="98" text-anchor="middle" class="s">lights · pump · fans (direct)</text>
+<rect x="540" y="180" width="170" height="50" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="625" y="202" text-anchor="middle" class="ttl">120V outlets</text><text x="625" y="218" text-anchor="middle" class="s">via inverter</text>
+<line x1="430" y1="135" x2="540" y2="85" stroke="#5b6068" stroke-width="2"/>
+<line x1="430" y1="155" x2="540" y2="205" stroke="#5b6068" stroke-width="2"/>
+<text x="455" y="120" class="s">straight to 12V</text><text x="455" y="185" class="s">up through inverter</text>
+<rect x="28" y="252" width="684" height="50" rx="9" fill="#241a10" stroke="#a86a1a"/><text x="44" y="274" class="new">The two boxes a house build doesn't have:</text><text x="44" y="292" class="s" fill="#ffd98a">① DC-DC charger (charges the house battery off the engine alternator while you drive) · ② shore-power inlet (plug into a campground/grid to charge). Plus tight space &amp; weight limits → smaller array.</text>
+<text x="28" y="332" class="s">Same five-box spine you already know — the house just has wheels and a temper.</text>
+</svg>

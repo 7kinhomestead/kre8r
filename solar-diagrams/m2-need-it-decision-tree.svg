@@ -1,0 +1,37 @@
+<svg viewBox="0 0 740 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Do I actually need this component decision guide</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.p{font-size:12px;font-weight:700;fill:#fff}.q{font-size:10px;fill:#8a8f98}.need{font-size:11px;font-weight:700;fill:#34d27b}.skip{font-size:11px;font-weight:700;fill:#8a8f98}.sit{font-size:11px;font-weight:700;fill:#ffb400}</style>
+<rect width="740" height="420" fill="#0d0d0d"/>
+<text x="28" y="30" class="lbl">MODULE 2 · DO I ACTUALLY NEED THIS PART?</text>
+<!-- rows -->
+<g>
+<rect x="28" y="48" width="150" height="44" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="42" y="68" class="p">Combiner box</text><text x="42" y="84" class="q">More than one PV string?</text>
+<text x="540" y="66" class="need">YES → NEED</text><text x="540" y="84" class="skip">one string → SKIP</text>
+<line x1="178" y1="70" x2="530" y2="70" stroke="#3a3f46"/>
+</g>
+<g>
+<rect x="28" y="104" width="150" height="44" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="42" y="124" class="p">Surge protector (SPD)</text><text x="42" y="140" class="q">Exposed / lightning-prone?</text>
+<text x="540" y="122" class="sit">YES → recommend</text><text x="540" y="140" class="skip">sheltered → optional</text>
+<line x1="178" y1="126" x2="530" y2="126" stroke="#3a3f46"/>
+</g>
+<g>
+<rect x="28" y="160" width="150" height="44" rx="8" fill="#161616" stroke="#2a2a2a"/><text x="42" y="180" class="p">Battery shunt/monitor</text><text x="42" y="196" class="q">Want a real fuel gauge?</text>
+<text x="540" y="182" class="sit">strongly recommended</text>
+<line x1="178" y1="182" x2="530" y2="182" stroke="#3a3f46"/>
+</g>
+<g>
+<rect x="28" y="216" width="150" height="44" rx="8" fill="#1c1812" stroke="#ffb400"/><text x="42" y="236" class="p">Cable</text><text x="42" y="252" class="q">Sized to the load</text>
+<text x="540" y="240" class="need">ALWAYS NEED — 4/0 @ 5.5kW/48V</text>
+<line x1="178" y1="238" x2="530" y2="238" stroke="#ffb400"/>
+</g>
+<g>
+<rect x="28" y="272" width="150" height="44" rx="8" fill="#1c1812" stroke="#ffb400"/><text x="42" y="292" class="p">Fuses / breakers</text><text x="42" y="308" class="q">Every source protected</text>
+<text x="540" y="296" class="need">ALWAYS NEED — ~250-400A main</text>
+<line x1="178" y1="294" x2="530" y2="294" stroke="#ffb400"/>
+</g>
+<g>
+<rect x="28" y="328" width="150" height="44" rx="8" fill="#1c1812" stroke="#ffb400"/><text x="42" y="348" class="p">DC + AC disconnects</text><text x="42" y="364" class="q">Both sides</text>
+<text x="540" y="352" class="need">ALWAYS NEED — code-required</text>
+<line x1="178" y1="350" x2="530" y2="350" stroke="#ffb400"/>
+</g>
+<rect x="28" y="384" width="684" height="26" rx="6" fill="#241a10" stroke="#a86a1a"/><text x="42" y="402" class="q" fill="#ffd98a">Grounding &amp; bonding: ALWAYS NEED — frames bonded, one neutral-ground bond, run to a ground rod (Module 5).</text>
+</svg>

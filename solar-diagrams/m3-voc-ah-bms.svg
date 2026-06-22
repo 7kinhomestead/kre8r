@@ -1,0 +1,22 @@
+<svg viewBox="0 0 740 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t"><title id="t">Cold Voc trap and the Ah lie</title>
+<style>text{font-family:'DM Sans',system-ui,sans-serif;fill:#fff}.lbl{font-size:10px;fill:#8a8f98;letter-spacing:.1em}.h{font-size:12px;font-weight:700;fill:#ffb400}.s{font-size:10px;fill:#8a8f98}.v{font-size:11px;font-weight:700;fill:#fff}</style>
+<rect width="740" height="380" fill="#0d0d0d"/>
+<text x="28" y="30" class="lbl">MODULE 3 · THE TRAP THAT FRIES GEAR + THE BATTERY LIE</text>
+<text x="28" y="58" class="h">1 · COLD makes panel voltage RISE — above the max, the controller dies</text>
+<line x1="60" y1="170" x2="60" y2="74" stroke="#5b6068"/><line x1="60" y1="170" x2="420" y2="170" stroke="#5b6068"/>
+<text x="66" y="86" class="s">Voc</text><text x="330" y="186" class="s">warm  to  COLD  →</text>
+<rect x="60" y="96" width="360" height="2" fill="#ff7070"/><text x="426" y="100" class="s" fill="#ff7070">MAX PV INPUT (e.g. 500V) — WARRANTY VOID ABOVE</text>
+<path d="M70,150 L200,128 L340,104 L410,92" fill="none" stroke="#ffb400" stroke-width="2.5"/>
+<circle cx="200" cy="128" r="3" fill="#ffb400"/><text x="150" y="122" class="s" fill="#ffb400">66.6V at 25C</text>
+<circle cx="410" cy="92" r="3" fill="#ffb400"/><text x="350" y="84" class="s" fill="#ffb400">74.5V at -10C</text>
+<line x1="28" y1="200" x2="712" y2="200" stroke="#2a2a2a"/>
+<text x="28" y="228" class="h">2 · "100Ah" means nothing without volts — and the BMS can choke a big inverter</text>
+<rect x="40" y="244" width="120" height="50" rx="6" fill="#161616" stroke="#2a2a2a"/><text x="100" y="268" text-anchor="middle" class="v">100Ah @ 12V</text><text x="100" y="284" text-anchor="middle" class="s">= 1.28 kWh</text>
+<text x="172" y="274" class="v" fill="#ffb400">4x →</text>
+<rect x="216" y="244" width="120" height="50" rx="6" fill="#1c1812" stroke="#ffb400"/><text x="276" y="268" text-anchor="middle" class="v" fill="#ffb400">100Ah @ 48V</text><text x="276" y="284" text-anchor="middle" class="s">= 5.12 kWh</text>
+<text x="40" y="324" class="s">Same Ah, 4x the energy. Always convert to watt-hours.</text>
+<rect x="430" y="244" width="92" height="50" rx="6" fill="#161616" stroke="#2a2a2a"/><text x="476" y="266" text-anchor="middle" class="s">1 battery BMS</text><text x="476" y="282" text-anchor="middle" class="v">100A ≈ 5.1kW</text>
+<rect x="522" y="262" width="38" height="14" fill="#ff7070"/>
+<rect x="560" y="244" width="124" height="50" rx="6" fill="#161616" stroke="#2a2a2a"/><text x="622" y="266" text-anchor="middle" class="s">12-15kW inverter</text><text x="622" y="282" text-anchor="middle" class="v" fill="#ff9a9a">STARVED</text>
+<text x="430" y="324" class="s" fill="#ff9a9a">One battery's BMS is a narrow pipe — parallel batteries to feed the inverter.</text>
+</svg>
