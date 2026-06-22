@@ -9,7 +9,8 @@
 
 ---
 
-# Module 1 — Design YOUR System
+# Module 1 — Open the Case: Design YOUR System
+*Case File 01 — Every build opens with one question: how much power does this life actually take? Read the scene before you touch a tool.*
 
 ### Lesson 1.1 — The tool that does it right
 > ‹SOURCE — PULL BEFORE PUBLISH: `thAV7GHobsg` "I Built You A Tool To Make Solar Design Simple (And Free)" — Jason WAS a pro (designed/sold/installed); every company quote-tool is "really really wrong," worse off-grid; his free Sizer lives in the toolshed: energy audit → location (real NASA sun data) → full system + materials list at 3 price points.›
@@ -51,7 +52,8 @@ Now, why 48 volts and not 12? Pure physics, and it's the one number that quietly
 
 ---
 
-# Module 2 — Every Part, Explained (the BOM)
+# Module 2 — The Usual Suspects: Every Part, Explained (the BOM)
+*Case File 02 — Before you build it, you have to know everyone in the room. Here's the full lineup — and which suspects are just along for the ride.*
 
 ### Lesson 2.1 — What's actually in the box (and the one rule for the whole list)
 > ‹SOURCE — PULL BEFORE PUBLISH: 📹 `OFrqbN9HMBQ` "What We Use for Our Off Grid Solar Array" (panels→charge controller→batteries→inverter→distribution, the five real boxes on his property) + 🔬 Pass-1 synthesis (full BOM: panels, racking, MPPT/all-in-one, LiFePO4+BMS, inverter, combiner, DC/AC disconnects, breakers/fuses, SPD, busbars, shunt, cable, grounding) + ✏️ the "need-it-or-skip-it" framing that runs the whole module.›
@@ -132,7 +134,8 @@ I'm going to go fast and honest, need-it-or-skip-it on each. And the disclaimer 
 
 ---
 
-# Module 3 — Buy It Right (read the spec sheet, dodge the trap)
+# Module 3 — Interrogate the Spec Sheet: Buy It Right (dodge the trap)
+*Case File 03 — The spec sheet is a witness with a motive. Learn where it lies and you'll never overpay or under-build again.*
 
 ### Lesson 3.1 — The spec sheet is a magic trick (here's where to look)
 > ‹SOURCE — PULL BEFORE PUBLISH: 📹 `2qyyDvAC2Yk` "Testing The Ampeak 3000w Inverter" ("I didn't know what I didn't know"; modified-vs-pure-sine wave lesson; only-buy-pure-sine rule; the budget unit's display shows watts/input V/SoC/output V & Hz) + 🔬 Pass-2 synthesis (read the datasheet not the hero number; the binding spec is rarely the one in the product name) + ✏️ "anatomy of a spec sheet" framing.›
@@ -197,7 +200,8 @@ Two of the meanest traps left, and then I'll tell you exactly where I bought my 
 
 ---
 
-# Module 4 — Build It: Mount the Array & Set the Gear
+# Module 4 — Assemble the Evidence: Build It (Mount the Array & Set the Gear)
+*Case File 04 — Now the pieces come together — in the right order, with the one live wire saved for last.*
 
 ### Lesson 4.1 — Racking: build the bones (and steal a second job from your array)
 > ‹SOURCE — PULL BEFORE PUBLISH: 📹 `2gpl_eOaKvw` "DIY Solar Panel Installation - 4 SunGold 590w Full Process" (the wood-rack build off a junk-pile 4×6, high-side uprights + low-side 4×4, tilt toward the sun, the "this voids the warranty but it solves a bigger problem — water collection" justification) + 📹 `DOsEJEwStdE` "So We Built An Off Grid Solar Array To Start Over" (frame built to shed water → garden + covered storage underneath; "check Square before fastening the 2×6 hangers"). 🔬 racking/orientation basics. ✏️ the physical build order. Anchor: Jason's real SunGold rig.›
@@ -269,7 +273,8 @@ I'm not torquing battery cables in this lesson on purpose — connection order a
 
 ---
 
-# Module 5 — Wire It Safe (the connections) 🏅
+# Module 5 — Question Every Connection: Wire It Safe 🏅
+*Case File 05 — Every fault hides in a connection nobody questioned. In this module, we question all of them.*
 
 ### Lesson 5.1 — Read this first (the part the lawyers and I both insist on)
 > ‹SOURCE — PULL BEFORE PUBLISH: ⚖️ in-voice disclaimer lesson. Synthesized from 📹 `Upjc6UuEYpE` + `kAF3bgcY9mk` (the recurring "electricians in the comments say this is dangerous" frame; assume every panel is hot; ~75% voltage even shaded), 🔬 Pass 1 caveat block (NEC + AHJ jurisdiction-dependent, rules of thumb vary by run length / temp / datasheet, verify your own gear + local code, licensed electrician for AC tie-in & inspection-bound work) and Pass 3 #20 (STOP signals: arc fault, ground fault, burning smell, melted lugs). ROUTES THROUGH LEGAL REVIEW BEFORE PUBLISH.›
@@ -394,7 +399,8 @@ That's the crown jewel — not a single trick, but the *order*. Bonding and grou
 
 ---
 
-# Module 6 — Smaller Rigs: RV/Van & Solar Generators
+# Module 6 — Side Cases: RV/Van & Solar Generators
+*Case File 06 — Two cases that bend the rules: the rig that rolls, and the box that skips the wiring entirely.*
 
 ### Lesson 6.1 — When the whole rig has to roll: RV & van power
 
@@ -470,7 +476,8 @@ So you've now seen three shapes of the same idea: the full built-out house syste
 
 ---
 
-# Module 7 — Turn It On, Troubleshoot & Grow
+# Module 7 — Case Closed: Turn It On, Troubleshoot & Grow
+*Case File 07 — This is where the clues come together: you throw the switch, the system breathes, and the only thing left to take down is the silence. Case closed.*
 
 ### Lesson 7.1 — Commissioning: the boring checklist that saves your system
 
