@@ -32,14 +32,14 @@
 <line x1="380" y1="430" x2="380" y2="470" stroke="#34d27b" stroke-width="2.5"/>
 <path d="M370 470 H390 M373 478 H387 M376 486 H384" stroke="#34d27b" stroke-width="2" fill="none"/>
 <text x="398" y="478" class="grn">GROUND ROD</text>
-<text x="432" y="330" class="star">★ ONE neutral-ground bond</text>
-<text x="432" y="347" class="sub" fill="#ffd98a">Made at the MAIN PANEL — the bond you actually install.</text>
-<text x="432" y="362" class="sub" fill="#ffd98a">Set SunGold item #63 OFF so it isn't bonded twice.</text>
-<text x="432" y="377" class="sub">Verify: an outlet tester reads “correct,” not “open neutral.”</text>
-<line x1="612" y1="322" x2="650" y2="264" stroke="#ffb400" stroke-width="1" stroke-dasharray="3 2"/>
+<text x="432" y="330" class="star">★ ONE neutral-ground bond — inside the inverter</text>
+<text x="432" y="347" class="sub" fill="#ffd98a">SunGold #63 ON makes it internally — that's the one bond.</text>
+<text x="432" y="362" class="sub" fill="#ffd98a">The panel it feeds is a SUBPANEL: float the neutral,</text>
+<text x="432" y="377" class="sub" fill="#ffd98a">bond the ground bar, no N-G bond downstream.</text>
+<line x1="446" y1="322" x2="446" y2="292" stroke="#ffb400" stroke-width="1" stroke-dasharray="3 2"/>
 <rect x="24" y="82" width="120" height="58" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="84" y="108" class="ttl" text-anchor="middle">Solar Array</text><text x="84" y="126" class="sub" text-anchor="middle">~5 kW</text>
 <rect x="310" y="172" width="172" height="120" rx="10" fill="#1c1812" stroke="#ffb400" stroke-width="1.5"/><text x="396" y="214" class="ttl" text-anchor="middle">All-in-One (SunGold)</text><text x="396" y="234" class="sub" text-anchor="middle">MPPT · Inverter · Charger</text><text x="396" y="252" class="sub" text-anchor="middle" fill="#ffb400">48V → 120/240V</text>
 <rect x="24" y="300" width="144" height="66" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="96" y="328" class="ttl" text-anchor="middle">Battery Bank</text><text x="96" y="346" class="sub" text-anchor="middle">48V · 4x LiTime 230Ah</text>
-<rect x="584" y="198" width="160" height="66" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="664" y="226" class="ttl" text-anchor="middle">Main AC Panel</text><text x="664" y="244" class="sub" text-anchor="middle">120/240V loads</text>
+<rect x="584" y="198" width="160" height="66" rx="9" fill="#161616" stroke="#2a2a2a"/><text x="664" y="222" class="ttl" text-anchor="middle">Distribution Panel</text><text x="664" y="238" class="sub" text-anchor="middle">120/240V loads</text><text x="664" y="253" class="sub" text-anchor="middle" fill="#34d27b">neutral floated · subpanel</text>
 <text x="28" y="502" class="sub">Rule-of-thumb values — size to YOUR gear's manual and verify NEC + your local AHJ. DC arcs kill.</text>
 </svg>
