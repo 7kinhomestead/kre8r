@@ -53,6 +53,13 @@ from `COURSE-SOLAR-DRAFTS.md` once the draft is locked. Source clips: `D:\kajabi
 - ⏳ Garden offer attach — needs Jason's go (commercial)
 - ⏳ Publish lessons (publishing_option: 'published') once content + video confirmed
 
+## Glossary (added post-build)
+- Public searchable page: `kre8r-land/public/solar-glossary.html` → `https://7kinhomestead.land/solar-glossary` (route added; reachable, **unlisted until launch**; deploys with the land box). ~90 terms, 8 categories, symbol decoding (I→amps), search + filter.
+- New Module 1 lesson **"📖 The Off-Grid Solar Glossary — decode any term"** = lesson id `2198302713` (links out to the page).
+- A "Stuck on a word?" glossary callout is appended to each module's **lead lesson** (1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1).
+- Linked from the landing page tools section.
+- ⚠️ These callouts + the glossary lesson are **only in Kajabi, not in COURSE-SOLAR-DRAFTS.md** — a full re-pour from the draft would drop them. Re-add after any re-pour (or fold into the draft).
+
 ## Re-pour note
 To re-sync after red-pen edits to COURSE-SOLAR-DRAFTS.md: re-run the cleaning script
 (parses `### Lesson N.N` headers, strips ‹SOURCE›/[VERIFY]/diagram-build/research-ref/watch-note
