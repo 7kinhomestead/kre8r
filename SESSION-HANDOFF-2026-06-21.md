@@ -1,5 +1,47 @@
 # Session Handoff → Master Project Session
 *Window dates: Jun 20–21 2026 (overnight into Father's Day). Purpose: rundown + file changes + outstanding pre-launch items for the master punch list. Jason is still finishing the solar course in the originating window.*
+*▸ **UPDATED Jun 22 2026** — see the ⭐ section immediately below; the solar course is now fully BUILT, PUBLISHED, and LIVE, and the Garden page was rebuilt.*
+
+---
+
+## ⭐ UPDATE — Jun 22 2026: SOLAR COURSE SHIPPED + GARDEN PAGE REBUILT
+
+Everything in section D below ("Intermediate Off-Grid Solar — fully drafted, not yet built") is now **DONE and LIVE**. Plus a Garden-page redesign and a few fixes. Rundown:
+
+### A. "The Mysteries of Off-Grid Solar" — BUILT, PUBLISHED, LIVE in the Garden ✅
+- **Renamed** from "Intermediate Off-Grid Solar" → **"The Mysteries of Off-Grid Solar"** — a whodunit/detective theme (Jason's idea, off a movie-poster he made). Tagline **"Some cases aren't solved. They're designed."**; closer **"Shine a light on the darkness. Case closed."** Light touch: case-file module titles (Open the Case → … → Case Closed), one-line frames; lesson titles + prose kept as-is.
+- **Kajabi evergreen course `2149490461`** (site `2148808568`). All IDs + admin links in **`kre8r/SOLAR-COURSE-KAJABI-IDS.md`** (the canonical reference for this course).
+- **7 modules / 23 lessons poured** from `COURSE-SOLAR-DRAFTS.md` (scaffolding stripped) + a **Bonus** video lesson (M5) + a **glossary** lesson (M1). **ALL modules + lessons PUBLISHED.**
+- **17 SVG diagrams** built + overflow-fixed, hosted at **`7kinhomestead.land/solar-diagrams/*.svg`** (deployed, resolving), embedded in the lessons.
+- **Gold theme** imported + assigned by Jason; **poster** set as the course thumbnail. **15 videos** uploaded by Jason (staged `D:\kajabi-course\Intermediate-Off-Grid-Solar\_UPLOAD-GUIDE.txt`; mapping is non-1:1 — several lessons are text-only by design).
+- **N-G bond corrected to Jason's REAL rig:** SunGold menu **#63 internal bond** → the panel it feeds is a **floating-neutral SUBPANEL**, not a service panel (NEC 250.30 = separately derived system; 250.142(B) = no load-side N-G bond). Lesson 5.2 + the wiring/grounding diagrams all reflect this, with a "verify YOUR inverter" disclaimer.
+- **Offer attached by Jason → the course is LIVE in the Garden.** Both build courses (Land + Solar) are now live.
+
+### B. The Off-Grid Solar Glossary (Cari's idea) ✅
+- **Public searchable page** `7kinhomestead.land/solar-glossary` — ~91 terms, plain-English, symbol decoding (e.g. *I = amps*), live search + category filters, **poster header with "Glossary" set low-left in white**. Free/SEO play. Deployed + live.
+- **In-course:** a single **"Evidence Locker"** link lesson (`2198302713`) — detective intro + button to the page. *(We tried embedding the full glossary inline but Kajabi's body-size limit forced a 2-lesson split, which over-complicated it → reverted to the clean link lesson.)*
+
+### C. Garden landing page (`/garden`) — REBUILT ✅
+- Replaced the top-of-scroll Cyber Jason chat widget with a **homepage-style alternating image/text showcase** (`.spot` pattern): **Solar (gold) · Land (teal) · Out of Your Own Way (azure)** — each with its real course art + theme color.
+- **Greenhouse** = a centered **"ALL THE GREENHOUSE STUFF, TOO"** band (no image) to break up the rhythm and de-feature the free tier.
+- **Cyber Jason = deliberately downplayed** (anti-AI lean in the homestead audience): a small centered **profile circle + green online dot**, copy reframed as *"the planning brain wired into the Tool Shed"* with a concrete example (Solar Designer → what to buy/skip/over-built) and how the Garden turns every tool into a step-by-step plan. Live chat widget mounts below it.
+- Offer copy refreshed everywhere to **3 full courses** (hero, stats "3 Full Courses Inside", "Full Course Library" feature card, Honest Ladder, meta/OG). Old redundant course grid removed.
+
+### D. Fixes
+- **`/regen` OG image** — `ground-truth.html` was the ONE tool page with **no Open Graph block** → shared links had no preview card. Added the standard `og:`/`twitter:` set → `og-card.jpg` (matches solar/freedom/water/lifestyle). Deployed. ⚠️ existing shares need a **re-scrape** (FB Sharing Debugger) to refresh the cached empty card.
+
+### ⚠️ Kajabi lesson-body gotchas (hard-won — for any future MCP course work)
+- **Markdown tables DON'T render** and raw `<table>` gets stripped in markdown mode → pour any table lesson with **`lesson_body_format:'html'`** (full HTML: `<p>`/`<h2>`/`<table>`). Affected/fixed: glossary, **5.3** wire-sizing, **7.3** fault-code reference.
+- **Bodies silently truncate over ~20KB** — `update_course_content` returns "success" but keeps the OLD body. Keep each lesson < ~18KB and **always `get_lesson` to confirm a big body persisted.**
+
+### Files changed this session (all pushed; land deployed through `eb8a8a1`)
+- **kre8r:** `COURSE-SOLAR-DRAFTS.md` (final content + detective frames + N-G correction), `solar-diagrams/*.svg` (17, overflow-fixed + bond-corrected), **new** `SOLAR-COURSE-KAJABI-IDS.md`, `SOLAR-COURSE-RESEARCH.md` (Pass 4), memory updates.
+- **kre8r-land:** **new** `public/solar-glossary.html`; `public/solar-course.html` (rename + poster hero + glossary card); `public/garden.html` (showcase rebuild + Solar card + 3-course copy); `public/ground-truth.html` (OG tags); `server.js` (`/solar-glossary` route); `src/utils/sitemap.js` (`/solar-course` + `/solar-glossary`); **new** `public/solar-diagrams/*.svg` (17 hosted).
+
+### Still open / nice-to-haves for the launch session
+1. **Coordinated Land + Solar launch announcement** still unwritten (community + email). Jason already did a launch post for `/regen` with a screenshot. Offer to draft the courses announcement in his voice with `/solar-course` + `/land-course` links.
+2. Optional polish: a **Cyber-Jason-in-a-tool screenshot** for the Garden CJ section (Jason to provide); a **regen-specific OG card** so that link stands out.
+3. Re-scrape the **/regen** OG on any already-posted links (FB Sharing Debugger / repost).
 
 ---
 
