@@ -367,6 +367,8 @@ app.use((req, res, next) => {
        '/beta-invite', '/beta-invite.html',
        '/gate', '/kre8r-gate', '/kre8r-gate.html',
        '/download', '/download.html',
+       '/happy-birthday', '/happy-birthday.html',
+       '/rocky-chess-cari', '/rocky-chess-cari.html',
        '/privacy', '/privacy.html', '/tos', '/tos.html'].includes(req.path)) return next();
   // The Fence — public link-in-bio AI page
   if (req.path === '/fence' || req.path.startsWith('/fence/')) return next();

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For Cari 🎁</title>
+<style>
+  :root {
+    --bg: #05070d;
+    --panel: rgba(13, 19, 30, 0.9);
+    --teal: #5eead4;
+    --amber: #f4b860;
+    --amber-deep: #c98a3a;
+    --text: #dce6ee;
+    --dim: #8fa3b5;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text); overflow: hidden;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #stars { position: fixed; inset: 0; pointer-events: none; }
+  .star { position: absolute; background: #bdd4e7; border-radius: 50%; animation: twinkle var(--d) ease-in-out infinite; }
+  @keyframes twinkle { 0%,100% { opacity: .15; } 50% { opacity: .9; } }
+
+  /* ── The gift ── */
+  #giftwrap { position: relative; z-index: 5; text-align: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  #hint { color: var(--dim); letter-spacing: 2px; font-size: 13px; margin-top: 34px; animation: hintpulse 2.2s ease-in-out infinite; }
+  @keyframes hintpulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+  #tag {
+    display: inline-block; background: var(--panel); border: 1px solid rgba(94,234,212,.35);
+    color: var(--teal); border-radius: 10px; padding: 7px 18px; font-size: 15px;
+    letter-spacing: 3px; margin-bottom: 30px;
+  }
+  #gift { position: relative; width: 190px; height: 175px; margin: 0 auto; animation: bob 2.6s ease-in-out infinite; filter: drop-shadow(0 14px 40px rgba(244,184,96,.28)); }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  #box {
+    position: absolute; bottom: 0; left: 15px; width: 160px; height: 115px;
+    background: linear-gradient(160deg, #e0a23f, var(--amber-deep));
+    border-radius: 8px;
+  }
+  #box::before { /* vertical ribbon */
+    content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+    width: 26px; height: 100%; background: linear-gradient(90deg, #6de3c8, var(--teal), #6de3c8);
+  }
+  #lid {
+    position: absolute; top: 32px; left: 0; width: 190px; height: 34px;
+    background: linear-gradient(160deg, #eab04c, #d19540);
+    border-radius: 6px; transition: transform .8s cubic-bezier(.34,1.3,.5,1), opacity .8s;
+    transform-origin: 20% 100%;
+  }
+  #lid::before {
+    content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+    width: 26px; height: 100%; background: linear-gradient(90deg, #6de3c8, var(--teal), #6de3c8);
+  }
+  #bow { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); transition: transform .8s, opacity .6s; }
+  #bow::before, #bow::after {
+    content: ''; position: absolute; top: 0; width: 34px; height: 26px;
+    border: 6px solid var(--teal); border-radius: 50% 50% 0 50%;
+  }
+  #bow::before { left: -34px; transform: rotate(-30deg); }
+  #bow::after { left: 0; border-radius: 50% 50% 50% 0; transform: rotate(30deg); }
+
+  .opened #lid { transform: translateY(-190px) rotate(-28deg); opacity: 0; }
+  .opened #bow { transform: translateX(-50%) translateY(-230px) rotate(40deg); opacity: 0; }
+  .opened #box { animation: boxout .7s ease .25s forwards; }
+  @keyframes boxout { to { transform: translateY(60px) scale(.75); opacity: 0; } }
+  .opened #hint, .opened #tag { opacity: 0; transition: opacity .4s; }
+  .opened #gift { animation: none; }
+
+  /* ── Confetti ── */
+  .confetti {
+    position: fixed; width: 9px; height: 9px; z-index: 8; pointer-events: none;
+    animation: fall var(--t) cubic-bezier(.2,.6,.6,1) forwards;
+  }
+  @keyframes fall {
+    0% { transform: translate(0,0) rotate(0); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; }
+  }
+
+  /* ── The reveal card ── */
+  #card {
+    position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; padding: 24px;
+    opacity: 0; pointer-events: none; transform: scale(.94);
+    transition: opacity .9s ease .55s, transform .9s ease .55s;
+    text-align: center;
+  }
+  #card.show { opacity: 1; pointer-events: auto; transform: scale(1); }
+  #card .big {
+    font-size: clamp(34px, 7vw, 62px); font-weight: 800; letter-spacing: 4px;
+    color: var(--amber); text-shadow: 0 0 40px rgba(244,184,96,.5);
+  }
+  #card .med { font-size: clamp(15px, 3vw, 21px); color: var(--teal); letter-spacing: 2px; }
+  #rockysays {
+    max-width: 480px; background: var(--panel); border: 1px solid rgba(244,184,96,.4);
+    border-radius: 3px 14px 14px 14px; padding: 14px 20px; margin-top: 8px;
+    font-size: 16px; line-height: 1.5; text-align: left;
+    box-shadow: 0 8px 40px rgba(0,0,0,.5);
+  }
+  #rockysays .who { font-size: 10px; letter-spacing: 2.5px; color: var(--amber); margin-bottom: 6px; }
+  .btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+  .btn {
+    display: inline-block; text-decoration: none; border-radius: 12px; padding: 14px 26px;
+    font-size: 16px; letter-spacing: .5px; transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn.play {
+    background: linear-gradient(160deg, #eab04c, var(--amber-deep)); color: #1a1206; font-weight: 700;
+    box-shadow: 0 6px 30px rgba(244,184,96,.35);
+  }
+  .btn.dl {
+    background: rgba(94,234,212,.08); border: 1px solid rgba(94,234,212,.4); color: var(--teal);
+  }
+  #note { font-size: 12.5px; color: var(--dim); max-width: 420px; line-height: 1.5; }
+  #from { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--dim); z-index: 10; }
+</style>
+</head>
+<body>
+<div id="stars"></div>
+
+<div id="giftwrap">
+  <div id="tag">FOR CARI</div>
+  <div id="gift">
+    <div id="box"></div>
+    <div id="lid"></div>
+    <div id="bow"></div>
+  </div>
+  <div id="hint">tap to open</div>
+</div>
+
+<div id="card">
+  <div class="big">HAPPY BIRTHDAY CARI</div>
+  <div class="med">Rocky came back. He wants a rematch.</div>
+  <div id="rockysays">
+    <div class="who">&#9835;&#9834;&#9835; ROCKY &nbsp;<span style="opacity:.5">(translated from Eridian)</span></div>
+    Question: is your birth day, question? HAPPY HAPPY HAPPY!
+    I bring gift. Gift is chess. And me. I am also gift.
+  </div>
+  <div class="btns">
+    <a class="btn play" href="/rocky-chess-cari">&#9654;&nbsp; Play Rocky Chess</a>
+    <a class="btn dl" href="/rocky-chess-cari.html" download="Rocky-Chess-For-Cari.html">&#11015;&nbsp; Download him forever</a>
+  </div>
+  <div id="note">The download is a single file — keep it anywhere, double-click it any time, and Rocky will be waiting. Full 3D board, he talks, he plays, he celebrates with jazz hands.</div>
+</div>
+
+<div id="from">love, Jason &nbsp;·&nbsp; July 2, 2026</div>
+
+<script>
+// starfield
+const stars = document.getElementById('stars');
+for (let i = 0; i < 130; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const sz = Math.random() * 2.2 + 0.6;
+  s.style.width = s.style.height = sz + 'px';
+  s.style.left = Math.random() * 100 + 'vw';
+  s.style.top = Math.random() * 100 + 'vh';
+  s.style.setProperty('--d', (Math.random() * 3 + 1.6) + 's');
+  s.style.animationDelay = (Math.random() * 3) + 's';
+  stars.appendChild(s);
+}
+
+// a soft Eridian chord, because Rocky speaks in music
+function chord() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const root = 240 + Math.random() * 120;
+    [1, 1.25, 1.5, 2].forEach((r, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = root * r;
+      const t = ctx.currentTime;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.05, t + 0.04 + i * 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+      o.connect(g).connect(ctx.destination);
+      o.start(t); o.stop(t + 1.5);
+    });
+  } catch (e) { /* silence is fine */ }
+}
+
+// open the gift
+const wrap = document.getElementById('giftwrap');
+wrap.addEventListener('click', () => {
+  if (wrap.classList.contains('opened')) return;
+  wrap.classList.add('opened');
+  chord();
+  // confetti burst from the box
+  const rect = document.getElementById('gift').getBoundingClientRect();
+  const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+  const colors = ['#f4b860', '#5eead4', '#dce6ee', '#eab04c', '#6de3c8'];
+  for (let i = 0; i < 70; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = cx + 'px'; c.style.top = cy + 'px';
+    c.style.background = colors[i % colors.length];
+    if (i % 3 === 0) c.style.borderRadius = '50%';
+    const ang = Math.random() * Math.PI * 2, v = 90 + Math.random() * 260;
+    c.style.setProperty('--dx', (Math.cos(ang) * v) + 'px');
+    c.style.setProperty('--dy', (Math.sin(ang) * v * 0.6 + 320 + Math.random() * 240) + 'px');
+    c.style.setProperty('--r', (Math.random() * 900 - 450) + 'deg');
+    c.style.setProperty('--t', (1.4 + Math.random() * 1.3) + 's');
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 3000);
+  }
+  setTimeout(() => document.getElementById('card').classList.add('show'), 500);
+  setTimeout(() => { wrap.style.display = 'none'; }, 1100);
+}, { once: false });
+</script>
+</body>
+</html>
