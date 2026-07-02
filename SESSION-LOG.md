@@ -3,6 +3,28 @@
 
 ---
 
+# Session 96 — LAUNCH DAY: Box-of-Rocks overhaul (Finder/links/Solar), SSH deploys, phone-approval loop (2026-07-01)
+All work in **kre8r-land**. Memory: `project_box_of_rocks_overhaul.md`. Design charter: `BOX-OF-ROCKS-RULES.md` (+Rule 14 "confusion reads as deception"). Audits in-repo: `FINDER-`, `LINKS-`, `SOLAR-BOX-OF-ROCKS-AUDIT.md`.
+
+## Shipped + deployed (all live)
+- **Finder S1–S4** (`edb0989`,`9474aa3`,`936c610`): state-pins 404 fixed (+server alias), stale baked BillyLand purged, search-first welcome ("Type where. See land. Tap one." — live state-count strip, no-catch line), forced tour → coach toast, results quick-chips, plain-English score line, empty-state alert capture → saved_searches, in-place due-diligence accordion on listings, "Drive Times From Here", page 424→219KB (3×62KB base64 logos!). **Hotfix** `050f909`: welcome-tap stub queue (Firefox/Linux "welcomeSearch not defined" — race/script-blocker; err-beacon caught it in hours).
+- **Links S1** (`9fafb45`): in-app webviews → straight to lite in <head> (fence iframe = the old OOM pattern; tagged src=inapp), Land Finder fast-lane chip from Act 1, "☰ See everything" skip, ALL walk doors tagged card:walk-* src:walk (were invisible — decides Jason's store-first reorder question with ~1wk of wave data), finder beacon now keeps ?src= (fence's src=fence was dropped).
+- **Solar S1–S3** (`e63b737`,`d09a82d`): tabs unlocked w/ honest routing guard, tier+cat on all /go links (74% clicks were tier-unknown), completion once/visit + no placeholder-state logging, logos → PNG (347→223KB); **four intent doors** (grid→bill mode / lean→necessities bundle / expand→own-panels surfaced / project→bill) + classic-designer link; **YOUR SYSTEM one-build card** (jam-study fix: tier SWITCH not columns, Picks woven in, REAL summed prices replace $/W estimate, old grid behind Advanced); **MPPT gate** (mismatched-panel buys locked behind 3 confirmations; "add controller" = upsell line); CJ gets intent+ownPanels. **SOLAR VIDEO GATE OPEN.**
+- **Telemetry gaps**: /regen+/research whitelisted, regen completions accepted, home+lifestyle page beacons added.
+
+## Infrastructure (new powers)
+- **Fable deploys directly**: `ssh land '…'` (landapp@64.23.158.236, key authorized; NEVER root). Prod reachable via `curl --ssl-no-revoke`.
+- **Phone-approval loop proven**: build → verify → push → PushNotification → Jason replies "go" from anywhere → deploy + verify. (`agentPushNotifEnabled` in ~/.claude/settings.json + Android notif permission were the gates.)
+- Cloudflare cache walkthrough ready: `CLOUDFLARE-CACHE-WALKTHROUGH.md` (Jason's dashboard, pre-TikTok).
+
+## Context
+Rock Rich S2: biweekly episode cadence locked, 3 tool videos + 3 episodes banked, ep3 filmed TODAY while this shipped. Finder TikTok deliberately unposted (webview + cache gates; links side now closed). Comment screenshots → `kre8r-land/feedback/` (gitignored). First Kajabi conversion from the .land funnel confirmed.
+
+## Next
+1. Jason's solar test notes → polish pass. 2. CF cache rules + Finder-in-TikTok smoke test (Jason). 3. Walk-door data → store-first reorder decision. 4. Solar v2: parse Vmp/Imp into catalog sync for true match-my-panels. 5. Freedom/Water/Regen/Lifestyle audits (priority order continues).
+
+---
+
 # Session 95 — Rock Rich ecosystem: tier fix, gate beacon de-tunnel, Orchard badge economy, .land /about (2026-06-19)
 Worked across three repos — **kre8r** (502 fix, MissionΩr funnel pull), **kre8r-land** (gate beacon catcher, /about), **harvestomr** (badges). Full detail in memory: `project_kajabi_tier_detection.md`, `project_gate_beacon.md`, `project_kajabi_game.md` (badge economy), `project_land_about_page.md`.
 
