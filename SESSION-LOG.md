@@ -20,8 +20,13 @@ All work in **kre8r-land**. Memory: `project_box_of_rocks_overhaul.md`. Design c
 ## Context
 Rock Rich S2: biweekly episode cadence locked, 3 tool videos + 3 episodes banked, ep3 filmed TODAY while this shipped. Finder TikTok deliberately unposted (webview + cache gates; links side now closed). Comment screenshots → `kre8r-land/feedback/` (gitignored). First Kajabi conversion from the .land funnel confirmed.
 
+## Night shift addendum (same session, into Jul 2)
+- **Regen full treatment** (audit `REGEN-BOX-OF-ROCKS-AUDIT.md` — tool is Opus-native + best-born; research verified rigorous): src-tag beacon (`?src=rr-s2e#` convention), engagement beacons, Mediterranean worksheet mismatch fixed, **GearΩ** (`/api/gear/go/:key` + gear_clicks, HD-FIRST 8%, chips + 5-item kit box, free-path-first), **Year 1/3/5 expectations** (8 biomes), **NRCS cost-share finder** (practice codes + apply-first caveat), **living 7-day forecast** (coords now persisted in state.clim), **infiltration stopwatch + photopoint**, **Season Loop v1** (`/api/regen/email-plan` + regen_plans + biome-field MailerLite subscribe + plan email). All deployed (`…8b03984`).
+- **HARD LAW (permanent memory `feedback_no_banks_ever`): no banks/financing/credit/BNPL/ethically-funky monetization, ever, any tool.**
+- Rock Rich S2 regen episode(s) film Jul 2; episode link = `/regen?src=rr-s2e1`.
+
 ## Next
-1. Jason's solar test notes → polish pass. 2. CF cache rules + Finder-in-TikTok smoke test (Jason). 3. Walk-door data → store-first reorder decision. 4. Solar v2: parse Vmp/Imp into catalog sync for true match-my-panels. 5. Freedom/Water/Regen/Lifestyle audits (priority order continues).
+1. Jason's solar test notes → polish pass. 2. CF cache rules + Finder-in-TikTok smoke test (Jason). 3. Walk-door data → store-first reorder decision. 4. Author per-biome season sequences in MailerLite (regen_biome field flowing) + set REGEN_ML_GROUP_ID in prod .env. 5. Solar v2 Vmp/Imp catalog parsing. 6. Freedom/Water/Lifestyle audits (priority order continues).
 
 ---
 
