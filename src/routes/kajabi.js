@@ -407,13 +407,29 @@ async function buildContactIndex() {
   return _contactIndex;
 }
 
-async function findContactByEmailCached(email, { maxAgeMs = 5 * 60 * 1000 } = {}) {
+// budgetMs: the CALLER's patience. The full-index rebuild paginates every
+// contact (~44 Kajabi calls) and can run well past any login timeout — before
+// this budget existed, an unknown/typo'd email hung member-check for 20s+ and
+// the CJ+ link endpoint on the land box 502'd. Now: kick the rebuild off,
+// wait at most budgetMs, and return the 'BUILDING' sentinel so the caller can
+// answer fast and honestly ("rolls are being re-read — retry in a minute");
+// the rebuild keeps running and the retry hits the finished index.
+const INDEX_BUILDING = 'BUILDING';
+async function findContactByEmailCached(email, { maxAgeMs = 6 * 60 * 60 * 1000, budgetMs = 8000 } = {}) {
   const fresh = _contactIndex.byEmail.size > 0 && (Date.now() - _contactIndex.at) < maxAgeMs;
   if (!fresh) {
     if (!_contactIndexRefresh) {
       _contactIndexRefresh = buildContactIndex().finally(() => { _contactIndexRefresh = null; });
     }
-    try { await _contactIndexRefresh; } catch (e) {
+    const budget = new Promise((resolve) => setTimeout(() => resolve(INDEX_BUILDING), budgetMs));
+    try {
+      const raced = await Promise.race([_contactIndexRefresh, budget]);
+      if (raced === INDEX_BUILDING) {
+        // A stale-but-populated index is still useful while the rebuild runs.
+        if (_contactIndex.byEmail.size > 0) return _contactIndex.byEmail.get(email) || null;
+        return INDEX_BUILDING;
+      }
+    } catch (e) {
       logger.warn({ err: e.message }, '[member-check] contact index rebuild failed');
     }
   }
@@ -620,6 +636,10 @@ router.post('/member-check', async (req, res) => {
     if (!contact) {
       logger.warn({ email, returned: contacts.length }, '[member-check] filter[email] miss — using contact index');
       contact = await findContactByEmailCached(want);
+    }
+    if (contact === 'BUILDING') {
+      // Cold index mid-rebuild — answer fast instead of hanging the caller.
+      return res.json({ active: false, reason: 'index_building', retry_in: 60 });
     }
     if (!contact) {
       return res.json({ active: false, reason: 'not_found' });
