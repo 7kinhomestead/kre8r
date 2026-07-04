@@ -83,6 +83,9 @@
   button:disabled { opacity: .35; cursor: default; }
   button.diff { flex: 1; padding: 6px 4px; font-size: 11px; }
   button.diff.on { background: rgba(244,184,96,.18); border-color: rgba(244,184,96,.55); color: var(--amber); }
+  button.lesson { flex: 0 0 calc(25% - 6px); padding: 6px 0; font-size: 11.5px; }
+  button.lesson.done { background: rgba(244,184,96,.14); border-color: rgba(244,184,96,.55); color: var(--amber); }
+  #btnExitSchool { border-color: rgba(244,116,106,.4); }
 
   .captures { font-size: 21px; letter-spacing: 2px; min-height: 26px; line-height: 1.2; word-break: break-all; }
   .captures.mine { color: #cfd8df; }
@@ -159,6 +162,10 @@
     <button class="diff on" data-d="friend">Friend</button>
     <button class="diff" data-d="engineer">Engineer</button>
   </div>
+
+  <h2>ROCKY'S CHESS SCHOOL</h2>
+  <div class="btnrow" id="schoolBtns"></div>
+  <button id="btnExitSchool" style="display:none">Leave school</button>
 
   <h2>ROCKY CAPTURED</h2>
   <div class="captures his" id="capByRocky"></div>
@@ -910,6 +917,7 @@ function playerMove(mv) {
   addChip('You · ' + applied.san);
   animateAppliedMove(applied, () => {
     refreshPanel();
+    if (school.active) { lessonCheck(applied); return; }
     if (checkGameEnd()) { busy = false; return; }
     // Rocky reacts to what you did
     if (applied.flags.includes('k') || applied.flags.includes('q')) speak('castle');
@@ -926,6 +934,7 @@ function rockyTurn(preScore) {
   setTimeout(() => speak('thinking', {}, { chord: false }), 700);
   // let the UI paint before the search blocks
   setTimeout(() => {
+    if (school.active) { busy = false; return; }
     const choice = chooseRockyMove();
     if (!choice) { checkGameEnd(); busy = false; return; }
     const applied = game.move(choice.move);
@@ -983,6 +992,199 @@ renderer.domElement.addEventListener('pointerdown', e => {
   }
 });
 
+/* ════════════════════════════════════════════════════════════════
+   ROCKY'S CHESS SCHOOL — eight lessons from an Eridian grandmaster
+   ════════════════════════════════════════════════════════════════ */
+const SCHOOL = [
+  { title: 'The Little Ones', steps: [
+    { fen: '7k/8/8/8/8/8/4P3/K7 w - - 0 1', targets: ['e3', 'e4'],
+      say: ["Welcome to Rocky School of Chess! Best school. Only school with teacher who is me.",
+            "Lesson one: the little ones. They walk ONE step forward. On their very first move — TWO steps allowed. Never backward. Very brave.",
+            "Walk your little one to a glowing square."],
+      success: "Good good good! Little one is walking. I am proud." },
+    { fen: '7k/8/8/3p4/4P3/8/8/K7 w - - 0 1', targets: ['d5'],
+      say: ["Now the strange part. Little ones EAT diagonal. One step, forward-sideways. Do not ask why. Earth rules.",
+            "That black little one is standing RIGHT THERE. Eat it."],
+      success: "OM NOM. You are natural predator. Fear!" }],
+    done: "Lesson complete! Little ones: walk straight, eat diagonal, never retreat. They are small but they have big dreams." },
+
+  { title: 'The Tower', steps: [
+    { fen: '7k/3p4/8/8/8/3R4/8/K7 w - - 0 1', targets: ['d7'],
+      say: ["Lesson two: the tower. Slides straight — up, down, sideways. Far as it wants. Strong like wall. A wall that moves.",
+            "See that little one far away? Slide up and eat it. The whole board is your hallway."],
+      success: "CRUNCH. Tower eats from across the world. Respect the tower." }],
+    done: "Towers: straight lines, long distance, no nonsense. My kind of piece. I am engineer — we understand walls." },
+
+  { title: 'The Pointy One', steps: [
+    { fen: '7k/8/8/6p1/8/8/8/K1B5 w - - 0 1', targets: ['g5'],
+      say: ["Lesson three: the pointy one. Slides DIAGONAL only. Always stays on same color squares. Forever. Very loyal. Little bit stubborn.",
+            "Slide the pointy one all the way up and eat that little one."],
+      success: "Sliced! Diagonal is sneaky. Humans forget to look diagonal. You will not forget." }],
+    done: "Pointy ones: diagonal, loyal to one color, deadly at long range. Use two together — they cover everything." },
+
+  { title: 'The Horse', steps: [
+    { fen: '7k/8/8/8/8/8/8/K5N1 w - - 0 1', targets: ['f3', 'h3', 'e2'],
+      say: ["Lesson four. The horse. My favorite. Horse moves like letter L — two steps one way, one step sideways.",
+            "And listen: horse JUMPS. Over anyone. Nobody else jumps. Do not tell the queen I said horse is best.",
+            "Make an L to a glowing square."],
+      success: "JUMP! Beautiful. The L is confusing at first. Then it is deadly." },
+    { fen: '7k/8/8/4p3/8/5N2/8/K7 w - - 0 1', targets: ['e5'],
+      say: ["Horse eats with the L too. That little one thinks it is safe. It is not safe.",
+            "Jump and eat."],
+      success: "Om nom via AIR MAIL. Amaze!" }],
+    done: "Horses: L-shape, they jump, they confuse humans. Attack two things at once with a horse — is called a fork. Dinner joke. I did not invent it." },
+
+  { title: 'The Queen', steps: [
+    { fen: '7k/8/8/7r/8/8/8/K2Q4 w - - 0 1', targets: ['h5'],
+      say: ["Lesson five: the queen. Any direction. Any distance. Tower plus pointy one in one body. Strongest piece on the board.",
+            "Jason says the strongest one in your house is also named Cari. I believe him.",
+            "That tower on the edge? Go take it."],
+      success: "The queen takes what she wants. And look — their leader is already scared." }],
+    done: "Queen: all directions, all distances, all power. One warning — everyone hunts her. Keep her safe until it is time." },
+
+  { title: 'The Leader', steps: [
+    { fen: '7k/8/8/8/8/8/8/4K3 w - - 0 1', targets: ['d1', 'd2', 'e2', 'f2', 'f1'],
+      say: ["Lesson six: your leader. He walks ONE small step, any direction. Not strong. But if he falls, game is over. Important is different from strong.",
+            "Take one dignified step."],
+      success: "Dignified. Stately, even. Leaders do not rush." },
+    { fen: '7k/8/8/4r3/8/8/8/4K3 w - - 0 1', any: true,
+      say: ["Now — FEAR! Your leader is attacked. This is called CHECK. You MUST fix it. No other move is allowed.",
+            "Three fixes exist: run away, put a friend in the way, or eat the attacker. Here you have no friends and the tower is far away. So: RUN."],
+      success: "You live! Running is not shame. I ran from many things. I am alive. Champions are alive people." }],
+    done: "Check: leader attacked, fix it now. Run, block, or eat. Remember all three — one is usually better than the others." },
+
+  { title: 'The Bunker', steps: [
+    { fen: '4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1', castle: true, mark: ['g1', 'c1'],
+      say: ["Lesson seven: secret move! Once per game, leader and tower do a little dance called castling. Leader hops TWO steps toward a tower, tower jumps over him.",
+            "Leader ends up behind a wall of little ones. I am engineer. I approve of bunkers.",
+            "Click your leader, then click a glowing square."],
+      success: "Leader is in the bunker! Safe safe safe. Do this early in real games. Every game. Trust me." }],
+    done: "Castle early. Leader hides, tower wakes up. Two good things, one move. Efficiency!" },
+
+  { title: 'Checkmate', steps: [
+    { fen: '6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1', mate: true,
+      say: ["Final lesson. CHECKMATE — a check that cannot be fixed. No run, no block, no eating. Game over.",
+            "Look: their leader hides behind his little ones. Cozy. BUT. The back row is an empty hallway.",
+            "Slide your tower to the very end of the board."],
+      success: "CHECKMATE! His own little ones blocked the escape. Betrayed by his own wall. Delicious irony." },
+    { fen: '7k/R7/8/8/8/8/8/1R2K3 w - - 0 1', mate: true,
+      say: ["One more. Two towers together make a LADDER. One tower cuts off a row, the other climbs past it.",
+            "The row next to their leader is already cut. Climb your other tower to the top."],
+      success: "LADDER MATE! You squeezed him like... like a thing that squeezes. You are dangerous now." }],
+    done: "" },
+];
+const SCHOOL_FAIL = [
+  "Hmm. Not that one. Is okay — I un-do it. We try again!",
+  "Close! But no. Watch the glowing squares. Try again try again.",
+  "No no. But good spirit! I fix the board. Again.",
+  "Wrong — BUT. Wrong with confidence. I respect it. One more time.",
+];
+const SCHOOL_FAIL_MATE = "That is a move, yes. But not THE move. I put it back — look for the row where his leader cannot escape.";
+
+const school = { active: false, li: 0, si: 0 };
+let sayTimers = [];
+function speakSeq(lines, gap = 3200) {
+  sayTimers.forEach(clearTimeout); sayTimers = [];
+  lines.forEach((l, i) => sayTimers.push(setTimeout(() => speak(l), i * gap)));
+}
+const taskMarkers = new THREE.Group();
+scene.add(taskMarkers);
+const taskMat = new THREE.MeshBasicMaterial({ color: 0xf4b860, transparent: true, opacity: 0.85 });
+function showTaskMarkers(sqs) {
+  taskMarkers.clear();
+  for (const sq of sqs || []) {
+    const p = squareToPos(sq);
+    const m = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.05, 8, 32), taskMat);
+    m.rotation.x = Math.PI / 2;
+    m.position.set(p.x, 0.04, p.z);
+    taskMarkers.add(m);
+  }
+}
+function schoolProgress() {
+  try { return JSON.parse(localStorage.getItem('rockySchoolDone') || '[]'); } catch { return []; }
+}
+function updateSchoolButtons() {
+  const done = schoolProgress();
+  document.querySelectorAll('button.lesson').forEach((b, i) => b.classList.toggle('done', done.includes(i)));
+}
+function startLesson(li) {
+  school.active = true; school.li = li; school.si = 0;
+  gameOver = false;
+  document.getElementById('btnExitSchool').style.display = '';
+  loadStep();
+}
+function loadStep() {
+  const L = SCHOOL[school.li], S = L.steps[school.si];
+  game.load(S.fen);
+  busy = false; selected = null; legalTargets = [];
+  clearMarkers(); rebuildBoardMeshes(); refreshPanel();
+  showTaskMarkers(S.mark || S.targets);
+  speakSeq(S.say);
+  setStatus('School ' + (school.li + 1) + '/' + SCHOOL.length + ' — ' + L.title, true);
+}
+function lessonCheck(applied) {
+  const L = SCHOOL[school.li], S = L.steps[school.si];
+  let ok;
+  if (S.mate) ok = game.isCheckmate();
+  else if (S.castle) ok = applied.flags.includes('k') || applied.flags.includes('q');
+  else if (S.any) ok = true;
+  else ok = S.targets.includes(applied.to);
+  if (ok) {
+    taskMarkers.clear();
+    speak(S.success);
+    school.si++;
+    setTimeout(() => {
+      if (school.si < L.steps.length) loadStep();
+      else lessonDone();
+    }, 3400);
+  } else {
+    speak(S.mate ? SCHOOL_FAIL_MATE : SCHOOL_FAIL[Math.floor(Math.random() * SCHOOL_FAIL.length)]);
+    setTimeout(() => { game.undo(); rebuildBoardMeshes(); refreshPanel(); busy = false; }, 1600);
+  }
+}
+function lessonDone() {
+  const done = schoolProgress();
+  if (!done.includes(school.li)) done.push(school.li);
+  localStorage.setItem('rockySchoolDone', JSON.stringify(done));
+  updateSchoolButtons();
+  if (school.li >= SCHOOL.length - 1) { graduation(); return; }
+  if (SCHOOL[school.li].done) speak(SCHOOL[school.li].done);
+  setTimeout(() => startLesson(school.li + 1), 4200);
+}
+function graduation() {
+  speakSeq([
+    "School is COMPLETE. You know the pieces, the check, the bunker, the checkmate. You know everything I know.",
+    "...Okay. Not everything. I keep two secrets. For rematch purposes.",
+    "GRADUATION CEREMONY: JAZZ HANDS! Now we play a real game. I will be gentle. That is lie. HAPPY BIRTHDAY!",
+  ]);
+  rockyJazzHands();
+  setTimeout(() => { rockyJazzHands(); exitSchool(true); }, 9800);
+}
+function exitSchool(silent) {
+  sayTimers.forEach(clearTimeout); sayTimers = [];
+  taskMarkers.clear();
+  school.active = false;
+  document.getElementById('btnExitSchool').style.display = 'none';
+  game.reset(); gameOver = false; busy = false; selected = null; legalTargets = [];
+  clearMarkers(); rebuildBoardMeshes(); refreshPanel();
+  setStatus('Your move');
+  if (!silent) speak("School dismissed! Normal game now. Everything I teach you — use it against me. Is the Eridian way.");
+}
+// build the lesson buttons
+{
+  const wrap = document.getElementById('schoolBtns');
+  SCHOOL.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.className = 'lesson';
+    b.textContent = String(i + 1);
+    b.title = L.title;
+    b.addEventListener('click', () => { ensureAudio(); startLesson(i); });
+    wrap.appendChild(b);
+  });
+  updateSchoolButtons();
+}
+document.getElementById('btnExitSchool').addEventListener('click', () => exitSchool(false));
+
 /* ── Buttons ── */
 document.querySelectorAll('button.diff').forEach(b => b.addEventListener('click', () => {
   ensureAudio();
@@ -993,6 +1195,7 @@ document.querySelectorAll('button.diff').forEach(b => b.addEventListener('click'
 }));
 document.getElementById('btnNew').addEventListener('click', () => {
   ensureAudio();
+  if (school.active) { exitSchool(true); }
   game.reset(); gameOver = false; busy = false; selected = null; legalTargets = [];
   clearMarkers(); rebuildBoardMeshes(); refreshPanel();
   setStatus('Your move');
@@ -1000,6 +1203,7 @@ document.getElementById('btnNew').addEventListener('click', () => {
 });
 document.getElementById('btnUndo').addEventListener('click', () => {
   ensureAudio();
+  if (school.active) { speak("In school, I fix the mistakes for you. Free service. Very good school."); return; }
   if (busy) return;
   if (game.history().length < 2) return;
   game.undo(); game.undo();
@@ -1010,6 +1214,11 @@ document.getElementById('btnUndo').addEventListener('click', () => {
 });
 document.getElementById('btnHint').addEventListener('click', () => {
   ensureAudio();
+  if (school.active) {
+    const S = SCHOOL[school.li].steps[school.si];
+    if (S) { speakSeq(S.say); showTaskMarkers(S.mark || S.targets); }
+    return;
+  }
   if (busy || gameOver || game.turn() !== 'w') return;
   const scored = searchBest(2, false); // white to move: minimize Rocky's score
   if (scored && scored.length) speak('hint', { san: scored[0].move.san });
@@ -1026,7 +1235,7 @@ birthdayEl.addEventListener('click', () => {
   ensureAudio();
   birthdayEl.classList.add('gone');
   speak('birthday');
-  setTimeout(() => { if (!busy) speak('greeting'); }, 11000);
+  setTimeout(() => { if (!busy && !school.active) speak('greeting'); }, 11000);
 }, { once: true });
 
 /* ── Idle chatter ── */
@@ -1071,6 +1280,7 @@ function animate() {
   for (const m of markerGroup.children) if (!m.geometry.type.includes('Box')) {
     m.scale.setScalar(1 + Math.sin(t * 4) * 0.12);
   }
+  for (const m of taskMarkers.children) m.scale.setScalar(1 + Math.sin(t * 3) * 0.16);
   controls.update();
   renderer.render(scene, camera);
 }
