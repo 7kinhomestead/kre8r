@@ -68,6 +68,7 @@
     width: 218px; background: var(--panel); border: 1px solid var(--line);
     border-radius: 14px; padding: 16px; backdrop-filter: blur(6px);
     display: flex; flex-direction: column; gap: 12px;
+    max-height: 92vh; overflow-y: auto; scrollbar-width: thin;
   }
   #panel h2 { font-size: 10px; letter-spacing: 2.5px; color: var(--dim); font-weight: 600; }
   #status { font-size: 14px; color: var(--teal); min-height: 20px; }
@@ -165,6 +166,8 @@
 
   <h2>ROCKY'S CHESS SCHOOL</h2>
   <div class="btnrow" id="schoolBtns"></div>
+  <h2>MASTERCLASS</h2>
+  <div class="btnrow" id="schoolBtns2"></div>
   <button id="btnExitSchool" style="display:none">Leave school</button>
 
   <h2>ROCKY CAPTURED</h2>
@@ -1071,6 +1074,91 @@ const SCHOOL = [
       say: ["One more. Two towers together make a LADDER. One tower cuts off a row, the other climbs past it.",
             "The row next to their leader is already cut. Climb your other tower to the top."],
       success: "LADDER MATE! You squeezed him like... like a thing that squeezes. You are dangerous now." }],
+    done: "Basics COMPLETE. But knowing how pieces move is not chess. Now — MASTERCLASS. War school." },
+
+  /* ── MASTERCLASS ── */
+  { title: 'Her Weapon: the Larsen', steps: [
+    { fen: 'start',
+      say: ["MASTERCLASS. Jason says you already know the moves. Good. Now we learn the WAR.",
+            "Your weapon: the Nimzowitsch-Larsen Attack. Old Nimzowitsch thought like an Eridian — he said you do not need to STAND in the center. You can watch it from far away, with long guns.",
+            "First move: push the b-little-one ONE step. Small move. Big plan."],
+      line: [
+        { move: 'b3', mark: 'b3', reply: 'e5',
+          say: "They grab the center with e5. GOOD. Let them. We are patient. Now the whole point — pointy one to b2." },
+        { move: 'Bb2', mark: 'b2', reply: 'Nc6',
+          say: "See the diagonal? b2 stares across the WHOLE board, right through their e5. They defend with the horse. Now e3 — small, solid, opens your other pointy one." },
+        { move: 'e3', mark: 'e3', reply: 'Nf6',
+          say: "They develop, we develop. Now the sharp move of the Modern line: pointy one to b5! Attack the horse that guards e5. The fight here is ALWAYS about e5." },
+        { move: 'Bb5', mark: 'b5' }],
+      success: "THIS is your Modern Variation. From here the plans: horse to e2 or f3, castle short, later break with d4 or f4. And the b2 pointy one stares at e5 forever. Patient. Eridian." }],
+    done: "You have an opening with a PLAN, not just moves. Same weapon every game — it gets sharper every time you swing it." },
+
+  { title: 'The Long Diagonal', steps: [
+    { fen: '5rk1/5p1p/8/8/3Q4/8/1B6/4K3 w - - 0 1', mate: true,
+      say: ["Now see WHY the long diagonal wins games. Your queen and your b2 pointy one aim at the SAME square: g7. This is called a battery.",
+            "Their leader hides in the corner. The corner is a trap. One move — checkmate. Find it."],
+      success: "BOOM. Look at the b2 pointy one — guarding your queen and locking the escape squares from ACROSS THE BOARD. This is the Larsen dream. Remember this picture." }],
+    done: "Long diagonal plus a friend equals fear. Every time you fianchetto, you are loading this gun." },
+
+  { title: 'The Fork', steps: [
+    { fen: 'r3k3/8/1P6/3N4/8/8/8/4K3 w - - 0 1',
+      say: ["Tactics! THE FORK: one piece, two targets. They can only save one.",
+            "Horse is the fork master — his L hits squares nobody watches. See it? One jump attacks BOTH the leader and the tower. Check first, dinner after."],
+      line: [
+        { move: 'Nc7+', mark: 'c7', reply: 'Kd7',
+          say: "CHECK! He must deal with that — and he cannot ALSO save the tower. Two birds, one horse." },
+        { move: 'Nxa8', mark: 'a8' }],
+      success: "Om nom. That is the fork: attack two, they save one, you eat the other." }],
+    done: "Fork rule: leaders, queens, and loose pieces. When two of them stand an L apart — the horse is hungry. Look for it EVERY turn." },
+
+  { title: 'Pin & Skewer', steps: [
+    { fen: '4k3/8/2n5/8/8/8/8/K4B2 w - - 0 1', targets: ['b5'],
+      say: ["Two freezing tricks. First: THE PIN.",
+            "Slide your pointy one to b5 — stare THROUGH their horse, straight at their leader."],
+      success: "The horse cannot move now — moving would expose the leader to you. ILLEGAL. He is frozen. Pinned pieces are not defenders, they are statues. Attack them!" },
+    { fen: '4q3/8/8/4k3/8/8/6K1/7R w - - 0 1',
+      say: ["Second trick: THE SKEWER. Same stick, backwards — the BIG one stands in front, the prize hides behind.",
+            "Their leader stands in front of their queen. Give check on the open line."],
+      line: [
+        { move: 'Re1+', mark: 'e1', reply: 'Kf5',
+          say: "Check! The leader must step aside... and LOOK what was standing behind him." },
+        { move: 'Rxe8', mark: 'e8' }],
+      success: "SKEWER. Om nom, queen." }],
+    done: "Pin: frozen in place. Skewer: forced to step aside. Both need a long stick — tower, pointy one, or queen." },
+
+  { title: 'The Discovery', steps: [
+    { fen: '3qk3/8/8/4N3/8/8/8/4R1K1 w - - 0 1',
+      say: ["Last trick, sneakiest trick: the DISCOVERED ATTACK. You move one piece — and a DIFFERENT piece attacks. Two threats, one move.",
+            "Your horse is blocking your own tower's line to their leader. Jump the horse somewhere ANNOYING — say, next to their queen — and let the tower shout."],
+      line: [
+        { move: 'Nc6', mark: 'c6', reply: 'Kf8',
+          say: "DISCOVERED CHECK — the tower yells from behind while the horse lands on the queen's doorstep. He must save the leader first. He cannot do both." },
+        { move: 'Nxd8', mark: 'd8' }],
+      success: "Om nom, ROYALTY. Two threats from one move is almost cheating. Legal cheating. The best kind." }],
+    done: "When two of your pieces stand in a line, moving the front one is a weapon. Set it up on purpose. Nobody sees it coming. Ever." },
+
+  { title: 'The Escort', steps: [
+    { fen: '4k3/8/4K3/4P3/8/8/8/8 w - - 0 1',
+      say: ["ENDGAME school. When the armies are gone, everything changes. Your leader stops hiding — he becomes a WARRIOR.",
+            "One little one plus a brave leader beats a lonely king — IF you escort correctly. The rule: leader in FRONT, little one behind."],
+      line: [
+        { move: 'Kd6', mark: 'd6', reply: 'Kd8',
+          say: "Leader first. He clears the road and shoulders their king aside." },
+        { move: 'e6', mark: 'e6', reply: 'Ke8',
+          say: "Now the little one walks — under full bodyguard." },
+        { move: 'e7', mark: 'e7', reply: 'Kf7',
+          say: "One square away. Their leader lunges for the corner office — too late." },
+        { move: 'Kd7', mark: 'd7', reply: 'Kg7',
+          say: "Your leader guards the crowning square himself. Nothing on Earth or Erid stops it now." },
+        { move: 'e8=Q', mark: 'e8' }],
+      success: "PROMOTION! The little one with big dreams — I TOLD you back in lesson one. This is how endgames are won: escort, push, crown." }],
+    done: "Endgame law one: your leader is a fighting piece — march him to the middle. Law two: passed little ones must PUSH." },
+
+  { title: 'Endgame Laws', steps: [
+    { fen: '1r5k/8/8/P7/8/8/8/4R2K w - - 0 1', targets: ['a1'],
+      say: ["Final law of the endgame: TOWERS BELONG BEHIND PASSED LITTLE ONES. Yours or theirs — always behind.",
+            "From behind, the tower pushes like wind at the runner's back. From in front, it just trips over him. Slide your tower behind your runner."],
+      success: "Now every step the little one takes, the tower pushes harder. And THEIR tower must sit in front like a prison guard — passive, sad, waiting. You win slowly, then all at once." }],
     done: "" },
 ];
 const SCHOOL_FAIL = [
@@ -1115,28 +1203,54 @@ function startLesson(li) {
 }
 function loadStep() {
   const L = SCHOOL[school.li], S = L.steps[school.si];
-  game.load(S.fen);
+  if (S.fen === 'start') game.reset(); else game.load(S.fen);
+  school.mi = 0;
   busy = false; selected = null; legalTargets = [];
   clearMarkers(); rebuildBoardMeshes(); refreshPanel();
-  showTaskMarkers(S.mark || S.targets);
+  showTaskMarkers(S.line ? [S.line[0].mark] : (S.mark || S.targets));
   speakSeq(S.say);
   setStatus('School ' + (school.li + 1) + '/' + SCHOOL.length + ' — ' + L.title, true);
 }
+function stepSuccess(S) {
+  taskMarkers.clear();
+  speak(S.success);
+  school.si++;
+  setTimeout(() => {
+    if (school.si < SCHOOL[school.li].steps.length) loadStep();
+    else lessonDone();
+  }, 3400);
+}
 function lessonCheck(applied) {
   const L = SCHOOL[school.li], S = L.steps[school.si];
+  // guided line: play the plan move-by-move, Rocky answers for black
+  if (S.line) {
+    const exp = S.line[school.mi];
+    const wanted = (Array.isArray(exp.move) ? exp.move : [exp.move]).map(w => w.replace(/[+#]/g, ''));
+    if (wanted.includes(applied.san.replace(/[+#]/g, ''))) {
+      if (exp.say) speak(exp.say);
+      school.mi++;
+      if (school.mi >= S.line.length) { stepSuccess(S); return; }
+      const showNext = () => { showTaskMarkers([S.line[school.mi].mark]); busy = false; };
+      if (exp.reply) {
+        setTimeout(() => {
+          const r = game.move(exp.reply);
+          addChip('Rocky · ' + r.san, true);
+          animateAppliedMove(r, () => { refreshPanel(); showNext(); });
+        }, 1400);
+      } else showNext();
+    } else {
+      speak("Hmm — the plan says " + (Array.isArray(exp.move) ? exp.move[0] : exp.move) + ". Watch the glowing square. I re-set, you re-try!");
+      setTimeout(() => { game.undo(); rebuildBoardMeshes(); refreshPanel(); showTaskMarkers([exp.mark]); busy = false; }, 1600);
+    }
+    return;
+  }
   let ok;
   if (S.mate) ok = game.isCheckmate();
   else if (S.castle) ok = applied.flags.includes('k') || applied.flags.includes('q');
   else if (S.any) ok = true;
   else ok = S.targets.includes(applied.to);
   if (ok) {
-    taskMarkers.clear();
-    speak(S.success);
-    school.si++;
-    setTimeout(() => {
-      if (school.si < L.steps.length) loadStep();
-      else lessonDone();
-    }, 3400);
+    stepSuccess(S);
   } else {
     speak(S.mate ? SCHOOL_FAIL_MATE : SCHOOL_FAIL[Math.floor(Math.random() * SCHOOL_FAIL.length)]);
     setTimeout(() => { game.undo(); rebuildBoardMeshes(); refreshPanel(); busy = false; }, 1600);
@@ -1153,9 +1267,9 @@ function lessonDone() {
 }
 function graduation() {
   speakSeq([
-    "School is COMPLETE. You know the pieces, the check, the bunker, the checkmate. You know everything I know.",
+    "MASTERCLASS COMPLETE. Openings. Tactics. Endgames. You know everything I know.",
     "...Okay. Not everything. I keep two secrets. For rematch purposes.",
-    "GRADUATION CEREMONY: JAZZ HANDS! Now we play a real game. I will be gentle. That is lie. HAPPY BIRTHDAY!",
+    "GRADUATION CEREMONY: JAZZ HANDS! Now we play a real game — and you bring the Larsen. I will be gentle. That is lie.",
   ]);
   rockyJazzHands();
   setTimeout(() => { rockyJazzHands(); exitSchool(true); }, 9800);
@@ -1170,16 +1284,17 @@ function exitSchool(silent) {
   setStatus('Your move');
   if (!silent) speak("School dismissed! Normal game now. Everything I teach you — use it against me. Is the Eridian way.");
 }
-// build the lesson buttons
+// build the lesson buttons — basics 1-8, masterclass 9-15
 {
-  const wrap = document.getElementById('schoolBtns');
+  const basics = document.getElementById('schoolBtns');
+  const master = document.getElementById('schoolBtns2');
   SCHOOL.forEach((L, i) => {
     const b = document.createElement('button');
     b.className = 'lesson';
     b.textContent = String(i + 1);
     b.title = L.title;
     b.addEventListener('click', () => { ensureAudio(); startLesson(i); });
-    wrap.appendChild(b);
+    (i < 8 ? basics : master).appendChild(b);
   });
   updateSchoolButtons();
 }
@@ -1216,7 +1331,10 @@ document.getElementById('btnHint').addEventListener('click', () => {
   ensureAudio();
   if (school.active) {
     const S = SCHOOL[school.li].steps[school.si];
-    if (S) { speakSeq(S.say); showTaskMarkers(S.mark || S.targets); }
+    if (S) {
+      speakSeq(S.say);
+      showTaskMarkers(S.line ? [S.line[Math.min(school.mi, S.line.length - 1)].mark] : (S.mark || S.targets));
+    }
     return;
   }
   if (busy || gameOver || game.turn() !== 'w') return;
