@@ -15,12 +15,17 @@ Building the `.land` `/about` page surfaced two things worth never re-learning:
    pipeline cron. They're **gitignored**, so editing the XML by hand does nothing — the cron overwrites it.
    To add a static page to the sitemap, add its path to the `STATIC_PAGES` array in `src/utils/sitemap.js`.
    It appears on the next pipeline regen (not instantly on deploy).
-2. **The land droplet rejects my SSH key for root — I cannot deploy it.** Of the DO boxes in
-   `~/.ssh/known_hosts`, my key only opens `143.244.179.113` (hostname `kinOS`, which does NOT host
-   kre8r-land). The land box (one of `64.23.152.96` / `64.23.158.236`) returns `Permission denied
-   (publickey)` for root. So **kre8r-land deploys must be handed to Jason** to run — give him the
-   canonical `sudo -iu landapp …` one-liner (memory `project_land_deploy.md`); don't try to SSH-deploy it.
-   `7kinhomestead.land` is behind Cloudflare now, so the hostname no longer resolves to the droplet.
+2. **SSH deploy access — UPDATED 2026-07-03, the old "key rejected" note below is obsolete.**
+   Claude on Jason's box can now deploy BOTH droplets directly:
+   - **kre8r-land**: `ssh land` (landapp@`64.23.158.236`, key authorized Jul 1) — canonical one-liner
+     in memory `project_land_deploy.md`. Always as `landapp`, never root.
+   - **kre8r.app**: `ssh kre8rapp` (root@`64.23.152.96`, key added Jul 3) — deploy with
+     `cd /home/kre8r/kre8r && sudo -u kre8r git pull origin master && sudo -u kre8r pm2 restart kre8r`.
+     Every git command on that box MUST run as `sudo -u kre8r`; git as root fails with
+     "dubious ownership". Memory: `reference_kre8rapp_deploy.md`.
+   (Historical, pre-Jul-2026: the key only opened `143.244.179.113`/kinOS and deploys were handed to
+   Jason via the DigitalOcean console. `7kinhomestead.land` is behind Cloudflare, so that hostname
+   still doesn't resolve to the droplet — use the IPs/aliases above.)
 
 For new `.land` pages: deploy first, confirm the URL returns 200 live, **then** Search Console → URL
 Inspection → Request Indexing. Requesting before it's live makes Google cache a 404. The sitemap is
