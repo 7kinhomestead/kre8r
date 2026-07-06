@@ -137,27 +137,45 @@ router.post('/sync', requireInternal, (req, res) => {
       fully_onboarded:  counts.fully_onboarded,
     });
 
-    // Auto-detect warm leads: Greenhouse only (free tier), progress_score 50-99,
-    // posts_30d > 0, joined >= 14 days ago. Garden + Founding 50 are already paying.
-    const warmCandidates = db.getAllCommunityMembers({ tier: 'greenhouse', min_score: 50, max_score: 99 });
+    // Auto-detect warm leads: Greenhouse only (free tier). Garden + Founding 50
+    // are already paying. Two buckets (see MissionΩr design plan):
+    //   ACTIVE warm — score 50-100, posted in the last 30d, joined >= 14d ago, and
+    //     clears >= 2 REAL signals. "posted_in_community" is recorded for context
+    //     but no longer COUNTS toward the threshold: this loop only reaches a member
+    //     with posts_30d > 0, so that signal was always true and silently halved the
+    //     bar (any one other signal made a lead). Now it takes two real ones.
+    //   QUIET warm — score >= 75 and engaged (recent comments) but has NEVER posted:
+    //     the fully-onboarded lurker who's warm but silent. The prime nurture target,
+    //     invisible to the active bucket because it requires a post.
+    const warmCandidates = db.getAllCommunityMembers({ tier: 'greenhouse', min_score: 50, max_score: 100 });
     let new_leads = 0;
     for (const c of warmCandidates) {
-      if (!c.posts_30d) continue;
       const joinedMs = c.joined_at ? new Date(c.joined_at).getTime() : 0;
-      const ageMs = Date.now() - joinedMs;
-      if (ageMs < 14 * 24 * 60 * 60 * 1000) continue; // too new
+      const ageMs = joinedMs ? Date.now() - joinedMs : 0;
+      const oldEnough = ageMs >= 14 * 24 * 60 * 60 * 1000;
 
-      const signals = [];
-      if (c.posts_30d >= 1)    signals.push('posted_in_community');
-      if (c.posts_count >= 2)  signals.push('multiple_posts');
-      if (c.comments_30d >= 3) signals.push('active_commenter');
-      if (c.progress_score >= 75) signals.push('high_onboarding_progress');
+      // Real signals — posting-at-all excluded (always true in the active branch).
+      const strong = [];
+      if (c.posts_count >= 2)     strong.push('multiple_posts');
+      if (c.comments_30d >= 3)    strong.push('active_commenter');
+      if (c.progress_score >= 75) strong.push('high_onboarding_progress');
 
-      if (signals.length >= 2) {
+      if (c.posts_30d && oldEnough && strong.length >= 2) {
+        // ACTIVE warm — keep posted_in_community in the recorded signals as context.
+        const signals = ['posted_in_community', ...strong];
         db.upsertWarmLead({
           member_id: c.id, kajabi_user_id: c.kajabi_user_id,
           name: `${c.first_name || ''} ${c.last_name || ''}`.trim(),
           email: c.email, signals,
+        });
+        new_leads++;
+      } else if (!c.posts_count && c.progress_score >= 75 && c.comments_30d >= 1) {
+        // QUIET warm — never posted, but onboarded AND commenting recently.
+        // No 14-day gate: catching the silent-but-engaged early is the whole point.
+        db.upsertWarmLead({
+          member_id: c.id, kajabi_user_id: c.kajabi_user_id,
+          name: `${c.first_name || ''} ${c.last_name || ''}`.trim(),
+          email: c.email, signals: ['quiet_warm', 'high_onboarding_progress'],
         });
         new_leads++;
       }
