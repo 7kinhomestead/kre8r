@@ -170,6 +170,18 @@
   <div class="btnrow" id="schoolBtns2"></div>
   <button id="btnExitSchool" style="display:none">Leave school</button>
 
+  <div id="reviewSec" style="display:none">
+    <h2>ROCKY'S REVIEW</h2>
+    <div class="btnrow">
+      <button id="btnRevStart" style="flex:1">Review the game</button>
+    </div>
+    <div class="btnrow" id="revNav" style="display:none">
+      <button id="btnRevPrev" style="flex:1">&#9664;</button>
+      <button id="btnRevNext" style="flex:1">&#9654;</button>
+      <button id="btnRevDone" style="flex:1">Done</button>
+    </div>
+  </div>
+
   <h2>ROCKY CAPTURED</h2>
   <div class="captures his" id="capByRocky"></div>
   <h2>YOU CAPTURED</h2>
@@ -792,6 +804,7 @@ function spawnPiece(type, color, sq) {
   pieceMeshes[sq] = g;
 }
 function rebuildBoardMeshes() {
+  lastMoveMarkers.clear();
   for (const sq of Object.keys(pieceMeshes)) { scene.remove(pieceMeshes[sq]); delete pieceMeshes[sq]; }
   const board = game.board();
   for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
@@ -815,6 +828,7 @@ function removePieceAt(sq, flyOff = true) {
 }
 /* apply an already-executed chess.js move to the 3D board */
 function animateAppliedMove(mv, onDone) {
+  markLastMove(mv);
   const mover = pieceMeshes[mv.from];
   // captured piece (including en passant, where the victim isn't on mv.to)
   let capSq = null;
@@ -898,6 +912,8 @@ const COLOR_LINES = {
   b: "This game I am white! I go first. You get the rock pieces — they are my cousins. They already like you.",
 };
 function startNewGame(announce) {
+  hideReview();
+  try { localStorage.removeItem('rockySave'); } catch (e) {}
   playerColor = consumeNextColor();
   game.reset(); gameOver = false; busy = false; selected = null; legalTargets = [];
   clearMarkers(); taskMarkers.clear(); rebuildBoardMeshes(); refreshPanel();
@@ -942,6 +958,8 @@ function checkGameEnd() {
   if (!game.isGameOver()) return false;
   gameOver = true;
   clearMarkers();
+  try { localStorage.removeItem('rockySave'); } catch (e) {}
+  if (!school.active) offerReview();
   if (game.isCheckmate()) {
     if (game.turn() === humanColor()) { setStatus('Checkmate — Rocky wins', true); speak('rockyWins'); rockyJazzHands(); }
     else { setStatus('Checkmate — YOU WIN!'); speak('playerWins'); rockyJazzHands(); }
@@ -961,12 +979,14 @@ function playerMove(mv) {
   const preScore = evaluate(); // Rocky-perspective eval before Rocky replies
   const applied = game.move({ from: mv.from, to: mv.to, promotion: 'q' });
   addChip('You · ' + applied.san);
+  saveGame();
   animateAppliedMove(applied, () => {
     refreshPanel();
     if (school.active) { lessonCheck(applied); return; }
     if (checkGameEnd()) { busy = false; return; }
     // Rocky reacts to what you did
-    if (applied.flags.includes('k') || applied.flags.includes('q')) speak('castle');
+    if (applied.san === 'b3' && game.history().length === 1) speak("THE LARSEN! My student! I taught you that. I am so proud. Also slightly afraid.");
+    else if (applied.flags.includes('k') || applied.flags.includes('q')) speak('castle');
     else if (applied.promotion) speak('promotion');
     else if (applied.captured) speak('playerCapture', { piece: PIECE_NAMES[applied.captured] });
     else if (game.isCheck()) speak('playerCheck');
@@ -985,6 +1005,7 @@ function rockyTurn(preScore) {
     if (!choice) { checkGameEnd(); busy = false; return; }
     const applied = game.move(choice.move);
     addChip('Rocky · ' + applied.san, true);
+    saveGame();
     animateAppliedMove(applied, () => {
       refreshPanel();
       if (checkGameEnd()) { busy = false; return; }
@@ -1202,7 +1223,33 @@ const SCHOOL = [
       say: ["Final law of the endgame: TOWERS BELONG BEHIND PASSED LITTLE ONES. Yours or theirs — always behind.",
             "From behind, the tower pushes like wind at the runner's back. From in front, it just trips over him. Slide your tower behind your runner."],
       success: "Now every step the little one takes, the tower pushes harder. And THEIR tower must sit in front like a prison guard — passive, sad, waiting. You win slowly, then all at once." }],
-    done: "" },
+    done: "Endgame laws: warrior leader, pushing passers, towers behind. Two more weapons left — back to YOUR opening." },
+
+  { title: 'Larsen vs d5', steps: [
+    { fen: 'start',
+      say: ["More opening school! Sometimes they answer your 1. b3 with d5 instead of e5 — the Classical way. Different center, same gun.",
+            "Push the b-little-one. You know this part."],
+      line: [
+        { move: 'b3', mark: 'b3', reply: 'd5',
+          say: "There it is — d5. They block the long diagonal before your pointy one even arrives. Rude. Also smart. Load the gun anyway." },
+        { move: 'Bb2', mark: 'b2', reply: 'c5',
+          say: "Now they grab MORE space. Do not panic — big pawns can become big TARGETS. Your plan: fight for the dark squares, d4 and e5. Solid step: e3." },
+        { move: 'e3', mark: 'e3', reply: 'Nc6',
+          say: "The horse comes out to watch d4. And you know what we do to horses that watch important squares... the familiar pin. b5!" },
+        { move: 'Bb5', mark: 'b5' }],
+      success: "Same song, different key! Pin the horse, then: horse to f3, castle, and later your OWN horse lands on e5 with the b2 gun behind it." }],
+    done: "Law of the Larsen: they pick e5 or d5 — you play b3, Bb2, e3 either way. One system, every game. Your gun is always loaded." },
+
+  { title: 'The e5 Bite', steps: [
+    { fen: 'r1bqkbnr/2pp1ppp/p1n5/1p2p3/8/1P2PN2/PBPP1PPP/RN1QKB1R w KQkq - 0 5',
+      say: ["A real Larsen moment. They played slow, lazy wing moves... and forgot to COUNT.",
+            "Look at e5: attacked by your horse AND your b2 gun — two attackers. Defended by ONE horse. Two beats one. That math means dinner. Bite."],
+      line: [
+        { move: 'Nxe5', mark: 'e5', reply: 'Nxe5',
+          say: "They bite back — they must. And now... the second attacker." },
+        { move: 'Bxe5', mark: 'e5' }],
+      success: "A free little one — AND your pointy one now sits in the center of the world on the monster diagonal. This is the Larsen bite. e5 is always one defender short." }],
+    done: "Count attackers, count defenders, every single turn. When you have one more — bite. The b2 gun makes the math unfair forever." },
 ];
 const SCHOOL_FAIL = [
   "Hmm. Not that one. Is okay — I un-do it. We try again!",
@@ -1239,6 +1286,8 @@ function updateSchoolButtons() {
   document.querySelectorAll('button.lesson').forEach((b, i) => b.classList.toggle('done', done.includes(i)));
 }
 function startLesson(li) {
+  if (review.analyzing) return;
+  hideReview();
   school.active = true; school.li = li; school.si = 0;
   gameOver = false;
   setOrientation('w'); // drills are always shown from white's side
@@ -1341,6 +1390,134 @@ function exitSchool(silent) {
 }
 document.getElementById('btnExitSchool').addEventListener('click', () => { exitSchool(true); startNewGame(true); });
 
+/* ════════════════════════════════════════════════════════════════
+   LAST-MOVE HIGHLIGHT + SAVE/RESUME
+   ════════════════════════════════════════════════════════════════ */
+const lastMoveMarkers = new THREE.Group();
+scene.add(lastMoveMarkers);
+const lastMoveMat = new THREE.MeshBasicMaterial({ color: 0xf4b860, transparent: true, opacity: 0.16 });
+function markLastMove(mv) {
+  lastMoveMarkers.clear();
+  for (const sq of [mv.from, mv.to]) {
+    const p = squareToPos(sq);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.015, 0.98), lastMoveMat);
+    m.position.set(p.x, 0.025, p.z);
+    lastMoveMarkers.add(m);
+  }
+}
+function saveGame() {
+  if (school.active) return;
+  try {
+    if (game.history().length === 0 || game.isGameOver()) localStorage.removeItem('rockySave');
+    else localStorage.setItem('rockySave', JSON.stringify({ pgn: game.pgn(), playerColor, difficulty }));
+  } catch (e) { /* storage blocked — play on */ }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ROCKY'S POST-GAME REVIEW — he replays the turning points
+   ════════════════════════════════════════════════════════════════ */
+const review = { moments: [], idx: 0, analyzing: false, active: false, finalPgn: null };
+function hideReview() {
+  review.active = false; review.analyzing = false; review.moments = [];
+  document.getElementById('reviewSec').style.display = 'none';
+  document.getElementById('revNav').style.display = 'none';
+}
+function offerReview() {
+  if (game.history().length < 6) return;
+  document.getElementById('reviewSec').style.display = '';
+  document.getElementById('revNav').style.display = 'none';
+  setTimeout(() => {
+    if (!school.active && gameOver) speak("Want to know WHERE the game turned? Press 'Review the game'. I saw everything. I always see everything.");
+  }, 6500);
+}
+function analyzeGame() {
+  if (review.analyzing || review.active || !gameOver) return;
+  review.analyzing = true; busy = true;
+  speak("Reviewing. Thinking thinking thinking. I replay every move in my carapace. One moment.");
+  const hist = game.history({ verbose: true });
+  review.finalPgn = game.pgn();
+  game.reset();
+  const found = [];
+  let i = 0;
+  (function step() {
+    if (i >= hist.length) { finishAnalysis(found); return; }
+    const mv = hist[i];
+    if (mv.color === playerColor) {
+      const scored = searchBest(2, playerColor === 'b');
+      if (scored && scored.length) {
+        const best = scored[0];
+        const played = scored.find(s => s.move.san === mv.san);
+        if (played) {
+          const worse = playerColor === 'w' ? played.score - best.score : best.score - played.score;
+          const mateMissed = playerColor === 'w' ? best.score <= -99000 : best.score >= 99000;
+          if (worse >= 150 && mv.san !== best.move.san) {
+            found.push({ ply: i, fen: game.fen(), played: mv, best: best.move, worse, mateMissed });
+          } else if (mv.san === best.move.san && scored.length > 1) {
+            const gap = playerColor === 'w' ? scored[1].score - best.score : best.score - scored[1].score;
+            if (gap >= 120) found.push({ ply: i, fen: game.fen(), played: mv, best: best.move, worse: 0, praise: true });
+          }
+        }
+      }
+    }
+    game.move(mv);
+    i++;
+    setStatus('Rocky reviews... ' + i + '/' + hist.length, true);
+    setTimeout(step, 10);
+  })();
+}
+function finishAnalysis(found) {
+  game.loadPgn(review.finalPgn);
+  rebuildBoardMeshes(); refreshPanel();
+  const bad = found.filter(m => !m.praise).sort((a, b) => b.worse - a.worse).slice(0, 3);
+  const good = found.filter(m => m.praise).slice(0, 2);
+  review.moments = [...bad, ...good].sort((a, b) => a.ply - b.ply);
+  review.analyzing = false; busy = false;
+  if (review.moments.length === 0) {
+    setStatus('Review: flawless', true);
+    speak("I found NOTHING to complain about. Zero blunders. Who ARE you? ...Rematch. Now. I demand science.");
+    return;
+  }
+  const verdict = bad.length === 0
+    ? "No blunders — only brilliance. I show you your best moments. Bask."
+    : bad.length <= 2
+      ? "Good game! But " + bad.length + " moment" + (bad.length > 1 ? "s" : "") + " changed everything. Come, look. Learning is looking twice."
+      : "SPICY game. Several earthquakes. We look at them together. No shame — only science.";
+  speak(verdict);
+  review.active = true; review.idx = 0;
+  document.getElementById('revNav').style.display = '';
+  setTimeout(showMoment, 3000);
+}
+function narrateMoment(m) {
+  const n = Math.floor(m.ply / 2) + 1;
+  if (m.praise) return "Move " + n + ": you played " + m.played.san + ". PERFECT. Best move on the board — and it was not close. I checked twice. Amaze.";
+  if (m.mateMissed) return "Move " + n + ": you played " + m.played.san + ". But " + m.best.san + " was CHECKMATE. Right there. Shining. ...Now you will see it forever. That is how learning works.";
+  if (m.worse >= 300) return "Move " + n + ": " + m.played.san + " — here the ground shook. The glowing squares show " + m.best.san + ". Difference: about " + (m.worse / 100).toFixed(1) + " little-ones-worth of ouch.";
+  return "Move " + n + ": " + m.played.san + " was okay. But " + m.best.san + " was juicier. Small habits win big games.";
+}
+function showMoment() {
+  if (!review.active || !review.moments.length) return;
+  const m = review.moments[review.idx];
+  game.load(m.fen);
+  rebuildBoardMeshes(); clearMarkers(); taskMarkers.clear();
+  addMarker(m.played.from, 'sel');
+  addMarker(m.played.to, m.praise ? 'move' : 'cap');
+  if (!m.praise) showTaskMarkers([m.best.from, m.best.to]);
+  setStatus('Review ' + (review.idx + 1) + '/' + review.moments.length, true);
+  speak(narrateMoment(m));
+}
+function endReview() {
+  review.active = false;
+  document.getElementById('revNav').style.display = 'none';
+  if (review.finalPgn) game.loadPgn(review.finalPgn);
+  rebuildBoardMeshes(); refreshPanel(); clearMarkers(); taskMarkers.clear();
+  setStatus('Game over — rematch, question?', true);
+  speak("Review complete. A mistake seen twice is a habit. Seen once — learning. You learned. Now: REMATCH, question?");
+}
+document.getElementById('btnRevStart').addEventListener('click', () => { ensureAudio(); analyzeGame(); });
+document.getElementById('btnRevPrev').addEventListener('click', () => { if (review.active && review.idx > 0) { review.idx--; showMoment(); } });
+document.getElementById('btnRevNext').addEventListener('click', () => { if (review.active && review.idx < review.moments.length - 1) { review.idx++; showMoment(); } });
+document.getElementById('btnRevDone').addEventListener('click', () => { if (review.active) endReview(); });
+
 /* ── Buttons ── */
 document.querySelectorAll('button.diff').forEach(b => b.addEventListener('click', () => {
   ensureAudio();
@@ -1357,9 +1534,10 @@ document.getElementById('btnNew').addEventListener('click', () => {
 document.getElementById('btnUndo').addEventListener('click', () => {
   ensureAudio();
   if (school.active) { speak("In school, I fix the mistakes for you. Free service. Very good school."); return; }
-  if (busy || game.turn() !== playerColor) return;
+  if (busy || gameOver || review.active || game.turn() !== playerColor) return;
   if (game.history().length < 2) return;
   game.undo(); game.undo();
+  saveGame();
   gameOver = false; selected = null; legalTargets = [];
   clearMarkers(); rebuildBoardMeshes(); refreshPanel();
   setStatus('Your move');
@@ -1375,7 +1553,7 @@ document.getElementById('btnHint').addEventListener('click', () => {
     }
     return;
   }
-  if (busy || gameOver || game.turn() !== playerColor) return;
+  if (busy || gameOver || review.active || game.turn() !== playerColor) return;
   const scored = searchBest(2, playerColor === 'b'); // best move from the player's side
   if (scored && scored.length) speak('hint', { san: scored[0].move.san });
 });
@@ -1391,14 +1569,19 @@ birthdayEl.addEventListener('click', () => {
   ensureAudio();
   birthdayEl.classList.add('gone');
   speak('birthday');
-  setTimeout(() => { if (!busy && !school.active) speak('greeting'); }, 11000);
-  // if it's Rocky's turn to be white this game, he opens
-  if (rockyColor() === 'w') {
+  setTimeout(() => {
+    if (busy || school.active) return;
+    speak(resumedGame
+      ? "Also — we have UNFINISHED GAME. I remember everything. Eridian memory is perfect. Also I wrote it down. Your board, exactly as you left it."
+      : 'greeting');
+  }, 11000);
+  // Rocky moves if it's his turn: he's white in a fresh game, or the save ended on his move
+  if (game.turn() === rockyColor()) {
     setTimeout(() => {
-      if (school.active || busy || gameOver || game.history().length > 0) return;
-      speak(COLOR_LINES.b);
+      if (school.active || busy || gameOver || game.turn() !== rockyColor()) return;
+      if (game.history().length === 0) speak(COLOR_LINES.b);
       setTimeout(() => {
-        if (school.active || busy || gameOver || game.history().length > 0) return;
+        if (school.active || busy || gameOver || game.turn() !== rockyColor()) return;
         busy = true;
         rockyTurn(evaluate());
       }, 2800);
@@ -1460,11 +1643,29 @@ addEventListener('resize', () => {
 });
 
 /* ── Go ── */
-playerColor = consumeNextColor();
+let resumedGame = false;
+try {
+  const sv = JSON.parse(localStorage.getItem('rockySave') || 'null');
+  if (sv && sv.pgn) {
+    game.loadPgn(sv.pgn);
+    if (game.history().length > 0 && !game.isGameOver()) {
+      playerColor = sv.playerColor === 'b' ? 'b' : 'w';
+      if (DIFF_DEPTH[sv.difficulty]) difficulty = sv.difficulty;
+      document.querySelectorAll('button.diff').forEach(x => x.classList.toggle('on', x.dataset.d === difficulty));
+      resumedGame = true;
+    } else {
+      game.reset();
+      localStorage.removeItem('rockySave');
+    }
+  }
+} catch (e) { game.reset(); }
+if (!resumedGame) playerColor = consumeNextColor();
+// quiet debug hook (harmless in production, invaluable for testing)
+window.__rocky = { game, checkGameEnd, analyzeGame, review, saveGame, refreshPanel, rebuildBoardMeshes };
 setOrientation(playerColor);
 rebuildBoardMeshes();
 refreshPanel();
-setStatus(playerColor === 'w' ? 'Your move' : 'Rocky goes first', playerColor !== 'w');
+setStatus(game.turn() === playerColor ? 'Your move' : 'Rocky goes first', game.turn() !== playerColor);
 animate();
 </script>
 </body>
