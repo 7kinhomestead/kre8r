@@ -211,7 +211,7 @@ const PIECE_NAMES = { p: 'little one', n: 'horse', b: 'pointy one', r: 'tower', 
 const LINES = {
   greeting: [
     "Hello hello hello! You are Cari. Jason tell me all about you. We play chess now, question?",
-    "You come back! Good good good. Board is ready. You are white. White go first. Is fair — is your birth day.",
+    "You come back! Good good good. Board is ready. We play!",
   ],
   birthday: [
     "Question: today is your birth day, question? ... HAPPY HAPPY HAPPY! Earth custom say I give gift. Gift is chess. And me. I am also gift.",
@@ -763,7 +763,7 @@ function searchBest(depth, maximizing) {
 let difficulty = 'friend';
 const DIFF_DEPTH = { silly: 1, friend: 2, engineer: 3 };
 function chooseRockyMove() {
-  const scored = searchBest(DIFF_DEPTH[difficulty], true);
+  const scored = searchBest(DIFF_DEPTH[difficulty], rockyColor() === 'b');
   if (!scored || scored.length === 0) return null;
   if (difficulty === 'silly') {
     // pick randomly among the top handful, sometimes not the best
@@ -771,9 +771,9 @@ function chooseRockyMove() {
     return scored[Math.floor(Math.random() * n)];
   }
   if (difficulty === 'friend') {
-    // small jitter: pick among moves within 40 centipawns of best
+    // small jitter: pick among moves within 40 centipawns of best (list is sorted best-first)
     const best = scored[0].score;
-    const near = scored.filter(s => best - s.score <= 40);
+    const near = scored.filter(s => Math.abs(best - s.score) <= 40);
     return near[Math.floor(Math.random() * near.length)];
   }
   return scored[0];
@@ -873,6 +873,48 @@ let legalTargets = [];  // verbose moves for selected piece
 let lastActivity = performance.now();
 let idleSpoken = false;
 
+/* ── Color alternation: Cari is white one game, black the next ── */
+let playerColor = 'w';
+const rockyColor = () => (playerColor === 'w' ? 'b' : 'w');
+const humanColor = () => (school.active ? 'w' : playerColor); // school drills always run from white's side
+function consumeNextColor() {
+  let c = localStorage.getItem('rockyNextColor');
+  if (c !== 'w' && c !== 'b') c = 'w';
+  localStorage.setItem('rockyNextColor', c === 'w' ? 'b' : 'w');
+  return c;
+}
+/* camera + Rocky swap sides so the player's pieces are always nearest, with Rocky facing them */
+function setOrientation(color) {
+  const w = color === 'w';
+  camera.position.set(0, 8.2, w ? 9.6 : -9.6);
+  controls.target.set(0, 0.4, w ? -0.4 : 0.4);
+  controls.update();
+  rockyRoot.position.z = w ? -6.4 : 6.4;
+  rockyRoot.rotation.y = w ? 0 : Math.PI;
+  rockyGlow.position.z = w ? -6.2 : 6.2;
+}
+const COLOR_LINES = {
+  w: "This game you are white — you go first. Advantage: you. I win anyway. Probably.",
+  b: "This game I am white! I go first. You get the rock pieces — they are my cousins. They already like you.",
+};
+function startNewGame(announce) {
+  playerColor = consumeNextColor();
+  game.reset(); gameOver = false; busy = false; selected = null; legalTargets = [];
+  clearMarkers(); taskMarkers.clear(); rebuildBoardMeshes(); refreshPanel();
+  setOrientation(playerColor);
+  setStatus(playerColor === 'w' ? 'Your move' : 'Rocky goes first', playerColor !== 'w');
+  const lines = announce ? [pick('newGame'), COLOR_LINES[playerColor]] : [COLOR_LINES[playerColor]];
+  speakSeq(lines);
+  if (rockyColor() === 'w') {
+    setTimeout(() => {
+      if (!school.active && !gameOver && !busy && game.history().length === 0) {
+        busy = true;
+        rockyTurn(evaluate());
+      }
+    }, lines.length * 3200 + 600);
+  }
+}
+
 function setStatus(text, rocky = false) {
   statusEl.textContent = text;
   statusEl.classList.toggle('rocky', rocky);
@@ -881,8 +923,9 @@ function refreshPanel() {
   const caps = { byRocky: [], byYou: [] };
   for (const mv of game.history({ verbose: true })) {
     if (!mv.captured) continue;
-    if (mv.color === 'b') caps.byRocky.push(UNI.w[mv.captured]);
-    else caps.byYou.push(UNI.b[mv.captured]);
+    const victim = mv.color === 'w' ? 'b' : 'w';
+    if (mv.color === humanColor()) caps.byYou.push(UNI[victim][mv.captured]);
+    else caps.byRocky.push(UNI[victim][mv.captured]);
   }
   capByRockyEl.textContent = caps.byRocky.join(' ');
   capByYouEl.textContent = caps.byYou.join(' ');
@@ -900,7 +943,7 @@ function checkGameEnd() {
   gameOver = true;
   clearMarkers();
   if (game.isCheckmate()) {
-    if (game.turn() === 'w') { setStatus('Checkmate — Rocky wins', true); speak('rockyWins'); rockyJazzHands(); }
+    if (game.turn() === humanColor()) { setStatus('Checkmate — Rocky wins', true); speak('rockyWins'); rockyJazzHands(); }
     else { setStatus('Checkmate — YOU WIN!'); speak('playerWins'); rockyJazzHands(); }
   } else if (game.isStalemate()) {
     setStatus('Stalemate'); speak('stalemate');
@@ -950,8 +993,8 @@ function rockyTurn(preScore) {
       else if (applied.promotion) speak('rockyPromotion');
       else if (game.isCheck()) speak('rockyCheck');
       else if (applied.captured) {
-        const big = choice.score - preScore >= 250;
-        speak(big ? 'rockyBigCapture' : 'rockyCapture', { piece: PIECE_NAMES[applied.captured] });
+        const gain = rockyColor() === 'b' ? choice.score - preScore : preScore - choice.score;
+        speak(gain >= 250 ? 'rockyBigCapture' : 'rockyCapture', { piece: PIECE_NAMES[applied.captured] });
       }
       setStatus(game.isCheck() ? 'Your move — CHECK!' : 'Your move');
       lastActivity = performance.now(); idleSpoken = false;
@@ -965,7 +1008,7 @@ const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 renderer.domElement.addEventListener('pointerdown', e => {
   ensureAudio();
-  if (busy || gameOver || game.turn() !== 'w') return;
+  if (busy || gameOver || game.turn() !== humanColor()) return;
   pointer.x = (e.clientX / innerWidth) * 2 - 1;
   pointer.y = -(e.clientY / innerHeight) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
@@ -984,7 +1027,7 @@ renderer.domElement.addEventListener('pointerdown', e => {
 
   // clicking one of your own pieces → select it
   const cell = game.get(sq);
-  if (cell && cell.color === 'w') {
+  if (cell && cell.color === humanColor()) {
     selected = sq;
     legalTargets = game.moves({ square: sq, verbose: true });
     clearMarkers();
@@ -1198,6 +1241,7 @@ function updateSchoolButtons() {
 function startLesson(li) {
   school.active = true; school.li = li; school.si = 0;
   gameOver = false;
+  setOrientation('w'); // drills are always shown from white's side
   document.getElementById('btnExitSchool').style.display = '';
   loadStep();
 }
@@ -1272,16 +1316,13 @@ function graduation() {
     "GRADUATION CEREMONY: JAZZ HANDS! Now we play a real game — and you bring the Larsen. I will be gentle. That is lie.",
   ]);
   rockyJazzHands();
-  setTimeout(() => { rockyJazzHands(); exitSchool(true); }, 9800);
+  setTimeout(() => { rockyJazzHands(); exitSchool(true); startNewGame(false); }, 9800);
 }
 function exitSchool(silent) {
   sayTimers.forEach(clearTimeout); sayTimers = [];
   taskMarkers.clear();
   school.active = false;
   document.getElementById('btnExitSchool').style.display = 'none';
-  game.reset(); gameOver = false; busy = false; selected = null; legalTargets = [];
-  clearMarkers(); rebuildBoardMeshes(); refreshPanel();
-  setStatus('Your move');
   if (!silent) speak("School dismissed! Normal game now. Everything I teach you — use it against me. Is the Eridian way.");
 }
 // build the lesson buttons — basics 1-8, masterclass 9-15
@@ -1298,7 +1339,7 @@ function exitSchool(silent) {
   });
   updateSchoolButtons();
 }
-document.getElementById('btnExitSchool').addEventListener('click', () => exitSchool(false));
+document.getElementById('btnExitSchool').addEventListener('click', () => { exitSchool(true); startNewGame(true); });
 
 /* ── Buttons ── */
 document.querySelectorAll('button.diff').forEach(b => b.addEventListener('click', () => {
@@ -1310,16 +1351,13 @@ document.querySelectorAll('button.diff').forEach(b => b.addEventListener('click'
 }));
 document.getElementById('btnNew').addEventListener('click', () => {
   ensureAudio();
-  if (school.active) { exitSchool(true); }
-  game.reset(); gameOver = false; busy = false; selected = null; legalTargets = [];
-  clearMarkers(); rebuildBoardMeshes(); refreshPanel();
-  setStatus('Your move');
-  speak('newGame');
+  if (school.active) exitSchool(true);
+  startNewGame(true);
 });
 document.getElementById('btnUndo').addEventListener('click', () => {
   ensureAudio();
   if (school.active) { speak("In school, I fix the mistakes for you. Free service. Very good school."); return; }
-  if (busy) return;
+  if (busy || game.turn() !== playerColor) return;
   if (game.history().length < 2) return;
   game.undo(); game.undo();
   gameOver = false; selected = null; legalTargets = [];
@@ -1337,8 +1375,8 @@ document.getElementById('btnHint').addEventListener('click', () => {
     }
     return;
   }
-  if (busy || gameOver || game.turn() !== 'w') return;
-  const scored = searchBest(2, false); // white to move: minimize Rocky's score
+  if (busy || gameOver || game.turn() !== playerColor) return;
+  const scored = searchBest(2, playerColor === 'b'); // best move from the player's side
   if (scored && scored.length) speak('hint', { san: scored[0].move.san });
 });
 document.getElementById('btnSound').addEventListener('click', e => {
@@ -1354,11 +1392,23 @@ birthdayEl.addEventListener('click', () => {
   birthdayEl.classList.add('gone');
   speak('birthday');
   setTimeout(() => { if (!busy && !school.active) speak('greeting'); }, 11000);
+  // if it's Rocky's turn to be white this game, he opens
+  if (rockyColor() === 'w') {
+    setTimeout(() => {
+      if (school.active || busy || gameOver || game.history().length > 0) return;
+      speak(COLOR_LINES.b);
+      setTimeout(() => {
+        if (school.active || busy || gameOver || game.history().length > 0) return;
+        busy = true;
+        rockyTurn(evaluate());
+      }, 2800);
+    }, 14000);
+  }
 }, { once: true });
 
 /* ── Idle chatter ── */
 setInterval(() => {
-  if (busy || gameOver || game.turn() !== 'w' || idleSpoken) return;
+  if (busy || gameOver || game.turn() !== humanColor() || idleSpoken) return;
   if (!birthdayEl.classList.contains('gone')) return;
   if (performance.now() - lastActivity > 50000) { speak('idle'); idleSpoken = true; }
 }, 5000);
@@ -1410,9 +1460,11 @@ addEventListener('resize', () => {
 });
 
 /* ── Go ── */
+playerColor = consumeNextColor();
+setOrientation(playerColor);
 rebuildBoardMeshes();
 refreshPanel();
-setStatus('Your move');
+setStatus(playerColor === 'w' ? 'Your move' : 'Rocky goes first', playerColor !== 'w');
 animate();
 </script>
 </body>
