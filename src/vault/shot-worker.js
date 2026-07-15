@@ -104,12 +104,68 @@ async function processFootage(row, tier) {
     }
     logger.info({ footage_id: row.id, segments: scan.segments.length },
       '[shot-worker] footage logged');
+
+    // THE CLASSIFIER SWAP: clip-level classification synthesized from the ledger
+    // (replaces the 3-thumbnails→Claude flow). Fills ONLY empty fields — human
+    // labels are law and are never overwritten.
+    try {
+      await synthesizeClipSummary(row);
+    } catch (e) {
+      logger.warn({ footage_id: row.id, err: e.message }, '[shot-worker] synthesis skipped');
+    }
   } catch (err) {
     logger.error({ footage_id: row.id, err: err.message }, '[shot-worker] failed');
     state.errors.push({ footage_id: row.id, error: err.message });
   } finally {
     state.current = state.current.filter(id => id !== row.id);
     state.done++;
+  }
+}
+
+/**
+ * synthesizeClipSummary(row) — derive clip-level classification from the shot
+ * ledger via one local TEXT call ($0). Only fills fields the human hasn't set.
+ */
+async function synthesizeClipSummary(row) {
+  const needsType = !row.shot_type;
+  const needsDesc = !row.description;
+  const needsSubj = !row.subjects;
+  if (!needsType && !needsDesc && !needsSubj) return;
+
+  const segs = db.prepare(
+    `SELECT s.start_s, s.end_s, a.description
+     FROM footage_shots s JOIN footage_shot_analysis a ON a.shot_id = s.id
+     WHERE s.footage_id = ? AND a.description IS NOT NULL AND a.description != ''
+     ORDER BY s.shot_idx LIMIT 40`).all(row.id);
+  if (segs.length === 0) return;
+
+  const ledgerText = segs.map(s =>
+    `[${Math.round(s.start_s)}-${Math.round(s.end_s)}s] ${s.description}`).join('\n');
+  const prompt =
+    'Below is a per-segment shot log of one video clip. Reply with ONLY a JSON object:\n' +
+    '{"shot_type":"b-roll|talking-head|dialogue|action|completed-video",' +
+    '"description":"one 2-sentence clip summary",' +
+    '"subjects":["up to 8 short subject tags"]}\n\nSHOT LOG:\n' + ledgerText;
+
+  const r = await vlm.askText(prompt, { budgets: [500, 1200, 2000] });
+  if (!r.text) return;
+  let parsed;
+  try {
+    parsed = JSON.parse(r.text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, ''));
+  } catch (_) {
+    return; // malformed synthesis is a no-op, never a corruption
+  }
+  const VALID_TYPES = new Set(['b-roll', 'talking-head', 'dialogue', 'action', 'completed-video']);
+  const updates = {};
+  if (needsType && VALID_TYPES.has(parsed.shot_type)) updates.shot_type = parsed.shot_type;
+  if (needsDesc && typeof parsed.description === 'string' && parsed.description.trim())
+    updates.description = parsed.description.trim();
+  if (needsSubj && Array.isArray(parsed.subjects) && parsed.subjects.length)
+    updates.subjects = JSON.stringify(parsed.subjects.slice(0, 8).map(String));
+  if (Object.keys(updates).length) {
+    db.updateFootage(row.id, updates);
+    logger.info({ footage_id: row.id, fields: Object.keys(updates) },
+      '[shot-worker] clip summary synthesized from ledger');
   }
 }
 
@@ -167,4 +223,4 @@ function getStatus() {
   return { ...state };
 }
 
-module.exports = { runBackfill, processFootage, getStatus };
+module.exports = { runBackfill, processFootage, synthesizeClipSummary, getStatus };

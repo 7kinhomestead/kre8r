@@ -165,4 +165,36 @@ async function describeFrames(frames, prompt, opts = {}) {
   return { text: '', retries, model: TIERS[serverTier]?.modelName || 'unknown' };
 }
 
-module.exports = { describeFrames, ensureServer, stopServer, isUp, currentTier, freeVramMb, TIERS };
+/**
+ * askText(prompt, opts) — text-only call to the local model (no images).
+ * Same retry-on-empty ladder. Returns { text, retries }.
+ */
+async function askText(prompt, opts = {}) {
+  const { default: fetch } = await import('node-fetch');
+  let retries = 0;
+  for (const budget of (opts.budgets || BUDGET_LADDER)) {
+    try {
+      const r = await fetch(`${BASE_URL}/v1/chat/completions`, {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({
+          model: 'local', temperature: 0.2, max_tokens: budget,
+          messages: [{ role: 'user', content: `${prompt} /no_think` }],
+        }),
+        timeout : 120000,
+      });
+      if (!r.ok) throw new Error(`vlm http ${r.status}`);
+      const data = await r.json();
+      const text = (data.choices?.[0]?.message?.content || '').trim();
+      if (text) return { text, retries };
+      retries++;
+    } catch (err) {
+      logger.warn({ err: err.message, budget }, '[vlm] askText attempt failed');
+      retries++;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  return { text: '', retries };
+}
+
+module.exports = { describeFrames, askText, ensureServer, stopServer, isUp, currentTier, freeVramMb, TIERS };
