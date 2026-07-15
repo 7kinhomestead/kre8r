@@ -17,6 +17,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const db = require('../db');
 const vlm = require('../utils/vlm');
+const embed = require('../utils/embed');
 const logger = require('../utils/logger');
 
 const SHOTSCAN = path.join(__dirname, '..', '..', 'scripts', 'vision', 'shotscan.py');
@@ -101,6 +102,20 @@ async function processFootage(row, tier) {
         seg.best_sharpness, seg.best_frame_time, result.retries);
       state.segmentsLogged++;
       if (!result.text) state.emptyDescriptions++;
+
+      // V2: semantic vector for this shot (CPU embedder; soft-fails clean)
+      if (description && db.isVecLoaded()) {
+        try {
+          const vec = await embed.embedText(`${description} ${tags || ''}`, 'document');
+          if (vec) {
+            db.getRawDb().prepare(
+              'INSERT OR REPLACE INTO shot_vec (rowid, embedding) VALUES (?, ?)'
+            ).run(BigInt(shotRow.id), vec);
+          }
+        } catch (e) {
+          logger.warn({ shot_id: shotRow.id, err: e.message }, '[shot-worker] embed skipped');
+        }
+      }
     }
     logger.info({ footage_id: row.id, segments: scan.segments.length },
       '[shot-worker] footage logged');
@@ -191,6 +206,12 @@ async function runBackfill({ limit = 10, tier = 'triage', shotTypes = null } = {
   const server = await vlm.ensureServer(tier);
   if (!server.ok) throw new Error(`Farmhand unavailable: ${server.reason}`);
   const effectiveTier = server.tier === 'external' ? tier : server.tier;
+
+  // Embedding server is nice-to-have — vectors backfill later if it's down
+  if (db.isVecLoaded()) {
+    const e = await embed.ensureServer();
+    if (!e.ok) logger.warn({ reason: e.reason }, '[shot-worker] embeddings offline this run');
+  }
 
   Object.assign(state, {
     running: true, total: rows.length, done: 0, segmentsLogged: 0,

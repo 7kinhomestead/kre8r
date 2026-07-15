@@ -12,6 +12,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const vlm = require('../utils/vlm');
+const embed = require('../utils/embed');
 const worker = require('../vault/shot-worker');
 const logger = require('../utils/logger');
 
@@ -58,13 +59,15 @@ router.get('/footage/:id', (req, res) => {
   }
 });
 
-router.get('/search', (req, res) => {
+router.get('/search', async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
     if (!q) return res.status(400).json({ ok: false, error: 'q required' });
+
+    // Text hits (exact/substring)
     const like = `%${q}%`;
-    const rows = db.prepare(
-      `SELECT s.footage_id, s.shot_idx, s.start_s, s.end_s,
+    const textRows = db.prepare(
+      `SELECT s.id AS shot_id, s.footage_id, s.shot_idx, s.start_s, s.end_s,
               a.description, a.tags,
               f.original_filename, f.file_path, f.proxy_path, f.shot_type, f.project_id
        FROM footage_shot_analysis a
@@ -72,8 +75,64 @@ router.get('/search', (req, res) => {
        JOIN footage f ON f.id = s.footage_id
        WHERE a.description LIKE ? OR a.tags LIKE ?
        ORDER BY s.footage_id DESC, s.shot_idx
-       LIMIT 200`).all(like, like);
-    res.json({ ok: true, q, count: rows.length, results: rows });
+       LIMIT 100`).all(like, like);
+
+    // Semantic hits (meaning) — merged in, deduped, when the stack is up
+    let semRows = [];
+    let semantic = false;
+    if (db.isVecLoaded() && await embed.isUp()) {
+      const qVec = await embed.embedText(q, 'query');
+      if (qVec) {
+        semantic = true;
+        const knn = db.getRawDb().prepare(
+          'SELECT rowid, distance FROM shot_vec WHERE embedding MATCH ? ORDER BY distance LIMIT 30'
+        ).all(qVec);
+        if (knn.length) {
+          const ids = knn.map(k => Number(k.rowid));
+          const dist = new Map(knn.map(k => [Number(k.rowid), k.distance]));
+          semRows = db.prepare(
+            `SELECT s.id AS shot_id, s.footage_id, s.shot_idx, s.start_s, s.end_s,
+                    a.description, a.tags,
+                    f.original_filename, f.file_path, f.proxy_path, f.shot_type, f.project_id
+             FROM footage_shots s
+             JOIN footage_shot_analysis a ON a.shot_id = s.id
+             JOIN footage f ON f.id = s.footage_id
+             WHERE s.id IN (${ids.map(() => '?').join(',')})`).all(...ids);
+          semRows.forEach(r => { r.distance = dist.get(r.shot_id); });
+          semRows.sort((x, y) => x.distance - y.distance);
+        }
+      }
+    }
+
+    const seen = new Set(textRows.map(r => r.shot_id));
+    const merged = [...textRows, ...semRows.filter(r => !seen.has(r.shot_id))];
+    res.json({ ok: true, q, semantic, count: merged.length, results: merged });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Backfill vectors for analysis rows that don't have one yet (existing ledgers)
+router.post('/embed-backfill', async (req, res) => {
+  try {
+    if (!db.isVecLoaded()) return res.status(409).json({ ok: false, error: 'sqlite-vec unavailable' });
+    const e = await embed.ensureServer();
+    if (!e.ok) return res.status(409).json({ ok: false, error: e.reason });
+    const rows = db.prepare(
+      `SELECT a.shot_id, a.description, a.tags
+       FROM footage_shot_analysis a
+       LEFT JOIN shot_vec v ON v.rowid = a.shot_id
+       WHERE v.rowid IS NULL AND a.description IS NOT NULL AND a.description != ''
+       LIMIT ${Math.min(parseInt(req.body?.limit, 10) || 2000, 10000)}`).all();
+    let done = 0;
+    const ins = db.getRawDb().prepare(
+      'INSERT OR REPLACE INTO shot_vec (rowid, embedding) VALUES (?, ?)');
+    for (const r of rows) {
+      const vec = await embed.embedText(`${r.description} ${r.tags || ''}`, 'document');
+      if (vec) { ins.run(BigInt(r.shot_id), vec); done++; }
+    }
+    logger.info({ done, of: rows.length }, '[shots] embed backfill');
+    res.json({ ok: true, embedded: done, candidates: rows.length });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

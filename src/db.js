@@ -27,6 +27,7 @@ const SCHEMA_PATH = path.join(__dirname, '..', 'database', 'schema.sql');
 const tenantContext = require('./utils/tenant-context');
 
 let db;
+let _vecLoaded = false;
 
 // ─────────────────────────────────────────────
 // INIT & PERSISTENCE
@@ -43,6 +44,17 @@ function initDb() {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.pragma('synchronous = NORMAL'); // safe with WAL, faster than FULL
+
+  // sqlite-vec — semantic shot search (VaultΩr 2.0 V2). Guarded: if the
+  // extension can't load on this box, everything else works and semantic
+  // search is simply unavailable.
+  try {
+    require('sqlite-vec').load(db);
+    _vecLoaded = true;
+  } catch (e) {
+    _vecLoaded = false;
+    console.warn('[DB] sqlite-vec unavailable — semantic search disabled:', e.message);
+  }
 
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
   db.exec(schema);
@@ -1368,6 +1380,16 @@ function runMigrations() {
     created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_fsa_shot ON footage_shot_analysis(shot_id)');
+
+  // Semantic shot vectors (V2) — rowid mirrors footage_shots.id.
+  // nomic-embed-text-v1.5 = 768 dims. Only when the extension loaded.
+  if (_vecLoaded) {
+    try {
+      db.exec('CREATE VIRTUAL TABLE IF NOT EXISTS shot_vec USING vec0(embedding float[768])');
+    } catch (e) {
+      console.warn('[DB] shot_vec creation failed:', e.message);
+    }
+  }
 }
 
 /**
@@ -4715,6 +4737,7 @@ module.exports = {
   checkpoint,
   bootstrapTenantTables, // used by tenant-db-cache to fully initialise new tenant DBs
   getRawDb: () => db,  // used by session store in server.js
+  isVecLoaded: () => _vecLoaded, // sqlite-vec availability (semantic shot search)
   // Raw prepare — routes that build inline SQL (e.g. affiliator.js) need this.
   // Delegates to _activeDb() so tenant context is respected.
   prepare: (sql) => _activeDb().prepare(sql),
