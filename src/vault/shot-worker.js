@@ -223,4 +223,23 @@ function getStatus() {
   return { ...state };
 }
 
-module.exports = { runBackfill, processFootage, synthesizeClipSummary, getStatus };
+// Auto-backfill after ingest: debounced 90s so a folder drop of 40 clips
+// triggers ONE run after the dust settles, not 40. Silent no-op when the
+// worker is already running or the Farmhand can't get VRAM — pending rows
+// are picked up by the next run either way (the LEFT JOIN is the queue).
+let _autoTimer = null;
+function scheduleAutoBackfill() {
+  if (_autoTimer) clearTimeout(_autoTimer);
+  _autoTimer = setTimeout(async () => {
+    _autoTimer = null;
+    if (state.running) return;
+    try {
+      const r = await runBackfill({ limit: 100, tier: 'triage' });
+      logger.info(r, '[shot-worker] auto-backfill after ingest');
+    } catch (err) {
+      logger.info({ err: err.message }, '[shot-worker] auto-backfill deferred');
+    }
+  }, 90_000);
+}
+
+module.exports = { runBackfill, processFootage, synthesizeClipSummary, scheduleAutoBackfill, getStatus };

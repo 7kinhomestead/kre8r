@@ -84,4 +84,38 @@ router.post('/server/stop', (req, res) => {
   res.json({ ok: true, stopped });
 });
 
+// Bin-review corrections intake — persists the pasted payload so a browser
+// crash or cleared localStorage can never lose Jason's review work (Prime
+// Directive). Corrections are applied to the bin map by hand/Fable; this is
+// the durable inbox.
+router.post('/bin-corrections', (req, res) => {
+  try {
+    const payload = req.body;
+    if (!payload || (Array.isArray(payload) && payload.length === 0)) {
+      return res.status(400).json({ ok: false, error: 'empty corrections payload' });
+    }
+    const key = `binreview_corrections_${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    db.prepare('INSERT INTO kv_store (key, value) VALUES (?, ?)')
+      .run(key, JSON.stringify(payload));
+    const count = Array.isArray(payload) ? payload.length
+      : (payload.corrections ? payload.corrections.length : 1);
+    logger.info({ key, count }, '[shots] bin-review corrections stored');
+    res.json({ ok: true, key, count });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.get('/bin-corrections', (req, res) => {
+  try {
+    const rows = db.prepare(
+      `SELECT key, value, updated_at FROM kv_store
+       WHERE key LIKE 'binreview_corrections_%' ORDER BY key DESC LIMIT 50`).all();
+    res.json({ ok: true, batches: rows.map(r => ({
+      key: r.key, saved_at: r.updated_at, payload: JSON.parse(r.value) })) });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
