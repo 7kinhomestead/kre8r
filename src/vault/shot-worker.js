@@ -24,11 +24,18 @@ const SHOTSCAN = path.join(__dirname, '..', '..', 'scripts', 'vision', 'shotscan
 const PYTHON = process.env.PYTHON_BIN || 'python';
 const CONCURRENT_DETECT = 3;
 
+// TODO(Soul): people roster + this prompt template belong in creator-profile.json
+// (Engine vs Soul) — names hardcoded here only until the roster field lands.
 const DEFAULT_PROMPT =
   process.env.VLM_SHOT_PROMPT ||
-  'You are logging footage for a video editor\'s catalog. Describe this shot in ' +
-  '2-3 sentences: who/what is visible, the action, the location type, anything ' +
-  'editorially notable. Then on a new line: TAGS: 5 comma-separated tags.';
+  'You are logging footage for a video editor. KNOWN PEOPLE: the bearded man is ' +
+  'Jason; the woman usually with him is Cari; children are \'one of the kids\'. Use ' +
+  'their names instead of describing their appearance. If unsure who someone is, ' +
+  'say \'a man\'/\'a woman\'. Do not describe clothing UNLESS it shows a brand/logo/' +
+  'text or is unusual — then name it exactly. Do not restate the genre or say what ' +
+  'the footage \'suggests\'. Describe this shot in 2-3 sentences: the ACTION, the ' +
+  'objects/tools/materials involved, and the environment. Then on a new line: ' +
+  'TAGS: 5 comma-separated tags.';
 
 const state = {
   running: false,
