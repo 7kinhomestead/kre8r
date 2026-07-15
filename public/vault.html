@@ -791,6 +791,14 @@
     <!-- Active tag filter pill -->
     <div id="active-tag-filter" style="display:none;align-items:center;gap:8px;padding:6px 12px;background:var(--teal-glow);border:1px solid rgba(62,207,178,0.2);border-radius:var(--radius-sm);margin-bottom:8px;"></div>
 
+    <!-- Moments — shot-level search hits from the Farmhand's ledger (VaultΩr 2.0) -->
+    <div id="moments-section" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+        <span style="font-size:11px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.5px;">Moments <span id="moments-count" style="font-weight:400"></span></span>
+      </div>
+      <div id="moments-rows" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;"></div>
+    </div>
+
     <!-- Subject tag cloud — aggregated from filtered footage, click any tag to search -->
     <div id="tag-cloud-section" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
@@ -891,6 +899,12 @@
         <textarea class="field-textarea" id="modalDescription" rows="3" placeholder="What is visible in this clip?"></textarea>
       </div>
 
+      <!-- Shot ledger — the Farmhand's per-segment read (VaultΩr 2.0) -->
+      <div class="field-group" id="shotLedgerGroup" style="display:none">
+        <label class="field-label">Shot Ledger <span id="shotLedgerCount" style="font-weight:400;color:var(--text-dimmer)"></span></label>
+        <div id="shotLedgerRows" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card-2);"></div>
+      </div>
+
       <hr class="modal-section-divider">
 
       <!-- Project link -->
@@ -963,6 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(searchDebounce);
     const q = e.target.value.trim();
     if (!q) {
+      hideMoments();
       const f = applyFilters(allFootage);
       renderView(f);
       renderTagCloud(f);
@@ -1244,14 +1259,50 @@ async function runSearch(q) {
 
   document.getElementById('searchSpinner').classList.add('visible');
   try {
-    const results = await fetch('/api/vault/search', {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ q })
-    }).then(r => r.json());
+    // Clip-level search + shot-level "moments" from the Farmhand's ledger, in
+    // parallel and INDEPENDENT — the local ledger search must render even when
+    // the cloud-powered clip search fails (and vice versa).
+    const [results, moments] = await Promise.all([
+      fetch('/api/vault/search', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ q })
+      }).then(r => r.json()).catch(e => ({ error: e.message })),
+      fetch(`/api/shots/search?q=${encodeURIComponent(q)}`).then(r => r.json()).catch(() => null),
+    ]);
+    renderMoments(moments && moments.ok ? moments.results : []);
     if (results.error) { showToast(results.error, 'amber'); return; }
     renderView(results);
     updateFootageCount(results.length, allFootage.length);
   } catch(e) { showToast('Search failed: ' + e.message, 'red'); }
   finally { document.getElementById('searchSpinner').classList.remove('visible'); }
+}
+
+// ── MOMENTS (shot-level search hits) ───────────────────────────────────────
+function fmtTc(s) {
+  const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function hideMoments() {
+  const sec = document.getElementById('moments-section');
+  if (sec) sec.style.display = 'none';
+}
+
+function renderMoments(rows) {
+  const sec  = document.getElementById('moments-section');
+  const list = document.getElementById('moments-rows');
+  const cnt  = document.getElementById('moments-count');
+  if (!sec || !list) return;
+  if (!rows || rows.length === 0) { sec.style.display = 'none'; return; }
+  cnt.textContent = `(${rows.length} shot${rows.length !== 1 ? 's' : ''})`;
+  list.innerHTML = rows.slice(0, 60).map(r => `
+    <div onclick="openModal(${r.footage_id})"
+      style="display:flex;gap:10px;align-items:baseline;padding:5px 8px;border-radius:6px;cursor:pointer;background:var(--bg-card-2);border:1px solid var(--border);"
+      onmouseenter="this.style.borderColor='rgba(62,207,178,0.4)'" onmouseleave="this.style.borderColor=''">
+      <span style="font-size:11px;color:var(--teal);white-space:nowrap;font-variant-numeric:tabular-nums;">${fmtTc(r.start_s)}–${fmtTc(r.end_s)}</span>
+      <span style="font-size:12px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${escHtml(r.description || '')}</span>
+      <span style="font-size:10px;color:var(--text-dimmer);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;">${escHtml(r.original_filename || '')}</span>
+    </div>`).join('');
+  sec.style.display = 'block';
 }
 
 // ── SUBJECT TAG CLOUD ──────────────────────────────────────────────────────
@@ -1922,6 +1973,28 @@ function formatDistDate(iso) {
 }
 
 // ── MODAL ──────────────────────────────────────────────────────────────────
+// Lazy-load the shot ledger into the clip modal (hidden when no shots logged)
+async function loadShotLedger(footageId) {
+  const group = document.getElementById('shotLedgerGroup');
+  const rows  = document.getElementById('shotLedgerRows');
+  const cnt   = document.getElementById('shotLedgerCount');
+  if (!group || !rows) return;
+  group.style.display = 'none';
+  rows.innerHTML = '';
+  try {
+    const data = await fetch(`/api/shots/footage/${footageId}`).then(r => r.json());
+    if (!data.ok || !data.shots || data.shots.length === 0) return;
+    cnt.textContent = `(${data.shots.length} segments — the Farmhand's read)`;
+    rows.innerHTML = data.shots.map(s => `
+      <div style="display:flex;gap:10px;align-items:baseline;padding:5px 10px;border-bottom:1px solid var(--border);">
+        <span style="font-size:11px;color:var(--teal);white-space:nowrap;font-variant-numeric:tabular-nums;">${fmtTc(s.start_s)}–${fmtTc(s.end_s)}</span>
+        <span style="font-size:12px;color:var(--text-dim);flex:1;">${escHtml(s.description || '(no description)')}
+          ${s.tags ? `<span style="color:var(--text-dimmer);font-size:11px;"> · ${escHtml(s.tags)}</span>` : ''}</span>
+      </div>`).join('');
+    group.style.display = 'block';
+  } catch (_) { /* ledger is progressive enhancement — never block the modal */ }
+}
+
 async function openModal(id) {
   // Load fresh record to get last_modified
   let f;
@@ -1952,6 +2025,7 @@ async function openModal(id) {
   document.getElementById('modalRecorded').textContent    = f.creation_timestamp ? formatDistDate(f.creation_timestamp) : '—';
   document.getElementById('modalModified').textContent    = f.last_modified ? formatDistDate(f.last_modified)   : '—';
   document.getElementById('modalFilepath').textContent    = f.file_path    || '—';
+  loadShotLedger(f.id);
 
   document.getElementById('modalShotType').value    = f.shot_type    || '';
   document.getElementById('modalSubcategory').value = f.subcategory  || '';

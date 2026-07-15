@@ -35,7 +35,7 @@ router.get('/status', async (req, res) => {
     const counts = db.prepare(
       `SELECT COUNT(DISTINCT footage_id) AS footage_with_shots,
               COUNT(*) AS total_shots
-       FROM shots`).get();
+       FROM footage_shots`).get();
     res.json({ ok: true, worker: worker.getStatus(), totals: counts,
                server_up: await vlm.isUp(), tier: vlm.currentTier() });
   } catch (err) {
@@ -48,8 +48,8 @@ router.get('/footage/:id', (req, res) => {
     const rows = db.prepare(
       `SELECT s.id, s.shot_idx, s.start_s, s.end_s, s.detect_source,
               a.description, a.tags, a.model, a.tier, a.sharpness, a.frame_time_s
-       FROM shots s
-       LEFT JOIN shot_analysis a ON a.shot_id = s.id
+       FROM footage_shots s
+       LEFT JOIN footage_shot_analysis a ON a.shot_id = s.id
        WHERE s.footage_id = ?
        ORDER BY s.shot_idx`).all(req.params.id);
     res.json({ ok: true, footage_id: Number(req.params.id), shots: rows });
@@ -67,8 +67,8 @@ router.get('/search', (req, res) => {
       `SELECT s.footage_id, s.shot_idx, s.start_s, s.end_s,
               a.description, a.tags,
               f.original_filename, f.file_path, f.proxy_path, f.shot_type, f.project_id
-       FROM shot_analysis a
-       JOIN shots s   ON s.id = a.shot_id
+       FROM footage_shot_analysis a
+       JOIN footage_shots s ON s.id = a.shot_id
        JOIN footage f ON f.id = s.footage_id
        WHERE a.description LIKE ? OR a.tags LIKE ?
        ORDER BY s.footage_id DESC, s.shot_idx

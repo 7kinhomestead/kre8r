@@ -1339,9 +1339,10 @@ function runMigrations() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_blog_project   ON blog_posts(project_id)');
 
   // ─── VaultΩr 2.0 shot layer (V1.5) ───────────────────────────────────────
-  // One row per detected shot/segment of a footage record. Detection runs on an
-  // NVDEC proxy when available; 60s slicing is the fallback for cut-less footage.
-  db.exec(`CREATE TABLE IF NOT EXISTS shots (
+  // footage_shots: one row per DETECTED segment of a footage record (the base
+  // `shots` table is DirectΩr's planned shot list — different thing entirely).
+  // Detection runs on an NVDEC proxy; 60s slicing is the cut-less fallback.
+  db.exec(`CREATE TABLE IF NOT EXISTS footage_shots (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     footage_id    INTEGER NOT NULL,
     shot_idx      INTEGER NOT NULL,
@@ -1351,10 +1352,10 @@ function runMigrations() {
     created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
     UNIQUE(footage_id, shot_idx)
   )`);
-  db.exec('CREATE INDEX IF NOT EXISTS idx_shots_footage ON shots(footage_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_footage_shots_footage ON footage_shots(footage_id)');
 
   // The Farmhand's read of each shot. tier: 'triage' (1.3B) | 'quality' (8B) | 'cloud'.
-  db.exec(`CREATE TABLE IF NOT EXISTS shot_analysis (
+  db.exec(`CREATE TABLE IF NOT EXISTS footage_shot_analysis (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     shot_id       INTEGER NOT NULL UNIQUE,
     description   TEXT,
@@ -1366,7 +1367,7 @@ function runMigrations() {
     empty_retries INTEGER NOT NULL DEFAULT 0,
     created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
   )`);
-  db.exec('CREATE INDEX IF NOT EXISTS idx_shot_analysis_shot ON shot_analysis(shot_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_fsa_shot ON footage_shot_analysis(shot_id)');
 }
 
 /**
@@ -1973,8 +1974,8 @@ function bootstrapTenantTables(tdb) {
   exec('CREATE INDEX IF NOT EXISTS idx_blog_published ON blog_posts(published_at DESC)');
   exec('CREATE INDEX IF NOT EXISTS idx_blog_project   ON blog_posts(project_id)');
 
-  // ── VaultΩr 2.0 shot layer (V1.5) ──────────────────────────────────────────
-  exec(`CREATE TABLE IF NOT EXISTS shots (
+  // ── VaultΩr 2.0 shot layer (V1.5) — see runMigrations note re: naming ──────
+  exec(`CREATE TABLE IF NOT EXISTS footage_shots (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     footage_id    INTEGER NOT NULL,
     shot_idx      INTEGER NOT NULL,
@@ -1984,8 +1985,8 @@ function bootstrapTenantTables(tdb) {
     created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
     UNIQUE(footage_id, shot_idx)
   )`);
-  exec('CREATE INDEX IF NOT EXISTS idx_shots_footage ON shots(footage_id)');
-  exec(`CREATE TABLE IF NOT EXISTS shot_analysis (
+  exec('CREATE INDEX IF NOT EXISTS idx_footage_shots_footage ON footage_shots(footage_id)');
+  exec(`CREATE TABLE IF NOT EXISTS footage_shot_analysis (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     shot_id       INTEGER NOT NULL UNIQUE,
     description   TEXT,
@@ -1997,7 +1998,7 @@ function bootstrapTenantTables(tdb) {
     empty_retries INTEGER NOT NULL DEFAULT 0,
     created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
   )`);
-  exec('CREATE INDEX IF NOT EXISTS idx_shot_analysis_shot ON shot_analysis(shot_id)');
+  exec('CREATE INDEX IF NOT EXISTS idx_fsa_shot ON footage_shot_analysis(shot_id)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation

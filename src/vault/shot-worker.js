@@ -73,12 +73,12 @@ async function processFootage(row, tier) {
   try {
     const scan = await runShotscan(src);
     const insertShot = db.prepare(
-      `INSERT OR IGNORE INTO shots (footage_id, shot_idx, start_s, end_s, detect_source)
+      `INSERT OR IGNORE INTO footage_shots (footage_id, shot_idx, start_s, end_s, detect_source)
        VALUES (?, ?, ?, ?, ?)`);
     const getShotId = db.prepare(
-      'SELECT id FROM shots WHERE footage_id = ? AND shot_idx = ?');
+      'SELECT id FROM footage_shots WHERE footage_id = ? AND shot_idx = ?');
     const insertAnalysis = db.prepare(
-      `INSERT OR REPLACE INTO shot_analysis
+      `INSERT OR REPLACE INTO footage_shot_analysis
        (shot_id, description, tags, model, tier, sharpness, frame_time_s, empty_retries)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
 
@@ -124,7 +124,7 @@ async function runBackfill({ limit = 10, tier = 'triage', shotTypes = null } = {
     : '';
   const rows = db.prepare(
     `SELECT f.* FROM footage f
-     LEFT JOIN shots s ON s.footage_id = f.id
+     LEFT JOIN footage_shots s ON s.footage_id = f.id
      WHERE s.id IS NULL
        AND COALESCE(f.shot_type, '') != 'unusable'
        ${typeFilter}
