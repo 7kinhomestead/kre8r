@@ -45,6 +45,7 @@
     "sharp": "^0.34.5",
     "snappy": "^7.3.3",
     "sql.js": "^1.14.1",
+    "sqlite-vec": "^0.1.9",
     "ws": "^8.20.0"
   },
   "devDependencies": {
