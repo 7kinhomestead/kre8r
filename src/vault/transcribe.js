@@ -416,7 +416,10 @@ async function transcribeFile(filePath, options = {}) {
     const fixTranscriptText = (t) => t
       .replace(/\bRockridge\b/g, 'Rock Rich')
       .replace(/\brock ridge\b/gi, 'Rock Rich')
-      .replace(/\brock-ridge\b/gi, 'Rock Rich');
+      .replace(/\brock-ridge\b/gi, 'Rock Rich')
+      // Whisper consistently hears "Carrie" — she is Cari (Jul 16 2026)
+      .replace(/\bCarrie\b/g, 'Cari')
+      .replace(/\bCarrie's\b/g, "Cari's");
 
     const fixedText     = fixTranscriptText(parsed.text);
     const fixedSegments = parsed.segments.map(seg => ({
