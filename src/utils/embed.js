@@ -13,9 +13,9 @@ const { spawn } = require('child_process');
 const logger = require('./logger');
 
 const EMBED_BASE_URL = process.env.EMBED_BASE_URL || 'http://127.0.0.1:8081';
-const EMBED_SERVER_EXE = process.env.VLM_SERVER_EXE || 'H:\\ai-models\\llama\\llama-server.exe';
+const EMBED_SERVER_EXE = process.env.VLM_SERVER_EXE || 'C:\\ai-models\\llama\\llama-server.exe';
 const EMBED_MODEL = process.env.EMBED_MODEL_PATH ||
-  'H:\\ai-models\\nomic-embed-text-v1.5.Q8_0.gguf';
+  'C:\\ai-models\\nomic-embed-text-v1.5.Q8_0.gguf';
 const DIMS = 768;
 
 let serverChild = null;

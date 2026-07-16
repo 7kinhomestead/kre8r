@@ -17,8 +17,9 @@ const { spawn, execFile } = require('child_process');
 const logger = require('./logger');
 
 const BASE_URL   = process.env.VLM_BASE_URL   || 'http://127.0.0.1:8080';
-const SERVER_EXE = process.env.VLM_SERVER_EXE || 'H:\\ai-models\\llama\\llama-server.exe';
-const MODELS_DIR = process.env.VLM_MODELS_DIR || 'H:\\ai-models';
+// Models live on C: NVMe (moved off the T7 Jul 16 2026 so the T7 can shuttle)
+const SERVER_EXE = process.env.VLM_SERVER_EXE || 'C:\\ai-models\\llama\\llama-server.exe';
+const MODELS_DIR = process.env.VLM_MODELS_DIR || 'C:\\ai-models';
 
 // Budget ladder for retry-on-empty (thinking-leak mitigation, ~96-98% hit rate)
 const BUDGET_LADDER = [500, 1000];
