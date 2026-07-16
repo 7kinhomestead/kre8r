@@ -91,6 +91,10 @@ async function ensureServer(tier = 'triage') {
     '-m', cfg.model, '--mmproj', cfg.mmproj,
     '-ngl', '99', '--port', new URL(BASE_URL).port || '8080',
     '-c', '8192', '--jinja',
+    // Kill Qwen3 thinking at the template level — instruction-heavy prompts
+    // otherwise burn the whole token budget "reasoning" and return empty
+    // content (finish_reason: length). Verified fix Jul 15 2026.
+    '--chat-template-kwargs', '{"enable_thinking":false}',
   ], { stdio: 'ignore', detached: false });
   serverChild.on('exit', code => {
     logger.info({ code }, '[vlm] llama-server exited');
