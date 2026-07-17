@@ -648,8 +648,7 @@ A 45-minute Id8Ωr research session or a long WritΩr generation run represents 
 **Affected call sites (non-exhaustive):**
 - `src/routes/id8r.js` — concept generation, research phases, package generation (partial retry exists on /start only)
 - `src/routes/generate.js` — script, captions, email generation
-- `src/routes/mirrr.js` — DNA clustering, niche analysis, Secrets discovery, coaching report
-- `src/routes/analytr.js` — coaching report, thumbnail A/B
+- `src/routes/mirrr.js` — DNA clustering, niche analysis, Secrets discovery, coaching report, thumbnail A/B
 - `src/routes/shows.js` — episode analysis (YouTube comments + insights)
 - `src/routes/northr.js` — monthly strategy generation
 - `src/editor/selects-new.js` — SelectsΩr clip classification and selection decisions

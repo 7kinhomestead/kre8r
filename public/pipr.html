@@ -1917,7 +1917,8 @@ async function psDoDelete() {
   const titleEl = s2.querySelector('.screen-title');
   const subEl   = s2.querySelector('.screen-sub');
   if (titleEl) titleEl.textContent = 'CHANGE STRUCTURE';
-  if (subEl)   subEl.textContent   = 'Pick a different structure. Your beat map will be rebuilt — coverage data is preserved.';
+  // PIPR-2 fix: coverage data is NOT preserved — correcting the UI lie
+  if (subEl)   subEl.textContent   = 'Pick a different structure. Your beat map will be rebuilt. Existing beat coverage and footage assignments will be reset.';
 
   // Show screen-2 immediately, hide all others
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));

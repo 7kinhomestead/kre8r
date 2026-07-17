@@ -246,7 +246,19 @@ async function loadDashboard() {
 
   try {
     const res = await fetch('/api/projects');
-    allProjects = await res.json();
+    const allFetched = await res.json();
+    // gate-1 fix: filter to only distribution-stage projects — pre-production noise
+    // (SeedΩr ideas, un-shot scripts) was burying the 2-3 videos actually awaiting a decision
+    allProjects = allFetched.filter(p => {
+      // Include if: has packages generated, any gate approved, OR current_stage starts with M
+      const stage = p.current_stage || '';
+      return p.package_count > 0
+        || p.gate_a_approved
+        || p.gate_b_approved
+        || p.gate_c_approved
+        || stage.startsWith('M')
+        || stage === 'distribution';
+    });
     renderDashboard(allProjects);
   } catch(e) {
     document.getElementById('pending-container').innerHTML =

@@ -30,8 +30,11 @@ function buildClipsPrompt({ transcript, footageMeta }) {
     .map(s => `[${s.start.toFixed(2)}s → ${s.end.toFixed(2)}s] ${s.text}`)
     .join('\n');
 
+  const dangerZone = footageMeta?.duration
+    ? ` | Clip end times must not exceed ${(footageMeta.duration * 0.95).toFixed(0)}s (last 5% = camera runoff)`
+    : '';
   const metaSection = footageMeta
-    ? `SOURCE VIDEO: ${footageMeta.filename} | Duration: ${footageMeta.duration}s | Type: ${footageMeta.shot_type || 'completed-video'}\n`
+    ? `SOURCE VIDEO: ${footageMeta.filename} | Duration: ${footageMeta.duration}s | Type: ${footageMeta.shot_type || 'completed-video'}${dangerZone}\n`
     : '';
 
   const tiktokBlock = tikTok ? `
@@ -60,6 +63,13 @@ A great clip:
 - Has a clear arc or punchline — a reason to watch to the end
 - Reflects the creator's authentic voice, not a polished TV moment
 - Hits the audience psychology shown in the TikTok Intelligence section above (when present)
+
+TIMING RULES (critical — these affect the actual video cuts):
+- Set "end" to the timestamp of the last meaningful spoken word in the clip. No buffer, no padding — cut tight to the last word. The editor will add breathing room manually in DaVinci.
+- Never extend end time into silence, natural pauses, or camera runoff after the last word.
+- If the last transcript segment ends at or near the video's total duration, do NOT use that as a clip end time — the creator almost certainly walked out of frame before the transcript ended. End the clip at the last word of real content.
+- Never pick a clip whose end time is within 5% of the total video duration unless the video genuinely ends with a strong closing line.
+- Clips must NOT overlap. Each clip's start time must be after the previous clip's end time. If two strong moments share overlapping time ranges, pick the stronger one — do not output both.
 
 ${SLOP_RULE}
 
@@ -117,9 +127,59 @@ async function analyzeForClips({ transcript, footageMeta, onProgress }) {
     return { ok: false, error: 'No clips array in Claude response', raw: JSON.stringify(analysis).slice(0, 500) };
   }
 
+  // Hard clamp: if we know the video duration, trim any clip end that bleeds into
+  // the last 5% of the video (camera runoff after creator walks out of frame).
+  // Also clamp end time to the last transcript segment that has actual content.
+  const videoDuration = footageMeta?.duration;
+  const lastRealSegment = transcript?.segments?.length
+    ? transcript.segments[transcript.segments.length - 1]
+    : null;
+
+  // Walk backwards to find the last segment with meaningful speech (>3 words)
+  let lastSpeechEnd = null;
+  if (transcript?.segments) {
+    for (let i = transcript.segments.length - 1; i >= 0; i--) {
+      const seg = transcript.segments[i];
+      if (seg.text && seg.text.trim().split(/\s+/).length > 3) {
+        lastSpeechEnd = seg.end;
+        break;
+      }
+    }
+  }
+
+  const clampedClips = analysis.clips.map(clip => {
+    let end = clip.end;
+    // Clamp to last meaningful speech — no buffer.
+    // DaVinci AppendToTimeline is non-destructive; creator trims in Resolve.
+    // Any buffer here risks landing in camera runoff after Jason walks out.
+    if (lastSpeechEnd !== null && end > lastSpeechEnd) {
+      end = lastSpeechEnd;
+    }
+    // Hard cap at 95% of video duration as a safety net
+    if (videoDuration && end > videoDuration * 0.95) {
+      end = Math.min(end, videoDuration * 0.95);
+    }
+    // Ensure clip still has valid duration after clamping
+    if (end <= clip.start + 5) return clip; // too short after clamp — leave as-is
+    return { ...clip, end, duration: parseFloat((end - clip.start).toFixed(2)) };
+  });
+
+  // Hard dedup: remove any clips whose time range overlaps the previous clip.
+  // Overlapping clips share frame ranges in DaVinci — causes freeze frames.
+  // Clips are already rank-sorted (rank 1 = best), so keep the earlier-ranked one.
+  const clips = [];
+  for (const clip of clampedClips) {
+    const prev = clips[clips.length - 1];
+    if (prev && clip.start < prev.end) {
+      console.warn(`[clipsr] Overlap detected: clip ${clip.rank} (${clip.start}s) starts before clip ${prev.rank} ends (${prev.end}s) — dropping clip ${clip.rank}`);
+      continue;
+    }
+    clips.push(clip);
+  }
+
   return {
     ok: true,
-    clips: analysis.clips,
+    clips,
     overall_assessment: analysis.overall_assessment || ''
   };
 }

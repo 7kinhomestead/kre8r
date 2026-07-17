@@ -356,6 +356,7 @@ async function uploadVideo({
         : 'Published to TikTok ✓';
       onProgress({ stage: 'tiktok_done', platform: 'tiktok', message: doneMsg, share_url });
       return {
+        ok:       true, // PB2 fix: queue-processor checks r.ok — was missing, made TikTok always show as failed
         post_id:  publish_id,
         post_url: share_url || null,
       };

@@ -2013,6 +2013,34 @@
     <div id="community-sync-note" style="font-size:12px;color:var(--text-dimmer);margin-top:8px;"></div>
   </div>
 
+  <!-- ── Course Completions (Pillar 2 beacon) ── -->
+  <div class="section" id="course-completions-section">
+    <div class="section-head">
+      <div class="section-title">🎓 COURSE COMPLETIONS</div>
+      <span style="font-size:12px;color:var(--text-dimmer);">Live from Kajabi lessons</span>
+    </div>
+    <div class="pub-stats" id="cc-stats">
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cc-completions" style="color:var(--teal)">—</div>
+        <div class="pub-stat-label">Completions</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cc-members">—</div>
+        <div class="pub-stat-label">Members Active</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cc-lessons">—</div>
+        <div class="pub-stat-label">Lessons Touched</div>
+      </div>
+      <div class="pub-stat">
+        <div class="pub-stat-value" id="cc-7d" style="color:var(--green)">—</div>
+        <div class="pub-stat-label">Completed (7d)</div>
+      </div>
+    </div>
+    <div id="cc-lessons-list" style="margin-top:10px;"></div>
+    <div id="cc-note" style="font-size:12px;color:var(--text-dimmer);margin-top:8px;"></div>
+  </div>
+
   <!-- ── Copyright Health ── -->
   <div class="section" id="copyright-health-section">
     <div class="section-head">
@@ -2279,6 +2307,7 @@ async function loadDashboard() {
 
     loadMarkPublished();
     loadCommunityWidget();
+    loadCourseCompletions();
   } catch (e) {
     console.error('[NorthΩr] Dashboard load failed:', e);
     toast('Failed to load dashboard: ' + e.message, 'error');
@@ -2724,6 +2753,47 @@ async function loadCommunityWidget() {
       note.textContent = 'No community data yet — run the weekly sync from Claude Desktop.';
     }
   } catch (_) {}
+}
+
+// ── Course Completions (Pillar 2 beacon) ────────────────────────────────────────
+async function loadCourseCompletions() {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  try {
+    const d = await fetch('/api/northr/course-completions').then(r => r.json());
+    const t = d.totals || {};
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = (val ?? 0).toLocaleString(); };
+    set('cc-completions', t.completions);
+    set('cc-members',     t.members);
+    set('cc-lessons',     t.lessons_touched);
+    set('cc-7d',          t.completions_7d);
+
+    const list = document.getElementById('cc-lessons-list');
+    const note = document.getElementById('cc-note');
+    const lessons = (d.byLesson || []).filter(l => l.post_id);
+    if (!lessons.length) {
+      if (list) list.innerHTML = '';
+      if (note) note.innerHTML = 'No completion data yet — embed the beacon (<code>/kajabi-beacon.js</code>) in a Kajabi lesson and reload it as a logged-in member.';
+      return;
+    }
+    if (note) note.textContent = '';
+    if (list) list.innerHTML = lessons.slice(0, 12).map(l => {
+      const title = esc(l.lesson_title || l.post_id);
+      const views = l.views || 0, completes = l.completes || 0;
+      const pct = views ? Math.round((completes / views) * 100) : 0;
+      const barColor = pct >= 60 ? 'var(--teal)' : pct >= 30 ? 'var(--amber,#f59e0b)' : 'var(--text-dim)';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+          <div style="font-size:11px;color:var(--text-dimmer);margin-top:3px">${esc(l.product_slug || '')}</div>
+          <div style="height:4px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${barColor}"></div></div>
+        </div>
+        <div style="text-align:center;min-width:48px;"><div style="font-size:16px;font-weight:700;color:var(--text)">${(l.uniq_members||0).toLocaleString()}</div><div style="font-size:10px;color:var(--text-dimmer);letter-spacing:.5px">MEMBERS</div></div>
+        <div style="text-align:center;min-width:48px;"><div style="font-size:16px;font-weight:700;color:${barColor}">${completes.toLocaleString()}</div><div style="font-size:10px;color:var(--text-dimmer);letter-spacing:.5px">DONE</div></div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    console.error('[NorthΩr] Course completions load failed:', e);
+  }
 }
 
 // ── Email Performance ──────────────────────────────────────────────────────────

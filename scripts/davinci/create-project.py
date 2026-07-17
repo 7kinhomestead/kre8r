@@ -199,7 +199,12 @@ def run(args):
     raw = unicodedata.normalize("NFKD", raw)
     raw = "".join(c for c in raw if not unicodedata.combining(c))
     # Replace common punctuation with hyphens before stripping
-    raw = raw.replace("—", "-").replace("–", "-").replace("'", "").replace('"', "").replace("'", "").replace(""", "").replace(""", "")
+    # DRV21 fix: use explicit unicode escapes for curly quotes — previous code had
+    # adjacent quote characters that caused a SyntaxError or stripped wrong chars
+    raw = raw.replace("—", "-").replace("–", "-")  # em/en dash
+    raw = raw.replace("‘", "").replace("’", "")    # left/right single curly quotes
+    raw = raw.replace("“", "").replace("”", "")    # left/right double curly quotes
+    raw = raw.replace('"', "").replace("'", "")              # straight quotes
     # Replace spaces and any remaining non-alphanumeric (except hyphens) with hyphens
     raw = re.sub(r"[^A-Za-z0-9]+", "-", raw)
     # Collapse multiple hyphens and strip leading/trailing
@@ -216,66 +221,10 @@ def run(args):
         )
 
     # ---- Color science settings --------------------------------------------
-    # colorScienceMode MUST be set first. "davinciYRGBColorManaged" enables
-    # Resolve Color Management (RCM) so input/output space settings are active.
-    color_science_result = project.SetSetting("colorScienceMode", "davinciYRGBColorManaged")
-    if not color_science_result:
-        errors.append("SetSetting(colorScienceMode, davinciYRGBColorManaged) returned False")
-    else:
-        # Probe available settings — log so we can see what Resolve 20 exposes.
-        # Key names changed between Resolve 18 and 20; this surfaces the real names.
-        probe_keys = [
-            "colorSpaceInput", "colorSpaceOutput", "colorSpaceTimeline",
-            "inputColorSpace", "outputColorSpace", "timelineColorSpace",
-            "colorSpaceInputGammaDrop", "colorSpaceOutputGammaDrop",
-            "rcmPresetMode", "colorScienceMode",
-            "videoMonitorColorSpace", "videoMonitorLUT",
-        ]
-        for pk in probe_keys:
-            try:
-                val = project.GetSetting(pk)
-                if val not in (None, ""):
-                    print(f"[probe] GetSetting({pk!r}) = {val!r}", file=sys.stderr)
-            except Exception:
-                pass
-
-        # Try setting input color space — Resolve 18 keys first, then Resolve 20 variants.
-        # Multiple string values tried because camera gen affects the exact name.
-        def try_set_color_space(setting_keys, value_candidates, label):
-            for key in setting_keys:
-                for value in value_candidates:
-                    try:
-                        if project.SetSetting(key, value):
-                            print(f"[color] {label}: SetSetting({key!r}, {value!r}) OK", file=sys.stderr)
-                            return True
-                    except Exception as exc:
-                        print(f"[color] {label}: SetSetting({key!r}, {value!r}) raised {exc}", file=sys.stderr)
-            errors.append(
-                f"Could not set {label} — tried keys {setting_keys} with values {value_candidates}. "
-                "Open Resolve → Project Settings → Color Management and set manually."
-            )
-            return False
-
-        try_set_color_space(
-            setting_keys=["colorSpaceInput", "inputColorSpace"],
-            value_candidates=[
-                "Blackmagic Design Film",
-                "Blackmagic Design Film Gen 5",
-                "Blackmagic Film Gen 5",
-                "Blackmagic Design",
-            ],
-            label="colorSpaceInput",
-        )
-        try_set_color_space(
-            setting_keys=["colorSpaceOutput", "outputColorSpace"],
-            value_candidates=["Rec.709 Scene", "Rec.709 Gamma 2.4", "Rec.709"],
-            label="colorSpaceOutput",
-        )
-        try_set_color_space(
-            setting_keys=["colorSpaceTimeline", "timelineColorSpace"],
-            value_candidates=["Rec.709 Scene", "Rec.709 Gamma 2.4", "Rec.709"],
-            label="colorSpaceTimeline",
-        )
+    # NOTE: Color space transforms removed — they caused proxy footage (H.264/H.265)
+    # to render incorrectly (oversaturated "disco" effect). BRAW files handle their
+    # own color science via the camera metadata. Proxies should use DaVinci's default
+    # color science (DaVinci YRGB). Set manually in Project Settings if needed.
 
     # ---- Parse footage_json ------------------------------------------------
     try:

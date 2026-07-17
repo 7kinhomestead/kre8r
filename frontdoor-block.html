@@ -1,0 +1,98 @@
+<script>window.RR_TRACK_ENDPOINT='https://skewer-retrial-landing.ngrok-free.dev/api/kajabi-track';</script>
+<style>
+  body.background-light{background:#080808 !important;}
+  .header, .header.background-dark{background:#0f0f0f !important;}
+  .product, .block.background-light{background:#131313 !important; border:1px solid #222 !important; box-shadow:none !important;}
+  .products__title, .product__title, .resume-course__title, .products h2, h2{color:#fff !important;}
+  .product__description, .product__subtitle, .resume-course__subtitle, .products__subtitle{color:rgba(255,255,255,.55) !important;}
+  [class*="resume-course"]{color:rgba(255,255,255,.82) !important;}
+  .progress__outer{background:#222 !important;}
+  #rr-fd{font-family:'DM Sans',-apple-system,sans-serif; max-width:1100px; margin:0 auto; padding:40px 28px 8px; color:rgba(255,255,255,.82);}
+  #rr-fd .eb{font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:3px; color:rgba(255,255,255,.40); display:flex; align-items:center; gap:10px;}
+  #rr-fd .eb .dot{width:9px; height:9px; border-radius:50%; background:#22c55e;}
+  #rr-fd h2.rr-h{font-family:'Bebas Neue',sans-serif !important; font-size:clamp(32px,5vw,56px) !important; line-height:.98 !important; color:#fff !important; margin:12px 0 14px !important; letter-spacing:.5px;}
+  #rr-fd .rr-p{font-size:16px; line-height:1.65; color:rgba(255,255,255,.82); max-width:620px;}
+  #rr-fd .rr-p b{color:#fff; font-weight:600;}
+  #rr-fd .rr-enter{display:inline-flex; align-items:center; gap:12px; background:#7c3aed; color:#fff; font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:1px; padding:16px 30px; border-radius:12px; text-decoration:none; border:1px solid #8b5cf6; margin-top:24px;}
+  #rr-fd .rr-enter:hover{background:#8b5cf6;}
+  #rr-fd .rr-bm{display:flex; align-items:center; gap:12px; background:#131313; border:1px solid #2e2e2e; border-radius:12px; padding:12px 16px; max-width:600px; margin-top:22px;}
+  #rr-fd .rr-bm .bi{flex:0 0 auto; width:34px; height:34px; border-radius:8px; background:rgba(224,48,48,.12); border:1px solid rgba(224,48,48,.35); color:#E03030; display:flex; align-items:center; justify-content:center; font-size:18px;}
+  #rr-fd .rr-bm .bt{font-size:14px; line-height:1.45; color:rgba(255,255,255,.82);} #rr-fd .rr-bm .bt b{color:#fff;}
+  #rr-fd .rr-bm kbd{background:#000; border:1px solid #2e2e2e; border-radius:5px; padding:1px 7px; font-size:12px; color:#fff;}
+  #rr-fd .rr-copy{margin-left:auto; flex:0 0 auto; background:transparent; border:1px solid #2e2e2e; color:rgba(255,255,255,.82); font:12px 'DM Sans',sans-serif; padding:7px 12px; border-radius:7px; cursor:pointer;}
+  #rr-fd .rr-copy:hover{border-color:rgba(255,255,255,.4); color:#fff;}
+  #rr-fd.quiet h2.rr-h, #rr-fd.quiet .rr-p, #rr-fd.quiet .rr-bm{display:none;}
+  #rr-fd.quiet{display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:14px 28px;}
+  #rr-fd.quiet .eb{margin:0;} #rr-fd.quiet .rr-enter{font-size:18px; padding:10px 20px; margin-top:0;}
+</style>
+<div id="rr-fd">
+  <div class="eb"><span class="dot" id="rr-dot"></span><span id="rr-eb">ROCK RICH COMMUNITY</span></div>
+  <h2 class="rr-h">Well, look who showed up at the front gate.</h2>
+  <p class="rr-p">This here's your <b>front gate</b> — your book, your courses, all your stuff lives right here. But everybody's gathered up on the porch, swappin' stories and figurin' this out together inside <b id="rr-name">the community</b>. Come on up — one click and you're sittin' with us.</p>
+  <a class="rr-enter" id="rr-enter" href="#"><span id="rr-entertxt">ENTER THE COMMUNITY</span> <span>&rarr;</span></a>
+  <div class="rr-bm">
+    <div class="bi">&#9733;</div>
+    <div class="bt" id="rr-bmtext">Do future-you a favor: bookmark this page so you can always find your way back.</div>
+    <button class="rr-copy" id="rr-copy">Copy my link</button>
+  </div>
+</div>
+<script>
+(function(){
+  var ENDPOINT = window.RR_TRACK_ENDPOINT || 'https://kre8r.app/api/kajabi-track';
+  var GH='https://www.7kinhomestead.com/communities/v2/access_groups/the-greenhouse-free';
+  var u=(window.Kajabi && window.Kajabi.currentSiteUser)||{};
+  var resolvedTier='greenhouse', resolvedHref=GH;
+  var TIERS={3:{name:'Founding 50',eb:'FOUNDING 50 · ROCK RICH INNER CIRCLE',enter:'ENTER FOUNDING 50',dot:'#ffb400',key:'founding50'},
+             2:{name:'The Garden',eb:'THE GARDEN · ROCK RICH COMMUNITY',enter:'ENTER THE GARDEN',dot:'#00C4B4',key:'garden'},
+             1:{name:'The Greenhouse',eb:'THE GREENHOUSE · ROCK RICH COMMUNITY',enter:'ENTER THE GREENHOUSE',dot:'#22c55e',key:'greenhouse'}};
+  function byId(i){return document.getElementById(i);}
+  function apply(href,rank){
+    var T=TIERS[rank]||TIERS[1]; resolvedTier=T.key; resolvedHref=href;
+    if(byId('rr-eb'))byId('rr-eb').textContent=T.eb;
+    if(byId('rr-dot'))byId('rr-dot').style.background=T.dot;
+    if(byId('rr-name'))byId('rr-name').textContent=T.name;
+    if(byId('rr-entertxt'))byId('rr-entertxt').textContent=T.enter;
+    if(byId('rr-enter'))byId('rr-enter').href=href;
+  }
+  function resolve(){
+    var anchors=document.querySelectorAll('a[href*="access_groups"]');
+    if(!anchors.length) return false;
+    var best={href:null, rank:0};
+    Array.prototype.forEach.call(anchors,function(a){
+      var card=a.closest('.product'); var t=card&&card.querySelector('.product__title');
+      var s=((t?t.textContent:'')+' '+a.href).toLowerCase();
+      var rank=/founding/.test(s)?3:(/garden/.test(s)?2:(/greenhouse/.test(s)?1:0));
+      if(rank>best.rank) best={href:a.href, rank:rank};
+    });
+    if(!best.href) best={href:anchors[0].href, rank:1};
+    apply(best.href, best.rank);
+    return true;
+  }
+  apply(GH,1);
+  if(!resolve()){ var n=0, iv=setInterval(function(){ if(resolve()||++n>40) clearInterval(iv); },150); }
+  function track(ev){
+    try{
+      var body=JSON.stringify({contact_id:u.contactId||null, site_user_id:u.id||null, member_type:u.type||null, product_slug:'library', event:ev, tier:resolvedTier, url:location.href.slice(0,300)});
+      if(navigator.sendBeacon){ navigator.sendBeacon(ENDPOINT, new Blob([body],{type:'text/plain'})); }
+      else{ fetch(ENDPOINT,{method:'POST',body:body,headers:{'Content-Type':'text/plain'},keepalive:true,mode:'no-cors'}); }
+    }catch(e){}
+  }
+  track('library_view');
+  if(byId('rr-enter')) byId('rr-enter').addEventListener('click', function(){ try{localStorage.setItem('rr_fd_entered','1');}catch(e){} track('enter_click'); });
+  var ua=navigator.userAgent||'';
+  var bm=byId('rr-bmtext');
+  if(bm){
+    var msg;
+    if(/iPhone|iPad|iPod/i.test(ua)) msg='Tap <b>Share</b> (the box with an &uarr;), then <b>Add to Home Screen</b> — now the gate is one tap away.';
+    else if(/Android/i.test(ua)) msg='Tap your browser <b>menu (&#8942;)</b>, then <b>Add to Home screen</b> — now the gate is one tap away.';
+    else if(/Mobi/i.test(ua)) msg='Add this page to your home screen so the gate is always one tap away.';
+    else { var k=/mac/i.test(ua)?'⌘ + D':'Ctrl + D'; msg='Press <kbd>'+k+'</kbd> to <b>bookmark the gate</b> — your way back in, every time.'; }
+    bm.innerHTML='Do future-you a favor: '+msg;
+  }
+  if(byId('rr-copy')) byId('rr-copy').addEventListener('click', function(){
+    try{ navigator.clipboard && navigator.clipboard.writeText(resolvedHref); }catch(e){}
+    var b=this; b.textContent='Copied!'; track('bookmark_click'); setTimeout(function(){b.textContent='Copy my link';},1500);
+  });
+  try{ if(localStorage.getItem('rr_fd_entered')) byId('rr-fd').classList.add('quiet'); }catch(e){}
+})();
+</script>

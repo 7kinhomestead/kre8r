@@ -256,7 +256,7 @@ def get_source_resolution(items):
 
 def probe_render_options(project):
     """
-    Call GetRenderFormats(), GetRenderCodecs('mp4'), and GetRenderPresets().
+    Call GetRenderFormats(), GetRenderCodecs('mp4'), and GetRenderPresetList().
     Log everything to stderr so we can see exactly what Resolve 20 exposes.
     Returns (formats_dict, codecs_dict, presets_list).
     """
@@ -288,15 +288,15 @@ def probe_render_options(project):
     else:
         print("[probe] GetRenderCodecs not callable", file=sys.stderr)
 
-    get_presets = getattr(project, "GetRenderPresets", None)
+    get_presets = getattr(project, "GetRenderPresetList", None)
     if callable(get_presets):
         try:
             presets = get_presets() or []
-            print(f"[probe] GetRenderPresets() = {presets}", file=sys.stderr)
+            print(f"[probe] GetRenderPresetList() = {presets}", file=sys.stderr)
         except Exception as exc:
-            print(f"[probe] GetRenderPresets() raised: {exc}", file=sys.stderr)
+            print(f"[probe] GetRenderPresetList() raised: {exc}", file=sys.stderr)
     else:
-        print("[probe] GetRenderPresets not callable", file=sys.stderr)
+        print("[probe] GetRenderPresetList not callable", file=sys.stderr)
 
     return formats, codecs, presets
 

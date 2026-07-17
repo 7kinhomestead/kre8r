@@ -701,6 +701,27 @@ router.post('/post', (req, res) => {
   (async () => {
     const results = {};
 
+    // markr-1 fix: immediate /post route never watermarked — only the queue processor did
+    // This meant "Post Now" always uploaded bare while "Schedule" got watermarked
+    let effectiveVideoPath = video_path;
+    try {
+      const { maybeWatermark } = require('../postor/queue-processor-utils').catch ? null
+        : await import('../postor/queue-processor-utils').catch(() => null) || {};
+      // Inline the watermark call since it lives in queue-processor
+      if (video_path && require('fs').existsSync(video_path)) {
+        const existingWm = db.getWatermarkByPath?.(video_path);
+        if (existingWm?.watermarked_path && require('fs').existsSync(existingWm.watermarked_path)) {
+          effectiveVideoPath = existingWm.watermarked_path;
+        } else {
+          try {
+            const { watermarkVideo } = require('../markr/watermark');
+            const result = await watermarkVideo(video_path, { channel: platforms[0] || 'original' }, { outputDir: require('path').dirname(video_path) });
+            if (result?.watermarkedPath) effectiveVideoPath = result.watermarkedPath;
+          } catch (_) {} // non-fatal — fall back to original
+        }
+      }
+    } catch (_) {} // watermark module unavailable — non-fatal
+
     for (const platform of platforms) {
       // Create a pending post record
       const postRowId = db.createPostorPost({
@@ -720,7 +741,7 @@ router.post('/post', (req, res) => {
 
         if (platform === 'youtube') {
           result = await youtube.uploadVideo({
-            videoPath:     video_path,
+            videoPath:     effectiveVideoPath, // markr-1: use watermarked path
             title,
             description,
             tags:          yt_tags,
@@ -731,13 +752,13 @@ router.post('/post', (req, res) => {
           });
         } else if (platform === 'instagram') {
           result = await meta.publishInstagramReel({
-            videoPath: video_path,
+            videoPath: effectiveVideoPath, // markr-1
             caption:   ig_caption || description || '',
             onProgress: (p) => pushEvent(job, p),
           });
         } else if (platform === 'facebook') {
           result = await meta.publishFacebookVideo({
-            videoPath:   video_path,
+            videoPath:   effectiveVideoPath, // markr-1
             title,
             description: fb_description || description || '',
             onProgress:  (p) => pushEvent(job, p),
@@ -751,7 +772,7 @@ router.post('/post', (req, res) => {
           });
         } else if (platform === 'tiktok') {
           result = await tiktok.uploadVideo({
-            videoPath:          video_path,
+            videoPath:          effectiveVideoPath, // markr-1
             title:              title || description || '',
             privacyLevel:       tt_privacy       || 'PUBLIC_TO_EVERYONE',
             disableDuet:        !!tt_disable_duet,
@@ -1158,9 +1179,18 @@ router.post('/campaign/generate-captions', (req, res) => {
       const { brand, followerSummary, profile } = getCreatorContext();
       const angles = profile?.content_angles || {};
 
+      // CAP-1 fix: inject the 190-transcript voice calibration block
+      // Previously a hardcoded one-liner — the most public-facing copy got LESS voice context than internal drafts
+      let voiceCalBlock = '';
+      try {
+        const { loadVoiceCalibrationBlock } = require('../writr/claude');
+        const vcb = loadVoiceCalibrationBlock();
+        if (vcb) voiceCalBlock = `\n\n${vcb}`;
+      } catch (_) {}
+
       const systemPrompt = `You are the social media voice for ${brand} — ${followerSummary}.
 
-CREATOR VOICE: Straight-talking, warm, encouraging, actually funny. Never corporate. Slips jokes in. Real numbers always.
+CREATOR VOICE: Straight-talking, warm, encouraging, actually funny. Never corporate. Slips jokes in. Real numbers always.${voiceCalBlock}
 
 PLATFORM RULES:
 - TikTok: Hook in the first line. Punchy, fast, scroll-stopping. 2-3 hashtags max. Under 300 characters total.
@@ -1212,12 +1242,29 @@ ${SLOP_RULE}`;
           send({ stage: 'generating', footage_id: footageId, index: i, total: footage_ids.length,
                  filename: clip.original_filename || clip.file_path });
 
+          // Inject visual_description signal when frame analysis has run
+          // Enables caption to reference the visually strongest moment — gated on visual_analyzed_at
+          let visualContext = '';
+          if (clip.visual_analyzed_at && clip.visual_description) {
+            try {
+              const vd = typeof clip.visual_description === 'string'
+                ? JSON.parse(clip.visual_description) : clip.visual_description;
+              const vparts = [];
+              if (vd.peak_energy_range) vparts.push(`strongest visual moment at ${vd.peak_energy_range}`);
+              if (vd.physical_demonstration) vparts.push(`includes physical demonstration`);
+              if (vd.eye_contact === 'strong') vparts.push(`strong eye contact with camera`);
+              if (vd.editorial_notes) vparts.push(vd.editorial_notes.slice(0, 100));
+              if (vparts.length) visualContext = `\nVISUAL SIGNAL (from frame analysis): ${vparts.join(', ')} — use this to hook the caption to the best moment in the clip.`;
+            } catch (_) {}
+          }
+
           const userPrompt = [
             `Generate platform-native captions for this social clip.`,
             projectContext,
             scriptContext,
             `Clip filename: ${clip.original_filename || ''}`,
             `Clip description: ${clip.description || 'No description available'}`,
+            visualContext,
             caption_direction ? `Creator direction: ${caption_direction}` : '',
             `\nReturn JSON only — all 5 platforms in one object.`
           ].filter(Boolean).join('\n');

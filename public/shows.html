@@ -339,7 +339,10 @@
         </div>
         <div id="episode-list" class="episode-list"></div>
         <button class="ep-add-btn" id="plan-next-btn" onclick="planNextEpisode()">
-          + Plan Next Episode
+          + Plan Next Episode in Id8Ωr →
+        </button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;margin-top:6px;width:100%;justify-content:center" onclick="openLinkProjectModal()">
+          ⧉ Link Existing Kre8r Project
         </button>
       </div>
 
@@ -359,6 +362,13 @@
               Generate Brief
             </button>
           </div>
+        </div>
+        <div class="context-card" style="border-color:rgba(62,207,178,0.2);background:rgba(62,207,178,0.03)">
+          <div class="context-card-title" style="color:var(--teal,#3ecfb2)">COLLABORATΩR</div>
+          <div style="font-size:12px;color:var(--text-dimmer);margin-bottom:12px;line-height:1.5">Your showrunner partner. Knows the full arc, what's been established, and the unresolved seeds. Think out loud together.</div>
+          <button class="btn btn-ghost" style="width:100%;justify-content:center;border-color:rgba(62,207,178,0.3);color:var(--teal,#3ecfb2)" onclick="openCollaboratr()">
+            Open CollaboratΩr →
+          </button>
         </div>
       </div>
     </div>
@@ -432,7 +442,7 @@
         </div>
         <div class="range-wrap">
           <label class="field-label">Target Episodes</label>
-          <input type="range" class="range-slider" id="w-target-eps" min="3" max="22" value="12" oninput="updateEpsLabel(this.value)">
+          <input type="range" class="range-slider" id="w-target-eps" min="2" max="22" value="12" oninput="updateEpsLabel(this.value)">
           <div class="range-hint" id="eps-label">12 episodes &mdash; Standard Season</div>
         </div>
       </div>
@@ -770,10 +780,29 @@
           ? '<span class="badge badge-amber" style="font-size:10px">In Progress</span>'
           : '<span class="badge badge-dim" style="font-size:10px">Planned</span>';
 
+      const pipelineStage = ep?.pipeline_stage || 'outlining';
+      const pipelineLabels = { outlining: 'Outlining', shoot_ready: 'Shoot Ready', shooting: 'Shooting', editing: 'Editing', published: 'Published' };
+      const pipelineBadge = ep ? `<span class="badge" style="font-size:10px;background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);">${pipelineLabels[pipelineStage] || pipelineStage}</span>` : '';
+      const importBtn = (ep && !ep.outline_text && pipelineStage === 'outlining')
+        ? `<button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;margin-left:auto;" onclick="event.stopPropagation();window.openImportOutlineModal(${ep.id},${currentShowId},'${esc(title || `Episode ${n}`)}')">Import Outline →</button>`
+        : (ep && ep.outline_text)
+          ? `<button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;margin-left:auto;color:var(--teal);" onclick="event.stopPropagation();window.openImportOutlineModal(${ep.id},${currentShowId},'${esc(title || `Episode ${n}`)}')">Update Outline</button>`
+          : '';
+
+      const hasContent = ep && (ep.outline_text || ep.shot_list_json || ep.interview_qs_json);
+      if (hasContent) {
+        div.classList.add('clickable');
+        div.onclick = (e) => {
+          if (e.target.tagName === 'BUTTON') return; // let button handlers work
+          window.openEpisodeDetail(ep, show);
+        };
+      }
+
       div.innerHTML = `
         <span class="ep-badge">${badge}</span>
         <span class="ep-title ${!title ? 'planned' : ''}">${esc(title || `Episode ${n} — Planned`)}</span>
-        ${statusBadge}
+        ${ep ? pipelineBadge : statusBadge}
+        ${importBtn}
       `;
       list.appendChild(div);
     }
@@ -822,9 +851,136 @@
     }
   }
 
-  function planNextEpisode() {
+  async function planNextEpisode() {
     if (!currentShowId) return;
-    window.location.href = `/id8r.html?mode=episodic&show_id=${currentShowId}`;
+
+    const btn = document.getElementById('plan-next-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Preparing context…'; }
+
+    try {
+      // Generate the episode brief first so Id8Ωr has full context
+      const res  = await fetch(`/api/shows/${currentShowId}/next-episode-brief`);
+      const brief = await res.json();
+      if (!res.ok) throw new Error(brief.error || 'Brief generation failed');
+
+      // Build rich season_context string — injected into Id8Ωr's episodic system prompt
+      const show = showData || {};
+      const seasonContext = [
+        `SHOW: ${esc(show.name || 'Untitled Show')} — Season ${show.season || 1}`,
+        `SERIES TYPE: ${esc(show.show_type || 'serialized')}`,
+        `CENTRAL QUESTION: ${esc(show.central_question || '(not defined yet)')}`,
+        `SEASON ARC: ${esc(show.season_arc || '(not defined yet)')}`,
+        ``,
+        `PLANNING EPISODE ${brief.episode_number} of ${show.target_episodes}`,
+        `ARC POSITION: ${esc(brief.arc_position)}`,
+        ``,
+        `WHAT THIS EPISODE MUST DO:`,
+        brief.brief ? esc(brief.brief) : '(generate brief first)',
+        ``,
+        brief.standalone_story ? `STANDALONE STORY: ${esc(brief.standalone_story)}` : '',
+        brief.arc_advancement  ? `ARC ADVANCEMENT: ${esc(brief.arc_advancement)}` : '',
+        brief.character_moment ? `CHARACTER MOMENT: ${esc(brief.character_moment)}` : '',
+        brief.seeds_to_water?.length ? `SEEDS TO WATER THIS EPISODE:\n${brief.seeds_to_water.map(s => `• ${s}`).join('\n')}` : '',
+      ].filter(Boolean).join('\n');
+
+      // Store in localStorage — Id8Ωr reads this on episodic mode init
+      localStorage.setItem('showrr_episode_context', JSON.stringify({
+        show_id:        currentShowId,
+        show_name:      show.name,
+        season:         show.season,
+        episode_number: brief.episode_number,
+        season_context: seasonContext,
+        brief,
+        timestamp:      Date.now(),
+      }));
+
+      window.location.href = `/id8r.html?mode=episodic&show_id=${currentShowId}&episode=${brief.episode_number}`;
+
+    } catch (e) {
+      toast('Failed to build episode context: ' + e.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '+ Plan Next Episode'; }
+    }
+  }
+
+  // ── Link Existing Project ──
+  window.openLinkProjectModal = async function openLinkProjectModal() {
+    console.log('[ShowΩr] openLinkProjectModal called, currentShowId=', currentShowId);
+    try {
+      if (!currentShowId) { alert('No show selected — currentShowId is null'); return; }
+
+      // Fetch projects — simple call, no filter
+      let projects = [];
+      try {
+        const res  = await fetch('/api/projects');
+        if (res.ok) {
+          const data = await res.json();
+          projects = Array.isArray(data) ? data : [];
+        }
+      } catch(_) {}
+
+      // Build options HTML first (avoids template literal issues with esc())
+      const optionsHTML = projects
+        .filter(p => p.title && p.title.trim() && p.title !== '1')
+        .slice(0, 50)
+        .map(p => {
+          const t = (p.title || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `<option value="${p.id}">${t}</option>`;
+        }).join('');
+
+      document.getElementById('link-project-modal')?.remove();
+
+      const modal = document.createElement('div');
+      modal.id    = 'link-project-modal';
+      modal.style.cssText = [
+        'position:fixed','inset:0','z-index:9999',
+        'display:flex','align-items:center','justify-content:center',
+        'background:rgba(0,0,0,0.75)'
+      ].join(';');
+
+      const epDefault = showData?.target_episodes || 12;
+
+      modal.innerHTML =
+        '<div style="background:#1a1f1b;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:24px;max-width:480px;width:calc(100% - 32px);position:relative">' +
+        '<button onclick="document.getElementById(\'link-project-modal\').remove()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:rgba(255,255,255,0.4);font-size:20px;cursor:pointer;line-height:1">×</button>' +
+        '<div style="font-size:14px;font-weight:700;margin-bottom:6px;color:#e8ebe6">Link Existing Kre8r Project</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:16px">Attach a project from Id8Ωr/WritΩr to an episode slot. The brief and research are carried over.</div>' +
+        '<select id="link-project-select" style="width:100%;background:#0e0f0e;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e8ebe6;padding:8px 10px;font-size:13px;margin-bottom:16px">' +
+        '<option value="">— select a project —</option>' +
+        optionsHTML +
+        '</select>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:6px">Episode number:</div>' +
+        '<input type="number" id="link-episode-num" min="1" max="22" value="' + epDefault + '" style="width:80px;background:#0e0f0e;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e8ebe6;padding:6px 10px;font-size:13px;margin-bottom:20px">' +
+        '<button onclick="confirmLinkProject()" style="width:100%;background:#3ecfb2;color:#0e0f0e;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:0.5px">Link Project to Episode</button>' +
+        '</div>';
+
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+
+    } catch(err) {
+      toast('Error opening modal: ' + err.message, 'error');
+    }
+  }
+
+  window.confirmLinkProject = async function confirmLinkProject() {
+    const projectId = document.getElementById('link-project-select')?.value;
+    const episodeNum = parseInt(document.getElementById('link-episode-num')?.value);
+    if (!projectId) { toast('Select a project first', 'error'); return; }
+
+    try {
+      const res = await fetch(`/api/shows/${currentShowId}/link-project`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: parseInt(projectId), episode_number: episodeNum }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      toast(`✓ Linked "${data.project_title}" to Episode ${data.episode_number}`, 'success');
+      document.getElementById('link-project-modal').remove();
+      openShow(currentShowId); // refresh
+    } catch(e) {
+      toast('Link failed: ' + e.message, 'error');
+    }
   }
 
   // ── Wizard ──
@@ -1322,9 +1478,428 @@
     if (e.target === this) closeWizard();
   });
 
+  // ── Episode Detail Panel ──────────────────────────────────────────────────
+  let _detailEp   = null;
+  let _detailTab  = 'outline';
+
+  window.openEpisodeDetail = function(ep, show) {
+    _detailEp  = ep;
+    _detailTab = 'outline';
+    const panel   = document.getElementById('ep-detail-panel');
+    const overlay = document.getElementById('ep-detail-overlay');
+    document.getElementById('ep-detail-badge').textContent =
+      `${show.name || 'Rock Rich'} · S${ep.season || 1} E${ep.episode_number || '?'}`;
+    document.getElementById('ep-detail-title').textContent = ep.title || `Episode ${ep.episode_number}`;
+    panel.style.display   = 'flex';
+    overlay.style.display = 'block';
+    setTimeout(() => { panel.style.transform = 'translateX(0)'; }, 10);
+    window.switchEpTab('outline');
+  };
+
+  window.closeEpisodeDetail = function() {
+    const panel   = document.getElementById('ep-detail-panel');
+    const overlay = document.getElementById('ep-detail-overlay');
+    panel.style.transform = 'translateX(100%)';
+    setTimeout(() => { panel.style.display = 'none'; overlay.style.display = 'none'; }, 300);
+  };
+
+  window.switchEpTab = function(tab) {
+    _detailTab = tab;
+    ['outline','shots','interview'].forEach(t => {
+      const btn = document.getElementById(`ep-tab-${t}`);
+      if (btn) {
+        btn.style.color       = t === tab ? '#f59e0b' : 'var(--text-dim)';
+        btn.style.borderBottom = t === tab ? '2px solid #f59e0b' : '2px solid transparent';
+      }
+    });
+    const body = document.getElementById('ep-detail-body');
+    if (!_detailEp) return;
+    if (tab === 'outline') {
+      body.innerHTML = _detailEp.outline_text
+        ? `<pre style="white-space:pre-wrap;font-family:var(--font-body);font-size:13px;color:var(--text);line-height:1.7;">${esc(_detailEp.outline_text)}</pre>`
+        : `<div style="color:var(--text-dim);font-size:13px;padding:20px 0;">No outline imported yet. Use "Import Outline →" on the episode card.</div>`;
+    } else if (tab === 'shots') {
+      let acts = [];
+      try { acts = JSON.parse(_detailEp.shot_list_json || '[]'); } catch(e) {}
+      if (!acts.length) {
+        body.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:20px 0;">No shot list yet. Import an outline to generate one.</div>`;
+        return;
+      }
+      body.innerHTML = acts.map(act => `
+        <div style="margin-bottom:24px;">
+          <div style="font-family:var(--font-head);font-size:13px;letter-spacing:2px;color:#f59e0b;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(245,158,11,0.15);">ACT ${act.act} — ${esc(act.act_title || '')}</div>
+          ${(act.shots || []).map(s => `
+            <div style="display:grid;grid-template-columns:28px 60px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);align-items:start;">
+              <div style="font-family:var(--font-head);font-size:11px;color:var(--text-dimmer);">${s.num}</div>
+              <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--text-dimmer);text-transform:uppercase;padding-top:1px;">${esc(s.type || '')}</div>
+              <div>
+                <div style="font-size:13px;color:var(--text);font-weight:500;">${esc(s.subject || '')}</div>
+                ${s.notes ? `<div style="font-size:11px;color:var(--text-dim);margin-top:3px;line-height:1.5;">${esc(s.notes)}</div>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    } else if (tab === 'interview') {
+      let acts = [];
+      try { acts = JSON.parse(_detailEp.interview_qs_json || '[]'); } catch(e) {}
+      if (!acts.length) {
+        body.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:20px 0;">No interview questions yet. Import an outline to generate them.</div>`;
+        return;
+      }
+      body.innerHTML = acts.map(act => `
+        <div style="margin-bottom:24px;">
+          <div style="font-family:var(--font-head);font-size:13px;letter-spacing:2px;color:#f59e0b;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(245,158,11,0.15);">ACT ${act.act} — ${esc(act.act_title || '')}</div>
+          ${(act.questions || []).map(q => `
+            <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:20px;${q.speaker === 'Jason' ? 'color:#3ecfb2;background:rgba(62,207,178,0.1);border:1px solid rgba(62,207,178,0.3);' : 'color:#f59e0b;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);'}">${esc(q.speaker || '')}</span>
+                <span style="font-size:11px;color:var(--text-dim);">asks →</span>
+              </div>
+              <div style="font-size:13px;color:var(--text);font-style:italic;line-height:1.5;margin-bottom:4px;">"${esc(q.text || '')}"</div>
+              ${q.intent ? `<div style="font-size:11px;color:var(--text-dimmer);line-height:1.4;">${esc(q.intent)}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+  };
+
+  window.openImportFromDetail = function() {
+    if (!_detailEp) return;
+    window.closeEpisodeDetail();
+    setTimeout(() => {
+      window.openImportOutlineModal(_detailEp.id, currentShowId, _detailEp.title || `Episode ${_detailEp.episode_number}`);
+    }, 320);
+  };
+
+  window.printEpisodeDetail = function() {
+    if (!_detailEp) return;
+    const ep       = _detailEp;
+    const tabNames = { outline: 'Outline', shots: 'Shot List', interview: 'Interview Questions' };
+    const tabLabel = tabNames[_detailTab] || _detailTab;
+    const showBadge = document.getElementById('ep-detail-badge')?.textContent || '';
+    const epTitle   = ep.title || `Episode ${ep.episode_number}`;
+
+    let bodyHtml = '';
+
+    if (_detailTab === 'outline') {
+      bodyHtml = ep.outline_text
+        ? `<pre style="white-space:pre-wrap;font-family:Georgia,serif;font-size:13px;line-height:1.8;">${ep.outline_text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`
+        : '<p>No outline imported yet.</p>';
+
+    } else if (_detailTab === 'shots') {
+      let acts = [];
+      try { acts = JSON.parse(ep.shot_list_json || '[]'); } catch(e) {}
+      bodyHtml = acts.map(act => `
+        <h2 style="font-size:14px;text-transform:uppercase;letter-spacing:2px;border-bottom:2px solid #000;padding-bottom:4px;margin:24px 0 12px;">Act ${act.act} — ${act.act_title || ''}</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid #ccc;">
+              <th style="text-align:left;padding:4px 8px;width:30px;">#</th>
+              <th style="text-align:left;padding:4px 8px;width:70px;">Type</th>
+              <th style="text-align:left;padding:4px 8px;width:160px;">Subject</th>
+              <th style="text-align:left;padding:4px 8px;">Notes / Intent</th>
+              <th style="width:60px;padding:4px 8px;">✓</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(act.shots || []).map(s => `
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:6px 8px;vertical-align:top;">${s.num}</td>
+                <td style="padding:6px 8px;vertical-align:top;text-transform:uppercase;font-size:10px;color:#555;">${s.type || ''}</td>
+                <td style="padding:6px 8px;vertical-align:top;font-weight:600;">${s.subject || ''}</td>
+                <td style="padding:6px 8px;vertical-align:top;color:#333;">${s.notes || ''}</td>
+                <td style="padding:6px 8px;"></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`).join('');
+
+    } else if (_detailTab === 'interview') {
+      let acts = [];
+      try { acts = JSON.parse(ep.interview_qs_json || '[]'); } catch(e) {}
+      bodyHtml = acts.map(act => `
+        <h2 style="font-size:14px;text-transform:uppercase;letter-spacing:2px;border-bottom:2px solid #000;padding-bottom:4px;margin:24px 0 12px;">Act ${act.act} — ${act.act_title || ''}</h2>
+        ${(act.questions || []).map(q => `
+          <div style="margin-bottom:16px;padding:12px;border:1px solid #ddd;border-radius:4px;break-inside:avoid;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">
+              ${q.speaker || ''} asks →
+            </div>
+            <div style="font-size:14px;font-style:italic;margin-bottom:6px;">"${q.text || ''}"</div>
+            ${q.intent ? `<div style="font-size:11px;color:#666;line-height:1.5;">${q.intent}</div>` : ''}
+          </div>`).join('')}`).join('');
+    }
+
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${epTitle} — ${tabLabel}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Georgia, serif; font-size: 13px; color: #111; padding: 32px 40px; max-width: 800px; margin: 0 auto; }
+    .print-header { border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 24px; }
+    .print-badge { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #666; margin-bottom: 4px; }
+    .print-title { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    .print-tab { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #888; margin-top: 4px; }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-header">
+    <div class="print-badge">${showBadge}</div>
+    <div class="print-title">${epTitle}</div>
+    <div class="print-tab">${tabLabel}</div>
+  </div>
+  ${bodyHtml}
+  <script>window.onload = function(){ window.print(); }<\/script>
+</body>
+</html>`);
+    win.document.close();
+  };
+
+  // ── Import Outline ────────────────────────────────────────────────────────
+  let _importEpId   = null;
+  let _importShowId = null;
+
+  window.openImportOutlineModal = function(epId, showId, epTitle) {
+    _importEpId   = epId;
+    _importShowId = showId;
+    document.getElementById('import-outline-ep-label').textContent = epTitle || 'Episode';
+    document.getElementById('import-outline-text').value = '';
+    document.getElementById('import-outline-status').textContent = '';
+    document.getElementById('import-outline-btn').disabled = false;
+    document.getElementById('import-outline-btn').textContent = 'Parse Outline →';
+    const modal = document.getElementById('import-outline-modal');
+    modal.style.display = 'flex';
+  };
+
+  window.closeImportOutlineModal = function() {
+    document.getElementById('import-outline-modal').style.display = 'none';
+  };
+
+  window.submitImportOutline = async function() {
+    const text = document.getElementById('import-outline-text').value.trim();
+    if (!text) { toast('Paste your outline first', 'error'); return; }
+    const btn    = document.getElementById('import-outline-btn');
+    const status = document.getElementById('import-outline-status');
+    btn.disabled = true;
+    btn.textContent = 'Parsing…';
+    status.textContent = 'Claude is parsing your outline into shot list and interview questions…';
+    try {
+      const res  = await fetch(`/api/shows/${_importShowId}/episodes/${_importEpId}/import-outline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outline_text: text })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+
+      const shotCount = (data.shot_list || []).reduce((n, act) => n + (act.shots || []).length, 0);
+      const qCount    = (data.interview_qs || []).reduce((n, act) => n + (act.questions || []).length, 0);
+      status.style.color = '#4ade80';
+      status.textContent = `✓ Done — ${shotCount} shots and ${qCount} interview questions organised by act. Pipeline stage set to Shoot Ready.`;
+      btn.textContent = 'Done ✓';
+      // Update the in-memory episode so the detail panel refreshes
+      if (_detailEp && _detailEp.id === _importEpId) {
+        _detailEp.outline_text      = text;
+        _detailEp.shot_list_json    = JSON.stringify(data.shot_list || []);
+        _detailEp.interview_qs_json = JSON.stringify(data.interview_qs || []);
+        _detailEp.pipeline_stage    = 'shoot_ready';
+      }
+      // Reload the show to update episode cards
+      setTimeout(() => {
+        window.closeImportOutlineModal();
+        openShow(currentShowId);
+        toast('Outline imported — shot list and interview Qs ready', 'success');
+      }, 1800);
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Parse Outline →';
+      status.style.color = '#e05252';
+      status.textContent = 'Error: ' + e.message;
+    }
+  };
+
+  // ── CollaboratΩr ──────────────────────────────────────────────────────────
+  let collabHistory = [];
+
+  window.openCollaboratr = function() {
+    if (!currentShowId) { toast('Open a show first', 'error'); return; }
+    const panel   = document.getElementById('collaboratr-panel');
+    const overlay = document.getElementById('collaboratr-overlay');
+    const label   = document.getElementById('collab-show-label');
+    if (showData?.name) label.textContent = showData.name + (showData.season ? ' · Season ' + showData.season : '');
+    panel.style.display   = 'flex';
+    overlay.style.display = 'block';
+    // Slide in
+    setTimeout(() => { panel.style.transform = 'translateX(0)'; }, 10);
+    document.getElementById('collab-input')?.focus();
+    // Add welcome message if empty
+    const msgs = document.getElementById('collab-messages');
+    if (!msgs.children.length) {
+      appendCollabMessage('assistant', "I've got the full season context loaded — what's on your mind? We can work through episode structure, thematic threads, character moments, or anything else about the arc.");
+    }
+  };
+
+  window.closeCollaboratr = function() {
+    const panel   = document.getElementById('collaboratr-panel');
+    const overlay = document.getElementById('collaboratr-overlay');
+    panel.style.transform = 'translateX(100%)';
+    setTimeout(() => { panel.style.display = 'none'; overlay.style.display = 'none'; }, 300);
+  };
+
+  function appendCollabMessage(role, text) {
+    const msgs = document.getElementById('collab-messages');
+    const div  = document.createElement('div');
+    div.style.cssText = role === 'user'
+      ? 'align-self:flex-end;background:rgba(62,207,178,0.1);border:1px solid rgba(62,207,178,0.2);border-radius:10px 10px 2px 10px;padding:10px 14px;max-width:85%;font-size:13px;line-height:1.6'
+      : 'align-self:flex-start;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px 10px 10px 2px;padding:10px 14px;max-width:90%;font-size:13px;line-height:1.6;color:#c8cbc6';
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+
+  window.sendCollabMessage = async function() {
+    const input = document.getElementById('collab-input');
+    const msg   = input?.value?.trim();
+    if (!msg || !currentShowId) return;
+
+    const btn = document.getElementById('collab-send-btn');
+    btn.disabled = true;
+    input.value  = '';
+
+    appendCollabMessage('user', msg);
+    const thinkingDiv = appendCollabMessage('assistant', '…');
+
+    try {
+      const res = await fetch(`/api/shows/${currentShowId}/collaborate`, {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ message: msg, history: collabHistory }),
+      });
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '', fullText = '';
+      thinkingDiv.textContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          try {
+            const d = JSON.parse(line.slice(line.indexOf(':') + 1).trim());
+            if (d.type === 'token' && d.text) {
+              fullText += d.text;
+              thinkingDiv.textContent = fullText;
+              document.getElementById('collab-messages').scrollTop = 9999;
+            }
+          } catch(_) {}
+        }
+      }
+
+      // Update history for context continuity
+      collabHistory.push({ role: 'user', content: msg });
+      collabHistory.push({ role: 'assistant', content: fullText });
+      if (collabHistory.length > 20) collabHistory = collabHistory.slice(-20);
+
+    } catch(e) {
+      thinkingDiv.textContent = 'Error: ' + e.message;
+    }
+
+    btn.disabled = false;
+    input.focus();
+  };
+
   // Init
   loadShows();
 })();
 </script>
+<!-- ─── Episode Detail Panel ─── -->
+<div id="ep-detail-panel" style="display:none;position:fixed;right:0;top:0;height:100%;width:520px;max-width:100%;background:#0f1510;border-left:1px solid rgba(245,158,11,0.2);z-index:500;flex-direction:column;transform:translateX(100%);transition:transform 0.3s ease;">
+  <div style="padding:20px 24px 14px;border-bottom:1px solid rgba(245,158,11,0.12);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;">
+    <div>
+      <div id="ep-detail-badge" style="font-size:9px;font-weight:700;letter-spacing:1.5px;color:#f59e0b;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:2px 10px;display:inline-block;margin-bottom:8px;"></div>
+      <div id="ep-detail-title" style="font-family:var(--font-head);font-size:20px;letter-spacing:1px;color:var(--text);"></div>
+    </div>
+    <button onclick="window.closeEpisodeDetail()" style="background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;flex-shrink:0;margin-left:12px;">✕</button>
+  </div>
+  <!-- Tabs -->
+  <div style="display:flex;border-bottom:1px solid rgba(245,158,11,0.1);flex-shrink:0;">
+    <button class="ep-tab active" id="ep-tab-outline"   onclick="window.switchEpTab('outline')"   style="flex:1;background:none;border:none;padding:10px;font-size:11px;letter-spacing:1px;font-weight:700;text-transform:uppercase;cursor:pointer;color:#f59e0b;border-bottom:2px solid #f59e0b;">Outline</button>
+    <button class="ep-tab"        id="ep-tab-shots"     onclick="window.switchEpTab('shots')"     style="flex:1;background:none;border:none;padding:10px;font-size:11px;letter-spacing:1px;font-weight:700;text-transform:uppercase;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent;">Shot List</button>
+    <button class="ep-tab"        id="ep-tab-interview" onclick="window.switchEpTab('interview')" style="flex:1;background:none;border:none;padding:10px;font-size:11px;letter-spacing:1px;font-weight:700;text-transform:uppercase;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent;">Interview Qs</button>
+  </div>
+  <!-- Tab content -->
+  <div id="ep-detail-body" style="flex:1;overflow-y:auto;padding:20px 24px;"></div>
+  <!-- Footer -->
+  <div style="padding:14px 24px;border-top:1px solid rgba(245,158,11,0.1);display:flex;gap:10px;flex-shrink:0;">
+    <button id="ep-detail-import-btn" class="btn btn-ghost" style="font-size:12px;color:#f59e0b;border-color:rgba(245,158,11,0.3);" onclick="window.openImportFromDetail()">Update Outline</button>
+    <button class="btn btn-ghost" style="font-size:12px;" onclick="window.printEpisodeDetail()">🖨 Print</button>
+    <button class="btn btn-ghost" style="font-size:12px;margin-left:auto;" onclick="window.closeEpisodeDetail()">Close</button>
+  </div>
+</div>
+<div id="ep-detail-overlay" onclick="window.closeEpisodeDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:499;"></div>
+
+<!-- ─── Import Outline Modal ─── -->
+<div id="import-outline-modal" style="display:none;position:fixed;inset:0;z-index:600;align-items:center;justify-content:center;">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);" onclick="window.closeImportOutlineModal()"></div>
+  <div style="position:relative;background:#111811;border:1px solid rgba(245,158,11,0.3);border-radius:12px;width:700px;max-width:95vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:var(--font-head);font-size:18px;letter-spacing:2px;color:#f59e0b;">IMPORT OUTLINE</div>
+        <div id="import-outline-ep-label" style="font-size:12px;color:var(--text-dim);margin-top:2px;"></div>
+      </div>
+      <button onclick="window.closeImportOutlineModal()" style="background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:20px 24px;flex:1;overflow-y:auto;">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">Paste your episode outline from CollaboratΩr. Claude will parse it into a shot list by act and interview questions by act.</div>
+      <textarea id="import-outline-text" rows="18" style="width:100%;background:#0a100a;border:1px solid rgba(245,158,11,0.2);border-radius:8px;color:var(--text);padding:14px;font-size:12px;line-height:1.6;font-family:var(--font-body);resize:vertical;" placeholder="Paste your full episode outline here…"></textarea>
+      <div id="import-outline-status" style="margin-top:10px;font-size:12px;color:var(--text-dim);min-height:18px;"></div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid rgba(245,158,11,0.1);display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="window.closeImportOutlineModal()">Cancel</button>
+      <button id="import-outline-btn" class="btn btn-teal" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;" onclick="window.submitImportOutline()">Parse Outline →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CollaboratΩr Panel ─── -->
+<div id="collaboratr-panel" style="display:none;position:fixed;right:0;top:0;height:100%;width:420px;max-width:100%;background:#0f1510;border-left:1px solid rgba(62,207,178,0.15);z-index:500;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s ease;">
+  <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div>
+      <div style="font-family:var(--font-head,'Bebas Neue',sans-serif);font-size:16px;letter-spacing:2px;color:var(--teal,#3ecfb2)">COLLABORATΩR</div>
+      <div id="collab-show-label" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">Show context loaded</div>
+    </div>
+    <button onclick="closeCollaboratr()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:20px;cursor:pointer;padding:4px 8px">×</button>
+  </div>
+  <div id="collab-messages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px"></div>
+  <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0">
+    <div style="display:flex;gap:8px">
+      <textarea id="collab-input" placeholder="Think out loud about the season…" rows="2"
+        style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e8ebe6;padding:10px 12px;font-size:13px;font-family:inherit;resize:none;line-height:1.5"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCollabMessage();}"></textarea>
+      <button onclick="sendCollabMessage()" id="collab-send-btn"
+        style="background:var(--teal,#3ecfb2);color:#0e0f0e;border:none;border-radius:8px;padding:0 16px;font-weight:800;font-size:13px;cursor:pointer;flex-shrink:0">
+        Send
+      </button>
+    </div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.2);margin-top:6px">Shift+Enter for new line · Enter to send</div>
+  </div>
+</div>
+<div id="collaboratr-overlay" onclick="closeCollaboratr()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:499"></div>
+
 </body>
 </html>

@@ -7,7 +7,9 @@
 const express    = require('express');
 const router     = express.Router();
 const db         = require('../db');
-const { callClaude } = require('../utils/claude');
+const { callClaude, callClaudeMessages } = require('../utils/claude');
+const { callClaudeStream } = require('../utils/claude');
+const { getCreatorContext } = require('../utils/creator-context');
 const https      = require('https');
 
 // ── YouTube helpers ──────────────────────────────────────────────────────────
@@ -392,6 +394,258 @@ Return ONLY valid JSON:
       episode_number:   next_episode_number,
       arc_position,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/shows/:id/collaborate — CollaboratΩr chat with full season context (SSE)
+// Body: { message, history: [{role,content}] }
+router.post('/:id/collaborate', async (req, res) => {
+  try {
+    const id      = parseInt(req.params.id, 10);
+    const context = db.buildSeasonContext(id);
+    if (!context) return res.status(404).json({ error: 'Show not found' });
+
+    const { message, history = [] } = req.body;
+    if (!message?.trim()) return res.status(400).json({ error: 'message required' });
+
+    const { show, episodes, seeds_unresolved, threads, arc_position, next_episode_number } = context;
+    const { brand, voiceSummary } = getCreatorContext();
+
+    // Build rich season context for the collaborator
+    const established = threads.length
+      ? threads.map(t => `• Ep${t.episode}: ${t.established}`).join('\n')
+      : '(No completed episodes yet — this is the first episode)';
+
+    const seeds = seeds_unresolved.length
+      ? seeds_unresolved.map(s => `• ${s}`).join('\n')
+      : '(None planted yet)';
+
+    const systemPrompt = `You are the CollaboratΩr — a creative writing partner and showrunner for "${show.name}", working with ${brand}.
+
+Your role: think out loud with the creator about season structure, episode arcs, character moments, thematic resonance, and story beats. You are a genuine collaborator — not a cheerleader. You push back when something doesn't serve the arc. You ask the hard questions. You get excited when something clicks.
+
+SERIES OVERVIEW:
+- Show: ${show.name} (${show.show_type || 'serialized'})
+- Season ${show.season}, planning Episode ${next_episode_number} of ${show.target_episodes}
+- Arc Position: ${arc_position}
+- Central Question: ${show.central_question || '(not yet defined — worth establishing)'}
+- Season Arc: ${show.season_arc || '(not yet defined)'}
+- Finale Answer: ${show.finale_answer || '(not yet defined)'}
+
+WHAT HAS BEEN ESTABLISHED:
+${established}
+
+SEEDS PLANTED (unresolved story threads):
+${seeds}
+
+CREATOR VOICE: ${voiceSummary || 'Direct, warm, real. Never corporate.'}
+
+You know this show's DNA. Help the creator make each episode earn its place in the season. Be specific. Reference what's already been established. Suggest connections. Flag when an episode idea doesn't advance the arc. Celebrate when it does.
+
+Keep responses focused and conversational — think out loud together, don't lecture.`;
+
+    // SSE streaming
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(_) {} };
+
+    const messages = [
+      ...history.slice(-10),
+      { role: 'user', content: message },
+    ];
+
+    await callClaudeStream(
+      systemPrompt,
+      messages,
+      1024,
+      (token) => send({ type: 'token', text: token }),
+    );
+
+    send({ type: 'done' });
+    res.end();
+  } catch (err) {
+    try { res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`); res.end(); } catch(_) {}
+  }
+});
+
+// POST /api/shows/:id/link-project — link an existing Id8Ωr project to an episode slot
+// Body: { project_id, episode_number, title? }
+// Creates or updates a planned episode row linked to the project
+router.post('/:id/link-project', async (req, res) => {
+  try {
+    const show_id = parseInt(req.params.id, 10);
+    const { project_id, episode_number, title } = req.body;
+    if (!project_id) return res.status(400).json({ error: 'project_id required' });
+
+    const show    = db.getShow(show_id);
+    if (!show) return res.status(404).json({ error: 'Show not found' });
+
+    const project = db.getProject(parseInt(project_id));
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    // Pull id8r context from the project to seed the episode
+    let brief = null, hook = null, concept = null;
+    try {
+      const id8r = project.id8r_data ? JSON.parse(project.id8r_data) : null;
+      if (id8r?.chosenConcept) {
+        hook    = id8r.chosenConcept.hook    || null;
+        concept = id8r.chosenConcept.why     || id8r.chosenConcept.headline || null;
+      }
+      if (id8r?.briefData?.elevator_pitch) brief = id8r.briefData.elevator_pitch;
+    } catch (_) {}
+
+    // Check if episode slot already exists
+    const context    = db.buildSeasonContext(show_id);
+    const epNum      = episode_number || context.next_episode_number;
+    const existing   = context.episodes.find(e => e.episode_number === epNum);
+
+    let episode;
+    if (existing) {
+      db.updateShowEpisode(existing.id, {
+        title:               title || project.title,
+        project_id:          project.id,
+        episode_summary:     brief || existing.episode_summary,
+        what_was_established: concept || existing.what_was_established,
+      });
+      episode = db.getShowEpisode(existing.id);
+    } else {
+      episode = db.createShowEpisode({
+        show_id,
+        episode_number: epNum,
+        title:          title || project.title,
+        project_id:     project.id,
+        episode_summary: brief || null,
+        what_was_established: concept || null,
+        status: 'planned',
+      });
+    }
+
+    res.json({ ok: true, episode, project_title: project.title, episode_number: epNum });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/shows/episodes/pipeline — active Rock Rich episodes for pipeline dashboard ──
+router.get('/episodes/pipeline', (req, res) => {
+  try {
+    const episodes = db.prepare(`
+      SELECT se.id, se.show_id, se.episode_number, se.season, se.title,
+             se.status, se.pipeline_stage, se.outline_text,
+             se.shot_list_json, se.interview_qs_json,
+             se.created_at,
+             s.name AS show_name
+      FROM show_episodes se
+      JOIN shows s ON s.id = se.show_id
+      WHERE (se.pipeline_stage IS NULL OR se.pipeline_stage != 'published')
+        AND se.status != 'archived'
+      ORDER BY s.id, se.season, se.episode_number
+    `).all();
+    res.json(episodes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/shows/:showId/episodes/:epId/import-outline ─────────────────────
+// Accepts outline text, calls Claude to parse into shot list + interview Qs by act,
+// stores both, sets pipeline_stage = 'shoot_ready'
+router.post('/:showId/episodes/:epId/import-outline', async (req, res) => {
+  try {
+    const showId = parseInt(req.params.showId, 10);
+    const epId   = parseInt(req.params.epId, 10);
+    const { outline_text } = req.body;
+
+    if (!outline_text || !outline_text.trim()) {
+      return res.status(400).json({ error: 'outline_text is required' });
+    }
+
+    const ep   = db.getShowEpisode(epId);
+    const show = db.getShow(showId);
+    if (!ep || !show) return res.status(404).json({ error: 'Episode or show not found' });
+
+    const system = `You are a production coordinator parsing a Rock Rich episode outline.
+Extract two structured arrays from the outline: shot list by act and interview questions by act.
+Return ONLY valid JSON — no commentary, no markdown fences.`;
+
+    const userMsg = `Parse this episode outline for "${show.name}" — ${ep.title || `Episode ${ep.episode_number}`}.
+
+Return JSON in exactly this shape:
+{
+  "shot_list": [
+    {
+      "act": 1,
+      "act_title": "Act title here",
+      "shots": [
+        { "num": 1, "type": "wide|close|walk|interview|action", "subject": "What/who", "notes": "Director intent" }
+      ]
+    }
+  ],
+  "interview_qs": [
+    {
+      "act": 1,
+      "act_title": "Act title here",
+      "questions": [
+        { "speaker": "Jason|Cari", "text": "The actual question", "intent": "Why this question matters to the act" }
+      ]
+    }
+  ]
+}
+
+OUTLINE:
+${outline_text}`;
+
+    const raw = await callClaudeMessages(
+      system,
+      [{ role: 'user', content: userMsg }],
+      4000
+    );
+
+    let parsed;
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    } catch (parseErr) {
+      return res.status(500).json({ error: 'Claude returned invalid JSON', raw });
+    }
+
+    const shotListJson    = JSON.stringify(parsed.shot_list    || []);
+    const interviewQsJson = JSON.stringify(parsed.interview_qs || []);
+
+    db.updateShowEpisode(epId, {
+      outline_text,
+      shot_list_json:    shotListJson,
+      interview_qs_json: interviewQsJson,
+      pipeline_stage:    'shoot_ready',
+    });
+
+    res.json({
+      ok: true,
+      pipeline_stage: 'shoot_ready',
+      shot_list:      parsed.shot_list    || [],
+      interview_qs:   parsed.interview_qs || [],
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PATCH /api/shows/:showId/episodes/:epId/stage — update pipeline stage ─────
+router.patch('/:showId/episodes/:epId/stage', (req, res) => {
+  try {
+    const epId  = parseInt(req.params.epId, 10);
+    const { pipeline_stage } = req.body;
+    const valid = ['outlining','shoot_ready','shooting','editing','published'];
+    if (!valid.includes(pipeline_stage)) {
+      return res.status(400).json({ error: `Invalid stage. Must be one of: ${valid.join(', ')}` });
+    }
+    db.updateShowEpisode(epId, { pipeline_stage });
+    res.json({ ok: true, pipeline_stage });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

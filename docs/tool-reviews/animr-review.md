@@ -1,0 +1,81 @@
+# AnimΩr — Architectural Review
+*Opus multi-agent audit.*
+
+## Synthesis
+All key claims verified. The findings are accurate. Synthesizing.
+
+---
+
+# AnimΩr Review — Synthesis
+
+AnimΩr is **structurally sound but strategically orphaned.** The engine works — it renders deterministic Remotion motion graphics to real local files that, unlike BrollΩr's Higgsfield CDN URLs, never expire. The problem isn't the renderer. It's that AnimΩr has no on-ramp (where does the data come from?) and no off-ramp (where does the render go?). It's a well-built machine with both conveyor belts disconnected. That is precisely why Jason "wants to use it but can't."
+
+## Top 3 by Creator Impact
+
+**1. The handoff is a lie (ANIMR-1 — verified).** AnimΩr's "Send to PostΩr" writes `video_path` into `captionr_prefill`, but I confirmed in `postor.html:1832` that `checkCaptionrPrefill()` only consumes `ig_caption`, `fb_caption`, `description`, and `clip_label` — it **never reads `video_path`.** The render silently vanishes and the notice cheerfully says "Pick your video and post." This is a direct Prime Directive violation (lost creative state, broken thread) AND a Secondary Directive violation (the button's entire purpose is to remove the re-attach decision; instead it adds one). Worst part: it's the easiest fix. PostΩr already handles `video_path` at lines 2434/2814/2866 — wire those four lines and the handoff works. **This is the single highest-leverage fix in the set.**
+
+**2. There's no front door for his data (ANIMR-6).** Every composition is a cold blank form — he must already know the number, type it, pick colors, pick duration. The tool that's supposed to *reduce* decisions currently *adds* four of them per asset. The connections note even says props "typically sourced from real creator data (solar savings, land stats, community numbers)" — but nothing fetches that data. An `animr_prefill` pattern (mirroring `captionr_prefill`) letting WritΩr/Id8Ωr/community-sync launch AnimΩr with the stat pre-filled — "turn this number from your script into a count-up" — converts a cold form into a one-click visualizer. **This is the likeliest root cause of non-use.**
+
+**3. No shared asset shelf — AnimΩr has no consumption moment (ANIMR-5 + ANIMR-4).** Confirmed AnimΩr (local, permanent) and BrollΩr (Higgsfield CDN, expiring) share zero data model and zero common library. To Jason they're two adjacent nav items that both "make clips," and neither output lands anywhere he naturally pulls from at edit time. Combined with AnimΩr sitting *dead last before CleanΩr* in nav — implying terminal step — he reaches ComposΩr with no motion-graphics prepared and no shelf to pull from. There is no moment in his flow where AnimΩr output is consumed.
+
+## Workflow Position Verdict
+
+**AnimΩr is misfiled as a terminal step; it is a parallel asset generator.** Confirmed nav order (`nav.js:62-63`): `…ClipsΩr → ComposΩr → BrollΩr → AnimΩr → CleanΩr`. Both BrollΩr and AnimΩr produce *supplemental visuals composited over footage* — they must exist **before/during** the compositing stage, not after it. Burying them after ComposΩr is backwards.
+
+**Verdict: reorder to `…ClipsΩr → BrollΩr → AnimΩr → ComposΩr → CleanΩr`,** and label BrollΩr+AnimΩr as a visual "Assets" sub-group so Jason understands they *feed* the edit, not follow it. Keep the two generators separate (different tech, different jobs) but **converge their output into one DB-backed asset shelf** surfaced as a pick-list inside ComposΩr/EditΩr. AnimΩr's no-expiry property makes it the *more* reliable feeder — that should be its identity.
+
+## What Would Make AnimΩr Actually Usable for a Solo Outdoor Creator
+
+In priority order — the first three are the unlock:
+
+1. **Fix the PostΩr handoff (ANIMR-1).** Make `checkCaptionrPrefill()` consume `data.video_path` and pre-attach the render. Four lines. Without this the tool's promised output path is broken.
+2. **Add a data on-ramp (`animr_prefill`, ANIMR-6).** Let WritΩr/Id8Ωr/community data launch a composition with the number + label filled in. Removes the blank-form cold start.
+3. **One shared asset shelf (ANIMR-5).** DB-backed library where both AnimΩr and BrollΩr register output, surfaced as a pick-list inside ComposΩr/EditΩr. Gives AnimΩr a consumption moment.
+4. **Make renders recoverable & tracked (ANIMR-2 + ANIMR-3).** Confirmed jobs are in-memory only (`animr.js:23`, "render jobs don't need persistence") and the library is a flat `readdirSync` folder with no DB link back to project/script. A ProRes 4444 transparent render runs for minutes; an Electron nav or 5-min backup restart hangs the SSE with no recovery. Persist render metadata (filename, composition, props snapshot, `project_id`, `created_at`); on a stream 404, fall back to polling `/renders` — *"render may have completed, check Library"* instead of a silent hung bar. Sweep orphan `_frames_<jobId>` dirs on startup; add an age/size cap on the unbounded `.mov` folder.
+5. **Pre-flight the transparent path (ANIMR-7).** The transparent branch (`animr.js:130`) falls back to bare `'ffmpeg'` and assumes `prores_ks` support. Verify the encoder exists *before* spending minutes rendering PNG frames; reuse the validated `FFMPEG_PATH` from server.js. Fail fast, not at the finish line.
+6. **Unbury CutΩr (ANIMR-8 — verified).** Confirmed `nav.js` has **no CutΩr entry at all** despite the route being registered (`server.js:618`) and `cutor.js` existing. The backend is wired; the door is missing. Add a CutΩr nav link in the Post group (after AssemblΩr / before ReviewΩr per its "identify cuts before assembly" position). Also note: AnimΩr's render/DELETE endpoints are unauthenticated and write to a shared `public/animr-renders` dir — namespace per-tenant when multi-tenancy work lands.
+
+**Bottom line:** AnimΩr doesn't need a rebuild. It needs its two conveyor belts reconnected — a data on-ramp (prefill) and a working off-ramp (PostΩr handoff + shared shelf) — plus a reorder so it sits beside BrollΩr feeding ComposΩr. Do items 1–3 and Jason goes from "want to but can't" to "one click from a script stat to a posted count-up."
+
+Relevant files: `C:\Users\18054\kre8r\public\postor.html` (line 1832), `C:\Users\18054\kre8r\public\animr.html`, `C:\Users\18054\kre8r\src\routes\animr.js`, `C:\Users\18054\kre8r\src\routes\brollr.js`, `C:\Users\18054\kre8r\public\js\nav.js` (lines 62-63), `C:\Users\18054\kre8r\server.js` (line 618).
+
+## Full Findings (8 total)
+### [HIGH] Send to PostΩr silently drops the video — handoff is broken
+**Dimension:** inter-tool | **Location:** public/animr.html sendToPostor(); public/postor.html checkCaptionrPrefill() ~line 1832-1867
+**Problem:** animr.html sendToPostor() writes localStorage.captionr_prefill = { clip_label, video_path }. But postor.html's checkCaptionrPrefill() (line 1832) only reads ig_caption, fb_caption, description, and clip_label. It NEVER reads video_path. So the user clicks 'Send to PostΩr', a new tab opens, and the render they wanted to post is silently gone — they still have to manually find and re-attach the file. The notice even says 'Pick your video and post.' This is a Prime Directive violation (lost creative state / broken thread) AND a Secondary Directive violation (it adds a decision instead of removing one). The whole point of the button — carrying the asset across — fails.
+**Fix:** Either (a) make postor's checkCaptionrPrefill consume data.video_path and pre-attach it to the post composer / quick-post path row, or (b) if PostΩr genuinely cannot accept a server-relative URL as a video source, remove the 'Send to PostΩr' button from AnimΩr entirely so it doesn't promise a handoff it can't deliver. Given AnimΩr outputs are local /animr-renders/<file> static URLs, option (a) is achievable: PostΩr already handles video_path elsewhere (lines 2434, 2814, 2866).
+
+### [HIGH] No CDN expiry problem — but renders are unmanaged local files that grow unbounded and aren't tracked in DB
+**Dimension:** improvement | **Location:** src/routes/animr.js RENDERS_DIR + GET /renders; vs src/routes/brollr.js CDN usage
+**Problem:** Direct answer to the creator's question: AnimΩr does NOT have BrollΩr's CDN-expiry problem. BrollΩr returns Higgsfield CDN URLs (image_url, src/routes/brollr.js lines 393/441/800) which expire. AnimΩr renders to public/animr-renders/ as real local .mp4/.mov files served by Express static — those never expire. However, the flip side: renders are filesystem-only with zero DB tracking. The library is rebuilt by readdirSync every load, ProRes 4444 .mov files are large, transparent-render temp _frames_<jobId> dirs are cleaned in a finally but an OS crash mid-render leaves orphans, and there is no link from a render back to the project/script/data that produced it. The creator can't answer 'which video is this bar chart for?' a week later.
+**Fix:** Persist render metadata to a DB table (filename, composition, props snapshot, project_id, created_at) so renders are tied to projects and survive being a flat folder. Add a size/age cap or a 'clean old renders' action. Sweep orphan _frames_ dirs on server start.
+
+### [HIGH] Render jobs are in-memory only — restart or crash loses an in-progress render with no recovery
+**Dimension:** bug | **Location:** src/routes/animr.js jobs Map; POST /render async IIFE; GET /render/:id/stream
+**Problem:** jobs = new Map() and the route comment says 'render jobs don't need persistence'. But a ProRes 4444 transparent render goes PNG-frames → ffmpeg stitch and can run for minutes. If Electron/server restarts (the app does 5-min rolling backups and Electron navigation is common per CLAUDE.md) the job vanishes, the SSE 404s, the progress UI hangs, and any partial output/_frames dir may be orphaned. The user has no signal it failed and no resume. This is the Prime Directive: 'never break the creative thread without a recovery path.' A render in flight IS creative state.
+**Fix:** On render completion the file already lands on disk — surface that as the recovery path: when a job id 404s on the stream endpoint, have the frontend fall back to polling /api/animr/renders for a recently-created file matching the composition. At minimum, detect-and-show 'render may have completed — check Library' instead of a silent hung bar.
+
+### [MEDIUM] AnimΩr sits last in Post-Production but is a parallel asset generator, not a terminal step
+**Dimension:** workflow-order | **Location:** public/js/nav.js lines 57-64
+**Problem:** In nav.js the Post group is ordered VaultΩr → AssemblΩr → ReviewΩr → ClipsΩr → ComposΩr → BrollΩr → AnimΩr → CleanΩr. AnimΩr is dead last before the utility CleanΩr, implying it's an end-of-line step. But per the connections summary, AnimΩr produces overlay/insert assets (bar charts, count-ups, stat slams) that need to exist BEFORE or DURING the edit/compose stage — you composite them over footage in ComposΩr/EditΩr. Burying it after ComposΩr means the creator reaches the compositing step with no motion-graphics assets prepared. It belongs adjacent to BrollΩr as a sibling asset source feeding ComposΩr, ideally before ComposΩr in the visual order.
+**Fix:** Group AnimΩr and BrollΩr together as the 'supplemental asset' pair and place them before ComposΩr (e.g. VaultΩr → AssemblΩr → ReviewΩr → ClipsΩr → BrollΩr → AnimΩr → ComposΩr → CleanΩr), or visually label them as a parallel 'Assets' sub-group so the creator understands they feed the edit rather than follow it.
+
+### [HIGH] AnimΩr is fully separate from BrollΩr with no shared 'asset shelf' — overlapping creator confusion
+**Dimension:** inter-tool | **Location:** src/routes/animr.js (local renders) vs src/routes/brollr.js (Higgsfield CDN); both feed ComposΩr but via no shared mechanism
+**Problem:** Answering the creator's question 'does it integrate with BrollΩr or is it separate': they are completely separate. BrollΩr = AI-generated b-roll/footage via Higgsfield (expiring CDN URLs, Soul ID, image2video). AnimΩr = deterministic Remotion motion graphics rendered locally (never expire). They share no data model, no common library view, no common handoff to ComposΩr/PostΩr. To the creator they're two adjacent nav items that both 'make video clips,' and neither one's output lands in a single place he can pull from at edit time. This is the root reason he 'wants to use it but can't' — there's no obvious moment in his flow where AnimΩr output is consumed.
+**Fix:** Introduce a unified asset library/shelf that both AnimΩr renders and BrollΩr clips register into (DB-backed), surfaced inside ComposΩr/EditΩr as a pick-list. AnimΩr's lack of expiry actually makes it the more reliable feeder. Keep the two generators separate but converge their OUTPUT into one consumable surface so the creator has a single 'here are my extra visuals' place.
+
+### [HIGH] Props are hand-typed numbers — no pull from real creator data, so the tool can't reduce a decision
+**Dimension:** improvement | **Location:** public/animr.html COMP_DEFS buildProps (all manual inputs); src/routes/animr.js (props passed straight through)
+**Problem:** Every composition (BarChart, CountUp, StatCard, Stomper) requires the creator to manually type values: target savings, bar values, acreage stats. Per Secondary Directive the tool should reduce decisions. Right now AnimΩr ADDS work: he has to know the number, type it, pick colors, pick duration. The connections summary even notes props are 'typically sourced from real creator data (solar savings, land stats, community numbers)' — but nothing in the route or UI actually fetches that data. This is likely the biggest reason it's unused: it's a blank-form generator with no on-ramp from his actual content.
+**Fix:** Wire an inbound prefill (mirror the captionr_prefill pattern, e.g. animr_prefill in localStorage) so WritΩr/Id8Ωr/community data can launch AnimΩr with the number and label pre-filled — 'turn this stat from your script into a count-up'. That converts AnimΩr from a cold blank form into a one-click visualizer of data he already has.
+
+### [MEDIUM] Transparent .mov path has no fallback if prores_ks/ffmpeg unavailable; only h264 errors are visible
+**Dimension:** bug | **Location:** src/routes/animr.js transparent branch, execFileAsync(ffmpegBin, [...prores_ks...])
+**Problem:** The transparent branch spawns ffmpeg with prores_ks -profile:v 4444 yuva444p10le via process.env.FFMPEG_PATH || 'ffmpeg'. If ffmpeg-static's binary doesn't include prores_ks (build-dependent) or FFMPEG_PATH is unset in this code path (server.js sets it before routes load, but a bare 'ffmpeg' fallback assumes PATH), the render fails after already spending the full PNG-frame render time. The user waits minutes for a frame render then gets a terminal ffmpeg error and loses all that compute. No pre-flight check.
+**Fix:** Pre-flight: verify ffmpegBin resolves and supports prores_ks (ffmpeg -encoders | prores_ks) BEFORE rendering the expensive PNG frames, and fail fast with a clear message. Reuse the FFMPEG_PATH already validated in server.js rather than falling back to bare 'ffmpeg'.
+
+### [MEDIUM] DELETE/library endpoints unauthenticated and CutΩr is registered but invisible — half-shipped feature
+**Dimension:** bug | **Location:** src/routes/animr.js (no auth, shared dir); public/js/nav.js (no CutΩr link); server.js line 618 (route exists)
+**Problem:** Two adjacent gaps. (1) /api/animr/render, /renders, and DELETE have no auth/tenant guard; combined with no tenant awareness this is consistent with the known multi-tenancy gap but worth noting AnimΩr writes to a shared public/animr-renders dir for all tenants. (2) The creator says CutΩr is a tool he wants but can't use: server.js line 618 registers /api/cutor, src/routes/cutor.js and src/vault/cutor.js exist, but there is NO CutΩr entry anywhere in nav.js. The backend is wired; the door is just missing. That's why it 'doesn't appear clearly in the nav' — it doesn't appear at all.
+**Fix:** Add a CutΩr nav entry in the Post group (logically between ClipsΩr/ReviewΩr per its pipeline position 'identify cuts before assembly', i.e. after AssemblΩr/before ReviewΩr) pointing at its page. For AnimΩr, namespace render output per tenant when background/multi-tenant work lands, and gate the DELETE behind the same auth as other routes.

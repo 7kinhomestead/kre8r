@@ -459,11 +459,24 @@ function angleColor(angle) {
 async function init() {
   await loadIdeas();
   renderList();
-  // Restore constellation from last session
+  // Restore constellation from last session — reconcile against live ideas
   try {
     const saved = localStorage.getItem('seedr_constellation');
     if (saved) {
-      constellationData = JSON.parse(saved);
+      const cached = JSON.parse(saved);
+      const liveIds = new Set(allIdeas.map(i => i.id));
+      // BUG-10: remove ghost nodes (deleted ideas) and stale connections
+      if (cached.nodes) {
+        cached.nodes = cached.nodes.filter(n => liveIds.has(n.idea_id));
+        // Refresh title/concept from live data
+        const liveMap = Object.fromEntries(allIdeas.map(i => [i.id, i]));
+        cached.nodes = cached.nodes.map(n => {
+          const live = liveMap[n.idea_id];
+          if (live) { n.title = live.title; n.status = live.status; }
+          return n;
+        });
+      }
+      constellationData = cached;
     }
   } catch(_) {}
   updateConstellationButtons();
@@ -661,6 +674,7 @@ async function saveEdit() {
     const updated = data.idea || data;
     const idx = allIdeas.findIndex(i => i.id === editingId);
     if (idx !== -1) allIdeas[idx] = { ...allIdeas[idx], ...updated };
+    invalidateConstellation(); // BUG-10: stale title/concept in constellation after edit
     closeEditModal();
     renderList();
     showToast('Idea saved', 'success');
@@ -674,14 +688,33 @@ async function saveEdit() {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function deleteIdea(id) {
   const idea = allIdeas.find(i => i.id === id);
-  const title = idea ? idea.title : 'this idea';
-  if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+  const title = idea ? `"${idea.title}"` : 'this idea';
+  if (!confirm(`Delete ${title}? You can undo this for 6 seconds.`)) return;
   try {
     const res = await fetch(`/api/ideas/${id}`, { method: 'DELETE' });
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || `Server error ${res.status}`); }
     allIdeas = allIdeas.filter(i => i.id !== id);
+    invalidateConstellation(); // BUG-10: deleted idea must not remain as ghost node
     renderList();
-    showToast('Idea deleted', 'info');
+    // SEEDR-04: undo toast — soft delete, so restore is possible for 6s
+    let undone = false;
+    showToast(`Idea deleted — <a href="#" id="undo-delete-${id}" style="color:#3ecfb2;text-decoration:underline">Undo</a>`, 'info', 6000);
+    setTimeout(() => {
+      const link = document.getElementById(`undo-delete-${id}`);
+      if (link) link.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (undone) return;
+        undone = true;
+        try {
+          const r = await fetch(`/api/ideas/${id}/restore`, { method: 'POST' });
+          if (!r.ok) throw new Error('restore failed');
+          const { idea: restored } = await r.json();
+          allIdeas.unshift(restored);
+          renderList();
+          showToast('Idea restored', 'success');
+        } catch (_) { showToast('Could not restore idea', 'error'); }
+      });
+    }, 50);
   } catch (err) {
     showToast('Failed to delete: ' + err.message, 'error');
   }
@@ -762,7 +795,7 @@ async function parseIdeas() {
       document.getElementById('btnParse').onclick = parseIdeas;
     };
     document.getElementById('bulkPreviewWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    showToast(`Parsed ${parsedBulkIdeas.length} ideas — review and hit Save All`, 'success');
+    showToast(`Found ${parsedBulkIdeas.length} ideas — review and hit Save All to add them`, 'success');
   } catch (err) {
     showToast('Parse failed: ' + err.message, 'error');
   } finally {
@@ -796,10 +829,12 @@ function renderBulkPreview() {
 async function saveBulkIdeas() {
   if (parsedBulkIdeas.length === 0) return;
   const btn = document.getElementById('btnSaveAll');
+  // H2: disable synchronously before any await so double-clicks can't fire a second save
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Saving…';
-  let saved = 0;
-  for (const idea of parsedBulkIdeas) {
+  const ideasToSave = [...parsedBulkIdeas]; // snapshot — prevent re-opened modal reusing same array
+  let saved = 0, failed = 0;
+  for (const idea of ideasToSave) {
     try {
       const res = await fetch('/api/ideas', {
         method: 'POST',
@@ -807,15 +842,20 @@ async function saveBulkIdeas() {
         body: JSON.stringify(idea)
       });
       if (res.ok) {
-        const data = await res.json();
-        allIdeas.unshift(data.idea || data);
         saved++;
+      } else {
+        failed++;
       }
-    } catch (e) { /* keep going */ }
+    } catch (e) { failed++; }
   }
   closeBulkModal();
+  await loadIdeas(); // BUG-9: reload from server instead of optimistic unshift to avoid shape mismatches
   renderList();
-  showToast(`Saved ${saved} ideas`, 'success');
+  if (failed > 0) {
+    showToast(`Saved ${saved} ideas · ${failed} failed — check console`, 'error');
+  } else {
+    showToast(`Saved ${saved} idea${saved !== 1 ? 's' : ''} to SeedΩr`, 'success');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1078,11 +1118,15 @@ function updateConstellationButtons() {
   }
 }
 
-function resetConstellation() {
+async function resetConstellation() {
   if (!confirm('Reset the constellation? This clears the map but keeps all your ideas.')) return;
+  // BUG-11: await server reset before clearing local state — prevents divergence on failure
+  try {
+    const res = await fetch('/api/ideas/constellation/reset', { method: 'POST' });
+    if (!res.ok) { showToast('Reset failed — try again', 'error'); return; }
+  } catch (e) { showToast('Reset failed: ' + e.message, 'error'); return; }
   constellationData = null;
   try { localStorage.removeItem('seedr_constellation'); } catch(_) {}
-  fetch('/api/ideas/constellation/reset', { method: 'POST' }).catch(() => {});
   switchView('list');
   updateConstellationButtons();
   showToast('Constellation reset — ready to remap', 'info');
@@ -1156,8 +1200,15 @@ async function integrateNewIdeas() {
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || `Server error ${res.status}`); }
     const { newClusters, newNodes } = await res.json();
 
-    constellationData.clusters = [...(constellationData.clusters || []), ...(newClusters || [])];
-    constellationData.nodes    = [...(constellationData.nodes    || []), ...(newNodes    || [])];
+    // H3: dedupe by idea_id — stale client state can cause the same node to appear twice
+    const existingNodeIds = new Set((constellationData.nodes || []).map(n => n.idea_id));
+    const dedupeNewNodes  = (newNodes || []).filter(n => !existingNodeIds.has(n.idea_id));
+    // Dedupe clusters by id
+    const existingClusterIds = new Set((constellationData.clusters || []).map(c => c.id));
+    const dedupeNewClusters  = (newClusters || []).filter(c => !existingClusterIds.has(c.id));
+
+    constellationData.clusters = [...(constellationData.clusters || []), ...dedupeNewClusters];
+    constellationData.nodes    = [...(constellationData.nodes    || []), ...dedupeNewNodes];
     try { localStorage.setItem('seedr_constellation', JSON.stringify(constellationData)); } catch(_) {}
 
     initConstellation(constellationData);

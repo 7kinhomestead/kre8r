@@ -1855,11 +1855,25 @@ function checkCaptionrPrefill() {
     filled.push('description');
   }
 
+  // ANIMR-1 fix: wire video_path from AnimΩr/BrollΩr handoff
+  // Previously checkCaptionrPrefill never read video_path, so the render was silently dropped
+  // and the notice said "Pick your video and post" — defeating the entire purpose of the button
+  if (data.video_path) {
+    try {
+      const videoInput = document.getElementById('video-path-input') || document.querySelector('input[name="video_path"]');
+      if (videoInput) { videoInput.value = data.video_path; filled.push('video'); }
+      // Also try to pre-fill the quick-post path field if it exists
+      const qpath = document.querySelector('.qpath-input, #quick-video-path');
+      if (qpath) { qpath.value = data.video_path; filled.push('video path'); }
+    } catch (_) {}
+  }
+
   if (filled.length > 0) {
     const notice = document.getElementById('prefill-notice');
     const label  = data.clip_label ? ` (${data.clip_label})` : '';
+    const videoNote = data.video_path ? '' : ' Pick your video and post.';
     document.getElementById('prefill-notice-text').textContent =
-      `📋 CaptionΩr${label} → ${filled.join(', ')} auto-filled. Pick your video and post.`;
+      `📋 CaptionΩr${label} → ${filled.join(', ')} auto-filled.${videoNote}`;
     notice.style.display = 'flex';
     // Scroll to the form area
     setTimeout(() => notice.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
@@ -2559,6 +2573,9 @@ function listenToJob(jobId, platforms) {
       const pct    = ev.pct || 10;
       const labels = { initiating: 'Initiating…', uploading: 'Uploading…', processing: 'Processing…', publishing: 'Publishing…', done: 'Done!' };
       updateProgress(ev.stage, pct, labels[ev.step] || ev.step, ev.step === 'done' ? 'pp-bar is-done' : '');
+    } else if (ev.stage && ev.stage.startsWith('tiktok_') && ev.platform === 'tiktok') {
+      const pct = typeof ev.percent === 'number' ? ev.percent : (ev.stage === 'tiktok_init' ? 10 : ev.stage === 'tiktok_processing' ? 90 : 50);
+      updateProgress('tiktok', pct, ev.message || ev.stage, '');
     } else if (ev.stage === 'platform_done') {
       updateProgress(ev.platform, 100, 'Posted! ✓', 'is-done');
       if (ev.post_url) {
@@ -2570,9 +2587,12 @@ function listenToJob(jobId, platforms) {
         showYouTubeStudioCard(ev.post_url, ev.post_id);
       }
     } else if (ev.stage === 'platform_error') {
-      updateProgress(ev.platform, 100, 'Error', 'is-error');
+      const shortErr = (ev.error || 'unknown error').slice(0, 80);
+      updateProgress(ev.platform, 100, shortErr, 'is-error');
       const status = document.getElementById('pstatus-' + ev.platform);
-      if (status) status.title = ev.error;
+      if (status) status.title = ev.error || '';
+      const meta = PLATFORM_META[ev.platform] || {};
+      toast(`${meta.icon || ''} ${meta.label || ev.platform} failed: ${ev.error}`, 'error', 10000);
     } else if (ev.stage === 'skip') {
       // TikTok skipped
     } else if (ev.stage === 'done') {
@@ -2582,6 +2602,7 @@ function listenToJob(jobId, platforms) {
       const failed = Object.values(ev.result?.results || {}).filter(r => !r.ok);
       if (failed.length === 0) {
         toast('🎉 All platforms posted successfully!', 'success', 6000);
+        try { new BroadcastChannel('kre8r_publish').postMessage({ type: 'video_posted' }); } catch(_) {}
       } else {
         toast(`⚠️ Posted with ${failed.length} error(s) — check progress panel.`, 'error', 6000);
       }

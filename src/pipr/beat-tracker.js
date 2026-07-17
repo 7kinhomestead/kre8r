@@ -156,8 +156,10 @@ function updateBeatCoverage(projectId) {
 
   // Update DB
   try {
+    // PIPR-3 fix: never regress pipr_complete to 0 — it tracks "creator finished planning",
+    // not "footage currently covers beats". A cleared/re-imported edit should not un-plan a project.
     db.updateProjectPipr(projectId, {
-      pipr_complete: config.story_structure === 'free_form' ? 1 : (covered.length > 0 ? 1 : 0)
+      pipr_complete: config.story_structure === 'free_form' ? 1 : (covered.length > 0 ? 1 : undefined)
     });
   } catch (_) {}
 

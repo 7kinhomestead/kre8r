@@ -14,6 +14,7 @@ const { ingestFolder, ingestFile, checkFfmpeg, reclassifyById } = require('../va
 const { startWatcher, stopWatcher, getWatcherStatus } = require('../vault/watcher');
 const { organizeFile, organizeAll } = require('../vault/organizer');
 const txQueue  = require('../vault/transcribe-queue');
+const fxQueue  = require('../vault/frame-analysis-queue');
 
 // multer — in-memory, we only need the path sent in the JSON body
 // (actual folder intake uses the File System Access API on the client side)
@@ -974,6 +975,173 @@ router.post('/transcribe-queue/add', (req, res) => {
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// FRAME ANALYSIS QUEUE ROUTES
+// ─────────────────────────────────────────────
+
+// GET /api/vault/frame-queue/status
+router.get('/frame-queue/status', (req, res) => {
+  try {
+    res.json(fxQueue.getQueueStatus());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/vault/frame-queue/stream — SSE live updates
+router.get('/frame-queue/stream', (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  const hb = setInterval(() => {
+    if (!res.writableEnded) res.write(': keepalive\n\n');
+  }, 20_000);
+  req.on('close', () => clearInterval(hb));
+
+  fxQueue.connectSse(res);
+});
+
+// POST /api/vault/frame-queue/add
+// Body: { footage_id, force? } — manually enqueue a clip for frame analysis
+// force=true re-analyzes even if visual_description already exists
+router.post('/frame-queue/add', (req, res) => {
+  const { footage_id, force = false } = req.body;
+  if (!footage_id) return res.status(400).json({ error: 'footage_id required' });
+
+  try {
+    const record = db.getFootageById(parseInt(footage_id));
+    if (!record) return res.status(404).json({ error: 'Footage not found' });
+
+    const decodable = fxQueue.getDecodablePath(record);
+    if (!decodable) return res.status(400).json({ error: 'No decodable file path (BRAW without proxy, or file missing)' });
+
+    const result = fxQueue.enqueue(parseInt(footage_id), decodable, record.original_filename, !!force);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/vault/frame-queue/batch
+// Bulk-enqueue unanalyzed clips for backfill using Haiku (cheap + fast).
+// Body: { shot_types?, project_id?, limit?, force?, model? }
+//   shot_types  — array of shot_type strings (default: ['talking-head'])
+//   project_id  — limit to one project
+//   limit       — max clips per batch call (default 200; call again to drain more)
+//   force       — re-queue clips that are already analyzed
+//   model       — override model (default: claude-haiku-4-5)
+router.post('/frame-queue/batch', (req, res) => {
+  try {
+    const {
+      shot_types = ['talking-head'],
+      project_id,
+      limit = 200,
+      force = false,
+      model,
+    } = req.body;
+
+    const result = fxQueue.enqueueBatch({
+      shot_types: Array.isArray(shot_types) ? shot_types : [shot_types],
+      project_id: project_id ? parseInt(project_id) : undefined,
+      limit:      parseInt(limit) || 200,
+      force:      !!force,
+      model:      model || undefined,
+    });
+
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/vault/frame-queue/progress
+// Returns DB-level analysis progress stats (total, analyzed, remaining, by_shot_type).
+// Use this to drive the progress bar — it reflects what's actually in the DB,
+// not just what's in the in-memory queue.
+router.get('/frame-queue/progress', (req, res) => {
+  try {
+    const stats = db.getFrameAnalysisStats();
+    const queue = fxQueue.getQueueStatus();
+    res.json({ ...stats, queue });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/vault/stream/:id — HTTP Range-request video streaming
+// Serves footage files over the network so Cari's laptop can play
+// them without needing local file access. Supports seeking/scrubbing.
+// ─────────────────────────────────────────────
+
+router.get('/stream/:id', (req, res) => {
+  try {
+    const record = db.getFootageById(parseInt(req.params.id));
+    if (!record) return res.status(404).json({ error: 'Footage not found' });
+
+    // Prefer proxy (H.264, universally playable) over raw BRAW
+    const RAW_EXT = new Set(['.braw', '.r3d', '.ari']);
+    let filePath = null;
+    if (record.proxy_path) {
+      const p = record.proxy_path.replace(/\//g, path.sep);
+      if (fs.existsSync(p)) filePath = p;
+    }
+    if (!filePath) {
+      const p = (record.file_path || '').replace(/\//g, path.sep);
+      const ext = path.extname(p).toLowerCase();
+      if (!RAW_EXT.has(ext) && fs.existsSync(p)) filePath = p;
+    }
+    if (!filePath) {
+      return res.status(404).json({ error: 'No streamable file found (BRAW needs proxy)' });
+    }
+
+    const stat   = fs.statSync(filePath);
+    const total  = stat.size;
+    const ext    = path.extname(filePath).toLowerCase();
+    const mime   = ext === '.mp4' ? 'video/mp4'
+                 : ext === '.mov' ? 'video/quicktime'
+                 : ext === '.mkv' ? 'video/x-matroska'
+                 : ext === '.avi' ? 'video/x-msvideo'
+                 : ext === '.mts' ? 'video/mp2t'
+                 : 'video/mp4';
+
+    const range = req.headers.range;
+    if (!range) {
+      // No range — send the whole file (small clips, thumbnailing)
+      res.writeHead(200, {
+        'Content-Type':   mime,
+        'Content-Length': total,
+        'Accept-Ranges':  'bytes',
+      });
+      fs.createReadStream(filePath).pipe(res);
+      return;
+    }
+
+    // Parse Range header  e.g. "bytes=0-"
+    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(startStr, 10);
+    const end   = endStr ? parseInt(endStr, 10) : Math.min(start + 10_000_000, total - 1);
+
+    if (start >= total) {
+      return res.status(416).set('Content-Range', `bytes */${total}`).end();
+    }
+
+    const chunkSize = (end - start) + 1;
+    res.writeHead(206, {
+      'Content-Range':  `bytes ${start}-${end}/${total}`,
+      'Accept-Ranges':  'bytes',
+      'Content-Length': chunkSize,
+      'Content-Type':   mime,
+    });
+    fs.createReadStream(filePath, { start, end }).pipe(res);
+
+  } catch (e) {
+    if (!res.headersSent) res.status(500).json({ error: e.message });
   }
 });
 

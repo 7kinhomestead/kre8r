@@ -42,9 +42,12 @@ function buildConfig(projectId, body) {
   let beats = buildBeatMap(story_structure, estimated_duration_minutes || null);
 
   // Apply any deep-mode overrides
+  // PIPR-1 fix: beat_overrides are keyed by 0-based array index (from the frontend),
+  // but beat.index is 1-based (from the beat templates). Using beat.index here caused
+  // every edit to silently land on the WRONG beat (off by one, last beat dropped).
   if (Object.keys(beat_overrides).length > 0) {
-    beats = beats.map(beat => {
-      const override = beat_overrides[beat.index];
+    beats = beats.map((beat, i) => {
+      const override = beat_overrides[i]; // 0-based, matching frontend updateBeatOverride(i,...)
       if (!override) return beat;
       return {
         ...beat,

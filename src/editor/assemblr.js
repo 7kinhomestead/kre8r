@@ -187,6 +187,17 @@ function parseStoredTranscript(clip) {
 async function mapBeatsInClip(clip, segments, beats, creatorCtx, emit, writrBeatMap, writrScriptText) {
   if (!segments || segments.length === 0) return { beat_coverage: [], gold_moments: [] };
 
+  // Parse stored visual description if available (populated by frame-analysis-queue at ingest).
+  // Null if clip was ingested before frame analysis feature shipped — graceful fallback.
+  let visualCtx = null;
+  if (clip.visual_description) {
+    try {
+      visualCtx = typeof clip.visual_description === 'string'
+        ? JSON.parse(clip.visual_description)
+        : clip.visual_description;
+    } catch (_) { visualCtx = null; }
+  }
+
   // For very long transcripts, sample to stay under context limits
   const MAX_SEGMENTS = 300;
   const segsToSend = segments.length > MAX_SEGMENTS
@@ -223,6 +234,19 @@ async function mapBeatsInClip(clip, segments, beats, creatorCtx, emit, writrBeat
     ? `\n\nFULL SCRIPT (for reference):\n${writrScriptText.slice(0, 3000)}${writrScriptText.length > 3000 ? '\n[...continues...]' : ''}`
     : '';
 
+  // Build visual context block from frame analysis (null = not yet analyzed, omit gracefully)
+  const visualBlock = visualCtx ? `
+
+VISUAL ANALYSIS (from frame sampling — ${visualCtx.overall_quality || 'unknown'} quality):
+- Eye contact: ${visualCtx.eye_contact_consistency || 'unknown'}
+- Energy arc: ${visualCtx.energy_arc || 'unknown'}
+- Peak energy window: ${visualCtx.peak_energy_range ? `${visualCtx.peak_energy_range.start_pct}%–${visualCtx.peak_energy_range.end_pct}% of clip` : 'unknown'}
+- Posture/delivery: ${visualCtx.posture_energy || 'unknown'}
+- Physical demonstration: ${visualCtx.physical_demonstration ? (visualCtx.demonstration_description || 'yes — something physical is being shown') : 'no'}
+- Lighting: ${visualCtx.lighting_quality || 'unknown'}${visualCtx.lighting_issues ? ` (${visualCtx.lighting_issues})` : ''}
+- Speaker in frame: ${visualCtx.speaker_visible_pct != null ? `${visualCtx.speaker_visible_pct}% of clip` : 'unknown'}
+- Editor note: ${visualCtx.editorial_notes || 'none'}` : '';
+
   const clipDuration = (segsToSend[segsToSend.length - 1]?.end ?? 0).toFixed(1);
 
   const prompt = `You are tagging a video clip for ${creatorCtx.creatorName || creatorCtx.brand} (${creatorCtx.niche} creator).
@@ -230,16 +254,17 @@ async function mapBeatsInClip(clip, segments, beats, creatorCtx, emit, writrBeat
 Jason films in long takes with multiple retakes — the SAME beat may appear multiple times in one clip.
 
 STORY BEATS:
-${enrichedBeatList}${scriptContext}
+${enrichedBeatList}${scriptContext}${visualBlock}
 
 TRANSCRIPT (${clipDuration}s clip):
 ${transcriptText}
 
 YOUR TASK:
 1. For EACH beat, find EVERY section of transcript where Jason covers that beat — include ALL retakes.
-2. Quality: "strong" = confident full delivery, "clean" = good delivery, "fumbled" = restarts/stumbles, "partial" = incomplete.
+2. Quality: "strong" = confident full delivery, "clean" = good delivery, "fumbled" = restarts/stumbles, "partial" = incomplete. If visual analysis shows "direct" eye contact and peak energy at a take's timestamp — upgrade its quality rating accordingly.
 3. Flag any off-script spontaneous moments as gold_moments.
 4. Every beat_index 0 to ${beats.length - 1} must appear — use editorial judgment for loose coverage.
+5. If visual analysis shows "physical_demonstration: yes" — tag the beat occurrence covering that moment with note "DEMO MOMENT — b-roll anchor" so the editor knows this is where a cutaway should live.
 
 beat_index is 0-based. Timestamps are decimal seconds matching the [M:SS.s] format in the transcript.
 
@@ -316,7 +341,11 @@ async function assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit) {
   if (sorted.length === 1 && sorted[0].quality !== 'fumbled') {
     const t = sorted[0];
     emit({ event: 'status', message: `Beat "${beat.name}": one clean take — using whole (no cuts)` });
-    return [{ footage_id: t.footage_id, start_ts: t.start, end_ts: t.end, level: 'full_take', note: 'only take' }];
+    const result = [{ footage_id: t.footage_id, start_ts: t.start, end_ts: t.end, level: 'full_take', note: 'only take' }];
+    result.assembly_note        = 'Single clean take — used whole';
+    result.coverage_confidence  = 'high';
+    result.critique_note        = null;
+    return result;
   }
 
   // If NO takes have transcript segments, Claude has nothing to work with —
@@ -326,11 +355,13 @@ async function assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit) {
     emit({ event: 'status', message: `Beat "${beat.name}": no transcript segments — using best take directly (no Call 2)` });
     const best = sorted.slice().reverse().find(t => t.quality === 'strong' || t.quality === 'clean') || sorted[sorted.length - 1];
     const result = [{ footage_id: best.footage_id, start_ts: best.start, end_ts: best.end, level: 'full_take', note: 'no segments — used best take' }];
-    result.assembly_note = 'No transcript segments — used best available take';
+    result.assembly_note        = 'No transcript segments — used best available take';
+    result.coverage_confidence  = null;
+    result.critique_note        = null;
     return result;
   }
 
-  // Build text block per take including its transcript.
+  // Build text block per take including its transcript + visual signals.
   // IMPORTANT: use decimal seconds in the transcript (not M:SS) so Claude
   // returns decimal seconds back — M:SS in the output breaks JSON parsing.
   const takesText = sorted.map((take, i) => {
@@ -338,7 +369,31 @@ async function assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit) {
       .map(s => `  [${s.start.toFixed(2)}s–${s.end.toFixed(2)}s] ${s.text.trim()}`)
       .join('\n');
     const range = `${take.start.toFixed(2)}s–${take.end.toFixed(2)}s`;
-    return `=== Take ${i + 1} (footage_id: ${take.footage_id}, quality: ${take.quality || 'clean'}, range: ${range}) ===\n${segsText || '  (no transcript segments)'}`;
+
+    // Inject visual signals from stored frame analysis for this clip.
+    // Check if this take's start falls inside the clip's peak energy window.
+    let visualAnnotation = '';
+    try {
+      const clipRecord = db.getFootageById(take.footage_id);
+      if (clipRecord?.visual_description) {
+        const vd = JSON.parse(clipRecord.visual_description);
+        const clipDur = clipRecord.duration || 1;
+        const takePct = (take.start / clipDur) * 100;
+        const inPeak  = vd.peak_energy_range &&
+          takePct >= (vd.peak_energy_range.start_pct - 5) &&
+          takePct <= (vd.peak_energy_range.end_pct + 5);
+        const parts = [
+          `eye contact: ${vd.eye_contact_consistency || '?'}`,
+          `delivery: ${vd.posture_energy || '?'}`,
+          inPeak ? '⚡ IN PEAK ENERGY ZONE' : null,
+          vd.lighting_quality && vd.lighting_quality !== 'excellent' && vd.lighting_quality !== 'good'
+            ? `lighting: ${vd.lighting_quality}` : null,
+        ].filter(Boolean);
+        if (parts.length) visualAnnotation = ` | visual: ${parts.join(', ')}`;
+      }
+    } catch (_) {}
+
+    return `=== Take ${i + 1} (footage_id: ${take.footage_id}, quality: ${take.quality || 'clean'}, range: ${range}${visualAnnotation}) ===\n${segsText || '  (no transcript segments)'}`;
   }).join('\n\n');
 
   const scriptSection = writrBeatScript
@@ -378,7 +433,9 @@ Return ONLY the JSON object below — no explanation, no analysis, no markdown:
       "note": "one sentence — what this covers and why chosen"
     }
   ],
-  "assembly_note": "one sentence describing the editorial strategy (e.g. 'Used take 3 — cleanest delivery, natural energy throughout')"
+  "assembly_note": "one sentence describing the editorial strategy (e.g. 'Used take 3 — cleanest delivery, natural energy throughout')",
+  "coverage_confidence": "high | medium | low",
+  "critique_note": "one sentence — what the assembly delivers and what (if anything) is missing or weak"
 }`;
 
   try {
@@ -394,8 +451,13 @@ Return ONLY the JSON object below — no explanation, no analysis, no markdown:
       assembly = [{ footage_id: best.footage_id, start_ts: best.start, end_ts: best.end, level: 'full_take', note: 'empty assembly — used best take' }];
     }
 
-    emit({ event: 'status', message: `Beat "${beat.name}": ${assembly.length} segment(s) — ${note}` });
-    assembly.assembly_note = note;
+    const confidence = result.coverage_confidence || 'medium';
+    const critique   = result.critique_note || '';
+    const confIcon   = confidence === 'high' ? '✓' : confidence === 'low' ? '⚠' : '~';
+    emit({ event: 'status', message: `Beat "${beat.name}": ${assembly.length} segment(s) — ${note} [${confIcon} ${confidence}]` });
+    assembly.assembly_note        = note;
+    assembly.coverage_confidence  = confidence;
+    assembly.critique_note        = critique;
     return assembly;
   } catch (e) {
     emit({ event: 'warning', message: `Assembly failed for "${beat.name}": ${e.message} — falling back to last non-fumbled take` });
@@ -407,7 +469,9 @@ Return ONLY the JSON object below — no explanation, no analysis, no markdown:
       level:      'fallback',
       note:       'Claude assembly failed — using last clean take',
     }];
-    result.assembly_note = 'Assembly failed — fallback to last clean take';
+    result.assembly_note        = 'Assembly failed — fallback to last clean take';
+    result.coverage_confidence  = null;
+    result.critique_note        = null;
     return result;
   }
 }
@@ -773,19 +837,25 @@ async function buildAssembly(projectId, onProgress) {
 
     // Call 2 — Claude assembles best sequence from short takes
     let assembly = [];
-    let assemblyNote = '';
+    let assemblyNote        = '';
+    let coverageConfidence  = null;
+    let critiqueNote        = null;
     try {
       const raw = await assembleBeat(beat, allTakes, writrBeatScript, creatorCtx, emit);
-      // assembleBeat returns an array with assembly_note attached as a property
-      assembly = Array.isArray(raw) ? raw : [];
-      assemblyNote = raw.assembly_note || '';
+      // assembleBeat returns an array with extra properties attached
+      assembly           = Array.isArray(raw) ? raw : [];
+      assemblyNote       = raw.assembly_note       || '';
+      coverageConfidence = raw.coverage_confidence || null;
+      critiqueNote       = raw.critique_note       || null;
     } catch (e) {
       emit({ event: 'warning', message: `Call 2 failed for "${beat.name}": ${e.message} — using best clean take` });
       // Fallback: last non-fumbled take, full block
       const sorted = [...allTakes].sort((a, b) => new Date(a.clip_created_at) - new Date(b.clip_created_at));
       const fallback = sorted.slice().reverse().find(t => t.quality !== 'fumbled') || sorted[sorted.length - 1];
-      assembly = [{ footage_id: fallback.footage_id, start_ts: fallback.start, end_ts: fallback.end, level: 'fallback', note: 'Call 2 failed — last clean take' }];
-      assemblyNote = 'Assembly failed — fallback to last clean take';
+      assembly           = [{ footage_id: fallback.footage_id, start_ts: fallback.start, end_ts: fallback.end, level: 'fallback', note: 'Call 2 failed — last clean take' }];
+      assemblyNote       = 'Assembly failed — fallback to last clean take';
+      coverageConfidence = null;
+      critiqueNote       = null;
     }
 
     // Apply handles to the assembly segments, then sort chronologically.
@@ -826,6 +896,10 @@ async function buildAssembly(projectId, onProgress) {
       fire_suggestion:          `${sortedTakes.length} take(s) — ${qualitySummary}. ${beat.emotional_function || ''}`,
       assembly_note:            assemblyNote,
       assembly_mode:            'ai_assembled',
+      // Beat context + self-critique (Threadline improvements)
+      beat_brief:               beat.emotional_function || null,
+      critique_note:            critiqueNote,
+      coverage_confidence:      coverageConfidence,
       davinci_timeline_position: sections.length,
     });
 

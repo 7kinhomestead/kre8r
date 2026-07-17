@@ -86,9 +86,12 @@ function enqueue(footageId, filePath, label = null) {
   if (!footageId || !filePath) return { ok: false, reason: 'missing footage_id or file_path' };
 
   // Check DB — already transcribed?
+  // Guard on BOTH transcript_path AND transcription_status so a re-scan of an
+  // already-processed library (e.g. 158 clips, only a few new) doesn't re-enqueue
+  // everything — which previously spawned 100+ Whisper processes and crashed Python.
   try {
     const record = db.getFootageById(footageId);
-    if (record?.transcript_path) {
+    if (record?.transcript_path || record?.transcription_status === 'done') {
       return { ok: false, reason: 'already transcribed' };
     }
     // Use proxy_path if available (proxy is decodable by Whisper, raw BRAW is not)

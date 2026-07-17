@@ -1253,6 +1253,13 @@ async function sendViaMailerlite() {
   const version = mlPickedVersion === 'a' ? lastBroadcast.version_a : lastBroadcast.version_b;
   if (!version) { showToast('No version available', 'amber'); return; }
 
+  // mailor-1 fix: read the LIVE textarea content — the creator may have edited it
+  // Previously sent version.body/version.subject (raw AI output) regardless of edits
+  // meaning up to 1,366 people received the unreviewed version silently
+  const activeCard = document.querySelector(`.broadcast-card[data-version="${mlPickedVersion}"]`);
+  const liveBody    = activeCard?.querySelector('.email-body-textarea')?.value?.trim() || version.body;
+  const liveSubject = activeCard?.querySelector('.email-subject-box')?.textContent?.trim() || version.subject;
+
   // Build optional sends_at for scheduled mode
   let sends_at = null;
   if (emailSendMode === 'schedule') {
@@ -1272,8 +1279,8 @@ async function sendViaMailerlite() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        subject:    version.subject,
-        html_body:  version.body,
+        subject:    liveSubject,  // mailor-1: use live edited content
+        html_body:  liveBody,     // mailor-1: use live edited content
         group_ids:  mlSelectedGroups,
         sends_at,
       }),

@@ -12,7 +12,10 @@
  * GET  /api/writr/:project_id/room/session  — load persisted room conversation
  * POST /api/writr/:project_id/room/session  — save room conversation to DB
  * DELETE /api/writr/:project_id/room/session — clear room conversation from DB
- * POST /api/writr/:project_id/room/approve  — approve script draft from room session
+ * POST /api/writr/:project_id/room/approve        — approve script draft from room session
+ * GET  /api/writr/:project_id/tiktok-scripts      — return stored TikTok series scripts
+ * POST /api/writr/:project_id/tiktok-scripts      — generate 5 TikTok format scripts (SSE)
+ * POST /api/writr/:project_id/tiktok-scripts/:id/status — update filmed/posted status
  */
 
 'use strict';
@@ -29,7 +32,7 @@ const { iterateScript }              = require('../writr/iterate');
 const { buildPasteIn }               = require('../writr/paste-in');
 const { readConfig, writeConfig }    = require('../pipr/beat-tracker');
 const { listProfiles }               = require('../writr/voice-analyzer');
-const { callClaude, REALITY_RULE, SLOP_RULE, loadVoiceCalibrationBlock } = require('../writr/claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadVoiceCalibrationBlock, loadAudienceTargetBlock } = require('../writr/claude');
 const vault                          = require('../utils/project-vault');
 const { addSoulContext, buildWritrPromptContext } = require('../utils/project-context-builder');
 const { callClaudeMessages }         = require('../utils/claude');
@@ -490,6 +493,20 @@ router.post('/generate', async (req, res) => {
     }
   } catch (_) {}
 
+  // H7/WRITR-IT-1: Post-Mortem brief — steer scripts away from diagnosed failure patterns
+  // Known issue #5 in CLAUDE.md: "Post-Mortem brief not yet injected into WritΩr/Id8Ωr"
+  try {
+    const pm = require('../db').getActivePostMortemBrief();
+    if (pm) {
+      let pmBlock = '\n\n## LAST VIDEO POST-MORTEM (learn from real performance — do not repeat these mistakes)';
+      if (pm.root_cause)   pmBlock += `\nRoot cause of underperformance: ${pm.root_cause}`;
+      if (pm.adjustments)  pmBlock += `\nAdjustments for next video: ${pm.adjustments}`;
+      if (pm.avoid)        pmBlock += `\nAvoid: ${pm.avoid}`;
+      pmBlock += '\nLet this shape tone and angle — but never override the creator\'s stated concept.';
+      id8rBlock += pmBlock;
+    }
+  } catch (_) {}
+
   // Short-form format constraint — injected into every prompt when project.format = 'short'
   if (project.format === 'short') {
     id8rBlock += `\n\n## SHORT-FORM FORMAT — STRICT CONSTRAINTS
@@ -534,7 +551,7 @@ This is a SHORT-FORM video (TikTok / Reels / Shorts). These rules override all o
       result = await buildPasteIn(projectId, input_text || '', emit);
       if (!result.ok) {
         write({ stage: 'error', error: result.error || 'Paste-in failed' });
-        finishJob(job, null);
+        end(); // H1: no `job` exists in this SSE handler — finishJob(job) was a ReferenceError
         return;
       }
       // Paste-in skips format variants — store as full mode only, then finish
@@ -565,7 +582,7 @@ This is a SHORT-FORM video (TikTok / Reels / Shorts). These rules override all o
         mode:      'full',
         message:   'Script imported — beats mapped. Review and approve when ready.'
       });
-      finishJob(job, { script_id: pasteId });
+      end(); // H1: no `job` in this SSE handler — just end the stream
       return;
     } else if (ep === 'script_first') {
       result = await generateScriptFirst({
@@ -697,21 +714,21 @@ Return ONLY valid JSON: {"summary":"string"}`;
       session_id:        sessionId
     };
 
-    const fullId    = db.insertWritrScript({ ...commonData, generated_script: scriptText,    mode: 'full'    });
-    const bulletsId = db.insertWritrScript({ ...commonData, generated_script: bulletsScript, mode: 'bullets' });
-    const hybridId  = db.insertWritrScript({ ...commonData, generated_script: hybridScript,  mode: 'hybrid'  });
-
-    db.updateProjectWritr(projectId, { active_script_id: fullId });
-
-    // Vault: save script generation
+    // M1: vault crash-recovery save BEFORE DB inserts — if insert fails, script is still on disk
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     try {
-      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       vault.saveVaultData(projectId, `writr/script-${ts}-full.txt`, scriptText);
       if (bulletsScript) vault.saveVaultData(projectId, `writr/script-${ts}-bullets.txt`, bulletsScript);
       if (hybridScript)  vault.saveVaultData(projectId, `writr/script-${ts}-hybrid.txt`, hybridScript);
     } catch (vaultErr) {
       console.warn('[writr/generate] vault save failed (non-fatal):', vaultErr.message);
     }
+
+    const fullId    = db.insertWritrScript({ ...commonData, generated_script: scriptText,    mode: 'full'    });
+    const bulletsId = db.insertWritrScript({ ...commonData, generated_script: bulletsScript, mode: 'bullets' });
+    const hybridId  = db.insertWritrScript({ ...commonData, generated_script: hybridScript,  mode: 'hybrid'  });
+
+    db.updateProjectWritr(projectId, { active_script_id: fullId });
 
     // Send final completion event
     write({
@@ -792,13 +809,19 @@ router.post('/iterate', async (req, res) => {
 
     const newIterCount = (existing.iteration_count || 0) + 1;
 
+    // M5: when Claude truncates and returns beat_map:[], fall back to prior beat structure
+    // so beat map is never lost across iterations
+    const iterBeatMap = (result.beat_map && result.beat_map.length > 0)
+      ? result.beat_map
+      : (existing.beat_map_json || []);
+
     const newScriptId = db.insertWritrScript({
       project_id:        projectId,
       entry_point:       existing.entry_point,
       input_type:        'iteration',
       raw_input:         feedback,
       generated_script:  result.script,
-      beat_map_json:     result.beat_map      || [],
+      beat_map_json:     iterBeatMap,
       missing_beats:     result.missing_beats || [],
       iteration_count:   newIterCount,
       story_found:       existing.story_found    || null,
@@ -807,6 +830,9 @@ router.post('/iterate', async (req, res) => {
       mode:              existing.mode            || 'full',
       session_id:        existing.session_id      || null
     });
+
+    // M5: update active_script_id so the freshest iteration is always the active draft
+    try { db.updateProjectWritr(projectId, { active_script_id: newScriptId }); } catch (_) {}
 
     // Vault: save iteration
     try {
@@ -932,8 +958,9 @@ router.post('/:project_id/unapprove', (req, res) => {
 // ─────────────────────────────────────────────
 
 function buildRoomSystemPrompt(project, projectContext, currentScript) {
-  const title        = project.title || 'this video';
+  const title         = project.title || 'this video';
   const voiceCalBlock = loadVoiceCalibrationBlock();
+  const audienceBlock = loadAudienceTargetBlock();
 
   let prompt = `You are the creative director for "${title}". You have complete context on this project: the original concept, why it was chosen, the story structure, the beat map, and the current script draft.
 
@@ -946,7 +973,8 @@ When you have a specific revision the creator can apply directly to the script, 
 ${REALITY_RULE}
 
 ${SLOP_RULE}
-${voiceCalBlock}`;
+${voiceCalBlock}
+${audienceBlock}`;
 
   if (projectContext) {
     prompt += `\n\n${projectContext}`;
@@ -974,6 +1002,18 @@ ${voiceCalBlock}`;
           prompt += `\nKey contrast finding: ${vis.contrast_finding}`;
         }
       }
+    }
+  } catch (_) {}
+
+  // H7: Post-Mortem brief in Room context — director should know what went wrong last time
+  try {
+    const pm = require('../db').getActivePostMortemBrief();
+    if (pm) {
+      prompt += `\n\n## LAST VIDEO POST-MORTEM (context for this revision session)`;
+      if (pm.root_cause)  prompt += `\nWhat went wrong: ${pm.root_cause}`;
+      if (pm.adjustments) prompt += `\nWhat to do differently: ${pm.adjustments}`;
+      if (pm.avoid)       prompt += `\nAvoid repeating: ${pm.avoid}`;
+      prompt += `\nIf a revision direction risks repeating these mistakes, flag it.`;
     }
   } catch (_) {}
 
@@ -1081,10 +1121,45 @@ router.post('/:project_id/room/approve', async (req, res) => {
     const project = db.getProject(projectId);
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
+    const trimmed = script_text.trim();
+
+    // H4: validate ≥2 beat markers before allowing approve — prevents locking a critique as the script
+    const beatMarkers = (trimmed.match(/\[● BEAT:/g) || []).length;
+    if (beatMarkers < 2) {
+      return res.status(400).json({
+        error: `Script must contain at least 2 beat markers [● BEAT: ...] before approving. Found: ${beatMarkers}. Make sure the full script (not a chat message) was selected.`
+      });
+    }
+
+    // H4: extract beat_map_json from [● BEAT: name] markers so downstream tools aren't left blind
+    // Fall back to prior active script's beat_map if parsing yields nothing useful
+    let beatMapJson = null;
+    try {
+      const markerMatches = [...trimmed.matchAll(/\[● BEAT:\s*([^\]]+)\]/g)];
+      if (markerMatches.length) {
+        beatMapJson = JSON.stringify(markerMatches.map((m, i) => ({
+          index: i + 1,
+          beat_name: m[1].trim(),
+          story_moment: m[1].trim(),
+        })));
+      }
+    } catch (_) {}
+
+    if (!beatMapJson) {
+      // Fall back to prior active script's beat_map
+      try {
+        const prior = db.getApprovedWritrScript(projectId);
+        if (prior?.beat_map_json) beatMapJson = typeof prior.beat_map_json === 'string'
+          ? prior.beat_map_json
+          : JSON.stringify(prior.beat_map_json);
+      } catch (_) {}
+    }
+
     // Create a new script record from the room-revised text
     const scriptId = db.insertWritrScript({
       project_id:       projectId,
-      generated_script: script_text.trim(),
+      generated_script: trimmed,
+      beat_map_json:    beatMapJson,
       entry_point:      'room_revision',
       input_type:       'room_revision',
       iteration_count:  0,
@@ -1477,5 +1552,178 @@ Return the complete smoothed script with beat headers intact:`;
     end();
   }
 });
+
+// ─────────────────────────────────────────────
+// GET /api/writr/:project_id/tiktok-scripts
+// ─────────────────────────────────────────────
+
+router.get('/:project_id/tiktok-scripts', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+  const rows = db.getTikTokScripts(projectId);
+  const scripts = rows.map(s => ({
+    ...s,
+    hook_variants:  tryJson(s.hook_variants,  []),
+    beat_spine:     tryJson(s.beat_spine,      []),
+    on_screen_text: tryJson(s.on_screen_text,  []),
+  }));
+  res.json({ ok: true, scripts });
+});
+
+// ─────────────────────────────────────────────
+// POST /api/writr/:project_id/tiktok-scripts/:id/status
+// Cycle filmed/posted/pending on a single script
+// ─────────────────────────────────────────────
+
+router.post('/:project_id/tiktok-scripts/:script_id/status', (req, res) => {
+  const scriptId = parseInt(req.params.script_id, 10);
+  const { status } = req.body || {};
+  if (!scriptId || !status) return res.status(400).json({ error: 'Missing script_id or status' });
+  db.updateTikTokScriptStatus(scriptId, status);
+  res.json({ ok: true });
+});
+
+// ─────────────────────────────────────────────
+// POST /api/writr/:project_id/tiktok-scripts
+// Generate 5 TikTok format scripts from approved WritΩr script (SSE)
+// ─────────────────────────────────────────────
+
+router.post('/:project_id/tiktok-scripts', async (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const send = data => res.write('data: ' + JSON.stringify(data) + '\n\n');
+
+  try {
+    const project = db.getProject(projectId);
+    if (!project) { send({ type: 'error', message: 'Project not found' }); return res.end(); }
+
+    let scriptRow = db.getApprovedWritrScript(projectId);
+    if (!scriptRow) {
+      const all = db.getWritrScriptsByProject(projectId);
+      scriptRow = all[0] || null;
+    }
+    if (!scriptRow) {
+      send({ type: 'error', message: 'No script found — write a script first' });
+      return res.end();
+    }
+
+    const scriptText = scriptRow.generated_script || scriptRow.content || '';
+    const title      = project.title || 'Untitled';
+
+    send({ type: 'progress', message: 'Building 5 TikTok formats from your script...' });
+
+    const voiceCalBlock = loadVoiceCalibrationBlock();
+
+    const systemPrompt = `You are a TikTok native content specialist writing for Jason Rutland (7 Kin Homestead). Jason has 730k TikTok followers covering homesteading, financial freedom, and the ROCK RICH philosophy.
+
+${voiceCalBlock}
+
+VOICE: Straight-talking, warm, funny, never corporate. Sharp-tongued neighbor talking over the fence. Jason goes off-script — those moments are often the best footage.
+
+CRITICAL FORMAT RULE: Write hook + beat spine, NOT teleprompter prose. The hook is the only part scripted verbatim. Everything else is fence-talk bullets the creator riffs from. A 90-second TikTok is NOT 270 words read to camera.`;
+
+    const userPrompt = `TOPIC: ${title}
+
+LONG-FORM SCRIPT (context only — find angles WITHIN it, do NOT summarize):
+${scriptText.slice(0, 5000)}
+
+Generate a 5-slot TikTok vertical series. These will be filmed immediately after the long-form shoot. Scripts are energy-ordered — Jason may stop at 3 and that's a win.
+
+SLOT 1 — CORE NATIVE (format_type: "core-native", energy_order: 1)
+The single best insight restructured around its own hook. Not a summary. What would a scroll-stopper screenshot? Film first at peak energy.
+
+SLOT 2 — CONTRARIAN (format_type: "contrarian", energy_order: 2)
+"Everyone tells you X about [topic]. Here's what actually happened to us." Jason's highest-trust format. Lead with the mistake or the thing that went wrong.
+
+SLOT 3 — CORE NATIVE 2 (format_type: "core-native-2", energy_order: 3)
+Second angle — different insight, different hook style than Slot 1. "What I wish I'd known" or "the number nobody talks about" work well here.
+
+SLOT 4 — SEARCH ANSWER (format_type: "search-answer", energy_order: 4)
+A literal question people type into TikTok/Google. Keyword in the FIRST LINE of hook, caption, AND on-screen text. "How much does it cost to..." / "Is it legal to..." / "Can you actually...". Answer it directly. More structured.
+
+SLOT 5 — SERIES EPISODE (format_type: "series-episode", energy_order: 5)
+Slots into an ongoing numbered series. Suggest a series name fitting Jason's content pillars (financial/system/rockrich/howto/mistakes). Most structured — can riff straight from spine if energy is low.
+
+FOR EACH SLOT:
+- hook_variants: 2-3 opening lines (first 1.5 seconds only). Varied: one question, one bold statement, one controversy/number. Jason picks on the day.
+- beat_spine: 4-6 bullets. 8-12 words max each. NOT full sentences. Fence-talk riff points. E.g. "bought 40 acres, nobody mentioned water rights" not "When we purchased our land, water rights were not discussed."
+- closing_line: Exact final line to camera (scripted verbatim like the hook).
+- caption: Keyword-rich TikTok caption. First line = the keyword/hook. 100-150 chars total. 3-5 hashtags at end.
+- on_screen_text: 2-3 text overlay phrases (2-5 words each) to display while talking.
+- pillar: One of: financial / system / rockrich / howto / mistakes / lifestyle / viral
+- series_name: Series episode only — suggest a name. All others: null.
+
+Return ONLY valid JSON, no explanation, no markdown fences:
+{
+  "scripts": [
+    {
+      "slot": 1,
+      "format_type": "core-native",
+      "energy_order": 1,
+      "hook_variants": ["...", "...", "..."],
+      "beat_spine": ["...", "...", "..."],
+      "closing_line": "...",
+      "caption": "...",
+      "on_screen_text": ["...", "..."],
+      "pillar": "...",
+      "series_name": null
+    }
+  ]
+}`;
+
+    const raw = await callClaudeMessages(systemPrompt, [{ role: 'user', content: userPrompt }], 4096);
+    if (!raw) { send({ type: 'error', message: 'No response from Claude — try again' }); return res.end(); }
+
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(cleaned); }
+    catch (_) { send({ type: 'error', message: 'Could not parse Claude response — try again' }); return res.end(); }
+
+    const rawScripts = parsed.scripts || [];
+    if (!rawScripts.length) { send({ type: 'error', message: 'No scripts returned' }); return res.end(); }
+
+    db.deleteTikTokScripts(projectId);
+    const saved = [];
+    for (const s of rawScripts) {
+      const row = db.insertTikTokScript({
+        project_id:     projectId,
+        slot:           s.slot || (rawScripts.indexOf(s) + 1),
+        format_type:    s.format_type    || 'core-native',
+        energy_order:   s.energy_order   || 3,
+        hook_variants:  s.hook_variants  || [],
+        beat_spine:     s.beat_spine     || [],
+        closing_line:   s.closing_line   || null,
+        caption:        s.caption        || null,
+        on_screen_text: s.on_screen_text || [],
+        pillar:         s.pillar         || null,
+        series_name:    s.series_name    || null,
+      });
+      saved.push({
+        ...row,
+        hook_variants:  s.hook_variants  || [],
+        beat_spine:     s.beat_spine     || [],
+        on_screen_text: s.on_screen_text || [],
+      });
+    }
+
+    send({ type: 'done', scripts: saved });
+    res.end();
+  } catch (err) {
+    console.error('[WritΩr] tiktok-scripts error:', err.message);
+    try { send({ type: 'error', message: err.message }); } catch (_) {}
+    res.end();
+  }
+});
+
+function tryJson(val, fallback) {
+  if (!val) return fallback;
+  try { return JSON.parse(val); } catch (_) { return fallback; }
+}
 
 module.exports = router;

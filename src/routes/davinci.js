@@ -50,6 +50,8 @@ function runScript(scriptName, args = [], timeoutMs = 120_000) {
       if (stderr) console.warn(`[DaVinci/${scriptName}] stderr:`, stderr.trim());
       try {
         const result = JSON.parse(stdout.trim());
+        // Attach stderr to result for debugging — visible in API response
+        result._stderr = stderr.trim().slice(-800);
         resolve(result);
       } catch (e) {
         reject(new Error(
@@ -349,6 +351,63 @@ router.post('/grade-approved/:project_id', async (req, res) => {
     res.json({ ok: true, state: 'grade_approved', message: '02_SELECTS timeline being created in DaVinci' });
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/davinci/create-from-vault/:project_id
+// Creates a DaVinci project with ALL footage for a project — no selects,
+// no transcription, no AI. For the Cari workflow: she edits, Jason finishes.
+// ─────────────────────────────────────────────
+router.post('/create-from-vault/:project_id', async (req, res) => {
+  const projectId = parseInt(req.params.project_id);
+  try {
+    const project = db.getProject(projectId);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    // Get ALL footage for this project
+    const footage = db.getAllFootage({ project_id: projectId });
+    if (!footage.length) {
+      return res.status(400).json({ error: 'No footage found for this project. Assign footage in VaultΩr first.' });
+    }
+
+    // Organise by shot type for DaVinci bins
+    const footageByType = {};
+    for (const f of footage) {
+      const path = f.proxy_path || f.file_path;
+      if (!path) continue;
+      const k = f.shot_type || 'unclassified';
+      if (!footageByType[k]) footageByType[k] = [];
+      footageByType[k].push(path);
+    }
+
+    const projectName = project.title || `Project ${projectId}`;
+
+    const args = [
+      '--project_id',    String(projectId),
+      '--project_name',  projectName,
+      '--footage_json',  JSON.stringify(footageByType),
+    ];
+
+    const result = await runScript('create-project.py', args, 120_000);
+    if (!result.ok) {
+      return res.status(500).json({ error: result.error || 'DaVinci script failed', detail: result.stderr });
+    }
+
+    // Record in DB
+    if (!project.davinci_project_name) {
+      db.updateProjectMeta(projectId, { davinci_project_name: projectName });
+    }
+
+    res.json({
+      ok: true,
+      project_name: projectName,
+      clip_count: footage.length,
+      bins: Object.keys(footageByType),
+      result: result.data,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

@@ -193,47 +193,75 @@ router.post('/analyze', async (req, res) => {
       const video = videosToAnalyze[i];
       const label = `(${i + 1}/${videosToAnalyze.length}) ${video.title.slice(0, 50)}`;
 
-      send({ stage: 'extracting', message: `Getting video duration — ${label}` });
-
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kre8r-visualr-'));
-      tempDirs.push(tmpDir);
-      const framePattern = path.join(tmpDir, 'frame_%04d.jpg');
-
-      let durationSec = null;
-      try { durationSec = await getVideoDuration(ffmpegPath, video.proxy_path); } catch (_) {}
-
-      // Scale frame count to video length: 1 frame/min, min 8, max 20
-      const durationMin  = durationSec ? durationSec / 60 : 10;
-      const frameTarget  = Math.min(FRAMES_MAX, Math.max(FRAMES_MIN, Math.round(durationMin * FRAMES_PER_MINUTE)));
-      const interval     = durationSec ? Math.max(1, Math.floor(durationSec / frameTarget)) : 60;
-
-      send({ stage: 'extracting', message: `Extracting ${frameTarget} frames (${Math.round(durationMin)}min video) — ${label}` });
-
-      await extractFrames(ffmpegPath, video.proxy_path, framePattern, interval, FRAME_JPEG_QUALITY);
-
-      const frameFiles = fs.readdirSync(tmpDir).filter(f => f.endsWith('.jpg')).sort().slice(0, frameTarget);
-
-      if (!frameFiles.length) {
-        send({ stage: 'warn', message: `No frames extracted from ${video.title} — skipping` });
-        continue;
+      // VISUALR-002 fix: check if VaultΩr frame analysis already ran (VAULT-001 fixed Session 91)
+      // Previously VisualΩr always re-extracted frames even when visual_description was already in DB
+      // This was double-billing Claude Vision on the same footage
+      let summary = null;
+      const footageRecord = video.footage_id ? db.getFootageById(video.footage_id) : null;
+      if (footageRecord?.visual_analyzed_at && footageRecord?.visual_description) {
+        try {
+          const vd = typeof footageRecord.visual_description === 'string'
+            ? JSON.parse(footageRecord.visual_description)
+            : footageRecord.visual_description;
+          // Convert VaultΩr frame-analysis format to VisualΩr summary format
+          if (vd && (vd.peak_energy_range || vd.editorial_notes)) {
+            send({ stage: 'analyzing', message: `Using existing frame analysis from VaultΩr — ${label}` });
+            summary = {
+              peak_energy:          vd.peak_energy_range || null,
+              eye_contact:          vd.eye_contact || null,
+              physical_demo:        vd.physical_demonstration || false,
+              editorial_notes:      vd.editorial_notes || '',
+              recommended_start:    vd.recommended_start_pct || null,
+              frames_analyzed:      vd.frames_analyzed || 0,
+              from_vault:           true,
+            };
+          }
+        } catch (_) {}
       }
 
-      const frames = frameFiles.map((filename, idx) => ({
-        b64:         fs.readFileSync(path.join(tmpDir, filename)).toString('base64'),
-        timestamp_s: interval * idx,
-      }));
+      if (!summary) {
+        // No existing analysis — extract frames and run Vision
+        send({ stage: 'extracting', message: `Getting video duration — ${label}` });
 
-      send({ stage: 'analyzing', message: `Claude Vision analyzing — ${label}` });
+        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kre8r-visualr-'));
+        tempDirs.push(tmpDir);
+        const framePattern = path.join(tmpDir, 'frame_%04d.jpg');
 
-      let visionFrames = [];
-      try {
-        visionFrames = await analyzeFramesWithVision(frames, video.title);
-      } catch (err) {
-        send({ stage: 'warn', message: `Vision analysis failed for ${video.title}: ${err.message}` });
-        continue;
+        let durationSec = null;
+        try { durationSec = await getVideoDuration(ffmpegPath, video.proxy_path); } catch (_) {}
+
+        const durationMin  = durationSec ? durationSec / 60 : 10;
+        const frameTarget  = Math.min(FRAMES_MAX, Math.max(FRAMES_MIN, Math.round(durationMin * FRAMES_PER_MINUTE)));
+        const interval     = durationSec ? Math.max(1, Math.floor(durationSec / frameTarget)) : 60;
+
+        send({ stage: 'extracting', message: `Extracting ${frameTarget} frames (${Math.round(durationMin)}min video) — ${label}` });
+
+        await extractFrames(ffmpegPath, video.proxy_path, framePattern, interval, FRAME_JPEG_QUALITY);
+
+        const frameFiles = fs.readdirSync(tmpDir).filter(f => f.endsWith('.jpg')).sort().slice(0, frameTarget);
+
+        if (!frameFiles.length) {
+          send({ stage: 'warn', message: `No frames extracted from ${video.title} — skipping` });
+          continue;
+        }
+
+        const frames = frameFiles.map((filename, idx) => ({
+          b64:         fs.readFileSync(path.join(tmpDir, filename)).toString('base64'),
+          timestamp_s: interval * idx,
+        }));
+
+        send({ stage: 'analyzing', message: `Claude Vision analyzing — ${label}` });
+
+        let visionFrames = [];
+        try {
+          visionFrames = await analyzeFramesWithVision(frames, video.title);
+        } catch (err) {
+          send({ stage: 'warn', message: `Vision analysis failed for ${video.title}: ${err.message}` });
+          continue;
+        }
+
+        summary = aggregateVisionResults(visionFrames);
       }
-
-      const summary = aggregateVisionResults(visionFrames);
 
       allVideoResults.push({
         title:            video.title,

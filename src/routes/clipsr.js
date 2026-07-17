@@ -16,6 +16,7 @@ const EventEmitter = require('events');
 const crypto       = require('crypto');
 
 const fs              = require('fs');
+const path            = require('path');
 const db                  = require('../db');
 const { transcribeFile }  = require('../vault/transcribe');
 const { analyzeForClips } = require('../vault/clipsr');
@@ -133,6 +134,24 @@ router.post('/analyze', async (req, res) => {
       }
 
       if (!transcript) {
+        // If force_retranscribe is set, also delete the slug-based disk cache inside
+        // transcribeFile — otherwise transcribeFileSmart returns the stale file even
+        // though the ClipsΩr-level cache was bypassed above.
+        if (force_retranscribe) {
+          try {
+            const { TRANSCRIPTS_DIR } = require('../vault/transcribe');
+            const crypto = require('crypto');
+            const slug = crypto.createHash('md5').update(path.resolve(footage.file_path)).digest('hex');
+            const slugPath = path.join(TRANSCRIPTS_DIR, slug + '.json');
+            if (fs.existsSync(slugPath)) {
+              fs.unlinkSync(slugPath);
+              console.log(`[ClipsΩr] Cleared stale transcript cache: ${slugPath}`);
+            }
+          } catch (e) {
+            console.warn('[ClipsΩr] Could not clear transcript slug cache:', e.message);
+          }
+        }
+
         pushEvent(job, { stage: 'transcribing', message: `Transcribing ${footage.original_filename}...` });
         const txResult = await transcribeFile(footage.file_path, {
           footageId: footage.id,
@@ -295,11 +314,35 @@ router.post('/send-to-davinci', async (req, res) => {
     }
 
     // Resolve source path — prefer proxy_path if original is BRAW
-    const sourcePath = footage.proxy_path || footage.file_path;
+    // Fallback: check uploads folder if stored path doesn't exist (path may have changed)
+    let sourcePath = footage.proxy_path || footage.file_path;
+    if (sourcePath && !fs.existsSync(sourcePath)) {
+      const uploadsCandidate = path.join(__dirname, '..', '..', 'uploads', path.basename(sourcePath));
+      if (fs.existsSync(uploadsCandidate)) {
+        sourcePath = uploadsCandidate;
+      }
+    }
     if (!sourcePath || !fs.existsSync(sourcePath)) {
       return res.status(400).json({
         error: `Source file not found: ${sourcePath}. Make sure the video file is accessible.`
       });
+    }
+    console.log(`[ClipsΩr→DaVinci] footage.proxy_path=${footage.proxy_path}`);
+    console.log(`[ClipsΩr→DaVinci] footage.file_path=${footage.file_path}`);
+    console.log(`[ClipsΩr→DaVinci] resolved sourcePath=${sourcePath}`);
+    console.log(`[ClipsΩr→DaVinci] footage.duration=${footage.duration}s`);
+    console.log(`[ClipsΩr→DaVinci] clip windows=${clips.map(c=>`${c.start_time.toFixed(1)}-${c.end_time.toFixed(1)}s`).join(', ')}`);
+
+    // Sanity check: if any clip starts beyond the footage duration, the transcript
+    // is from the wrong source — catch it here before sending to Resolve.
+    if (footage.duration) {
+      const badClips = clips.filter(c => c.start_time > footage.duration * 1.05);
+      if (badClips.length > 0) {
+        return res.status(400).json({
+          error: `Clip timestamps (${badClips[0].start_time.toFixed(0)}s) exceed video duration (${footage.duration.toFixed(0)}s). ` +
+                 `Re-analyze this footage with "Force re-transcribe" to fix mismatched timestamps.`
+        });
+      }
     }
 
     // Load transcript segments for per-clip text extraction
@@ -323,6 +366,7 @@ router.post('/send-to-davinci', async (req, res) => {
     // Default 29.97 — footage table doesn't store fps directly
     const fps = 29.97;
 
+    // start_time / end_time are stored in seconds in the DB.
     const clipsPayload = clips.map(c => ({
       rank:       c.rank,
       start:      c.start_time,
@@ -341,6 +385,7 @@ router.post('/send-to-davinci', async (req, res) => {
       '--source_path',  sourcePath,
       '--clips_json',   JSON.stringify(clipsPayload),
       '--fps',          String(fps),
+      '--duration',     String(footage.duration || 0),
     ], 120_000);
 
     res.json(result);

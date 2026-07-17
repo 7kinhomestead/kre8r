@@ -215,4 +215,75 @@ function loadVoiceCalibrationBlock() {
   }
 }
 
-module.exports = { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock };
+// ── Audience Target Block — injected into every WritΩr prompt and Id8Ωr ──────
+// Reads audience_profile + niche_block from creator-profile.json.
+// Renders THE TARGET: who they are, beliefs, four fears, governing question, title formula.
+// Frame this as the target, not trivia — every script answers the governing question.
+
+function loadAudienceTargetBlock() {
+  try {
+    const { loadProfile } = require('../utils/profile-validator');
+    const result = loadProfile();
+    if (!result.ok) return '';
+    const ap = result.profile?.audience_profile;
+    const nb = result.profile?.niche_block;
+    if (!ap && !nb) return '';
+
+    const lines = ['## THE TARGET — every script answers this or it doesn\'t ship'];
+
+    if (nb?.governing_question) {
+      lines.push(`\nGOVERNING QUESTION: "${nb.governing_question}"`);
+      lines.push('This is the real ask beneath every video. If the script does not answer it, the audience feels nothing.');
+    }
+
+    if (ap?.who_they_are) {
+      lines.push(`\nWHO THEY ARE: ${ap.who_they_are}`);
+    }
+
+    const beliefs = ap?.what_they_believe || [];
+    if (beliefs.length) {
+      lines.push(`\nWHAT THEY ALREADY BELIEVE (meet them here, don\'t argue with it):\n${beliefs.map(b => `- ${b}`).join('\n')}`);
+    }
+
+    const fears = ap?.what_they_fear || [];
+    if (fears.length) {
+      lines.push(`\nTHEIR FOUR FEARS (name one of these in the hook and the script earns trust):\n${fears.map((f, i) => `${i + 1}. ${f}`).join('\n')}`);
+    }
+
+    const converts = ap?.content_that_converts || [];
+    if (converts.length) {
+      lines.push(`\nCONTENT THAT CONVERTS:\n${converts.map(c => `- ${c}`).join('\n')}`);
+    }
+
+    if (nb?.title_formula) {
+      lines.push(`\nTITLE FORMULA: ${nb.title_formula}`);
+    }
+
+    if (nb?.clusters?.length) {
+      const sorted = [...nb.clusters].sort((a, b) => b.avg_views - a.avg_views);
+      lines.push(`\nPERFORMANCE MAP (highest-performing clusters first):\n${sorted.map(c => `- ${c.name}: ~${Number(c.avg_views).toLocaleString()} avg views`).join('\n')}`);
+    }
+
+    // Channel DNA secrets — top patterns from real video performance data
+    try {
+      const db      = require('../db');
+      const raw     = db.getKv('channel_dna_secrets');
+      const secrets = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+      if (Array.isArray(secrets) && secrets.length) {
+        // Prefer pattern + warning types (most actionable for writing), then fill with others
+        const priority = secrets.filter(s => s.type === 'pattern' || s.type === 'warning');
+        const rest     = secrets.filter(s => s.type !== 'pattern' && s.type !== 'warning');
+        const top      = [...priority, ...rest].slice(0, 3);
+        lines.push(`\nCHANNEL DNA (from real video performance — apply these, don't ignore them):\n${top.map(s =>
+          `• ${s.title}: ${s.implication || s.insight}`
+        ).join('\n')}`);
+      }
+    } catch (_) {}
+
+    return '\n' + lines.join('\n') + '\n';
+  } catch (_) {
+    return '';
+  }
+}
+
+module.exports = { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock, loadAudienceTargetBlock };

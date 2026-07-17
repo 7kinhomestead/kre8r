@@ -239,6 +239,7 @@
   <!-- TABS -->
   <div class="tabs">
     <button class="tab active" onclick="switchTab('groups')">Groups</button>
+    <button class="tab" onclick="switchTab('community')">🏕 Community</button>
     <button class="tab" onclick="switchTab('import')">Import CSV</button>
     <button class="tab" onclick="switchTab('campaigns')">Campaigns</button>
     <button class="tab" onclick="switchTab('webhook')">Webhook</button>
@@ -303,6 +304,60 @@
       <div id="mappings-section" style="margin-top:14px;display:none;">
         <div style="font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dimmer);margin-bottom:8px;">Active Keyword Mappings</div>
         <div id="mappings-list" class="mapping-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── COMMUNITY TAB ─────────────────────────────────────────────────── -->
+  <div id="tab-community" class="tab-panel">
+
+    <!-- Health Strip -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px;" id="communityHealthStrip">
+      <div class="group-card greenhouse"><div class="group-name">Greenhouse 🌱</div><div class="group-count" id="chGreenhouse">—</div><div class="group-sub">Free tier</div></div>
+      <div class="group-card garden"><div class="group-name">Garden 🌿</div><div class="group-count" id="chGarden">—</div><div class="group-sub">$19/mo</div></div>
+      <div class="group-card founding50"><div class="group-name">Founding 50 🏆</div><div class="group-count" id="chFounding">—</div><div class="group-sub">$297 one-time</div></div>
+      <div class="group-card"><div class="group-name">Lurkers 😶</div><div class="group-count" id="chLurkers" style="color:var(--amber)">—</div><div class="group-sub">Score ≤ 25</div></div>
+      <div class="group-card"><div class="group-name">Engaged ✊</div><div class="group-count" id="chEngaged" style="color:var(--teal)">—</div><div class="group-sub">Score 26–99</div></div>
+      <div class="group-card"><div class="group-name">Full ⭐</div><div class="group-count" id="chFull" style="color:var(--green)">—</div><div class="group-sub">Score 100</div></div>
+    </div>
+
+    <!-- Last synced + sync prompt -->
+    <div class="section-card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div class="section-label">📡 DATA STATUS</div>
+          <div id="communityLastSync" style="font-size:13px;color:var(--text-dim);">No sync data yet.</div>
+        </div>
+        <div style="font-size:12px;color:var(--text-dimmer);max-width:380px;line-height:1.5;">
+          To sync: open Claude Desktop → say <strong style="color:var(--teal)">"Run the weekly community snapshot"</strong> → Claude pulls all members via Kajabi MCP and pushes here automatically.
+        </div>
+      </div>
+    </div>
+
+    <!-- Warm Leads -->
+    <div class="section-card" style="margin-bottom:14px;">
+      <div class="section-label">🔥 WARM LEADS <span id="warmLeadCount" style="font-size:12px;font-weight:400;color:var(--amber);margin-left:6px;"></span></div>
+      <div class="section-sub">Members showing 2+ engagement signals — ready for a personal Garden Tier DM.</div>
+      <div id="warmLeadsTable">
+        <div class="empty-state">No warm leads yet. Run the weekly sync to detect them.</div>
+      </div>
+    </div>
+
+    <!-- Score Movers -->
+    <div class="section-card" style="margin-bottom:14px;">
+      <div class="section-label">📈 SCORE MOVERS THIS WEEK</div>
+      <div class="section-sub">Members whose onboarding progress score changed since the last snapshot.</div>
+      <div id="scoreMoversTable">
+        <div class="empty-state">No snapshot history yet. Needs two syncs to detect deltas.</div>
+      </div>
+    </div>
+
+    <!-- Recent Events -->
+    <div class="section-card">
+      <div class="section-label">📋 RECENT EVENTS</div>
+      <div id="communityEventsList">
+        <div class="empty-state">No events logged yet.</div>
       </div>
     </div>
 
@@ -583,7 +638,7 @@ async function refreshGroupCounts() {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 function switchTab(name) {
-  const names = ['groups', 'import', 'campaigns', 'webhook', 'welcome'];
+  const names = ['groups', 'community', 'import', 'campaigns', 'webhook', 'welcome'];
   document.querySelectorAll('.tab').forEach((t, i) => {
     t.classList.toggle('active', names[i] === name);
   });
@@ -1384,6 +1439,145 @@ function showToast(msg, type = '') {
 }
 
 init();
+</script>
+
+<script>
+// ── Community Intelligence ─────────────────────────────────────────────────
+
+async function loadCommunityHealth() {
+  try {
+    const d = await fetch('/api/community/health').then(r => r.json());
+    const c = d.counts || {};
+
+    // Health strip
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = (val || 0).toLocaleString(); };
+    set('chGreenhouse', c.greenhouse);
+    set('chGarden',     c.garden);
+    set('chFounding',   c.founding50);
+    set('chLurkers',    c.lurkers);
+    set('chEngaged',    c.engaged);
+    set('chFull',       c.fully_onboarded);
+
+    // Last sync
+    const syncEl = document.getElementById('communityLastSync');
+    if (syncEl) {
+      if (d.latest_snapshot) {
+        syncEl.textContent = `Last synced: ${d.latest_snapshot.snapshot_date} · ${c.total?.toLocaleString()} members in DB`;
+      } else {
+        syncEl.textContent = 'No sync data yet — run the weekly snapshot from Claude Desktop.';
+      }
+    }
+
+    // Warm leads
+    loadWarmLeads();
+
+    // Events
+    loadCommunityEvents();
+
+    // Movers
+    loadScoreMovers();
+
+  } catch (e) {
+    console.error('[Community]', e);
+  }
+}
+
+async function loadWarmLeads() {
+  const el = document.getElementById('warmLeadsTable');
+  const countEl = document.getElementById('warmLeadCount');
+  if (!el) return;
+  try {
+    const leads = await fetch('/api/community/warm-leads').then(r => r.json());
+    if (countEl) countEl.textContent = leads.length ? `(${leads.length})` : '';
+    if (!leads.length) { el.innerHTML = '<div class="empty-state">No warm leads detected yet.</div>'; return; }
+
+    const statusColor = { draft: 'var(--amber)', approved: 'var(--teal)', sent: 'var(--green)', no: 'var(--text-dimmer)', not_yet: 'var(--text-dimmer)' };
+    el.innerHTML = `
+      <div style="display:grid;gap:8px;margin-top:8px;">
+        ${leads.map(l => {
+          const signals = JSON.parse(l.signals_json || '[]');
+          const name = l.name || 'Unknown';
+          const daysAgo = l.created_at ? Math.floor((Date.now() - new Date(l.created_at).getTime()) / 86400000) : '?';
+          return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;">
+            <div>
+              <div style="font-weight:600;font-size:14px;">${name}</div>
+              <div style="font-size:11px;color:var(--text-dimmer);margin-top:2px;">${l.email || ''}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+                ${signals.map(s => `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--bg-card-2);color:var(--teal)">${s.replace(/_/g,' ')}</span>`).join('')}
+              </div>
+              ${l.dm_draft ? `<div style="font-size:11px;color:var(--text-dim);margin-top:6px;font-style:italic;border-left:2px solid var(--border);padding-left:8px;">${l.dm_draft.slice(0, 120)}…</div>` : ''}
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <span style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid var(--border);color:${statusColor[l.dm_status]||'var(--text-dimmer)'};">${l.dm_status}</span>
+              <div style="font-size:10px;color:var(--text-dimmer);margin-top:4px;">${daysAgo}d ago</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } catch (e) { el.innerHTML = '<div class="empty-state">Error loading warm leads.</div>'; }
+}
+
+async function loadScoreMovers() {
+  const el = document.getElementById('scoreMoversTable');
+  if (!el) return;
+  try {
+    const movers = await fetch('/api/community/movers').then(r => r.json());
+    if (!movers.length) { el.innerHTML = '<div class="empty-state">No score changes detected yet. Needs at least two weekly syncs.</div>'; return; }
+    el.innerHTML = `<div style="display:grid;gap:6px;margin-top:8px;">
+      ${movers.map(m => {
+        const dir = m.delta > 0 ? '↑' : '↓';
+        const color = m.delta > 0 ? 'var(--green)' : 'var(--red)';
+        const name = [m.first_name, m.last_name].filter(Boolean).join(' ') || 'Unknown';
+        return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:12px;font-size:13px;">
+          <span style="font-size:18px;font-weight:700;color:${color};min-width:32px;">${dir}${Math.abs(m.delta)}</span>
+          <div style="flex:1;">
+            <div style="font-weight:600;">${name}</div>
+            <div style="font-size:11px;color:var(--text-dimmer);">${m.score_prev} → ${m.score_now} · ${m.tier}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch (e) { el.innerHTML = '<div class="empty-state">Error loading score movers.</div>'; }
+}
+
+async function loadCommunityEvents() {
+  const el = document.getElementById('communityEventsList');
+  if (!el) return;
+  try {
+    const events = await fetch('/api/community/events?limit=20').then(r => r.json());
+    if (!events.length) { el.innerHTML = '<div class="empty-state">No events logged yet.</div>'; return; }
+    const icons = { new_member: '👋', first_post: '✍️', score_moved: '📈', challenge_complete: '🏁', tier_upgrade: '⬆️' };
+    el.innerHTML = `<div class="event-log-list">
+      ${events.map(e => {
+        const ts = e.created_at ? new Date(e.created_at).toLocaleDateString() : '';
+        const icon = icons[e.event_type] || '📌';
+        const meta = e.metadata_json ? (() => { try { return JSON.parse(e.metadata_json); } catch(_) { return {}; } })() : {};
+        let detail = e.event_type.replace(/_/g, ' ');
+        if (e.event_type === 'score_moved') detail = `score ${meta.from} → ${meta.to}`;
+        if (e.event_type === 'new_member')  detail = `joined · ${meta.tier || 'greenhouse'}`;
+        return `<div class="event-log-row">
+          <div style="font-size:18px;">${icon}</div>
+          <div>
+            <div class="event-log-email">${e.member_name || 'Unknown'}</div>
+            <div class="event-log-event">${detail}</div>
+          </div>
+          <div class="event-log-ts">${ts}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch (e) { el.innerHTML = '<div class="empty-state">Error loading events.</div>'; }
+}
+
+// Load community data when tab is opened
+const _origSwitchTab = switchTab;
+window._communityLoaded = false;
+switchTab = function(name) {
+  _origSwitchTab(name);
+  if (name === 'community' && !window._communityLoaded) {
+    window._communityLoaded = true;
+    loadCommunityHealth();
+  }
+};
 </script>
 
 <script src="/js/nav.js" defer></script>

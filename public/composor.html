@@ -880,13 +880,15 @@ function streamJob(jobId, barEl, logEl, onDone) {
       if (msg.data?.message) logLine(logEl, '', msg.data.message);
     }
 
-    if (msg.type === 'event') {
-      const d = msg.data || {};
+    // composor-sse-shape-mismatch fix: backend sends {stage,...} directly, not {type:'event',data} envelope
+    // Previously every branch was skipped — progress bar never moved, logs never showed anything
+    if (msg.stage) {
+      const d = msg;
       const line = formatStageLog(d);
       if (line) logLine(logEl, stageClass(d.stage), line);
       if (d.percent != null) barEl.style.width = d.percent + '%';
-      // Refresh tracks whenever a track is ready
-      if (d.stage === 'track_saved' || d.stage === 'suno_downloaded') {
+      // Refresh tracks on track_ready (fixed: was 'track_saved', backend now emits 'track_ready')
+      if (d.stage === 'track_ready' || d.stage === 'track_saved' || d.stage === 'suno_downloaded') {
         loadTracks();
       }
       if (d.stage === 'credits_exhausted') {
@@ -902,14 +904,16 @@ function streamJob(jobId, barEl, logEl, onDone) {
       }
     }
 
-    if (msg.type === 'done') {
+    if (msg.stage === 'done' || msg.type === 'done') {
       barEl.style.width = '100%';
       logLine(logEl, 'ok', '✓ Complete');
       es.close();
       onDone?.();
     }
 
-    if (msg.type === 'error') {
+    if (msg.stage === 'error' || msg.type === 'error') {
+      logLine(logEl, 'err', `✗ ${msg.error || msg.data?.error || 'Failed'}`); es.close(); onDone?.();
+    } else if (false) { // replaced below
       logLine(logEl, 'err', `✗ ${msg.data?.error || 'Failed'}`);
       es.close();
       onDone?.();

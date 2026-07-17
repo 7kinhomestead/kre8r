@@ -161,15 +161,24 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
     // Allow per-job model override via options.model, else use server default
     const modelToUse = (options && options.model) || WHISPER_MODEL;
 
+    // Pin the model cache to a fixed directory so every Whisper subprocess
+    // reuses the same downloaded model instead of re-downloading it.
+    // The CLI flag is `--model_dir` (maps to load_model(download_root=...)).
+    // The earlier `--download-root` flag was wrong — that name doesn't exist,
+    // which is why Whisper kept falling back to the default cache and (under
+    // memory pressure) re-downloading the model on every clip after ~60.
+    try {
+      fs.mkdirSync(WHISPER_CACHE_DIR, { recursive: true });
+    } catch (_) { /* non-fatal — Whisper will fall back to default cache */ }
+
     const args = [
       '-m', 'whisper',
       filePath,
       '--model',           modelToUse,
+      '--model_dir',       WHISPER_CACHE_DIR,
       '--output_format',   'json',
       '--word_timestamps', 'True',
       '--output_dir',      TRANSCRIPTS_DIR,
-      // NOTE: --download-root was removed — not supported by all Whisper versions.
-      // The model downloads to Whisper's default cache (~/.cache/whisper) on first run.
       '--verbose',         'False',
     ];
 
@@ -484,13 +493,15 @@ async function transcribeFileSmart(filePath, options = {}) {
     return { ok: true, skipped: true, transcript_path: destPath, ...existing };
   }
 
-  // Force-Whisper override
-  const forceWhisper = (process.env.TRANSCRIBE_ENGINE || '').toLowerCase() === 'whisper';
+  // Default engine is Whisper. Set TRANSCRIBE_ENGINE=resolve to try DaVinci first.
+  // Resolve path adds 45s+ cold-start timeout and fails whenever Resolve isn't
+  // running or the timeline isn't loaded — not worth it for assembly workflow.
+  const forceWhisper = (process.env.TRANSCRIBE_ENGINE || 'whisper').toLowerCase() !== 'resolve';
 
   let transcript = null;
   let usedEngine  = null;
 
-  // ── Try Resolve first ───────────────────────────────────────────────────
+  // ── Try Resolve first (only if TRANSCRIBE_ENGINE=resolve) ──────────────
   if (!forceWhisper) {
     onProgress?.({ stage: 'resolve_attempt', message: 'Trying DaVinci Resolve transcription…' });
     const resolveResult = await transcribeWithResolve(filePath, { footageId, onProgress });

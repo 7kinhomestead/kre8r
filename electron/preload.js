@@ -17,6 +17,13 @@ contextBridge.exposeInMainWorld('kre8rElectron', {
   // Native folder picker — returns selected path string or null if cancelled
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
 
+  // Launch a sibling app (OrgΩr on :3002, KinOS on :3001)
+  // Only works in Electron — button is hidden in browser mode
+  launchApp: (appName) => ipcRenderer.invoke('launch-app', appName),
+
+  // OS notification — fires for CRITICAL attention items detected on the bridge
+  notify: (title, body) => ipcRenderer.invoke('notify', title, body),
+
   // Platform info for conditional UI (e.g. menu bar adjustments on macOS)
   platform:   process.platform,
   isElectron: true,

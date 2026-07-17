@@ -55,7 +55,13 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       error_file:    'logs/northr-error.log',
       out_file:      'logs/northr-out.log',
-      merge_logs:    true
+      merge_logs:    true,
+      // northr-1 fix: cron was writing alerts to ~/.kre8r/kre8r.db (default DB_PATH)
+      // while the Electron app reads AppData\Roaming\kre8r\kre8r.db — alerts never surfaced
+      env: {
+        DB_PATH:  process.env.APPDATA ? require('path').join(process.env.APPDATA, 'kre8r', 'kre8r.db') : undefined,
+        ELECTRON: '1',
+      }
     }
   ]
 };

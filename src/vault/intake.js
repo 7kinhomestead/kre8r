@@ -650,6 +650,22 @@ async function processProxyUpdate(proxyPath, brawRecord, options = {}) {
   }
   db.updateFootage(brawRecord.id, updateFields);
 
+  // Enqueue frame analysis now that proxy is available.
+  // Always runs on proxy_path (BRAW is undecoded, proxy is H.264 MP4).
+  // Uses a lazy require to avoid circular deps — watcher.js also requires intake.js.
+  try {
+    const fxQueue = require('./frame-analysis-queue');
+    const finalShotType = normalizeShotType(classification.shot_type) || brawRecord.shot_type;
+    if (finalShotType === 'talking-head') {
+      const fxResult = fxQueue.enqueue(brawRecord.id, proxyPath, path.basename(proxyPath));
+      if (fxResult.ok) {
+        console.log(`[VaultΩr] 👁 Queued for frame analysis: ${path.basename(proxyPath)} (job=${fxResult.job_id})`);
+      }
+    }
+  } catch (fxErr) {
+    console.warn(`[VaultΩr] Frame analysis enqueue failed: ${fxErr.message}`);
+  }
+
   onProgress?.({ stage: 'saved', file: original_filename, id: brawRecord.id, proxy_update: true });
 
   return {

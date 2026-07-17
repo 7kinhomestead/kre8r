@@ -1374,6 +1374,20 @@ async function loadProject(id) {
 //  FETCH BEATS
 // ════════════════════════════════════════════════════════════════
 async function fetchBeats(silent = false) {
+  // C1 fix: retry any pending writes before merging server state
+  if (window._pendingWrites?.size) {
+    const toRetry = Array.from(window._pendingWrites.values());
+    for (const w of toRetry) {
+      try {
+        const r = await fetch(`/api/shootday/${projectId}/take`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ beat_index: w.beatIdx, beat_name: w.beatName, status: w.status, note: w.note }),
+        });
+        if (r.ok) window._pendingWrites.delete(`${w.beatIdx}`);
+      } catch (_) {} // still offline — keep pending, try next cycle
+    }
+  }
+
   const res  = await fetch(`/api/shootday/${projectId}/beats`);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
@@ -1701,6 +1715,11 @@ async function markTake(beatIdx, status) {
   if (activeTab === 'script') refreshScriptDots();
 
   // POST to server
+  // C1 fix: track pending writes — if POST fails, retry on next refresh cycle
+  const writeKey = `${beatIdx}`;
+  if (!window._pendingWrites) window._pendingWrites = new Map();
+  window._pendingWrites.set(writeKey, { beatIdx, beatName: beat.name, status, note: takes[beatIdx]?.note || null });
+
   try {
     const res = await fetch(`/api/shootday/${projectId}/take`, {
       method:  'POST',
@@ -1715,8 +1734,10 @@ async function markTake(beatIdx, status) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.coverage) updateCoverage(data.coverage);
+    window._pendingWrites.delete(writeKey); // synced — remove from pending
   } catch(err) {
-    showToast('Save failed — will retry on next refresh');
+    showToast('Save failed — will retry automatically');
+    // Local mark preserved in takes[] — server will not clobber it on refresh
   }
 }
 

@@ -206,13 +206,24 @@ async function callClaude(systemPrompt, messages, maxTokens = 512, tools = null,
 
 async function callClaudeText(systemPrompt, messages, maxTokens = 512, sessionId = null, onRetry = null) {
   const data = await callClaude(systemPrompt, messages, maxTokens, null, sessionId, onRetry);
-  return data.content[0].text.trim();
+  // M1: defensive extraction — content[0] may be tool_use or absent on max_tokens/refusal
+  const block = (data.content || []).find(b => b.type === 'text');
+  if (!block?.text) throw new Error('Claude returned no text content');
+  return block.text.trim();
 }
 
 async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024, sessionId = null, onRetry = null) {
   const raw = await callClaudeText(systemPrompt, messages, maxTokens, sessionId, onRetry);
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
   try { return JSON.parse(cleaned); } catch {
+    // M2: attempt to extract largest balanced JSON object/array before giving up
+    const objMatch = cleaned.match(/\{[\s\S]*\}/);
+    const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+    const candidate = (objMatch?.[0]?.length || 0) >= (arrMatch?.[0]?.length || 0)
+      ? objMatch?.[0] : arrMatch?.[0];
+    if (candidate) {
+      try { return JSON.parse(candidate); } catch (_) {}
+    }
     throw new Error(`Claude returned malformed JSON. First 300 chars: ${cleaned.slice(0, 300)}`);
   }
 }
@@ -224,6 +235,59 @@ async function callClaudeJSON(systemPrompt, messages, maxTokens = 1024, sessionI
  * falls back to Claude's training knowledge automatically.
  * Returns { text, source: 'web'|'training' }
  */
+// ─── Gemini API Helper (Google AI Studio — search grounding) ──────────────────
+// Used for Phase 1 (YouTube landscape) and Phase 2 (Data & Facts) in /research.
+// Gemini with google_search grounding fetches live results; falls back to Claude
+// training knowledge if the API key is missing or the call fails.
+
+async function callGemini(prompt, { useSearch = true } = {}) {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY not set');
+
+  const axios = require('axios');
+  const body  = { contents: [{ parts: [{ text: prompt }] }] };
+  if (useSearch) body.tools = [{ google_search: {} }];
+
+  const response = await axios.post(
+    `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-2.5-flash'}:generateContent`,
+    body,
+    {
+      params:  { key: apiKey },
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 60000,
+    }
+  );
+
+  const candidate = (response.data?.candidates || [])[0] || {};
+  const parts     = candidate.content?.parts || [];
+  const text      = parts.filter(p => p.text).map(p => p.text).join('\n').trim();
+
+  // Pull cited URLs from grounding metadata
+  const chunks  = candidate.groundingMetadata?.groundingChunks || [];
+  const sources = chunks.map(c => c.web?.uri).filter(Boolean);
+
+  if (!text) throw new Error('Gemini returned empty response');
+  return { text, sources };
+}
+
+// Gemini with Claude fallback — same pattern as callClaudeWithSearchFallback
+async function callGeminiWithFallback(geminiPrompt, fallbackSystem, fallbackMessages, maxTokens = 1200, sessionId = null, onRetry = null) {
+  const hasKey = !!process.env.GOOGLE_AI_API_KEY;
+  if (hasKey) {
+    try {
+      const result = await callGemini(geminiPrompt, { useSearch: true });
+      console.log('[id8r] Gemini search succeeded');
+      return { text: result.text, sources: result.sources, source: 'gemini' };
+    } catch (e) {
+      console.warn(`[id8r] Gemini failed (${e.message}) — falling back to Claude training knowledge`);
+    }
+  } else {
+    console.warn('[id8r] GOOGLE_AI_API_KEY not set — using Claude training knowledge');
+  }
+  const text = await callClaudeText(fallbackSystem, fallbackMessages, maxTokens, sessionId, onRetry);
+  return { text, sources: [], source: 'training' };
+}
+
 async function callClaudeWithSearchFallback(systemPrompt, fallbackSystem, messages, fallbackMessages, maxTokens = 1200, sessionId = null, onRetry = null) {
   try {
     const data = await callClaude(
@@ -252,10 +316,14 @@ async function callClaudeWithSearchFallback(systemPrompt, fallbackSystem, messag
 // ─── Message Window Helper ─────────────────────────────────────────────────────
 
 function getRecentMessages(messages, maxExchanges = 6) {
-  const seed    = messages.slice(0, 2);
-  const recent  = messages.slice(2);
-  const windowed = recent.slice(-(maxExchanges * 2));
-  return [...seed, ...windowed];
+  const seed    = messages.slice(0, 2); // synthetic "Let's get started." pair
+  const rest    = messages.slice(2);
+  const windowed = rest.slice(-(maxExchanges * 2));
+  // M6: pin the creator's FIRST real user message so it never falls out of the window
+  // In long Shape-It sessions, the founding idea (index 2) is otherwise lost to the rolling slice
+  const firstReal = rest.find(m => m.role === 'user' && m.content !== "Let's get started.");
+  const pinned    = firstReal && !windowed.includes(firstReal) ? [firstReal] : [];
+  return [...seed, ...pinned, ...windowed];
 }
 
 // ─── POST /api/id8r/start ──────────────────────────────────────────────────────
@@ -437,6 +505,29 @@ router.post('/fast-concepts', async (req, res) => {
       }
     } catch (_) {}
 
+    // H7: Post-Mortem brief — steer concepts away from diagnosed failure patterns
+    try {
+      const pm = require('../db').getActivePostMortemBrief();
+      if (pm) {
+        let pmBlock = '\n\n## LAST POST-MORTEM — DO NOT REPEAT THESE MISTAKES';
+        if (pm.root_cause)   pmBlock += `\nRoot cause: ${pm.root_cause}`;
+        if (pm.adjustments)  pmBlock += `\nAdjustments: ${pm.adjustments}`;
+        if (pm.avoid)        pmBlock += `\nAvoid: ${pm.avoid}`;
+        pmBlock += '\nDo not generate concepts that repeat this pattern. If an angle overlaps with "Avoid", only surface it with a materially different execution.';
+        mirrrBlock += pmBlock;
+      }
+    } catch (_) {}
+
+    // H6: Voice calibration + audience target — hooks must be in Jason's real calibrated voice
+    let voiceBlock = '';
+    try {
+      const { loadVoiceCalibrationBlock, loadAudienceTargetBlock } = require('../writr/claude');
+      const vcBlock  = loadVoiceCalibrationBlock();
+      const audBlock = loadAudienceTargetBlock();
+      if (vcBlock)  voiceBlock += `\n\n${vcBlock}`;
+      if (audBlock) voiceBlock += `\n\n${audBlock}`;
+    } catch (_) {}
+
     const angleInstruction = angle
       ? `\nThe creator wants to lean toward the "${angle}" angle — at least 2 concepts should use or riff on it.`
       : '';
@@ -455,7 +546,7 @@ Generate exactly 5 concept directions. Rules:
 - Concept 3 should be the wildcard: the most surprising angle that still makes sense for this audience${angleInstruction}
 
 CONTENT ANGLES:
-${anglesText}${intelligenceBlock}${mirrrBlock}
+${anglesText}${intelligenceBlock}${mirrrBlock}${voiceBlock}
 
 Return ONLY valid JSON:
 {
@@ -603,6 +694,29 @@ router.post('/concepts', async (req, res) => {
       }
     } catch (_) {}
 
+    // H7: Post-Mortem brief (conversational path)
+    let postMortemBlock2 = '';
+    try {
+      const pm2 = require('../db').getActivePostMortemBrief();
+      if (pm2) {
+        postMortemBlock2 = '\n\n## LAST POST-MORTEM — DO NOT REPEAT THESE MISTAKES';
+        if (pm2.root_cause)  postMortemBlock2 += `\nRoot cause: ${pm2.root_cause}`;
+        if (pm2.adjustments) postMortemBlock2 += `\nAdjustments: ${pm2.adjustments}`;
+        if (pm2.avoid)       postMortemBlock2 += `\nAvoid: ${pm2.avoid}`;
+        postMortemBlock2 += '\nDo not generate concepts that repeat this pattern.';
+      }
+    } catch (_) {}
+
+    // H6: Voice calibration + audience target (conversational path)
+    let voiceBlock2 = '';
+    try {
+      const { loadVoiceCalibrationBlock, loadAudienceTargetBlock } = require('../writr/claude');
+      const vcb  = loadVoiceCalibrationBlock();
+      const aub  = loadAudienceTargetBlock();
+      if (vcb) voiceBlock2 += `\n\n${vcb}`;
+      if (aub) voiceBlock2 += `\n\n${aub}`;
+    } catch (_) {}
+
     const result = await callClaudeJSON(
       `You are Id8Ωr, a creative strategist for ${brand} (${followerSummary}, ${niche} content). Based on the conversation below, generate exactly 3 concept directions for the next video.
 
@@ -613,7 +727,7 @@ RULES:
 - Be specific to what was discussed, not generic. Match the creator's real voice: straight-talking, funny, real numbers, never corporate.
 
 CONTENT ANGLES:
-${anglesText}${intelligenceBlock}${clipsrBlock}${mirrrBlock}${studioIntelBlock2}
+${anglesText}${intelligenceBlock}${clipsrBlock}${mirrrBlock}${studioIntelBlock2}${postMortemBlock2}${voiceBlock2}
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -672,8 +786,10 @@ router.post('/choose', async (req, res) => {
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     const choiceNum = parseInt(choice);
-    if (!isNaN(choiceNum) && choiceNum >= 1 && choiceNum <= 3) {
-      const concepts = session.concepts || [];
+    const concepts  = session.concepts || [];
+    // H10: accept any valid index — fast-concepts returns 5, conversational returns 3
+    // Previously clamped to 1–3, silently discarding cards 4 and 5 as "blends"
+    if (!isNaN(choiceNum) && choiceNum >= 1 && choiceNum <= concepts.length) {
       session.chosenConcept = concepts[choiceNum - 1] || {
         id: choiceNum, angle: 'Custom', headline: String(choice), why: '', hook: '',
       };
@@ -747,9 +863,12 @@ router.post('/research', async (req, res) => {
       return res.end();
     }
 
+    // M7: include delay_ms + attempt so the frontend toast shows accurate backoff info
     const onRetry = (attempt, delayMs, reason) => send({
-      stage:   'retrying',
-      message: `Claude is ${reason} — retrying in ${Math.round(delayMs / 1000)}s… (attempt ${attempt} of ${BACKOFF_DELAYS.length})`,
+      stage:    'retrying',
+      delay_ms: delayMs,
+      attempt:  attempt,
+      message:  `Claude is ${reason} — retrying in ${Math.round(delayMs / 1000)}s… (attempt ${attempt} of ${BACKOFF_DELAYS.length})`,
     });
 
     const { brand: _brand, creatorName: _cn, followerSummary: _fs, niche: _niche } = getCreatorContext();
@@ -775,23 +894,32 @@ router.post('/research', async (req, res) => {
 
     const results = {};
 
-    // ── Phase 1: YouTube Research ─────────────────────────────────
-    // Uses Claude training knowledge. web_search_20260209 is unreliable —
-    // when it fails it burns minutes retrying before giving up. Revisit when stable.
+    // ── Phase 1: YouTube Landscape (Gemini live search → Claude fallback) ────────
     const phase1Label = chosenAngle ? `YouTube Research — ${chosenAngle}` : 'YouTube Research';
     send({ stage: 'phase_start', phase: 1, label: phase1Label });
     try {
-      results.youtube = await callClaudeText(
-        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Draw on your training knowledge of YouTube content trends. Be specific — name real channels, real video types, and real gaps you know about.`,
-        [{ role: 'user', content: `${conceptBrief}\n\nFrom your knowledge of YouTube: name 4-5 video types or approaches that perform well for this topic (with example channel styles if you know them). What angle dominates? What ONE content gap could this creator own?` }],
+      const p1 = await callGeminiWithFallback(
+        // Gemini prompt — tight and search-optimized
+        `Research YouTube content landscape for: ${conceptBrief}
+
+Search for: what types of YouTube videos exist on this topic right now, which channels dominate, what angles are oversaturated, and what content gap exists that a homesteading/financial-freedom creator with 725k TikTok and 54k YouTube could own.
+
+Return: 4-5 specific video types performing well (with channel examples if findable), the dominant angle that owns this space, and ONE specific gap this creator could own. Be concrete — real channel names, real approaches.`,
+        // Claude fallback system
+        `You are a YouTube research analyst for ${_brand}, a ${_niche} channel with ${_fs}. Draw on your training knowledge of YouTube content trends. Name real channels, real video types, and real content gaps.`,
+        [{ role: 'user', content: `${conceptBrief}\n\nName 4-5 video types that perform well for this topic (with channel examples). What angle dominates? What ONE gap could this creator own?` }],
         1200, session_id, onRetry
       );
+      results.youtube = p1.text;
+      results.youtube_source  = p1.source;
+      results.youtube_sources = p1.sources || [];
+      if (p1.source === 'gemini') send({ stage: 'phase_note', phase: 1, message: '🔍 Live Google search' });
     } catch (e) {
       console.error('[id8r/research] Phase 1 error:', e.message);
-      results.youtube = `Error: ${e.message}`;
+      results.youtube = `Research unavailable: ${e.message}`;
+      results.youtube_source = 'error';
     }
-    send({ stage: 'phase_result', phase: 1, label: phase1Label, data: results.youtube });
-    // Checkpoint: phase 1 done — use persistSession shape so restore always works
+    send({ stage: 'phase_result', phase: 1, label: phase1Label, data: results.youtube, source: results.youtube_source, sources: results.youtube_sources || [] });
     try {
       db.setCheckpoint(session_id, 'id8r', {
         ...session,
@@ -799,24 +927,41 @@ router.post('/research', async (req, res) => {
       });
     } catch (_) {}
 
-    // ── Phase 2: Data & Facts ─────────────────────────────────────
-    // Uses Claude training knowledge. Same reasoning as Phase 1 — web_search unreliable.
+    // ── Phase 2: Data & Facts (Gemini live search → Claude fallback) ──────────
     const phase2Label = chosenAngle ? `Data & Facts — ${chosenAngle}` : 'Data & Facts';
     send({ stage: 'phase_start', phase: 2, label: phase2Label });
     try {
-      results.data = await callClaudeText(
-        `You are a research analyst for ${_brand}, a ${_niche} content creator. Draw on your training knowledge to surface compelling statistics, studies, and data points. Be specific — real numbers, named studies, credible sources where you know them.`,
-        [{ role: 'user', content: `${conceptBrief}\n\nFrom your knowledge: give 3-5 concrete statistics or research findings that strengthen this specific angle. Include the source name where you know it. These should be the kind of numbers that make an audience stop scrolling.` }],
+      const p2 = await callGeminiWithFallback(
+        // Gemini prompt
+        `Find real statistics, studies, and data points for: ${conceptBrief}
+
+Search for: concrete numbers, named studies, government or credible source data that supports or challenges this video angle. The creator's audience cares about real costs, real outcomes, financial impact, and practical implications for self-reliant/off-grid people.
+
+Return: 3-5 specific statistics with source names. Include publication year where findable. Prioritize numbers that would make someone stop scrolling — surprising, counterintuitive, or financially significant.`,
+        // Claude fallback system
+        `You are a research analyst for ${_brand}, a ${_niche} content creator. Surface compelling statistics and data points from your training knowledge. Real numbers, named studies, credible sources.`,
+        [{ role: 'user', content: `${conceptBrief}\n\nGive 3-5 concrete statistics or research findings that strengthen this angle. Include source names. Make them scroll-stopping.` }],
         1200, session_id, onRetry
       );
-      session.citations = [];
+      results.data = p2.text;
+      results.data_source  = p2.source;
+      results.data_sources = p2.sources || [];
+      // M3: accumulate citations from ALL grounded phases — Phase 1 sources were dropped before
+      const allSources = [...(results.youtube_sources || []), ...(p2.sources || [])];
+      const seenUrls   = new Set();
+      session.citations = allSources.filter(s => {
+        const u = s.uri || s.url || s;
+        if (seenUrls.has(u)) return false;
+        seenUrls.add(u); return true;
+      });
+      if (p2.source === 'gemini') send({ stage: 'phase_note', phase: 2, message: '🔍 Live Google search' });
     } catch (e) {
       console.error('[id8r/research] Phase 2 error:', e.message);
-      results.data = `Error: ${e.message}`;
-      session.citations = [];
+      results.data = `Research unavailable: ${e.message}`;
+      results.data_source  = 'error';
+      session.citations    = [];
     }
-    send({ stage: 'phase_result', phase: 2, label: phase2Label, data: results.data });
-    // Checkpoint: phase 2 done
+    send({ stage: 'phase_result', phase: 2, label: phase2Label, data: results.data, source: results.data_source, sources: results.data_sources || [] });
     try {
       db.setCheckpoint(session_id, 'id8r', {
         ...session,
@@ -824,63 +969,76 @@ router.post('/research', async (req, res) => {
       });
     } catch (_) {}
 
-    // ── Phase 3: VaultΩr cross-reference ─────────────────────────
+    // ── Phase 3: VaultΩr cross-reference (DB direct — no HTTP auth issues) ────
     const phase3Label = 'VaultΩr — have you covered this before?';
     send({ stage: 'phase_start', phase: 3, label: phase3Label });
     try {
-      const { default: fetch } = await import('node-fetch');
-      const vaultRes = await fetch('http://localhost:3000/api/vault/footage');
-      if (!vaultRes.ok) {
-        results.vault = 'VaultΩr not available.';
+      const allFootage = db.getAllFootage({ limit: 500 });
+      const completed  = (allFootage || []).filter(f =>
+        f.shot_type === 'completed-video' || f.classification || f.status === 'completed'
+      );
+
+      if (completed.length === 0) {
+        results.vault = 'No completed videos in VaultΩr yet — fresh territory.';
       } else {
-        const footage  = await vaultRes.json();
-        const items    = Array.isArray(footage) ? footage : (footage.footage || []);
-        const completed = items.filter(f => f.status === 'completed' || f.classification);
-        if (completed.length === 0) {
-          results.vault = 'No classified footage in VaultΩr yet.';
+        // Keyword match against title, tags, description, classification
+        const keywords = conceptBrief.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+        const related  = completed.filter(f => {
+          const haystack = [f.title, f.tags, f.description, f.classification, f.topic]
+            .filter(Boolean).join(' ').toLowerCase();
+          return keywords.some(k => haystack.includes(k));
+        });
+
+        if (related.length === 0) {
+          results.vault = `VaultΩr has ${completed.length} completed videos — none closely match this topic. Fresh territory.`;
         } else {
-          const topicKeywords = conversationText.toLowerCase().split(/\s+/).filter(w => w.length > 4);
-          const related = completed.filter(f => {
-            const text = `${f.title || ''} ${f.classification || ''} ${f.topic || ''}`.toLowerCase();
-            return topicKeywords.some(k => text.includes(k));
-          });
-          results.vault = related.length === 0
-            ? `VaultΩr has ${completed.length} completed clips — none closely match this topic. Fresh territory.`
-            : `VaultΩr found ${related.length} related clip(s): ${related.slice(0, 5).map(f => f.title || f.filename).join(', ')}`;
+          const names = related.slice(0, 5).map(f => f.title || f.filename || `footage_${f.id}`).join(', ');
+          results.vault = `VaultΩr found ${related.length} related video(s): ${names}. Review before filming — existing footage may be reusable or need a fresh angle to avoid repeating yourself.`;
         }
       }
     } catch (e) {
+      console.error('[id8r/research] Phase 3 error:', e.message);
       results.vault = `VaultΩr check failed: ${e.message}`;
     }
     send({ stage: 'phase_result', phase: 3, label: phase3Label, data: results.vault });
-    // Checkpoint: all 3 phases done — full research in DB
     try {
       db.setCheckpoint(session_id, 'id8r', {
         ...session,
         researchResults: { youtube: results.youtube, data: results.data, vault: results.vault },
       });
     } catch (_) {}
-    // Phase 3 is a local VaultΩr check — no web searches, no delay needed.
 
-    // ── Phase 4: Summarization ────────────────────────────────────
-    send({ stage: 'phase_start', phase: 4, label: 'Summarizing...' });
+    // ── Phase 4: Summarization ────────────────────────────────────────────────
+    send({ stage: 'phase_start', phase: 4, label: 'Synthesizing research...' });
 
     session.researchResults = results;
 
+    // Build a clean summary input — gracefully handle any phase that errored
+    const youtubeText = (results.youtube || '').startsWith('Research unavailable')
+      ? '(YouTube research unavailable)'
+      : (results.youtube || '').slice(0, 2000);
+    const dataText    = (results.data || '').startsWith('Research unavailable')
+      ? '(Data research unavailable)'
+      : (results.data || '').slice(0, 2000);
+    const vaultText   = (results.vault || '').slice(0, 500);
+
     try {
       session.researchSummary = await callClaudeText(
-        'You are a research summarizer. Be concise. Return plain text bullet points only, no markdown headers.',
+        `You are a research synthesizer for ${_brand}, a ${_niche} creator. Synthesize these research results into actionable bullet points for a content creator about to make a video. Under 400 words. Plain text bullets only — no markdown headers. Focus on: content gaps to exploit, strongest data points to use on camera, and vault context.`,
         [{
           role: 'user',
-          content: `Summarize these research results into bullet points under 400 words:\n\nYouTube: ${results.youtube.slice(0, 2000)}\n\nData: ${results.data.slice(0, 2000)}\n\nVault: ${results.vault.slice(0, 500)}`,
+          content: `YouTube landscape:\n${youtubeText}\n\nData & facts:\n${dataText}\n\nVaultΩr:\n${vaultText}\n\nConcept: ${conceptBrief}\n\nSynthesize into actionable bullets.`,
         }],
-        600,
-        session_id,
-        onRetry
+        700, session_id, onRetry
       );
     } catch (e) {
-      console.error('[id8r] summarization failed:', e.message);
-      session.researchSummary = `YouTube: ${results.youtube.slice(0, 300)}\n\nData: ${results.data.slice(0, 300)}\n\nVault: ${results.vault.slice(0, 200)}`;
+      console.error('[id8r] Phase 4 summarization failed:', e.message);
+      // Hard fallback — never leave researchSummary empty
+      const bullets = [];
+      if (youtubeText && !youtubeText.includes('unavailable')) bullets.push(`YouTube: ${youtubeText.slice(0, 250)}`);
+      if (dataText    && !dataText.includes('unavailable'))    bullets.push(`Data: ${dataText.slice(0, 250)}`);
+      if (vaultText)  bullets.push(`Vault: ${vaultText.slice(0, 150)}`);
+      session.researchSummary = bullets.join('\n\n') || 'Research completed — see individual phase results above.';
     }
 
     // Save raw research to session vault (no project_id yet — saved again at send-pipeline)
@@ -1026,9 +1184,41 @@ Return ONLY valid JSON in this exact shape:
 
 // ─── POST /api/id8r/send-pipeline ─────────────────────────────────────────────
 
+// Inline edits from the Vision Brief screen arrive with the send-pipeline call.
+// They're written into the SAME briefData fields every downstream consumer
+// (WritΩr, project-context.json, vault, id8r_data) already reads — no schema change.
+function applyBriefEdits(session, edits) {
+  if (!edits || typeof edits !== 'object') return;
+  const brief = session.briefData || (session.briefData = {});
+  for (const f of ['elevator_pitch', 'audience_insight', 'story_angle']) {
+    if (typeof edits[f] === 'string') brief[f] = edits[f];
+  }
+  for (const f of ['talking_points', 'what_not_to_do']) {
+    if (Array.isArray(edits[f])) {
+      brief[f] = edits[f].filter(p => typeof p === 'string' && p.trim()).map(p => p.trim());
+    }
+  }
+  if (edits.pipeline_brief && typeof edits.pipeline_brief === 'object') {
+    const pb = { ...(brief.pipeline_brief || {}) };
+    for (const f of ['title', 'concept_note', 'high_concept']) {
+      if (typeof edits.pipeline_brief[f] === 'string') pb[f] = edits.pipeline_brief[f];
+    }
+    brief.pipeline_brief = pb;
+  }
+  // Edited hook flows into chosenConcept.hook — the field WritΩr and
+  // project-context.json read as the opening hook
+  if (typeof edits.selected_hook === 'string' && edits.selected_hook.trim() && session.chosenConcept) {
+    session.chosenConcept.hook = edits.selected_hook.trim();
+  }
+  // Keep the vault copy in sync so id8r/brief.json reflects what was dispatched
+  if (session._briefVaultData) {
+    session._briefVaultData = { ...session._briefVaultData, briefData: brief, editedAt: new Date().toISOString() };
+  }
+}
+
 router.post('/send-pipeline', async (req, res) => {
   try {
-    const { session_id, destination, project_id: existingProjectId } = req.body;
+    const { session_id, destination, project_id: existingProjectId, brief_edits } = req.body;
 
     if (!session_id) return res.status(400).json({ error: 'session_id is required' });
 
@@ -1036,6 +1226,11 @@ router.post('/send-pipeline', async (req, res) => {
     if (!session) return res.status(404).json(SESSION_EXPIRED);
 
     if (!session.briefData && !session.packageData) return res.status(400).json({ error: 'No brief generated yet — run /brief first' });
+
+    if (brief_edits) {
+      applyBriefEdits(session, brief_edits);
+      persistSession(session_id);
+    }
 
     const brief = session.briefData || {};
     const pb    = brief.pipeline_brief || {};
@@ -1050,22 +1245,36 @@ router.post('/send-pipeline', async (req, res) => {
       const title = pb.title || brief.elevator_pitch || session.chosenConcept?.headline || 'Untitled Id8Ωr Project';
       const topic = [pb.high_concept, pb.content_angle, pb.concept_note].filter(Boolean).join(' | ');
       project = db.createProject(title, topic, null, null);
+      // Stamp source='id8r' so Mission Control dedup prefers PipΩr version if one exists
+      try { db.setProjectSource(project.id, 'id8r'); } catch (_) {}
     }
 
     // Write brief fields to DB so PipΩr and WritΩr can pre-populate
+    // M5: content_type = format (short_form/long_form/series), NOT the angle
+    // content_angle goes into high_concept_angles (projects table already has this column)
     db.updateProjectPipr(project.id, {
       entry_point:  pb.entry_point  || 'script_first',
-      content_type: pb.content_angle || '',
-      high_concept: pb.high_concept  || '',
+      content_type: pb.content_type || 'long_form',
+      high_concept: pb.high_concept || '',
     });
+    if (pb.content_angle) {
+      try { db.getRawDb().prepare('UPDATE projects SET high_concept_angles = ? WHERE id = ?').run(pb.content_angle, project.id); } catch (_) {}
+    }
 
-    // Persist full Id8Ωr research session so WritΩr can inject creative context into prompts
+    // Persist full Id8Ωr research session so WritΩr can inject creative context into prompts.
+    // When attaching to an EXISTING project, merge into existing id8r_data rather than
+    // overwriting — prevents a partial session (e.g. packageData only, no brief) from
+    // clobbering a previously-saved chosenConcept/researchSummary/briefData.
+    const existingId8rData = existingProjectId
+      ? (() => { try { const p = db.getProject(parseInt(existingProjectId, 10)); return JSON.parse(p?.id8r_data || '{}'); } catch (_) { return {}; } })()
+      : {};
     db.updateProjectId8r(project.id, {
-      chosenConcept:   session.chosenConcept   || null,
-      researchSummary: session.researchSummary  || null,
-      packageData:     session.packageData      || null,
-      briefData:       session.briefData        || null,
-      citations:       session.citations        || [],
+      ...existingId8rData,
+      ...(session.chosenConcept   != null && { chosenConcept:   session.chosenConcept }),
+      ...(session.researchSummary != null && { researchSummary: session.researchSummary }),
+      ...(session.packageData     != null && { packageData:     session.packageData }),
+      ...(session.briefData       != null && { briefData:       session.briefData }),
+      ...(session.citations?.length       && { citations:       session.citations }),
     });
 
     // Build project-context.json — single source of truth for the pipeline

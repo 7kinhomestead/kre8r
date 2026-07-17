@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refit Bay — Kre8Ωr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Exo+2:wght@300;400;500;600&family=Bebas+Neue&display=swap" rel="stylesheet">
+
+<style>
+/* ─── RESET & BASE TOKENS ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --mc-bg:          #060c0e;
+  --mc-panel:       #0d1e20;
+  --mc-panel-hi:    #112428;
+  --mc-line:        #1a2e32;
+  --mc-teal:        #14b8a6;
+  --mc-teal-dim:    #0d6b62;
+  --mc-cyan:        #06b6d4;
+  --mc-text:        #d4edea;
+  --mc-text-dim:    #4a7070;
+  --mc-amber:       #f0a020;
+  --mc-red:         #ef4444;
+  --mc-green:       #22c55e;
+  --mc-green-soft:  #86efac;
+  --mc-violet:      #8b5cf6;
+  --mc-orange:      #fb923c;
+  --font-hud:       'Orbitron', monospace;
+  --font-head:      'Bebas Neue', sans-serif;
+  --font-data:      'Exo 2', system-ui, sans-serif;
+  --font-body:      'Exo 2', system-ui, sans-serif;
+  --panel-radius:   4px;
+  --glow-primary:   0 0 12px rgba(20,184,166,0.6);
+  --motion-pulse-duration: 4s;
+
+  /* Nav compat */
+  --bg:             #0e0f0e;
+  --bg-card:        #161916;
+  --bg-card-2:      #1c1f1b;
+  --teal:           #3ecfb2;
+  --teal-glow:      rgba(62,207,178,0.10);
+  --text:           #e8ebe6;
+  --text-dim:       #8a9487;
+  --text-dimmer:    #4e5349;
+  --border:         #2a2e28;
+  --border-bright:  #3d4439;
+  --radius:         10px;
+  --radius-sm:      6px;
+  --nav-height:     54px;
+}
+
+html, body {
+  min-height: 100%;
+  background: var(--mc-bg);
+  color: var(--mc-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ─── PAGE LAYOUT ─────────────────────────────────────────────────────── */
+.rb-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ─── HEADER ──────────────────────────────────────────────────────────── */
+.rb-header {
+  padding: 40px 0 32px;
+  border-bottom: 1px solid var(--mc-line);
+  margin-bottom: 32px;
+}
+
+.rb-header-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.rb-title-group {}
+
+.rb-title {
+  font-family: var(--font-head);
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: 3px;
+  color: var(--mc-text);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.rb-title-omega {
+  color: var(--mc-teal);
+}
+
+.rb-subtitle {
+  font-family: var(--font-hud);
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--mc-text-dim);
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+/* ─── ACTIVE CONFIGURATION BAR ────────────────────────────────────────── */
+.rb-active-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--mc-panel);
+  border: 1px solid var(--mc-line);
+  border-left: 3px solid var(--mc-teal);
+  border-radius: var(--panel-radius);
+  padding: 14px 20px;
+  margin-bottom: 32px;
+}
+
+.rb-active-label {
+  font-family: var(--font-hud);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--mc-text-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rb-active-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mc-teal);
+  box-shadow: 0 0 8px var(--mc-teal);
+  flex-shrink: 0;
+  animation: rb-pulse var(--motion-pulse-duration, 4s) ease-in-out infinite;
+}
+
+@keyframes rb-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--mc-teal); }
+  50%       { opacity: 0.6; box-shadow: 0 0 3px var(--mc-teal); }
+}
+
+.rb-active-name {
+  font-family: var(--font-hud);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mc-teal);
+  letter-spacing: 1px;
+}
+
+.rb-active-era {
+  font-size: 12px;
+  color: var(--mc-text-dim);
+  margin-left: auto;
+}
+
+/* ─── TABS ────────────────────────────────────────────────────────────── */
+.rb-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--mc-line);
+  padding-bottom: 0;
+}
+
+.rb-tab {
+  font-family: var(--font-hud);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--mc-text-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px 16px 12px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+}
+
+.rb-tab:hover {
+  color: var(--mc-text);
+}
+
+.rb-tab.is-active {
+  color: var(--mc-teal);
+  border-bottom-color: var(--mc-teal);
+}
+
+/* ─── SKIN GRID ───────────────────────────────────────────────────────── */
+.rb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+/* ─── SKIN CARD ───────────────────────────────────────────────────────── */
+.rb-card {
+  background: var(--mc-panel);
+  border: 1px solid var(--mc-line);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.rb-card:hover {
+  border-color: var(--card-accent, var(--mc-teal-dim));
+}
+
+.rb-card.is-active {
+  border-color: var(--card-accent, var(--mc-teal));
+  box-shadow: 0 0 0 1px var(--card-accent, var(--mc-teal)),
+              0 0 24px rgba(20,184,166,0.15);
+}
+
+/* Top accent stripe */
+.rb-card-stripe {
+  height: 3px;
+  background: var(--card-accent, var(--mc-teal));
+  flex-shrink: 0;
+}
+
+/* ─── MINI BRIDGE PREVIEW ─────────────────────────────────────────────── */
+.rb-preview {
+  background: var(--preview-bg, #060c0e);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: default;
+}
+
+/* Scanline effect for retro skins */
+.rb-preview.has-scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.rb-preview-emoji {
+  font-size: 64px;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease;
+  filter: drop-shadow(0 0 12px var(--card-accent, rgba(20,184,166,0.5)));
+}
+
+.rb-card:hover .rb-preview-emoji {
+  transform: scale(1.08);
+}
+
+/* Mini instrument bars — animated visual life */
+.rb-mini-instruments {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 32px;
+  z-index: 1;
+  position: relative;
+}
+
+.rb-mini-bar {
+  width: 8px;
+  border-radius: 2px 2px 0 0;
+  background: var(--card-accent, var(--mc-teal));
+  opacity: 0.7;
+  animation: rb-bar-bounce 2s ease-in-out infinite;
+}
+
+.rb-mini-bar:nth-child(2) { animation-delay: 0.2s; }
+.rb-mini-bar:nth-child(3) { animation-delay: 0.4s; }
+.rb-mini-bar:nth-child(4) { animation-delay: 0.6s; }
+.rb-mini-bar:nth-child(5) { animation-delay: 0.8s; }
+.rb-mini-bar:nth-child(6) { animation-delay: 1.0s; }
+.rb-mini-bar:nth-child(7) { animation-delay: 0.3s; }
+
+@keyframes rb-bar-bounce {
+  0%, 100% { height: 8px;  opacity: 0.4; }
+  50%       { height: 28px; opacity: 0.85; }
+}
+
+/* Mini panels row */
+.rb-mini-panels {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  padding: 0 4px;
+  z-index: 1;
+  position: relative;
+}
+
+.rb-mini-panel {
+  flex: 1;
+  height: 24px;
+  border-radius: 2px;
+  background: var(--preview-panel, var(--mc-panel-hi, #112428));
+  border: 1px solid var(--card-accent, var(--mc-teal));
+  opacity: 0.5;
+  position: relative;
+  overflow: hidden;
+}
+
+.rb-mini-panel::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  right: 30%;
+  height: 2px;
+  background: var(--card-accent, var(--mc-teal));
+  transform: translateY(-50%);
+  border-radius: 1px;
+  opacity: 0.7;
+}
+
+/* ACTIVE badge overlay */
+.rb-active-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--card-accent, var(--mc-teal));
+  color: #000;
+  font-family: var(--font-hud);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+  z-index: 3;
+  display: none;
+}
+
+.rb-card.is-active .rb-active-badge {
+  display: block;
+}
+
+/* ─── CARD BODY ───────────────────────────────────────────────────────── */
+.rb-card-body {
+  padding: 16px 18px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rb-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rb-skin-name {
+  font-family: var(--font-head);
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: var(--mc-text);
+  line-height: 1.1;
+}
+
+.rb-skin-era {
+  font-family: var(--font-hud);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--mc-text-dim);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.rb-tier-badge {
+  font-family: var(--font-hud);
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rb-tier-foundation {
+  background: rgba(20,184,166,0.12);
+  color: var(--mc-teal);
+  border: 1px solid rgba(20,184,166,0.3);
+}
+
+.rb-tier-creator {
+  background: rgba(240,160,32,0.12);
+  color: var(--mc-amber);
+  border: 1px solid rgba(240,160,32,0.3);
+}
+
+.rb-tier-community {
+  background: rgba(139,92,246,0.12);
+  color: var(--mc-violet);
+  border: 1px solid rgba(139,92,246,0.3);
+}
+
+.rb-skin-desc {
+  font-size: 12px;
+  color: var(--mc-text-dim);
+  line-height: 1.5;
+}
+
+/* ─── CARD FOOTER ─────────────────────────────────────────────────────── */
+.rb-card-footer {
+  padding: 12px 18px;
+  border-top: 1px solid var(--mc-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rb-price {
+  font-family: var(--font-hud);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mc-text);
+}
+
+.rb-price.is-free {
+  color: var(--mc-teal);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.rb-btn-apply {
+  font-family: var(--font-hud);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: var(--card-accent, var(--mc-teal));
+  color: #000;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  font-weight: 700;
+}
+
+.rb-btn-apply:hover {
+  opacity: 0.85;
+}
+
+.rb-btn-apply:active {
+  transform: scale(0.97);
+}
+
+.rb-btn-apply:disabled,
+.rb-btn-apply.is-current {
+  background: var(--mc-line);
+  color: var(--mc-text-dim);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* ─── REFIT TRANSITION OVERLAY ────────────────────────────────────────── */
+#rb-refit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  font-family: var(--font-hud);
+}
+
+#rb-refit-overlay.is-active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.rb-refit-title {
+  font-family: var(--font-head);
+  font-size: 36px;
+  letter-spacing: 6px;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.rb-refit-status {
+  font-family: var(--font-hud);
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #888;
+  min-height: 18px;
+  transition: color 0.3s;
+}
+
+.rb-refit-bar-wrap {
+  width: 280px;
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.rb-refit-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: #fff;
+  border-radius: 2px;
+  transition: width 0.4s ease, background 0.3s;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.rb-refit-skin-name {
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.4);
+}
+
+/* Static burst */
+#rb-static-burst {
+  position: fixed;
+  inset: 0;
+  z-index: 9995;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(255,255,255,0.06);
+  transition: opacity 0.08s ease;
+}
+
+#rb-static-burst.is-on { opacity: 1; }
+
+/* ─── EMPTY STATE ─────────────────────────────────────────────────────── */
+.rb-empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--mc-text-dim);
+}
+
+.rb-empty-icon { font-size: 48px; margin-bottom: 16px; }
+.rb-empty-title {
+  font-family: var(--font-head);
+  font-size: 28px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.rb-empty-sub { font-size: 13px; opacity: 0.6; }
+
+/* ─── FOOTER NOTE ─────────────────────────────────────────────────────── */
+.rb-footer-note {
+  margin-top: 40px;
+  padding: 16px 20px;
+  background: var(--mc-panel);
+  border: 1px solid var(--mc-line);
+  border-radius: var(--panel-radius);
+  font-size: 11px;
+  color: var(--mc-text-dim);
+  line-height: 1.6;
+}
+
+.rb-footer-note strong {
+  color: var(--mc-text);
+}
+
+/* ─── SCROLLBAR ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; background: var(--mc-bg); }
+::-webkit-scrollbar-thumb { background: var(--mc-line); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--mc-teal-dim); }
+</style>
+</head>
+<body>
+
+<div id="kre8r-nav"></div>
+
+<!-- ─── REFIT TRANSITION OVERLAY ──────────────────────────────────────── -->
+<div id="rb-refit-overlay">
+  <div class="rb-refit-title">SYSTEM REFIT</div>
+  <div class="rb-refit-skin-name" id="rb-refit-skin-name">— — —</div>
+  <div class="rb-refit-bar-wrap">
+    <div class="rb-refit-bar-fill" id="rb-refit-bar-fill"></div>
+  </div>
+  <div class="rb-refit-status" id="rb-refit-status">STANDING BY</div>
+</div>
+<div id="rb-static-burst"></div>
+
+<!-- ─── PAGE BODY ──────────────────────────────────────────────────────── -->
+<div class="rb-page">
+
+  <!-- HEADER -->
+  <div class="rb-header">
+    <div class="rb-header-top">
+      <div class="rb-title-group">
+        <div class="rb-title">
+          REFIT BAY<span class="rb-title-omega"> //</span>
+        </div>
+        <div class="rb-subtitle">Bridge Configuration — Select Your Hull</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVE CONFIG BAR -->
+  <div class="rb-active-bar" id="rb-active-bar">
+    <div class="rb-active-label">Active Configuration</div>
+    <div class="rb-active-indicator" id="rb-active-dot"></div>
+    <div class="rb-active-name" id="rb-active-name">STARFLEET COMMAND</div>
+    <div class="rb-active-era" id="rb-active-era">SNW / Discovery bridge</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="rb-tabs">
+    <button class="rb-tab is-active" data-tab="hangar">HANGAR</button>
+    <button class="rb-tab" data-tab="store">STORE</button>
+    <button class="rb-tab" data-tab="submit">SUBMIT A SKIN</button>
+  </div>
+
+  <!-- SKIN GRID -->
+  <div class="rb-grid" id="rb-grid">
+    <!-- populated by JS -->
+  </div>
+
+  <!-- STORE PANEL (hidden) -->
+  <div id="rb-tab-store" style="display:none">
+    <div class="rb-empty">
+      <div class="rb-empty-icon">🛒</div>
+      <div class="rb-empty-title">MARKETPLACE COMING SOON</div>
+      <div class="rb-empty-sub">Community skins, official expansions, and creator packs.<br>The Fortnite model — pointed at creators who want their bridge to feel like theirs.</div>
+    </div>
+  </div>
+
+  <!-- SUBMIT PANEL (hidden) -->
+  <div id="rb-tab-submit" style="display:none">
+    <div class="rb-empty">
+      <div class="rb-empty-icon">🎨</div>
+      <div class="rb-empty-title">SKIN BUILDER — COMING SOON</div>
+      <div class="rb-empty-sub">Build a .k8skin bundle. Validate the manifest. Submit for review.<br>Earn rev-share when creators wear your hull.</div>
+    </div>
+  </div>
+
+  <!-- FOOTER NOTE -->
+  <div class="rb-footer-note">
+    <strong>Engine vs Soul.</strong> A skin changes <em>what the bridge is made of</em>, never <em>where the instruments are.</em>
+    Tokens write to <code>:root</code> CSS custom properties — one swap, instant, no reload.
+    A malformed skin fails validation silently and the default loads. The bridge never breaks.
+  </div>
+
+</div><!-- /rb-page -->
+
+<script src="/js/nav.js"></script>
+<script src="/js/skins/starfleet-command.js"></script>
+<script src="/js/skins/lcars-classic.js"></script>
+<script src="/js/skins/hearth.js"></script>
+<script src="/js/skins/western.js"></script>
+<script src="/js/skin-manager.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ─── SKIN REGISTRY ──────────────────────────────────────────────────────
+  // Pulls from window globals set by the individual skin files,
+  // plus two inline skins (Nostromo, Omega Directive) not yet in separate files.
+
+  const NOSTROMO_SKIN = {
+    meta: {
+      id: 'nostromo',
+      name: 'Nostromo',
+      author: 'kre8r-official',
+      era: 'Retro-Industrial — Alien 1979',
+      version: '1.0.0',
+      tier: 'creator',
+      price_usd: 14,
+      description: "Green CRT phosphor. Scanlines. Monospace everything. MOTHER on comms. The bridge feels worn and lived-in. Drifting dust, not stars.",
+      preview_emoji: '👾',
+    },
+    tokens: {
+      'mc-bg':                 '#040800',
+      'mc-panel':              '#080f02',
+      'mc-panel-hi':           '#0d1a04',
+      'mc-line':               '#1a3300',
+      'mc-teal':               '#33ff00',
+      'mc-teal-dim':           '#1a7a00',
+      'mc-cyan':               '#00cc44',
+      'mc-text':               '#99ff66',
+      'mc-text-dim':           '#336600',
+      'mc-amber':              '#ff8800',
+      'mc-red':                '#ff2200',
+      'mc-green':              '#33ff00',
+      'mc-green-soft':         '#99ff66',
+      'mc-violet':             '#44ff88',
+      'mc-orange':             '#ff6600',
+      'conn-color':            '#33ff00',
+      'tactical-color':        '#ff8800',
+      'ops-color':             '#00cc44',
+      'science-color':         '#99ff66',
+      'comms-color':           '#44ff88',
+      'eng-color':             '#ff6600',
+      'font-hud':              '"Courier New", "Lucida Console", monospace',
+      'font-head':             '"Courier New", monospace',
+      'font-data':             '"Courier New", monospace',
+      'font-body':             '"Courier New", monospace',
+      'panel-radius':          '2px',
+      'glow-primary':          '0 0 10px rgba(51,255,0,0.4)',
+      'motion-pulse-duration': '8s',
+      'instrument-style':      'arc',
+    },
+    station_callsigns: {
+      conn: 'HELM', ops: 'SYSTEMS', tactical: 'WEAPONS',
+      science: 'SENSORS', comms: 'COMMS', eng: 'ENGINEERING',
+    },
+    sounds: {},
+    crew: {},
+  };
+
+  const OMEGA_SKIN = {
+    meta: {
+      id: 'omega-directive',
+      name: 'Omega Directive',
+      author: 'kre8r-official',
+      era: 'Discovery — Section 31',
+      version: '1.0.0',
+      tier: 'creator',
+      price_usd: 20,
+      description: 'Near-black. Blood-red and gunmetal. Angular brackets, minimal glow, tactical-AI crew. High-density, high-tension. For when the Captain wants a warship.',
+      preview_emoji: '⚫',
+    },
+    tokens: {
+      'mc-bg':                 '#030305',
+      'mc-panel':              '#0a0a12',
+      'mc-panel-hi':           '#120a18',
+      'mc-line':               '#1a0a0a',
+      'mc-teal':               '#cc1122',
+      'mc-teal-dim':           '#660a11',
+      'mc-cyan':               '#880011',
+      'mc-text':               '#e8c0c0',
+      'mc-text-dim':           '#4a1a1a',
+      'mc-amber':              '#cc3300',
+      'mc-red':                '#ff1111',
+      'mc-green':              '#aa2222',
+      'mc-green-soft':         '#ff6655',
+      'mc-violet':             '#550011',
+      'mc-orange':             '#cc2200',
+      'conn-color':            '#cc1122',
+      'tactical-color':        '#cc3300',
+      'ops-color':             '#550011',
+      'science-color':         '#880011',
+      'comms-color':           '#ff6655',
+      'eng-color':             '#cc2200',
+      'font-hud':              "'Orbitron', monospace",
+      'font-head':             "'Bebas Neue', sans-serif",
+      'font-data':             "'Exo 2', sans-serif",
+      'font-body':             "'Exo 2', sans-serif",
+      'panel-radius':          '0px',
+      'glow-primary':          '0 0 8px rgba(204,17,34,0.5)',
+      'motion-pulse-duration': '3s',
+      'instrument-style':      'arc',
+    },
+    station_callsigns: {
+      conn: 'NAVIGATION', ops: 'SYSTEMS', tactical: 'WEAPONS',
+      science: 'INTEL', comms: 'COMMS', eng: 'ENGINEERING',
+    },
+    sounds: {},
+    crew: {},
+  };
+
+  // Assemble all skins from window globals + inline
+  function getAllSkins() {
+    const list = [];
+    if (window.SKIN_STARFLEET_COMMAND) list.push(window.SKIN_STARFLEET_COMMAND);
+    if (window.SKIN_LCARS_CLASSIC)     list.push(window.SKIN_LCARS_CLASSIC);
+    if (window.SKIN_HEARTH)            list.push(window.SKIN_HEARTH);
+    if (window.SKIN_WESTERN)         list.push(window.SKIN_WESTERN);
+    list.push(NOSTROMO_SKIN);
+    list.push(OMEGA_SKIN);
+    return list;
+  }
+
+  // ─── ACTIVE SKIN DETECTION ───────────────────────────────────────────────
+  function getActiveSkinId() {
+    try {
+      return localStorage.getItem('kre8r_skin') || 'starfleet-command';
+    } catch (e) { return 'starfleet-command'; }
+  }
+
+  // ─── CARD ACCENT COLOR MAP ──────────────────────────────────────────────
+  function getAccentColor(skin) {
+    if (skin.tokens && skin.tokens['mc-teal']) return skin.tokens['mc-teal'];
+    return '#14b8a6';
+  }
+
+  function getPreviewBg(skin) {
+    if (skin.tokens && skin.tokens['mc-bg']) return skin.tokens['mc-bg'];
+    return '#060c0e';
+  }
+
+  function getPreviewPanel(skin) {
+    if (skin.tokens && skin.tokens['mc-panel-hi']) return skin.tokens['mc-panel-hi'];
+    if (skin.tokens && skin.tokens['mc-panel'])    return skin.tokens['mc-panel'];
+    return '#112428';
+  }
+
+  // ─── TIER LABEL/CLASS ───────────────────────────────────────────────────
+  function tierClass(tier) {
+    const map = {
+      foundation: 'rb-tier-foundation',
+      creator:    'rb-tier-creator',
+      community:  'rb-tier-community',
+    };
+    return map[tier] || 'rb-tier-foundation';
+  }
+
+  function tierLabel(tier) {
+    const map = {
+      foundation: 'FOUNDATION',
+      creator:    'CREATOR',
+      community:  'COMMUNITY',
+    };
+    return map[tier] || 'FOUNDATION';
+  }
+
+  // ─── PRICE DISPLAY ──────────────────────────────────────────────────────
+  function priceHTML(price, tier) {
+    if (tier === 'foundation' || price === 0) {
+      return `<div class="rb-price is-free">FREE — INCLUDED</div>`;
+    }
+    return `<div class="rb-price">$${price}</div>`;
+  }
+
+  // ─── BUILD A MINI INSTRUMENT BARS SET ───────────────────────────────────
+  function miniBarsHTML() {
+    const heights = [10, 22, 18, 28, 14, 20, 12];
+    return heights.map((h, i) =>
+      `<div class="rb-mini-bar" style="height:${h}px;animation-delay:${i * 0.15}s"></div>`
+    ).join('');
+  }
+
+  // ─── MINI PANELS ────────────────────────────────────────────────────────
+  function miniPanelsHTML() {
+    return [1,2,3,4].map(() =>
+      `<div class="rb-mini-panel"></div>`
+    ).join('');
+  }
+
+  // ─── BUILD SINGLE CARD ──────────────────────────────────────────────────
+  function buildCard(skin, isActive) {
+    const accent      = getAccentColor(skin);
+    const previewBg   = getPreviewBg(skin);
+    const previewPanel = getPreviewPanel(skin);
+    const scanlines   = skin.id === 'nostromo' || (skin.tokens && skin.tokens['mc-scanlines'] === '1');
+    const id          = skin.meta.id;
+
+    const applyLabel  = isActive ? 'ACTIVE' : 'APPLY';
+    const applyClass  = isActive ? 'rb-btn-apply is-current' : 'rb-btn-apply';
+    const cardClass   = isActive ? 'rb-card is-active' : 'rb-card';
+
+    return `
+      <div class="${cardClass}" data-skin-id="${id}"
+           style="--card-accent:${accent};--preview-bg:${previewBg};--preview-panel:${previewPanel}">
+        <div class="rb-card-stripe"></div>
+        <div class="rb-preview${scanlines ? ' has-scanlines' : ''}">
+          <div class="rb-active-badge">ACTIVE</div>
+          <div class="rb-preview-emoji">${skin.meta.preview_emoji || '🖖'}</div>
+          <div class="rb-mini-instruments">
+            ${miniBarsHTML()}
+          </div>
+          <div class="rb-mini-panels">
+            ${miniPanelsHTML()}
+          </div>
+        </div>
+        <div class="rb-card-body">
+          <div class="rb-card-top">
+            <div>
+              <div class="rb-skin-name">${skin.meta.name}</div>
+              <div class="rb-skin-era">${skin.meta.era}</div>
+            </div>
+            <div class="rb-tier-badge ${tierClass(skin.meta.tier)}">${tierLabel(skin.meta.tier)}</div>
+          </div>
+          <div class="rb-skin-desc">${skin.meta.description || ''}</div>
+        </div>
+        <div class="rb-card-footer">
+          ${priceHTML(skin.meta.price_usd, skin.meta.tier)}
+          <button class="${applyClass}"
+                  data-skin-id="${id}"
+                  ${isActive ? 'disabled' : ''}>
+            ${applyLabel}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ─── RENDER GRID ────────────────────────────────────────────────────────
+  function renderGrid(activeId) {
+    const grid  = document.getElementById('rb-grid');
+    const skins = getAllSkins();
+    grid.innerHTML = skins.map(s => buildCard(s, s.meta.id === activeId)).join('');
+  }
+
+  // ─── UPDATE ACTIVE BAR ──────────────────────────────────────────────────
+  function updateActiveBar(skin) {
+    const nameEl = document.getElementById('rb-active-name');
+    const eraEl  = document.getElementById('rb-active-era');
+    const dot    = document.getElementById('rb-active-dot');
+    const bar    = document.getElementById('rb-active-bar');
+
+    if (!skin) return;
+    if (nameEl) nameEl.textContent = skin.meta.name.toUpperCase();
+    if (eraEl)  eraEl.textContent  = skin.meta.era;
+
+    const accent = getAccentColor(skin);
+    if (dot) {
+      dot.style.background  = accent;
+      dot.style.boxShadow   = `0 0 8px ${accent}`;
+    }
+    if (bar) {
+      bar.style.borderLeftColor = accent;
+    }
+    if (nameEl) nameEl.style.color = accent;
+  }
+
+  // ─── REFIT TRANSITION ───────────────────────────────────────────────────
+  function doRefit(targetSkin) {
+    const overlay  = document.getElementById('rb-refit-overlay');
+    const fill     = document.getElementById('rb-refit-bar-fill');
+    const status   = document.getElementById('rb-refit-status');
+    const skinName = document.getElementById('rb-refit-skin-name');
+    const burst    = document.getElementById('rb-static-burst');
+    const accent   = getAccentColor(targetSkin);
+
+    if (!overlay) return;
+
+    // Set accent color on overlay elements
+    overlay.style.color = accent;
+    if (fill) {
+      fill.style.background  = accent;
+      fill.style.boxShadow   = `0 0 12px ${accent}`;
+      fill.style.width       = '0%';
+    }
+    if (skinName) skinName.textContent = targetSkin.meta.name.toUpperCase();
+    if (status)   status.textContent   = 'POWERING DOWN';
+    if (status)   status.style.color   = '#666';
+
+    // Phase 1: show overlay
+    overlay.classList.add('is-active');
+
+    let step = 0;
+    const phases = [
+      { delay: 60,  width: '15%', text: 'INSTRUMENTS OFFLINE',         color: '#666' },
+      { delay: 180, width: '35%', text: 'SEVERING HULL CONNECTIONS',   color: '#888' },
+      { delay: 320, width: '55%', text: 'RECONFIGURING HULL GEOMETRY', color: accent },
+      { delay: 400, width: '70%', text: 'APPLYING NEW CONFIGURATION',  color: accent },
+    ];
+
+    function runPhase(i) {
+      if (i >= phases.length) return;
+      const p = phases[i];
+      setTimeout(() => {
+        if (fill)   fill.style.width   = p.width;
+        if (status) {
+          status.textContent = p.text;
+          status.style.color = p.color;
+        }
+        runPhase(i + 1);
+      }, p.delay);
+    }
+    runPhase(0);
+
+    // Static burst at 420ms — apply skin tokens here (invisible under overlay)
+    setTimeout(() => {
+      burst.classList.add('is-on');
+      // Apply the skin tokens through SkinManager
+      if (window.SkinManager && typeof window.SkinManager.load === 'function') {
+        window.SkinManager.load(targetSkin);
+      } else {
+        // Fallback: write tokens directly
+        for (const [k, v] of Object.entries(targetSkin.tokens || {})) {
+          document.documentElement.style.setProperty(`--${k}`, v);
+        }
+        try { localStorage.setItem('kre8r_skin', targetSkin.meta.id); } catch(e) {}
+        try { localStorage.setItem('kre8r_skin_config', JSON.stringify(targetSkin)); } catch(e) {}
+      }
+    }, 420);
+
+    // Clear burst
+    setTimeout(() => {
+      burst.classList.remove('is-on');
+      if (fill)   fill.style.width = '100%';
+      if (status) {
+        status.textContent = 'POWER UP SEQUENCE COMPLETE';
+        status.style.color = accent;
+      }
+    }, 540);
+
+    // Fade out overlay
+    setTimeout(() => {
+      overlay.classList.remove('is-active');
+    }, 900);
+
+    // After overlay gone: navigate to Mission Control with new skin active
+    setTimeout(() => {
+      window.location.href = '/mission-control.html';
+    }, 1100);
+  }
+
+  // ─── CARD CLICK HANDLING ────────────────────────────────────────────────
+  function attachCardEvents() {
+    document.querySelectorAll('.rb-btn-apply:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const skinId = this.dataset.skinId;
+        const skin   = getAllSkins().find(s => s.meta.id === skinId);
+        if (!skin) { console.warn('[Refit] Skin not found:', skinId); return; }
+        // Save to localStorage immediately — guaranteed before navigation
+        try {
+          localStorage.setItem('kre8r_skin', skin.meta.id);
+          localStorage.setItem('kre8r_skin_config', JSON.stringify(skin));
+          console.log('[Refit] Saved skin:', skin.meta.id);
+        } catch(e) { console.error('[Refit] localStorage save failed', e); }
+        doRefit(skin);
+      });
+    });
+  }
+
+  // ─── TAB SWITCHING ──────────────────────────────────────────────────────
+  function attachTabEvents() {
+    const tabs  = document.querySelectorAll('.rb-tab');
+    const grid  = document.getElementById('rb-grid');
+    const store = document.getElementById('rb-tab-store');
+    const sub   = document.getElementById('rb-tab-submit');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', function () {
+        tabs.forEach(t => t.classList.remove('is-active'));
+        this.classList.add('is-active');
+
+        const which = this.dataset.tab;
+        grid.style.display  = which === 'hangar' ? 'grid' : 'none';
+        if (store) store.style.display = which === 'store'  ? 'block' : 'none';
+        if (sub)   sub.style.display   = which === 'submit' ? 'block' : 'none';
+      });
+    });
+  }
+
+  // ─── INIT ────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    initNav();
+
+    const activeId  = getActiveSkinId();
+    const allSkins  = getAllSkins();
+    const activeSkin = allSkins.find(s => s.meta.id === activeId) || allSkins[0];
+
+    renderGrid(activeId);
+    updateActiveBar(activeSkin);
+    attachCardEvents();
+    attachTabEvents();
+  });
+
+})();
+</script>
+</body>
+</html>

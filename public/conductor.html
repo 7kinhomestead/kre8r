@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConductΩr — Business Cockpit</title>
+  <link rel="stylesheet" href="/css/global.css">
+  <style>
+    :root {
+      --green:  #3ecfb2;
+      --amber:  #f0b942;
+      --red:    #e05252;
+      --panel:  var(--mc-panel, #151b18);
+      --border: rgba(255,255,255,0.08);
+      --text:   #e8ebe6;
+      --dim:    rgba(255,255,255,0.45);
+    }
+
+    body { background: #0e0f0e; color: var(--text); font-family: var(--font-body, 'Inter', sans-serif); margin: 0; padding: 0; }
+    #kre8r-nav { position: sticky; top: 0; z-index: 100; }
+
+    .conductor-wrap { max-width: 960px; margin: 0 auto; padding: 24px 20px 80px; }
+
+    /* ── HEADER ── */
+    .conductor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .conductor-title  { font-family: var(--font-hud, 'Bebas Neue', sans-serif); font-size: 28px; letter-spacing: 3px; color: var(--green); }
+    .conductor-sub    { font-size: 11px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-top: 2px; }
+    .refresh-btn      { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--dim); font-size: 12px; padding: 6px 14px; cursor: pointer; letter-spacing: 1px; }
+    .refresh-btn:hover { border-color: var(--green); color: var(--green); }
+
+    /* ── BAND 1: PULSE ── */
+    .pulse-band { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; display: flex; align-items: center; gap: 24px; }
+    .firing-dial { flex-shrink: 0; position: relative; width: 72px; height: 72px; }
+    .firing-dial svg { width: 72px; height: 72px; transform: rotate(-90deg); }
+    .dial-track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 6; }
+    .dial-fill  { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1), stroke 0.4s; }
+    .dial-score { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-hud, monospace); font-size: 20px; font-weight: 900; }
+    .pulse-text { flex: 1; }
+    .pulse-headline { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .pulse-sub      { font-size: 12px; color: var(--dim); margin-top: 4px; }
+
+    /* ── BAND 2: CYLINDERS ── */
+    .cylinders-band { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+    @media (max-width: 680px) { .cylinders-band { grid-template-columns: repeat(3, 1fr); } }
+
+    .cylinder-chip {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 12px; cursor: pointer; transition: border-color 0.2s;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .cylinder-chip:hover { border-color: rgba(255,255,255,0.2); }
+    .cylinder-chip.green { border-color: rgba(62,207,178,0.25); }
+    .cylinder-chip.amber { border-color: rgba(240,185,66,0.3); }
+    .cylinder-chip.red   { border-color: rgba(224,82,82,0.4); }
+
+    .chip-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .chip-head { display: flex; align-items: center; gap: 7px; }
+    .chip-name { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+    .chip-status { font-size: 11px; color: var(--dim); line-height: 1.4; }
+    .chip-bar { height: 2px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+    .chip-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+    .green .chip-dot, .green .chip-bar-fill { background: var(--green); }
+    .amber .chip-dot, .amber .chip-bar-fill { background: var(--amber); }
+    .red   .chip-dot, .red   .chip-bar-fill { background: var(--red); }
+    .green .chip-name { color: var(--green); }
+    .amber .chip-name { color: var(--amber); }
+    .red   .chip-name { color: var(--red); }
+
+    /* ── BAND 3: BATON ── */
+    .baton-band { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; }
+    .baton-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+    .baton-goal { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .baton-goal-chip { font-family: var(--font-hud, monospace); font-size: 13px; font-weight: 900; letter-spacing: 2px; padding: 4px 10px; border-radius: 6px; background: rgba(62,207,178,0.1); color: var(--green); border: 1px solid rgba(62,207,178,0.3); }
+    .baton-goal-chip.urgency-high { background: rgba(224,82,82,0.1); color: var(--red); border-color: rgba(224,82,82,0.3); }
+    .baton-goal-chip.urgency-medium { background: rgba(240,185,66,0.1); color: var(--amber); border-color: rgba(240,185,66,0.3); }
+    .baton-headline { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .baton-reason   { font-size: 13px; color: var(--dim); line-height: 1.6; margin-bottom: 12px; }
+    .baton-tip      { font-size: 12px; color: rgba(62,207,178,0.7); margin-bottom: 14px; padding: 8px 12px; background: rgba(62,207,178,0.05); border-radius: 6px; border-left: 2px solid rgba(62,207,178,0.3); }
+    .baton-actions  { display: flex; gap: 10px; flex-wrap: wrap; }
+    .baton-btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; letter-spacing: 0.5px; }
+    .baton-btn-primary { background: var(--green); color: #0e0f0e; }
+    .baton-btn-primary:hover { opacity: 0.88; }
+    .baton-btn-secondary { background: none; border: 1px solid var(--border); color: var(--dim); }
+    .baton-btn-secondary:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+
+    /* ── VectΩr ribbon ── */
+    .vectr-ribbon { font-size: 11px; color: var(--dim); margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .vectr-ribbon span { color: rgba(255,255,255,0.3); letter-spacing: 1px; }
+
+    /* ── Goal classifier section ── */
+    .classify-section { margin-top: 32px; }
+    .section-title { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin-bottom: 14px; }
+    .project-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .project-row:last-child { border-bottom: none; }
+    .project-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .goal-select { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 5px 8px; cursor: pointer; }
+    .goal-select.REACH     { border-color: rgba(139,92,246,0.4); color: #a78bfa; }
+    .goal-select.AUTHORITY { border-color: rgba(59,130,246,0.4); color: #93c5fd; }
+    .goal-select.CONVERT   { border-color: rgba(245,158,11,0.4); color: #fcd34d; }
+    .goal-select.SERVE     { border-color: rgba(62,207,178,0.4); color: var(--green); }
+    .goal-select.RETAIN    { border-color: rgba(236,72,153,0.4); color: #f9a8d4; }
+    .suggest-btn { font-size: 11px; color: var(--dim); cursor: pointer; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: none; }
+    .suggest-btn:hover { color: var(--green); border-color: rgba(62,207,178,0.3); }
+    .filter-tab { background: none; border: 1px solid var(--border); border-radius: 5px; color: var(--dim); font-size: 11px; padding: 4px 10px; cursor: pointer; letter-spacing: 0.5px; }
+    .filter-tab:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+    .active-filter { border-color: rgba(62,207,178,0.4); color: var(--green); background: rgba(62,207,178,0.06); }
+    .page-btn { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--dim); font-size: 11px; padding: 3px 9px; cursor: pointer; }
+    .page-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+    .page-btn.active { border-color: rgba(62,207,178,0.4); color: var(--green); }
+
+    /* ── Cylinder detail slide-out ── */
+    .cylinder-detail { display: none; position: fixed; right: 0; top: 0; height: 100%; width: 320px; background: #111614; border-left: 1px solid var(--border); padding: 24px; overflow-y: auto; z-index: 200; }
+    .cylinder-detail.open { display: block; }
+    .detail-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--dim); font-size: 20px; cursor: pointer; }
+    .detail-title { font-family: var(--font-hud, monospace); font-size: 18px; font-weight: 900; letter-spacing: 2px; margin-bottom: 16px; margin-top: 8px; }
+    .detail-stat  { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+    .detail-stat:last-child { border-bottom: none; }
+    .detail-key { color: var(--dim); }
+    .detail-val { font-weight: 600; }
+
+    /* ── Loading ── */
+    .loading-state { text-align: center; padding: 60px 20px; color: var(--dim); }
+    .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="kre8r-nav"></div>
+
+<div class="conductor-wrap">
+  <div class="conductor-header">
+    <div>
+      <div class="conductor-title">CONDUCTΩ R</div>
+      <div class="conductor-sub">Business Cockpit</div>
+    </div>
+    <button class="refresh-btn" onclick="loadDashboard(true)">↺ Refresh</button>
+  </div>
+
+  <div id="dashboard-content">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div>Computing your business cylinders…</div>
+    </div>
+  </div>
+
+  <!-- YouTube sync + classifier -->
+  <div class="classify-section" id="classify-section" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div class="section-title" style="margin-bottom:2px">Classify Your Videos</div>
+        <div id="classify-counts" style="font-size:11px;color:var(--dim)"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="suggest-all-btn" onclick="suggestAll(false)" style="background:rgba(62,207,178,0.12);border:1px solid rgba(62,207,178,0.35);border-radius:7px;color:var(--green);font-size:12px;font-weight:700;padding:7px 16px;cursor:pointer;letter-spacing:1px">
+          ✦ Suggest Unclassified
+        </button>
+        <button onclick="suggestAll(true)" style="background:none;border:1px solid rgba(240,185,66,0.3);border-radius:7px;color:var(--amber);font-size:12px;font-weight:700;padding:7px 16px;cursor:pointer;letter-spacing:1px" title="Clear all classifications and redo with title + description">
+          ↺ Reclassify All
+        </button>
+        <button id="sync-yt-btn" onclick="syncYouTube()" style="background:none;border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:var(--dim);font-size:12px;font-weight:700;padding:7px 16px;cursor:pointer;letter-spacing:1px">
+          ↓ Re-sync YouTube
+        </button>
+      </div>
+    </div>
+    <div id="sync-log" style="display:none;font-size:12px;color:var(--dim);padding:10px 14px;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:12px;max-height:120px;overflow-y:auto;white-space:pre-wrap"></div>
+    <div id="suggest-all-progress" style="display:none;margin-bottom:12px">
+      <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 14px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+          <span id="sa-status" style="color:var(--dim)">Starting…</span>
+          <span id="sa-counts" style="color:var(--text)"></span>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden">
+          <div id="sa-bar" style="height:100%;background:var(--green);border-radius:2px;width:0%;transition:width 0.3s"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Filter tabs + pagination -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="display:flex;gap:6px">
+        <button onclick="setFilter('unclassified')" id="filter-unclassified" class="filter-tab active-filter">Unclassified</button>
+        <button onclick="setFilter('all')" id="filter-all" class="filter-tab">All</button>
+        <button onclick="setFilter('classified')" id="filter-classified" class="filter-tab">Classified</button>
+      </div>
+      <div id="pagination" style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--dim)"></div>
+    </div>
+    <div id="project-list"></div>
+  </div>
+</div>
+
+<!-- Cylinder detail panel -->
+<div class="cylinder-detail" id="cylinder-detail">
+  <button class="detail-close" onclick="closeDetail()">×</button>
+  <div id="detail-content"></div>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  initNav();
+
+  let dashboardData = null;
+
+  const GOAL_COLORS = {
+    REACH: '#a78bfa', AUTHORITY: '#93c5fd', CONVERT: '#fcd34d',
+    SERVE: '#3ecfb2', RETAIN: '#f9a8d4'
+  };
+  const GOAL_LABELS = {
+    REACH: '📡 REACH', AUTHORITY: '🏛 AUTHORITY', CONVERT: '💰 CONVERT',
+    SERVE: '🌱 SERVE', RETAIN: '🔒 RETAIN'
+  };
+
+  async function loadDashboard(forceRefresh = false) {
+    document.getElementById('dashboard-content').innerHTML =
+      '<div class="loading-state"><div class="spinner"></div><div>Computing your business cylinders…</div></div>';
+    try {
+      const url = '/api/conductor/dashboard' + (forceRefresh ? '?refresh=1' : '');
+      const res  = await fetch(url);
+      const data = await res.json();
+      dashboardData = data;
+      renderDashboard(data);
+      loadProjectClassifier();
+    } catch (e) {
+      document.getElementById('dashboard-content').innerHTML =
+        `<div class="loading-state" style="color:#e05252">Failed to load: ${e.message}</div>`;
+    }
+  }
+
+  function renderDashboard(data) {
+    const score = data.firingScore || 0;
+    const scoreColor = score >= 80 ? '#3ecfb2' : score >= 55 ? '#f0b942' : '#e05252';
+    const circumference = 2 * Math.PI * 30;
+    const fillDash = (score / 100) * circumference;
+
+    // Band 1: Pulse
+    // Check if we're in setup mode (no classifications yet)
+    const needsSetup = data.cylinders.some(c => c.details?.needsClassification);
+    const redCount   = data.cylinders.filter(c => c.color === 'red' && !c.details?.needsClassification).length;
+    const amberCount = data.cylinders.filter(c => c.color === 'amber' && !c.details?.needsClassification).length;
+
+    const pulseHeadline = needsSetup
+      ? 'Classify your recent videos below to unlock all cylinders.'
+      : redCount > 0
+        ? `${redCount} cylinder${redCount > 1 ? 's' : ''} need attention before they drop.`
+        : amberCount > 0
+          ? `${amberCount} cylinder${amberCount > 1 ? 's' : ''} drifting — make your next video count.`
+          : 'All cylinders are firing. Keep the mix going.';
+
+    // Band 2: Cylinders
+    const cylinderHTML = (data.cylinders || []).map(c => `
+      <div class="cylinder-chip ${c.color}" onclick="showDetail('${c.cylinder}')">
+        <div class="chip-head">
+          <div class="chip-dot"></div>
+          <div class="chip-name">${c.cylinder}</div>
+        </div>
+        <div class="chip-status">${escHtml(c.status)}</div>
+        <div class="chip-bar"><div class="chip-bar-fill" style="width:${c.score}%"></div></div>
+      </div>`).join('');
+
+    // Band 3: Baton
+    const rec = data.recommendation || {};
+    const urgencyClass = `urgency-${rec.urgency || 'medium'}`;
+    // Only show setup prompt if truly no classifications yet (not after batch classify)
+    const setupPrompt = (needsSetup && (data.firingScore || 55) <= 55 && !data.cylinders?.some(c => c.details?.view_count))
+      ? `<div style="margin-bottom:12px;padding:10px 14px;background:rgba(240,185,66,0.08);border:1px solid rgba(240,185,66,0.2);border-radius:8px;font-size:13px;color:var(--amber)">
+           ↓ Scroll down to classify your recent videos
+           <button onclick="document.getElementById('classify-section').scrollIntoView({behavior:'smooth'})"
+             style="margin-left:12px;background:var(--amber);color:#0e0f0e;border:none;border-radius:5px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer">
+             Jump to classifier
+           </button>
+         </div>`
+      : '';
+
+    const batonHTML = rec.goal ? `${setupPrompt}
+      <div class="baton-label">▸ MAKE NEXT</div>
+      <div class="baton-goal">
+        <div class="baton-goal-chip ${urgencyClass}">${rec.goal}</div>
+        <span style="font-size:12px;color:var(--dim)">${rec.angle ? '· ' + rec.angle : ''}</span>
+      </div>
+      <div class="baton-headline">${escHtml(rec.headline || '')}</div>
+      <div class="baton-reason">${escHtml(rec.reason || '')}</div>
+      ${rec.post_mortem_tip ? `<div class="baton-tip">💡 ${escHtml(rec.post_mortem_tip)}</div>` : ''}
+      <div class="baton-actions">
+        <button class="baton-btn baton-btn-primary" onclick="sendToId8r('${rec.goal}', '${(rec.angle||'').replace(/'/g,"\\'")}', '${(rec.reason||'').slice(0,80).replace(/'/g,"\\'")}')">Send to Id8Ωr →</button>
+        <button class="baton-btn baton-btn-secondary" onclick="showWhyThis()">Why this?</button>
+        <button class="baton-btn baton-btn-secondary" onclick="showOverride()">Override</button>
+      </div>
+      ${rec.vectr_alignment ? `<div class="vectr-ribbon"><span>VectΩr</span>${escHtml(rec.vectr_alignment)}</div>` : ''}
+    ` : '<div style="color:var(--dim);font-size:13px">Recommendation computing…</div>';
+
+    document.getElementById('dashboard-content').innerHTML = `
+      <div class="pulse-band">
+        <div class="firing-dial">
+          <svg viewBox="0 0 72 72">
+            <circle class="dial-track" cx="36" cy="36" r="30"/>
+            <circle class="dial-fill" cx="36" cy="36" r="30"
+              stroke="${scoreColor}"
+              stroke-dasharray="${circumference}"
+              stroke-dashoffset="${circumference - fillDash}"/>
+          </svg>
+          <div class="dial-score" style="color:${scoreColor}">${score}</div>
+        </div>
+        <div class="pulse-text">
+          <div class="pulse-headline">${escHtml(pulseHeadline)}</div>
+          <div class="pulse-sub">Firing Score — ${score >= 80 ? 'All cylinders in range' : score >= 55 ? 'Some attention needed' : 'Action required'}</div>
+        </div>
+      </div>
+      <div class="cylinders-band">${cylinderHTML}</div>
+      <div class="baton-band">${batonHTML}</div>
+    `;
+  }
+
+  function showDetail(cylinderName) {
+    if (!dashboardData) return;
+    const c = dashboardData.cylinders.find(x => x.cylinder === cylinderName);
+    if (!c) return;
+
+    const rows = Object.entries(c.details || {}).map(([k, v]) =>
+      `<div class="detail-stat"><span class="detail-key">${k.replace(/_/g,' ')}</span><span class="detail-val">${v ?? '—'}</span></div>`
+    ).join('');
+
+    document.getElementById('detail-content').innerHTML = `
+      <div class="detail-title" style="color:${c.color==='green'?'var(--green)':c.color==='amber'?'var(--amber)':'var(--red)'}">${cylinderName}</div>
+      <div style="font-size:13px;color:var(--dim);margin-bottom:16px">${c.status}</div>
+      ${rows}
+    `;
+    document.getElementById('cylinder-detail').classList.add('open');
+  }
+
+  function closeDetail() { document.getElementById('cylinder-detail').classList.remove('open'); }
+
+  function sendToId8r(goal, angle, hint) {
+    const params = new URLSearchParams({
+      conductor_goal: goal,
+      conductor_angle: angle,
+      conductor_hint: hint,
+    });
+    window.location.href = `/id8r.html?${params.toString()}`;
+  }
+
+  function showWhyThis() {
+    const rec = dashboardData?.recommendation;
+    if (!rec) return;
+
+    const LAG = { REACH: '60–90 days', AUTHORITY: '60–90 days', CONVERT: '1–15 days', SERVE: '14–45 days', RETAIN: '30–60 days' };
+    const INCOME = {
+      REACH:     'YouTube ad revenue + brand deal eligibility (more subs = better rates)',
+      AUTHORITY: 'Brand deal trust + book/course sales',
+      CONVERT:   'Affiliate commissions + product sales — fastest cash-to-publish window',
+      SERVE:     'Greenhouse → Garden conversions ($19/mo) — warmth takes weeks to convert',
+      RETAIN:    'Garden/F50 renewals + word-of-mouth referrals',
+    };
+
+    // Remove any existing why panel
+    document.getElementById('why-panel')?.remove();
+
+    const panel = document.createElement('div');
+    panel.id = 'why-panel';
+    panel.style.cssText = [
+      'position:fixed','inset:0','z-index:9999','display:flex',
+      'align-items:center','justify-content:center',
+      'background:rgba(0,0,0,0.7)'
+    ].join(';');
+
+    panel.innerHTML = `
+      <div style="background:#151b18;border:1px solid rgba(62,207,178,0.25);border-radius:14px;
+                  padding:28px 32px;max-width:480px;width:calc(100% - 40px);position:relative">
+        <button onclick="document.getElementById('why-panel').remove()"
+          style="position:absolute;top:14px;right:16px;background:none;border:none;
+                 color:rgba(255,255,255,0.4);font-size:20px;cursor:pointer">×</button>
+
+        <div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.35);margin-bottom:8px">WHY THIS?</div>
+        <div style="font-size:20px;font-weight:800;color:var(--green);margin-bottom:16px;letter-spacing:1px">
+          ${rec.goal} · ${rec.angle || ''}
+        </div>
+
+        <div style="font-size:14px;line-height:1.7;color:#c8cbc6;margin-bottom:18px">
+          ${escHtml(rec.reason || 'Recommendation based on current cylinder health.')}
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:12px 16px;margin-bottom:12px">
+          <div style="font-size:10px;letter-spacing:1.5px;color:rgba(255,255,255,0.3);margin-bottom:4px">INCOME STREAM</div>
+          <div style="font-size:13px;color:#e8ebe6">${INCOME[rec.goal] || ''}</div>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:12px 16px;margin-bottom:18px">
+          <div style="font-size:10px;letter-spacing:1.5px;color:rgba(255,255,255,0.3);margin-bottom:4px">REVENUE LAG</div>
+          <div style="font-size:13px;color:#e8ebe6">
+            Publishing this type of video today typically affects income in <strong>${LAG[rec.goal] || 'weeks'}</strong>.
+            ${rec.goal === 'SERVE' ? ' Greenhouse members who feel served convert to Garden at their own pace — the sooner you serve, the sooner the pipeline fills.' : ''}
+            ${rec.goal === 'CONVERT' ? ' Affiliate clicks happen fast — expect income movement within 1–2 weeks of publishing.' : ''}
+          </div>
+        </div>
+
+        ${rec.post_mortem_tip ? `
+        <div style="background:rgba(62,207,178,0.05);border:1px solid rgba(62,207,178,0.15);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12px;color:rgba(62,207,178,0.8)">
+          💡 From Post-Mortem: ${escHtml(rec.post_mortem_tip)}
+        </div>` : ''}
+
+        ${rec.vectr_alignment ? `
+        <div style="font-size:12px;color:rgba(255,255,255,0.3);border-top:1px solid rgba(255,255,255,0.06);padding-top:12px">
+          <span style="letter-spacing:1px">VectΩr</span> — ${escHtml(rec.vectr_alignment)}
+        </div>` : ''}
+
+        <button onclick="sendToId8r('${rec.goal}','${(rec.angle||'').replace(/'/g,"\\'")}',' ')"
+          style="width:100%;background:var(--green);color:#0e0f0e;border:none;border-radius:8px;
+                 padding:12px;font-size:14px;font-weight:800;cursor:pointer;margin-top:16px;letter-spacing:1px">
+          Send to Id8Ωr →
+        </button>
+      </div>`;
+
+    panel.addEventListener('click', (e) => { if (e.target === panel) panel.remove(); });
+    document.body.appendChild(panel);
+  }
+
+  function showOverride() {
+    const goals = ['REACH', 'AUTHORITY', 'CONVERT', 'SERVE', 'RETAIN'];
+    const choice = prompt(`Override recommendation. Choose:\n${goals.map((g,i)=>`${i+1}. ${g}`).join('\n')}\n\nEnter 1-5:`);
+    const idx = parseInt(choice) - 1;
+    if (idx >= 0 && idx < goals.length) {
+      alert(`Noted — making a ${goals[idx]} video. When you publish it, classify it as ${goals[idx]} in the section below.`);
+    }
+  }
+
+  // ── Project Classifier ──────────────────────────────────────────────────────
+  async function syncYouTube() {
+    const btn = document.getElementById('sync-yt-btn');
+    const log = document.getElementById('sync-log');
+    btn.disabled = true;
+    btn.textContent = 'Syncing…';
+    log.style.display = 'block';
+    log.textContent = 'Starting sync…\n';
+
+    const es = new EventSource('/api/conductor/sync-youtube');
+    es.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.message) { log.textContent += d.message + '\n'; log.scrollTop = log.scrollHeight; }
+      if (d.done) {
+        const r = d.result;
+        log.textContent += `\n✓ Done! ${r.total_saved} public long-form videos synced. ${r.linked_to_projects} linked to Kre8r projects.\n`;
+        es.close();
+        btn.textContent = '↓ Sync YouTube History';
+        btn.disabled = false;
+        loadProjectClassifier(); // reload classifier with fresh data
+        _cache = null;
+      }
+      if (d.error) {
+        log.textContent += `\n✗ Error: ${d.error}\n`;
+        es.close();
+        btn.textContent = '↓ Sync YouTube History';
+        btn.disabled = false;
+      }
+    };
+    es.onerror = () => {
+      log.textContent += '\nConnection error — check server logs\n';
+      es.close();
+      btn.textContent = '↓ Sync YouTube History';
+      btn.disabled = false;
+    };
+  }
+
+  let _cache = null;
+  let _currentFilter = 'unclassified';
+  let _currentPage   = 1;
+
+  function setFilter(f) {
+    _currentFilter = f;
+    _currentPage   = 1;
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active-filter'));
+    document.getElementById('filter-' + f)?.classList.add('active-filter');
+    loadProjectClassifier();
+  }
+
+  async function suggestAll(force = false) {
+    if (force && !confirm('This will clear all existing classifications and redo them with title + description. Continue?')) return;
+    const btn = document.getElementById('suggest-all-btn');
+    const prog = document.getElementById('suggest-all-progress');
+    const bar  = document.getElementById('sa-bar');
+    const status = document.getElementById('sa-status');
+    const counts = document.getElementById('sa-counts');
+
+    btn.disabled = true; btn.textContent = 'Running…';
+    prog.style.display = '';
+
+    const es = new EventSource('/api/conductor/suggest-all' + (force ? '?force=1' : ''));
+    es.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.error) { status.textContent = '✗ Error: ' + d.error; status.style.color = 'var(--red)'; es.close(); btn.disabled = false; btn.textContent = '✦ Suggest All'; return; }
+      if (d.debug) { status.textContent = `⚠ ${d.debug}`; status.style.color = 'var(--amber)'; }
+      if (d.total) {
+        const pct = Math.round(((d.classified + d.skipped + d.errors) / d.total) * 100);
+        bar.style.width = pct + '%';
+        counts.textContent = `${d.classified} classified · ${d.skipped} skipped · ${d.errors} errors`;
+        if (d.last) status.textContent = `${d.last.goal === 'SKIP' ? '⊘ skip' : '✓ ' + d.last.goal}: ${d.last.title?.slice(0, 50)}`;
+      }
+      if (d.done) {
+        status.textContent = `✓ Done — ${d.classified} classified, ${d.skipped} skipped`;
+        status.style.color = 'var(--green)';
+        es.close();
+        btn.disabled = false; btn.textContent = '✦ Suggest All';
+        loadProjectClassifier(); // refresh list
+        loadDashboard(true);     // refresh cylinders
+      }
+    };
+    es.onerror = () => { es.close(); btn.disabled = false; btn.textContent = '✦ Suggest All'; };
+  }
+
+  async function loadProjectClassifier() {
+    try {
+      const res  = await fetch(`/api/conductor/videos?filter=${_currentFilter}&page=${_currentPage}&limit=20`);
+      const data = await res.json();
+
+      document.getElementById('classify-section').style.display = '';
+
+      // Update counts
+      const countsEl = document.getElementById('classify-counts');
+      if (countsEl) countsEl.textContent = `${data.totalUnclassified || 0} unclassified · ${data.totalAll || 0} total`;
+
+      // No YouTube sync yet
+      if (!data.totalAll) {
+        document.getElementById('project-list').innerHTML =
+          `<div style="color:var(--dim);font-size:13px;padding:12px 0">
+            Click <strong style="color:var(--green)">↓ Re-sync YouTube</strong> to import your video history.
+          </div>`;
+        return;
+      }
+
+      const videos = data.videos || [];
+      if (!videos.length) {
+        document.getElementById('project-list').innerHTML =
+          `<div style="color:var(--green);font-size:13px;padding:16px 0">✓ All videos in this view are classified!</div>`;
+        renderPagination(data);
+        return;
+      }
+
+      document.getElementById('classify-section').style.display = '';
+      // Always scroll to classifier on first load when unclassified videos exist
+      setTimeout(() => {
+        document.getElementById('classify-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 600);
+
+      document.getElementById('project-list').innerHTML = videos.map(v => {
+        const itemId  = v.video_id || v.id;
+        const isYT    = !!v.video_id;
+        const views   = v.view_count ? `${v.view_count.toLocaleString()} views` : '';
+        const priv    = v.privacy_status === 'unlisted' ? '<span style="font-size:10px;color:var(--amber);opacity:.6;margin-left:6px">[unlisted]</span>' : '';
+        const current = v.conductor_goal || '';
+        const goalClass = current && current !== 'SKIP' ? current : '';
+        return `<div class="project-row">
+          <div class="project-name" title="${escHtml(v.title)}">${escHtml(v.title)}${priv}${views ? `<span style="font-size:11px;color:var(--dim);margin-left:8px">${views}</span>` : ''}</div>
+          <button class="suggest-btn" onclick="suggestGoal('${itemId}', this, ${isYT})">✦</button>
+          <select class="goal-select ${goalClass}" id="goal-${itemId}" onchange="setGoal('${itemId}', this, ${isYT})">
+            <option value="" ${!current ? 'selected' : ''}>— classify —</option>
+            <option value="REACH"     ${current==='REACH'     ? 'selected' : ''}>REACH</option>
+            <option value="AUTHORITY" ${current==='AUTHORITY' ? 'selected' : ''}>AUTHORITY</option>
+            <option value="CONVERT"   ${current==='CONVERT'   ? 'selected' : ''}>CONVERT</option>
+            <option value="SERVE"     ${current==='SERVE'     ? 'selected' : ''}>SERVE</option>
+            <option value="RETAIN"    ${current==='RETAIN'    ? 'selected' : ''}>RETAIN</option>
+            <option value="SKIP"      ${current==='SKIP'      ? 'selected' : ''}>⊘ Skip (unclear)</option>
+          </select>
+        </div>`;
+      }).join('');
+
+      renderPagination(data);
+    } catch (_) {}
+  }
+
+  function renderPagination(data) {
+    const el = document.getElementById('pagination');
+    if (!el || data.pages <= 1) { if(el) el.innerHTML = ''; return; }
+    let html = `<span style="margin-right:4px">Page ${data.page}/${data.pages}</span>`;
+    if (data.page > 1) html += `<button class="page-btn" onclick="goPage(${data.page-1})">‹ Prev</button>`;
+    // Show up to 5 page numbers
+    const start = Math.max(1, data.page - 2);
+    const end   = Math.min(data.pages, start + 4);
+    for (let i = start; i <= end; i++) {
+      html += `<button class="page-btn ${i === data.page ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+    }
+    if (data.page < data.pages) html += `<button class="page-btn" onclick="goPage(${data.page+1})">Next ›</button>`;
+    el.innerHTML = html;
+  }
+
+  function goPage(page) {
+    _currentPage = page;
+    loadProjectClassifier();
+    document.getElementById('classify-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function suggestGoal(itemId, btn, isVideoId) {
+    btn.textContent = '…';
+    btn.disabled = true;
+    try {
+      const endpoint = isVideoId ? '/api/conductor/goal/video/suggest' : '/api/conductor/goal/suggest';
+      const body     = isVideoId ? { video_id: itemId } : { project_id: itemId };
+      const res  = await fetch(endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.suggestion) {
+        const sel = document.getElementById(`goal-${itemId}`);
+        if (sel) { sel.value = data.suggestion; sel.className = `goal-select ${data.suggestion}`; }
+        await setGoal(itemId, sel, isVideoId);
+      }
+    } catch (_) {}
+    btn.textContent = '✦ Suggest';
+    btn.disabled = false;
+  }
+
+  async function setGoal(itemId, select, isVideoId) {
+    const goal = select?.value;
+    if (!goal) return;
+    if (select) select.className = `goal-select ${goal}`;
+    try {
+      const endpoint = isVideoId ? `/api/conductor/goal/video/${itemId}` : `/api/conductor/goal/${itemId}`;
+      await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goal }) });
+      const res  = await fetch('/api/conductor/cylinders');
+      const cdata = await res.json();
+      if (dashboardData) {
+        dashboardData.cylinders   = cdata.cylinders;
+        dashboardData.firingScore = cdata.firingScore;
+        dashboardData.hasRed      = cdata.hasRed;
+        renderDashboard(dashboardData);
+      }
+    } catch (_) {}
+  }
+
+  function escHtml(s) {
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Load on page open
+  loadDashboard();
+</script>
+</body>
+</html>

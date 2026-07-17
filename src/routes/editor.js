@@ -244,24 +244,20 @@ async function detectPython() {
   return null;
 }
 
-router.post('/davinci/build/:project_id', (req, res) => {
-  const projectId = parseInt(req.params.project_id, 10);
-  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
-
-  const project = db.getProject(projectId);
-  if (!project) return res.status(404).json({ error: `Project ${projectId} not found` });
-
-  const job = createJob();
-  res.json({ job_id: job.id, project_id: projectId });
-
-  (async () => {
-    try {
+// Shared worker: builds the 02_SELECTS timeline in Resolve from a project's
+// existing selects rows by calling build-selects.py directly.
+// NO transcription, NO AI assembly — it just hands the already-approved selects
+// to the DaVinci script. Used by both:
+//   POST /api/editor/davinci/build/:project_id   (after running AssemblΩr)
+//   POST /api/editor/send-to-davinci/:project_id (escape hatch — already self-edited)
+async function buildDavinciTimeline(projectId, project, job) {
+  try {
       const binary = await detectPython();
       if (!binary) return failJob(job, `Python not found. Tried: ${PYTHON_CANDIDATES.join(', ')}`);
 
       const sections = db.getSelectsByProject(projectId);
       if (sections.length === 0) {
-        return failJob(job, 'No selects found for this project. Run Build Selects first.');
+        return failJob(job, 'No approved selects found for this project. Approve selects in ReviewΩr first.');
       }
 
       // Build footage_paths_json: { footage_id → best available file path }
@@ -397,7 +393,54 @@ router.post('/davinci/build/:project_id', (req, res) => {
     } catch (err) {
       failJob(job, err.message);
     }
-  })();
+}
+
+// POST /api/editor/davinci/build/:project_id
+// Push assembly to DaVinci after running AssemblΩr.
+router.post('/davinci/build/:project_id', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  const project = db.getProject(projectId);
+  if (!project) return res.status(404).json({ error: `Project ${projectId} not found` });
+
+  const job = createJob();
+  res.json({ job_id: job.id, project_id: projectId });
+
+  buildDavinciTimeline(projectId, project, job);
+});
+
+// ─────────────────────────────────────────────
+// SEND TO DAVINCI — ESCAPE HATCH
+// POST /api/editor/send-to-davinci/:project_id
+//
+// For when Jason has already self-edited his footage and just wants a DaVinci
+// project built from his approved selects WITHOUT running transcription or AI
+// assembly. Calls the SAME build-selects.py as /davinci/build — it simply skips
+// the AssemblΩr step entirely. Requires that selects already exist for the
+// project (created in ReviewΩr / a prior assembly, or imported manually).
+// ─────────────────────────────────────────────
+
+router.post('/send-to-davinci/:project_id', (req, res) => {
+  const projectId = parseInt(req.params.project_id, 10);
+  if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
+
+  const project = db.getProject(projectId);
+  if (!project) return res.status(404).json({ error: `Project ${projectId} not found` });
+
+  // Gate: there must be approved selects to send. No selects = nothing to build.
+  const sections = db.getSelectsByProject(projectId);
+  if (!sections || sections.length === 0) {
+    return res.status(400).json({
+      error: 'No approved selects for this project. Approve selects in ReviewΩr before sending to DaVinci.'
+    });
+  }
+
+  const job = createJob();
+  res.json({ job_id: job.id, project_id: projectId });
+
+  // Reuse the exact same build-selects.py worker — no transcription, no AI.
+  buildDavinciTimeline(projectId, project, job);
 });
 
 // ─────────────────────────────────────────────

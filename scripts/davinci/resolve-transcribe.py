@@ -1,15 +1,26 @@
 """
 resolve-transcribe.py — Kre8Ωr DaVinci Resolve transcription bridge
 
-Uses DaVinci Resolve's built-in AI transcription (Whisper-based, frame-accurate
-against the clip's actual timecodes) instead of running Whisper externally.
+Two-path transcription strategy:
 
-Advantages over external Whisper:
-  - Timestamps are anchored to Resolve's internal timecode — zero drift
+PATH 1 — MediaPoolItem (primary):
+  Uses DaVinci Resolve's built-in AI transcription (Whisper-based, frame-accurate
+  against the clip's actual timecodes).
+  - Timestamps anchored to Resolve's internal timecode — zero drift
   - Operates directly on the MediaPoolItem so BRAW proxies work correctly
   - Resolve's model handles audio EQ/noise better than raw Whisper on proxy H.264
+  - Known issue: TranscribeAudio() does NOT respond to scripted triggers on all builds.
+    When it fails, Path 2 is tried automatically.
 
-Cari voice filter:
+PATH 2 — Timeline subtitle fallback:
+  Uses CreateSubtitlesFromAudio() on a temp timeline — the same API used by
+  resolve-timeline-transcript.py which is confirmed working on this build.
+  Creates / reuses a temp timeline (_kre8r_transcribe_temp), appends the clip,
+  triggers subtitle generation, reads the subtitle track back as segments.
+  Slightly lower resolution (segment-level, no per-word timing) but fully reliable.
+  Cari voice filter is skipped (no word-level data from subtitle track).
+
+Cari voice filter (Path 1 only):
   Cari feeds Jason lines at low volume while standing off-camera.
   Two filters applied before output:
     1. Dominant speaker filter — if Resolve provides speaker labels (Resolve 19+),
@@ -39,8 +50,16 @@ import traceback
 # ─── Cari filter constants (can be overridden by CLI args) ───────────────────
 DEFAULT_MIN_SEG_SEC       = 1.2    # discard segments shorter than this
 DEFAULT_ISOLATION_GAP_SEC = 1.5    # after silence this long → likely Cari feed
-TRANSCRIPTION_TIMEOUT_SEC = 300    # 5 min max wait for Resolve transcription
+TRANSCRIPTION_TIMEOUT_SEC = 90     # 90s max wait for Resolve transcription (PATH 1)
+                                   # After 40s of status=None → switches to direct GetTranscription() polling
+                                   # If still nothing after 90s total → bail to PATH 2 → then Whisper
 POLL_INTERVAL_SEC         = 2      # how often to check transcription status
+
+# ─── Timeline fallback constants ─────────────────────────────────────────────
+TEMP_TIMELINE_NAME        = "_kre8r_transcribe_temp"   # reused across runs
+TIMELINE_POLL_INTERVAL    = 3.0
+TIMELINE_MAX_WAIT         = 45     # 45s — quick attempt only; if it doesn't work fast
+                                   # we fall through to Whisper rather than blocking for 5min
 
 # ─── Resolve API bootstrap (identical to all other Kre8Ωr Resolve scripts) ───
 
@@ -189,29 +208,82 @@ def trigger_and_wait(item):
     reliably wake up Resolve's AI engine on all builds. The status may stay "None"
     indefinitely even though the call returns without error.
 
-    Strategy:
-      - If already "Completed" → use immediately, no wait
-      - Call TranscribeAudio(), then poll for up to NONE_BAIL_COUNT × POLL_INTERVAL_SEC
-      - If status stays "None" that whole time → scripted trigger failed; raise so
-        Node.js falls back to Whisper gracefully
-      - If status moves to "InProgress" → reset bail counter and wait up to full timeout
+    Strategy (two phases):
+      Phase 1 (0–40s): Poll GetTranscriptionStatus every 2s.
+        - "Completed" → done immediately
+        - "InProgress" → reset bail counter, keep waiting
+        - "None" for 20 consecutive polls → switch to Phase 2
+
+      Phase 2 (40s–5min): Status is stuck at None (v21 bug).
+        Transcription may still be running — we don't give up.
+        Poll GetTranscription() directly every 10s for the remainder
+        of the 5-minute window. As soon as data appears, use it.
+        Only raises if 5-minute deadline is reached with still no data.
     """
+    # ── DIAGNOSTIC: log everything about this item ────────────────────────────
+    try:
+        item_name = item.GetName() if callable(item.GetName) else "?"
+        item_path = item.GetClipProperty("File Path") if callable(item.GetClipProperty) else "?"
+        print(f"[resolve] Item name: {item_name}", file=sys.stderr)
+        print(f"[resolve] Item path: {item_path}", file=sys.stderr)
+    except Exception as diag_e:
+        print(f"[resolve] Item diagnostic failed: {diag_e}", file=sys.stderr)
+
+    # ── Check for existing transcript first ──────────────────────────────────
+    # On v21, GetTranscriptionStatus() lies — returns "None" even when transcript
+    # data IS present (speech bubble icon visible in media pool). Always probe
+    # GetTranscription() directly first so we never re-trigger a completed job.
     status = _safe_call(item.GetTranscriptionStatus)
+    print(f"[resolve] Initial transcription status: {status!r}", file=sys.stderr)
+
     if status == "Completed":
-        print("[resolve] Transcript already present — reusing.", file=sys.stderr)
+        print("[resolve] Status=Completed — transcript already present, reusing.", file=sys.stderr)
         return True
 
-    print("[resolve] Triggering transcription…", file=sys.stderr)
+    # Even if status isn't "Completed", check if data is already there.
+    # The speech bubble icon in DaVinci's media pool means GetTranscription()
+    # will return data regardless of what GetTranscriptionStatus() reports.
+    existing = _safe_call(item.GetTranscription)
+    # Log what we actually got back — type + preview — so we can debug
+    print(f"[resolve] GetTranscription() upfront check: type={type(existing).__name__!r}, "
+          f"truthy={bool(existing)}, preview={repr(existing)[:200]}", file=sys.stderr)
+
+    if existing:
+        print("[resolve] GetTranscription() has data — reusing existing transcript.", file=sys.stderr)
+        return True
+
+    print("[resolve] No existing transcript found — triggering transcription…", file=sys.stderr)
     _safe_call(item.TranscribeAudio)
 
-    # If status stays "None" for this many consecutive polls we give up.
-    # 20 polls × 2s = 40s — enough to confirm the AI engine isn't responding.
-    NONE_BAIL_COUNT = 20
-    none_streak     = 0
-    deadline        = time.time() + TRANSCRIPTION_TIMEOUT_SEC
-    dots            = 0
+    # Phase 1: Poll GetTranscriptionStatus for 40s.
+    #   On v21, status reliably reports InProgress → Completed when it works.
+    #   But on many builds it stays "None" even while transcription runs.
+    # Phase 2: Once status is stuck at None for 40s, switch to polling
+    #   GetTranscription() directly for the remaining timeout window.
+    #   This handles the v21 bug where status never updates but data IS written.
+    #   For long videos (60+ min) Resolve transcription can take 3-5 minutes —
+    #   we keep probing rather than bailing early.
+    NONE_BAIL_COUNT   = 20   # 20 polls × 2s = 40s before switching strategy
+    DIRECT_POLL_INTERVAL = 10  # poll GetTranscription() every 10s in phase 2
+    none_streak       = 0
+    deadline          = time.time() + TRANSCRIPTION_TIMEOUT_SEC
+    dots              = 0
+    switched_to_direct = False
 
     while time.time() < deadline:
+
+        # ── Phase 2: direct GetTranscription() polling ───────────────────────
+        if switched_to_direct:
+            elapsed = int(time.time() - (deadline - TRANSCRIPTION_TIMEOUT_SEC))
+            print(f"[resolve] Waiting for Resolve to finish (direct probe)… {elapsed}s", file=sys.stderr)
+            raw = _safe_call(item.GetTranscription)
+            if raw:
+                print("[resolve] GetTranscription() returned data — transcription complete.", file=sys.stderr)
+                return True
+            time.sleep(DIRECT_POLL_INTERVAL)
+            continue
+
+        # ── Phase 1: status polling ──────────────────────────────────────────
         status = _safe_call(item.GetTranscriptionStatus)
         print(f"[resolve] Transcription status: {status}", file=sys.stderr)
 
@@ -224,15 +296,22 @@ def trigger_and_wait(item):
         if status == "None" or status is None:
             none_streak += 1
             if none_streak >= NONE_BAIL_COUNT:
-                raise RuntimeError(
-                    "TranscribeAudio() did not start after 40s — Resolve's AI engine "
-                    "does not respond to scripted triggers on this build. "
-                    "To fix: open the clip in Resolve's Edit page → Transcription panel → "
-                    "transcribe manually, then re-run AssemblΩr. "
-                    "(Node.js will fall back to Whisper this run.)"
-                )
+                # Status is stuck at None — could mean:
+                #   (a) Scripted trigger failed (engine not responding) — GetTranscription() empty
+                #   (b) v21 status bug — transcription IS running but status never updates
+                # Probe once. If data is already there, we're done.
+                # If not, switch to direct polling (don't give up — transcription may still be running).
+                print("[resolve] Status stuck at None after 40s — switching to direct GetTranscription() polling…", file=sys.stderr)
+                raw = _safe_call(item.GetTranscription)
+                if raw:
+                    print("[resolve] GetTranscription() already has data — using it.", file=sys.stderr)
+                    return True
+                print("[resolve] No data yet — will keep probing every 10s until 5-minute timeout.", file=sys.stderr)
+                print("[resolve] (If DaVinci is actively transcribing, this will resolve when it finishes.)", file=sys.stderr)
+                switched_to_direct = True
+                time.sleep(DIRECT_POLL_INTERVAL)
+                continue
         else:
-            # Status moved to something other than None (e.g. InProgress) — reset bail
             none_streak = 0
 
         dots += 1
@@ -242,6 +321,18 @@ def trigger_and_wait(item):
 
         time.sleep(POLL_INTERVAL_SEC)
 
+    # Deadline reached — one final attempt
+    raw = _safe_call(item.GetTranscription)
+    if raw:
+        print("[resolve] GetTranscription() returned data at deadline — using it.", file=sys.stderr)
+        return True
+
+    if switched_to_direct:
+        raise TimeoutError(
+            f"Resolve transcription did not complete within {TRANSCRIPTION_TIMEOUT_SEC}s. "
+            "DaVinci was triggered but produced no transcript data. "
+            "Try: open the Transcription panel in Resolve → transcribe manually → then re-analyze in ClipsΩr."
+        )
     raise TimeoutError(
         f"Resolve transcription did not complete within {TRANSCRIPTION_TIMEOUT_SEC}s."
     )
@@ -255,6 +346,188 @@ def _safe_call(method, *args):
     except Exception as exc:
         print(f"[warn] API call {method} raised: {exc}", file=sys.stderr)
     return None
+
+
+# ─── Timeline subtitle helpers (mirrored from resolve-timeline-transcript.py) ─
+
+# DaVinci v21 CreateSubtitlesFromAudio() creates "caption" tracks, not "subtitle" tracks.
+# We check both so this works regardless of build version.
+TRANSCRIPT_TRACK_TYPES = ["caption", "subtitle"]
+
+
+def _get_track_count(timeline, track_type):
+    try:
+        return timeline.GetTrackCount(track_type) or 0
+    except Exception:
+        return 0
+
+
+def _count_items_on_track(timeline, track_type, track_index):
+    try:
+        items = timeline.GetItemListInTrack(track_type, track_index)
+        return len(items) if items else 0
+    except Exception:
+        return 0
+
+
+def _find_best_transcript_track(timeline):
+    """
+    Return (track_type, track_index) for the track with the most transcript items,
+    checking both 'caption' and 'subtitle' track types.
+    Returns (None, None) if nothing found.
+    """
+    # Diagnostic: log all track counts so we know what's there
+    for tt in TRANSCRIPT_TRACK_TYPES + ["video", "audio"]:
+        try:
+            count = timeline.GetTrackCount(tt) or 0
+            if count > 0:
+                print(f"[tl-fallback] Track type '{tt}': {count} track(s)", file=sys.stderr)
+        except Exception:
+            pass
+
+    best_type, best_index, best_count = None, None, 0
+    for tt in TRANSCRIPT_TRACK_TYPES:
+        track_count = _get_track_count(timeline, tt)
+        for i in range(1, track_count + 1):
+            n = _count_items_on_track(timeline, tt, i)
+            print(f"[tl-fallback] {tt} track {i}: {n} item(s)", file=sys.stderr)
+            if n > best_count:
+                best_count = n
+                best_type  = tt
+                best_index = i
+
+    if best_type:
+        print(f"[tl-fallback] Best transcript track: {best_type}[{best_index}] with {best_count} items", file=sys.stderr)
+    return best_type, best_index
+
+
+def _read_subtitle_segments(timeline, track_type, track_index, fps=24.0):
+    """Read caption/subtitle track items → list of {start, end, text}."""
+    segments = []
+    try:
+        items = timeline.GetItemListInTrack(track_type, track_index)
+        if not items:
+            print(f"[tl-fallback] GetItemListInTrack({track_type!r}, {track_index}) returned empty", file=sys.stderr)
+            return segments
+        item_list = list(items.values()) if isinstance(items, dict) else list(items)
+        print(f"[tl-fallback] Reading {len(item_list)} items from {track_type} track {track_index}", file=sys.stderr)
+        for item in item_list:
+            try:
+                start_frame    = item.GetStart()    if callable(item.GetStart)    else 0
+                duration_frame = item.GetDuration() if callable(item.GetDuration) else 0
+                text           = item.GetName()     if callable(item.GetName)     else ""
+                if not text:
+                    # Some builds store text differently
+                    for prop in ("Subtitle Text", "Caption Text", "Text"):
+                        try:
+                            text = item.GetClipProperty(prop) or ""
+                            if text:
+                                break
+                        except Exception:
+                            pass
+                start_sec = float(start_frame)    / fps
+                end_sec   = start_sec + float(duration_frame) / fps
+                if text.strip():
+                    segments.append({"start": round(start_sec, 3),
+                                     "end":   round(end_sec,   3),
+                                     "text":  text.strip()})
+            except Exception as e:
+                print(f"[tl-fallback] skipping item: {e}", file=sys.stderr)
+        print(f"[tl-fallback] Read {len(segments)} segments with text", file=sys.stderr)
+    except Exception as e:
+        print(f"[tl-fallback] error reading {track_type} track: {e}", file=sys.stderr)
+    return segments
+
+
+def transcribe_via_timeline(project, media_pool, item):
+    """
+    PATH 2 — Timeline subtitle fallback.
+
+    Creates / reuses a temp timeline, appends the clip, calls
+    CreateSubtitlesFromAudio(), polls until the subtitle track appears,
+    then reads the track back as {start, end, text} segments.
+
+    Returns list of segment dicts. Raises RuntimeError / TimeoutError on failure.
+    """
+    # ── Find or create temp timeline ─────────────────────────────────────────
+    timeline = None
+    count = project.GetTimelineCount() or 0
+    for i in range(1, count + 1):
+        tl = project.GetTimelineByIndex(i)
+        if not tl:
+            continue
+        name = tl.GetName() if callable(tl.GetName) else ""
+        if name == TEMP_TIMELINE_NAME:
+            timeline = tl
+            break
+
+    if timeline is None:
+        timeline = _safe_call(media_pool.CreateEmptyTimeline, TEMP_TIMELINE_NAME)
+        if not timeline:
+            raise RuntimeError(
+                f"Could not create temp timeline '{TEMP_TIMELINE_NAME}'. "
+                "Make sure DaVinci Resolve has a project open."
+            )
+        print(f"[tl-fallback] Created temp timeline: {TEMP_TIMELINE_NAME}", file=sys.stderr)
+    else:
+        print(f"[tl-fallback] Reusing temp timeline: {TEMP_TIMELINE_NAME}", file=sys.stderr)
+
+    project.SetCurrentTimeline(timeline)
+
+    # ── Detect fps ────────────────────────────────────────────────────────────
+    fps = 24.0
+    try:
+        fps = float(timeline.GetSetting("timelineFrameRate") or fps)
+    except Exception:
+        pass
+    print(f"[tl-fallback] Timeline fps: {fps}", file=sys.stderr)
+
+    # ── Check for an existing caption/subtitle track (clip was transcribed before) ───
+    existing_type, existing_track = _find_best_transcript_track(timeline)
+    if existing_track is not None:
+        print(f"[tl-fallback] Existing {existing_type} track {existing_track} found — reusing.", file=sys.stderr)
+        segs = _read_subtitle_segments(timeline, existing_type, existing_track, fps)
+        if segs:
+            return segs
+        print("[tl-fallback] Existing track was empty — will re-transcribe.", file=sys.stderr)
+
+    # ── Append clip to timeline ───────────────────────────────────────────────
+    print("[tl-fallback] Appending clip to temp timeline...", file=sys.stderr)
+    append_result = _safe_call(media_pool.AppendToTimeline, [{"mediaPoolItem": item, "startFrame": 0}])
+    if not append_result:
+        print("[tl-fallback] AppendToTimeline returned falsy — clip may already be on timeline.", file=sys.stderr)
+
+    # ── Call CreateSubtitlesFromAudio ─────────────────────────────────────────
+    print("[tl-fallback] Calling CreateSubtitlesFromAudio()...", file=sys.stderr)
+    try:
+        cs_result = timeline.CreateSubtitlesFromAudio({"audioTrackIndex": 1})
+        print(f"[tl-fallback] CreateSubtitlesFromAudio() returned: {cs_result}", file=sys.stderr)
+    except Exception as e:
+        print(f"[tl-fallback] CreateSubtitlesFromAudio() raised: {e}", file=sys.stderr)
+
+    # ── Poll for caption/subtitle track to appear ─────────────────────────────
+    # Note: CreateSubtitlesFromAudio() may be synchronous on some builds —
+    # if it blocked above, tracks will already be there on the first poll.
+    deadline  = time.time() + TIMELINE_MAX_WAIT
+    last_log  = 0
+    while time.time() < deadline:
+        time.sleep(TIMELINE_POLL_INTERVAL)
+        elapsed = int(time.time() - (deadline - TIMELINE_MAX_WAIT))
+        track_type, track_idx = _find_best_transcript_track(timeline)
+        if track_idx is not None:
+            print(f"[tl-fallback] {track_type} track {track_idx} appeared after {elapsed}s", file=sys.stderr)
+            segs = _read_subtitle_segments(timeline, track_type, track_idx, fps)
+            if segs:
+                return segs
+            print("[tl-fallback] Track appeared but no text items yet — continuing to wait.", file=sys.stderr)
+        if elapsed - last_log >= 15:
+            print(f"[tl-fallback] Waiting for Resolve caption/subtitle generation... ({elapsed}s)", file=sys.stderr)
+            last_log = elapsed
+
+    raise TimeoutError(
+        f"Timeline transcription did not complete within {TIMELINE_MAX_WAIT}s. "
+        "(Node.js will fall back to Whisper.)"
+    )
 
 
 # ─── Transcript extraction ────────────────────────────────────────────────────
@@ -500,23 +773,52 @@ def run(args):
     # Find / import the clip
     item = find_or_import_clip(media_pool, file_path)
 
-    # Trigger transcription and wait
-    trigger_and_wait(item)
+    # ── PATH 1: MediaPoolItem TranscribeAudio ─────────────────────────────────
+    segments  = None
+    source_id = "resolve"
 
-    # Extract word-level data
-    words = extract_transcript(item)
+    try:
+        trigger_and_wait(item)
+        words = extract_transcript(item)
+        words = filter_cari_voice(words, min_seg_sec, iso_gap_sec)
+        if words:
+            segments = words_to_segments(words)
+            print(
+                f"[resolve-transcribe] PATH 1 done. "
+                f"{len(segments)} segments, {len(words)} words.",
+                file=sys.stderr
+            )
+        else:
+            print("[resolve-transcribe] PATH 1: no words after Cari filter — trying timeline fallback.", file=sys.stderr)
+    except (RuntimeError, TimeoutError) as path1_err:
+        print(f"[resolve-transcribe] PATH 1 failed: {path1_err}", file=sys.stderr)
+        print("[resolve-transcribe] Trying PATH 2 — timeline subtitle fallback…", file=sys.stderr)
 
-    # Apply Cari voice filter
-    words = filter_cari_voice(words, min_seg_sec, iso_gap_sec)
-
-    if not words:
-        raise RuntimeError(
-            "No words remain after filtering. "
-            "The clip may contain only Cari's voice, or transcription returned empty results."
+    # ── PATH 2: Timeline CreateSubtitlesFromAudio (fallback) ──────────────────
+    if not segments:
+        raw_segs = transcribe_via_timeline(project, media_pool, item)
+        # Wrap in the same schema as words_to_segments output (no word-level timing)
+        segments = [
+            {
+                "id":    i,
+                "start": s["start"],
+                "end":   s["end"],
+                "text":  s["text"],
+                "words": []   # subtitle track doesn't expose per-word timing
+            }
+            for i, s in enumerate(raw_segs)
+        ]
+        source_id = "resolve_timeline"
+        print(
+            f"[resolve-transcribe] PATH 2 done. {len(segments)} segments.",
+            file=sys.stderr
         )
 
-    # Group into segments
-    segments = words_to_segments(words)
+    if not segments:
+        raise RuntimeError(
+            "No segments from either transcription path. "
+            "Make sure DaVinci Resolve is open with a project loaded."
+        )
 
     # Apply text fixes
     full_text = fix_transcript_text(" ".join(s["text"] for s in segments).strip())
@@ -535,12 +837,11 @@ def run(args):
         "text":       full_text,
         "duration":   duration,
         "segments":   segments,
-        "_source":    "resolve",
+        "_source":    source_id,
     }
 
     print(
-        f"[resolve-transcribe] Done. {len(segments)} segments, "
-        f"{len(words)} words, {duration:.1f}s",
+        f"[resolve-transcribe] Done. {len(segments)} segments, {duration:.1f}s (source={source_id})",
         file=sys.stderr
     )
 

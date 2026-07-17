@@ -190,6 +190,46 @@
 
   /* ── PREVIOUS DRAFTS ── */
   .drafts-section{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
+  /* ── TikTok Series ── */
+  .tt-series-section{margin-top:20px;border-top:1px solid rgba(20,184,166,0.15);padding-top:18px;}
+  .tt-series-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .tt-series-title{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--teal);text-transform:uppercase;}
+  .tt-filming-bar{display:flex;align-items:center;gap:6px;margin-bottom:16px;padding:8px 12px;background:rgba(20,184,166,0.04);border-radius:4px;border:1px solid rgba(20,184,166,0.12);}
+  .tt-filming-label{font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.8px;}
+  .tt-filming-dots{display:flex;gap:6px;margin-left:8px;}
+  .tt-dot{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);}
+  .tt-dot.filmed{background:rgba(74,222,128,0.2);border-color:rgba(74,222,128,0.45);color:#4ade80;}
+  .tt-dot.posted{background:rgba(20,184,166,0.2);border-color:var(--teal);color:var(--teal);}
+  .tt-bail-note{font-size:10px;color:rgba(255,255,255,0.3);margin-left:auto;font-style:italic;}
+  .tt-script-card{background:rgba(20,184,166,0.03);border:1px solid rgba(20,184,166,0.1);border-left:3px solid rgba(20,184,166,0.3);border-radius:4px;padding:14px 16px;margin-bottom:10px;}
+  .tt-script-card.e1{border-left-color:var(--teal);}
+  .tt-script-card.e2{border-left-color:#f59e0b;}
+  .tt-script-card.e3{border-left-color:rgba(20,184,166,0.45);}
+  .tt-script-card.e4{border-left-color:rgba(255,255,255,0.18);}
+  .tt-script-card.e5{border-left-color:rgba(255,255,255,0.1);}
+  .tt-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .tt-slot-badge{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(20,184,166,0.1);color:var(--teal);padding:2px 7px;border-radius:3px;}
+  .tt-format-label{font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.8px;}
+  .tt-pillar{font-size:9px;color:rgba(255,255,255,0.25);margin-left:auto;}
+  .tt-status-btn{font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.35);cursor:pointer;transition:all 0.15s;}
+  .tt-status-btn:hover{border-color:var(--teal);color:var(--teal);}
+  .tt-status-btn.filmed{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.3);color:#4ade80;}
+  .tt-status-btn.posted{background:rgba(20,184,166,0.1);border-color:var(--teal);color:var(--teal);}
+  .tt-hooks{margin-bottom:10px;}
+  .tt-hooks-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f59e0b;margin-bottom:5px;}
+  .tt-hook{font-size:12px;color:rgba(255,255,255,0.8);padding:4px 8px;background:rgba(245,158,11,0.05);border-radius:3px;margin-bottom:3px;font-style:italic;}
+  .tt-hook::before{content:'⚡ ';font-style:normal;}
+  .tt-spine{margin-bottom:10px;}
+  .tt-spine-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:5px;}
+  .tt-spine-item{font-size:11px;color:rgba(255,255,255,0.7);padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:6px;}
+  .tt-spine-item::before{content:'·';color:var(--teal);flex-shrink:0;}
+  .tt-closing{font-size:11px;color:var(--teal);font-weight:600;margin-bottom:10px;padding-top:6px;}
+  .tt-closing::before{content:'→ CLOSE: ';font-size:9px;font-weight:700;letter-spacing:1px;opacity:0.7;}
+  .tt-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.04);}
+  .tt-caption{font-size:10px;color:rgba(255,255,255,0.38);flex-basis:100%;line-height:1.6;}
+  .tt-on-screen{font-size:9px;color:rgba(255,255,255,0.28);}
+  .tt-on-screen span{background:rgba(255,255,255,0.06);border-radius:2px;padding:1px 5px;margin-right:3px;}
+  .tt-gen-loading{font-size:11px;color:var(--teal);opacity:0.7;padding:20px 0;text-align:center;}
   .drafts-toggle{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--text-dim);font-family:var(--font-body);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;cursor:pointer;padding:0;transition:color 0.15s;}
   .drafts-toggle:hover{color:var(--text);}
   .drafts-arrow{font-size:10px;transition:transform 0.2s;}
@@ -697,6 +737,21 @@
           <button class="btn btn-ghost" id="exportBtn">⬇ Export .txt</button>
           <button class="btn btn-ghost" id="teleprompterBtn" style="display:none" onclick="openTeleprompter()">📺 TeleprΩmpter</button>
           <button class="btn btn-ghost" id="directorBtn" style="display:none" onclick="openDirector()">🎬 DirectΩr →</button>
+          <button class="btn btn-ghost" id="tiktokSeriesBtn" style="display:none" onclick="generateTikTokSeries()">✦ TikTok Series</button>
+        </div>
+
+        <!-- TikTok Series Scripts -->
+        <div class="tt-series-section" id="ttSeriesSection" style="display:none">
+          <div class="tt-series-header">
+            <span class="tt-series-title">✦ TikTok Series</span>
+            <button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;margin-left:auto" onclick="generateTikTokSeries()">↺ Regenerate</button>
+          </div>
+          <div class="tt-filming-bar">
+            <span class="tt-filming-label">Filmed</span>
+            <div class="tt-filming-dots" id="ttFilmedDots"></div>
+            <span class="tt-bail-note" id="ttBailNote">3 of 5 = green ✓</span>
+          </div>
+          <div id="ttScriptsBody"></div>
         </div>
 
         <!-- Previous drafts -->
@@ -1044,6 +1099,7 @@ async function onProjectChange(pid) {
       renderBeatMap(beatMap);
       renderScript(currentScript);
       loadDraftsHistory(pid);
+      loadTikTokSeries(pid);
       // Load sibling tabs in background (non-blocking)
       if (s.session_id) loadSiblingTabs(s.session_id, beatMap);
     } else if (data.config?.beats?.length) {
@@ -1527,10 +1583,15 @@ function setReviseLoading(loading) {
 async function onApprove() {
   if (!currentProjectId || !currentScript) return;
   try {
+    // H2: always approve the FULL sibling — bullets/hybrid are presentation views, never source of truth.
+    // If the creator is on the Bullets or Hybrid tab, approving those locks 3-word memory triggers
+    // as the canonical script for AssemblΩr, MailΩr, PostΩr, TeleprΩmpter, BrΩllr.
+    const fullScript = currentScripts.full;
+    const approveId  = fullScript?.id || currentScript.id;
     const r = await fetch(`/api/writr/${currentProjectId}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ script_id: currentScript.id })
+      body: JSON.stringify({ script_id: approveId })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
 
@@ -1552,6 +1613,10 @@ async function onApprove() {
     // Show DirectΩr button
     const dirBtn = document.getElementById('directorBtn');
     if (dirBtn) dirBtn.style.display = '';
+
+    // Show TikTok Series button
+    const ttBtn = document.getElementById('tiktokSeriesBtn');
+    if (ttBtn) ttBtn.style.display = '';
 
     showToast('Script approved! Ready for DirectΩr or TeleprΩmpter.', 'success');
     loadDraftsHistory(currentProjectId);
@@ -1879,6 +1944,12 @@ function renderScript(script) {
     document.getElementById('approveBtn').disabled   = true;
     document.getElementById('approveBtn').textContent = '✓ Approved';
     document.getElementById('approveBtn').style.display = '';
+    // Show post-approval buttons on load (not just after fresh approve)
+    document.getElementById('teleprompterBtn').style.display = '';
+    const _dirBtn = document.getElementById('directorBtn');
+    if (_dirBtn) _dirBtn.style.display = '';
+    const _ttBtn = document.getElementById('tiktokSeriesBtn');
+    if (_ttBtn) _ttBtn.style.display = '';
   } else {
     document.getElementById('reviseControls').style.display  = 'block';
     document.getElementById('regenApprovedRow').style.display = 'none';
@@ -3230,6 +3301,143 @@ document.addEventListener('DOMContentLoaded', () => {
 // BOOT
 // ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
+
+// ─────────────────────────────────────────────
+// TIKTOK SERIES GENERATOR
+// ─────────────────────────────────────────────
+
+const TT_FORMAT_LABELS = {
+  'core-native':    'CORE NATIVE',
+  'core-native-2':  'CORE NATIVE 2',
+  'contrarian':     'CONTRARIAN',
+  'search-answer':  'SEARCH ANSWER',
+  'series-episode': 'SERIES EPISODE',
+};
+
+async function generateTikTokSeries() {
+  if (!currentProjectId) return;
+  const section = document.getElementById('ttSeriesSection');
+  const body    = document.getElementById('ttScriptsBody');
+  section.style.display = 'block';
+  body.innerHTML = '<div class="tt-gen-loading">Building 5 TikTok formats from your script…<br><span style="font-size:10px;opacity:0.6">~20 seconds</span></div>';
+  updateTtFilmedDots([]);
+
+  try {
+    const r = await fetch(`/api/writr/${currentProjectId}/tiktok-scripts`, { method: 'POST' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const reader = r.body.getReader();
+    const dec    = new TextDecoder();
+    let   buf    = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const ev = JSON.parse(line.slice(6));
+          if (ev.type === 'progress') {
+            body.innerHTML = `<div class="tt-gen-loading">${ev.message}</div>`;
+          } else if (ev.type === 'done' && ev.scripts) {
+            renderTikTokSeries(ev.scripts);
+          } else if (ev.type === 'error') {
+            body.innerHTML = `<div class="tt-gen-loading" style="color:#ef4444">Error: ${esc(ev.message || 'Generation failed')}</div>`;
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (e) {
+    document.getElementById('ttScriptsBody').innerHTML =
+      `<div class="tt-gen-loading" style="color:#ef4444">Failed: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderTikTokSeries(scripts) {
+  if (!scripts || !scripts.length) return;
+  const body = document.getElementById('ttScriptsBody');
+  body.innerHTML = scripts.map(s => {
+    const hooks    = Array.isArray(s.hook_variants)  ? s.hook_variants  : (tryParseJson(s.hook_variants,  []));
+    const spine    = Array.isArray(s.beat_spine)     ? s.beat_spine     : (tryParseJson(s.beat_spine,     []));
+    const onScreen = Array.isArray(s.on_screen_text) ? s.on_screen_text : (tryParseJson(s.on_screen_text, []));
+    const label    = TT_FORMAT_LABELS[s.format_type] || (s.format_type || '').toUpperCase();
+    const statusCls   = s.status === 'filmed' ? 'filmed' : s.status === 'posted' ? 'posted' : '';
+    const statusLabel = s.status === 'filmed' ? '✓ FILMED' : s.status === 'posted' ? '✓ POSTED' : 'Mark Filmed';
+
+    return `<div class="tt-script-card e${s.energy_order || 3}" id="tt-card-${s.id}">
+      <div class="tt-card-header">
+        <span class="tt-slot-badge">${s.slot} of 5</span>
+        <span class="tt-format-label">${esc(label)}</span>
+        <span class="tt-pillar">${esc(s.pillar || '')}${s.series_name ? ' · ' + esc(s.series_name) : ''}</span>
+        <button class="tt-status-btn ${statusCls}" onclick="cycleTikTokStatus(${s.id}, '${esc(s.status || 'pending')}')">${statusLabel}</button>
+      </div>
+      <div class="tt-hooks">
+        <div class="tt-hooks-label">Hook variants — pick one on the day</div>
+        ${hooks.map(h => `<div class="tt-hook">${esc(h)}</div>`).join('')}
+      </div>
+      <div class="tt-spine">
+        <div class="tt-spine-label">Beat spine</div>
+        ${spine.map(b => `<div class="tt-spine-item">${esc(b)}</div>`).join('')}
+      </div>
+      ${s.closing_line ? `<div class="tt-closing">${esc(s.closing_line)}</div>` : ''}
+      <div class="tt-meta">
+        ${s.caption ? `<div class="tt-caption">${esc(s.caption)}</div>` : ''}
+        ${onScreen.length ? `<div class="tt-on-screen">ON-SCREEN: ${onScreen.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  updateTtFilmedDots(scripts);
+}
+
+function updateTtFilmedDots(scripts) {
+  const dots = document.getElementById('ttFilmedDots');
+  const note = document.getElementById('ttBailNote');
+  if (!dots) return;
+  const filmed = scripts.filter(s => s.status === 'filmed' || s.status === 'posted').length;
+  dots.innerHTML = scripts.map((s, i) => {
+    const cls = s.status === 'posted' ? 'posted' : s.status === 'filmed' ? 'filmed' : '';
+    const ttLabel = TT_FORMAT_LABELS[s.format_type] || s.format_type || '';
+    return `<div class="tt-dot ${cls}" title="${esc(ttLabel)}">${i + 1}</div>`;
+  }).join('');
+  if (note) {
+    if (filmed >= 5)      note.textContent = 'All 5 filmed ✓';
+    else if (filmed >= 3) note.textContent = `${filmed} of 5 — that\'s a win ✓`;
+    else if (filmed > 0)  note.textContent = `${filmed} of 5 filmed`;
+    else                  note.textContent = '3 of 5 = green ✓';
+  }
+}
+
+async function cycleTikTokStatus(id, current) {
+  if (!currentProjectId) return;
+  const next = current === 'pending' ? 'filmed' : current === 'filmed' ? 'posted' : 'pending';
+  try {
+    await fetch(`/api/writr/${currentProjectId}/tiktok-scripts/${id}/status`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ status: next }),
+    });
+    loadTikTokSeries(currentProjectId);
+  } catch (_) {}
+}
+
+async function loadTikTokSeries(projectId) {
+  if (!projectId) return;
+  try {
+    const r = await fetch(`/api/writr/${projectId}/tiktok-scripts`);
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.scripts && d.scripts.length) {
+      document.getElementById('ttSeriesSection').style.display = 'block';
+      renderTikTokSeries(d.scripts);
+    }
+  } catch (_) {}
+}
+
+function tryParseJson(val, fallback) {
+  if (!val) return fallback;
+  try { return JSON.parse(val); } catch (_) { return fallback; }
+}
 </script>
 <script src="/js/nav.js"></script>
 <script>initNav();</script>

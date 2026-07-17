@@ -22,8 +22,10 @@
   // ─────────────────────────────────────────────
   // NAV STRUCTURE
   // ─────────────────────────────────────────────
-  const NORTHR_LINK = { href: '/northr.html', label: '🧭 NorthΩr' };
-  const LAB_LINK    = { href: '/lab.html',    label: '🧪 Lab' };
+  const NORTHR_LINK  = { href: '/conductor.html',        label: '🎼 ConductΩr' };
+  const MISSION_LINK = { href: '/mission-control.html', label: '🚀 MissionΩr' };
+  const LAB_LINK     = { href: '/lab.html',             label: '🧪 Lab' };
+  const REFIT_LINK   = { href: '/refit-bay.html',       label: '🎨 RefitΩr' };
 
   const NAV = {
     categories: [
@@ -51,15 +53,32 @@
       {
         id: 'post',
         label: 'Post',
+        // Nav order fixed per Opus Tier 3 audit (Session 92):
+        // BrollΩr + AnimΩr are ASSET GENERATORS — they belong after AssemblΩr's first pass
+        // (so coverage gaps are known) but BEFORE ReviewΩr/ComposΩr (so assets exist when needed).
+        // ClipsΩr belongs AFTER ComposΩr — you extract social clips from the finished video.
+        // Old order: AssemblΩr → ReviewΩr → ClipsΩr → ComposΩr → BrollΩr → AnimΩr (wrong)
+        // New order: AssemblΩr → BrollΩr → AnimΩr → ReviewΩr → ComposΩr → ClipsΩr
         items: [
-          { label: 'VaultΩr',  href: '/vault.html' },
+          { label: 'VaultΩr',   href: '/vault.html' },
           { label: 'AssemblΩr', href: '/editor.html' },
-          { label: 'ReviewΩr', href: '/reviewr.html' },
-          { label: 'ClipsΩr',  href: '/clipsr.html' },
-          { label: 'ComposΩr', href: '/composor.html' },
-          { label: 'BrollΩr',  href: '/brollr.html' },
-          { label: 'AnimΩr',   href: '/animr.html' },
-          { label: 'CleanΩr',  href: '/cleanr.html' },
+          { label: 'BrollΩr',   href: '/brollr.html' },   // ← generate b-roll for gap beats
+          { label: 'AnimΩr',    href: '/animr.html' },    // ← generate motion graphics assets
+          { label: 'ReviewΩr',  href: '/reviewr.html' },  // ← review with all assets ready
+          { label: 'ComposΩr',  href: '/composor.html' }, // ← compose final video
+          { label: 'ClipsΩr',   href: '/clipsr.html' },   // ← extract social clips from finished video
+          { label: 'CleanΩr',   href: '/cleanr.html' },
+        ]
+      },
+      {
+        id: 'sites',
+        label: 'Sites',
+        items: [
+          { label: 'Land Finder',    href: 'https://7kinhomestead.land/finder',        external: true },
+          { label: 'List Your Land', href: 'https://7kinhomestead.land/list-your-land', external: true },
+          { label: 'Land Admin',     href: 'https://7kinhomestead.land/admin/listings', external: true },
+          { label: 'The Fence',      href: 'https://7kinhomestead.land/fence',          external: true },
+          { label: 'Land Home',      href: 'https://7kinhomestead.land',                external: true },
         ]
       },
       {
@@ -70,10 +89,15 @@
           { label: 'PackageΩr', sublabel: 'M2', href: '/m2-package-generator.html' },
           { label: 'CaptionΩr', sublabel: 'M3', href: '/m3-caption-generator.html' },
           { label: 'MailΩr',    sublabel: 'M4', href: '/mailor.html' },
-          { label: 'AudiencΩr', sublabel: 'M5', href: '/audience.html' },
-          { label: 'PostΩr',    href: '/postor.html' },
+          { label: 'PostΩr',    sublabel: 'M5', href: '/postor.html' },  // ← promoted: PostΩr IS the distribution step
+          { label: 'AudiencΩr', href: '/audience.html' },
           { label: 'AutomatΩr', href: '/automator.html' },
-          { label: 'MirrΩr',     href: '/mirrr.html' },
+          { label: 'MirrΩr',      href: '/mirrr.html' },
+          { label: 'NorthΩr',     href: '/northr.html' },
+          { label: 'VectΩr',      href: '/vectr.html' },
+          { label: 'Post-Mortem', href: '/postmortem.html' },
+          { label: 'StudioΩr',   href: '/studio-intel.html' },
+          { label: 'VisualΩr',   href: '/visualr.html' },
           { label: 'AnalyticΩr', href: '/analyticr.html' },
           { label: 'Analytics Import', href: '/analytics-import.html' },
           { label: 'MarkΩr',      href: '/markr.html' },
@@ -493,7 +517,8 @@
             ${rightHTML}
           </span>`;
         }
-        return `<a href="${item.href}" class="${classes}" role="menuitem" tabindex="${active ? '0' : '-1'}">
+        const extAttrs = item.external ? ` target="_blank" rel="noopener noreferrer"` : '';
+        return `<a href="${item.href}"${extAttrs} class="${classes}" role="menuitem" tabindex="${active ? '0' : '-1'}">
           <span>${escHtml(item.label)}</span>
           ${rightHTML}
         </a>`;
@@ -534,7 +559,8 @@
             ${soonHTML}
           </span>`;
         }
-        return `<a href="${item.href}" class="${classes}">
+        const extAttrs = item.external ? ` target="_blank" rel="noopener noreferrer"` : '';
+        return `<a href="${item.href}"${extAttrs} class="${classes}">
           <span>${escHtml(item.label)}</span>
           ${sublabelHTML || soulHTML}
         </a>`;
@@ -546,8 +572,10 @@
       </div>`;
     }).join('');
 
-    const northrActive = getActivePage() === NORTHR_LINK.href.toLowerCase();
-    const labActive    = getActivePage() === LAB_LINK.href.toLowerCase();
+    const northrActive  = getActivePage() === NORTHR_LINK.href.toLowerCase();
+    const missionActive = getActivePage() === MISSION_LINK.href.toLowerCase();
+    const labActive     = getActivePage() === LAB_LINK.href.toLowerCase();
+    const refitActive   = getActivePage() === REFIT_LINK.href.toLowerCase();
     const navHTML = `
       <nav class="kn-nav" role="navigation" aria-label="Kre8Ωr main navigation">
         <a href="/" class="kn-logo" aria-label="Kre8Ωr home">
@@ -558,8 +586,14 @@
             ${escHtml(NORTHR_LINK.label)}
             <span class="kn-alert-badge" id="kn-alert-badge" style="display:none"></span>
           </a>
+          <a href="${MISSION_LINK.href}" class="kn-northr-link${missionActive ? ' is-active' : ''}" aria-label="MissionΩr — command center">
+            ${escHtml(MISSION_LINK.label)}
+          </a>
           <a href="${LAB_LINK.href}" class="kn-northr-link${labActive ? ' is-active' : ''}" aria-label="Lab — creative director chat">
             ${escHtml(LAB_LINK.label)}
+          </a>
+          <a href="${REFIT_LINK.href}" class="kn-northr-link${refitActive ? ' is-active' : ''}" aria-label="Refit Bay — bridge skin configuration">
+            ${escHtml(REFIT_LINK.label)}
           </a>
           ${categoryHTML}
           <a href="/sync.html"   class="kn-northr-link${getActivePage() === '/sync.html'   ? ' is-active' : ''}" aria-label="SyncΩr — cross-device sync" title="SyncΩr — cross-device sync" style="font-size:13px;opacity:.7">⟳ Sync</a>
@@ -575,6 +609,13 @@
         <div class="kn-mobile-header">
           <a href="/" class="kn-mobile-logo">KRE<span style="color:var(--teal,#3ecfb2)">8Ω</span>R</a>
           <button class="kn-mobile-close" aria-label="Close navigation menu">✕</button>
+        </div>
+        <div class="kn-mobile-section">
+          <div class="kn-mobile-section-label">Bridge</div>
+          <a href="${NORTHR_LINK.href}"  class="kn-mobile-item${northrActive  ? ' is-active' : ''}">${escHtml(NORTHR_LINK.label)}</a>
+          <a href="${MISSION_LINK.href}" class="kn-mobile-item${missionActive ? ' is-active' : ''}">${escHtml(MISSION_LINK.label)}</a>
+          <a href="${LAB_LINK.href}"     class="kn-mobile-item${labActive     ? ' is-active' : ''}">${escHtml(LAB_LINK.label)}</a>
+          <a href="${REFIT_LINK.href}"   class="kn-mobile-item${refitActive   ? ' is-active' : ''}">${escHtml(REFIT_LINK.label)}</a>
         </div>
         ${mobileSections}
       </div>

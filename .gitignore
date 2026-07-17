@@ -36,6 +36,10 @@ public/music/
 backups/
 logs/
 
+# ── Cari's birthday gift (local only, never deploy) ──────────────────────────
+public/rocky-chess.html
+public/rocky.glb
+
 # ── Misc ──────────────────────────────────────────────────────────────────────
 *.log
 public/thumbnails/

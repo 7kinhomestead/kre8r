@@ -18,7 +18,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock, loadAudienceTargetBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -224,6 +224,7 @@ function buildReconcilePrompt({ concept, whatCaptured, transcriptBlock, config, 
   const seasonBlock  = buildSeasonBlock(seasonContext);
   const tikTokBlock    = loadTikTokIntelligenceBlock();
   const voiceCalBlock  = loadVoiceCalibrationBlock();
+  const audienceBlock  = loadAudienceTargetBlock();
 
   const transcriptSection = transcriptBlock
     ? `## FOOTAGE TRANSCRIPTS\n${transcriptBlock}`
@@ -238,6 +239,7 @@ ${SLOP_RULE}
 ## CREATOR VOICE
 ${voiceSummary}
 ${voiceCalBlock}
+${audienceBlock}
 ${tikTokBlock}
 ## PROJECT CONFIG
 Content type: ${contentType}

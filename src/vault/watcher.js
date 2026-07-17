@@ -19,6 +19,8 @@ const fs        = require('fs');
 const { ingestFile } = require('./intake');
 const { transcribeFile } = require('./transcribe');
 const txQueue   = require('./transcribe-queue');
+const fxQueue   = require('./frame-analysis-queue');
+const db        = require('../db');
 
 const PROFILE_PATH = process.env.CREATOR_PROFILE_PATH || path.join(__dirname, '..', '..', 'creator-profile.json');
 const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv']);
@@ -64,12 +66,15 @@ function parseProjectFromPath(filePath, watchPath) {
     if (isNaN(projectId) || projectId <= 0) return null;
 
     // Determine shot_type_override from the immediate subfolder
-    const subfolder = parts[1]?.toLowerCase(); // 'raw', 'completed', 'clips'
+    const subfolder = parts[1]?.toLowerCase(); // 'raw', 'completed', 'clips', 'generated'
     let shot_type_override = null;
     if (subfolder === 'completed') {
       shot_type_override = 'completed-video';
     } else if (subfolder === 'clips') {
       shot_type_override = 'social-clip';
+    } else if (subfolder === 'generated') {
+      // GeneratΩr output — BrollΩr + AnimΩr downloads auto-classified as b-roll
+      shot_type_override = 'broll';
     }
     // 'raw' and 'raw/proxy' — leave null; BRAW/proxy detection in intake.js handles these
 
@@ -79,8 +84,9 @@ function parseProjectFromPath(filePath, watchPath) {
   }
 }
 
-let watcher = null;
-let watchPath = null;
+let watcher          = null;
+let watchPath        = null;
+let watcherHeartbeat = null;
 
 // ─────────────────────────────────────────────
 // STABILITY CHECK
@@ -153,10 +159,16 @@ function startWatcher(overridePath = null) {
   }
 
   watchPath = intakePath;
+  // Mark active immediately so the bridge doesn't show OFFLINE while chokidar scans intake
+  try { db.setKv('watcher_active', true); } catch (_) {}
 
   watcher = chokidar.watch(intakePath, {
     persistent:      true,
     ignoreInitial:   true,   // don't re-ingest files already there at startup
+    // Blackmagic Proxy Generator drops ProRes copies into "Proxy" subfolders beside
+    // sources — those are render artifacts, never source footage. Ingesting them
+    // duplicates records and burns vision-analysis calls (222 junk records, Jul 13 '26).
+    ignored:         /[\\\/]Proxy[\\\/]/,
     awaitWriteFinish: {
       stabilityThreshold: STABLE_DELAY_MS,
       pollInterval: 500
@@ -195,6 +207,13 @@ function startWatcher(overridePath = null) {
           } else {
             console.log(`[VaultΩr Watcher] Transcription skipped for id=${result.id}: ${enqueueResult.reason}`);
           }
+
+          // Auto-analyze frames for visual perception (parallel to transcription).
+          // Produces eye contact, energy arc, peak energy zone, b-roll signals.
+          const fxResult = fxQueue.enqueue(result.id, filePath, label);
+          if (fxResult.ok) {
+            console.log(`[VaultΩr Watcher] 👁 Queued for frame analysis: ${label} (job=${fxResult.job_id})`);
+          }
         }
 
         // Auto-transcribe social clips so CaptionΩr can generate captions
@@ -228,6 +247,12 @@ function startWatcher(overridePath = null) {
 
   watcher.on('ready', () => {
     console.log(`[VaultΩr Watcher] Watching: ${intakePath}`);
+    try { db.setKv('watcher_active', true); } catch (_) {}
+    // Heartbeat every 2 min — lets mission control detect a crashed watcher
+    if (watcherHeartbeat) clearInterval(watcherHeartbeat);
+    watcherHeartbeat = setInterval(() => {
+      try { db.setKv('watcher_active', true); } catch (_) {}
+    }, 120_000);
   });
 
   return { ok: true, path: intakePath };
@@ -239,6 +264,8 @@ function startWatcher(overridePath = null) {
 
 async function stopWatcher() {
   if (!watcher) return { ok: true, message: 'Watcher was not running' };
+  if (watcherHeartbeat) { clearInterval(watcherHeartbeat); watcherHeartbeat = null; }
+  try { db.setKv('watcher_active', false); } catch (_) {}
   await watcher.close();
   watcher = null;
   watchPath = null;

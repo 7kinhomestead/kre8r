@@ -28,7 +28,8 @@ function makeJobId() {
 
 // ── POST /api/animr/render ────────────────────────────────────────────────────
 router.post('/render', async (req, res) => {
-  const { composition, props = {}, durationInFrames, fps = 30, transparent = false } = req.body;
+  // GeneratΩr: accept optional project_id so renders go to the project's generated folder
+  const { composition, props = {}, durationInFrames, fps = 30, transparent = false, project_id } = req.body;
 
   if (!composition) return res.status(400).json({ error: 'composition required' });
 
@@ -161,16 +162,39 @@ router.post('/render', async (req, res) => {
       }
 
       const stat = fs.statSync(outputLocation);
+
+      // GeneratΩr: copy to D:\intake\[project_id]_[slug]\generated\ so VaultΩr
+      // watcher auto-ingests and associates with the project
+      let generatorPath = null;
+      if (project_id) {
+        try {
+          const { getGeneratorOutputPath } = require('../utils/generator-output');
+          const db = require('../db');
+          const proj = db.getProject(parseInt(project_id));
+          if (proj) {
+            const outDir = getGeneratorOutputPath(proj.id, proj.title);
+            if (outDir) {
+              const destPath = path.join(outDir, outFilename);
+              fs.copyFileSync(outputLocation, destPath);
+              generatorPath = destPath;
+              emit({ type: 'log', msg: `Saved to GeneratΩr folder: ${destPath}` });
+            }
+          }
+        } catch (_) {}
+      }
+
       emit({
         type: 'done',
         filename: outFilename,
         url: `/animr-renders/${outFilename}`,
         sizeBytes: stat.size,
+        generator_path: generatorPath,
       });
 
-      job.status   = 'done';
-      job.filename = outFilename;
-      job.url      = `/animr-renders/${outFilename}`;
+      job.status         = 'done';
+      job.filename       = outFilename;
+      job.url            = `/animr-renders/${outFilename}`;
+      job.generator_path = generatorPath;
 
     } catch (err) {
       logger.error({ err }, 'AnimΩr render failed');

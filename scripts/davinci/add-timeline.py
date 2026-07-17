@@ -282,10 +282,11 @@ def build_03_rough_cut(media_pool, project, timeline, footage, cuts_json, errors
             errors.append("AppendToTimeline (rough cut track 2) returned falsy")
 
     # Set clip colour label to Blue on track 1 items
+    # DRV21 fix: GetItemInTrack/GetTrackItemCount never existed — use GetItemListInTrack
     try:
-        track1_count = timeline.GetTrackItemCount("video", 1) if hasattr(timeline, "GetTrackItemCount") else 0
-        for idx in range(1, track1_count + 1):
-            ti = timeline.GetItemInTrack("video", 1, idx)
+        get_items = getattr(timeline, "GetItemListInTrack", None) or getattr(timeline, "GetItemsInTrack", None)
+        track1_items = get_items("video", 1) if callable(get_items) else []
+        for ti in (track1_items or []):
             if ti and hasattr(ti, "SetClipColor"):
                 ti.SetClipColor("Blue")
     except Exception as exc:

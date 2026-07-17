@@ -1030,6 +1030,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
      SCREEN 3 — REMOTE CONTROL (phone)
 ══════════════════════════════════════════ -->
 <div id="tp-remote">
+  <!-- TP-3 fix: back button — known issue #7 (no exit from remote/voice/join screens) -->
+  <button onclick="(function(){if(window.wsConn){try{window.wsConn.close();}catch(_){}}localStorage.removeItem('tp_session');localStorage.removeItem('tp_mode');history.replaceState({},'','/teleprompter.html');location.reload();})()" style="position:fixed;top:12px;left:12px;z-index:9999;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.7);font-size:13px;padding:8px 14px;cursor:pointer;">← Back</button>
 
   <!-- Connect panel — hidden after connection -->
   <div id="tp-rem-connect-panel">
@@ -1097,6 +1099,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
      SCREEN 4 — JOIN CHOICE
 ══════════════════════════════════════════ -->
 <div id="tp-join">
+  <!-- TP-3 fix: back button -->
+  <button onclick="(function(){localStorage.removeItem('tp_session');localStorage.removeItem('tp_mode');history.replaceState({},'','/teleprompter.html');location.reload();})()" style="position:fixed;top:12px;left:12px;z-index:9999;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.7);font-size:13px;padding:8px 14px;cursor:pointer;">← Back</button>
   <div class="tp-join-heading">Session</div>
   <div class="tp-join-code-display" id="tp-join-code">----</div>
   <div class="tp-join-subtitle">How do you want to use this device?</div>
@@ -1129,6 +1133,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
      SCREEN 5 — VOICE DEVICE (mic in pocket)
 ══════════════════════════════════════════ -->
 <div id="tp-voice-device">
+  <!-- TP-3 fix: back button -->
+  <button onclick="(function(){if(window.wsConn){try{window.wsConn.close();}catch(_){}}localStorage.removeItem('tp_session');localStorage.removeItem('tp_mode');history.replaceState({},'','/teleprompter.html');location.reload();})()" style="position:fixed;top:12px;left:12px;z-index:9999;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.7);font-size:13px;padding:8px 14px;cursor:pointer;">← Back</button>
 
   <!-- Session entry screen (shown when no code provided) -->
   <div id="tp-vd-join" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:24px;padding:32px;">
@@ -2379,32 +2385,38 @@ async function connectSecondaryDisplayWS(code) {
     let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
 
     if (msg.type === 'registered') {
+      const isReconnect = (wsSession === msg.session && currentMode === 'display');
       wsSession  = msg.session;
       const pid  = msg.projectId;
 
-      // Load the script from this session's project
-      if (pid) {
-        try {
-          const r = await fetch(`/api/teleprompter/script/${pid}`);
-          const d = await r.json();
-          if (!d.ok) throw new Error(d.error);
-          const segs = processScript(d.script_text);
-          loadedScript = {
-            projectId:   pid,
-            projectName: d.project_name || msg.title || 'Untitled',
-            text:        d.script_text,
-            segments:    segs
-          };
-        } catch (_) { loadedScript = null; }
-      }
+      // TP-1 fix: on reconnect, skip re-render + scrollTop reset — position syncs via state message
+      // Previously, every WiFi blip caused scrollTop=0, snapping the display to the start mid-take
+      if (!isReconnect) {
+        // Load the script from this session's project
+        if (pid) {
+          try {
+            const r = await fetch(`/api/teleprompter/script/${pid}`);
+            const d = await r.json();
+            if (!d.ok) throw new Error(d.error);
+            const segs = processScript(d.script_text);
+            loadedScript = {
+              projectId:   pid,
+              projectName: d.project_name || msg.title || 'Untitled',
+              text:        d.script_text,
+              segments:    segs
+            };
+          } catch (_) { loadedScript = null; }
+        }
 
-      // Render and show display
-      if (loadedScript?.segments?.length) renderScript(loadedScript.segments);
-      document.documentElement.style.setProperty('--font-size', fontSize + 'px');
-      document.getElementById('tp-selector').style.display = 'none';
-      document.getElementById('tp-display').classList.add('active');
-      document.getElementById('tp-scroll-wrap').scrollTop = 0;
-      currentMode = 'display';
+        // Render and show display (first registration only)
+        if (loadedScript?.segments?.length) renderScript(loadedScript.segments);
+        document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+        document.getElementById('tp-selector').style.display = 'none';
+        document.getElementById('tp-display').classList.add('active');
+        document.getElementById('tp-scroll-wrap').scrollTop = 0;
+        currentMode = 'display';
+      }
+      // On reconnect: position is restored by the incoming state message below — no jump
 
       // Apply initial session state
       if (msg.state) {

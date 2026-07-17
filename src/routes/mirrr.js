@@ -1,10 +1,11 @@
 /**
- * AnalΩzr Route — src/routes/analytr.js
+ * MirrΩr Route — src/routes/mirrr.js
+ * (formerly AnalΩzr — /api/analytr remains mounted as a legacy alias in server.js)
  *
- * GET  /api/analytr/channel-health        — all-time channel stats
- * GET  /api/analytr/videos                — last 10 projects with analytics
- * POST /api/analytr/coach                 — SSE: Claude coaching report
- * POST /api/analytr/youtube-sync          — SSE: sync YouTube stats via API
+ * GET  /api/mirrr/channel-health        — all-time channel stats
+ * GET  /api/mirrr/videos                — last 10 projects with analytics
+ * POST /api/mirrr/coach                 — SSE: Claude coaching report
+ * POST /api/mirrr/youtube-sync          — SSE: sync YouTube stats via API
  */
 
 'use strict';
@@ -315,14 +316,58 @@ router.get('/tiktok-patterns', (req, res) => {
 // Runs detached from any HTTP connection. Writes progress to background_jobs table.
 // Client connects to /jobs/:id/stream to watch progress.
 
+// Fetch channel-level stats (subscriber count, total views) and cache them in
+// kv_store under 'yt_channel_stats'. Independent of any project — needs only the
+// API key + channel handle. Safe to call on its own; never throws.
+async function fetchAndCacheChannelStats(apiKey) {
+  try {
+    let channelHandle = process.env.YOUTUBE_CHANNEL_HANDLE;
+    if (!channelHandle) {
+      try { channelHandle = getCreatorContext().youtubeHandle; } catch (_) {}
+    }
+    if (channelHandle) channelHandle = String(channelHandle).replace(/^@/, '');
+    if (!channelHandle) return false;
+
+    const { default: fetch } = await import('node-fetch');
+    const chanUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics&forHandle=${encodeURIComponent(channelHandle)}&key=${apiKey}`;
+    const chanRes = await fetch(chanUrl);
+    if (!chanRes.ok) return false;
+    const chanData = await chanRes.json();
+    const stats = chanData.items?.[0]?.statistics;
+    if (!stats) return false;
+    db.setKv('yt_channel_stats', {
+      subscriber_count: parseInt(stats.subscriberCount) || null,
+      view_count:       parseInt(stats.viewCount)       || null,
+      video_count:      parseInt(stats.videoCount)      || null,
+      fetched_at:       new Date().toISOString(),
+    });
+    return true;
+  } catch (err) {
+    console.error('[fetchAndCacheChannelStats]', err.message);
+    return false;
+  }
+}
+
 async function runYoutubeSyncJob(jobId) {
   try {
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey) { db.failJob(jobId, 'YOUTUBE_API_KEY not set in .env'); return; }
 
+    // Channel-level stats (subscribers, total views) are independent of whether
+    // any kre8r project is linked to a YouTube video — fetch them FIRST so the
+    // Mission Control SCIENCE panel always gets fresh data, even if the per-video
+    // sync below bails because no project has a youtube_video_id.
+    await fetchAndCacheChannelStats(apiKey);
+
     const projects = db.getAllProjects();
     const withYT   = projects.filter(p => p.youtube_video_id);
-    if (withYT.length === 0) { db.failJob(jobId, 'No projects with YouTube IDs found'); return; }
+    if (withYT.length === 0) {
+      // Not an error — channel stats are already cached above. Finish cleanly so
+      // the FIRE sequence and any watching client see success, not a red failure.
+      db.setKv('mirrr_last_sync', new Date().toISOString());
+      db.finishJob(jobId, { ok: 0, errors: 0, total: 0, result: { synced_at: new Date().toISOString(), message: 'Channel stats refreshed; no project-linked videos to sync.' } });
+      return;
+    }
 
     const { default: fetch } = await import('node-fetch');
     const total = withYT.length;
@@ -399,6 +444,12 @@ async function runYoutubeSyncJob(jobId) {
 
     const syncedAt = new Date().toISOString();
     db.setKv('mirrr_last_sync', syncedAt);
+
+    // Refresh channel-level stats once more now that per-video metrics are in
+    // (cheap single call). Already fetched at job start, so this just keeps the
+    // subscriber count as current as possible. Never blocks job completion.
+    await fetchAndCacheChannelStats(apiKey);
+
     db.finishJob(jobId, { ok: synced, errors: failed, total, result: { synced_at: syncedAt } });
   } catch (err) {
     console.error(`[youtube-sync job ${jobId}] fatal:`, err.message);
@@ -769,7 +820,7 @@ router.get('/cached-results', (req, res) => {
 });
 
 // ─── Import Status ────────────────────────────────────────────────────────────
-// GET /api/analytr/import-status
+// GET /api/mirrr/import-status
 // Returns whether the channel has already been bulk-imported.
 
 router.get('/import-status', (req, res) => {
@@ -1045,7 +1096,7 @@ router.post('/youtube-import-channel', async (req, res) => {
 });
 
 // ─── Thumbnail A/B Tester ─────────────────────────────────────────────────────
-// POST /api/analytr/thumbnail-ab
+// POST /api/mirrr/thumbnail-ab
 // Accepts: multipart form with thumbnailA + thumbnailB image files
 //          + optional fields: project_id, context
 
@@ -1187,7 +1238,7 @@ Respond in EXACTLY this JSON structure (no markdown, no commentary, just JSON):
 });
 
 // ─── Content DNA: Graph data (cluster analysis) ───────────────────────────────
-// GET /api/analytr/content-dna/graph
+// GET /api/mirrr/content-dna/graph
 // Returns nodes with cluster assignments for the D3 constellation graph.
 // Fetches all projects with youtube_video_id, clusters by title via Claude,
 // caches result in kv_store as 'channel_dna_clusters'.
@@ -1487,7 +1538,7 @@ Return ONLY a JSON object mapping list number to cluster id, no markdown, no com
 });
 
 // ─── Content DNA: Niche + Audience generation (SSE) ──────────────────────────
-// POST /api/analytr/content-dna
+// POST /api/mirrr/content-dna
 // Reads cluster data, builds comprehensive prompt, streams Claude analysis.
 
 router.post('/content-dna', async (req, res) => {
@@ -1622,14 +1673,15 @@ router.patch('/creator-profile-audience', async (req, res) => {
     const profilePath = path.join(__dirname, '..', '..', 'creator-profile.json');
 
     const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
-    const { audience_profile } = req.body;
+    const { audience_profile, niche_block } = req.body;
 
     if (!audience_profile) {
       return res.status(400).json({ error: 'audience_profile is required' });
     }
 
-    profile.audience_profile = audience_profile;
+    profile.audience_profile     = audience_profile;
     profile._audience_updated_at = new Date().toISOString();
+    if (niche_block) profile.niche_block = niche_block;
 
     fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf8');
 
@@ -1640,7 +1692,7 @@ router.patch('/creator-profile-audience', async (req, res) => {
 });
 
 // ─── Content Secrets: hidden pattern analysis (SSE) ──────────────────────────
-// POST /api/analytr/content-secrets
+// POST /api/mirrr/content-secrets
 // Reads cluster + edge data from kv_store, finds non-obvious patterns via Claude.
 
 router.post('/content-secrets', async (req, res) => {
@@ -1779,7 +1831,7 @@ Return ONLY a valid JSON array, no markdown, no commentary:
 });
 
 // ─── Save Secrets to Soul ─────────────────────────────────────────────────────
-// PATCH /api/analytr/save-secrets-to-soul
+// PATCH /api/mirrr/save-secrets-to-soul
 // Writes top insights to creator-profile.json content_intelligence block.
 
 router.patch('/save-secrets-to-soul', (req, res) => {

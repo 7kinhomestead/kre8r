@@ -452,21 +452,24 @@ router.get('/startup', async (req, res) => {
 
 router.get('/drivers', async (req, res) => {
   try {
-    // WMI DriverDate is in "yyyymmddHHMMSS.mmmmmm+UUU" format — convert to ISO
-    const ps = [
-      'Get-WmiObject Win32_PnPSignedDriver',
-      '| Where-Object { $_.DeviceName -ne $null -and $_.DriverVersion -ne $null }',
-      '| Select-Object DeviceName, DriverVersion,',
-      '  @{N="DriverDate";E={',
-      '    if($_.DriverDate){',
-      '      try{[Management.ManagementDateTimeConverter]::ToDateTime($_.DriverDate).ToString("yyyy-MM-dd")}catch{""}',
-      '    } else {""}',
-      '  }},',
-      '  Manufacturer, IsSigned, DeviceClass',
-      '| ConvertTo-Json -Depth 2',
-    ].join(' ');
-
-    const { stdout } = await execAsync(`powershell -NoProfile -Command "${ps}"`, { maxBuffer: 8 * 1024 * 1024 });
+    // Write script to temp file to avoid -Command quoting issues with nested quotes
+    const os = require('os');
+    const tmpScript = path.join(os.tmpdir(), 'kre8r-drivers.ps1');
+    const psScript = `
+Get-WmiObject Win32_PnPSignedDriver |
+  Where-Object { $_.DeviceName -ne $null -and $_.DriverVersion -ne $null } |
+  Select-Object DeviceName, DriverVersion,
+    @{N='DriverDate';E={
+      if ($_.DriverDate) {
+        try { [Management.ManagementDateTimeConverter]::ToDateTime($_.DriverDate).ToString('yyyy-MM-dd') } catch { '' }
+      } else { '' }
+    }},
+    Manufacturer, IsSigned, DeviceClass |
+  ConvertTo-Json -Depth 2
+`;
+    fs.writeFileSync(tmpScript, psScript, 'utf8');
+    const { stdout } = await execAsync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${tmpScript}"`, { maxBuffer: 8 * 1024 * 1024 });
+    try { fs.unlinkSync(tmpScript); } catch { /* ignore */ }
     let drivers = [];
     try {
       drivers = JSON.parse(stdout.trim());

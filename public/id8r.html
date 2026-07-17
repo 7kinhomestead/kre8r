@@ -311,6 +311,19 @@
   .brief-section-body{color:var(--text);font-size:14px;line-height:1.6;}
   .brief-section-body ul{padding-left:18px;}
   .brief-section-body li{margin-bottom:4px;}
+  .brief-editable{cursor:text;border-bottom:1px dashed transparent;transition:border-color .15s;}
+  .brief-editable:hover{border-bottom-color:var(--border);}
+  .brief-editable:focus{outline:none;border-bottom-color:var(--teal);}
+  .brief-edit-hint{font-family:var(--font-body);font-size:10px;letter-spacing:.5px;color:var(--text-dim);text-transform:none;margin-left:8px;opacity:.7;}
+  .brief-pkg-row{margin-bottom:6px;}
+  .brief-pkg-row .brief-editable{display:inline;}
+  .brief-list-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;}
+  .brief-list-bullet{color:var(--teal);flex-shrink:0;}
+  .brief-list-text{flex:1;}
+  .brief-list-remove{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;line-height:1.5;padding:0 2px;flex-shrink:0;}
+  .brief-list-remove:hover{color:var(--red);}
+  .brief-list-add{background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text-dim);cursor:pointer;font-family:var(--font-body);font-size:12px;padding:4px 10px;margin-top:4px;}
+  .brief-list-add:hover{color:var(--teal);border-color:var(--teal);}
   .brief-pipeline{
     background:var(--bg);border:1px solid var(--border-bright);border-radius:var(--radius-sm);
     padding:14px 16px;font-family:monospace;font-size:12px;color:var(--text-dim);
@@ -645,7 +658,7 @@
   <div id="screen-brief" class="screen">
     <div class="brief-header">
       <div class="brief-title">VISION BRIEF</div>
-      <div class="brief-sub">Your production-ready concept. Ready to send to the pipeline.</div>
+      <div class="brief-sub">Your production-ready concept. Click any field to fine-tune it, then send to the pipeline.</div>
     </div>
     <div class="loading-state" id="brief-loading">
       <div class="spinner"></div>
@@ -655,33 +668,38 @@
       <div class="brief-grid">
 
         <div class="brief-section">
-          <div class="brief-section-label">Elevator Pitch</div>
+          <div class="brief-section-label">Elevator Pitch <span class="brief-edit-hint">✎ editable</span></div>
           <div class="brief-section-body" id="brief-elevator"></div>
         </div>
 
         <div class="brief-section">
-          <div class="brief-section-label">The Package</div>
+          <div class="brief-section-label">The Package <span class="brief-edit-hint">✎ title &amp; hook editable</span></div>
           <div class="brief-section-body" id="brief-package-chosen"></div>
         </div>
 
         <div class="brief-section">
-          <div class="brief-section-label">Audience Insight</div>
+          <div class="brief-section-label">Audience Insight <span class="brief-edit-hint">✎ editable</span></div>
           <div class="brief-section-body" id="brief-audience"></div>
         </div>
 
         <div class="brief-section">
-          <div class="brief-section-label">Key Talking Points</div>
+          <div class="brief-section-label">Key Talking Points <span class="brief-edit-hint">✎ editable</span></div>
           <div class="brief-section-body" id="brief-talking-points"></div>
         </div>
 
         <div class="brief-section">
-          <div class="brief-section-label">Story Angle</div>
+          <div class="brief-section-label">Story Angle <span class="brief-edit-hint">✎ editable</span></div>
           <div class="brief-section-body" id="brief-story"></div>
         </div>
 
         <div class="brief-section">
-          <div class="brief-section-label">What NOT To Do</div>
+          <div class="brief-section-label">What NOT To Do <span class="brief-edit-hint">✎ editable</span></div>
           <div class="brief-section-body" id="brief-not-do"></div>
+        </div>
+
+        <div class="brief-section">
+          <div class="brief-section-label">Concept Note <span class="brief-edit-hint">✎ editable</span></div>
+          <div class="brief-section-body" id="brief-concept-note"></div>
         </div>
 
         <div class="brief-section">
@@ -702,7 +720,7 @@
           <div class="spinner-lg"></div>
           <span class="btn-label">Send to WritΩr →</span>
         </button>
-        <button class="btn btn-secondary" id="save-vault-btn" onclick="saveToVault()">
+        <button class="btn btn-secondary" id="save-vault-btn">
           <span class="btn-label">💡 Save to Vault</span>
         </button>
       </div>
@@ -829,7 +847,7 @@
       const res  = await fetch('/api/id8r/fast-concepts', {
         method  : 'POST',
         headers : { 'Content-Type': 'application/json' },
-        body    : JSON.stringify({ input, mode: fastInputMode, angle: angle || undefined }),
+        body    : JSON.stringify({ input, mode: fastInputMode, angle: angle || undefined, idea_id: window._id8rSourceIdeaId || undefined }),
       });
       const data = await res.json();
       if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed'); }
@@ -934,21 +952,38 @@
     document.getElementById('episodic-go-btn').style.cursor  = 'not-allowed';
 
     try {
+      // Check if ShowΩr pre-generated the context (avoids a second Claude call)
+      const stored = (() => {
+        try {
+          const raw = localStorage.getItem('showrr_episode_context');
+          if (!raw) return null;
+          const d = JSON.parse(raw);
+          // Only use if it's for the same show and fresh (< 10 min)
+          if (d.show_id == showId && (Date.now() - d.timestamp) < 600000) return d;
+          return null;
+        } catch(_) { return null; }
+      })();
+
       const [showRes, briefRes] = await Promise.all([
         fetch(`/api/shows/${showId}`),
-        fetch(`/api/shows/${showId}/next-episode-brief`),
+        stored ? Promise.resolve({ ok: true, json: () => Promise.resolve(stored.brief) }) : fetch(`/api/shows/${showId}/next-episode-brief`),
       ]);
       const show  = await showRes.json();
-      const brief = await briefRes.json();
+      const brief = stored ? stored.brief : await briefRes.json();
+
+      // Clear the stored context after using it
+      if (stored) localStorage.removeItem('showrr_episode_context');
 
       episodicContext = {
         show,
-        brief:          brief.brief,
-        episode_number: brief.episode_number,
-        arc_position:   brief.arc_position,
-        arc_advancement:brief.arc_advancement,
+        brief:           brief.brief,
+        episode_number:  brief.episode_number,
+        arc_position:    brief.arc_position,
+        arc_advancement: brief.arc_advancement,
         standalone_story:brief.standalone_story,
-        seeds_to_water: brief.seeds_to_water || [],
+        seeds_to_water:  brief.seeds_to_water || [],
+        // Inject the full season_context string from ShowΩr if available
+        season_context_override: stored?.season_context || null,
       };
 
       document.getElementById('episodic-brief-spinner').style.display = 'none';
@@ -993,7 +1028,28 @@
     const placeholder = appendMessage('assistant', 'Starting episodic session...', true);
 
     // Build a context-rich start message
+    // Use ShowΩr's pre-built context if available (richer, no extra Claude call)
     const ctx = episodicContext;
+    if (ctx.season_context_override) {
+      try {
+        const res = await fetch('/api/id8r/start', {
+          method : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body   : JSON.stringify({ mode: 'episodic', season_context: ctx.season_context_override }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to start session');
+        sessionId = data.session_id;
+        localStorage.setItem('id8r_session_id', sessionId);
+        localStorage.setItem('id8r_mode_label', 'EPISODIC — ' + ctx.show.name);
+        localStorage.setItem('id8r_episodic_context', JSON.stringify(ctx));
+        placeholder.remove();
+        appendMessage('assistant', data.message);
+        saveSession();
+        return; // skip the default context build below
+      } catch(_) {} // fall through to default if override fails
+    }
+
     const seasonContext = [
       `## SERIES CONTEXT — ${ctx.show.name}`,
       `Season ${ctx.show.season || 1}, Episode ${ctx.episode_number} of ${ctx.show.target_episodes}`,
@@ -1161,11 +1217,18 @@
       const cp = await res.json();
       if (!cp.found) return;
 
+      // Normalise checkpoint shape — backend now writes researchResults:{youtube,data,vault}
+      // Legacy checkpoints used phase1/phase2/phase3; support both.
+      const rr = cp.data.researchResults || {};
+      const p1data = rr.youtube || cp.data.phase1 || null;
+      const p2data = rr.data    || cp.data.phase2 || null;
+      const p3data = rr.vault   || cp.data.phase3 || null;
+
       // Build a readable summary of what survived
       const phasesFound = [
-        cp.data.phase1 ? '✓ YouTube research' : null,
-        cp.data.phase2 ? '✓ Data & Facts'     : null,
-        cp.data.phase3 ? '✓ VaultΩr check'   : null,
+        p1data ? '✓ YouTube research' : null,
+        p2data ? '✓ Data & Facts'     : null,
+        p3data ? '✓ VaultΩr check'   : null,
       ].filter(Boolean).join(' · ');
       const age = cp.updated_at ? Math.round((Date.now() - cp.updated_at) / 60000) : null;
       const ageStr = age !== null ? ` (${age < 60 ? age + 'm' : Math.round(age/60) + 'h'} ago)` : '';
@@ -1207,8 +1270,10 @@
           3: 'VaultΩr — have you covered this before?',
         };
         const ICONS = { 1: '📺', 2: '📊', 3: '📦' };
+        // Use normalised phase data (supports both old and new checkpoint shapes)
+        const phaseData = { 1: p1data, 2: p2data, 3: p3data };
         [1, 2, 3].forEach(ph => {
-          const d = cp.data['phase' + ph];
+          const d = phaseData[ph];
           if (!d) return;
           const card = document.createElement('div');
           card.className = 'phase-card';
@@ -1223,7 +1288,7 @@
         });
 
         // If all 3 phases are present, mark research complete
-        if (cp.data.phase3) {
+        if (p3data) {
           researchComplete = true;
           const btn = document.getElementById('research-continue-btn');
           if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
@@ -1514,15 +1579,32 @@
       const next = document.getElementById('phase-next-' + ev.phase);
       if (next) next.remove();
 
+      const sourceBadge = ev.source === 'gemini'
+        ? '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(66,133,244,.15);color:#4285f4;margin-left:6px">🔍 Live</span>'
+        : ev.source === 'training'
+          ? '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);margin-left:6px">📚 Training</span>'
+          : '';
+
       const card = document.createElement('div');
       card.className = 'phase-card';
       card.innerHTML =
         '<div class="phase-card-header">' +
           '<span class="phase-card-icon">' + (PHASE_ICONS[ev.phase] || '◎') + '</span>' +
           '<span class="phase-card-label">' + escHtml(ev.label) + '</span>' +
+          sourceBadge +
           '<span class="phase-card-status">✓ Done</span>' +
         '</div>' +
-        '<div class="phase-card-body">' + renderPhaseBody(ev.phase, ev.data || '') + '</div>';
+        '<div class="phase-card-body">' + renderPhaseBody(ev.phase, ev.data || '') + '</div>' +
+        // H8: render grounding sources so creator can verify stats before going on camera
+        (ev.sources && ev.sources.length
+          ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">' +
+              '<span style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px">Sources</span>' +
+              ev.sources.slice(0, 5).map(s => {
+                const domain = (() => { try { return new URL(s.uri || s.url || s).hostname.replace('www.',''); } catch(_) { return s.uri || s.url || s; } })();
+                return `<a href="${escHtml(s.uri||s.url||s)}" target="_blank" rel="noopener" style="display:block;font-size:11px;color:#3ecfb2;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(domain)}</a>`;
+              }).join('') +
+            '</div>'
+          : '');
       feed.appendChild(card);
       feed.scrollTop = feed.scrollHeight;
     }
@@ -1733,10 +1815,13 @@
   }
 
   function renderPackage(data) {
+    // M9: Pre-select AI's top pick (index 0) for each group so Continue is enabled immediately.
+    // Creator can override by clicking another card — the selection follows the click.
     const tl = document.getElementById('titles-list');
     tl.innerHTML = '';
     (data.titles || []).forEach((t, i) => {
-      const c = mkPkgCard(`Title ${i+1}`, t.text, t.angle);
+      const c = mkPkgCard(`Title ${i+1}`, t.text, t.angle, i === 0 ? '✦ Recommended' : '');
+      if (i === 0) { c.classList.add('selected'); selectedTitle = t; }
       c.addEventListener('click', () => {
         tl.querySelectorAll('.pkg-card').forEach(x => x.classList.remove('selected'));
         c.classList.add('selected');
@@ -1749,7 +1834,8 @@
     const thl = document.getElementById('thumbnails-list');
     thl.innerHTML = '';
     (data.thumbnails || []).forEach((t, i) => {
-      const c = mkPkgCard(`Thumbnail ${i+1} · ${t.emotion}`, t.text_overlay, t.concept);
+      const c = mkPkgCard(`Thumbnail ${i+1} · ${t.emotion}`, t.text_overlay, t.concept, i === 0 ? '✦ Recommended' : '');
+      if (i === 0) { c.classList.add('selected'); selectedThumb = t; }
       c.addEventListener('click', () => {
         thl.querySelectorAll('.pkg-card').forEach(x => x.classList.remove('selected'));
         c.classList.add('selected');
@@ -1762,7 +1848,8 @@
     const hl = document.getElementById('hooks-list');
     hl.innerHTML = '';
     (data.hooks || []).forEach((h, i) => {
-      const c = mkPkgCard(`Hook ${i+1} · ${h.type}`, h.text, '');
+      const c = mkPkgCard(`Hook ${i+1} · ${h.type}`, h.text, '', i === 0 ? '✦ Recommended' : '');
+      if (i === 0) { c.classList.add('selected'); selectedHook = h; }
       c.addEventListener('click', () => {
         hl.querySelectorAll('.pkg-card').forEach(x => x.classList.remove('selected'));
         c.classList.add('selected');
@@ -1771,12 +1858,15 @@
       });
       hl.appendChild(c);
     });
+
+    checkPkg(); // enable Continue immediately since all three are pre-selected
   }
 
-  function mkPkgCard(label, text, sub) {
+  function mkPkgCard(label, text, sub, badge) {
     const c = document.createElement('div');
     c.className = 'pkg-card';
-    c.innerHTML = `<div class="pkg-card-label">${escHtml(label)}</div><div class="pkg-card-text">${escHtml(text)}</div>${sub ? `<div class="pkg-card-sub">${escHtml(sub)}</div>` : ''}`;
+    const badgeHtml = badge ? `<span style="font-size:10px;color:#3ecfb2;font-weight:700;margin-left:6px;opacity:.7">${escHtml(badge)}</span>` : '';
+    c.innerHTML = `<div class="pkg-card-label">${escHtml(label)}${badgeHtml}</div><div class="pkg-card-text">${escHtml(text)}</div>${sub ? `<div class="pkg-card-sub">${escHtml(sub)}</div>` : ''}`;
     return c;
   }
 
@@ -1816,35 +1906,158 @@
     }
   }
 
+  // Editable working copy of the brief. Edits stay client-side until
+  // send-pipeline, which posts them as brief_edits for the server to merge
+  // into session.briefData (same fields, same schema).
+  let briefDraft = null;
+
   function renderBrief(data) {
-    setText('brief-elevator', data.elevator_pitch || '');
-    setText('brief-audience', data.audience_insight || '');
-    setText('brief-story',    data.story_angle || '');
+    briefDraft = JSON.parse(JSON.stringify(data || {}));
+    briefDraft.pipeline_brief = briefDraft.pipeline_brief || {};
+    briefDraft.talking_points = Array.isArray(briefDraft.talking_points) ? briefDraft.talking_points : [];
+    briefDraft.what_not_to_do = Array.isArray(briefDraft.what_not_to_do) ? briefDraft.what_not_to_do : [];
 
-    const tpEl = document.getElementById('brief-talking-points');
-    const pts  = data.talking_points || [];
-    tpEl.innerHTML = pts.length
-      ? '<ul>' + pts.map(p => `<li>${escHtml(p)}</li>`).join('') + '</ul>'
-      : '';
+    bindEditableText('brief-elevator', briefDraft.elevator_pitch,   v => { briefDraft.elevator_pitch = v; });
+    bindEditableText('brief-audience', briefDraft.audience_insight, v => { briefDraft.audience_insight = v; });
+    bindEditableText('brief-story',    briefDraft.story_angle,      v => { briefDraft.story_angle = v; });
+    bindEditableText('brief-concept-note', briefDraft.pipeline_brief.concept_note,
+      v => { briefDraft.pipeline_brief.concept_note = v; refreshPipelineJson(); });
 
-    const wEl = document.getElementById('brief-not-do');
-    const avd = data.what_not_to_do || [];
-    wEl.innerHTML = avd.length
-      ? '<ul>' + avd.map(p => `<li>${escHtml(p)}</li>`).join('') + '</ul>'
-      : '';
+    // M10: auto-save brief to SeedΩr — no manual click needed, show passive indicator
+    setTimeout(() => {
+      const btn    = document.getElementById('save-vault-btn');
+      const status = document.getElementById('vault-save-status');
+      if (chosenConcept || sessionId) {
+        if (btn) btn.textContent = '💾 Saved to SeedΩr';
+        saveToVault().then(() => {
+          if (status) { status.style.display = ''; status.style.color = '#3ecfb2'; status.textContent = 'Auto-saved ✓'; }
+        }).catch(() => {}); // silent — the manual button is still there as fallback
+      }
+    }, 800); // slight delay so the brief renders first
 
-    document.getElementById('brief-package-chosen').innerHTML = [
-      selectedTitle ? `<strong>Title:</strong> ${escHtml(selectedTitle.text)}` : '',
-      selectedThumb ? `<strong>Thumbnail:</strong> ${escHtml(selectedThumb.text_overlay)} — ${escHtml(selectedThumb.concept)}` : '',
-      selectedHook  ? `<strong>Hook:</strong> ${escHtml(selectedHook.text)}` : '',
-    ].filter(Boolean).join('<br>');
+    renderEditableList('brief-talking-points', briefDraft.talking_points, arr => { briefDraft.talking_points = arr; });
+    renderEditableList('brief-not-do',         briefDraft.what_not_to_do, arr => { briefDraft.what_not_to_do = arr; });
 
-    const pb = data.pipeline_brief || {};
-    document.getElementById('brief-pipeline-json').textContent = JSON.stringify(pb, null, 2);
+    renderChosenPackage();
+    refreshPipelineJson();
   }
 
-  function setText(id, val) {
-    document.getElementById(id).textContent = val;
+  function renderChosenPackage() {
+    const el = document.getElementById('brief-package-chosen');
+    el.innerHTML = '';
+    const row = (label, text, commit) => {
+      const div = document.createElement('div');
+      div.className = 'brief-pkg-row';
+      const strong = document.createElement('strong');
+      strong.textContent = label + ': ';
+      div.appendChild(strong);
+      const span = document.createElement('span');
+      span.textContent = text || '';
+      if (commit) makeEditable(span, false, commit);
+      div.appendChild(span);
+      return div;
+    };
+    el.appendChild(row('Title', selectedTitle?.text || briefDraft.pipeline_brief.title || '', v => {
+      briefDraft.pipeline_brief.title = v;
+      if (selectedTitle) selectedTitle.text = v;
+      refreshPipelineJson();
+    }));
+    if (selectedThumb) {
+      el.appendChild(row('Thumbnail', `${selectedThumb.text_overlay || ''} — ${selectedThumb.concept || ''}`, null));
+    }
+    el.appendChild(row('Hook', selectedHook?.text || '', v => {
+      if (selectedHook) selectedHook.text = v;
+      else selectedHook = { text: v };
+    }));
+  }
+
+  // Bulleted list where each point is editable, removable, and new points can be added
+  function renderEditableList(containerId, items, commit) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+
+    const readBack = () => {
+      const arr = [...el.querySelectorAll('.brief-list-text')]
+        .map(s => s.innerText.replace(/\u00a0/g, ' ').trim())
+        .filter(Boolean);
+      commit(arr);
+    };
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'brief-list-add';
+    addBtn.type = 'button';
+    addBtn.textContent = '+ Add point';
+    el.appendChild(addBtn);
+
+    const addRow = (text, focus) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'brief-list-row';
+      const bullet = document.createElement('span');
+      bullet.className = 'brief-list-bullet';
+      bullet.textContent = '•';
+      const span = document.createElement('span');
+      span.className = 'brief-list-text';
+      span.textContent = text;
+      makeEditable(span, false, readBack);
+      const rm = document.createElement('button');
+      rm.className = 'brief-list-remove';
+      rm.type = 'button';
+      rm.title = 'Remove point';
+      rm.textContent = '✕';
+      rm.addEventListener('click', () => { rowEl.remove(); readBack(); });
+      rowEl.append(bullet, span, rm);
+      el.insertBefore(rowEl, addBtn);
+      if (focus) span.focus();
+    };
+
+    addBtn.addEventListener('click', () => addRow('', true));
+    items.forEach(p => addRow(p, false));
+  }
+
+  function bindEditableText(id, value, commit) {
+    const el = document.getElementById(id);
+    el.textContent = value || '';
+    makeEditable(el, true, commit);
+  }
+
+  function makeEditable(el, multiline, commit) {
+    el._editCommit = commit;
+    el.dataset.multiline = multiline ? '1' : '';
+    if (el.dataset.editBound) return;
+    el.dataset.editBound = '1';
+    el.classList.add('brief-editable');
+    el.setAttribute('contenteditable', 'plaintext-only');
+    if (el.contentEditable !== 'plaintext-only') el.setAttribute('contenteditable', 'true');
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !el.dataset.multiline) { e.preventDefault(); el.blur(); }
+    });
+    el.addEventListener('blur', () => {
+      const v = el.innerText.replace(/\u00a0/g, ' ').trim();
+      el.textContent = v; // normalize any pasted markup
+      if (typeof el._editCommit === 'function') el._editCommit(v);
+    });
+  }
+
+  function refreshPipelineJson() {
+    document.getElementById('brief-pipeline-json').textContent =
+      JSON.stringify(briefDraft?.pipeline_brief || {}, null, 2);
+  }
+
+  // Snapshot of all editable fields, posted with send-pipeline
+  function buildBriefEdits() {
+    if (!briefDraft) return null;
+    return {
+      elevator_pitch:   briefDraft.elevator_pitch   || '',
+      audience_insight: briefDraft.audience_insight || '',
+      story_angle:      briefDraft.story_angle      || '',
+      talking_points:   briefDraft.talking_points   || [],
+      what_not_to_do:   briefDraft.what_not_to_do   || [],
+      pipeline_brief: {
+        ...(briefDraft.pipeline_brief.title        != null && { title:        briefDraft.pipeline_brief.title }),
+        ...(briefDraft.pipeline_brief.concept_note != null && { concept_note: briefDraft.pipeline_brief.concept_note }),
+      },
+      ...(selectedHook?.text ? { selected_hook: selectedHook.text } : {}),
+    };
   }
 
   // ── Send to pipeline ───────────────────────────────────────────
@@ -1859,11 +2072,19 @@
     const activeBtn = destination === 'writr' ? writrBtn : piprBtn;
     activeBtn.classList.add('loading');
 
+    // Commit any in-progress edit before snapshotting the draft
+    if (document.activeElement?.classList?.contains('brief-editable')) document.activeElement.blur();
+
     try {
+      const briefEdits = buildBriefEdits();
       const res  = await fetch('/api/id8r/send-pipeline', {
         method  : 'POST',
         headers : { 'Content-Type': 'application/json' },
-        body    : JSON.stringify({ session_id: sessionId, destination }),
+        body    : JSON.stringify({
+          session_id: sessionId,
+          destination,
+          ...(briefEdits && { brief_edits: briefEdits }),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { if (checkSessionExpired(data)) return; throw new Error(data.error || 'Failed'); }
@@ -1879,6 +2100,7 @@
 
   document.getElementById('send-pipr-btn').addEventListener('click',  () => sendToPipeline('pipr'));
   document.getElementById('send-writr-btn').addEventListener('click', () => sendToPipeline('writr'));
+  document.getElementById('save-vault-btn').addEventListener('click', () => saveToVault());
 
   // ── Save to Vault ──────────────────────────────────────────────
   // Saves the current brief back to an idea in SeedΩr.
@@ -1960,13 +2182,25 @@
         // Pre-populate chosenConcept so Save to Vault has something to work with
         chosenConcept = { headline: idea.title, angle: idea.angle, why: idea.concept, hook: idea.hook };
 
+        // H9: store idea_id on session so send-pipeline can link back to SeedΩr
+        window._id8rSourceIdeaId = ideaId;
+
         // Land directly on the fast-input screen with the idea pre-filled
         showFastInput('shape_it');
 
-        // Build a rich pre-fill from whatever the idea has
+        // H9: Build a rich pre-fill — include notes, cluster context, and connections
         const parts = [idea.title];
         if (idea.concept) parts.push(idea.concept);
         if (idea.hook)    parts.push(`Hook: ${idea.hook}`);
+        if (idea.notes)   parts.push(`My notes: ${idea.notes}`);
+        // Surface cluster/connection context so the model knows the idea's neighbours
+        try {
+          const conns = typeof idea.connections === 'string' ? JSON.parse(idea.connections) : idea.connections;
+          if (Array.isArray(conns) && conns.length) {
+            parts.push(`Related ideas (ConstellΩr): ${conns.slice(0,3).map(c => c.title || c.idea_id).join(', ')}`);
+          }
+        } catch(_) {}
+        if (idea.cluster) parts.push(`Idea cluster: ${idea.cluster}`);
         document.getElementById('fast-input-text').value = parts.join('\n\n');
 
         // Set angle if the idea has one
@@ -1995,6 +2229,17 @@
 
   // ── SSE POST stream helper ─────────────────────────────────────
   function streamSSE(url, body, onEvent) {
+    // H5: watchdog — if the stream ends without a 'done' event, surface a retry affordance
+    let receivedDone = false;
+    let lastEventAt  = Date.now();
+    const WATCHDOG_MS = 60_000; // 60s with no events = stream stalled
+    const watchdog = setInterval(() => {
+      if (!receivedDone && Date.now() - lastEventAt > WATCHDOG_MS) {
+        clearInterval(watchdog);
+        onEvent({ stage: 'error', error: 'Research stream stalled — tap retry to resume from checkpoint.' });
+      }
+    }, 5000);
+
     fetch(url, {
       method  : 'POST',
       headers : { 'Content-Type': 'application/json' },
@@ -2006,20 +2251,30 @@
 
       function pump() {
         reader.read().then(({ done, value }) => {
-          if (done) return;
+          if (done) {
+            clearInterval(watchdog);
+            // H5: stream ended without a 'done' event — surface retry
+            if (!receivedDone) onEvent({ stage: 'error', error: 'Research stream ended unexpectedly — your progress is saved. Reload to resume.' });
+            return;
+          }
+          lastEventAt = Date.now();
           buf += decoder.decode(value, { stream: true });
           const lines = buf.split('\n');
           buf = lines.pop();
           lines.forEach(line => {
             if (line.startsWith('data: ')) {
-              try { onEvent(JSON.parse(line.slice(6))); } catch (_) {}
+              try {
+                const ev = JSON.parse(line.slice(6));
+                if (ev.stage === 'done') { receivedDone = true; clearInterval(watchdog); }
+                onEvent(ev);
+              } catch (_) {}
             }
           });
           pump();
-        });
+        }).catch(e => { clearInterval(watchdog); onEvent({ stage: 'error', error: e.message }); });
       }
       pump();
-    }).catch(e => onEvent({ stage: 'error', error: e.message }));
+    }).catch(e => { clearInterval(watchdog); onEvent({ stage: 'error', error: e.message }); });
   }
 
   // ── Session Expired ────────────────────────────────────────────

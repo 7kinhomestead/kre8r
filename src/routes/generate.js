@@ -172,7 +172,15 @@ Generate exactly 5 packages. Each must be a distinct angle — not variations of
 
     const rawText = await callClaude(systemPrompt, userPrompt, 4000);
     const parsed = parseJson(rawText);
-    const packages = parsed.packages;
+    // M2-02 fix: validate before save — malformed/truncated response was throwing 500
+    // and burning the entire ~20s generation with no partial recovery
+    const packages = parsed?.packages;
+    if (!Array.isArray(packages) || packages.length === 0) {
+      return res.status(500).json({
+        error: 'PackageΩr generation failed — Claude returned an unexpected response. Please try again.',
+        raw_preview: rawText?.slice(0, 200),
+      });
+    }
 
     // Create or update project
     let projectId = project_id ? parseInt(project_id) : null;

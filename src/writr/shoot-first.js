@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock, loadAudienceTargetBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -62,7 +62,22 @@ function summariseTranscripts(footageRows) {
       const text = words.length > 300
         ? words.slice(0, 150).join(' ') + ' … ' + words.slice(-50).join(' ')
         : f.transcript;
-      return `[footage_id:${f.id}] ${f.original_filename || f.file_path?.split(/[\\/]/).pop() || 'clip'} (${f.shot_type || 'unknown'}):\n${text.trim()}`;
+      // Inject visual_description signal when frame analysis has run — gated on visual_analyzed_at
+      // so it degrades gracefully for clips that haven't been analyzed yet (VAULT-001 fix enables this)
+      let visualSignal = '';
+      if (f.visual_analyzed_at && f.visual_description) {
+        try {
+          const vd = typeof f.visual_description === 'string'
+            ? JSON.parse(f.visual_description) : f.visual_description;
+          const parts = [];
+          if (vd.peak_energy_range) parts.push(`peak energy ${vd.peak_energy_range}`);
+          if (vd.physical_demonstration) parts.push(`physical demo present`);
+          if (vd.eye_contact === 'strong') parts.push(`strong eye contact`);
+          if (vd.editorial_notes) parts.push(vd.editorial_notes.slice(0, 80));
+          if (parts.length) visualSignal = `\n  ⚡ Visual: ${parts.join(', ')}`;
+        } catch (_) {}
+      }
+      return `[footage_id:${f.id}] ${f.original_filename || f.file_path?.split(/[\\/]/).pop() || 'clip'} (${f.shot_type || 'unknown'}):${visualSignal}\n${text.trim()}`;
     });
 
   if (!clips.length) return null;
@@ -120,6 +135,7 @@ function buildPrompt({ whatHappened, transcriptBlock, config, profile, voiceProf
   const seasonBlock  = buildSeasonBlock(seasonContext);
   const tikTokBlock    = loadTikTokIntelligenceBlock();
   const voiceCalBlock  = loadVoiceCalibrationBlock();
+  const audienceBlock  = loadAudienceTargetBlock();
 
   return `You are WritΩr — a story finder and script developer for ${brand}, a homesteading
 and off-grid living reality content creator.
@@ -131,6 +147,7 @@ ${SLOP_RULE}
 ## CREATOR VOICE
 ${voiceSummary}
 ${voiceCalBlock}
+${audienceBlock}
 ${tikTokBlock}
 ## PROJECT CONFIG
 Brand: ${brand}

@@ -112,6 +112,8 @@ function startServer() {
         // Bundled binary paths — overrides system PATH for cross-platform reliability
         ...(ffmpegPath  && { FFMPEG_PATH:  ffmpegPath  }),
         ...(ffprobePath && { FFPROBE_PATH: ffprobePath }),
+        // Backup file path so the server can read mtime without an IPC round-trip
+        BACKUP_DB_PATH: getResourcePath('database', 'kre8r-electron-backup.db'),
       },
     });
 
@@ -204,6 +206,7 @@ function createMainWindow() {
     height:    900,
     minWidth:  1024,
     minHeight: 768,
+    title:     'Mission Control — Kre8Ωr',
     // macOS: traffic lights inside the frame; Windows: default chrome
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     icon: getResourcePath('public', 'images', 'kre8r-icon.png'),
@@ -216,8 +219,9 @@ function createMainWindow() {
     },
   });
 
-  // Load index.html explicitly — avoids any cached redirects from previous sessions
-  mainWindow.loadURL(`http://localhost:${PORT}/index.html`);
+  // Mission Control is the default landing — auth middleware redirects to /login if not authenticated
+  // and login page redirects back to /mission-control.html after successful sign-in.
+  mainWindow.loadURL(`http://localhost:${PORT}/mission-control.html`);
 
   mainWindow.once('ready-to-show', () => {
     if (splashWindow) {
@@ -353,6 +357,12 @@ app.on('before-quit', () => {
   if (serverProcess) serverProcess.kill();
 });
 
+// ─── OS notification — fired by mission-control for CRITICAL attention items ──
+ipcMain.handle('notify', (_, title, body) => {
+  const { Notification } = require('electron');
+  new Notification({ title, body, urgency: 'critical' }).show();
+});
+
 // ─── Native folder picker — used by Soul BuildΩr setup wizard ────────────────
 ipcMain.handle('pick-folder', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -361,6 +371,45 @@ ipcMain.handle('pick-folder', async () => {
   });
   if (result.canceled || !result.filePaths.length) return null;
   return result.filePaths[0];
+});
+
+// ─── Sibling app launcher — OrgΩr (:3002) and KinOS (:3001) ─────────────────
+// Called from Mission Control's START buttons when an app shows as Offline.
+// Spawns the app's server.js in a detached child process so it survives.
+ipcMain.handle('launch-app', async (_, appName) => {
+  const { spawn } = require('child_process');
+  const apps = {
+    orgr:  { dir: 'C:\\Users\\18054\\orgboard', port: 3002, label: 'OrgΩr' },
+    kinos: { dir: 'C:\\Users\\18054\\kinos',    port: 3001, label: 'KinOS' },
+  };
+  const cfg = apps[appName];
+  if (!cfg) return { ok: false, error: 'Unknown app: ' + appName };
+
+  // Quick check — is it already up?
+  try {
+    const http = require('http');
+    await new Promise((resolve, reject) => {
+      const req = http.get(`http://localhost:${cfg.port}/`, res => resolve(res));
+      req.on('error', reject);
+      req.setTimeout(800, () => { req.destroy(); reject(new Error('timeout')); });
+    });
+    return { ok: true, already_running: true, label: cfg.label };
+  } catch (_) { /* not running — launch it */ }
+
+  try {
+    const child = spawn('node', ['server.js'], {
+      cwd:      cfg.dir,
+      detached: true,
+      stdio:    'ignore',
+      windowsHide: true,
+    });
+    child.unref();
+    // Give it 2s to start then report success
+    await new Promise(r => setTimeout(r, 2000));
+    return { ok: true, label: cfg.label, pid: child.pid };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 });
 
 // ─── kre8r:// OAuth protocol handler ─────────────────────────────────────────

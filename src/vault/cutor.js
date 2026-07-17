@@ -332,7 +332,9 @@ async function identifyCuts(projectId, options = {}) {
     footageMeta
   });
 
-  onProgress?.({ stage: 'analyzing', model: MODEL });
+  // CutΩr fix: MODEL was never defined — threw ReferenceError on every analysis
+  // making CutΩr 100% non-functional. The progress event doesn't need the model name.
+  onProgress?.({ stage: 'analyzing' });
 
   let analysis;
   try {

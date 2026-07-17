@@ -455,6 +455,39 @@
   .toast.green { border-color: var(--green); color: var(--green); }
   .toast.amber { border-color: var(--amber); color: var(--amber); }
 
+  /* ─── ROCK RICH EPISODE CARD ─── */
+  .project-card.rr-episode {
+    border-left: 3px solid var(--amber);
+    background: linear-gradient(135deg, rgba(245,158,11,0.03) 0%, var(--bg-card) 40%);
+  }
+  .project-card.rr-episode:hover { border-color: var(--amber); }
+  .rr-show-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 20px; border: 1px solid var(--amber-border);
+    color: var(--amber); background: var(--amber-glow); white-space: nowrap;
+  }
+  .rr-ep-stages { display: flex; align-items: center; gap: 0; margin: 8px 0 6px; flex-wrap: wrap; }
+  .rr-ep-stage {
+    font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--text-dimmer); display: flex; align-items: center; gap: 4px;
+  }
+  .rr-ep-stage.done  { color: var(--amber); }
+  .rr-ep-stage.current { color: var(--text); }
+  .rr-ep-stage-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-dimmer); flex-shrink: 0;
+  }
+  .rr-ep-stage.done  .rr-ep-stage-dot { background: var(--amber); }
+  .rr-ep-stage.current .rr-ep-stage-dot { background: var(--text); box-shadow: 0 0 6px var(--amber); }
+  .rr-ep-stage-line { width: 16px; height: 1px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+  .rr-ep-stage-line.done { background: var(--amber); }
+  .rr-ep-indicators { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .rr-indicator {
+    font-size: 10px; padding: 2px 7px; border-radius: 12px; border: 1px solid;
+    color: var(--text-dimmer); border-color: var(--border);
+  }
+  .rr-indicator.ok { color: var(--amber); border-color: var(--amber-border); background: var(--amber-glow); }
+
   /* ─── KANBAN COLUMNS ─── */
   .kanban-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px; }
   @media (max-width: 900px) { .kanban-cols { grid-template-columns: 1fr; } }
@@ -640,6 +673,7 @@ fetch('/api/creator-profile').then(r => r.ok ? r.json() : null).then(p => {
 // STATE
 // ─────────────────────────────────────────────
 let _projects = [];
+let _episodes = [];   // Rock Rich show episodes
 let _beatReport = {};
 let _health = {};
 
@@ -684,13 +718,18 @@ function updateStatusBar(h) {
 // ─────────────────────────────────────────────
 async function loadDashboard() {
   try {
-    const [projRes, beatRes] = await Promise.allSettled([
+    const [projRes, beatRes, epRes] = await Promise.allSettled([
       fetch('/api/projects'),
-      fetch('/api/pipr/report')
+      fetch('/api/pipr/report'),
+      fetch('/api/shows/episodes/pipeline')
     ]);
 
     _projects = projRes.status === 'fulfilled' && projRes.value.ok
       ? await projRes.value.json()
+      : [];
+
+    _episodes = epRes.status === 'fulfilled' && epRes.value.ok
+      ? await epRes.value.json()
       : [];
 
     if (beatRes.status === 'fulfilled' && beatRes.value.ok) {
@@ -851,7 +890,9 @@ function renderProjectsZone() {
   const badge  = document.getElementById('project-count-badge');
   const kanban = document.getElementById('kanban-cols');
 
-  if (!_projects || _projects.length === 0) {
+  const totalActive = (_projects ? _projects.length : 0) + (_episodes ? _episodes.length : 0);
+
+  if (totalActive === 0) {
     empty.style.display = 'block';
     kanban.style.display = 'none';
     grid.style.display = 'none';
@@ -859,14 +900,11 @@ function renderProjectsZone() {
   }
 
   empty.style.display = 'none';
-  badge.textContent = `${_projects.length} active`;
+  badge.textContent = `${totalActive} active`;
   badge.style.display = '';
 
   // ── Kanban grouping ──────────────────────────────────────
-  // COMPLETE: gate_c_approved — all distribution gates passed
-  // AWAITING ACTION: needs creator to act now (blocked)
-  // IN PROGRESS: active work, no immediate blocker
-  const recent = _projects.slice(0, 10); // max 10
+  const recent = (_projects || []).slice(0, 10);
   const cols   = { progress: [], awaiting: [], complete: [] };
 
   recent.forEach((p, i) => {
@@ -875,6 +913,15 @@ function renderProjectsZone() {
                                        cols.complete.push(card);
     else if (projectNeedsAttention(p)) cols.awaiting.push(card);
     else                               cols.progress.push(card);
+  });
+
+  // ── Merge Rock Rich episodes ─────────────────────────────
+  (_episodes || []).forEach((ep, i) => {
+    const card = buildEpisodeCard(ep, i);
+    const stage = ep.pipeline_stage || 'outlining';
+    if (stage === 'published')                          cols.complete.push(card);
+    else if (stage === 'shooting' || stage === 'editing') cols.progress.push(card);
+    else                                                cols.awaiting.push(card); // outlining, shoot_ready
   });
 
   document.getElementById('kb-col-progress').innerHTML = cols.progress.join('') || '<div class="kanban-empty">None active</div>';
@@ -995,6 +1042,82 @@ function buildProjectCard(p, i) {
 }
 
 // ─────────────────────────────────────────────
+// ROCK RICH EPISODE CARD
+// ─────────────────────────────────────────────
+function buildEpisodeCard(ep, i) {
+  const stage     = ep.pipeline_stage || 'outlining';
+  const showLabel = ep.show_name || 'Rock Rich';
+  const epLabel   = `S${ep.season || 1} E${ep.episode_number || '?'}`;
+  const dateStr   = relativeDate(ep.created_at);
+
+  const STAGES = ['outlining', 'shoot_ready', 'shooting', 'editing', 'published'];
+  const LABELS  = { outlining: 'Outlining', shoot_ready: 'Shoot Ready', shooting: 'Shooting', editing: 'Editing', published: 'Published' };
+  const SHORT   = { outlining: 'Outline', shoot_ready: 'Ready', shooting: 'Shoot', editing: 'Edit', published: 'Done' };
+  const stageIdx = STAGES.indexOf(stage);
+
+  const stagesHTML = STAGES.map((s, si) => {
+    const done    = si < stageIdx;
+    const current = si === stageIdx;
+    const cls     = done ? 'done' : current ? 'current' : '';
+    const lineHTML = si < STAGES.length - 1
+      ? `<div class="rr-ep-stage-line${done ? ' done' : ''}"></div>`
+      : '';
+    return `<div class="rr-ep-stage ${cls}"><div class="rr-ep-stage-dot"></div>${SHORT[s]}</div>${lineHTML}`;
+  }).join('');
+
+  const hasOutline    = !!ep.outline_text;
+  const hasShotList   = !!ep.shot_list_json;
+  const hasInterviewQ = !!ep.interview_qs_json;
+
+  const indicators = [
+    `<span class="rr-indicator${hasOutline    ? ' ok' : ''}">Outline${hasOutline    ? ' ✓' : ''}</span>`,
+    `<span class="rr-indicator${hasShotList   ? ' ok' : ''}">Shot List${hasShotList   ? ' ✓' : ''}</span>`,
+    `<span class="rr-indicator${hasInterviewQ ? ' ok' : ''}">Interview Qs${hasInterviewQ ? ' ✓' : ''}</span>`,
+  ].join('');
+
+  // Next action
+  let nextLabel, nextHref, nextColor;
+  if (stage === 'outlining') {
+    nextLabel = 'Import Outline →'; nextHref = `/shows.html`; nextColor = 'amber';
+  } else if (stage === 'shoot_ready') {
+    nextLabel = 'View Shot List →'; nextHref = `/shows.html`; nextColor = 'teal';
+  } else if (stage === 'shooting') {
+    nextLabel = 'Log Footage →'; nextHref = `/vault.html`; nextColor = 'teal';
+  } else if (stage === 'editing') {
+    nextLabel = 'Open EditΩr →'; nextHref = `/editor.html`; nextColor = 'teal';
+  } else {
+    nextLabel = 'Published ✓'; nextHref = `/shows.html`; nextColor = 'green';
+  }
+
+  return `<div class="project-card rr-episode" style="animation-delay:${i * 0.05}s">
+    <div class="pc-left">
+      <div class="pc-title-row">
+        <span class="pc-title">${esc(ep.title || `Episode ${ep.episode_number}`)}</span>
+        <span class="rr-show-badge">${esc(showLabel)} · ${esc(epLabel)}</span>
+      </div>
+      <div class="pc-meta">
+        <span class="pc-dot amber"></span>
+        <span>${LABELS[stage]}</span>
+        <span>·</span>
+        <span>${dateStr}</span>
+      </div>
+      <div class="rr-ep-stages" style="flex-wrap:nowrap;">${stagesHTML}</div>
+      <div class="rr-ep-indicators">${indicators}</div>
+    </div>
+    <div class="pc-right">
+      <div class="pc-menu-wrap">
+        <button class="pc-menu-btn" title="Episode options" onclick="toggleEpMenu('ep-${ep.id}',event)">⋯</button>
+        <div class="pc-menu" id="pc-menu-ep-${ep.id}">
+          <button class="pc-menu-item" onclick="archiveEpisode(${ep.id},'${esc(ep.title || `Episode ${ep.episode_number}`)}')">📦 Archive Season</button>
+        </div>
+      </div>
+      <div class="pc-updated">${dateStr}</div>
+      <a href="${nextHref}" class="pc-next-action ${nextColor}">${nextLabel}</a>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
 // PROJECT HELPERS
 // ─────────────────────────────────────────────
 function projectNeedsAttention(p) {
@@ -1034,7 +1157,7 @@ function getNextAction(p) {
   if (!p.gate_a_approved) return { label: 'Approve Gate A →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' };
   if (p.gate_a_approved && p.approved_captions > 0 && !p.gate_b_approved) return { label: 'Approve Gate B →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' };
   if (p.gate_b_approved && p.approved_emails > 0 && !p.gate_c_approved) return { label: 'Approve Gate C →', href: `/m1-approval-dashboard.html?project_id=${p.id}`, color: 'amber' };
-  if (p.gate_c_approved) return { label: 'View in AnalytΩr →', href: `/analytr.html`, color: 'green' };
+  if (p.gate_c_approved) return { label: 'View in MirrΩr →', href: `/mirrr.html`, color: 'green' };
   return { label: 'Open EditΩr →', href: `/editor.html?project_id=${p.id}`, color: 'dim' };
 }
 
@@ -1215,6 +1338,44 @@ function togglePcMenu(id, e) {
 document.addEventListener('click', () => {
   document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
 });
+
+function toggleEpMenu(key, e) {
+  e.stopPropagation();
+  const menu = document.getElementById(`pc-menu-${key}`);
+  const wasOpen = menu.classList.contains('open');
+  document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) menu.classList.add('open');
+}
+
+async function archiveEpisode(epId, title) {
+  showConfirm({
+    title: 'Archive Episode',
+    msg: `Archive "${title}"? It will be removed from the pipeline. You can find it in ShowΩr.`,
+    okLabel: 'Archive',
+    okClass: 'delete',
+    onConfirm: async () => {
+      try {
+        await fetch(`/api/shows/episodes/${epId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'archived' })
+        });
+        // Remove card from DOM immediately
+        const card = document.querySelector(`#pc-menu-ep-${epId}`)?.closest('.project-card');
+        if (card) card.remove();
+        // Update count
+        const counts = {};
+        ['progress','awaiting','complete'].forEach(col => {
+          counts[col] = document.getElementById(`kb-col-${col}`)?.querySelectorAll('.project-card').length || 0;
+          document.getElementById(`kb-count-${col}`).textContent = counts[col];
+        });
+        toast('Episode archived', 'success');
+      } catch (err) {
+        toast('Archive failed: ' + err.message, 'error');
+      }
+    }
+  });
+}
 
 // ─────────────────────────────────────────────
 // CONFIRMATION MODAL

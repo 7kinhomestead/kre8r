@@ -34,6 +34,9 @@ const MIME_TYPES = {
   '.png':  'image/png',
   '.gif':  'image/gif',
   '.webp': 'image/webp',
+  '.mp3':  'audio/mpeg',
+  '.wav':  'audio/wav',
+  '.m4a':  'audio/mp4',
 };
 
 /**

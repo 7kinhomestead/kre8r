@@ -14,7 +14,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock } = require('./claude');
+const { callClaude, REALITY_RULE, SLOP_RULE, loadTikTokIntelligenceBlock, loadVoiceCalibrationBlock, loadAudienceTargetBlock } = require('./claude');
 
 const CREATOR_PROFILE_PATH = path.join(__dirname, '..', '..', 'creator-profile.json');
 const PROJECTS_DIR         = path.join(__dirname, '..', '..', 'database', 'projects');
@@ -81,7 +81,12 @@ function buildPrompt({ inputText, config, profile, voiceProfiles, id8rBlock, sea
   const mission          = profile?.creator?.mission || '';
   const seasonBlock      = buildSeasonBlock(seasonContext);
   const tikTokBlock      = loadTikTokIntelligenceBlock();
-  const voiceCalBlock    = loadVoiceCalibrationBlock();
+  // H8: when explicit voice library profiles are selected, they ARE the voice authority —
+  // suppress the 190-transcript calibration block to avoid contradictory signals.
+  // Default (no profiles selected): calibration is the sole voice source.
+  const hasExplicitProfiles = Array.isArray(voiceProfiles) && voiceProfiles.length > 0;
+  const voiceCalBlock    = hasExplicitProfiles ? '' : loadVoiceCalibrationBlock();
+  const audienceBlock    = loadAudienceTargetBlock();
 
   return `You are WritΩr — a script development assistant for ${brand}, a homesteading and
 off-grid living creator. Your job is to develop authentic, beat-mapped scripts from
@@ -94,6 +99,7 @@ ${SLOP_RULE}
 ## CREATOR VOICE
 ${voiceSummary}
 ${voiceCalBlock}
+${audienceBlock}
 ${tikTokBlock}
 ## PROJECT CONFIG
 Brand: ${brand}

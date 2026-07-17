@@ -103,8 +103,10 @@ def add_marker(timeline, frame, color, name, note="", duration=1):
         ok = timeline.AddMarker(int(frame), color, name[:40], note[:4000], int(max(1, duration)))
         if not ok:
             print(f"[warn] AddMarker({frame}, {color!r}, {name!r}) returned False", file=sys.stderr)
+        return bool(ok)
     except Exception as exc:
         print(f"[warn] AddMarker failed at frame {frame}: {exc}", file=sys.stderr)
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -139,23 +141,15 @@ def run(args):
     if project_manager is None:
         raise RuntimeError("Could not get ProjectManager from Resolve")
 
-    # ── Create project ────────────────────────────────────────────────────────
-    date_str  = datetime.date.today().strftime("%Y-%m-%d")
-    safe_proj = safe_name(args.project_name, 40).replace(" ", "-")
-    proj_name = f"{date_str}_ClipMarkers_{safe_proj}"
-
-    project = project_manager.CreateProject(proj_name)
+    # ── Use current open project (no CreateProject — avoids v21 API issues) ──
+    project = project_manager.GetCurrentProject()
     if project is None:
-        # Try with timestamp suffix to avoid name collision
-        import time as _time
-        proj_name = f"{proj_name}_{int(_time.time()) % 10000}"
-        project = project_manager.CreateProject(proj_name)
-        if project is None:
-            raise RuntimeError(
-                f"Could not create Resolve project '{proj_name}'. "
-                "A project with that name may already exist."
-            )
-    print(f"[resolve] Created project: {proj_name}", file=sys.stderr)
+        raise RuntimeError(
+            "No project is currently open in DaVinci Resolve. "
+            "Open any project and try again."
+        )
+    proj_name = project.GetName() if callable(project.GetName) else "CurrentProject"
+    print(f"[resolve] Using current project: {proj_name}", file=sys.stderr)
 
     media_pool   = project.GetMediaPool()
     root_folder  = media_pool.GetRootFolder()
@@ -165,15 +159,49 @@ def run(args):
         raise FileNotFoundError(f"Source video not found: {args.source_path}")
 
     # ── Import source video ───────────────────────────────────────────────────
+    print(f"[resolve] Source path: {args.source_path}", file=sys.stderr)
+    print(f"[resolve] File exists: {os.path.isfile(args.source_path)}", file=sys.stderr)
+    print(f"[resolve] File size:   {os.path.getsize(args.source_path) if os.path.isfile(args.source_path) else 'N/A'}", file=sys.stderr)
     media_pool.SetCurrentFolder(root_folder)
     imported = media_pool.ImportMedia([args.source_path])
     if not imported:
         raise RuntimeError(f"ImportMedia failed for: {args.source_path}")
     source_item = imported[0]
+    try:
+        item_name = source_item.GetName()
+        item_fps  = source_item.GetClipProperty("Clip FPS")
+        item_dur  = source_item.GetClipProperty("Duration")
+        print(f"[resolve] Media item: {item_name} | FPS: {item_fps} | Duration: {item_dur}", file=sys.stderr)
+    except Exception as e:
+        print(f"[resolve] Could not read media item properties: {e}", file=sys.stderr)
     print(f"[resolve] Imported source: {os.path.basename(args.source_path)}", file=sys.stderr)
 
-    # ── Create timeline ───────────────────────────────────────────────────────
-    TIMELINE_NAME = "CLIP_MARKERS"
+    # ── Lock project frame rate BEFORE creating any timelines ───────────────
+    # SetSetting('timelineFrameRate') on individual timelines silently fails
+    # once the project has a master rate locked.  Must set it at the project
+    # level first so every timeline inherits the correct rate.  If the rate
+    # doesn't match the source, AppendToTimeline's startFrame/endFrame get
+    # conform-mapped and high frame numbers overshoot the source end —
+    # producing a freeze frame for the full clip duration.
+    fps_str = f"{float(fps):.3f}".rstrip("0").rstrip(".")
+    ok1 = project.SetSetting("timelineFrameRate",         fps_str)
+    ok2 = project.SetSetting("timelinePlaybackFrameRate", fps_str)
+    actual_fps = project.GetSetting("timelineFrameRate")
+    print(f"[resolve] SetProjectFps({fps_str}) → tl={ok1} pb={ok2} actual={actual_fps}", file=sys.stderr)
+    try:
+        if abs(float(actual_fps) - float(fps)) > 0.01:
+            print(f"[warn] Project fps is {actual_fps}, expected {fps}. "
+                  "startFrame/endFrame conform may be wrong. "
+                  "Open Project Settings and set Master frame rate to match source.",
+                  file=sys.stderr)
+    except (TypeError, ValueError):
+        pass
+
+    # ── Create timeline (unique name so re-runs don't collide) ───────────────
+    import time as _time
+    safe_vid  = safe_name(args.project_name, 20).replace(" ", "_")
+    _run_ts   = int(_time.time()) % 100000   # shared suffix — same for all timelines this run
+    TIMELINE_NAME = f"CLIPSR_{safe_vid}_{_run_ts}"
     media_pool.SetCurrentFolder(root_folder)
     timeline = media_pool.CreateEmptyTimeline(TIMELINE_NAME)
     if timeline is None:
@@ -182,100 +210,113 @@ def run(args):
             "Make sure Resolve is on the Edit page."
         )
     print(f"[resolve] Created timeline: {TIMELINE_NAME}", file=sys.stderr)
-
-    # Match frame rate
-    try:
-        timeline.SetSetting("timelineFrameRate", str(fps))
-    except Exception as exc:
-        print(f"[warn] SetSetting(timelineFrameRate): {exc}", file=sys.stderr)
-
     project.SetCurrentTimeline(timeline)
 
-    # ── Place full source clip on timeline ────────────────────────────────────
-    append_result = media_pool.AppendToTimeline([{
-        "mediaPoolItem": source_item,
-        "trackIndex":    1,
-    }])
-    if not append_result:
-        raise RuntimeError("AppendToTimeline failed — could not place source clip")
-    print(f"[resolve] Full source placed on timeline", file=sys.stderr)
+    # ── Extract each clip into its own timeline ───────────────────────────────
+    # Uses AppendToTimeline with startFrame/endFrame — DaVinci places only the
+    # clip segment on the timeline, making the actual cut for you.
+    # No markers, no manual blading needed.
+    # Max frame from known video duration — more reliable than querying Resolve API
+    max_source_frame = seconds_to_frames(args.duration, fps) - 1 if args.duration > 0 else 0
+    if max_source_frame > 0:
+        print(f"[resolve] Max source frame: {max_source_frame} ({args.duration:.1f}s @ {fps}fps)", file=sys.stderr)
 
-    # ── Overview marker at head ───────────────────────────────────────────────
-    clip_count   = len(clips)
-    type_counts  = {}
-    for c in clips:
-        t = c.get("clip_type", "social")
-        type_counts[t] = type_counts.get(t, 0) + 1
-    type_summary = ", ".join(f"{v} {k}" for k, v in type_counts.items())
-    overview_note = (
-        f"{clip_count} clip markers — {type_summary}. "
-        f"Blade at each marker's IN and OUT point to isolate clips. "
-        f"Green=gold, Blue=social, Cyan=retention, Red=off-script gold."
-    )
-    add_marker(timeline, 0, "Purple", f"CLIPSR: {clip_count} clips", overview_note, duration=1)
-
-    # ── Add one duration-span marker per clip ─────────────────────────────────
-    markers_added = 0
-    errors        = []
+    clips_added = 0
+    errors      = []
+    clip_timelines = []
 
     for clip in clips:
-        rank        = clip.get("rank", 0)
-        start_s     = float(clip.get("start", 0))
-        end_s       = float(clip.get("end", 0))
-        hook        = clip.get("hook", "") or ""
-        reasoning   = clip.get("reasoning", "") or ""
-        clip_type   = clip.get("clip_type", "social")
-        transcript  = clip.get("transcript", "") or ""
-        duration_s  = end_s - start_s
+        rank       = clip.get("rank", 0)
+        start_s    = float(clip.get("start", 0))
+        end_s      = float(clip.get("end", 0))
+        hook       = clip.get("hook", "") or ""
+        clip_type  = clip.get("clip_type", "social")
+        duration_s = end_s - start_s
 
         if end_s <= start_s:
             errors.append(f"Clip {rank}: invalid timecodes ({start_s}→{end_s}), skipped")
             continue
 
-        start_frame     = seconds_to_frames(start_s, fps)
-        duration_frames = seconds_to_frames(duration_s, fps)
+        # Sanity check: clip must start within the first 24 hours of video
+        # If start_s > 86400 something is very wrong with the timestamps
+        if start_s > 86400:
+            errors.append(f"Clip {rank}: start time {start_s}s looks wrong (>24h), skipped")
+            print(f"[warn] Clip {rank} start={start_s}s is impossibly large — bad timestamps in DB", file=sys.stderr)
+            continue
 
-        color = clip_color(clip_type)
+        start_frame = seconds_to_frames(start_s, fps)
+        end_frame   = seconds_to_frames(end_s,   fps)
 
-        # Short hook label (first 6 words) for the marker name
-        hook_words = " ".join(hook.split()[:6])
-        type_label = {"gold": "GOLD", "social": "CLIP", "retention": "RET",
-                      "off_script_gold": "GOLD-OS", "CTA": "CTA"}.get(clip_type, "CLIP")
-        marker_name = f"#{rank:02d} {type_label} — {hook_words}"
+        # Clamp to known video length so we never request frames past the source end
+        if max_source_frame > 0:
+            start_frame = min(start_frame, max_source_frame)
+            end_frame   = min(end_frame,   max_source_frame)
+            if end_frame <= start_frame:
+                errors.append(f"Clip {rank}: after clamping start={start_frame} >= end={end_frame}, skipped")
+                continue
 
-        # Full note: hook + timecodes + transcript + reasoning
-        # DaVinci marker notes are visible in the Inspector panel — 512 char limit applied in add_marker()
-        note_parts = []
-        if hook:
-            note_parts.append(f"HOOK: {hook}")
-        note_parts.append(f"IN: {start_s:.1f}s  OUT: {end_s:.1f}s  ({duration_s:.1f}s)")
-        if transcript:
-            note_parts.append(f"TRANSCRIPT:\n{transcript}")
-        if reasoning:
-            note_parts.append(f"WHY: {reasoning[:300]}")
-        marker_note = "\n\n".join(note_parts)
+        type_label  = {"gold": "GOLD", "social": "CLIP", "retention": "RET",
+                       "off_script_gold": "GOLD-OS", "CTA": "CTA"}.get(clip_type, "CLIP")
+        hook_slug   = safe_name(" ".join(hook.split()[:5]), 25).replace(" ", "_")
+        tl_name     = f"CLIP_{rank:02d}_{type_label}_{hook_slug}_{_run_ts}"
 
-        add_marker(timeline, start_frame, color, marker_name, marker_note, duration=duration_frames)
-        markers_added += 1
-        print(f"[marker] #{rank:02d} {type_label} @ {start_s:.1f}s–{end_s:.1f}s ({color})", file=sys.stderr)
+        # Create a dedicated timeline for this clip
+        clip_tl = media_pool.CreateEmptyTimeline(tl_name)
+        if clip_tl is None:
+            errors.append(f"Clip {rank}: could not create timeline '{tl_name}'")
+            print(f"[warn] Could not create timeline: {tl_name}", file=sys.stderr)
+            continue
+
+        # MUST set this timeline as current before AppendToTimeline
+        # AppendToTimeline always targets the active timeline in the project
+        project.SetCurrentTimeline(clip_tl)
+
+        # Verify timeline inherited project fps
+        tl_fps = clip_tl.GetSetting("timelineFrameRate")
+        if tl_fps:
+            try:
+                if abs(float(tl_fps) - float(fps)) > 0.01:
+                    print(f"[warn] Timeline '{tl_name}' fps={tl_fps}, expected {fps}", file=sys.stderr)
+            except (TypeError, ValueError):
+                pass
+
+        # Append ONLY the clip segment — DaVinci makes the cut for you
+        print(f"[clip] Appending rank {rank}: startFrame={start_frame} endFrame={end_frame} ({start_s:.1f}s–{end_s:.1f}s @ {fps}fps)", file=sys.stderr)
+        result = media_pool.AppendToTimeline([{
+            "mediaPoolItem": source_item,
+            "startFrame":    start_frame,
+            "endFrame":      end_frame,
+        }])
+
+        if not result:
+            errors.append(f"Clip {rank}: AppendToTimeline failed for '{tl_name}'")
+            print(f"[warn] AppendToTimeline failed for clip {rank}", file=sys.stderr)
+            continue
+
+        clips_added += 1
+        clip_timelines.append(tl_name)
+        print(f"[clip] #{rank:02d} {type_label} @ {start_s:.1f}s–{end_s:.1f}s → timeline '{tl_name}' ✓", file=sys.stderr)
+
+    # Switch back to the overview timeline so Resolve lands there
+    project.SetCurrentTimeline(timeline)
 
     # ── Save ──────────────────────────────────────────────────────────────────
     project_manager.SaveProject()
     print(f"[resolve] Project saved: {proj_name}", file=sys.stderr)
+    print(f"[resolve] {clips_added} clip timelines created: {clip_timelines}", file=sys.stderr)
 
     return {
         "ok":             True,
         "project_name":   proj_name,
-        "timeline_name":  TIMELINE_NAME,
-        "markers_added":  markers_added,
-        "clip_count":     clip_count,
+        "overview_timeline": TIMELINE_NAME,
+        "clips_added":    clips_added,
+        "clip_timelines": clip_timelines,
         "source":         os.path.basename(args.source_path),
         "errors":         errors,
         "instructions": (
-            "Full source is on the CLIP_MARKERS timeline. "
-            "Each colored marker spans one clip. "
-            "Blade at the IN (marker start) and OUT (marker end) of each colored region, "
-            "then delete the unwanted sections."
+            f"{clips_added} individual clip timelines created in DaVinci Resolve. "
+            "Each CLIP_XX timeline contains only that clip's footage — already cut for you. "
+            "Open each timeline, grade, and export."
         ),
     }
 
@@ -290,6 +331,8 @@ def parse_args():
     p.add_argument("--source_path",  type=str, required=True)
     p.add_argument("--clips_json",   type=str, required=True)
     p.add_argument("--fps",          type=float, default=29.97)
+    p.add_argument("--duration",     type=float, default=0,
+                   help="Source video duration in seconds (used to clamp clip end frames)")
     return p.parse_args()
 
 

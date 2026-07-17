@@ -1271,15 +1271,23 @@
 
         if (!data.ok) {
           showToast('DaVinci error: ' + (data.error || 'unknown'), 'red');
+          if (data._stderr) console.warn('[clip-markers stderr]', data._stderr);
           if (btn) { btn.disabled = false; btn.textContent = '🎬 Send to DaVinci'; }
           return;
         }
 
-        const n = data.markers_added || 0;
-        showToast(`✓ ${n} clip marker${n !== 1 ? 's' : ''} placed in Resolve — "${data.project_name}"`, 'green');
-        setTimeout(() => showToast('💡 Blade at each marker\'s start and end — green=gold, blue=social, cyan=retention', 'blue'), 1800);
+        const n = data.clips_added || 0;
+        if (data._stderr) console.info('[clip-markers stderr]', data._stderr);
+        if (data.errors?.length) console.warn('[clip-markers errors]', data.errors);
+        if (n === 0) {
+          showToast(`⚠️ Connected to Resolve but 0 clip timelines created — check console for details`, 'amber');
+          if (btn) { btn.disabled = false; btn.textContent = '🎬 Send to DaVinci'; }
+          return;
+        }
+        showToast(`✓ ${n} clip timeline${n !== 1 ? 's' : ''} created in Resolve — already cut for you!`, 'green');
+        setTimeout(() => showToast('💡 Open each CLIP_XX timeline in Resolve — footage is already trimmed', 'blue'), 1800);
 
-        if (btn) { btn.disabled = false; btn.textContent = `✓ ${n} markers in Resolve`; }
+        if (btn) { btn.disabled = false; btn.textContent = `✓ ${n} clips in Resolve`; }
 
         // Show persistent breadcrumb card
         let projectFolderPath = null;
@@ -1290,7 +1298,7 @@
             if (pd?.folder_path) projectFolderPath = pd.folder_path.replace(/\//g, '\\');
           } catch (_) {}
         }
-        showDaVinciSuccessCard(n, data.project_name, projectFolderPath);
+        showDaVinciSuccessCard(n, data.project_name || data.overview_timeline, projectFolderPath);
 
       } catch (e) {
         showToast('Network error: ' + e.message, 'red');
@@ -1301,7 +1309,7 @@
     // ─────────────────────────────────────────────
     // DaVinci success breadcrumb — persistent next-step card
     // ─────────────────────────────────────────────
-    function showDaVinciSuccessCard(markerCount, projectName, projectFolderPath) {
+    function showDaVinciSuccessCard(clipCount, projectName, projectFolderPath) {
       // Remove any previous card
       const existing = document.getElementById('davinci-success-card');
       if (existing) existing.remove();
@@ -1331,14 +1339,14 @@
       card.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
           <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;color:#14b8a6;text-transform:uppercase;">
-            ✅ ${markerCount} clip marker${markerCount !== 1 ? 's' : ''} in Resolve${projectName ? ` — "${escHtml(projectName)}"` : ''}
+            ✅ ${clipCount} clip timeline${clipCount !== 1 ? 's' : ''} created in Resolve${projectName ? ` — "${escHtml(projectName)}"` : ''}
           </div>
           <button onclick="this.closest('#davinci-success-card').remove()" style="background:none;border:none;color:#666;font-size:16px;cursor:pointer;line-height:1;flex-shrink:0;" title="Dismiss">✕</button>
         </div>
         <div style="color:#aaa;margin-bottom:10px;font-size:12px;line-height:1.7;">
-          In DaVinci: open the <strong style="color:#e5e5e5;">CLIP_MARKERS</strong> timeline. Each colored marker spans one clip.<br>
-          <span style="color:#4ade80;">■</span> Green = gold &nbsp; <span style="color:#60a5fa;">■</span> Blue = social &nbsp; <span style="color:#67e8f9;">■</span> Cyan = retention &nbsp; <span style="color:#f87171;">■</span> Red = off-script gold<br>
-          Blade at the <strong style="color:#e5e5e5;">start</strong> and <strong style="color:#e5e5e5;">end</strong> of each colored marker region, delete the gaps, then export each clip.
+          In DaVinci: each <strong style="color:#e5e5e5;">CLIP_XX_...</strong> timeline is already cut — only that clip's footage is on it.<br>
+          Open each timeline, grade it, then export. No blading needed.<br>
+          <span style="color:#aaa;font-size:11px;">Overview timeline: <strong style="color:#e5e5e5;">${escHtml(projectName || 'CLIPSR_...')}</strong></span>
         </div>
         <div style="color:#777;margin-bottom:10px;font-size:11px;">
           After export, render clips to:

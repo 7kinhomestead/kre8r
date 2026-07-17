@@ -125,6 +125,42 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 }
 .demo-result.show{display:block}
 
+/* ── right panel tabs ────────────────────────────────────────────────────── */
+.right-tab{
+  flex:1;padding:7px 10px;background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
+  letter-spacing:.03em;
+}
+.right-tab:hover{color:var(--off)}
+.right-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+
+/* ── character cards ─────────────────────────────────────────────────────── */
+.char-card{
+  display:flex;align-items:center;gap:10px;padding:10px;
+  background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  margin-bottom:8px;
+}
+.char-avatar{
+  width:36px;height:36px;border-radius:50%;background:var(--faint);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+}
+.char-info{flex:1;min-width:0}
+.char-name{font-size:13px;font-weight:700}
+.char-status{font-size:11px;color:var(--muted)}
+.char-badge-ready{color:var(--green)}
+.char-badge-training{color:var(--amber)}
+.char-badge-failed{color:var(--red)}
+
+/* ── character selector on moment cards ─────────────────────────────────── */
+.char-select-row{
+  display:flex;align-items:center;gap:8px;margin-bottom:10px;
+  padding:6px 8px;background:rgba(20,184,166,.05);border:1px solid rgba(20,184,166,.15);
+  border-radius:var(--radius-sm);
+}
+.char-select-row label{font-size:11px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.char-select-row select{flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--off);font-size:12px;padding:4px 8px;outline:none}
+.char-select-row select:focus{border-color:var(--teal)}
+
 /* ── history panel (right) ───────────────────────────────────────────────── */
 .history-item{
   display:flex;flex-direction:column;gap:4px;padding:10px;
@@ -232,14 +268,173 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     </div>
   </div>
 
-  <!-- ── RIGHT: History panel ── -->
+  <!-- ── RIGHT: Characters + History panel ── -->
   <div class="panel" id="history-panel">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div class="panel-title" style="margin-bottom:0">History</div>
-      <button class="btn btn-secondary btn-xs" onclick="loadHistory()">↺ Refresh</button>
+    <!-- Tab bar -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);">
+      <button class="right-tab active" id="tab-chars"    onclick="switchRightTab('chars')">🎭 Characters</button>
+      <button class="right-tab"        id="tab-speak"    onclick="switchRightTab('speak')">🎙 Speak</button>
+      <button class="right-tab"        id="tab-history"  onclick="switchRightTab('history')">🎬 History</button>
     </div>
-    <div id="history-container">
-      <div class="empty" id="history-empty">No generations yet.</div>
+
+    <!-- ── Characters tab ── -->
+    <div id="chars-tab">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+        Train a <strong style="color:var(--text)">Soul ID</strong> on 15–20 photos of a person.
+        Every b-roll clip will feature that character consistently.<br>
+        <span style="color:#f59e0b">$3 per character training.</span>
+      </p>
+
+      <!-- Create character form -->
+      <div id="char-create-form" style="margin-bottom:16px">
+        <input type="text" id="char-name" placeholder="Character name (e.g. Jason)"
+          style="width:100%;background:var(--card2);border:1px solid var(--border2);color:var(--off);
+                 padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:8px;outline:none"
+          onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border2)'"
+        >
+        <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">
+          Appearance / Style Notes <span style="color:var(--teal)">(auto-injected into every prompt)</span>
+        </label>
+        <textarea id="char-notes" rows="2" placeholder="e.g. early 30s, athletic build, rugged outdoor look, worn work clothes, stubble"
+          style="width:100%;background:var(--card2);border:1px solid var(--border2);color:var(--off);
+                 padding:7px 10px;border-radius:6px;font-size:12px;resize:vertical;margin-bottom:8px;
+                 outline:none;font-family:inherit;line-height:1.5"
+          onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border2)'"
+        ></textarea>
+
+        <!-- Mode toggle -->
+        <div style="display:flex;gap:0;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px;overflow:hidden">
+          <button id="mode-btn-paste" onclick="setCharMode('paste')"
+            style="flex:1;padding:6px;font-size:12px;font-weight:700;border:none;cursor:pointer;
+                   background:var(--teal);color:#fff;transition:all .15s">
+            Paste Soul ID
+          </button>
+          <button id="mode-btn-train" onclick="setCharMode('train')"
+            style="flex:1;padding:6px;font-size:12px;font-weight:700;border:none;cursor:pointer;
+                   background:var(--card2);color:var(--muted);transition:all .15s">
+            Train New ($3)
+          </button>
+        </div>
+
+        <!-- Paste mode -->
+        <div id="char-mode-paste">
+          <button class="btn btn-secondary" style="width:100%;font-size:12px;margin-bottom:8px" onclick="fetchHiggsfieldChars()">
+            ↓ Fetch My Characters from Higgsfield
+          </button>
+          <div id="higgsfield-fetch-status" style="font-size:12px;color:var(--muted);margin-bottom:6px;display:none"></div>
+          <div id="higgsfield-char-picker" style="display:none">
+            <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">Select character</label>
+            <select id="higgsfield-char-select"
+              style="width:100%;background:var(--card2);border:1px solid var(--border2);color:var(--off);
+                     padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:8px;outline:none">
+              <option value="">— Choose —</option>
+            </select>
+            <button class="btn btn-primary" style="width:100%;font-size:13px;margin-bottom:10px" onclick="saveExistingSoulId()">
+              ✓ Save Character
+            </button>
+          </div>
+          <!-- Manual fallback -->
+          <details style="margin-top:4px">
+            <summary style="font-size:11px;color:var(--muted);cursor:pointer">Paste Soul ID manually</summary>
+            <div style="margin-top:8px">
+              <input type="text" id="char-soul-id-input" placeholder="e.g. a3ef4d6e-97d6-48de-9c02-b76347d9a21d"
+                style="width:100%;background:var(--card2);border:1px solid var(--border2);color:var(--off);
+                       padding:7px 10px;border-radius:6px;font-size:12px;margin-bottom:8px;outline:none;font-family:monospace"
+                onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border2)'"
+              >
+              <button class="btn btn-primary" style="width:100%;font-size:13px" onclick="saveManualSoulId()">
+                ✓ Save Character
+              </button>
+            </div>
+          </details>
+        </div>
+
+        <!-- Train mode -->
+        <div id="char-mode-train" style="display:none">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:6px">
+            Upload 15–20 photos (JPEG/PNG/WebP, max 10MB each)
+          </label>
+          <input type="file" id="char-photos" accept="image/jpeg,image/png,image/webp" multiple
+            style="font-size:12px;color:var(--muted);width:100%;margin-bottom:8px">
+          <button class="btn btn-primary" style="width:100%;font-size:13px" onclick="trainCharacter()">
+            🧬 Train Soul ID
+          </button>
+        </div>
+
+        <div id="char-progress" style="display:none;margin-top:10px">
+          <div style="font-size:12px;color:var(--teal);margin-bottom:6px" id="char-progress-msg">Training…</div>
+          <div style="background:var(--border);border-radius:4px;height:4px">
+            <div id="char-progress-bar" style="background:var(--teal);height:4px;border-radius:4px;width:0%;transition:width .4s"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Character list -->
+      <div id="char-list">
+        <div class="empty" id="char-empty">No characters yet.</div>
+      </div>
+    </div>
+
+    <!-- ── Speak tab ── -->
+    <div id="speak-tab" style="display:none">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+        Type what you want Jason to say → upload a photo of his face → get a lip-synced talking-head video back.<br>
+        <span style="color:var(--teal)">Uses your ElevenLabs voice clone + Higgsfield lip-sync.</span>
+      </p>
+
+      <div class="field">
+        <label>Script to speak</label>
+        <textarea id="speak-script" rows="6" placeholder="Type the exact words you want spoken…"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Reference photo <span style="font-weight:400;color:var(--muted)">(face to animate)</span></label>
+        <input type="file" id="speak-photo-input" accept="image/jpeg,image/png,image/webp"
+          style="width:100%;font-size:12px;color:var(--muted);margin-bottom:8px"
+          onchange="onSpeakPhotoChange()">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-align:center">— or paste image URL —</div>
+        <input type="text" id="speak-image-url" placeholder="https://… (from History stills)"
+          style="width:100%;background:var(--card2);border:1px solid var(--border2);color:var(--off);
+                 padding:7px 10px;border-radius:6px;font-size:12px;outline:none"
+          onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border2)'"
+          oninput="onSpeakUrlInput()">
+        <div id="speak-image-preview" style="margin-top:8px;display:none;border-radius:6px;overflow:hidden">
+          <img id="speak-image-preview-img" style="width:100%;max-height:120px;object-fit:cover;border-radius:6px">
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="speak-generate-btn" onclick="generateSpeak()">
+        🎙 Generate Talking Head
+      </button>
+
+      <div id="speak-progress" style="display:none;margin-top:12px">
+        <div style="background:var(--faint);border-radius:4px;height:4px;overflow:hidden;margin-bottom:6px">
+          <div id="speak-progress-bar" style="height:100%;background:var(--teal);border-radius:4px;width:0%;transition:width .4s"></div>
+        </div>
+        <div id="speak-progress-msg" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+
+      <div id="speak-result" style="display:none;margin-top:12px">
+        <video id="speak-result-video" controls playsinline
+          style="width:100%;border-radius:var(--radius-sm);background:#000"></video>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="openSpeakModal()">⛶ Full Screen</button>
+          <button class="btn btn-secondary btn-sm" id="speak-save-vault-btn" onclick="saveSpeakToVault()">💾 Save to Vault</button>
+        </div>
+      </div>
+
+      <div id="speak-error" style="display:none;margin-top:12px;padding:10px 12px;background:rgba(239,68,68,.08);
+           border:1px solid rgba(239,68,68,.25);border-radius:6px;font-size:12px;color:var(--red)"></div>
+    </div>
+
+    <!-- ── History tab ── -->
+    <div id="history-tab" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-secondary btn-xs" onclick="loadHistory()">↺ Refresh</button>
+      </div>
+      <div id="history-container">
+        <div class="empty" id="history-empty">No generations yet.</div>
+      </div>
     </div>
   </div>
 
@@ -272,6 +467,7 @@ async function init() {
   await checkDemoMode();
   await loadProjects();
   await loadHistory();
+  await loadCharacters();
 }
 
 async function checkDemoMode() {
@@ -413,6 +609,13 @@ function renderMoments() {
           <select class="moment-style">${styleOptions}</select>
         </div>
       </div>
+      <div class="char-select-row" id="char-select-row-${idx}">
+        <label>🎭 Character</label>
+        <select class="moment-character" onchange="updateCharSelectHint(${idx}, this)">
+          <option value="">— None —</option>
+        </select>
+        <span id="char-hint-${idx}" style="font-size:11px;color:var(--muted)"></span>
+      </div>
       <div class="duration-row">
         <span class="duration-label">Duration</span>
         <button class="dur-btn active" data-dur="5" onclick="selectDuration(${idx}, 5, this)">5s</button>
@@ -428,6 +631,34 @@ function renderMoments() {
       <div class="vault-matches" id="vault-${idx}">
         <div class="vault-matches-title">Vault Matches</div>
         <div id="vault-clips-${idx}"></div>
+      </div>
+
+      <!-- Image preview (step 1 result) -->
+      <div id="image-preview-${idx}" style="display:none;margin-top:12px;padding:12px;background:rgba(20,184,166,.04);border:1px solid rgba(20,184,166,.18);border-radius:var(--radius-sm)">
+        <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">
+          Step 1 — Review Still Image
+        </div>
+        <img id="image-preview-img-${idx}" src="" alt="Generated still"
+          style="width:100%;border-radius:var(--radius-sm);cursor:zoom-in;margin-bottom:10px"
+          onclick="openImageModal(this.src)"
+          title="Click to view full size">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">
+          Refine prompt
+        </div>
+        <textarea id="refine-prompt-${idx}" rows="2"
+          placeholder="Adjust the prompt, then hit Regen Image…"
+          style="width:100%;background:var(--card2);border:1px solid var(--border2);color:var(--off);
+                 padding:6px 8px;border-radius:5px;font-size:12px;resize:vertical;outline:none;
+                 font-family:inherit;line-height:1.5;margin-bottom:8px"
+          onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" id="animate-btn-${idx}" onclick="animateMoment(${idx})">
+            ▶ Animate to Video
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="regenImage(${idx})">
+            ↺ Regen Image
+          </button>
+        </div>
       </div>
 
       <div class="video-result" id="video-result-${idx}">
@@ -448,6 +679,9 @@ function renderMoments() {
 
     container.appendChild(card);
   });
+
+  // Populate character selectors on all moment cards
+  populateMomentCharSelects();
 }
 
 function escHtml(s) {
@@ -513,7 +747,8 @@ async function checkVault(idx) {
 // ─────────────────────────────────────────────
 // GENERATE
 // ─────────────────────────────────────────────
-const generationIds = {}; // idx → id
+const generationIds = {}; // idx → generation DB id
+const imageUrls     = {}; // idx → image_url from step 1
 
 async function generateMoment(idx) {
   const card = document.getElementById(`moment-${idx}`);
@@ -543,6 +778,9 @@ async function generateMoment(idx) {
   videoResult.classList.remove('show');
   demoResult.classList.remove('show');
 
+  const charSelect = card.querySelector('.moment-character');
+  const soul_id = charSelect ? charSelect.value : '';
+
   const body = {
     moment_label: moment.label,
     prompt,
@@ -551,6 +789,7 @@ async function generateMoment(idx) {
     duration,
   };
   if (currentProjectId) body.project_id = parseInt(currentProjectId);
+  if (soul_id) body.soul_id = soul_id;
 
   try {
     const resp = await fetch('/api/brollr/generate', {
@@ -577,11 +816,29 @@ async function generateMoment(idx) {
         try { ev = JSON.parse(line.slice(6)); } catch { continue; }
 
         if (ev.step === 'creating') {
-          progressFill.style.width = '30%';
-          progressMsg.textContent = ev.message || 'Sending to Higgsfield…';
+          progressFill.style.width = '20%';
+          progressMsg.textContent = ev.message || 'Step 1/2 — Generating image…';
+        } else if (ev.step === 'image_ready') {
+          // Step 1 done — show still for approval before animating
+          progressFill.style.width = '50%';
+          progressMsg.textContent = 'Image ready — review, refine if needed, then Animate';
+          generationIds[idx] = ev.generation_id;
+          imageUrls[idx] = ev.image_url;
+          const previewDiv = document.getElementById(`image-preview-${idx}`);
+          const previewImg = document.getElementById(`image-preview-img-${idx}`);
+          previewImg.src = ev.image_url;
+          previewDiv.style.display = 'block';
+          // Pre-populate the refine textarea with the current prompt
+          const refineArea = document.getElementById(`refine-prompt-${idx}`);
+          if (refineArea && !refineArea.value.trim()) {
+            refineArea.value = prompt;
+          }
+          genBtn.disabled = false;
+          genBtn.textContent = 'Generate with AI';
+          card.classList.remove('generating');
         } else if (ev.step === 'processing') {
-          progressFill.style.width = '65%';
-          progressMsg.textContent = ev.message || 'AI is generating your clip…';
+          progressFill.style.width = '75%';
+          progressMsg.textContent = ev.message || 'Step 2/2 — Animating to video…';
         } else if (ev.step === 'done') {
           progressFill.style.width = '100%';
           progressMsg.textContent = 'Done!';
@@ -593,6 +850,8 @@ async function generateMoment(idx) {
             videoResult.classList.add('show');
             videoResult.querySelector('video').src = ev.result_url;
             saveBtn.style.display = 'inline-flex';
+            // Hide image preview once video is ready
+            document.getElementById(`image-preview-${idx}`).style.display = 'none';
           }
           loadHistory();
         } else if (ev.step === 'demo') {
@@ -617,6 +876,135 @@ async function generateMoment(idx) {
     genBtn.disabled = false;
     genBtn.textContent = 'Generate with AI';
   }
+}
+
+// ─────────────────────────────────────────────
+// ANIMATE (step 2 — triggered by Approve button)
+// ─────────────────────────────────────────────
+async function animateMoment(idx) {
+  const genId   = generationIds[idx];
+  const imgUrl  = imageUrls[idx];
+  if (!genId || !imgUrl) { alert('No image to animate — generate an image first.'); return; }
+
+  const card        = document.getElementById(`moment-${idx}`);
+  const progressWrap = document.getElementById(`progress-${idx}`);
+  const progressFill = document.getElementById(`progress-fill-${idx}`);
+  const progressMsg  = document.getElementById(`progress-msg-${idx}`);
+  const videoResult  = document.getElementById(`video-result-${idx}`);
+  const saveBtn      = document.getElementById(`save-btn-${idx}`);
+  const animBtn      = document.getElementById(`animate-btn-${idx}`);
+
+  animBtn.disabled = true;
+  animBtn.textContent = 'Animating…';
+  progressWrap.classList.add('show');
+  progressFill.style.width = '60%';
+  progressMsg.textContent = 'Step 2/2 — Animating to video… (1–3 min)';
+  card.classList.add('generating');
+
+  const moment = moments[idx];
+  const charSelect = card.querySelector('.moment-character');
+  const soul_id = charSelect?.value || '';
+
+  try {
+    const resp = await fetch('/api/brollr/animate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        generation_id: genId,
+        image_url:     imgUrl,
+        camera_motion: card.querySelector('.moment-motion').value,
+        style:         card.querySelector('.moment-style').value,
+        moment_label:  moment?.label || '',
+        soul_id,
+      }),
+    });
+
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        let ev; try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+        if (ev.step === 'processing') {
+          progressFill.style.width = '80%';
+          progressMsg.textContent = ev.message || 'Animating…';
+        } else if (ev.step === 'done') {
+          progressFill.style.width = '100%';
+          progressMsg.textContent = 'Done!';
+          card.classList.remove('generating');
+          card.classList.add('done');
+          document.getElementById(`image-preview-${idx}`).style.display = 'none';
+          if (ev.result_url) {
+            videoResult.classList.add('show');
+            videoResult.querySelector('video').src = ev.result_url;
+            saveBtn.style.display = 'inline-flex';
+          }
+          loadHistory();
+        } else if (ev.step === 'error') {
+          progressMsg.style.color = 'var(--red)';
+          progressMsg.textContent = 'Error: ' + ev.error;
+          card.classList.remove('generating');
+          animBtn.disabled = false;
+          animBtn.textContent = '▶ Animate to Video';
+        }
+      }
+    }
+  } catch (err) {
+    progressMsg.style.color = 'var(--red)';
+    progressMsg.textContent = 'Error: ' + err.message;
+    card.classList.remove('generating');
+  } finally {
+    // Always reset — covers silent disconnects, server timeouts, and clean exits without a done event
+    animBtn.disabled = false;
+    animBtn.textContent = '▶ Animate to Video';
+  }
+}
+
+// ─────────────────────────────────────────────
+// REGEN IMAGE (step 1 retry with optional prompt tweak)
+// ─────────────────────────────────────────────
+function regenImage(idx) {
+  const card       = document.getElementById(`moment-${idx}`);
+  const mainPrompt = card.querySelector('.moment-prompt');
+  const refineArea = document.getElementById(`refine-prompt-${idx}`);
+  const refined    = refineArea?.value?.trim();
+
+  // Sync refined prompt back to the main prompt textarea if changed
+  if (refined && refined !== mainPrompt.value.trim()) {
+    mainPrompt.value = refined;
+  }
+
+  // Hide the current preview so generating state looks clean
+  document.getElementById(`image-preview-${idx}`).style.display = 'none';
+  // Clear the refine field so on the next image_ready it gets re-populated fresh
+  if (refineArea) refineArea.value = '';
+
+  generateMoment(idx);
+}
+
+function openImageModal(src) {
+  document.getElementById('modal-video').style.display = 'none';
+  const modal = document.getElementById('player-modal');
+  // Reuse modal but show image
+  let img = document.getElementById('modal-image');
+  if (!img) {
+    img = document.createElement('img');
+    img.id = 'modal-image';
+    img.style.cssText = 'width:100%;border-radius:6px;margin-bottom:10px';
+    document.getElementById('modal-video').insertAdjacentElement('afterend', img);
+  }
+  img.src = src;
+  img.style.display = 'block';
+  document.getElementById('modal-video').style.display = 'none';
+  document.getElementById('modal-label').textContent = 'Generated Still — click Animate to Video if you like it';
+  document.getElementById('modal-prompt').textContent = '';
+  modal.classList.add('open');
 }
 
 // ─────────────────────────────────────────────
@@ -712,7 +1100,11 @@ async function deleteGeneration(id, btn) {
 // MODAL
 // ─────────────────────────────────────────────
 function openModal(url, label, prompt) {
-  document.getElementById('modal-video').src = url;
+  const img = document.getElementById('modal-image');
+  if (img) img.style.display = 'none';
+  const vid = document.getElementById('modal-video');
+  vid.style.display = 'block';
+  vid.src = url;
   document.getElementById('modal-label').textContent = label || '';
   document.getElementById('modal-prompt').textContent = prompt || '';
   document.getElementById('player-modal').classList.add('open');
@@ -728,6 +1120,486 @@ document.getElementById('player-modal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ─────────────────────────────────────────────
+// RIGHT PANEL TABS
+// ─────────────────────────────────────────────
+function switchRightTab(tab) {
+  document.getElementById('chars-tab').style.display   = tab === 'chars'   ? 'block' : 'none';
+  document.getElementById('speak-tab').style.display   = tab === 'speak'   ? 'block' : 'none';
+  document.getElementById('history-tab').style.display = tab === 'history' ? 'block' : 'none';
+  document.getElementById('tab-chars').classList.toggle('active',   tab === 'chars');
+  document.getElementById('tab-speak').classList.toggle('active',   tab === 'speak');
+  document.getElementById('tab-history').classList.toggle('active', tab === 'history');
+}
+
+// ─────────────────────────────────────────────
+// SPEAK (ElevenLabs TTS + Higgsfield lip-sync)
+// ─────────────────────────────────────────────
+let speakImageBase64  = null;   // data URL from file upload
+let currentSpeakGenId = null;
+let currentSpeakUrl   = null;
+
+function onSpeakPhotoChange() {
+  const file = document.getElementById('speak-photo-input').files[0];
+  if (!file) { speakImageBase64 = null; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    speakImageBase64 = e.target.result; // data:image/jpeg;base64,...
+    document.getElementById('speak-image-url').value = '';
+    const preview = document.getElementById('speak-image-preview');
+    document.getElementById('speak-image-preview-img').src = speakImageBase64;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function onSpeakUrlInput() {
+  // Clear file upload if URL is being typed
+  const url = document.getElementById('speak-image-url').value.trim();
+  if (url) {
+    speakImageBase64 = null;
+    document.getElementById('speak-photo-input').value = '';
+    // Show preview of URL
+    const preview = document.getElementById('speak-image-preview');
+    const img     = document.getElementById('speak-image-preview-img');
+    img.src = url;
+    img.onerror = () => { preview.style.display = 'none'; };
+    img.onload  = () => { preview.style.display = 'block'; };
+  }
+}
+
+async function generateSpeak() {
+  const scriptText = document.getElementById('speak-script').value.trim();
+  if (!scriptText) { alert('Enter the script text first.'); return; }
+
+  const imageUrl = speakImageBase64 || document.getElementById('speak-image-url').value.trim();
+  if (!imageUrl) { alert('Upload a reference photo or paste an image URL.'); return; }
+
+  const btn         = document.getElementById('speak-generate-btn');
+  const progress    = document.getElementById('speak-progress');
+  const progressBar = document.getElementById('speak-progress-bar');
+  const progressMsg = document.getElementById('speak-progress-msg');
+  const resultDiv   = document.getElementById('speak-result');
+  const errorDiv    = document.getElementById('speak-error');
+
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  progress.style.display = 'block';
+  resultDiv.style.display = 'none';
+  errorDiv.style.display = 'none';
+  progressBar.style.width = '5%';
+  progressMsg.style.color = '';
+  progressMsg.textContent = 'Starting…';
+  currentSpeakGenId = null;
+  currentSpeakUrl   = null;
+
+  try {
+    const resp = await fetch('/api/brollr/speak', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        script_text: scriptText,
+        image_url:   imageUrl,
+        project_id:  currentProjectId || null,
+      }),
+    });
+
+    if (!resp.ok || !resp.body) throw new Error(`Server error ${resp.status}`);
+
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let   buf     = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        let evt;
+        try { evt = JSON.parse(line.slice(5).trim()); } catch (_) { continue; }
+        if (evt.generation_id) currentSpeakGenId = evt.generation_id;
+
+        if (evt.step === 'creating') {
+          progressBar.style.width = '20%';
+          progressMsg.textContent = evt.message || 'Generating audio…';
+        } else if (evt.step === 'audio_ready') {
+          progressBar.style.width = '45%';
+          progressMsg.textContent = evt.message || 'Audio ready — starting lip-sync…';
+        } else if (evt.step === 'processing') {
+          progressBar.style.width = '65%';
+          progressMsg.textContent = evt.message || 'Lip-sync in progress…';
+        } else if (evt.step === 'done') {
+          progressBar.style.width = '100%';
+          progressMsg.textContent = 'Done!';
+          currentSpeakUrl = evt.result_url;
+          document.getElementById('speak-result-video').src = evt.result_url;
+          document.getElementById('speak-save-vault-btn').disabled = false;
+          document.getElementById('speak-save-vault-btn').textContent = '💾 Save to Vault';
+          resultDiv.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = '🎙 Generate Talking Head';
+          loadHistory();
+        } else if (evt.step === 'error') {
+          errorDiv.textContent = evt.error || 'Generation failed';
+          errorDiv.style.display = 'block';
+          progress.style.display = 'none';
+          btn.disabled = false;
+          btn.textContent = '🎙 Generate Talking Head';
+        }
+      }
+    }
+  } catch (err) {
+    errorDiv.textContent = err.message;
+    errorDiv.style.display = 'block';
+    progress.style.display = 'none';
+    btn.disabled = false;
+    btn.textContent = '🎙 Generate Talking Head';
+  }
+}
+
+function openSpeakModal() {
+  if (!currentSpeakUrl) return;
+  const script = document.getElementById('speak-script').value.slice(0, 80);
+  openModal(currentSpeakUrl, '🎙 Speak', script);
+}
+
+async function saveSpeakToVault() {
+  if (!currentSpeakGenId) return;
+  const btn = document.getElementById('speak-save-vault-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const r = await fetch('/api/brollr/save-to-vault', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ generation_id: currentSpeakGenId }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Save failed');
+    btn.textContent = '✓ Saved to Vault';
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '💾 Save to Vault';
+    alert('Save failed: ' + err.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+// CHARACTERS (SOUL ID)
+// ─────────────────────────────────────────────
+let characters = []; // cached list
+
+async function loadCharacters() {
+  try {
+    const r = await fetch('/api/brollr/characters');
+    const d = await r.json();
+    characters = d.characters || [];
+    renderCharacters();
+    populateMomentCharSelects();
+  } catch (_) {}
+}
+
+function renderCharacters() {
+  const list = document.getElementById('char-list');
+  if (!characters.length) {
+    list.innerHTML = '<div class="empty" id="char-empty">No characters yet.</div>';
+    return;
+  }
+  list.innerHTML = characters.map(c => {
+    const statusClass = c.status === 'ready' ? 'char-badge-ready' : c.status === 'failed' ? 'char-badge-failed' : 'char-badge-training';
+    const statusLabel = c.status === 'ready' ? '✓ Ready' : c.status === 'failed' ? '✗ Failed' : '⏳ Training';
+    const photoLabel  = c.photo_count ? `${c.photo_count} photos` : '';
+    const notes       = c.notes || '';
+    return `
+      <div class="char-card" id="char-card-${c.id}" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="char-avatar">🧬</div>
+          <div class="char-info">
+            <div class="char-name">${escHtml(c.name)}</div>
+            <div class="char-status">
+              <span class="${statusClass}">${statusLabel}</span>
+              ${photoLabel ? `<span> · ${photoLabel}</span>` : ''}
+            </div>
+            ${c.soul_id ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:monospace">${c.soul_id.slice(0, 20)}…</div>` : ''}
+          </div>
+          <button class="btn btn-danger btn-xs" onclick="deleteCharacter(${c.id})">✕</button>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">
+            Appearance Notes <span style="font-weight:400;color:var(--muted)">(auto-injected into prompts)</span>
+          </div>
+          <textarea
+            id="char-notes-${c.id}"
+            rows="2"
+            placeholder="e.g. early 30s, athletic build, rugged outdoor look, worn work clothes"
+            onblur="saveCharacterNotes(${c.id}, this)"
+            style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--off);
+                   padding:6px 8px;border-radius:5px;font-size:11px;resize:vertical;
+                   outline:none;font-family:inherit;line-height:1.5"
+            onfocus="this.style.borderColor='var(--teal)'" onblur_helper="this.style.borderColor='var(--border2)'"
+          >${escHtml(notes)}</textarea>
+          <div id="char-notes-saved-${c.id}" style="font-size:10px;color:var(--green);display:none;margin-top:2px">✓ Saved</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function populateMomentCharSelects() {
+  // Refresh the character dropdown on every rendered moment card
+  const selects = document.querySelectorAll('.moment-character');
+  selects.forEach(sel => {
+    const current = sel.value;
+    // Keep the "None" option, rebuild the rest
+    while (sel.options.length > 1) sel.remove(1);
+    characters.filter(c => c.status === 'ready').forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.soul_id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+    // Restore selection if still valid
+    if (current) sel.value = current;
+  });
+}
+
+function updateCharSelectHint(idx, sel) {
+  const hint = document.getElementById(`char-hint-${idx}`);
+  if (!hint) return;
+  hint.textContent = sel.value ? '🎭 applied' : '';
+}
+
+function setCharMode(mode) {
+  const isPaste = mode === 'paste';
+  document.getElementById('char-mode-paste').style.display = isPaste ? 'block' : 'none';
+  document.getElementById('char-mode-train').style.display = isPaste ? 'none'  : 'block';
+  document.getElementById('mode-btn-paste').style.background = isPaste ? 'var(--teal)' : 'var(--card2)';
+  document.getElementById('mode-btn-paste').style.color      = isPaste ? '#fff' : 'var(--muted)';
+  document.getElementById('mode-btn-train').style.background = isPaste ? 'var(--card2)' : 'var(--teal)';
+  document.getElementById('mode-btn-train').style.color      = isPaste ? 'var(--muted)' : '#fff';
+}
+
+async function fetchHiggsfieldChars() {
+  const statusEl = document.getElementById('higgsfield-fetch-status');
+  const pickerEl = document.getElementById('higgsfield-char-picker');
+  const selectEl = document.getElementById('higgsfield-char-select');
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Fetching from Higgsfield…';
+  pickerEl.style.display = 'none';
+  try {
+    const r = await fetch('/api/brollr/characters/higgsfield-list');
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    const items = d.items || [];
+    if (!items.length) { statusEl.textContent = 'No trained characters found in your Higgsfield account.'; return; }
+    // Populate dropdown
+    selectEl.innerHTML = '<option value="">— Choose —</option>';
+    items.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.name} (${c.status})`;
+      selectEl.appendChild(opt);
+    });
+    statusEl.style.display = 'none';
+    pickerEl.style.display = 'block';
+  } catch (err) {
+    statusEl.textContent = 'Error: ' + err.message;
+  }
+}
+
+async function saveManualSoulId() {
+  const name   = document.getElementById('char-name').value.trim();
+  const notes  = document.getElementById('char-notes').value.trim();
+  const soulId = document.getElementById('char-soul-id-input').value.trim();
+  if (!name)   { alert('Give this character a name first.'); return; }
+  if (!soulId) { alert('Paste the Soul ID first.'); return; }
+  const btn = document.querySelector('#char-mode-paste details .btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const r = await fetch('/api/brollr/characters/import', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, soul_id: soulId, notes: notes || null }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Save failed');
+    document.getElementById('char-name').value = '';
+    document.getElementById('char-notes').value = '';
+    document.getElementById('char-soul-id-input').value = '';
+    await loadCharacters();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Save Character'; }
+  }
+}
+
+async function saveExistingSoulId() {
+  const name    = document.getElementById('char-name').value.trim();
+  const notes   = document.getElementById('char-notes').value.trim();
+  const selectEl = document.getElementById('higgsfield-char-select');
+  const soulId  = selectEl?.value?.trim();
+  const charName = name || selectEl?.options[selectEl.selectedIndex]?.text?.split(' (')[0] || '';
+
+  if (!charName) { alert('Give this character a name first (or fetch to auto-fill).'); return; }
+  if (!soulId)   { alert('Select a character from the list first.'); return; }
+
+  // Auto-fill name from Higgsfield if not manually set
+  const finalName = name || charName;
+
+  const saveBtn = document.querySelector('#higgsfield-char-picker .btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+
+  try {
+    const r = await fetch('/api/brollr/characters/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: finalName, soul_id: soulId, notes: notes || null }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Save failed');
+    // Reset form
+    document.getElementById('char-name').value = '';
+    document.getElementById('char-notes').value = '';
+    document.getElementById('higgsfield-char-picker').style.display = 'none';
+    document.getElementById('higgsfield-fetch-status').style.display = 'none';
+    await loadCharacters();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓ Save Character'; }
+  }
+}
+
+async function saveCharacterNotes(id, textarea) {
+  textarea.style.borderColor = 'var(--border2)';
+  const notes = textarea.value.trim();
+  const savedEl = document.getElementById(`char-notes-saved-${id}`);
+  try {
+    const r = await fetch(`/api/brollr/characters/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    });
+    if (!r.ok) throw new Error('Save failed');
+    // Update local cache
+    const char = characters.find(c => c.id === id);
+    if (char) char.notes = notes;
+    // Flash saved indicator
+    if (savedEl) {
+      savedEl.style.display = 'block';
+      setTimeout(() => { savedEl.style.display = 'none'; }, 2000);
+    }
+  } catch (err) {
+    textarea.style.borderColor = 'var(--red)';
+    console.error('Save character notes failed:', err.message);
+  }
+}
+
+async function deleteCharacter(id) {
+  if (!confirm('Remove this character? This cannot be undone.')) return;
+  try {
+    await fetch(`/api/brollr/characters/${id}`, { method: 'DELETE' });
+    await loadCharacters();
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+  }
+}
+
+async function trainCharacter() {
+  const nameEl   = document.getElementById('char-name');
+  const photosEl = document.getElementById('char-photos');
+  const progressEl  = document.getElementById('char-progress');
+  const progressMsg = document.getElementById('char-progress-msg');
+  const progressBar = document.getElementById('char-progress-bar');
+
+  const name = nameEl.value.trim();
+  if (!name) { alert('Give your character a name first.'); nameEl.focus(); return; }
+
+  const files = photosEl.files;
+  if (!files || files.length < 5) {
+    alert('Upload at least 5 photos (15–20 recommended for best results).');
+    return;
+  }
+  if (files.length < 15) {
+    const ok = confirm(`You've selected ${files.length} photos. For best results Higgsfield recommends 15–20. Continue anyway?`);
+    if (!ok) return;
+  }
+
+  const notesVal = document.getElementById('char-notes').value.trim();
+
+  // Build FormData
+  const form = new FormData();
+  form.append('name', name);
+  if (notesVal) form.append('notes', notesVal);
+  for (const f of files) form.append('photos', f);
+
+  progressEl.style.display = 'block';
+  progressMsg.textContent  = 'Uploading photos…';
+  progressBar.style.width  = '5%';
+
+  const trainBtn = document.querySelector('#char-create-form .btn');
+  trainBtn.disabled = true;
+  trainBtn.textContent = 'Training…';
+
+  try {
+    const resp = await fetch('/api/brollr/characters', { method: 'POST', body: form });
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        let ev;
+        try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+
+        if (ev.step === 'uploading') {
+          progressMsg.textContent = ev.message || 'Uploading…';
+          progressBar.style.width = `${Math.min(10 + ev.index * 4, 55)}%`;
+        } else if (ev.step === 'training') {
+          progressMsg.textContent = ev.message || 'Training Soul ID…';
+          progressBar.style.width = '70%';
+        } else if (ev.step === 'done') {
+          progressMsg.textContent = '✓ Character ready!';
+          progressBar.style.width = '100%';
+          progressMsg.style.color = 'var(--green)';
+          // Reset form
+          nameEl.value = '';
+          photosEl.value = '';
+          document.getElementById('char-notes').value = '';
+          // Reload character list + selectors
+          await loadCharacters();
+          // Switch to show the new character
+          setTimeout(() => {
+            progressEl.style.display = 'none';
+            progressMsg.style.color  = 'var(--teal)';
+            progressBar.style.width  = '0%';
+          }, 2000);
+        } else if (ev.step === 'error') {
+          progressMsg.textContent = 'Error: ' + ev.error;
+          progressMsg.style.color  = 'var(--red)';
+          progressBar.style.width  = '100%';
+        }
+      }
+    }
+  } catch (err) {
+    progressMsg.textContent = 'Error: ' + err.message;
+    progressMsg.style.color  = 'var(--red)';
+  } finally {
+    trainBtn.disabled    = false;
+    trainBtn.textContent = '🧬 Train Soul ID';
+  }
+}
 
 // ─────────────────────────────────────────────
 // BOOT

@@ -38,11 +38,20 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/ideas — create one idea
+// H2: Server-side dedupe — if a non-deleted idea with the same trimmed title was
+// created in the last 60 seconds, return the existing record instead of inserting.
+// Prevents duplicates from double-clicks, slow-network retries, and re-opened modals.
 router.post('/', (req, res) => {
   try {
     const { title, concept, angle, hook, notes, source } = req.body;
     if (!title || !title.trim()) return res.status(400).json({ error: 'title is required' });
-    const id = db.createIdea({ title: title.trim(), concept, angle, hook, notes, source });
+    const trimmedTitle = title.trim();
+    // Dedupe check — same title within the last 60 seconds
+    const existing = db.getRawDb().prepare(
+      `SELECT * FROM ideas WHERE title = ? AND created_at >= datetime('now', '-60 seconds') ORDER BY created_at DESC LIMIT 1`
+    ).get(trimmedTitle);
+    if (existing) return res.status(201).json({ idea: parseIdeaJson(existing), deduplicated: true });
+    const id = db.createIdea({ title: trimmedTitle, concept, angle, hook, notes, source });
     const idea = db.getIdea(id);
     res.status(201).json({ idea: parseIdeaJson(idea) });
   } catch (err) {
@@ -63,14 +72,27 @@ router.patch('/:id', (req, res) => {
   }
 });
 
-// DELETE /api/ideas/:id
+// DELETE /api/ideas/:id — soft delete (sets deleted_at)
 router.delete('/:id', (req, res) => {
   try {
-    const id   = parseInt(req.params.id);
+    const id   = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' });
     const idea = db.getIdea(id);
     if (!idea) return res.status(404).json({ error: 'Idea not found' });
     db.deleteIdea(id);
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/ideas/:id/restore — undo soft delete (clears deleted_at)
+router.post('/:id/restore', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' });
+    db.restoreIdea(id);
+    res.json({ ok: true, idea: parseIdeaJson(db.getIdea(id)) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -134,9 +156,11 @@ Parse as many ideas as you can find. Minimum 1, no maximum.`;
       return res.status(400).json({ error: 'No ideas could be parsed from that text' });
     }
 
-    const ids   = db.bulkCreateIdeas(parsed);
-    const ideas = ids.map(id => parseIdeaJson(db.getIdea(id)));
-    res.status(201).json({ ok: true, count: ideas.length, ideas });
+    // ST-5 FIX: parse-only — do NOT insert here. Frontend previews + Save All does the write.
+    // Previously this inserted AND the frontend re-POSTed each idea → every bulk import doubled.
+    // Pattern matches /from-comments: parse, preview, confirm, then single write path.
+    const ideas = parsed.map(p => ({ ...p, title: (p.title || '').trim() || p.concept?.slice(0,60) || 'Untitled idea' })).filter(p => p.title);
+    res.json({ ok: true, count: ideas.length, ideas });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -428,6 +452,7 @@ router.post('/constellation/reset', (req, res) => {
 });
 
 // POST /api/ideas/:id/promote — promote idea to a PipΩr project
+// H4: wrapped in a transaction — partial failure no longer orphans a project or leaves idea unlinked
 router.post('/:id/promote', (req, res) => {
   try {
     const id   = parseInt(req.params.id);
@@ -436,14 +461,6 @@ router.post('/:id/promote', (req, res) => {
 
     const brief = idea.brief_data ? JSON.parse(idea.brief_data) : {};
 
-    // Create the project
-    const projectId = db.createProject(
-      idea.title,
-      idea.concept || idea.title,
-      null, null
-    );
-
-    // Store id8r_data on the project so PipΩr can pre-fill
     const id8rData = {
       chosenConcept: {
         headline: idea.title,
@@ -451,18 +468,23 @@ router.post('/:id/promote', (req, res) => {
         why:      idea.concept,
         hook:     idea.hook,
       },
-      briefData:      brief.briefData      || {},
-      packageData:    brief.packageData    || {},
+      briefData:       brief.briefData       || {},
+      packageData:     brief.packageData     || {},
       researchSummary: brief.researchSummary || '',
       fromIdeaVault: true,
       ideaId: id,
     };
 
-    db.updateProjectId8r(projectId, id8rData);
+    // Run all writes atomically — no orphaned projects if any step fails
+    const promote = db.getRawDb().transaction(() => {
+      const projectId = db.createProject(idea.title, idea.concept || idea.title, null, null);
+      db.updateProjectId8r(projectId, id8rData);
+      try { db.setProjectSource(projectId, 'idea_vault'); } catch (_) {}
+      db.updateIdea(id, { status: 'in_development', project_id: projectId });
+      return projectId;
+    });
 
-    // Mark idea as in_development and link to project
-    db.updateIdea(id, { status: 'in_development', project_id: projectId });
-
+    const projectId = promote();
     res.json({ ok: true, project_id: projectId, redirect: `/pipr.html?load_project=${projectId}` });
   } catch (err) {
     res.status(500).json({ error: err.message });

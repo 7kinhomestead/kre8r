@@ -338,7 +338,8 @@ router.post('/generate-dmca/:reportId', async (req, res) => {
   // Build evidence summary
   let evidenceSummary = '';
   if (report.match_confidence) {
-    const pct = Math.round(report.match_confidence * 100);
+    // GUARD-4 fix: overall_confidence is already 0-100, not 0-1 — was producing "8500%" in DMCA notices
+    const pct = Math.round(report.match_confidence <= 1 ? report.match_confidence * 100 : report.match_confidence);
     evidenceSummary += `Detection confidence: ${pct}%.\n`;
   }
   if (report.match_type) {
@@ -405,7 +406,7 @@ Use formal legal language. Include the date: ${today}. Make it ready to copy and
     const anthropic = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const stream = await anthropic.messages.stream({
-      model:      'claude-sonnet-4-6',
+      model:      process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 2000,
       messages:   [{ role: 'user', content: prompt }],
     });

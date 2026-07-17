@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bin Review — RR S2</title>
+<style>
+  :root { --bg:#0b0f0e; --card:#141a19; --line:#233230; --teal:#14b8a6; --amber:#f59e0b; --text:#d7e0de; --dim:#7c8a87; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; padding: 16px; }
+  h1 { font-size: 20px; color: var(--teal); margin-bottom: 4px; }
+  .sub { color: var(--dim); margin-bottom: 14px; }
+  .bar { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 5; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  select, input[type=text], button { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; }
+  button { cursor: pointer; }
+  button.primary { background: var(--teal); color: #05201c; font-weight: 700; border: 0; }
+  .count { color: var(--amber); font-weight: 700; }
+  .group-h { margin: 22px 0 10px; font-size: 15px; color: var(--amber); border-bottom: 1px solid var(--line); padding-bottom: 5px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .card.changed { border-color: var(--amber); }
+  .thumbwrap { position: relative; aspect-ratio: 16/9; background: #000; }
+  .thumbwrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .noThumb { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--dim); font-size: 12px; }
+  .meta { padding: 9px 11px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .idline { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .id { color: var(--teal); font-weight: 700; }
+  .dur, .st { color: var(--dim); font-size: 12px; }
+  .binbadge { font-size: 11px; background: #0f2a26; color: var(--teal); padding: 2px 8px; border-radius: 999px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .desc { color: #b7c4c1; font-size: 12.5px; max-height: 54px; overflow: hidden; cursor: pointer; }
+  .desc.open { max-height: none; }
+  .controls { display: flex; gap: 6px; margin-top: auto; }
+  .controls select { flex: 1; min-width: 0; }
+  .note { width: 100%; }
+  .pill { font-size: 11px; color: var(--dim); }
+</style>
+</head>
+<body>
+<h1>Bin Review — Rock Rich S2</h1>
+<div class="sub">Fix a clip's bin with the dropdown. Changes save locally as you go — hit <b>Copy corrections</b> when done and hand the result to Fable to apply to the bin map.</div>
+<div class="bar">
+  <select id="groupFilter"><option value="">All groups</option></select>
+  <input type="text" id="q" placeholder="search description / filename…" size="30">
+  <label><input type="checkbox" id="onlyChanged"> only changed</label>
+  <span>changes: <span class="count" id="changeCount">0</span></span>
+  <button class="primary" id="copyBtn">Copy corrections</button>
+  <button id="clearBtn">Clear all changes</button>
+</div>
+<div id="app">loading vault…</div>
+
+<script id="binmap" type="application/json">{"1077":{"bin":"BURN-DAY SEQUENCE — Apr 13 (all 29 clearing-down-the-hill cl","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"8170":{"bin":"REDDING EPILOGUE (Jun 2)","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8171":{"bin":"REDDING EPILOGUE (Jun 2)","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8173":{"bin":"JUN 11 — LAND BONES","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8174":{"bin":"JUN 11 — LAND BONES","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8175":{"bin":"JUN 11 — LAND BONES","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8176":{"bin":"JUN 11 — LAND BONES","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8177":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8178":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8179":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8180":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8181":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8182":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8183":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8184":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8185":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8186":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8187":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8188":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8189":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8190":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8191":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8192":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8193":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8194":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8195":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8197":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8198":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8199":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8200":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8201":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8202":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8203":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8204":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8205":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8206":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8207":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8208":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8209":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8210":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8211":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8212":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8213":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8214":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8215":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8216":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8217":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8218":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8219":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8220":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8221":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8222":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8223":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8224":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8225":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8226":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8227":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8228":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8229":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8230":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8231":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8232":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8233":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8234":{"bin":"SHOP CLEANUP / MAY LAYER (EP1 grind + EP2 feed)","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8235":{"bin":"THE REDDING SOLAR TRIP — Jun 1 complete arc (staged edit-sta","pass":"PASS 4 — 680 raw / \"shop clean up and re"},"8236":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8237":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8238":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8239":{"bin":"CLEANUP WEEK (Jun 7–9) — EP1 grind + EP2 shop feed","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8240":{"bin":"REDDING EPILOGUE (Jun 2)","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8241":{"bin":"REDDING EPILOGUE (Jun 2)","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8242":{"bin":"REDDING EPILOGUE (Jun 2)","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"8437":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8438":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8439":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8440":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8441":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8442":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8443":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8444":{"bin":"EP5 — BREAK GROUND (early candidates only)","pass":"PASS 1-2"},"8445":{"bin":"EP5 — BREAK GROUND (early candidates only)","pass":"PASS 1-2"},"8446":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8447":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8448":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8449":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8450":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8451":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8468":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8469":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8470":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8471":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8472":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8473":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8474":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8475":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8476":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8477":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8478":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8479":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8480":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8481":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8482":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8483":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8484":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8485":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8486":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8493":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8494":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8495":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8496":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8497":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8498":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8499":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8500":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8501":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8502":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8503":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8504":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8505":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8506":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8507":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8508":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8509":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8510":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8511":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8512":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8513":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8514":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8515":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8516":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8517":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8518":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8519":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8520":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8521":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8522":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8523":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8524":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8525":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8526":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8527":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8528":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8529":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8530":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8531":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8532":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8533":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8534":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8535":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8536":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8537":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8538":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8539":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8540":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8541":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8542":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8543":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8544":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8545":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8546":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8547":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8548":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8549":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8550":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8551":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8552":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8553":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8554":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8555":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8556":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8557":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8558":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8559":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8560":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8561":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8562":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8563":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8564":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8565":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8566":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8567":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8568":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8569":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8570":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8571":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8572":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8573":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8574":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8575":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8576":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8577":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8578":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8579":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8580":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8581":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8582":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8583":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8586":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8587":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8588":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8589":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8590":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8591":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8592":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8593":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8594":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8595":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8596":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8597":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8598":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8599":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8600":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8601":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8602":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8603":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8604":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8605":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8606":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8607":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8609":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8610":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8611":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8612":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8613":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8614":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8615":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8616":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8617":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8618":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8619":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8620":{"bin":"EP5 — BREAK GROUND (early candidates only)","pass":"PASS 1-2"},"8621":{"bin":"EP5 — BREAK GROUND (early candidates only)","pass":"PASS 1-2"},"8622":{"bin":"EP5 — BREAK GROUND (early candidates only)","pass":"PASS 1-2"},"8623":{"bin":"EP5 — BREAK GROUND (early candidates only)","pass":"PASS 1-2"},"8624":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8625":{"bin":"CLUSTERS NEEDING A HUMAN WORD","pass":"PASS 1-2"},"8626":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8627":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8628":{"bin":"EP1 — THE RECKONING","pass":"PASS 1-2"},"8629":{"bin":"EP4 — THE ASK","pass":"PASS 1-2"},"8630":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8631":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8632":{"bin":"EP3 — BAD LAND","pass":"PASS 1-2"},"8633":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8635":{"bin":"EP2 — THE CLEARING","pass":"PASS 1-2"},"8655":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"8657":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8661":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8664":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8665":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"8845":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"8846":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"8848":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8849":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8850":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8851":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8852":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8862":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8877":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8889":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8890":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8892":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"8894":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"8895":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"8908":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8909":{"bin":"ACT 2 SEED — THE JUNIPERS (already filmed)","pass":"PASS 2 — the overnight phone dump + aeri"},"8910":{"bin":"ACT 2 SEED — THE JUNIPERS (already filmed)","pass":"PASS 2 — the overnight phone dump + aeri"},"8921":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8923":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"8924":{"bin":"REDDING EPILOGUE (Jun 2)","pass":"PASS 5 — 680 raw remainder: THE MISSING "},"9145":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9147":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9164":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9166":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9167":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9171":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9172":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9173":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9178":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9180":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9181":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9185":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9186":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9188":{"bin":"HEARTS (the bank keeps filling)","pass":"PASS 2 — the overnight phone dump + aeri"},"9193":{"bin":"ACT 2 SEED — THE JUNIPERS (already filmed)","pass":"PASS 2 — the overnight phone dump + aeri"},"9194":{"bin":"ACT 2 SEED — THE JUNIPERS (already filmed)","pass":"PASS 2 — the overnight phone dump + aeri"},"9204":{"bin":"HEARTS (the bank keeps filling)","pass":"PASS 2 — the overnight phone dump + aeri"},"9205":{"bin":"HEARTS (the bank keeps filling)","pass":"PASS 2 — the overnight phone dump + aeri"},"9206":{"bin":"HEARTS (the bank keeps filling)","pass":"PASS 2 — the overnight phone dump + aeri"},"9208":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9211":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9214":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9215":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9217":{"bin":"HEARTS (the bank keeps filling)","pass":"PASS 2 — the overnight phone dump + aeri"},"9218":{"bin":"HEARTS (the bank keeps filling)","pass":"PASS 2 — the overnight phone dump + aeri"},"9225":{"bin":"HEARTS (the bank keeps filling)","pass":"PASS 2 — the overnight phone dump + aeri"},"9228":{"bin":"HEARTS (the bank keeps filling)","pass":"PASS 2 — the overnight phone dump + aeri"},"9231":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9235":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9236":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9238":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9249":{"bin":"EP4 — THE ASK (now fully shot)","pass":"PASS 2 — the overnight phone dump + aeri"},"9254":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9255":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9258":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9260":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9262":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9264":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9266":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9271":{"bin":"BONUS THREADS","pass":"PASS 2 — the overnight phone dump + aeri"},"9315":{"bin":"EP5 — WHERE THE WATER GOES (stacked)","pass":"PASS 2 — the overnight phone dump + aeri"},"9318":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9319":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9320":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9325":{"bin":"INTERIOR RENO SPRINT — May 17–19 (9321–9331)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9331":{"bin":"INTERIOR RENO SPRINT — May 17–19 (9321–9331)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9332":{"bin":"PTC POOL CANDIDATES (Whisper before shooting these beats fre","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9333":{"bin":"THE WATER MAN — Mar 12 (9333 9334 9335) RESOLVED — mid-seaso","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9334":{"bin":"THE WATER MAN — Mar 12 (9333 9334 9335) RESOLVED — mid-seaso","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9335":{"bin":"THE WATER MAN — Mar 12 (9333 9334 9335) RESOLVED — mid-seaso","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9336":{"bin":"SOLAR/POWER ARCHIVAL (midpoint ep before layer)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9339":{"bin":"APR 5 FAMILY LAND DAY (9337–9349)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9340":{"bin":"APR 5 FAMILY LAND DAY (9337–9349)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9343":{"bin":"APR 5 FAMILY LAND DAY (9337–9349)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9350":{"bin":"EP5 / WATER ARCHIVAL","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9351":{"bin":"EP5 / WATER ARCHIVAL","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9352":{"bin":"BURN-DAY SEQUENCE — Apr 13 (all 29 clearing-down-the-hill cl","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9355":{"bin":"ANIMAL CLIPS (revised per Jason Jul 13)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9362":{"bin":"ANIMAL CLIPS (revised per Jason Jul 13)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9363":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9369":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9370":{"bin":"PTC POOL CANDIDATES (Whisper before shooting these beats fre","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9371":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9372":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9373":{"bin":"ANIMAL CLIPS (revised per Jason Jul 13)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9374":{"bin":"ANIMAL CLIPS (revised per Jason Jul 13)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9375":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"},"9378":{"bin":"FAMILY CLOUD+LOCAL (not S2 protect forever)","pass":"PASS 3 — may-21-26-videodump (61) + clea"}}</script>
+<script>
+var BINMAP = JSON.parse(document.getElementById('binmap').textContent);
+var TARGETS = [
+  'EP1 — The Reckoning', 'EP2 — The Facade', 'EP3 — Bad Land', 'EP4 — The Ask',
+  'EP5 — Where the Water Goes', 'EP6 — Break Ground / The Pour',
+  'ACT 2 — Junipers / Build', 'MID-SEASON — Animals', 'WATER MAN thread',
+  'HEARTS', 'PTC POOL (Whisper it)', 'FAMILY — CLOUD+LOCAL', 'QUIET STORE (not S2)',
+  'NOT S2 — other video', 'JUNK — discard candidate', 'UNSURE — flag Fable'
+];
+var S2_HINTS = ['rock rich season 2', '680_season-2', 'may-21-26-videodump', 'clearing down the hill', 'shop clean up'];
+var LSKEY = 'binreview_v1';
+var changes = {};
+try { changes = JSON.parse(localStorage.getItem(LSKEY) || '{}'); } catch (e) { changes = {}; }
+
+function saveChanges() {
+  try { localStorage.setItem(LSKEY, JSON.stringify(changes)); } catch (e) {}
+  var n = Object.keys(changes).length;
+  document.getElementById('changeCount').textContent = n;
+}
+
+function thumbUrl(f) {
+  if (!f.thumbnail_path) return null;
+  var base = String(f.thumbnail_path).split(/[\\\/]/).pop();
+  return '/thumbnails/' + encodeURIComponent(base);
+}
+
+function fmtDur(s) {
+  s = Math.round(s || 0);
+  var m = Math.floor(s / 60);
+  return m > 0 ? (m + 'm' + String(s % 60).padStart(2, '0') + 's') : (s + 's');
+}
+
+function groupOf(f) {
+  var m = BINMAP[String(f.id)];
+  if (m) return m.bin;
+  var p = String(f.file_path || '').toLowerCase();
+  for (var i = 0; i < S2_HINTS.length; i++) {
+    if (p.indexOf(S2_HINTS[i]) !== -1) return 'UNBINNED (S2-adjacent)';
+  }
+  return null; // not shown
+}
+
+var PRIORITY = ['CLUSTERS NEEDING A HUMAN WORD', 'UNBINNED (S2-adjacent)'];
+
+fetch('/api/vault/footage?limit=10000').then(function (r) { return r.json(); }).then(function (d) {
+  var all = d.footage || d;
+  var groups = {};
+  all.forEach(function (f) {
+    var g = groupOf(f);
+    if (!g) return;
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(f);
+  });
+  var names = Object.keys(groups).sort(function (a, b) {
+    var pa = PRIORITY.indexOf(a) !== -1 ? PRIORITY.indexOf(a) : 99;
+    var pb = PRIORITY.indexOf(b) !== -1 ? PRIORITY.indexOf(b) : 99;
+    if (pa !== pb) return pa - pb;
+    return groups[b].length - groups[a].length;
+  });
+  var gf = document.getElementById('groupFilter');
+  names.forEach(function (n) {
+    var o = document.createElement('option');
+    o.value = n; o.textContent = n + ' (' + groups[n].length + ')';
+    gf.appendChild(o);
+  });
+  render(groups, names);
+  document.getElementById('groupFilter').addEventListener('change', function () { render(groups, names); });
+  document.getElementById('q').addEventListener('input', function () { render(groups, names); });
+  document.getElementById('onlyChanged').addEventListener('change', function () { render(groups, names); });
+  saveChanges();
+}).catch(function (e) {
+  document.getElementById('app').textContent = 'failed to load vault: ' + e;
+});
+
+function render(groups, names) {
+  var app = document.getElementById('app');
+  app.innerHTML = '';
+  var filterG = document.getElementById('groupFilter').value;
+  var q = document.getElementById('q').value.toLowerCase();
+  var onlyCh = document.getElementById('onlyChanged').checked;
+  names.forEach(function (g) {
+    if (filterG && g !== filterG) return;
+    var clips = groups[g].filter(function (f) {
+      if (onlyCh && !changes[f.id]) return false;
+      if (!q) return true;
+      var hay = ((f.description || '') + ' ' + (f.file_path || '')).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+    if (!clips.length) return;
+    var h = document.createElement('div');
+    h.className = 'group-h';
+    h.textContent = g + '  (' + clips.length + ')';
+    app.appendChild(h);
+    var grid = document.createElement('div');
+    grid.className = 'grid';
+    clips.forEach(function (f) { grid.appendChild(card(f, g)); });
+    app.appendChild(grid);
+  });
+  if (!app.children.length) app.textContent = 'nothing matches the filters';
+}
+
+function card(f, currentBin) {
+  var el = document.createElement('div');
+  el.className = 'card' + (changes[f.id] ? ' changed' : '');
+  var tw = document.createElement('div');
+  tw.className = 'thumbwrap';
+  var tu = thumbUrl(f);
+  if (tu) {
+    var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.src = tu;
+    img.onerror = function () { tw.innerHTML = '<div class="noThumb">no thumbnail</div>'; };
+    tw.appendChild(img);
+  } else {
+    tw.innerHTML = '<div class="noThumb">no thumbnail</div>';
+  }
+  el.appendChild(tw);
+
+  var meta = document.createElement('div');
+  meta.className = 'meta';
+  var name = String(f.file_path || '').split(/[\\\/]/).pop();
+  var idline = document.createElement('div');
+  idline.className = 'idline';
+  idline.innerHTML = '<span class="id">' + f.id + '</span>' +
+    '<span class="dur">' + fmtDur(f.duration_seconds || f.duration) + '</span>' +
+    '<span class="st">' + (f.shot_type || '?') + '</span>';
+  meta.appendChild(idline);
+  var nm = document.createElement('div');
+  nm.className = 'pill';
+  nm.textContent = name;
+  meta.appendChild(nm);
+  var badge = document.createElement('div');
+  badge.className = 'binbadge';
+  badge.title = currentBin;
+  badge.textContent = currentBin;
+  meta.appendChild(badge);
+  var desc = document.createElement('div');
+  desc.className = 'desc';
+  desc.textContent = f.description || '(no description)';
+  desc.addEventListener('click', function () { desc.classList.toggle('open'); });
+  meta.appendChild(desc);
+
+  var ctr = document.createElement('div');
+  ctr.className = 'controls';
+  var sel = document.createElement('select');
+  var keep = document.createElement('option');
+  keep.value = '';
+  keep.textContent = '✓ keep bin';
+  sel.appendChild(keep);
+  TARGETS.forEach(function (t) {
+    var o = document.createElement('option');
+    o.value = t; o.textContent = '→ ' + t;
+    sel.appendChild(o);
+  });
+  if (changes[f.id]) sel.value = changes[f.id].to || '';
+  sel.addEventListener('change', function () {
+    if (sel.value) {
+      changes[f.id] = changes[f.id] || {};
+      changes[f.id].to = sel.value;
+      changes[f.id].from = currentBin;
+      el.classList.add('changed');
+    } else {
+      delete changes[f.id];
+      el.classList.remove('changed');
+    }
+    saveChanges();
+  });
+  ctr.appendChild(sel);
+  meta.appendChild(ctr);
+  var note = document.createElement('input');
+  note.type = 'text';
+  note.className = 'note';
+  note.placeholder = 'note (optional)';
+  if (changes[f.id] && changes[f.id].note) note.value = changes[f.id].note;
+  note.addEventListener('input', function () {
+    if (note.value) {
+      changes[f.id] = changes[f.id] || { from: currentBin };
+      changes[f.id].note = note.value;
+      el.classList.add('changed');
+    } else if (changes[f.id]) {
+      delete changes[f.id].note;
+      if (!changes[f.id].to) { delete changes[f.id]; el.classList.remove('changed'); }
+    }
+    saveChanges();
+  });
+  meta.appendChild(note);
+  el.appendChild(meta);
+  return el;
+}
+
+document.getElementById('copyBtn').addEventListener('click', function () {
+  var out = JSON.stringify(changes, null, 1);
+  // Also persist server-side (durable inbox — survives cleared localStorage).
+  // Silently no-ops on servers that don't have the endpoint yet.
+  try {
+    fetch('/api/shots/bin-corrections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: out
+    }).catch(function () {});
+  } catch (_) {}
+  navigator.clipboard.writeText(out).then(function () {
+    document.getElementById('copyBtn').textContent = 'Copied ' + Object.keys(changes).length + ' ✓';
+    setTimeout(function () { document.getElementById('copyBtn').textContent = 'Copy corrections'; }, 2000);
+  });
+});
+document.getElementById('clearBtn').addEventListener('click', function () {
+  if (confirm('Clear ALL pending corrections?')) {
+    changes = {};
+    saveChanges();
+    location.reload();
+  }
+});
+</script>
+</body>
+</html>

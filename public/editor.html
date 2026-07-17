@@ -229,6 +229,12 @@
       <span class="spinner" id="davinciSpinner" style="display:none"></span>
       Push to DaVinci
     </button>
+    <button class="btn btn-ghost" id="sendDavinciBtn" disabled
+            title="Already edited your footage? Build a DaVinci project straight from your approved selects — no transcription, no AI assembly."
+            style="border-color:rgba(62,207,178,0.4);color:var(--teal)">
+      <span class="spinner" id="sendDavinciSpinner" style="display:none"></span>
+      ⬡ Send to DaVinci
+    </button>
     <button class="btn btn-ghost" id="timelineTranscriptBtn" disabled title="Read transcript from the selected Resolve timeline">
       <span class="spinner" id="ttSpinner" style="display:none"></span>
       📄 Read Timeline Transcript
@@ -623,6 +629,7 @@ async function init() {
 
   document.getElementById('buildSelectsBtn').addEventListener('click', onBuildSelects);
   document.getElementById('davinciBtn').addEventListener('click', onPushToDavinci);
+  document.getElementById('sendDavinciBtn').addEventListener('click', onSendToDavinci);
   document.getElementById('timelineTranscriptBtn').addEventListener('click', onReadTimelineTranscript);
   document.getElementById('refreshTimelinesBtn').addEventListener('click', loadTimelineList);
   document.getElementById('importBrollBtn').addEventListener('click', onImportBroll);
@@ -732,6 +739,16 @@ async function onProjectChange(projectId) {
 async function onBuildSelects() {
   if (!currentProjectId) return;
 
+  // ED-1 fix: if there are existing sections, confirm before re-running — AssemblΩr
+  // deletes ALL selects rows including any hand-curated sequences (no undo, no backup)
+  if (currentSelects && currentSelects.length > 0) {
+    const hasManual = currentSelects.some(s => s.manually_edited || (s.selected_takes && JSON.parse(s.selected_takes||'[]').length > 1));
+    const msg = hasManual
+      ? 'Re-running AssemblΩr will replace your hand-edited sequences with a fresh AI pass. This cannot be undone.\n\nContinue?'
+      : 'Re-running AssemblΩr will replace the current assembly. Continue?';
+    if (!confirm(msg)) return;
+  }
+
   setBuildLoading(true);
   showProgress('selectsProgress', true);
   clearSections();
@@ -818,6 +835,8 @@ function renderSelects(data) {
   // Enable DaVinci + Timeline Transcript buttons
   document.getElementById('davinciBtn').disabled = false;
   document.getElementById('timelineTranscriptBtn').disabled = false;
+  // "Send to DaVinci" escape hatch: enabled whenever approved selects exist.
+  document.getElementById('sendDavinciBtn').disabled = !(data.sections && data.sections.length > 0);
 
   document.getElementById('overallNotes').style.display = 'none';
 
@@ -844,6 +863,13 @@ function renderSelects(data) {
   document.getElementById('goReviewrBtn').href = `/reviewr.html?project_id=${currentProjectId}`;
 }
 
+function confidenceBadge(conf) {
+  if (!conf) return '';
+  if (conf === 'high')   return `<span class="badge badge-winner" title="Claude: high confidence this beat is well covered">✓ strong coverage</span>`;
+  if (conf === 'low')    return `<span class="badge badge-fumbled" title="Claude: low confidence — review this beat carefully">⚠ weak coverage</span>`;
+  return `<span class="badge badge-ok" title="Claude: medium confidence">~ coverage ok</span>`;
+}
+
 function buildSectionCard(sec) {
   const card = document.createElement('div');
   card.className = 'section-card' + (sec.gold_nugget ? ' is-gold' : '');
@@ -861,16 +887,19 @@ function buildSectionCard(sec) {
       <span class="section-idx">${sec.section_index + 1}</span>
       <div class="section-info">
         <div class="section-label">${esc(sec.script_section)}</div>
-        <div class="section-meta">
+        ${sec.beat_brief ? `<div style="font-size:11px;color:var(--text-dimmer);margin-top:2px;line-height:1.4;font-style:italic;">${esc(sec.beat_brief)}</div>` : ''}
+        <div class="section-meta" style="margin-top:4px">
           ${takes.length > 0 ? `<span class="badge badge-takes">${takes.length} take${takes.length !== 1 ? 's' : ''}</span>` : ''}
           ${hasSequence ? `<span class="badge badge-fire">${segCount} seg${segCount !== 1 ? 's' : ''} assembled</span>` : ''}
           ${sec.gold_nugget ? `<span class="badge badge-gold">⚡ gold</span>` : ''}
+          ${confidenceBadge(sec.coverage_confidence)}
         </div>
       </div>
       <button class="section-expand" tabindex="-1">▾</button>
     </div>
     <div class="section-body">
       ${sec.assembly_note ? `<div style="background:rgba(62,207,178,0.06);border:1px solid rgba(62,207,178,0.2);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--teal);">🧠 <em>${esc(sec.assembly_note)}</em></div>` : ''}
+      ${sec.critique_note ? `<div style="background:${sec.coverage_confidence === 'low' ? 'rgba(224,92,92,0.06)' : 'rgba(240,185,66,0.05)'};border:1px solid ${sec.coverage_confidence === 'low' ? 'rgba(224,92,92,0.25)' : 'rgba(240,185,66,0.2)'};border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:${sec.coverage_confidence === 'low' ? 'var(--red)' : 'var(--amber)'};">📋 <em>${esc(sec.critique_note)}</em></div>` : ''}
       ${buildSequenceHTML(sec)}
       ${buildTakesHTML(sec)}
       ${sec.fire_suggestion ? `<div class="fire-box" style="margin-top:8px"><strong>NOTE:</strong> ${esc(sec.fire_suggestion)}</div>` : ''}
@@ -1059,6 +1088,58 @@ async function onPushToDavinci() {
 function setDavinciLoading(loading) {
   document.getElementById('davinciBtn').disabled = loading;
   document.getElementById('davinciSpinner').style.display = loading ? 'inline-block' : 'none';
+}
+
+// ─────────────────────────────────────────────
+// SEND TO DAVINCI (ESCAPE HATCH)
+// Build a DaVinci project straight from approved selects — no transcription,
+// no AI assembly. Same build-selects.py as Push to DaVinci, called directly.
+// ─────────────────────────────────────────────
+
+async function onSendToDavinci() {
+  if (!currentProjectId) return;
+
+  setSendDavinciLoading(true);
+  showProgress('davinciProgress', true);
+  appendLog('davinciLog', 'Send to DaVinci — building project from approved selects (no transcription, no AI)…', 'dim');
+
+  try {
+    const r = await fetch(`/api/editor/send-to-davinci/${currentProjectId}`, { method: 'POST' });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      appendLog('davinciLog', `Cannot send: ${err.error || r.statusText}`, 'err');
+      setSendDavinciLoading(false);
+      return;
+    }
+    const { job_id } = await r.json();
+
+    await streamJob(job_id, '/api/editor/selects/status/', 'davinciProgress', 'davinciBar', 'davinciLog', {
+      onStage: (ev) => {
+        if (ev.stage === 'davinci_log') appendLog('davinciLog', ev.line, 'dim');
+        if (ev.stage === 'davinci_start') appendLog('davinciLog', `Sending ${ev.sections} sections to DaVinci…`, 'dim');
+      },
+      onDone: (result) => {
+        const warn = (result.warnings || []).length;
+        const errs = (result.errors || []).length;
+        appendLog('davinciLog', `Timeline '${result.timeline_name}' created — ${result.clips_placed} clips placed`, 'ok');
+        if (warn) appendLog('davinciLog', `${warn} warning(s) — check DaVinci`, 'warn');
+        if (errs) appendLog('davinciLog', `${errs} error(s)`, 'err');
+        setSendDavinciLoading(false);
+      },
+      onError: (err) => {
+        appendLog('davinciLog', `Error: ${err}`, 'err');
+        setSendDavinciLoading(false);
+      }
+    });
+  } catch (e) {
+    appendLog('davinciLog', `Request failed: ${e.message}`, 'err');
+    setSendDavinciLoading(false);
+  }
+}
+
+function setSendDavinciLoading(loading) {
+  document.getElementById('sendDavinciBtn').disabled = loading;
+  document.getElementById('sendDavinciSpinner').style.display = loading ? 'inline-block' : 'none';
 }
 
 // ─────────────────────────────────────────────

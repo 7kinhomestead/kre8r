@@ -1,0 +1,8 @@
+{
+  "source": "kre8r-land/data/transcripts.json (read-only copy)",
+  "snapshot_date": "2026-06-17",
+  "total_in_source": 195,
+  "usable_entries": 194,
+  "dropped_empty_transcript": 1,
+  "note": "Snapshotted into kre8r repo for Pillar 1 course-gen. Do not edit kre8r-land at runtime. Missing per-video duration/date/topic — duration/date recoverable via YouTube Data API (youtube_id present on all); topics produced by the AI classification pass."
+}

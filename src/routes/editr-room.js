@@ -70,9 +70,10 @@ function buildSystemPrompt(project, piprConfig, writrScript, selects, creatorCtx
   // VisualΩr — visual intelligence context
   let visualBlock = '';
   try {
-    const visRaw = require('../db').getKv('visual_intelligence_profile');
-    if (visRaw) {
-      const vis = JSON.parse(visRaw);
+    // editr-1 fix: getKv already JSON.parses — double-parsing threw SyntaxError silently
+    // meaning VisualΩr context was NEVER injected into the EditΩr Room despite the prompt claiming it
+    const vis = require('../db').getKv('visual_intelligence_profile');
+    if (vis) {
       if (vis?.writr_injection || vis?.contrast_finding) {
         visualBlock = '\n\n## VISUAL INTELLIGENCE (channel performance analysis)';
         if (vis.contrast_finding)       visualBlock += `\n${vis.contrast_finding}`;

@@ -172,7 +172,7 @@ def get_subtitle_count(timeline):
 def count_items_on_track(timeline, track_index):
     """Return number of items on a subtitle track, handling dict or list return."""
     try:
-        items = timeline.GetItemsInTrack("subtitle", track_index)
+        items = timeline.GetItemListInTrack("subtitle", track_index)
         if not items:
             return 0
         if isinstance(items, dict):
@@ -213,9 +213,9 @@ def read_subtitle_items(timeline, track_index, fps=24.0):
     """
     segments = []
     try:
-        items = timeline.GetItemsInTrack("subtitle", track_index)
+        items = timeline.GetItemListInTrack("subtitle", track_index)
         if not items:
-            print(f"[resolve] GetItemsInTrack returned empty for track {track_index}", file=sys.stderr)
+            print(f"[resolve] GetItemListInTrack returned empty for track {track_index}", file=sys.stderr)
             return segments
 
         item_list = list(items.values()) if isinstance(items, dict) else list(items)

@@ -126,7 +126,9 @@ router.post('/analyze', async (req, res) => {
       } catch (_) {}
     }
 
-    const prompt = `You are BrollΩr, a b-roll planning AI for a homesteading creator (7 Kin Homestead — off-grid, financial freedom, rock-solid resourcefulness).
+    // BROLL-synthesis #1 fix: const→let — prompt+= below threw TypeError when VisualΩr was configured
+    // "the better the setup, the harder Analyze Script crashed" — one character unblocks the tool
+    let prompt = `You are BrollΩr, a b-roll planning AI for a homesteading creator (7 Kin Homestead — off-grid, financial freedom, rock-solid resourcefulness).
 
 Analyze this script/content and identify the key moments that need b-roll coverage. For each moment:
 - What visual would reinforce or contrast the spoken content?
@@ -462,12 +464,27 @@ router.post('/animate', async (req, res) => {
     }
     if (!finalUrl) throw new Error('Video generation timed out');
 
+    // GeneratΩr: download to D:\intake\[project_id]_[slug]\generated\ so VaultΩr watcher
+    // auto-ingests and associates with the project — no more expiring CDN-only clips
+    let localPath = null;
+    try {
+      const { downloadToGenerator } = require('../utils/generator-output');
+      const gen = db.getBrollGenerationById ? db.getBrollGenerationById(parseInt(generation_id)) : null;
+      const proj = gen?.project_id ? db.getProject(gen.project_id) : null;
+      if (proj) {
+        const ext = finalUrl.match(/\.(mp4|mov|webm)/i)?.[1] || 'mp4';
+        const fname = `broll-${generation_id}-${Date.now()}.${ext}`;
+        localPath = await downloadToGenerator(finalUrl, fname, proj.id, proj.title);
+        if (localPath) send({ step: 'downloaded', local_path: localPath });
+      }
+    } catch (_) {}
+
     db.updateBrollGeneration(parseInt(generation_id), {
       status:     'done',
-      result_url: finalUrl,
+      result_url: localPath || finalUrl,  // prefer local path — CDN expires
     });
 
-    send({ step: 'done', generation_id, result_url: finalUrl });
+    send({ step: 'done', generation_id, result_url: localPath || finalUrl });
     end();
   } catch (err) {
     logger.error({ module: 'brollr', err: err.message }, 'animate failed');

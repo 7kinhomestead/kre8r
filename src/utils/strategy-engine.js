@@ -57,7 +57,9 @@ async function checkAllThresholds() {
   const triggered  = [];
 
   // ── 1. Publishing gap ──────────────────────────────────────────────────────
-  if (stats.days_since_last_publish >= thresholds.no_publish_alert) {
+  // northr-2 fix: 999 is a sentinel meaning "no publish date found" — guard against
+  // "999 days since your last video" CRITICAL alert on a fresh install or empty history
+  if (stats.days_since_last_publish < 999 && stats.days_since_last_publish >= thresholds.no_publish_alert) {
     triggered.push({
       type:         'no_publish',
       severity:     'critical',

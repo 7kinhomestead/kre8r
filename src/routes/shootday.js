@@ -82,12 +82,13 @@ function buildBeatList(projectId) {
       talking_head_prompt: b.talking_head_prompt || null,
       target_pct:         b.target_pct || null,
       target_seconds:     b.target_seconds || null,
-      // Infer shot type: explicit > talking_head_prompt > footage IDs = broll > default talking_head
-      // Beats with footage_ids are b-roll captures; beats without are talking head by default
+      // M2 fix: default to 'broll' not 'talking_head' — defaulting to talking_head mislabels
+      // b-roll/action beats and tells Cari to shoot a piece-to-camera for a silent beat.
+      // Only use talking_head when there's an explicit prompt or explicit shot_type.
       shot_type:          b.shot_type
                             || (b.talking_head_prompt ? 'talking_head'
                             : (b.coverage_footage_ids?.length ? 'broll'
-                            : 'talking_head')),
+                            : 'broll')),
       // take state
       status:             take?.status     || 'needed',
       take_number:        take?.take_number || 0,
@@ -242,11 +243,16 @@ router.get('/package/:project_id', (req, res) => {
   const safeName       = (project.title || 'project').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
   const filename       = `shootday_${safeName}_${date}.html`;
 
-  const beatsJSON  = JSON.stringify(beats);
-  const scriptJSON = JSON.stringify(cleanScript);
-  const projJSON   = JSON.stringify({ id: project.id, title: project.title, date });
+  const beatsJSON    = JSON.stringify(beats);
+  const scriptJSON   = JSON.stringify(cleanScript);
+  const projJSON     = JSON.stringify({ id: project.id, title: project.title, date });
+  const tiktokScripts = db.getTikTokScripts(projectId).map(s => {
+    const tryJ = (v, fb) => { try { return v ? JSON.parse(v) : fb; } catch(_) { return fb; } };
+    return { ...s, hook_variants: tryJ(s.hook_variants, []), beat_spine: tryJ(s.beat_spine, []), on_screen_text: tryJ(s.on_screen_text, []) };
+  });
+  const tiktokJSON   = JSON.stringify(tiktokScripts);
 
-  const html = generateOfflineHTML({ project, beats, beatsJSON, scriptJSON, projJSON, date });
+  const html = generateOfflineHTML({ project, beats, beatsJSON, scriptJSON, projJSON, date, tiktokScripts, tiktokJSON });
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -347,6 +353,13 @@ router.post('/:project_id/take', (req, res) => {
   const projectId = parseInt(req.params.project_id, 10);
   if (!projectId) return res.status(400).json({ error: 'Invalid project_id' });
 
+  // H4 fix: guard against orphan takes on deleted/stale project IDs
+  // Previously accepted any integer — a stale kre8r_sd_project in localStorage
+  // would accumulate real DB rows bound to a phantom project the pipeline never loads
+  if (!db.getProject(projectId)) {
+    return res.status(404).json({ error: 'Project not found — reload ShootDay to reselect', stale_project: true });
+  }
+
   const { beat_index, beat_name, status, note } = req.body;
   if (beat_index == null) return res.status(400).json({ error: 'beat_index required' });
   if (!['needed', 'good', 'skip'].includes(status)) {
@@ -422,7 +435,7 @@ router.get('/:project_id/summary', (req, res) => {
 // with all data baked in, zero external dependencies
 // ─────────────────────────────────────────────
 
-function generateOfflineHTML({ project, beats, beatsJSON, scriptJSON, projJSON, date }) {
+function generateOfflineHTML({ project, beats, beatsJSON, scriptJSON, projJSON, date, tiktokScripts = [], tiktokJSON = '[]' }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -600,6 +613,14 @@ body{background:#0D0D1A;color:#E8EBE6;font-family:-apple-system,BlinkMacSystemFo
       <div id="review-content"></div>
     </div>
 
+    <div id="view-vertical" class="view" style="display:none">
+      <div class="view-header">
+        <div class="view-title">✦ TikTok Series</div>
+        <div class="project-name" style="font-size:13px;opacity:0.6">Shoot vertical after long-form · 3 of 5 = green</div>
+      </div>
+      <div id="vertical-content" style="padding:12px 12px 16px"></div>
+    </div>
+
   </div><!-- /view-area -->
 
   <!-- TAB BAR -->
@@ -612,6 +633,9 @@ body{background:#0D0D1A;color:#E8EBE6;font-family:-apple-system,BlinkMacSystemFo
     </button>
     <button class="tab-btn" id="tab-review" onclick="switchTab('review')">
       <span class="tab-icon">✅</span>Review
+    </button>
+    <button class="tab-btn" id="tab-vertical" onclick="switchTab('vertical')" style="${tiktokScripts.length ? '' : 'display:none'}">
+      <span class="tab-icon">✦</span>Vertical
     </button>
     <button class="tab-btn" onclick="openSettings()">
       <span class="tab-icon">⚙️</span>Settings
@@ -669,9 +693,10 @@ body{background:#0D0D1A;color:#E8EBE6;font-family:-apple-system,BlinkMacSystemFo
 <script>
 'use strict';
 // ── BAKED-IN DATA ──
-const PROJECT = ${projJSON};
-const BEATS   = ${beatsJSON};
-const SCRIPT  = ${scriptJSON};
+const PROJECT        = ${projJSON};
+const BEATS          = ${beatsJSON};
+const SCRIPT         = ${scriptJSON};
+const TIKTOK_SCRIPTS = ${tiktokJSON};
 
 // ── STORAGE ──
 const STORE_KEY = 'sd_' + PROJECT.id;
@@ -712,12 +737,14 @@ function applyToggles() {
 let currentTab = 'shots';
 function switchTab(tab) {
   currentTab = tab;
-  ['shots','script','review'].forEach(t => {
-    document.getElementById('view-' + t).style.display = t === tab ? 'block' : 'none';
+  ['shots','script','review','vertical'].forEach(t => {
+    const v = document.getElementById('view-' + t);
+    if (v) v.style.display = t === tab ? 'block' : 'none';
     document.getElementById('tab-' + t)?.classList.toggle('active', t === tab);
   });
-  if (tab === 'script') renderScript();
-  if (tab === 'review') renderReview();
+  if (tab === 'script')   renderScript();
+  if (tab === 'review')   renderReview();
+  if (tab === 'vertical') renderVertical();
 }
 
 // ── COVERAGE ──
@@ -911,6 +938,76 @@ function renderReview() {
     html += '</div>';
   }
   el.innerHTML = html;
+}
+
+// ── VERTICAL (TikTok Series) ──
+const TT_LABELS = {'core-native':'CORE NATIVE','core-native-2':'CORE NATIVE 2','contrarian':'CONTRARIAN','search-answer':'SEARCH ANSWER','series-episode':'SERIES EPISODE'};
+const TT_STORE  = 'sd_tt_' + (typeof PROJECT !== 'undefined' ? PROJECT.id : 0);
+
+function loadTtStatus() { try { return JSON.parse(localStorage.getItem(TT_STORE) || '{}'); } catch { return {}; } }
+function saveTtStatus(s) { try { localStorage.setItem(TT_STORE, JSON.stringify(s)); } catch(_) {} }
+
+function renderVertical() {
+  const el = document.getElementById('vertical-content');
+  if (!TIKTOK_SCRIPTS || !TIKTOK_SCRIPTS.length) {
+    el.innerHTML = \`<div style="padding:40px 16px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px">No TikTok series generated yet.<br>Approve a script in WritΩr and click ✦ TikTok Series.</div>\`;
+    return;
+  }
+  const statusMap = loadTtStatus();
+  const filmed = TIKTOK_SCRIPTS.filter(s => (statusMap[s.id] || s.status) === 'filmed' || (statusMap[s.id] || s.status) === 'posted').length;
+
+  let html = \`<div style="display:flex;align-items:center;gap:8px;padding:8px 4px 14px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:12px">
+    <span style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.8px">Filmed</span>
+    <div style="display:flex;gap:5px;margin-left:6px">\${TIKTOK_SCRIPTS.map((s,i) => {
+      const st = statusMap[s.id] || s.status || 'pending';
+      const col = st === 'posted' ? '#00C9A7' : st === 'filmed' ? '#4ade80' : 'rgba(255,255,255,0.15)';
+      return \`<div style="width:22px;height:22px;border-radius:50%;border:1px solid \${col};font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;color:\${col}">\${i+1}</div>\`;
+    }).join('')}</div>
+    <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,0.3);font-style:italic">\${filmed >= 5 ? 'All 5 ✓' : filmed >= 3 ? filmed + ' of 5 — win ✓' : filmed > 0 ? filmed + ' of 5' : '3 of 5 = green'}</span>
+  </div>\`;
+
+  html += TIKTOK_SCRIPTS.map(s => {
+    const st    = statusMap[s.id] || s.status || 'pending';
+    const label = TT_LABELS[s.format_type] || (s.format_type||'').toUpperCase();
+    const accentMap = {1:'#00C9A7',2:'#f59e0b',3:'rgba(0,201,167,0.5)',4:'rgba(255,255,255,0.2)',5:'rgba(255,255,255,0.12)'};
+    const accent = accentMap[s.energy_order] || accentMap[3];
+    const stLabel = st === 'filmed' ? '✓ FILMED' : st === 'posted' ? '✓ POSTED' : 'Mark Filmed';
+    const stColor = st === 'filmed' ? '#4ade80' : st === 'posted' ? '#00C9A7' : 'rgba(255,255,255,0.3)';
+
+    const hooks    = s.hook_variants  || [];
+    const spine    = s.beat_spine     || [];
+    const onScreen = s.on_screen_text || [];
+
+    return \`<div style="background:rgba(20,184,166,0.03);border:1px solid rgba(255,255,255,0.07);border-left:3px solid \${accent};border-radius:6px;padding:14px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:9px;font-weight:700;letter-spacing:1px;color:#00C9A7;background:rgba(0,201,167,0.1);padding:2px 7px;border-radius:3px">\${s.slot} OF 5</span>
+        <span style="font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.8px">\${esc(label)}</span>
+        \${s.pillar ? \`<span style="font-size:9px;color:rgba(255,255,255,0.25);margin-left:auto">\${esc(s.pillar)}\${s.series_name?' · '+esc(s.series_name):''}</span>\` : ''}
+        <button onclick="cycleTtStatus(\${s.id})" style="font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid \${stColor};background:transparent;color:\${stColor};cursor:pointer">\${stLabel}</button>
+      </div>
+      \${hooks.length ? \`<div style="margin-bottom:10px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f59e0b;margin-bottom:5px">HOOK VARIANTS</div>
+        \${hooks.map(h => \`<div style="font-size:12px;color:rgba(255,255,255,0.8);padding:4px 8px;background:rgba(245,158,11,0.05);border-radius:3px;margin-bottom:3px;font-style:italic">⚡ \${esc(h)}</div>\`).join('')}
+      </div>\` : ''}
+      \${spine.length ? \`<div style="margin-bottom:10px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:5px">BEAT SPINE</div>
+        \${spine.map(b => \`<div style="font-size:12px;color:rgba(255,255,255,0.75);padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:6px"><span style="color:#00C9A7">·</span>\${esc(b)}</div>\`).join('')}
+      </div>\` : ''}
+      \${s.closing_line ? \`<div style="font-size:11px;color:#00C9A7;font-weight:600;padding-top:6px;margin-bottom:8px">→ CLOSE: \${esc(s.closing_line)}</div>\` : ''}
+      \${s.caption ? \`<div style="font-size:10px;color:rgba(255,255,255,0.35);line-height:1.6;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05)">\${esc(s.caption)}</div>\` : ''}
+      \${onScreen.length ? \`<div style="margin-top:4px;font-size:9px;color:rgba(255,255,255,0.28)">ON-SCREEN: \${onScreen.map(t=>\`<span style="background:rgba(255,255,255,0.06);border-radius:2px;padding:1px 5px;margin-right:3px">\${esc(t)}</span>\`).join('')}</div>\` : ''}
+    </div>\`;
+  }).join('');
+
+  el.innerHTML = html;
+}
+
+function cycleTtStatus(id) {
+  const map = loadTtStatus();
+  const cur = map[id] || 'pending';
+  map[id] = cur === 'pending' ? 'filmed' : cur === 'filmed' ? 'posted' : 'pending';
+  saveTtStatus(map);
+  renderVertical();
 }
 
 // ── SETTINGS ──

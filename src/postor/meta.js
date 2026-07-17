@@ -275,7 +275,9 @@ async function publishFacebookVideo({ videoPath, title, description, onProgress 
  */
 async function publishFacebookPost({ caption, imagePath, onProgress }) {
   const conn = db.getPostorConnection('facebook');
-  if (!conn?.connected) throw new Error('Facebook not connected');
+  // PB6 fix: conn.connected is never stored in DB (only synthesized in the route's /connections response)
+  // so !conn?.connected was always true — threw even when Facebook was connected
+  if (!conn) throw new Error('Facebook not connected');
 
   const pageId    = conn.account_id;
   const pageToken = conn.access_token;

@@ -30,7 +30,7 @@ const { callClaudeStream, callClaudeMessages } = require('../utils/claude');
 const { getCreatorContext } = require('../utils/creator-context');
 
 const YTDLP_PATH = process.env.YTDLP_PATH   || 'yt-dlp';
-const OPUS_MODEL = process.env.VISUALR_MODEL || 'claude-opus-4-5';
+const OPUS_MODEL = process.env.OPUS_MODEL || 'claude-opus-4-5';
 
 // ─── GET /api/postmortem/videos ───────────────────────────────────────────────
 

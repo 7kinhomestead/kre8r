@@ -464,6 +464,16 @@
       <span class="label">Transcribing</span>
       <span class="val" id="txQueueVal">—</span>
     </div>
+    <div class="status-pill" id="fxQueuePill" style="display:none;cursor:default;" title="Frame analysis queue">
+      <div class="status-dot" id="fxQueueDot" style="background:#a78bfa;animation:pulse 1.2s ease-in-out infinite;"></div>
+      <span class="label">Analyzing</span>
+      <span class="val" id="fxQueueVal">—</span>
+    </div>
+    <div class="status-pill" id="fxBatchPill" onclick="document.getElementById('frameAnalysisPanel').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;" title="Open frame analysis panel">
+      <div class="status-dot" id="fxBatchDot" style="background:#7c3aed"></div>
+      <span class="label">👁 Frame Analysis</span>
+      <span class="val" id="fxBatchVal">—</span>
+    </div>
   </div>
 
   <!-- Intake -->
@@ -702,9 +712,91 @@
       <div class="section-title">DAVINCI PROJECTS</div>
       <div class="section-sub">Resolve projects linked to Kre8Ωr</div>
     </div>
+    <!-- Create DaVinci Project from all vault footage -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:12px 14px;background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius);">
+      <select class="project-select" id="dvCreateProjectSelect" style="flex:1;" onchange="onDvProjectSelect()">
+        <option value="">— Select a project —</option>
+      </select>
+      <button class="btn btn-primary" id="dvCreateBtn" onclick="createDavinciFromVault()" disabled
+              style="white-space:nowrap;opacity:0.5;">
+        ⬡ Create DaVinci Project
+      </button>
+    </div>
+    <div id="dvCreateLog" style="display:none;font-family:monospace;font-size:12px;color:var(--text-dim);background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;max-height:140px;overflow-y:auto;"></div>
     <div class="davinci-panel">
       <div class="dvp-empty" id="dvpEmpty">Loading…</div>
       <div class="dvp-cards" id="dvpCards" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Frame Analysis Batch Panel -->
+  <div class="section" id="frameAnalysisPanel">
+    <div class="section-header">
+      <div>
+        <div class="section-title">👁 FRAME ANALYSIS BACKFILL</div>
+        <div class="section-sub">Analyze existing footage with Claude Vision — generates energy arcs, eye contact scores, b-roll signals, and trim hints</div>
+      </div>
+      <button class="btn btn-ghost" onclick="loadFxProgress()" style="font-size:11px;padding:5px 12px;">↻ Refresh</button>
+    </div>
+
+    <!-- Progress bar row -->
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--text-dim);" id="fxProgressLabel">Loading stats…</span>
+        <span style="font-size:12px;color:var(--text-dimmer);" id="fxProgressPct"></span>
+      </div>
+      <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;">
+        <div id="fxProgressBar" style="height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:4px;transition:width 0.5s;width:0%;"></div>
+      </div>
+    </div>
+
+    <!-- By-type breakdown -->
+    <div id="fxBreakdown" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div>
+        <label style="font-size:11px;color:var(--text-dimmer);display:block;margin-bottom:4px;">Shot types</label>
+        <select id="fxShotTypes" multiple style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:4px 8px;height:72px;min-width:140px;">
+          <option value="talking-head" selected>talking-head</option>
+          <option value="b-roll">b-roll</option>
+          <option value="social-clip">social-clip</option>
+          <option value="completed-video">completed-video</option>
+          <option value="action">action</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text-dimmer);display:block;margin-bottom:4px;">Batch size</label>
+        <select id="fxBatchLimit" onchange="loadFxProgress()" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 10px;">
+          <option value="50">50 clips</option>
+          <option value="100">100 clips</option>
+          <option value="200" selected>200 clips</option>
+          <option value="500">500 clips</option>
+          <option value="1000">1 000 clips</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text-dimmer);display:block;margin-bottom:4px;">Model</label>
+        <select id="fxBatchModel" onchange="loadFxProgress()" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 10px;">
+          <option value="claude-haiku-4-5" selected>Haiku (fast · cheap)</option>
+          <option value="claude-sonnet-4-5">Sonnet (balanced)</option>
+          <option value="claude-opus-4-5">Opus (best quality)</option>
+        </select>
+      </div>
+      <div style="align-self:flex-end;">
+        <button class="btn" id="fxBatchBtn" onclick="startFrameBatch()" style="background:#7c3aed;border-color:#7c3aed;font-size:13px;">▶ Analyze Unanalyzed</button>
+      </div>
+      <div style="align-self:flex-end;">
+        <button class="btn btn-ghost" id="fxQueueStatusBtn" onclick="toggleFxLog()" style="font-size:12px;">📋 Queue Log</button>
+      </div>
+    </div>
+
+    <!-- Cost estimate -->
+    <div id="fxCostHint" style="font-size:11px;color:var(--text-dimmer);margin-top:8px;"></div>
+
+    <!-- Live queue log (hidden by default) -->
+    <div id="fxLog" style="display:none;margin-top:14px;background:var(--bg-input,#0a0a0a);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:220px;overflow-y:auto;font-family:monospace;font-size:11px;color:var(--text-dim);">
+      <div id="fxLogLines" style="display:flex;flex-direction:column-reverse;gap:3px;"></div>
     </div>
   </div>
 
@@ -964,6 +1056,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDavinciProjects();
   loadStorageStats();
   startTxQueueStream();
+  startFxQueueStream();
+  loadFxProgress();
   prefillWatcherPath();
 
   document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -1095,7 +1189,7 @@ let allProjects = [];
 async function loadProjects() {
   try {
     allProjects = await fetch('/api/projects').then(r => r.json());
-    const targets = [document.getElementById('projectSelect'), document.getElementById('uploadProjectSelect'), document.getElementById('modalProjectLink'), document.getElementById('bulkProjectSelect'), document.getElementById('archiveProjectSelect')];
+    const targets = [document.getElementById('projectSelect'), document.getElementById('uploadProjectSelect'), document.getElementById('modalProjectLink'), document.getElementById('bulkProjectSelect'), document.getElementById('archiveProjectSelect'), document.getElementById('dvCreateProjectSelect')];
     for (const sel of targets) {
       if (!sel) continue;
       // Keep first option (— None — / — Unassigned —), clear the rest
@@ -1706,6 +1800,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ── CREATE DAVINCI PROJECT FROM VAULT ──────────────────────────────────────
+function onDvProjectSelect() {
+  var btn = document.getElementById('dvCreateBtn');
+  var sel = document.getElementById('dvCreateProjectSelect');
+  var hasProject = !!sel.value;
+  btn.disabled = !hasProject;
+  btn.style.opacity = hasProject ? '1' : '0.5';
+}
+
+async function createDavinciFromVault() {
+  var sel = document.getElementById('dvCreateProjectSelect');
+  var btn = document.getElementById('dvCreateBtn');
+  var log = document.getElementById('dvCreateLog');
+  var projectId = sel.value;
+  if (!projectId) return;
+
+  var projectName = sel.options[sel.selectedIndex].text;
+  btn.disabled = true;
+  btn.textContent = '⏳ Creating…';
+  log.style.display = 'block';
+  log.textContent = '⬡ Creating DaVinci project for "' + projectName + '"…\n';
+
+  try {
+    var res = await fetch('/api/davinci/create-from-vault/' + projectId, { method: 'POST' });
+    var data = await res.json();
+    if (data.ok) {
+      log.textContent += '✓ Project created: ' + (data.project_name || projectName) + '\n';
+      log.textContent += '✓ ' + (data.clip_count || 0) + ' clips added to media pool\n';
+      log.textContent += '✓ Open DaVinci Resolve to find your project';
+      btn.textContent = '✓ Done';
+      btn.style.background = 'var(--teal)';
+      loadDavinciProjects();
+      setTimeout(function() {
+        btn.textContent = '⬡ Create DaVinci Project';
+        btn.style.background = '';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }, 4000);
+    } else {
+      log.textContent += '✗ Error: ' + (data.error || 'Unknown error');
+      btn.textContent = '⬡ Create DaVinci Project';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  } catch(e) {
+    log.textContent += '✗ Request failed: ' + e.message;
+    btn.textContent = '⬡ Create DaVinci Project';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
 
 // ── DAVINCI PROJECTS PANEL ─────────────────────────────────────────────────
 async function loadDavinciProjects() {
@@ -2944,6 +3090,173 @@ function updateTxQueuePill(queue) {
     // Queue idle — hide the pill
     pill.style.display = 'none';
   }
+}
+
+// ── FRAME ANALYSIS QUEUE ─────────────────────────────────────────────────────
+
+let fxQueueEs = null;
+let fxLogVisible = false;
+
+function startFxQueueStream() {
+  if (fxQueueEs) { fxQueueEs.close(); }
+  fxQueueEs = new EventSource('/api/vault/frame-queue/stream');
+
+  fxQueueEs.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.queue) updateFxQueuePill(data.queue);
+      if (data.type === 'frame_done' || data.type === 'frame_error') {
+        // Refresh the card so visual badge appears
+        const fid = data.job?.footage_id;
+        if (fid) refreshCardById(fid);
+        // Refresh progress bar
+        loadFxProgress();
+      }
+      appendFxLog(data);
+    } catch (_) {}
+  };
+
+  fxQueueEs.onerror = () => {
+    setTimeout(() => { if (document.hidden) return; startFxQueueStream(); }, 10000);
+  };
+}
+
+function updateFxQueuePill(queue) {
+  if (!queue) return;
+  const pill    = document.getElementById('fxQueuePill');
+  const val     = document.getElementById('fxQueueVal');
+  const dot     = document.getElementById('fxQueueDot');
+  if (!pill) return;
+
+  const { active_count = 0, pending_count = 0 } = queue;
+  if (active_count > 0 || pending_count > 0) {
+    pill.style.display = '';
+    dot.style.animation = 'pulse 1.2s ease-in-out infinite';
+    if (active_count > 0 && pending_count > 0) {
+      val.textContent = `${active_count} active · ${pending_count} waiting`;
+    } else if (active_count > 0) {
+      val.textContent = `${active_count} active`;
+    } else {
+      val.textContent = `${pending_count} queued`;
+    }
+  } else {
+    pill.style.display = 'none';
+  }
+}
+
+async function loadFxProgress() {
+  try {
+    const d = await fetch('/api/vault/frame-queue/progress').then(r => r.json());
+    const { total = 0, analyzed = 0, remaining = 0, by_shot_type = [], queue } = d;
+
+    const pct = total > 0 ? Math.round((analyzed / total) * 100) : 0;
+
+    const label = document.getElementById('fxProgressLabel');
+    const pctEl = document.getElementById('fxProgressPct');
+    const bar   = document.getElementById('fxProgressBar');
+    const batchPillVal = document.getElementById('fxBatchVal');
+
+    if (label) label.textContent = `${analyzed.toLocaleString()} of ${total.toLocaleString()} clips analyzed · ${remaining.toLocaleString()} remaining`;
+    if (pctEl)  pctEl.textContent = `${pct}%`;
+    if (bar)    bar.style.width = `${pct}%`;
+    if (batchPillVal) batchPillVal.textContent = `${pct}%`;
+
+    // Breakdown chips
+    const breakdown = document.getElementById('fxBreakdown');
+    if (breakdown && by_shot_type.length) {
+      breakdown.innerHTML = by_shot_type.map(r => {
+        const p = r.total > 0 ? Math.round((r.done / r.total) * 100) : 0;
+        const color = p === 100 ? '#10b981' : p > 0 ? '#a78bfa' : '#6b7280';
+        return `<span style="font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--border);color:${color};">
+          ${r.shot_type || 'unclassified'}: ${r.done}/${r.total} (${p}%)
+        </span>`;
+      }).join('');
+    }
+
+    if (queue) updateFxQueuePill(queue);
+
+    // Cost hint
+    const costHint = document.getElementById('fxCostHint');
+    const limit = parseInt(document.getElementById('fxBatchLimit')?.value || '200');
+    const toRun = Math.min(limit, remaining);
+    if (costHint && toRun > 0) {
+      const model = document.getElementById('fxBatchModel')?.value || 'claude-haiku-4-5';
+      const costPerClip = model.includes('haiku') ? 0.004 : model.includes('sonnet') ? 0.04 : 0.23;
+      const est = (toRun * costPerClip).toFixed(2);
+      costHint.textContent = `Est. cost for next ${toRun.toLocaleString()} clips at current settings: ~$${est} USD`;
+    } else if (costHint && remaining === 0) {
+      costHint.textContent = '✓ All clips have been analyzed.';
+    }
+  } catch (e) {
+    console.error('[fxProgress]', e);
+  }
+}
+
+async function startFrameBatch() {
+  const btn   = document.getElementById('fxBatchBtn');
+  const sel   = document.getElementById('fxShotTypes');
+  const limit = parseInt(document.getElementById('fxBatchLimit')?.value || '200');
+  const model = document.getElementById('fxBatchModel')?.value || 'claude-haiku-4-5';
+
+  const shot_types = sel ? Array.from(sel.selectedOptions).map(o => o.value) : ['talking-head'];
+  if (shot_types.length === 0) { alert('Select at least one shot type.'); return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Queuing…'; }
+
+  try {
+    const res = await fetch('/api/vault/frame-queue/batch', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ shot_types, limit, model })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      appendFxLog({ type: 'batch_queued', message: `Queued ${data.queued} clips (${data.skipped} skipped) · model: ${data.model}` });
+      loadFxProgress();
+    } else {
+      alert('Batch failed: ' + (data.error || 'unknown'));
+    }
+  } catch (e) {
+    alert('Batch error: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '▶ Analyze Unanalyzed'; }
+  }
+}
+
+function toggleFxLog() {
+  fxLogVisible = !fxLogVisible;
+  const logEl = document.getElementById('fxLog');
+  if (logEl) logEl.style.display = fxLogVisible ? '' : 'none';
+  const btn = document.getElementById('fxQueueStatusBtn');
+  if (btn) btn.textContent = fxLogVisible ? '📋 Hide Log' : '📋 Queue Log';
+}
+
+function appendFxLog(data) {
+  const lines = document.getElementById('fxLogLines');
+  if (!lines) return;
+  const MAX_LINES = 100;
+
+  const ts  = new Date().toLocaleTimeString();
+  let text  = '';
+  const t   = data.type || '';
+  const job = data.job;
+
+  if (t === 'frame_enqueued')     text = `[${ts}] ⟳ Queued: ${job?.label || job?.footage_id}`;
+  else if (t === 'frame_started') text = `[${ts}] 👁 Analyzing: ${job?.label || job?.footage_id} (${job?.model || ''})`;
+  else if (t === 'frame_done')    text = `[${ts}] ✓ Done: ${job?.label || job?.footage_id} · quality=${job?.result?.overall_quality || '?'}`;
+  else if (t === 'frame_error')   text = `[${ts}] ✗ Error: ${job?.label || job?.footage_id} — ${job?.error}`;
+  else if (t === 'frame_batch_started') text = `[${ts}] 🚀 Batch: ${data.queued} queued, ${data.skipped} skipped · ${data.model}`;
+  else if (t === 'batch_queued')  text = `[${ts}] 🚀 ${data.message}`;
+  else if (t === 'frame_status')  return; // skip noisy status pings
+  else text = `[${ts}] ${JSON.stringify(data).slice(0, 120)}`;
+
+  const line = document.createElement('div');
+  line.textContent = text;
+  line.style.cssText = 'padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03);';
+  lines.prepend(line);
+
+  // Trim old lines
+  while (lines.children.length > MAX_LINES) lines.removeChild(lines.lastChild);
 }
 
 async function enqueueTranscript(footageId) {
