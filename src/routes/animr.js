@@ -16,8 +16,13 @@ const logger   = require('../utils/logger');
 
 const router = express.Router();
 
-const RENDERS_DIR = path.join(__dirname, '../../public/animr-renders');
-fs.mkdirSync(RENDERS_DIR, { recursive: true });
+// PUBLIC_WRITE_DIR (packaged app) keeps renders outside the read-only asar;
+// mkdir is guarded so a bad path can never crash the server at load time.
+const RENDERS_DIR = path.join(
+  process.env.PUBLIC_WRITE_DIR || path.join(__dirname, '../../public'),
+  'animr-renders');
+try { fs.mkdirSync(RENDERS_DIR, { recursive: true }); }
+catch (err) { logger.warn({ err: err.message, dir: RENDERS_DIR }, '[animr] renders dir unavailable'); }
 
 // In-memory job store (render jobs don't need persistence)
 const jobs = new Map();

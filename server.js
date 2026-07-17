@@ -29,6 +29,41 @@ if (process.env.ELECTRON === 'true') {
   // This pulls in SYNC_SERVER_URL, SYNC_TOKEN etc. saved by upsertEnv() between sessions.
   const _userEnvPath = _path.join(_path.dirname(process.env.DB_PATH), '.env');
   require('dotenv').config({ path: _userEnvPath, override: false });
+  console.log('[env] Electron mode — user env:', _userEnvPath,
+    '| SESSION_SECRET:', process.env.SESSION_SECRET ? 'found' : 'MISSING');
+
+  // Self-healing secrets — the desktop app must never refuse to boot over a
+  // missing secret. If dotenv didn't surface one, recover it by reading the
+  // user .env directly; if it truly doesn't exist, generate + persist it.
+  // (kre8r.app droplet keeps the strict SESSION_SECRET fatal further down.)
+  for (const _name of ['SESSION_SECRET', 'INTERNAL_API_KEY']) {
+    if (process.env[_name]) continue;
+    const _fs = require('fs');
+    let _content = '';
+    try { _content = _fs.readFileSync(_userEnvPath, 'utf8'); } catch (_) {}
+    const _m = _content.match(new RegExp(`^${_name}\\s*=\\s*(.+)$`, 'm'));
+    if (_m) {
+      process.env[_name] = _m[1].trim();
+      console.warn(`[env] ${_name} recovered by direct read (dotenv missed it)`);
+    } else {
+      process.env[_name] = require('crypto').randomBytes(32).toString('hex');
+      try {
+        _fs.writeFileSync(_userEnvPath,
+          _content.trimEnd() + (_content.length ? '\n' : '') +
+          `${_name}=${process.env[_name]}\n`, 'utf8');
+        console.warn(`[env] ${_name} generated and persisted to`, _userEnvPath);
+      } catch (err) {
+        console.warn(`[env] ${_name} generated in-memory only (persist failed):`, err.message);
+      }
+    }
+  }
+
+  // Writable public overlay — the packaged app's public/ lives inside the
+  // read-only asar; anything the server writes for the browser (uploads,
+  // renders) goes here instead, served at the same URL paths.
+  if (!process.env.PUBLIC_WRITE_DIR) {
+    process.env.PUBLIC_WRITE_DIR = _path.join(_path.dirname(process.env.DB_PATH), 'public-write');
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -631,6 +666,12 @@ app.get('/affiliator.html', (req, res) => res.sendFile(path.join(__dirname, 'pub
 // ─────────────────────────────────────────────
 // STATIC FILES
 // ─────────────────────────────────────────────
+// Writable overlay first — uploaded/rendered files in packaged mode live
+// outside the read-only asar but keep their same URL paths (/uploads/…, etc.)
+if (process.env.PUBLIC_WRITE_DIR) {
+  try { fs.mkdirSync(process.env.PUBLIC_WRITE_DIR, { recursive: true }); } catch (_) {}
+  app.use(express.static(process.env.PUBLIC_WRITE_DIR));
+}
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 // ─────────────────────────────────────────────

@@ -7,8 +7,13 @@ const path    = require('path');
 const fs      = require('fs');
 
 // ── Image upload storage ──────────────────────────────────────────────────────
-const UPLOAD_DIR = path.join(__dirname, '../../public/uploads/affiliate');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// PUBLIC_WRITE_DIR (packaged app) keeps this outside the read-only asar;
+// mkdir is guarded so a bad path can never crash the server at load time.
+const UPLOAD_DIR = path.join(
+  process.env.PUBLIC_WRITE_DIR || path.join(__dirname, '../../public'),
+  'uploads', 'affiliate');
+try { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); }
+catch (err) { require('../utils/logger').warn({ err: err.message, dir: UPLOAD_DIR }, '[affiliator] upload dir unavailable'); }
 
 const imgUpload = multer({
   storage: multer.diskStorage({
