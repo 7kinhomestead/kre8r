@@ -832,10 +832,13 @@ app.get('/api/health', (req, res) => {
     build: '1.0.8-f6',
     ai_configured: !!process.env.ANTHROPIC_API_KEY
   };
-  // Internal-key diag — lets tooling read the server's real runtime paths
-  // without a session (machine-to-machine, same pattern as import-ledger).
-  if (process.env.INTERNAL_API_KEY &&
-      req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY) {
+  // Diag — lets tooling read the server's real runtime paths without a
+  // session. Internal key, or any localhost request (the desktop app is
+  // local-only; on the droplet nginx forwards Host: kre8r.app, so the
+  // hostname check never opens this to the public).
+  const _isLocal = ['localhost', '127.0.0.1', '::1'].includes(req.hostname);
+  if (_isLocal || (process.env.INTERNAL_API_KEY &&
+      req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY)) {
     body.diag = {
       electron_env: process.env.ELECTRON || null,
       electron_runtime: process.versions.electron || null,
