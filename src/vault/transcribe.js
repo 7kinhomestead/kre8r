@@ -37,6 +37,10 @@ const crypto    = require('crypto');
 const db = require('../db');
 
 const WHISPER_MODEL  = process.env.WHISPER_MODEL  || 'medium';
+// WhisperX (forced alignment — fixes cumulative timestamp drift on long takes).
+// Preferred when installed; classic whisper remains the fallback.
+const WHISPERX_MODEL   = process.env.WHISPERX_MODEL || 'large-v3';
+const WHISPERX_ENABLED = process.env.WHISPERX_DISABLED !== '1';
 const TRANSCRIPTS_DIR = path.join(__dirname, '..', '..', 'database', 'transcripts');
 
 // Pin the Whisper model cache to a fixed directory so every Python binary
@@ -95,12 +99,39 @@ async function detectWhisperBinary() {
   return null;
 }
 
+// WhisperX detection — cached like the whisper probe above
+let _whisperxBinary = null;   // null = unprobed, '' = not found, string = binary
+
+async function detectWhisperX() {
+  if (_whisperxBinary !== null) return _whisperxBinary || null;
+  if (!WHISPERX_ENABLED) { _whisperxBinary = ''; return null; }
+  for (const bin of WHISPER_CANDIDATES) {
+    const ok = await new Promise((resolve) => {
+      const proc = spawn(bin, ['-c', 'import whisperx; print(1)'], {
+        windowsHide: true, timeout: 15_000
+      });
+      proc.on('error', () => resolve(false));
+      proc.on('close', (code) => resolve(code === 0));
+    });
+    if (ok) {
+      _whisperxBinary = bin;
+      console.log(`[WhisperX] Detected binary: ${bin}`);
+      return bin;
+    }
+  }
+  _whisperxBinary = '';
+  return null;
+}
+
 async function checkWhisper() {
   const binary = await detectWhisperBinary();
+  const xBinary = await detectWhisperX();
   return {
     whisper:         binary !== null,
     whisper_binary:  binary || null,
-    whisper_version: _whisperVersion || null
+    whisper_version: _whisperVersion || null,
+    whisperx:        xBinary !== null,
+    whisperx_model:  xBinary ? WHISPERX_MODEL : null
   };
 }
 
@@ -246,8 +277,56 @@ async function runWhisper(filePath, onProgress = null, options = {}) {
 }
 
 // ─────────────────────────────────────────────
+// RUN WHISPERX (preferred path)
+// python -m whisperx <file> --model large-v3 --device cuda --compute_type float16
+// GPU float16 ≈ 29x realtime measured on the 3070 Ti (Jul 15 2026).
+// Throws on failure — caller falls back to classic whisper.
+// ─────────────────────────────────────────────
+
+async function runWhisperX(filePath, onProgress = null) {
+  const binary = await detectWhisperX();
+  if (!binary) throw new Error('WhisperX not installed');
+
+  return new Promise((resolve, reject) => {
+    ensureTranscriptsDir();
+    const args = [
+      '-m', 'whisperx', filePath,
+      '--model',        WHISPERX_MODEL,
+      '--language',     'en',
+      '--device',       'cuda',
+      '--compute_type', 'float16',
+      '--batch_size',   '8',
+      '--output_dir',   TRANSCRIPTS_DIR,
+      '--output_format','json',
+    ];
+    onProgress?.({ stage: 'whisper_start', model: `whisperx/${WHISPERX_MODEL}`, file: path.basename(filePath) });
+
+    const ffmpegBinDir = process.env.FFMPEG_PATH ? path.dirname(process.env.FFMPEG_PATH) : null;
+    const childEnv = { ...process.env };
+    if (ffmpegBinDir) childEnv.PATH = ffmpegBinDir + path.delimiter + (childEnv.PATH || '');
+
+    const proc = spawn(binary, args, { windowsHide: true, env: childEnv, timeout: 1_800_000 });
+    let stderr = '';
+    proc.stderr.on('data', (d) => {
+      const chunk = d.toString();
+      stderr += chunk;
+      if (chunk.includes('Performing') || chunk.includes('%|')) {
+        onProgress?.({ stage: 'whisper_progress', line: chunk.trim().slice(0, 200) });
+      }
+    });
+    proc.on('error', (err) => reject(new Error(`WhisperX spawn failed: ${err.message}`)));
+    proc.on('close', (code) => {
+      if (code !== 0) return reject(new Error(`WhisperX exited ${code}: ${stderr.slice(-500)}`));
+      resolve();
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
 // PARSE WHISPER JSON OUTPUT
-// Whisper names the output file after the input filename stem
+// Whisper names the output file after the input filename stem.
+// Handles BOTH shapes: classic whisper (text, segments[].words[].probability)
+// and whisperx (segments[].words[].score, often no top-level text).
 // ─────────────────────────────────────────────
 
 function parseWhisperOutput(filePath) {
@@ -260,17 +339,18 @@ function parseWhisperOutput(filePath) {
 
   const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
 
-  // Normalise to our schema — Whisper JSON has text, segments[], language
+  // Normalise to our schema. WhisperX words carry `score` and may lack start/end
+  // on unalignable tokens (numbers, noises) — inherit the segment edge.
   const segments = (raw.segments || []).map((seg, i) => ({
     id:    i,
-    start: parseFloat(seg.start.toFixed(3)),
-    end:   parseFloat(seg.end.toFixed(3)),
-    text:  seg.text.trim(),
+    start: parseFloat((seg.start ?? 0).toFixed(3)),
+    end:   parseFloat((seg.end ?? seg.start ?? 0).toFixed(3)),
+    text:  (seg.text || '').trim(),
     words: (seg.words || []).map(w => ({
-      word:        w.word.trim(),
-      start:       parseFloat(w.start.toFixed(3)),
-      end:         parseFloat(w.end.toFixed(3)),
-      probability: parseFloat((w.probability || 1).toFixed(4))
+      word:        (w.word || '').trim(),
+      start:       parseFloat(((w.start ?? seg.start) || 0).toFixed(3)),
+      end:         parseFloat(((w.end ?? w.start ?? seg.end) || 0).toFixed(3)),
+      probability: parseFloat(((w.probability ?? w.score) || 1).toFixed(4))
     }))
   }));
 
@@ -278,9 +358,12 @@ function parseWhisperOutput(filePath) {
     ? segments[segments.length - 1].end
     : null;
 
+  // whisperx JSON has no top-level `text` — assemble it from segments
+  const fullText = (raw.text || segments.map(s => s.text).join(' ')).trim();
+
   return {
     language: raw.language || 'en',
-    text:     (raw.text || '').trim(),
+    text:     fullText,
     duration,
     segments,
     _source_json: jsonPath  // internal — used to build the stored path
@@ -327,11 +410,19 @@ async function transcribeFile(filePath, options = {}) {
     return { ok: true, skipped: true, transcript_path: destPath, ...existing };
   }
 
-  // Run Whisper
+  // Run WhisperX (preferred — forced alignment, no drift); fall back to
+  // classic whisper if it's not installed or the GPU path fails.
   try {
-    await runWhisper(filePath, onProgress);
-  } catch (e) {
-    return { ok: false, error: e.message };
+    await runWhisperX(filePath, onProgress);
+  } catch (xErr) {
+    if (await detectWhisperX()) {
+      console.warn(`[WhisperX] failed (${xErr.message.slice(0, 200)}) — falling back to whisper`);
+    }
+    try {
+      await runWhisper(filePath, onProgress);
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
   }
 
   // Parse + rename output
@@ -346,7 +437,10 @@ async function transcribeFile(filePath, options = {}) {
     const fixTranscriptText = (t) => t
       .replace(/\bRockridge\b/g, 'Rock Rich')
       .replace(/\brock ridge\b/gi, 'Rock Rich')
-      .replace(/\brock-ridge\b/gi, 'Rock Rich');
+      .replace(/\brock-ridge\b/gi, 'Rock Rich')
+      // Whisper consistently hears "Carrie" — she is Cari (Jul 16 2026)
+      .replace(/\bCarrie\b/g, 'Cari')
+      .replace(/\bCarrie's\b/g, "Cari's");
 
     const fixedText     = fixTranscriptText(parsed.text);
     const fixedSegments = parsed.segments.map(seg => ({

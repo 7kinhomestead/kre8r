@@ -639,6 +639,7 @@ app.use('/api/shows',   require('./src/routes/shows'));
 app.use('/api/generate', require('./src/routes/generate'));
 app.use('/api/vault/scan', require('./src/routes/vault-scan'));
 app.use('/api/vault',      require('./src/routes/vault'));
+app.use('/api/shots',      require('./src/routes/shots'));
 app.use('/api/cutor',      require('./src/routes/cutor'));
 app.use('/api/analytics',  require('./src/routes/analytics'));
 app.use('/api/operator',   require('./src/routes/operator'));

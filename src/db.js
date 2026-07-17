@@ -27,6 +27,7 @@ const SCHEMA_PATH = path.join(__dirname, '..', 'database', 'schema.sql');
 const tenantContext = require('./utils/tenant-context');
 
 let db;
+let _vecLoaded = false;
 
 // ─────────────────────────────────────────────
 // INIT & PERSISTENCE
@@ -43,6 +44,17 @@ function initDb() {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.pragma('synchronous = NORMAL'); // safe with WAL, faster than FULL
+
+  // sqlite-vec — semantic shot search (VaultΩr 2.0 V2). Guarded: if the
+  // extension can't load on this box, everything else works and semantic
+  // search is simply unavailable.
+  try {
+    require('sqlite-vec').load(db);
+    _vecLoaded = true;
+  } catch (e) {
+    _vecLoaded = false;
+    console.warn('[DB] sqlite-vec unavailable — semantic search disabled:', e.message);
+  }
 
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
   db.exec(schema);
@@ -1788,6 +1800,47 @@ Partner: {{partner_name}}
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_tiktok_scripts_project ON tiktok_scripts(project_id)');
   console.log('[DB] tiktok_scripts table verified');
+
+  // ─── VaultΩr 2.0 shot layer (V1.5) ───────────────────────────────────────
+  // footage_shots: one row per DETECTED segment of a footage record (the base
+  // `shots` table is DirectΩr's planned shot list — different thing entirely).
+  // Detection runs on an NVDEC proxy; 60s slicing is the cut-less fallback.
+  db.exec(`CREATE TABLE IF NOT EXISTS footage_shots (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id    INTEGER NOT NULL,
+    shot_idx      INTEGER NOT NULL,
+    start_s       REAL    NOT NULL,
+    end_s         REAL    NOT NULL,
+    detect_source TEXT,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(footage_id, shot_idx)
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_footage_shots_footage ON footage_shots(footage_id)');
+
+  // The Farmhand's read of each shot. tier: 'triage' (1.3B) | 'quality' (8B) | 'cloud'.
+  db.exec(`CREATE TABLE IF NOT EXISTS footage_shot_analysis (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    shot_id       INTEGER NOT NULL UNIQUE,
+    description   TEXT,
+    tags          TEXT,
+    model         TEXT,
+    tier          TEXT,
+    sharpness     REAL,
+    frame_time_s  REAL,
+    empty_retries INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_fsa_shot ON footage_shot_analysis(shot_id)');
+
+  // Semantic shot vectors (V2) — rowid mirrors footage_shots.id.
+  // nomic-embed-text-v1.5 = 768 dims. Only when the extension loaded.
+  if (_vecLoaded) {
+    try {
+      db.exec('CREATE VIRTUAL TABLE IF NOT EXISTS shot_vec USING vec0(embedding float[768])');
+    } catch (e) {
+      console.warn('[DB] shot_vec creation failed:', e.message);
+    }
+  }
 }
 
 /**
@@ -2605,6 +2658,32 @@ function bootstrapTenantTables(tdb) {
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   )`);
   exec('CREATE INDEX IF NOT EXISTS idx_tiktok_scripts_project ON tiktok_scripts(project_id)');
+
+  // ── VaultΩr 2.0 shot layer (V1.5) — see runMigrations note re: naming ──────
+  exec(`CREATE TABLE IF NOT EXISTS footage_shots (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    footage_id    INTEGER NOT NULL,
+    shot_idx      INTEGER NOT NULL,
+    start_s       REAL    NOT NULL,
+    end_s         REAL    NOT NULL,
+    detect_source TEXT,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(footage_id, shot_idx)
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_footage_shots_footage ON footage_shots(footage_id)');
+  exec(`CREATE TABLE IF NOT EXISTS footage_shot_analysis (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    shot_id       INTEGER NOT NULL UNIQUE,
+    description   TEXT,
+    tags          TEXT,
+    model         TEXT,
+    tier          TEXT,
+    sharpness     REAL,
+    frame_time_s  REAL,
+    empty_retries INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+  )`);
+  exec('CREATE INDEX IF NOT EXISTS idx_fsa_shot ON footage_shot_analysis(shot_id)');
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
@@ -5655,6 +5734,7 @@ module.exports = {
   checkpoint,
   bootstrapTenantTables, // used by tenant-db-cache to fully initialise new tenant DBs
   getRawDb: () => db,  // used by session store in server.js
+  isVecLoaded: () => _vecLoaded, // sqlite-vec availability (semantic shot search)
   // Raw prepare — routes that build inline SQL (e.g. affiliator.js) need this.
   // Delegates to _activeDb() so tenant context is respected.
   prepare: (sql) => _activeDb().prepare(sql),

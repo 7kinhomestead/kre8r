@@ -779,6 +779,14 @@ async function ingestFile(filePath, options = {}) {
 
   // options may include: { projectId, shot_type_override, onProgress }
   const result = await processFile(filePath, options);
+
+  // VaultΩr 2.0: freshly-ingested footage gets its eyes automatically.
+  // Debounced + opportunistic — never blocks ingest, never fights Resolve for
+  // VRAM (the worker's ensureServer handles tier fallback / refusal), and
+  // anything skipped stays discoverable by the next backfill.
+  if (result.status === 'ok' && process.env.SHOTLAYER_AUTOLOG !== '0') {
+    try { require('./shot-worker').scheduleAutoBackfill(); } catch (_) {}
+  }
   return { ok: result.status === 'ok', ...result };
 }
 
