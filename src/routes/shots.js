@@ -177,4 +177,84 @@ router.get('/bin-corrections', (req, res) => {
   }
 });
 
+// ── Ledger import bridge ─────────────────────────────────────────────────────
+// POST /api/shots/import-ledger — bulk-import scratchpad shot-log JSONs into
+// footage_shots/footage_shot_analysis. Machine-to-machine: X-Internal-Key auth
+// (whitelisted in server.js), matches clips to vault footage by path/filename.
+router.post('/import-ledger', (req, res) => {
+  if (!process.env.INTERNAL_API_KEY ||
+      req.headers['x-internal-key'] !== process.env.INTERNAL_API_KEY) {
+    return res.status(401).json({ ok: false, error: 'unauthorized' });
+  }
+  try {
+    const items = (req.body && req.body.items) || [];
+    const path = require('path');
+    const norm = p => String(p || '').toLowerCase().replace(/\//g, '\\');
+
+    // Build a lookup of vault footage by full paths and by basename
+    const rows = db.prepare(
+      'SELECT id, file_path, proxy_path, organized_path, original_filename FROM footage').all();
+    const byPath = new Map();
+    const byBase = new Map();
+    for (const r of rows) {
+      for (const p of [r.file_path, r.proxy_path, r.organized_path]) {
+        if (p) byPath.set(norm(p), r.id);
+      }
+      if (r.original_filename) {
+        const b = r.original_filename.toLowerCase();
+        byBase.set(b, (byBase.get(b) || []).concat(r.id));
+      }
+    }
+
+    const insShot = db.prepare(
+      `INSERT OR IGNORE INTO footage_shots (footage_id, shot_idx, start_s, end_s, detect_source)
+       VALUES (?, ?, ?, ?, ?)`);
+    const getShot = db.prepare(
+      'SELECT id FROM footage_shots WHERE footage_id = ? AND shot_idx = ?');
+    const insAnal = db.prepare(
+      `INSERT OR IGNORE INTO footage_shot_analysis
+       (shot_id, description, tags, model, tier, sharpness, frame_time_s)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`);
+
+    let matched = 0, unmatched = [], segs = 0;
+    for (const item of items) {
+      const p = norm(item.path);
+      let fid = byPath.get(p);
+      if (!fid) {
+        // staged copies carry an "NNNN_" vault-id prefix — try that, then basename
+        const base = path.basename(String(item.path || ''));
+        const idm = base.match(/^(\d{2,6})_/);
+        if (idm) {
+          const cand = db.prepare('SELECT id FROM footage WHERE id = ?').get(Number(idm[1]));
+          if (cand) fid = cand.id;
+        }
+        if (!fid) {
+          const ids = byBase.get(base.toLowerCase().replace(/^\d{2,6}_/, ''));
+          if (ids && ids.length === 1) fid = ids[0];
+        }
+      }
+      if (!fid) { unmatched.push(item.path); continue; }
+      matched++;
+      for (const s of item.segments || []) {
+        insShot.run(fid, s.idx, s.start, s.end, s.detect_source || 'imported');
+        const sr = getShot.get(fid, s.idx);
+        if (sr && (s.desc || s.tags)) {
+          let desc = s.desc || '';
+          let tags = s.tags || null;
+          const tm = desc.match(/TAGS:\s*(.+)$/im);
+          if (tm && !tags) { tags = tm[1].trim(); desc = desc.replace(/TAGS:\s*.+$/im, '').trim(); }
+          insAnal.run(sr.id, desc, tags, s.model || 'import', s.tier || 'triage',
+                      s.sharpness ?? null, s.frame_time ?? null);
+          segs++;
+        }
+      }
+    }
+    logger.info({ matched, unmatched: unmatched.length, segs }, '[shots] ledger import batch');
+    res.json({ ok: true, matched, segments: segs, unmatched });
+  } catch (err) {
+    logger.error({ err: err.message }, '[shots] import-ledger failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;

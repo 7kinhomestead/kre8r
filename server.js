@@ -395,6 +395,8 @@ app.use((req, res, next) => {
       req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY) return next();
   // HarvestΩr membership verification — internal key auth handled inside the route
   if (req.path === '/api/kajabi/member-check') return next();
+  // Shot-ledger import bridge — internal key auth handled inside the route
+  if (req.path === '/api/shots/import-ledger') return next();
   // Owned-membership-mirror rebuild — internal key auth handled inside the route
   if (req.path === '/api/kajabi/refresh-member-mirror') return next();
   // AffiliateΩr Electron sync — internal key auth handled inside the route
