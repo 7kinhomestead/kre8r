@@ -36,37 +36,47 @@ if (IS_ELECTRON) {
   if (!process.env.CREATOR_PROFILE_PATH) {
     process.env.CREATOR_PROFILE_PATH = _path.join(_kre8rHome, 'creator-profile.json');
   }
-  // Reload .env from the same directory as the DB (set above by main.js env vars).
-  // override: false — never overwrite DB_PATH/CREATOR_PROFILE_PATH that main.js set.
-  // This pulls in SYNC_SERVER_URL, SYNC_TOKEN etc. saved by upsertEnv() between sessions.
+  // Load the user .env (same directory as the DB) MANUALLY — dotenv.config's
+  // override:false treats an inherited EMPTY value ('') as "already set" and
+  // silently skips the key, which is exactly the failure we chased all night
+  // on Jul 16 2026. Rules here: a key applies unless process.env already has a
+  // NON-EMPTY value; for the two desktop secrets the FILE always wins (stale
+  // inherited values must not beat the persisted ones).
   const _userEnvPath = _path.join(_path.dirname(process.env.DB_PATH), '.env');
-  require('dotenv').config({ path: _userEnvPath, override: false });
-  console.log('[env] Electron mode — user env:', _userEnvPath,
+  const _fs = require('fs');
+  global.__kre8rEnvBoot = { user_env: _userEnvPath, read_ok: false, keys_in_file: 0,
+                            applied: 0, skipped_nonempty: 0, error: null };
+  try {
+    const _parsed = require('dotenv').parse(_fs.readFileSync(_userEnvPath, 'utf8'));
+    global.__kre8rEnvBoot.read_ok = true;
+    global.__kre8rEnvBoot.keys_in_file = Object.keys(_parsed).length;
+    const _fileWins = new Set(['SESSION_SECRET', 'INTERNAL_API_KEY']);
+    for (const [_k, _v] of Object.entries(_parsed)) {
+      if (!_v) continue;
+      if (process.env[_k] && !_fileWins.has(_k)) { global.__kre8rEnvBoot.skipped_nonempty++; continue; }
+      process.env[_k] = _v;
+      global.__kre8rEnvBoot.applied++;
+    }
+  } catch (err) {
+    global.__kre8rEnvBoot.error = err.message;
+  }
+  console.log('[env] Electron mode — user env:', _userEnvPath, JSON.stringify(global.__kre8rEnvBoot),
     '| SESSION_SECRET:', process.env.SESSION_SECRET ? 'found' : 'MISSING');
 
-  // Self-healing secrets — the desktop app must never refuse to boot over a
-  // missing secret. If dotenv didn't surface one, recover it by reading the
-  // user .env directly; if it truly doesn't exist, generate + persist it.
-  // (kre8r.app droplet keeps the strict SESSION_SECRET fatal further down.)
+  // Last-resort secrets — never refuse to boot over a missing secret. If the
+  // file lacked them (or was unreadable), generate + persist.
   for (const _name of ['SESSION_SECRET', 'INTERNAL_API_KEY']) {
     if (process.env[_name]) continue;
-    const _fs = require('fs');
-    let _content = '';
-    try { _content = _fs.readFileSync(_userEnvPath, 'utf8'); } catch (_) {}
-    const _m = _content.match(new RegExp(`^${_name}\\s*=\\s*(.+)$`, 'm'));
-    if (_m) {
-      process.env[_name] = _m[1].trim();
-      console.warn(`[env] ${_name} recovered by direct read (dotenv missed it)`);
-    } else {
-      process.env[_name] = require('crypto').randomBytes(32).toString('hex');
-      try {
-        _fs.writeFileSync(_userEnvPath,
-          _content.trimEnd() + (_content.length ? '\n' : '') +
-          `${_name}=${process.env[_name]}\n`, 'utf8');
-        console.warn(`[env] ${_name} generated and persisted to`, _userEnvPath);
-      } catch (err) {
-        console.warn(`[env] ${_name} generated in-memory only (persist failed):`, err.message);
-      }
+    process.env[_name] = require('crypto').randomBytes(32).toString('hex');
+    try {
+      let _content = '';
+      try { _content = _fs.readFileSync(_userEnvPath, 'utf8'); } catch (_) {}
+      _fs.writeFileSync(_userEnvPath,
+        _content.trimEnd() + (_content.length ? '\n' : '') +
+        `${_name}=${process.env[_name]}\n`, 'utf8');
+      console.warn(`[env] ${_name} generated and persisted to`, _userEnvPath);
+    } catch (err) {
+      console.warn(`[env] ${_name} generated in-memory only (persist failed):`, err.message);
     }
   }
 
@@ -847,6 +857,22 @@ app.get('/api/health', (req, res) => {
       dirname: __dirname,
       cwd: process.cwd(),
       vec_loaded: (() => { try { return require('./src/db').isVecLoaded(); } catch (_) { return null; } })(),
+      env_boot: global.__kre8rEnvBoot || null,
+      secrets: {
+        session_secret_len: (process.env.SESSION_SECRET || '').length,
+        internal_key_len: (process.env.INTERNAL_API_KEY || '').length,
+        anthropic_len: (process.env.ANTHROPIC_API_KEY || '').length,
+      },
+      // Live fs probe from inside THIS process — settles read-permission theories
+      overlay_probe: (() => {
+        try {
+          const d = process.env.PUBLIC_WRITE_DIR;
+          if (!d) return 'no PUBLIC_WRITE_DIR';
+          const entries = fs.readdirSync(d);
+          const thumbs = (() => { try { return fs.readdirSync(path.join(d, 'thumbnails')).length; } catch (e) { return `ERR ${e.code}`; } })();
+          return { entries, thumbnail_count: thumbs };
+        } catch (e) { return `ERR ${e.code || e.message}`; }
+      })(),
     };
   }
   res.json(body);
