@@ -14,12 +14,24 @@ require('dotenv').config({ override: true });
 // When running inside Electron, main.js sets ELECTRON=true and passes
 // DB_PATH + CREATOR_PROFILE_PATH pointing to the user's AppData folder.
 // This block is a safety net if those vars weren't set by main.js.
-if (process.env.ELECTRON === 'true') {
+// Detect Electron intrinsically as well — env delivery through
+// utilityProcess has proven unreliable on at least one launch path, and
+// this block is what makes the desktop app self-locating. A packaged
+// server always runs under Electron's Node (process.versions.electron)
+// from inside app.asar.
+const IS_ELECTRON = process.env.ELECTRON === 'true' ||
+  !!process.versions.electron || __filename.includes('app.asar');
+if (IS_ELECTRON) {
+  process.env.ELECTRON = 'true'; // normalize for downstream checks
   const _os   = require('os');
   const _path = require('path');
   const _kre8rHome = _path.join(_os.homedir(), '.kre8r');
   if (!process.env.DB_PATH) {
-    process.env.DB_PATH = _path.join(_kre8rHome, 'kre8r.db');
+    // Align with the app's real userData (Roaming\kre8r on Windows) —
+    // the legacy ~/.kre8r fallback pointed at a folder that never exists.
+    process.env.DB_PATH = (process.platform === 'win32' && process.env.APPDATA)
+      ? _path.join(process.env.APPDATA, 'kre8r', 'kre8r.db')
+      : _path.join(_kre8rHome, 'kre8r.db');
   }
   if (!process.env.CREATOR_PROFILE_PATH) {
     process.env.CREATOR_PROFILE_PATH = _path.join(_kre8rHome, 'creator-profile.json');
@@ -813,12 +825,28 @@ app.get('/api/health', (req, res) => {
     const result = loadProfile();
     if (result.ok) instance = result.profile.instance || 'kre8r';
   } catch (_) { /* no profile yet — fresh install */ }
-  res.json({
+  const body = {
     status: 'ok',
     instance,
     version: '1.0',
+    build: '1.0.8-f6',
     ai_configured: !!process.env.ANTHROPIC_API_KEY
-  });
+  };
+  // Internal-key diag — lets tooling read the server's real runtime paths
+  // without a session (machine-to-machine, same pattern as import-ledger).
+  if (process.env.INTERNAL_API_KEY &&
+      req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY) {
+    body.diag = {
+      electron_env: process.env.ELECTRON || null,
+      electron_runtime: process.versions.electron || null,
+      db_path: process.env.DB_PATH || '(unset — db.js default)',
+      public_write_dir: process.env.PUBLIC_WRITE_DIR || null,
+      dirname: __dirname,
+      cwd: process.cwd(),
+      vec_loaded: (() => { try { return require('./src/db').isVecLoaded(); } catch (_) { return null; } })(),
+    };
+  }
+  res.json(body);
 });
 
 // Diagnostic — returns recent structured log lines for "Copy Diagnostic Info" UI
