@@ -91,7 +91,10 @@ async function ensureServer(tier = 'triage') {
   serverChild = spawn(SERVER_EXE, [
     '-m', cfg.model, '--mmproj', cfg.mmproj,
     '-ngl', '99', '--port', new URL(BASE_URL).port || '8080',
-    '-c', '8192', '--jinja',
+    // -np 1: our pipeline is strictly sequential — the default 4 parallel
+    // slots quadruple KV memory and slowly strangle 8GB cards on long runs
+    // (Jul 16: 76-min run crept to 7.8GB, WDDM eviction, CPU-crawl timeouts).
+    '-c', '4096', '-np', '1', '--jinja',
     // Kill Qwen3 thinking at the template level — instruction-heavy prompts
     // otherwise burn the whole token budget "reasoning" and return empty
     // content (finish_reason: length). Verified fix Jul 15 2026.
