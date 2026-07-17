@@ -10,7 +10,7 @@
     "electron": "electron .",
     "electron:dev": "cross-env NODE_ENV=development electron .",
     "prebuild-sqlite": "node scripts/prebuild-sqlite.js",
-    "dist:win": "npm run prebuild-sqlite && electron-builder --win",
+    "dist:win": "node scripts/prebuild-sqlite.js --force && electron-builder --win",
     "deploy:update": "node scripts/deploy-update.js",
     "dist:mac": "electron-builder --mac",
     "dist": "electron-builder --win --mac",

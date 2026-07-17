@@ -19,8 +19,13 @@ const STAMP            = path.join(__dirname, '.sqlite-mode');
 const TARGET_STAMP     = `electron-${ELECTRON_VERSION}`;
 
 // ── Already correct? ───────────────────────────────────────────────────────────
+// --force skips the stamp check — dist builds MUST use it: any npm install can
+// silently restore the node-ABI prebuilt while the stamp still vouches for the
+// old Electron binary (tarball extraction preserves mtimes, so that lie is
+// undetectable). Shipped a broken 1.0.8 candidate this way on Jul 16 2026.
+const FORCE = process.argv.includes('--force');
 const currentStamp = fs.existsSync(STAMP) ? fs.readFileSync(STAMP, 'utf8').trim() : '';
-if (currentStamp === TARGET_STAMP && fs.existsSync(BINARY)) {
+if (!FORCE && currentStamp === TARGET_STAMP && fs.existsSync(BINARY)) {
   console.log('[prebuild-sqlite] Already built for Electron — skipping.');
   process.exit(0);
 }
