@@ -31,7 +31,8 @@ if (process.env.FFPROBE_PATH) ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
 const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.mts', '.avi', '.mkv', '.braw', '.r3d', '.ari']);
 const RAW_EXTENSIONS        = new Set(['.braw', '.r3d', '.ari']);
 const BRAW_EXTENSIONS       = new Set(['.braw']); // Blackmagic RAW — no ffprobe at all, proxy-only workflow
-const THUMBNAIL_DIR         = path.join(__dirname, '..', '..', 'public', 'thumbnails');
+const { publicWriteDir }    = require('../utils/public-dir');
+const THUMBNAIL_DIR         = publicWriteDir('thumbnails');
 const ANTHROPIC_VERSION     = '2023-06-01';
 const MODEL                 = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
 

@@ -25,7 +25,8 @@ const db = require('../db');
 if (process.env.FFMPEG_PATH)  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
 if (process.env.FFPROBE_PATH) ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
 
-const CLIPS_DIR = path.join(__dirname, '..', '..', 'public', 'clips');
+const { publicWriteDir } = require('../utils/public-dir');
+const CLIPS_DIR = publicWriteDir('clips');
 
 // ─────────────────────────────────────────────
 // HELPERS

@@ -553,11 +553,8 @@ const uploadStorage = multer.diskStorage({
   destination(req, file, cb) {
     const projectId  = parseInt(req.params.project_id, 10);
     const sceneLabel = req.body?.scene_label || 'scene';
-    const dir = path.join(
-      __dirname, '..', '..', 'public', 'music',
-      String(projectId),
-      sceneSlug(sceneLabel)
-    );
+    const { publicWriteDir } = require('../utils/public-dir');
+    const dir = publicWriteDir('music', String(projectId), sceneSlug(sceneLabel));
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },

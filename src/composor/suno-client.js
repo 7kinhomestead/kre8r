@@ -69,11 +69,8 @@ function sceneSlug(label) {
 // ─── ENSURE music output directory exists ────────────────────────────────────
 
 function ensureMusicDir(projectId, sceneLabel) {
-  const dir = path.join(
-    __dirname, '..', '..', 'public', 'music',
-    String(projectId),
-    sceneSlug(sceneLabel)
-  );
+  const { publicWriteDir } = require('../utils/public-dir');
+  const dir = publicWriteDir('music', String(projectId), sceneSlug(sceneLabel));
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
