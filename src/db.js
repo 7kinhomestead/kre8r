@@ -48,8 +48,14 @@ function initDb() {
   // sqlite-vec — semantic shot search (VaultΩr 2.0 V2). Guarded: if the
   // extension can't load on this box, everything else works and semantic
   // search is simply unavailable.
+  // Packaged app: sqlite-vec hands a path string to SQLite's loadExtension,
+  // which uses Win32 LoadLibrary — that can't read inside the asar, so point
+  // it at the asarUnpack'd copy of vec0.dll.
   try {
-    require('sqlite-vec').load(db);
+    const sqliteVec = require('sqlite-vec');
+    const vecPath = sqliteVec.getLoadablePath()
+      .replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+    db.loadExtension(vecPath);
     _vecLoaded = true;
   } catch (e) {
     _vecLoaded = false;
