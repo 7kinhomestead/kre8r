@@ -458,6 +458,8 @@ app.use((req, res, next) => {
   if (req.path === '/api/shots/embed-backfill') return next();
   // SlotΩr proposals — session OR internal key, checked inside the route
   if (req.path === '/api/shots/propose') return next();
+  // SlotΩr → Resolve push — session OR internal key, checked inside the route
+  if (req.path === '/api/shots/push-resolve') return next();
   // Owned-membership-mirror rebuild — internal key auth handled inside the route
   if (req.path === '/api/kajabi/refresh-member-mirror') return next();
   // AffiliateΩr Electron sync — internal key auth handled inside the route

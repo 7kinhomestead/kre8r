@@ -36,6 +36,18 @@
   .pick .copy { margin-top: 8px; background: none; border: 1px solid var(--line); color: var(--dim);
                 border-radius: 6px; padding: 3px 10px; font-size: .75rem; cursor: pointer; }
   .pick .copy:hover { border-color: var(--teal); color: var(--teal); }
+  .pick { cursor: pointer; }
+  .pick.sel { border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal); }
+  .pick.sel .body::after { content: "✓ selected"; color: var(--teal); font-size: .72rem; }
+  .pushbar { position: fixed; bottom: 0; left: 0; right: 0; background: #10151c;
+             border-top: 1px solid var(--line); padding: 10px 24px; display: none;
+             align-items: center; gap: 16px; z-index: 50; }
+  .pushbar.on { display: flex; }
+  .pushbar .count { color: var(--teal); font-weight: 600; }
+  .pushbar button { background: var(--teal); color: #04251f; border: none; border-radius: 8px;
+                    padding: 8px 18px; font-weight: 600; cursor: pointer; }
+  .pushbar button:disabled { opacity: .5; cursor: wait; }
+  .pushbar .note { color: var(--dim); font-size: .82rem; }
   .empty { color: var(--dim); font-size: .9rem; font-style: italic; }
   .status { color: var(--dim); margin-bottom: 18px; min-height: 20px; }
   .status.err { color: #f85149; }
@@ -57,6 +69,12 @@
   </div>
   <div class="status" id="status"></div>
   <div id="results"></div>
+</div>
+
+<div class="pushbar" id="pushbar">
+  <span class="count" id="pushcount">0 selected</span>
+  <button id="pushbtn">⬆ Push to V2 of current timeline</button>
+  <span class="note">Resolve must be open with your project loaded — clips append in order; you slide them into place.</span>
 </div>
 
 <div id="kre8r-nav"></div>
@@ -108,7 +126,8 @@ async function propose() {
       }
       html += '<div class="picks">';
       slot.picks.forEach(function (p) {
-        html += '<div class="pick">';
+        html += '<div class="pick" data-path="' + esc(p.file_path || '') +
+                '" data-start="' + p.start_s + '" data-end="' + p.end_s + '">';
         html += p.thumbnail
           ? '<img loading="lazy" src="' + esc(p.thumbnail) + '" alt="">'
           : '<div class="noimg">🎞</div>';
@@ -136,13 +155,64 @@ async function propose() {
 }
 
 document.getElementById('go').addEventListener('click', propose);
+
+function updatePushbar() {
+  var n = document.querySelectorAll('.pick.sel').length;
+  document.getElementById('pushcount').textContent = n + ' selected';
+  document.getElementById('pushbar').className = n ? 'pushbar on' : 'pushbar';
+}
+
 document.getElementById('results').addEventListener('click', function (ev) {
   var b = ev.target.closest('.copy');
-  if (!b) return;
-  navigator.clipboard.writeText(b.getAttribute('data-path') || '').then(function () {
-    b.textContent = 'copied!';
-    setTimeout(function () { b.textContent = 'copy path'; }, 1200);
-  });
+  if (b) {
+    ev.stopPropagation();
+    navigator.clipboard.writeText(b.getAttribute('data-path') || '').then(function () {
+      b.textContent = 'copied!';
+      setTimeout(function () { b.textContent = 'copy path'; }, 1200);
+    });
+    return;
+  }
+  var card = ev.target.closest('.pick');
+  if (!card) return;
+  card.classList.toggle('sel');
+  updatePushbar();
+});
+
+document.getElementById('pushbtn').addEventListener('click', async function () {
+  var btn = this;
+  var status = document.getElementById('status');
+  var picks = Array.prototype.map.call(document.querySelectorAll('.pick.sel'), function (c) {
+    return {
+      file_path: c.getAttribute('data-path'),
+      start_s: parseFloat(c.getAttribute('data-start')) || 0,
+      end_s: parseFloat(c.getAttribute('data-end')) || 0,
+    };
+  }).filter(function (p) { return p.file_path; });
+  if (!picks.length) return;
+
+  btn.disabled = true;
+  status.className = 'status';
+  status.textContent = 'Pushing ' + picks.length + ' clips to Resolve…';
+  try {
+    var r = await fetch('/api/shots/push-resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ picks: picks, track: 2 }),
+    });
+    var j = await r.json();
+    if (!j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    var msg = '🎬 ' + j.appended + ' clips on V' + j.track + ' of “' + j.timeline + '”';
+    if (j.fell_back_to_v1) msg += ' (' + j.fell_back_to_v1 + ' landed on V1 — older API)';
+    if (j.missing && j.missing.length) msg += ' — ' + j.missing.length + ' files not importable';
+    status.textContent = msg;
+    document.querySelectorAll('.pick.sel').forEach(function (c) { c.classList.remove('sel'); });
+    updatePushbar();
+  } catch (e) {
+    status.className = 'status err';
+    status.textContent = 'Push failed: ' + e.message + ' — is Resolve open with your project?';
+  } finally {
+    btn.disabled = false;
+  }
 });
 </script>
 </body>

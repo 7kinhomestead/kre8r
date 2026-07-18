@@ -361,4 +361,57 @@ router.post('/import-ledger', (req, res) => {
   }
 });
 
+// ── Push chosen picks to DaVinci (V2 of the current timeline) ────────────────
+// POST /api/shots/push-resolve { picks: [{file_path,start_s,end_s}], track? }
+// Resolve must be running with the working project open.
+router.post('/push-resolve', async (req, res) => {
+  const keyOk = process.env.INTERNAL_API_KEY &&
+    req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY;
+  if (!req.session?.userId && !keyOk) {
+    return res.status(401).json({ ok: false, error: 'unauthorized' });
+  }
+  try {
+    const picks = (req.body?.picks || [])
+      .filter(p => p && p.file_path)
+      .map(p => ({ path: p.file_path, start_s: p.start_s || 0, end_s: p.end_s || 0 }));
+    if (!picks.length) return res.status(400).json({ ok: false, error: 'no picks' });
+
+    const { detectPython } = require('../vault/transcribe');
+    const python = await detectPython();
+    if (!python) return res.status(409).json({ ok: false, error: 'Python not found' });
+
+    const os = require('os');
+    const path2 = require('path');
+    const fs2 = require('fs');
+    const jobPath = path2.join(os.tmpdir(), `slotor-push-${Date.now()}.json`);
+    fs2.writeFileSync(jobPath, JSON.stringify({
+      picks, track: Math.max(1, parseInt(req.body?.track, 10) || 2),
+    }), 'utf8');
+
+    const script = path2.join(__dirname, '..', '..', 'scripts', 'davinci', 'push-slots.py');
+    const { spawn } = require('child_process');
+    const child = spawn(python, ['-u', script, jobPath],
+      { env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
+    let stdout = '', stderr = '';
+    child.stdout.on('data', d => { stdout += d; });
+    child.stderr.on('data', d => { stderr += d; });
+    const timer = setTimeout(() => { try { child.kill(); } catch (_) {} }, 120000);
+    child.on('close', () => {
+      clearTimeout(timer);
+      try { fs2.unlinkSync(jobPath); } catch (_) {}
+      const line = stdout.trim().split('\n').pop() || '';
+      try {
+        const result = JSON.parse(line);
+        logger.info({ ...result }, '[shots] push-resolve');
+        res.json(result);
+      } catch (_) {
+        logger.warn({ stderr: stderr.slice(-400) }, '[shots] push-resolve unparseable');
+        res.status(500).json({ ok: false, error: 'push script produced no result — is Resolve running?' });
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
