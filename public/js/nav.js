@@ -61,6 +61,7 @@
         // New order: AssemblΩr → BrollΩr → AnimΩr → ReviewΩr → ComposΩr → ClipsΩr
         items: [
           { label: 'VaultΩr',   href: '/vault.html' },
+          { label: 'SlotΩr',    href: '/slots.html' },    // ← script → b-roll proposals from the shot vault
           { label: 'AssemblΩr', href: '/editor.html' },
           { label: 'BrollΩr',   href: '/brollr.html' },   // ← generate b-roll for gap beats
           { label: 'AnimΩr',    href: '/animr.html' },    // ← generate motion graphics assets
