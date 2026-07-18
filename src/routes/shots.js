@@ -112,27 +112,42 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// Backfill vectors for analysis rows that don't have one yet (existing ledgers)
+// Embed every analysis row that doesn't have a vector yet. Shared by the
+// manual backfill endpoint and the auto-embed pass after ledger imports.
+async function embedMissingShots(limit = 5000) {
+  if (!db.isVecLoaded()) return { ok: false, reason: 'sqlite-vec unavailable' };
+  const e = await embed.ensureServer();
+  if (!e.ok) return { ok: false, reason: e.reason };
+  const rows = db.prepare(
+    `SELECT a.shot_id, a.description, a.tags
+     FROM footage_shot_analysis a
+     LEFT JOIN shot_vec v ON v.rowid = a.shot_id
+     WHERE v.rowid IS NULL AND a.description IS NOT NULL AND a.description != ''
+     LIMIT ?`).all(Math.min(limit, 10000));
+  let done = 0;
+  const ins = db.getRawDb().prepare(
+    'INSERT OR REPLACE INTO shot_vec (rowid, embedding) VALUES (?, ?)');
+  for (const r of rows) {
+    const vec = await embed.embedText(`${r.description} ${r.tags || ''}`, 'document');
+    if (vec) { ins.run(BigInt(r.shot_id), vec); done++; }
+  }
+  logger.info({ done, of: rows.length }, '[shots] embed pass');
+  return { ok: true, embedded: done, candidates: rows.length };
+}
+
+// Backfill vectors for analysis rows that don't have one yet (existing ledgers).
+// Session auth OR internal key (whitelisted in server.js) — tooling shouldn't
+// need a browser console for this.
 router.post('/embed-backfill', async (req, res) => {
+  const keyOk = process.env.INTERNAL_API_KEY &&
+    req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY;
+  if (!req.session?.userId && !keyOk) {
+    return res.status(401).json({ ok: false, error: 'unauthorized' });
+  }
   try {
-    if (!db.isVecLoaded()) return res.status(409).json({ ok: false, error: 'sqlite-vec unavailable' });
-    const e = await embed.ensureServer();
-    if (!e.ok) return res.status(409).json({ ok: false, error: e.reason });
-    const rows = db.prepare(
-      `SELECT a.shot_id, a.description, a.tags
-       FROM footage_shot_analysis a
-       LEFT JOIN shot_vec v ON v.rowid = a.shot_id
-       WHERE v.rowid IS NULL AND a.description IS NOT NULL AND a.description != ''
-       LIMIT ${Math.min(parseInt(req.body?.limit, 10) || 2000, 10000)}`).all();
-    let done = 0;
-    const ins = db.getRawDb().prepare(
-      'INSERT OR REPLACE INTO shot_vec (rowid, embedding) VALUES (?, ?)');
-    for (const r of rows) {
-      const vec = await embed.embedText(`${r.description} ${r.tags || ''}`, 'document');
-      if (vec) { ins.run(BigInt(r.shot_id), vec); done++; }
-    }
-    logger.info({ done, of: rows.length }, '[shots] embed backfill');
-    res.json({ ok: true, embedded: done, candidates: rows.length });
+    const result = await embedMissingShots(parseInt(req.body?.limit, 10) || 5000);
+    if (!result.ok) return res.status(409).json({ ok: false, error: result.reason });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -243,6 +258,13 @@ router.post('/import-ledger', (req, res) => {
           let tags = s.tags || null;
           const tm = desc.match(/TAGS:\s*(.+)$/im);
           if (tm && !tags) { tags = tm[1].trim(); desc = desc.replace(/TAGS:\s*.+$/im, '').trim(); }
+          // Scrub prompt-echo junk the VLM occasionally leaks into output
+          desc = desc.replace(/\/?no_think/gi, '')
+                     .replace(/Then on a new line:?\s*TAGS:.*$/is, '').trim();
+          if (tags) {
+            tags = String(tags).replace(/\/?no_think/gi, '').replace(/^,+|,+$/g, '').trim();
+            if (!tags || /jason,\s*cari,\s*one of the kids/i.test(tags)) tags = null;
+          }
           insAnal.run(sr.id, desc, tags, s.model || 'import', s.tier || 'triage',
                       s.sharpness ?? null, s.frame_time ?? null);
           segs++;
@@ -250,7 +272,11 @@ router.post('/import-ledger', (req, res) => {
       }
     }
     logger.info({ matched, unmatched: unmatched.length, segs }, '[shots] ledger import batch');
-    res.json({ ok: true, matched, segments: segs, unmatched });
+    res.json({ ok: true, matched, segments: segs, unmatched, auto_embed: 'queued' });
+    // Auto-embed the new rows — fire-and-forget so the import response is instant.
+    // This is what retires the DevTools console ritual.
+    setImmediate(() => embedMissingShots().catch(err =>
+      logger.warn({ err: err.message }, '[shots] post-import auto-embed failed')));
   } catch (err) {
     logger.error({ err: err.message }, '[shots] import-ledger failed');
     res.status(500).json({ ok: false, error: err.message });

@@ -454,6 +454,8 @@ app.use((req, res, next) => {
   if (req.path === '/api/kajabi/member-check') return next();
   // Shot-ledger import bridge — internal key auth handled inside the route
   if (req.path === '/api/shots/import-ledger') return next();
+  // Embed backfill — session OR internal key, checked inside the route
+  if (req.path === '/api/shots/embed-backfill') return next();
   // Owned-membership-mirror rebuild — internal key auth handled inside the route
   if (req.path === '/api/kajabi/refresh-member-mirror') return next();
   // AffiliateΩr Electron sync — internal key auth handled inside the route

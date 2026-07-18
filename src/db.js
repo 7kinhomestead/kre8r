@@ -1847,6 +1847,33 @@ Partner: {{partner_name}}
       console.warn('[DB] shot_vec creation failed:', e.message);
     }
   }
+
+  // One-time scrub of VLM prompt-echo junk that leaked into early ledgers
+  // ('/no_think' tokens and the roster echoed back as tags).
+  try {
+    db.prepare("UPDATE footage_shot_analysis SET tags = NULL WHERE tags LIKE '%no_think%'").run();
+    db.prepare("UPDATE footage_shot_analysis SET description = TRIM(REPLACE(REPLACE(description, '/no_think', ''), 'no_think', '')) WHERE description LIKE '%no_think%'").run();
+  } catch (e) {
+    console.warn('[DB] shot-analysis junk scrub failed:', e.message);
+  }
+
+  // Camera clock corrections — the BMPCC spent S2 set to 2025, so BRAW
+  // filenames/mtimes lie by a constant offset per reel era. Real capture
+  // time = file time + offset_seconds. Seeded with the verified A013 era.
+  db.exec(`CREATE TABLE IF NOT EXISTS camera_clock_offsets (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    reel_prefix    TEXT NOT NULL UNIQUE,
+    offset_seconds INTEGER NOT NULL,
+    note           TEXT,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  try {
+    db.prepare(`INSERT OR IGNORE INTO camera_clock_offsets (reel_prefix, offset_seconds, note)
+                VALUES ('A013', ?, 'BMPCC clock set to 2025 — verified against PTC shoot Jul 13 2026 (files stamped ~414d 5h behind reality)')`)
+      .run(414 * 86400 + 5 * 3600);
+  } catch (e) {
+    console.warn('[DB] camera_clock_offsets seed failed:', e.message);
+  }
 }
 
 /**
@@ -2690,6 +2717,14 @@ function bootstrapTenantTables(tdb) {
     created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
   )`);
   exec('CREATE INDEX IF NOT EXISTS idx_fsa_shot ON footage_shot_analysis(shot_id)');
+
+  exec(`CREATE TABLE IF NOT EXISTS camera_clock_offsets (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    reel_prefix    TEXT NOT NULL UNIQUE,
+    offset_seconds INTEGER NOT NULL,
+    note           TEXT,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
 }
 
 // persist() removed — better-sqlite3 writes directly to disk on every operation
