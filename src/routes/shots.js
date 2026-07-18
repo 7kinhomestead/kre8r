@@ -114,25 +114,38 @@ router.get('/search', async (req, res) => {
 
 // Embed every analysis row that doesn't have a vector yet. Shared by the
 // manual backfill endpoint and the auto-embed pass after ledger imports.
+// Single-flight: concurrent import batches each fire this, but vec0 tables
+// don't tolerate racing inserts (no OR REPLACE semantics) — one pass at a
+// time, and per-row tolerance for the rare straggler.
+let _embedBusy = false;
 async function embedMissingShots(limit = 5000) {
-  if (!db.isVecLoaded()) return { ok: false, reason: 'sqlite-vec unavailable' };
-  const e = await embed.ensureServer();
-  if (!e.ok) return { ok: false, reason: e.reason };
-  const rows = db.prepare(
-    `SELECT a.shot_id, a.description, a.tags
-     FROM footage_shot_analysis a
-     LEFT JOIN shot_vec v ON v.rowid = a.shot_id
-     WHERE v.rowid IS NULL AND a.description IS NOT NULL AND a.description != ''
-     LIMIT ?`).all(Math.min(limit, 10000));
-  let done = 0;
-  const ins = db.getRawDb().prepare(
-    'INSERT OR REPLACE INTO shot_vec (rowid, embedding) VALUES (?, ?)');
-  for (const r of rows) {
-    const vec = await embed.embedText(`${r.description} ${r.tags || ''}`, 'document');
-    if (vec) { ins.run(BigInt(r.shot_id), vec); done++; }
+  if (_embedBusy) return { ok: true, skipped: 'pass already running' };
+  _embedBusy = true;
+  try {
+    if (!db.isVecLoaded()) return { ok: false, reason: 'sqlite-vec unavailable' };
+    const e = await embed.ensureServer();
+    if (!e.ok) return { ok: false, reason: e.reason };
+    const rows = db.prepare(
+      `SELECT a.shot_id, a.description, a.tags
+       FROM footage_shot_analysis a
+       LEFT JOIN shot_vec v ON v.rowid = a.shot_id
+       WHERE v.rowid IS NULL AND a.description IS NOT NULL AND a.description != ''
+       LIMIT ?`).all(Math.min(limit, 10000));
+    let done = 0;
+    const ins = db.getRawDb().prepare(
+      'INSERT INTO shot_vec (rowid, embedding) VALUES (?, ?)');
+    for (const r of rows) {
+      const vec = await embed.embedText(`${r.description} ${r.tags || ''}`, 'document');
+      if (vec) {
+        try { ins.run(BigInt(r.shot_id), vec); done++; }
+        catch (_) { /* row landed via another path — fine */ }
+      }
+    }
+    logger.info({ done, of: rows.length }, '[shots] embed pass');
+    return { ok: true, embedded: done, candidates: rows.length };
+  } finally {
+    _embedBusy = false;
   }
-  logger.info({ done, of: rows.length }, '[shots] embed pass');
-  return { ok: true, embedded: done, candidates: rows.length };
 }
 
 // Backfill vectors for analysis rows that don't have one yet (existing ledgers).
