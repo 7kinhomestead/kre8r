@@ -158,6 +158,71 @@ router.post('/server/stop', (req, res) => {
   res.json({ ok: true, stopped });
 });
 
+// ── B-rollΩr slot proposals (V3) ─────────────────────────────────────────────
+// POST /api/shots/propose { text, s2_only?, per_line? }
+// Splits the text into lines/beats, embeds each, KNN-searches the shot vault,
+// returns non-talking-head b-roll candidates per line. The draft-brain:
+// it proposes, the creator decides — never the other way around.
+router.post('/propose', async (req, res) => {
+  // Session (the SlotΩr page) OR internal key (tooling / Resolve pushers)
+  const keyOk = process.env.INTERNAL_API_KEY &&
+    req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY;
+  if (!req.session?.userId && !keyOk) {
+    return res.status(401).json({ ok: false, error: 'unauthorized' });
+  }
+  try {
+    if (!db.isVecLoaded()) return res.status(409).json({ ok: false, error: 'sqlite-vec unavailable' });
+    const e = await embed.ensureServer();
+    if (!e.ok) return res.status(409).json({ ok: false, error: e.reason });
+
+    const raw = String(req.body?.text || '').trim();
+    if (!raw) return res.status(400).json({ ok: false, error: 'text required' });
+    const s2Only = req.body?.s2_only !== false; // This-Season law is the default
+    const perLine = Math.min(parseInt(req.body?.per_line, 10) || 4, 8);
+    const S2_RX = /Rock Rich Season 2|680_s2|680_season|Cari's phone|drone mapping/i;
+
+    const lines = raw.split(/\r?\n+/).map(l => l.trim())
+      .filter(l => l.length >= 15).slice(0, 40);
+
+    const knn = db.getRawDb().prepare(
+      'SELECT rowid, distance FROM shot_vec WHERE embedding MATCH ? ORDER BY distance LIMIT 14');
+    const detail = db.prepare(
+      `SELECT s.id, s.footage_id, s.start_s, s.end_s, a.description, a.tags,
+              f.original_filename, f.shot_type, f.file_path, f.proxy_path, f.thumbnail_path
+       FROM footage_shots s
+       JOIN footage_shot_analysis a ON a.shot_id = s.id
+       JOIN footage f ON f.id = s.footage_id
+       WHERE s.id = ?`);
+
+    const slots = [];
+    for (const line of lines) {
+      const vec = await embed.embedText(line, 'query');
+      if (!vec) { slots.push({ line, picks: [] }); continue; }
+      const picks = [];
+      for (const h of knn.all(vec)) {
+        const d = detail.get(Number(h.rowid));
+        if (!d) continue;
+        if (s2Only && !S2_RX.test(`${d.file_path || ''} ${d.proxy_path || ''}`)) continue;
+        if (String(d.shot_type || '').replace('_', '-') === 'talking-head') continue;
+        if (/talking (to|into|at) (the )?camera|speaks? to the camera|speaking and gestur/i.test(d.description || '')) continue;
+        picks.push({
+          footage_id: d.footage_id, filename: d.original_filename,
+          start_s: Math.round(d.start_s), end_s: Math.round(d.end_s),
+          description: String(d.description || '').slice(0, 240),
+          thumbnail: d.thumbnail_path || null, file_path: d.file_path,
+          distance: Number(h.distance.toFixed(3)),
+        });
+        if (picks.length >= perLine) break;
+      }
+      slots.push({ line, picks });
+    }
+    res.json({ ok: true, s2_only: s2Only, slots });
+  } catch (err) {
+    logger.error({ err: err.message }, '[shots] propose failed');
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Bin-review corrections intake — persists the pasted payload so a browser
 // crash or cleared localStorage can never lose Jason's review work (Prime
 // Directive). Corrections are applied to the bin map by hand/Fable; this is

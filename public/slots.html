@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SlotΩr — B-roll Slot Proposals</title>
+<style>
+  :root { --teal: #14b8a6; --bg: #0d1117; --card: #161b22; --line: #21262d; --text: #e6edf3; --dim: #8b949e; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; padding-bottom: 90px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  h1 .om { color: var(--teal); }
+  .sub { color: var(--dim); margin-bottom: 20px; font-size: .95rem; }
+  textarea { width: 100%; min-height: 160px; background: var(--card); color: var(--text);
+             border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-size: .95rem;
+             font-family: inherit; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--teal); }
+  .controls { display: flex; align-items: center; gap: 18px; margin: 12px 0 24px; flex-wrap: wrap; }
+  .controls label { color: var(--dim); font-size: .9rem; display: flex; align-items: center; gap: 6px; }
+  button.go { background: var(--teal); color: #04251f; border: none; border-radius: 8px;
+              padding: 10px 22px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button.go:disabled { opacity: .5; cursor: wait; }
+  .slot { margin-bottom: 26px; }
+  .slot .line { font-size: 1.05rem; margin-bottom: 10px; color: var(--text); }
+  .slot .line::before { content: "🎙 "; }
+  .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .pick { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .pick img { width: 100%; height: 120px; object-fit: cover; display: block; background: #000; }
+  .pick .noimg { width: 100%; height: 120px; display: flex; align-items: center; justify-content: center;
+                 color: var(--dim); font-size: 2rem; background: #0a0d12; }
+  .pick .body { padding: 10px; }
+  .pick .name { font-size: .82rem; color: var(--teal); word-break: break-all; }
+  .pick .time { font-size: .8rem; color: var(--dim); margin: 2px 0 6px; }
+  .pick .desc { font-size: .8rem; color: var(--dim); line-height: 1.35; max-height: 68px; overflow: hidden; }
+  .pick .copy { margin-top: 8px; background: none; border: 1px solid var(--line); color: var(--dim);
+                border-radius: 6px; padding: 3px 10px; font-size: .75rem; cursor: pointer; }
+  .pick .copy:hover { border-color: var(--teal); color: var(--teal); }
+  .empty { color: var(--dim); font-size: .9rem; font-style: italic; }
+  .status { color: var(--dim); margin-bottom: 18px; min-height: 20px; }
+  .status.err { color: #f85149; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Slot<span class="om">Ω</span>r</h1>
+  <div class="sub">Paste a script, transcript, or beat list — the season proposes B-roll for every line.
+    Powered by the Farmhand's full-season shot ledger.</div>
+
+  <textarea id="script" placeholder="Paste script lines, PTC transcript, or beats here — one thought per line works best."></textarea>
+  <div class="controls">
+    <label><input type="checkbox" id="s2only" checked> This Season only (the promise)</label>
+    <label>Picks per line
+      <select id="perline"><option>3</option><option selected>4</option><option>6</option></select>
+    </label>
+    <button class="go" id="go">🎬 Propose Shots</button>
+  </div>
+  <div class="status" id="status"></div>
+  <div id="results"></div>
+</div>
+
+<div id="kre8r-nav"></div>
+<script src="/js/nav.js" defer></script>
+<script>
+window.addEventListener('load', function () { if (window.initNav) initNav(); });
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function fmtTime(s) {
+  var m = Math.floor(s / 60), r = s % 60;
+  return m + ':' + String(r).padStart(2, '0');
+}
+
+async function propose() {
+  var btn = document.getElementById('go');
+  var status = document.getElementById('status');
+  var results = document.getElementById('results');
+  var text = document.getElementById('script').value.trim();
+  if (!text) { status.textContent = 'Paste something first.'; return; }
+
+  btn.disabled = true;
+  status.className = 'status';
+  status.textContent = 'The season is thinking…';
+  results.innerHTML = '';
+  try {
+    var r = await fetch('/api/shots/propose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        s2_only: document.getElementById('s2only').checked,
+        per_line: parseInt(document.getElementById('perline').value, 10),
+      }),
+    });
+    var j = await r.json();
+    if (!j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+
+    var html = '';
+    j.slots.forEach(function (slot) {
+      html += '<div class="slot"><div class="line">' + esc(slot.line) + '</div>';
+      if (!slot.picks.length) {
+        html += '<div class="empty">no strong matches — maybe an abstract line (those want faces, not b-roll)</div></div>';
+        return;
+      }
+      html += '<div class="picks">';
+      slot.picks.forEach(function (p) {
+        html += '<div class="pick">';
+        html += p.thumbnail
+          ? '<img loading="lazy" src="' + esc(p.thumbnail) + '" alt="">'
+          : '<div class="noimg">🎞</div>';
+        html += '<div class="body">';
+        html += '<div class="name">' + esc(p.filename) + '</div>';
+        html += '<div class="time">' + fmtTime(p.start_s) + ' – ' + fmtTime(p.end_s) + ' in clip</div>';
+        html += '<div class="desc">' + esc(p.description) + '</div>';
+        html += '<button class="copy" data-path="' + esc(p.file_path || '') + '">copy path</button>';
+        html += '</div></div>';
+      });
+      html += '</div></div>';
+    });
+    results.innerHTML = html;
+    var n = j.slots.reduce(function (a, s) { return a + s.picks.length; }, 0);
+    status.textContent = j.slots.length + ' lines → ' + n + ' proposals' +
+      (j.s2_only ? ' (This Season only)' : ' (all vault)');
+  } catch (e) {
+    status.className = 'status err';
+    status.textContent = 'SlotΩr hit a snag: ' + e.message +
+      (String(e.message).indexOf('embed') >= 0 || String(e.message).indexOf('vec') >= 0
+        ? ' — the embedding engine may still be waking up; try again in a minute.' : '');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('go').addEventListener('click', propose);
+document.getElementById('results').addEventListener('click', function (ev) {
+  var b = ev.target.closest('.copy');
+  if (!b) return;
+  navigator.clipboard.writeText(b.getAttribute('data-path') || '').then(function () {
+    b.textContent = 'copied!';
+    setTimeout(function () { b.textContent = 'copy path'; }, 1200);
+  });
+});
+</script>
+</body>
+</html>
