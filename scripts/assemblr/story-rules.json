@@ -1,0 +1,66 @@
+{
+  "_doc": "Story laws — machine copy of ROCK-RICH-BINDER/26-THE-STORY-LAWS.md. Story laws OUTRANK craft laws (montage-rules.json) at every level of the loop hierarchy. Positions are fractions of total runtime; runtime is an OUTPUT of the beat sheet (15-35 min legal).",
+  "dual_test": {
+    "sentence": {
+      "template": "Today {subject} set out to {goal}, and the environment {verb}ed him.",
+      "provenance": "Gold Rush story producer, direct to Jason",
+      "test": "the finished cut must be able to fill its own blanks; antagonist is the WORLD and must be established before it carries force"
+    },
+    "lesson": {
+      "template": "After watching this, I now know how/that I can {payoff}.",
+      "voice": "viewer_first_person",
+      "test": "payoff must transfer to the viewer's own journey — technique, number, or principle; biography about the subject alone = FAIL",
+      "provenance": "channel outlier data: all breakouts are you-framed payoffs"
+    },
+    "vehicle": {
+      "rule_a": "no lesson ships without a vehicle (unwrapped teaching = lecture, flag)",
+      "rule_b": "no big spectacle ships empty (payload-free wildness = candy; legal in fun_and_games, rationed elsewhere)",
+      "source": "Snyder Pope-in-the-Pool, made doctrine"
+    }
+  },
+  "beats": [
+    {"n": 1,  "key": "opening_image",  "pos": [0.00, 0.02], "test": "a 'before' snapshot diffable against beat 15"},
+    {"n": 2,  "key": "theme_stated",   "pos": [0.03, 0.10], "test": "thesis planted by someone OTHER than the hero, not yet believed"},
+    {"n": 3,  "key": "setup",          "pos": [0.01, 0.10], "test": "world+flaw+stakes; every later payoff planted; save-the-cat moment present"},
+    {"n": 4,  "key": "catalyst",       "pos": [0.08, 0.13], "hard_flag_after": 0.15, "test": "one specific irreversible external event"},
+    {"n": 5,  "key": "debate",         "pos": [0.10, 0.23], "test": "doubt posing a question; strictly AFTER catalyst"},
+    {"n": 6,  "key": "break_into_two", "pos": [0.18, 0.25], "test": "the hero's ACTIVE choice into the new world"},
+    {"n": 7,  "key": "b_story",        "pos": [0.20, 0.30], "test": "new thread carrying the THEME (doc: the relationship under the task)"},
+    {"n": 8,  "key": "fun_and_games",  "pos": [0.20, 0.50], "span": true, "test": "the promise of the premise SHOWN, escalating; min ~20% of runtime"},
+    {"n": 9,  "key": "midpoint",       "pos": [0.45, 0.55], "test": "FALSE victory or FALSE defeat; stakes raise; clock starts"},
+    {"n": 10, "key": "bad_guys_close_in", "pos": [0.50, 0.75], "span": true, "test": "compounding setbacks, external AND internal (the flaw re-presses)"},
+    {"n": 11, "key": "all_is_lost",    "pos": [0.70, 0.78], "test": "lowest point, OPPOSITE polarity to midpoint, with a whiff of death (a concrete on-screen loss)"},
+    {"n": 12, "key": "dark_night",     "pos": [0.75, 0.85], "span": true, "test": "reflective sit IN the loss; distinct from the loss event itself"},
+    {"n": 13, "key": "break_into_three", "pos": [0.78, 0.85], "test": "the answer via A+B fusion; theme pays off"},
+    {"n": 14, "key": "finale",         "pos": [0.80, 0.99], "span": true, "test": "the CHANGED hero executes through escalation; no un-set-up devices"},
+    {"n": 15, "key": "final_image",    "pos": [0.98, 1.00], "test": "mirror of beat 1, provably changed"}
+  ],
+  "cross_rules": [
+    {"id": "teaser_separation", "rule": "a cold open is neither opening_image nor catalyst; its material may not be re-staged as-if-new before p=0.15"},
+    {"id": "establish_before_weight", "rule": "anything carrying story force must be planted in setup before it is used"},
+    {"id": "monotonic_order", "rule": "beats appear in canonical order; catalyst -> debate -> break_into_two strict"},
+    {"id": "open_final_mirror", "rule": "beats 1 and 15 share a visual register and differ in state"},
+    {"id": "theme_echo", "rule": "beat 2's line pays off in beats 13-15"},
+    {"id": "ab_braid", "rule": "b_story intro < midpoint; A/B cross at midpoint; fusion at break_into_three"},
+    {"id": "polarity_inversion", "rule": "midpoint and all_is_lost carry opposite emotional polarity"},
+    {"id": "loss_is_not_wallow", "rule": "all_is_lost (event) and dark_night (reflection) are distinct; collapsed = double-beat flag"},
+    {"id": "drift_flag", "rule": "any point beat >5% of runtime off its window is flagged"},
+    {"id": "single_premise", "rule": "one improbable premise per episode (double mumbo jumbo)"}
+  ],
+  "episodic_variants": {
+    "cliffhanger": {
+      "rule": "a serialized episode may end at all_is_lost/dark_night; beats 13-15 roll into the next episode's open; final_image becomes a DARK MIRROR (same register, polarity reversed, resolution owed)",
+      "example": "EP1 ends locked in the dump; EP2 opens on the rescue (blessed ruling)"
+    },
+    "season_nesting": "each episode's Sentence is a clause of the season's Sentence; episode lessons accumulate toward the season thesis; per-episode open loops are season pipe"
+  },
+  "sense_pass": {
+    "steps": ["state the Sentence from the transcript alone",
+              "state the Lesson in viewer first person",
+              "does what is said, in this order, make sense with no pictures"],
+    "rule": "a comp failing any step returns to the bench"
+  },
+  "retention": {"floor_pct": 42, "target_pct": 60, "proven_ceiling_pct": 72,
+                "calibration_source": "MirrΩr curves of Jason's own best videos, not industry folklore"},
+  "runtime": {"legal_min": 15, "legal_max": 35, "rule": "runtime is an OUTPUT of the beat sheet; critics prevent padding (montage law 1: length is redundancy)"}
+}
