@@ -75,10 +75,21 @@
     }
   },
   "loop_hierarchy": {
-    "_doc": "Local judges converge per-act (cheap, parallel, nothing hides in an average — the EP0 bed-check lesson). Structural judges run once per episode join.",
-    "local_unit": "act",
-    "local_judges": ["montage_laws", "loudness_bed", "hook_cadence", "grammar_profile"],
-    "structural_judges": ["sag_zone_placement", "rehook_spacing", "cue_variety", "act_transitions", "total_runtime"]
+    "_doc": "Jason's design, REVISED Jul 25 after the v1 dress rehearsal ('the story is not being told in an order that matches the structure of any story I have ever seen'): the loop's base unit is the STORY BEAT, and STORY LAWS OUTRANK CRAFT LAWS at every level (Murch: Emotion 51%). story-rules.json arrives from the Save the Cat research pass. Provenance: Jason's best S1 episodes were hand-made exactly this way — full beat sheet, beats edited individually, then assembled.",
+    "judgment_priority": ["story_laws", "craft_laws"],
+    "levels": [
+      {"unit": "story_beat",
+       "primary_test": "does this section accomplish beat X's purpose (Snyder beat spec)",
+       "secondary": ["montage_laws", "loudness_bed", "hook_cadence", "grammar_profile"]},
+      {"unit": "act",
+       "primary_test": "do the assembled beats accomplish this act's stated purpose",
+       "secondary": ["act_profile_compliance", "beat_length_variety"]},
+      {"unit": "comp",
+       "primary_test": "does the 3-act / 15-beat whole tell ONE cohesive story (ordering constraints, establish-before-weight, hook/teaser separation, opening-final image mirror)",
+       "secondary": ["sag_zone_placement", "rehook_spacing", "cue_variety", "act_transitions", "total_runtime"]},
+      {"unit": "sense_pass",
+       "primary_test": "transcribe the finished comp and judge it AS TEXT: does what is said, in this order, make sense to a stranger"}
+    ]
   },
   "meta": {
     "uncertain_trim_bias": "longer",
