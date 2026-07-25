@@ -1,0 +1,57 @@
+{
+  "_doc": "Montage grammar config — machine copy of ROCK-RICH-BINDER/25-MONTAGE-GRAMMAR.md. Read by SlotΩr (build) and the montage critic (judge). Tuned for the Rock Rich audience: patient how-to niche, slow end of every band.",
+  "shot": {
+    "duration_band_s": [2.0, 4.0],
+    "duration_floor_s": 1.0,
+    "breath_shot_over_s": 4.0,
+    "breath_shots_max_per_montage": 2,
+    "adjacent_framing_min_change": "one_size_step_or_30deg"
+  },
+  "cadence": {
+    "max_equal_length_run": 3,
+    "variance_style": "clustered_1f_not_metronomic",
+    "accelerate": "second_half_mean_lt_first_half_mean"
+  },
+  "repetition": {
+    "max_same_action_instances": 3,
+    "flag_on": 4
+  },
+  "narration": {
+    "unnarrated_uncaptioned_warn_s": 30,
+    "unnarrated_uncaptioned_flag_s": 45,
+    "visual_change_min_interval_s": [5, 7],
+    "pattern_interrupt_every_s": [30, 60]
+  },
+  "story": {
+    "rehook_every_s": [120, 180],
+    "rehook_position": "montage_end",
+    "sag_zone_runtime_pct": [55, 65],
+    "sag_zone_rule": "no_longest_montage_here",
+    "bracket": "open_loop_before_result_after"
+  },
+  "payoff": {
+    "speed": "1x_only",
+    "voiceover": "forbidden",
+    "music": "thin_or_drop"
+  },
+  "compression": {
+    "in_task": "hard_cut",
+    "across_scenes": "dissolve_allowed",
+    "long_grind": "1x_intro_ramp_middle_1x_outcome",
+    "time_markers": "environmental_not_graphic"
+  },
+  "audio_priority": ["natural_sound", "designed_sfx", "music_accent"],
+  "music": {
+    "one_cue_per_idea": true,
+    "talking_beats": "l_cut_over_following_broll"
+  },
+  "faces": {
+    "cut_in_at": ["pre_risk", "outcome"],
+    "during_grind": "stay_on_work"
+  },
+  "meta": {
+    "uncertain_trim_bias": "longer",
+    "every_cut_needs_reason": ["new_info", "on_action", "scale_change", "beat", "progress_step"],
+    "required_ingest_tags": ["action_class", "shot_scale", "effort_direction", "progress_stage"]
+  }
+}
