@@ -49,6 +49,37 @@
     "cut_in_at": ["pre_risk", "outcome"],
     "during_grind": "stay_on_work"
   },
+  "act_profiles": {
+    "_doc": "Jason's hierarchical-loop design (Jul 25): loop each act to plateau under its own profile, then join, then run the episode-level loop for structural sins (sag zone, re-hook spacing, cue variety, transitions, runtime). Profile keys off PipΩr beat map / emotional_function. Values override the base config above.",
+    "act1_setup": {
+      "goal": "world-building, information-dense, let the land speak",
+      "shot": {"duration_band_s": [2.5, 5.0], "breath_shots_max_per_montage": 3},
+      "music": {"presence": "restrained"}
+    },
+    "fun_and_games": {
+      "goal": "delight, energy, comedy faces welcome",
+      "shot": {"duration_band_s": [1.5, 3.0]},
+      "faces": {"cut_in_at": ["pre_risk", "outcome", "comedy_beat"]},
+      "music": {"presence": "forward"}
+    },
+    "act2_grind": {
+      "goal": "effort and attrition, tension accumulating",
+      "shot": {"duration_band_s": [2.0, 4.0]},
+      "music": {"presence": "tension_bed"}
+    },
+    "act3_consequence": {
+      "goal": "payoff and cost, tightest cutting, silence sacred",
+      "shot": {"duration_band_s": [1.5, 3.5]},
+      "narration": {"unnarrated_uncaptioned_warn_s": 45, "unnarrated_uncaptioned_flag_s": 60},
+      "music": {"presence": "drops_at_peaks"}
+    }
+  },
+  "loop_hierarchy": {
+    "_doc": "Local judges converge per-act (cheap, parallel, nothing hides in an average — the EP0 bed-check lesson). Structural judges run once per episode join.",
+    "local_unit": "act",
+    "local_judges": ["montage_laws", "loudness_bed", "hook_cadence", "grammar_profile"],
+    "structural_judges": ["sag_zone_placement", "rehook_spacing", "cue_variety", "act_transitions", "total_runtime"]
+  },
   "meta": {
     "uncertain_trim_bias": "longer",
     "every_cut_needs_reason": ["new_info", "on_action", "scale_change", "beat", "progress_step"],
