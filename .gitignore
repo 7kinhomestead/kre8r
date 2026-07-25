@@ -56,3 +56,7 @@ tmp_*.json
 uploads/
 *.db-shm
 *.db-wal
+
+# Never commit model caches or oversized skin media (GitHub 100MB limit — Jul 24 push surgery)
+database/whisper-model-cache/
+public/skins/western/draw-iron.mp4
