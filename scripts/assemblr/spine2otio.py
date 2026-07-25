@@ -13,6 +13,7 @@
 #       [--strip-suffix _conformed] [--ext .braw] [--fps 30]
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -35,19 +36,33 @@ def find_ffprobe():
 FFPROBE = find_ffprobe()
 
 def media_info(path):
-    """(fps, duration_s) — best effort; BRAW is opaque to ffprobe (None)."""
+    """(fps, duration_s, start_tc_frames) — BRAW is opaque to ffprobe (Nones).
+    start_tc_frames matters: camera media carries time-of-day timecode, and
+    Resolve resolves OTIO source_ranges in TIMECODE space — a zero-based
+    range 'does not exist' inside a clip that starts at 13:25:09:23
+    (the Jul 24 'not found' mystery)."""
     out = subprocess.run(
-        [FFPROBE, "-v", "error", "-select_streams", "v:0", "-show_entries",
-         "stream=r_frame_rate:format=duration", "-of", "json", str(path)],
-        capture_output=True, text=True)
+        [FFPROBE, "-v", "error", "-show_entries",
+         "stream=r_frame_rate:stream_tags=timecode:format=duration",
+         "-of", "json", str(path)], capture_output=True, text=True)
     try:
         d = json.loads(out.stdout)
-        num, den = d["streams"][0]["r_frame_rate"].split("/")
+        vstream = next(s for s in d["streams"] if "r_frame_rate" in s
+                       and s["r_frame_rate"] != "0/0")
+        num, den = vstream["r_frame_rate"].split("/")
         fps = float(num) / float(den or 1)
         dur = float(d["format"]["duration"])
-        return fps, dur
+        tc = None
+        for s in d["streams"]:
+            tc = (s.get("tags") or {}).get("timecode") or tc
+        tc_frames = 0
+        if tc:
+            hh, mm, ss, ff = re.split(r"[:;]", tc)
+            tc_frames = ((int(hh) * 3600 + int(mm) * 60 + int(ss))
+                         * round(fps) + int(ff))
+        return fps, dur, tc_frames
     except Exception:
-        return None, None
+        return None, None, None
 
 def main():
     ap = argparse.ArgumentParser()
@@ -78,6 +93,10 @@ def main():
     wrote = []
     for tl_spec in job["timelines"]:
         tl = otio.schema.Timeline(name=tl_spec["name"])
+        # Explicit start TC at the job rate — without this, Resolve's Load
+        # OTIO dialog guesses 24fps (learned Jul 24). 01:00:00:00 house TC.
+        tl.global_start_time = otio.opentime.RationalTime(
+            round(3600 * args.fps), args.fps)
         track = otio.schema.Track(name="V1", kind=otio.schema.TrackKind.Video)
         tl.tracks.append(track)
         missing = []
@@ -85,20 +104,27 @@ def main():
             src = transform(pick["path"])
             if not src.exists():
                 missing.append(src.name)
-            fps, dur = media_info(src) if src.exists() else (None, None)
+            fps = dur = base = None
+            if src.exists():
+                fps, dur, base = media_info(src)
+            if fps is None and str(src) != pick["path"]:
+                # BRAW twin: unprobeable — its proxy sibling shares fps,
+                # duration, and start timecode. Borrow them.
+                fps, dur, base = media_info(pick["path"])
             fps = fps or args.fps
+            base = base or 0
             start = float(pick["start_s"])
             end = float(pick["end_s"])
             if dur:
                 end = min(end, dur)
             frames = max(1, round((end - start) * fps))
-            # available_range is REQUIRED: Resolve's OTIO reader and the
-            # FCP7-XML builder both choke on refs without it (learned Jul 24).
+            # available_range REQUIRED, and it must live in TIMECODE space:
+            # start at the clip's embedded TC, ranges offset from it.
             avail_dur = dur if dur else max(end, start) + 1.0
             ref = otio.schema.ExternalReference(
                 target_url=str(src.resolve()) if src.exists() else str(src),
                 available_range=otio.opentime.TimeRange(
-                    start_time=otio.opentime.RationalTime(0, fps),
+                    start_time=otio.opentime.RationalTime(base, fps),
                     duration=otio.opentime.RationalTime(
                         round(avail_dur * fps), fps)))
             clip = otio.schema.Clip(
@@ -106,7 +132,7 @@ def main():
                 media_reference=ref,
                 source_range=otio.opentime.TimeRange(
                     start_time=otio.opentime.RationalTime(
-                        round(start * fps), fps),
+                        base + round(start * fps), fps),
                     duration=otio.opentime.RationalTime(frames, fps)))
             track.append(clip)
         out_path = Path(args.out)
