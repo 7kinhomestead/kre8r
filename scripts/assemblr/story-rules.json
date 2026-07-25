@@ -47,6 +47,18 @@
     {"id": "drift_flag", "rule": "any point beat >5% of runtime off its window is flagged"},
     {"id": "single_premise", "rule": "one improbable premise per episode (double mumbo jumbo)"}
   ],
+  "hard_rules": {
+    "first_beat_visual": "the first beat after any cold open is ALWAYS visual, never a PTC (Jason, Jul 25)",
+    "cold_open_escalation": "EP1 ruling: the season cold open airs IN the episode; every moment it pre-fires must return BIGGER in the body (fuller scene, new context) — echo without escalation = flag",
+    "hero_shot_selection": "any image carrying story weight (opening image, act turns, final image) must be selected by CONTENT (eyes on frames), never by bin/filename — the sticks-aerial lesson",
+    "sense_pass_first": "the sense pass runs on the comp SCRIPT BEFORE rendering, not after — fix it as text, then spend render time",
+    "montage_speech": "montage windows must be chosen speech-aware: silent windows preferred (transcripts exist), else audio ducked under music — stray half-sentences are the noise floor that drowns structure",
+    "beat_trim": "spoken beats are trimmed to exactly the sentences serving the beat's purpose — sentence-boundary snapped, false starts and slate-tail chatter scrubbed"
+  },
+  "reference_standard": {
+    "gold": ["Season 2 cold open", "S1 EP1", "S1 EP2"],
+    "note": "S1 EP2 was hand-built on the HARMON STORY CIRCLE (scene exports literally named You/Need/Go/Search/Take/Change) — the autopsy of these references calibrates all thresholds; 'the examples of what things should look like, just tightened up' (Jason)"
+  },
   "episodic_variants": {
     "cliffhanger": {
       "rule": "a serialized episode may end at all_is_lost/dark_night; beats 13-15 roll into the next episode's open; final_image becomes a DARK MIRROR (same register, polarity reversed, resolution owed)",
