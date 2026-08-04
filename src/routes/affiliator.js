@@ -217,7 +217,7 @@ router.post('/push-to-live', async (req, res) => {
 // New rows are INSERTed; existing rows are UPDATEd with last-write-wins.
 // Soft-delete is handled by active=0 in ALLOWED — no tombstone table needed.
 const SYNC_ALLOWED = ['og_image_url','gear_description','gear_price','gear_emoji',
-                      'gear_category','show_on_gear','label','active'];
+                      'gear_category','show_on_gear','label','active','destination_url'];
 
 function applySyncBatch(links) {
   let inserted = 0, updated = 0, skipped = 0;
