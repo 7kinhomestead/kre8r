@@ -1,4 +1,7 @@
-$apiKey = 'AIzaSyByBuHUEKrTbvlCRwlt5ev_JI26tY1ao0A'
+# API key from kre8r/.env (never hardcode — Aug 10 2026 leak lesson)
+$envLine = Select-String -Path "$PSScriptRoot...env" -Pattern "^GOOGLE_AI_API_KEY=(.*)$"
+$GKEY = $envLine.Matches[0].Groups[1].Value.Trim()
+$apiKey = '$GKEY'
 $outputFile = 'C:\Users\18054\kre8r\scripts\gemini-results.txt'
 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=$apiKey"
 
@@ -12,7 +15,7 @@ $queries = @(
 )
 
 # Clear output file
-"" | Set-Content $outputFile
+$GKEY | Set-Content $outputFile
 
 function Invoke-GeminiQuery {
     param([string]$query, [int]$queryNum)
@@ -69,9 +72,9 @@ for ($q = 1; $q -le 6; $q++) {
     $header = "=== QUERY $q RESPONSE ==="
     Add-Content $outputFile $header
     Add-Content $outputFile $result
-    Add-Content $outputFile ""
+    Add-Content $outputFile $GKEY
     Add-Content $outputFile "---END Q$q---"
-    Add-Content $outputFile ""
+    Add-Content $outputFile $GKEY
 
     Write-Output "Query $q done. Length: $($result.Length) chars"
 

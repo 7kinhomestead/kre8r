@@ -1,4 +1,7 @@
-$apiKey = 'AIzaSyByBuHUEKrTbvlCRwlt5ev_JI26tY1ao0A'
+# API key from kre8r/.env (never hardcode — Aug 10 2026 leak lesson)
+$envLine = Select-String -Path "$PSScriptRoot...env" -Pattern "^GOOGLE_AI_API_KEY=(.*)$"
+$GKEY = $envLine.Matches[0].Groups[1].Value.Trim()
+$apiKey = '$GKEY'
 
 # Try flash model - higher free tier limits
 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey"

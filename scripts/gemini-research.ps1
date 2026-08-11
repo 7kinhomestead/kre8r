@@ -1,6 +1,9 @@
+# API key from kre8r/.env (never hardcode — Aug 10 2026 leak lesson)
+$envLine = Select-String -Path "$PSScriptRoot...env" -Pattern "^GOOGLE_AI_API_KEY=(.*)$"
+$GKEY = $envLine.Matches[0].Groups[1].Value.Trim()
 param([int]$QueryNum = 1)
 
-$apiKey = 'AIzaSyByBuHUEKrTbvlCRwlt5ev_JI26tY1ao0A'
+$apiKey = '$GKEY'
 
 $queries = @(
     "What content allocation frameworks do successful multi-stream YouTube creators use to balance growth content vs monetization content vs community content? What percentage of videos should serve each goal for a creator with 500k-1M subscribers who has ad revenue, affiliate income, digital products, and a paid membership community?",
