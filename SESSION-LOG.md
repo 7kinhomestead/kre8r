@@ -2497,3 +2497,24 @@ Built + deployed to kre8r.app/download. `npm run dist:win` → 238MB installer.
 
 ## Commits
 - `390cc86` — 12 files, 1964 insertions
+
+---
+
+# Session — Aug 26-27 2026 (Ledger): EP4 "THE ASK" SHIPPED + clip pipeline
+EP4 finished + posted Thu Aug 27 (https://youtu.be/DfsYYAY6Ajg, 39:25, title
+vidiq 99). Master: HEVC 10-bit + one -14/-2 pass, music -14dB (3 QC rounds by
+ear). Launch kit + sealed prediction + 8-persona crosslab in H:\edit-staging\EP4.
+EP3 day-7 graded (4P/3F: 0:30 call bullseye; traffic 79.7% algorithm-carried).
+NEW: daily social clip pipeline — CLIP-BANK + BANK-LEDGER.md (H:\edit-staging\
+CLIP-BANK), Rella MCP staging via ngrok tunnel, daily-clip-watchdog scheduled
+task 07:22. Jason authorized auto-post for published-master clips only.
+
+### batch-conform.py — five audio laws added (the EP4 mix post-mortems)
+loudnorm linear=true silent dynamic fallback (check LRA in vs out) · hot-spot
+taming (flat per-burst cuts, 10ms edges, ear count > machine count) ·
+limiter-as-pump corollary (safety limiter must be idle) · Output-Track exports
+tap PRE-main-bus-fader (apply bus offset when mixing both export paths) ·
+music bed lands ~15 LU under dialogue, not 10 (start EP5 at 13-15).
+
+## Commits
+- batch-conform.py law updates (this commit)

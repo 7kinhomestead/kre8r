@@ -14,6 +14,67 @@
 # Parts target defaults to -16 LUFS / -3 dBTP: parts sit consistent with
 # headroom; the EPISODE master (-14/-2) happens once on the full timeline —
 # never master parts to the delivery target or the final pass has no room.
+#
+# MUSIC MIX LAW (Jason, Aug 24 2026 — settled by ear on the S2EP4 history
+# act, v4 blessed): NO DUCKING, EVER — no sidechain, no automation riding
+# under dialogue; the pumping reads as jumpy and distracting. Music is a
+# STATIC bed at **10 LU below the dialogue stem's integrated LUFS**
+# (documentary standard; e.g. dialogue -19 -> trim music to -29). EP4
+# AMENDMENT (Aug 26 2026): Jason's ear landed the shipped master closer to
+# ~15 LU under dialogue after two "still too loud" rounds — treat 10 LU as
+# the STARTING point and expect the ear to pull 3-5 more. Start EP5's music
+# pass at ~13-15 LU under and adjust UP if it disappears. Sum flat,
+# transparent true-peak limiter on the sum (alimiter -4dB, attack 3ms,
+# release 120ms — catches VO-transient overs only, never pumps), then the
+# normal two-pass linear loudnorm to the parts target (-16/-3). Want a
+# musical moment to hit harder? Shape the MUSIC STEM's clip gain in the
+# no-dialogue stretch and re-export — arrangement makes the space, never a
+# compressor. (EP3's music level was a fader feel, never written; this
+# number is now the season spec.)
+#
+# STEM EXPORT LAW (Aug 25 2026 — the EP4 triplet incident): Resolve's render
+# queue does NOT snapshot mute state — mutes are live timeline state, so a
+# batch of queued mute-based stem jobs all render with the LAST mute config
+# (three identical "stems," one real one). Either render ONE JOB PER MUTE
+# STATE (queue one, render, re-mute, repeat — the EP3 way), or use Deliver >
+# Audio > OUTPUT TRACK pointed at the specific track, which DOES live in the
+# job and batches safely. Verify stems before mixing: identical loudness
+# fingerprints across "different" stems = clones (spot-check solo moments).
+#
+# LOUDNORM LINEAR FALLBACK LAW (Aug 25 2026 — the EP4 v5 stem pass): ffmpeg
+# loudnorm with linear=true SILENTLY falls back to DYNAMIC (windowed AGC)
+# mode whenever pure gain can't meet the TP ceiling (source peaks too hot,
+# or a quiet source needing more gain than its headroom allows). Dynamic
+# mode is the windowed processing that caused the J/L edit-boundary fades.
+# Detect it: output LRA != input LRA means the fallback fired. When it
+# would: use pure gain (volume=XdB) to the integrated target + alimiter at
+# the TP ceiling (3ms/120ms, level=disabled — alimiter auto-levels without
+# it) so only over-ceiling instants get touched. Never trust linear=true
+# without comparing LRA in vs out.
+#
+# HOT-SPOT TAMING LAW (Aug 26 2026 — the Jen pumping post-mortem, three
+# stacked causes): a track that's fine except a handful of laughs/emphatic
+# spikes gets FEW, FLAT, SURGICAL cuts — one flat gain pull per burst
+# (threshold: speech-median +8dB; merge spikes <1.5s apart into one burst),
+# cut exactly the hot region with INSTANT 10ms cosine edges. Never smear a
+# cut outward to "quiet boundaries," never use 60ms+ ramps (audible swell),
+# and sanity-check the count: if the machine finds 10x more hot spots than
+# the editor's ear counted, the threshold is wrong, not the ear.
+# LIMITER-AS-PUMP COROLLARY: a "safety" TP limiter is only safe when it's
+# idle. If gain-to-anchor pushes ordinary speech peaks into the ceiling,
+# the limiter grinds continuously and its release (120ms) reads as random
+# mid-sentence pumping. Tame the hot spots FIRST so the needed gain drops,
+# keep limiter release fast (50ms), and confirm it only touches transients.
+#
+# OUTPUT-TRACK GAIN-STAGE LAW (Aug 26 2026 — the EP4 hot-music master):
+# Resolve's Deliver > Audio > Output Track taps the TRACK, BEFORE the main
+# bus fader. A stem exported that way does NOT carry the main-bus trim, so
+# it lands hot relative to any main-bus render by exactly the bus offset
+# (EP4: dialogue via bus at -5, music via Output Track = music +5 relative).
+# When mixing stems from BOTH export paths, apply the bus offset to the
+# Output-Track stems first — and verify by ear against a known-good section
+# before mastering. (Mute-state safety is why Output Track is still the
+# right export; just respect its gain stage.)
 import argparse
 import json
 import shutil
