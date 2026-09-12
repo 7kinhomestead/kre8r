@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@higgsfield/client": "^0.2.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@ngrok/ngrok": "^1.7.0",
     "@remotion/bundler": "^4.0.457",
     "@remotion/renderer": "^4.0.457",

@@ -493,6 +493,11 @@ app.use((req, res, next) => {
   // AffiliateΩr bulk seed — kre8r-land solar tool seeds product links here
   if (req.path === '/api/affiliator/bulk-seed' &&
       req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY) return next();
+  // VaultΩr read API — internal key for the local MCP bridge (scripts/vault-mcp.mjs, LM Studio)
+  if (req.path.startsWith('/api/vault') && req.method === 'GET' || req.path === '/api/vault/search') {
+    if (process.env.INTERNAL_API_KEY &&
+        req.headers['x-internal-key'] === process.env.INTERNAL_API_KEY) return next();
+  }
 
   // Logged in — allow
   if (req.session?.userId) return next();
