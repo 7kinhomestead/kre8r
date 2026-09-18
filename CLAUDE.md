@@ -115,7 +115,7 @@ Tier correction: page contacts client-side, filter by tag name, match by email.
 **Jason Rutland** — 7 Kin Homestead. Voice: straight-talking, warm, funny, never corporate.
 "Sharp-tongued neighbor talks over a fence." Goes off-script — those moments are often better.
 Partner: Cari (camera). 5 kids. 700 sq ft. Shoots outdoors only.
-Content angles: financial, system, rockrich (Gold Rush meets How the Universe Works), howto, mistakes, lifestyle, viral.
+Content angles: financial, system, rockrich (Gold Rush meets the 2014 Cosmos — corrected by Jason Sep 18 2026; NOT How the Universe Works), howto, mistakes, lifestyle, viral.
 ROCK RICH tiers: Greenhouse 🌱 (free) / Garden 🌿 ($19/mo) / Founding 50 🏆 ($297 one-time).
 Camera: Blackmagic BRAW → DaVinci proxy → D:\kre8r\intake. Archive: D:\. Never write to C:\.
 
