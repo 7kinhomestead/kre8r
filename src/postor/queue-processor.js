@@ -219,6 +219,48 @@ function firePublishFanOut(item) {
   }
 }
 
+// ── Cross-process overlap guard ──────────────────────────────────────────────
+// The in-run flag below stops the 60s tick lapping itself INSIDE one process.
+// It cannot stop a SECOND process: an Electron restart that leaves the old one
+// draining, a stray `node server.js` beside the desktop app, or the dev server
+// and Electron both pointed at the same DB. Both would SELECT the same pending
+// rows before either flipped one to 'posting', and the clip goes out twice.
+// A pid-stamped lock file beside the database closes that: one queue processor
+// per database, whoever gets there first.
+const LOCK_STALE_MS = 15 * 60 * 1000; // longest plausible single tick (IG 3min + TikTok 2.5min + slack)
+
+function lockPath() {
+  const dbFile = process.env.DB_PATH || path.join(__dirname, '..', '..', 'database', 'kre8r.db');
+  return path.join(path.dirname(dbFile), 'postor-queue.lock');
+}
+
+function pidAlive(pid) {
+  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
+}
+
+/** Returns a release function, or null when another process holds a live lock. */
+function acquireQueueLock() {
+  const file = lockPath();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const fd = fs.openSync(file, 'wx');
+      fs.writeSync(fd, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
+      fs.closeSync(fd);
+      return () => { try { fs.unlinkSync(file); } catch (_) {} };
+    } catch (err) {
+      if (err.code !== 'EEXIST') return () => {}; // can't lock (read-only dir) — don't block posting
+      let held = null;
+      try { held = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) {}
+      const stale = !held?.pid || !pidAlive(held.pid) ||
+        (held.at && Date.now() - Date.parse(held.at) > LOCK_STALE_MS);
+      if (!stale) return null;
+      console.warn(`[postor/queue] stealing stale queue lock from pid ${held?.pid}`);
+      try { fs.unlinkSync(file); } catch (_) {}
+    }
+  }
+  return null;
+}
+
 function start() {
   if (started) return;
   started = true;
@@ -235,6 +277,11 @@ function start() {
     // otherwise cause the next 60s tick to start a second run() and double-fire posts
     if (running) return;
     running = true;
+    const release = acquireQueueLock();
+    if (!release) {
+      running = false;
+      return; // another process is draining this queue
+    }
     try {
       let items;
       try {
@@ -249,6 +296,7 @@ function start() {
         );
       }
     } finally {
+      release();
       running = false;
     }
   };

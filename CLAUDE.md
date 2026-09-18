@@ -129,7 +129,8 @@ Camera: Blackmagic BRAW → DaVinci proxy → D:\kre8r\intake. Archive: D:\. Nev
 
 ## Active Known Issues (not yet fixed)
 1. SESSION_SECRET hardcoded fallback in server.js — fail-fast needed before beta
-2. PostΩr queue processor no overlap guard — double-fire on slow uploads
+2. ~~PostΩr queue processor no overlap guard~~ **FIXED Sep 18 2026** — in-process
+   `running` flag (PB1) + cross-process pid lock `postor-queue.lock` beside the DB. See DEVNOTES.
 3. OAuth tokens plaintext in platform_connections — needs aes-256-gcm
 4. Background workers tenant-blind (watcher, queues, cron) — biggest multi-tenancy gap
 5. Post-Mortem brief not yet injected into WritΩr/Id8Ωr

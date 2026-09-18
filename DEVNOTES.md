@@ -6,6 +6,127 @@ Future Claude reads this before touching anything related.
 
 ---
 
+## PostΩr direct publishing — TT-BANK bank runner (2026-09-18)
+
+Built `scripts/bank-post.js` so the TT-BANK daily pipeline publishes through our
+own Meta Graph calls instead of Rella. Rella's connector has no `auto_publish`
+field, so every item it creates is born dark and the slot passes unfired — nine
+straight dark days by Sep 18 (see `BANK-LEDGER.md`). Cutting Rella out of the
+daily loop removes the toggle entirely.
+
+### Meta's Reels uploader CANNOT fetch from the land box — send bytes instead
+`rupload` accepts a `file_url` header so Meta fetches the file itself. Against a
+clipdrop URL on `7kinhomestead.land` it fails **every time**:
+
+```
+422 {"debug_info":{"retriable":false,"type":"FileUrlProcessingError",
+     "message":"Unable to fetch media from URL, got status code: 403 Forbidden"}}
+```
+
+The origin is innocent. The same URL returns 200/206 to curl under **every** user
+agent tried, including `facebookexternalhit/1.1`, honours Range requests, and
+`POST /{page-id}/videos?file_url=` fetched that exact URL successfully minutes
+earlier. **Cloudflare sits in front of `7kinhomestead.land` and blocks the
+rupload fetcher specifically.** Do not go looking in the land app for this.
+
+The fix is to send the bytes, not a URL — `offset` / `file_size` headers with the
+file as the body. Verified `{"success":true}`. This is better anyway: a Reel now
+never touches a public host at all.
+
+**Three transports, and they are not interchangeable:**
+
+| What | Transport | Public host? |
+|---|---|---|
+| FB Reel (≤90s) | binary rupload | **no** |
+| FB video (>90s) | `/videos?file_url=` via clipdrop | yes, for the upload only |
+| Instagram | `/media?video_url=` via clipdrop | yes, for the upload only |
+
+⚠ The IG leg is the **one untested link** — the IG token was expired when this
+was built, so whether IG's fetcher can read a clipdrop URL is unknown. If the
+first real IG run fails on a fetch/403, it is this same Cloudflare block, and the
+fix is a Cloudflare WAF skip rule for `/clipdrop-*` (or an unproxied host) — NOT
+a code change.
+
+### Use the upload_url the start phase returns
+`POST /{page-id}/video_reels upload_phase=start` hands back an `upload_url` that
+is versioned by Meta itself (currently `v26.0` even when you ask on `v21.0`).
+Hardcoding `RUPLOAD + '/' + video_id` drifts. Use what it gives you.
+
+### published=false is the only safe way to test Facebook
+`/videos` takes a `published` parameter, so a real unpublished page video can be
+created, inspected and `DELETE`d without anything appearing on the page. Reels
+have no such parameter — to smoke-test the Reels path, run `upload_phase=start`
+plus the rupload and simply **never send `upload_phase=finish`**. The session
+expires on its own and nothing publishes.
+
+### Tokens: page tokens are forever, IG tokens are not
+`debug_token` on the stored FB page token: `"expires_at": 0` — page tokens
+derived from a long-lived user token do not expire. The Instagram token is a
+different animal: an `IGAA…` Instagram-Login token, 60 days, refreshable only
+**while still valid**. It expired Jun 16 2026 and cannot be refreshed; past that
+window the only route is re-minting. Anything depending on IG should check
+`/me` before it uploads, not after.
+
+### better-sqlite3 is not safe to depend on from a scheduled task
+The installed binary wants `NODE_MODULE_VERSION 145`; the Node on this box is
+137 and the bundled sidecar is 115, so `require('better-sqlite3')` throws outright
+right now. A daily task must not break on a Node upgrade — `bank-post.js` reads
+`platform_connections` through **`node:sqlite`, read-only** (`readOnly: true` +
+`PRAGMA query_only`). That respects the WAL rule: the rule forbids *writing* to
+the .db behind a running server, and read-only readers are exactly what WAL is
+for. The server's `/api/postor/connections` route is no help here — it
+deliberately does not return tokens.
+
+### Scheduled tasks on an off-grid battery
+`RockRich Bank Post FB` (12:00 PT) and `RockRich Bank Post IG` (15:00 PT) both
+run with `DisallowStartIfOnBatteries = FALSE` **and** `StopIfGoingOnBatteries =
+FALSE`. Farmy is a desktop on a battery bank; the Windows defaults would silently
+skip the noon slot on every cloudy day — the same failure as a dark Rella post,
+arriving by a different road. ⚠ `RockRich Call Clerk` still has both set to
+`true` and should probably be changed for the same reason.
+
+### PowerShell wrapper gotchas (both already cost a run elsewhere)
+- **No non-ASCII inside strings** in a BOM-less `.ps1`. PowerShell 5.1 reads it as
+  ANSI; a UTF-8 em-dash (`E2 80 94`) lands as bytes containing `”` in CP1252 and
+  the whole script fails to parse. In comments it is only cosmetic.
+- **Never `*>>` the wrapper's output into the log pino already owns.** A
+  PowerShell redirect holds an exclusive handle for the whole run, so node cannot
+  open its own logger. Same lesson as `clerk.ps1`: two logs, and they stay two —
+  `bank-post.log` (the runner's record) and `bank-post-shift.log` (the wrapper's).
+- Set `[Console]::OutputEncoding = UTF8` in the wrapper or every em-dash node
+  prints arrives in the shift log as `ΓÇö`.
+- `pino-pretty` must `colorize` only when `process.stdout.isTTY` — under the task,
+  stdout is a file and ANSI escapes make the log unreadable.
+- Do not `process.exit()` with a pino pretty transform attached: it tears the loop
+  down mid-close and libuv aborts with
+  `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`, which reads as a crash
+  in the task history on an otherwise clean run. Set `process.exitCode` instead.
+
+## PostΩr queue processor — overlap guard, both halves (2026-09-18)
+
+Known issue #2 in CLAUDE.md is **half stale**: the in-process guard has been
+there since the PB1 fix (`let running = false` around the 60s tick). What was
+still missing is the cross-process half, now added in
+`src/postor/queue-processor.js`:
+
+- **In-process** (`running` flag) — stops the 60s tick lapping itself when an
+  upload runs long (IG polls up to 3 min, TikTok ~2.5 min).
+- **Cross-process** (`postor-queue.lock`, pid-stamped, beside the DB) — stops a
+  *second process* draining the same queue: an Electron restart that leaves the
+  old instance finishing, a stray `node server.js` beside the desktop app, or dev
+  + Electron on one DB. Without it both processes `SELECT` the same pending rows
+  before either flips one to `posting`, and the clip goes out twice.
+
+Stale locks are stolen (dead pid, or older than 15 min). If the lock file cannot
+be created at all — read-only directory — posting proceeds rather than wedging;
+a missed guard is recoverable, a queue that never fires is not.
+
+⚠ `process.kill(pid, 0)` liveness checks only work against real Windows PIDs. A
+Git-Bash shell PID is an MSYS pseudo-pid and always reads as dead, which will
+make a hand-written test lock look stale. Test with a real `node` PID.
+
+---
+
 ## kre8r-land deploy + sitemap — hard-won facts (Session 95, 2026-06-19)
 
 Building the `.land` `/about` page surfaced two things worth never re-learning:
