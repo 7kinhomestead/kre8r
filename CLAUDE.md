@@ -2,7 +2,7 @@
 
 ## What This Project Is
 AI-native content production OS for solo creators. Built for Jason Rutland — 7 Kin Homestead
-(725k TikTok, 54k YouTube, 80k Lemon8, ROCK RICH Kajabi community). Built with Claude Code,
+(728k TikTok, 71k YouTube, 14k Facebook as of Sep 19 2026; 80k Lemon8; the ROCK RICH community on his own platform). Built with Claude Code,
 no prior coding experience. Eliminates the admin layer between idea and audience.
 
 ## Prime Directive
