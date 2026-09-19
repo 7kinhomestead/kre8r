@@ -10,7 +10,7 @@
  * GET  /api/mission/kinos             — KinOS proxy (today's events, overdue tasks)
  * POST /api/mission/number-one        — Vulcan morning brief (SSE streaming)
  * POST /api/mission/aie-chat          — Dale AIE chat proxy to OrgΩr (SSE streaming)
- * POST /api/mission/tts               — ElevenLabs TTS proxy (audio/mpeg stream)
+ * POST /api/mission/tts               — Edge TTS proxy (audio/mpeg stream, free)
  */
 
 const express = require('express');
@@ -2074,7 +2074,7 @@ router.post('/push-stats', async (req, res) => {
 // ─────────────────────────────────────────────
 // POST /api/mission/tts
 // Edge TTS (Microsoft neural voices) — free, no API key needed.
-// Falls back to ElevenLabs if ELEVENLABS_API_KEY is set.
+// ElevenLabs was removed Sep 19 2026 (subscription cancelled); a voice_id in the body is ignored.
 // Voice: en-GB-RyanNeural by default (measured, British, Vulcan-appropriate)
 // ─────────────────────────────────────────────
 
@@ -2082,33 +2082,6 @@ router.post('/tts', async (req, res) => {
   const { text, voice } = req.body || {};
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'text required' });
-  }
-
-  // If ElevenLabs key is configured, prefer it
-  if (process.env.ELEVENLABS_API_KEY) {
-    try {
-      const { default: fetch } = await import('node-fetch');
-      // voice_id in body overrides env (lets Grex, Dale, etc. use different voices)
-      const voiceId = req.body.voice_id || process.env.ELEVENLABS_VOICE_NUMBER_ONE || 'pNInz6obpgDQGcFmaJgB';
-      const elRes = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
-        {
-          method: 'POST',
-          headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Accept': 'audio/mpeg', 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              text: text.trim(),
-              model_id: 'eleven_flash_v2_5',
-              optimize_streaming_latency: 4,
-              voice_settings: { stability: 0.70, similarity_boost: 0.75, speed: parseFloat(req.body.speed) || 1.15 }
-            }),
-        }
-      );
-      if (elRes.ok) {
-        res.setHeader('Content-Type', 'audio/mpeg');
-        elRes.body.pipe(res);
-        return;
-      }
-    } catch (_) { /* fall through to Edge TTS */ }
   }
 
   // Edge TTS — Microsoft neural voices, completely free
