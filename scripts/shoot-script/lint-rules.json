@@ -1,0 +1,72 @@
+{
+  "_README": "The words ShootScript refuses to let onto Cari's shooting copy. Anything inside [[notes]] is exempt — that is the whole point of notes. Add a word by adding an object to `banned` (ERROR) or `house_jargon` (WARN). `pattern` is a Python regex; `case_sensitive` defaults to false.",
+
+  "banned": [
+    { "id": "in-out",        "pattern": "\\b(an?|the)?\\s*in\\s+and\\s+(an?|the)?\\s*out\\b", "why": "\"in and out\" is an editor's join. Cari shoots what is happening." },
+    { "id": "in-out-number", "pattern": "\\b(IN|OUT)\\s*[0-9]\\b", "case_sensitive": true, "why": "IN 1 / OUT 2 are weld labels from the edit, not directions." },
+    { "id": "entry-exit",    "pattern": "\\b(entry|exit)\\s+line\\b",                    "why": "entry/exit lines are an editor's idea. On her copy it is just a line." },
+    { "id": "weld",          "pattern": "\\bweld(s|ed|ing)?\\b",                         "why": "a weld is a cut between two pieces of tape — nothing to shoot." },
+    { "id": "bridge",        "pattern": "\\bbridg(e|es|ed|ing)\\b",                      "why": "a bridge is an edit structure. Say what happens in front of the camera." },
+    { "id": "attach",        "pattern": "\\battach(\\s*point|es|ed|ing|ment|ments|s)?\\b", "why": "attach points describe where a piece lands in the cut." },
+    { "id": "joint",         "pattern": "\\b(THEREFORE|BUT)\\s+(joint|cut|turn)\\b",     "why": "THEREFORE/BUT joints are story-structure notes for the edit." },
+    { "id": "joint-caps",    "pattern": "\\b(THEREFORE|BUT)\\b\\s*(?=[-—:,])", "case_sensitive": true, "why": "a shouted THEREFORE/BUT is a joint marker from the edit." },
+    { "id": "serving",       "pattern": "\\bserving(s)?\\b",                             "why": "\"serving\" is house shorthand for a chunk of the film in the edit." },
+    { "id": "spine",         "pattern": "\\bspine\\b",                                   "why": "the spine is the edit's running order, not a shooting instruction." },
+    { "id": "beat-id",       "pattern": "\\b(beat\\s*[0-9]+|beat\\s*id|P[0-9]{1,2})\\b", "why": "beat ids (P1, beat 4) mean nothing on the day." },
+    { "id": "clip-id-a",     "pattern": "\\b[0-9]{4}_[A-Z]\\b",                          "why": "a clip id is a reference to a file. Write a plain synopsis instead." },
+    { "id": "clip-id-b",     "pattern": "\\bC0[0-9][0-9]\\b",                            "why": "a camera clip id. Write a plain synopsis instead." },
+    { "id": "clip-id-c",     "pattern": "A[0-9]{3}_[0-9]+",                              "why": "a camera roll/clip id. Write a plain synopsis instead." },
+    { "id": "timecode",      "pattern": "\\b[0-9]{2}:[0-9]{2}:[0-9]{2}:[0-9]{2}\\b",     "why": "timecode belongs in the edit, not on a shooting copy." }
+  ],
+
+  "house_jargon": [
+    { "id": "the-sitting",  "pattern": "\\bthe sitting\\b",        "industry": "sit-down interview", "status": "RETIRE", "why": "industry already has \"sit-down\" / \"interview\"." },
+    { "id": "natives",      "pattern": "\\bnatives\\b",            "industry": "native / platform-native short", "status": "DEFINE", "why": "not sourced anywhere Cari can read — define with Jason." },
+    { "id": "ptc",          "pattern": "\\bPTC\\b",                "industry": "piece to camera (direct address)", "status": "KEEP-SHORT", "why": "PTC is real industry shorthand, but spell it out the first time." },
+    { "id": "the-vehicle",  "pattern": "\\bthe vehicle\\b",        "industry": "running prop / motif", "status": "RETIRE", "why": "on a homestead shoot \"the vehicle\" reads as the truck." },
+    { "id": "the-weave",    "pattern": "\\bthe weave\\b",          "industry": "intercut / story structure", "status": "DEFINE", "why": "house word for how the strands interlock — needs Jason's definition." },
+    { "id": "pickup-ab",    "pattern": "\\bpickups?\\s+[AB]\\b",   "industry": "pickup", "status": "RETIRE", "why": "\"pickup\" is industry; the A/B labels are edit bookkeeping." },
+    { "id": "card",         "pattern": "\\bcard\\b",               "industry": "title card / question card / memory card", "status": "DEFINE", "why": "means three different things to the two of you." },
+    { "id": "run-sheet",    "pattern": "\\brun sheet\\b",          "industry": "call sheet / shot list", "status": "RETIRE", "why": "a call sheet and a shot list already exist as words." },
+    { "id": "history-act",  "pattern": "\\bhistory act\\b",        "industry": "(none)", "status": "KEEP", "why": "genuinely a house form; keep it, but define it in the glossary." }
+  ],
+
+  "_voice_note": "Cari, Sep 19 2026: a line she hands Jason is a line he SAYS, so it is written in the first person (\"I can't afford the crusher\"), and a question she asks is written the way she would ask it, to him (\"You told me X — where were you coming from?\"). Action stays third person present, as screenplays do.",
+
+  "voice": {
+    "crew_names": ["JASON", "CARI", "INTERVIEWER", "LEDGER"],
+    "interviewer_character": "INTERVIEWER",
+    "third_person": "\\b(he|him|his|himself)\\b",
+    "second_person": "\\b(you|your|yours|yourself|you're|youre)\\b",
+    "question_openers": ["tell me", "talk me through", "walk me through", "describe",
+                         "take me back", "give me", "explain", "say more about",
+                         "what", "why", "how", "when", "where", "who", "which"]
+  },
+
+  "reference_cues": [
+    "earlier", "back when", "remember", "the day", "when you", "when we", "you said",
+    "he said", "she said", "i said", "the bit", "the part", "the moment", "footage",
+    "the scene where", "talked about", "told me", "last time", "we shot", "we filmed",
+    "the take where", "that clip", "the one where", "back then"
+  ],
+
+  "_forward_note": "These match a reference to somewhere ELSE IN THE PAPER, never a thing happening in front of the camera. 'the hammer coming up into his hand' and 'the earth below' are action; 'see below' and 'coming up later' are not.",
+
+  "forward_reference": [
+    { "id": "see-page",  "pattern": "\\b(see|on|from) page\\s+(\\w+)\\b" },
+    { "id": "see-below", "pattern": "\\b(see|shown|listed|described|written|noted|explained|defined|is)\\s+below\\b" },
+    { "id": "later-in",  "pattern": "\\blater in (this|the)\\s+(script|page|sheet|document|doc|scene|setup|film|episode|list|shoot)\\b" },
+    { "id": "coming-up", "pattern": "\\bcoming up\\s+(in|later|next)\\b" },
+    { "id": "find-out",  "pattern": "\\byou'?ll (find out|see)\\b" },
+    { "id": "come-back", "pattern": "\\bwe'?ll (get|come) back to\\b" },
+    { "id": "explained", "pattern": "\\bexplained (later|further down)\\b" },
+    { "id": "more-on",   "pattern": "\\bmore on (this|that)\\b" }
+  ],
+
+  "forward_reference_scene": [
+    { "id": "as-described", "pattern": "\\bas described in scene\\s+([0-9]+)\\b" },
+    { "id": "see-scene",    "pattern": "\\bsee scene\\s+([0-9]+)\\b" },
+    { "id": "in-scene",     "pattern": "\\bin scene\\s+([0-9]+)\\b" },
+    { "id": "setup-n",      "pattern": "\\bsetup\\s+([0-9]+)\\b" }
+  ]
+}
