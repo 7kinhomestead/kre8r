@@ -36,6 +36,12 @@ const SCOPES = [
   'pages_manage_posts',        // create/edit/delete Page posts
   'pages_read_engagement',     // read Page content + follower data
   'pages_show_list',           // list Pages the user manages
+  // Sep 21 2026 (Jason: "add the scopes, I'll reconnect"). For a Page you admin these
+  // are granted without App Review; review is only for other people's Pages.
+  'pages_read_user_content',   // read comments + visitor posts on the Page
+  'pages_manage_engagement',   // reply to / hide comments as the Page
+  'pages_messaging',           // read + answer Messenger conversations (scam reports)
+  'read_insights',             // Page insights (reach, follows, video views)
   // publish_video — requires use case; Facebook video upload uses page token directly
   // 'publish_video',
 ].join(',');
