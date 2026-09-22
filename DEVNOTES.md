@@ -760,3 +760,18 @@ Electron-only. Avoids all psychology terminology per creator preference.
 node %APPDATA%\npm\node_modules\pm2\bin\pm2 start server.js --name orgboard
 ```
 Run from `C:\Users\18054\orgboard`. Process lost after machine restart — re-run to restore.
+
+## Desktop release recipe + the Ω download bug (Sep 21 2026, v1.0.12)
+The installed Kre8Ωr (AppData\Local\Programs\kre8r) auto-updates from **https://kre8r.app/downloads/latest.yml**
+(electron-updater, generic provider). It had never actually worked: the 1.0.7 installer landed on the droplet with
+a double-encoded Ω in its filename ("Kre8Î©r Setup 1.0.7.exe"), so the manifest's url 404'd and 1.0.10/1.0.11 were
+installed by hand. Fix = publish under an ASCII name and point the manifest at it.
+1. bump `version` in package.json, commit; `npm run dist:win` (~3 min, ~757 MB signed NSIS installer in dist/).
+2. `cp "dist/Kre8Ωr Setup X.exe" dist/Kre8r-Setup-X.exe` (+ .blockmap); `sed` the two filename fields in dist/latest.yml
+   → latest-X.yml (sha512/size unchanged).
+3. Upload resumably: `split -b 150m -d` → scp chunks to `kre8rapp:/tmp/`, `cat` them back, verify
+   `sha512sum | xxd -r -p | base64` == manifest sha512.
+4. Move exe + blockmap into `/home/kre8r/kre8r/public/downloads/`, copy manifest to `latest.yml` (back the old one up),
+   `chown kre8r:kre8r`. Verify `curl -I https://kre8r.app/downloads/Kre8r-Setup-X.exe` → 200.
+Express skips `/downloads/` (server.js ~434) so nginx/static serves it. The app checks 5 s after launch and offers
+"Restart Now". Old 1.0.0/1.0.1 installers (~500 MB) are still in that folder — safe to delete when disk matters.
