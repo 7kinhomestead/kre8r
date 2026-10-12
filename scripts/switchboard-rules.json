@@ -1,0 +1,19 @@
+{
+  "_readme": "THE SWITCHBOARD destination rules. First match wins, top to bottom, case-insensitive, on the caption plus its hashtags. Term syntax: a plain term matches a whole word or phrase; a term ending in * matches a word start (owner financ* = financing, financed); a term starting with re: is a regular expression; a term starting with link: matches that text anywhere in the full caption, footer included (a caption that links the solar designer goes to the solar designer). Plain and * terms of 5+ letters also match inside a hashtag (#offgridsolar hits solar). Caption lines matching ignore_lines (the standing footer with the house link) are not read for words. url youtube:episode means the matching video on YouTube: the one whose title the caption quotes, else the same EP number, else the YouTube video that was newest when the post went up. A YouTube post only takes rules marked tool:true; otherwise it points at itself (watch on YouTube). No match goes to the default below. Edit freely; no deploy needed, the next hourly run picks it up.",
+  "ignore_lines": "www\\.|https?://|7kinhomestead\\.(com|land)",
+  "rules": [
+    { "name": "solar",   "tool": true,  "match": ["link:7kinhomestead.land/solar", "solar*", "panels", "inverter*", "battery sizing", "how much solar"], "label": "the solar designer", "url": "https://7kinhomestead.land/solar" },
+    { "name": "land",    "tool": true,  "match": ["link:7kinhomestead.land/finder", "land finder", "find land", "cheap land", "owner financ*", "buy land", "acre*"], "label": "the land finder", "url": "https://7kinhomestead.land/finder" },
+    { "name": "water",   "tool": true,  "match": ["link:7kinhomestead.land/water", "water*", "rain", "rainwater", "cistern*", "tank", "tanks", "gallons"], "label": "the water planner", "url": "https://7kinhomestead.land/water" },
+    { "name": "freedom", "tool": true,  "match": ["link:7kinhomestead.land/freedom", "freedom", "escape", "quit", "retire*", "paycheck*", "how we afford"], "label": "the freedom calculator", "url": "https://7kinhomestead.land/freedom" },
+    { "name": "feed",    "tool": true,  "match": ["link:7kinhomestead.land/feed", "feed", "garden*"], "label": "the garden tools", "url": "https://7kinhomestead.land/feed" },
+    { "name": "regen",   "tool": true,  "match": ["link:7kinhomestead.land/regen", "regen*", "soil"], "label": "the garden tools", "url": "https://7kinhomestead.land/regen" },
+    { "name": "episode", "tool": false, "match": ["re:\\bep\\s?\\d+", "episode*", "re:rock rich\\s*\\|"], "label": "watch the episode", "url": "youtube:episode" },
+    { "name": "ooyow",   "tool": false, "match": ["out of your own way"], "label": "the book, pay what you want", "url": "https://www.7kinhomestead.com/out-of-your-own-way-ebook-1" },
+    { "name": "book",    "tool": false, "match": ["book", "shoestring"], "label": "the book, pay what you want", "url": "https://www.7kinhomestead.com/off-grid-on-a-shoestring-budget-landing-page-1" },
+    { "name": "house",   "tool": false, "match": ["rock rich", "community", "join", "free"], "label": "the house", "url": "https://www.7kinhomestead.com/" }
+  ],
+  "youtube_self": { "label": "watch on YouTube" },
+  "episode_fallback_url": "https://www.youtube.com/channel/UCFiYtvJimJzFZLH6rzNkc5Q/videos",
+  "default": { "label": "everything we make", "url": "https://www.7kinhomestead.com/links-switchboard#all" }
+}
