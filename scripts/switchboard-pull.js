@@ -3,7 +3,7 @@
 // Pulls the recent videos from Facebook (Graph, PostΩr Page token, read-only),
 // YouTube (public RSS, no key; channel page fallback) and TikTok (public
 // creator embed page + manual oEmbed seeds, fail-soft),
-// makes 96 px webp thumbnails, guesses a destination per post from
+// makes 256 px webp thumbnails, guesses a destination per post from
 // switchboard-rules.json, and POSTs the list to the house:
 //   POST <HOUSE_URL>/api/bridge/switchboard  (x-internal-key)
 //
@@ -47,7 +47,9 @@ const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 const KEEP_PER_PLATFORM = 10;
 const MAX_AGE_MS = 60 * 24 * 3600 * 1000;
 const STALE_MS = 48 * 3600 * 1000;
-const THUMB_MAX_BYTES = 8 * 1024;
+// 256 px squares (shown at 84 CSS px on the house, sharp at 3x); the house takes up to 24 KB.
+const THUMB_SIZE = 256;
+const THUMB_MAX_BYTES = 24 * 1024;
 const PLATFORMS = ['facebook', 'youtube', 'tiktok'];
 
 const args = new Set(process.argv.slice(2));
@@ -349,13 +351,28 @@ function urlForLabel(rules, label) {
   return r ? r.url : null;
 }
 
-// ── thumbnails: ffmpeg-static, 96x96 cover-scale + top crop, webp ≤ 8 KB ─────
+// ── thumbnails: ffmpeg-static, 256x256 cover-scale + top crop, webp ≤ 24 KB ───
 const FFMPEG = (() => { try { return require('ffmpeg-static'); } catch (_) { return null; } })();
 function thumbPath(p) { return path.join(THUMBS, `${p.platform}-${String(p.id).replace(/[^\w.-]/g, '_')}.webp`); }
+// The width of a webp from its header (VP8, VP8L or VP8X), or 0 if it cannot be read.
+// The cache is keyed by name only, so this is how a 96 px thumb from before PASS A
+// (Oct 11 2026) is found and remade at 256 under the same name.
+function webpWidth(file) {
+  try {
+    const b = fs.readFileSync(file);
+    if (b.length < 30 || b.toString('ascii', 0, 4) !== 'RIFF' || b.toString('ascii', 8, 12) !== 'WEBP') return 0;
+    const fmt = b.toString('ascii', 12, 16);
+    if (fmt === 'VP8 ') return b.readUInt16LE(26) & 0x3fff;
+    if (fmt === 'VP8L') return 1 + (((b[22] & 0x3f) << 8) | b[21]);
+    if (fmt === 'VP8X') return 1 + (b[24] | (b[25] << 8) | (b[26] << 16));
+  } catch (_) {}
+  return 0;
+}
 function encodeThumb(input, out) {
   if (!FFMPEG) throw new Error('ffmpeg-static not found');
-  const vf = 'scale=96:96:force_original_aspect_ratio=increase,crop=96:96:(iw-96)/2:0';
-  for (const q of [72, 55, 40, 25]) {
+  const n = THUMB_SIZE;
+  const vf = `scale=${n}:${n}:force_original_aspect_ratio=increase,crop=${n}:${n}:(iw-${n})/2:0`;
+  for (const q of [80, 70, 60, 50, 40, 30, 20]) {
     const tmp = out + '.tmp.webp';
     const r = spawnSync(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', '-i', 'pipe:0',
       '-vf', vf, '-frames:v', '1', '-c:v', 'libwebp', '-quality', String(q), '-compression_level', '6', tmp],
@@ -367,19 +384,22 @@ function encodeThumb(input, out) {
     if (fs.statSync(tmp).size <= THUMB_MAX_BYTES) { fs.renameSync(tmp, out); return; }
     fs.unlinkSync(tmp);
   }
-  throw new Error('thumbnail stays over 8 KB');
+  throw new Error('thumbnail stays over 24 KB');
 }
 async function ensureThumb(p) {
   const out = thumbPath(p);
-  if (fs.existsSync(out)) return out;               // cached by platform+id: no re-download
-  if (!p.thumb_src) return null;
+  // cached by platform+id: no re-download, unless it is an old size
+  if (fs.existsSync(out) && webpWidth(out) === THUMB_SIZE && fs.statSync(out).size <= THUMB_MAX_BYTES) return out;
+  // An old-size thumb is kept until a new one is made: a failed remake never loses the picture.
+  const had = fs.existsSync(out) ? out : null;
+  if (!p.thumb_src) return had;
   try {
     const buf = await getBuffer(p.thumb_src, { 'User-Agent': DESKTOP_UA });
     encodeThumb(buf, out);
     return out;
   } catch (e) {
     console.log(`switchboard: thumb failed ${p.platform}:${p.id} (${errLine(e)})`);
-    return null;
+    return had;
   }
 }
 
