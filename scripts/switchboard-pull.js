@@ -403,7 +403,9 @@ async function pullTikTok() {
 }
 
 // ── manual TikTok seeds (scripts/switchboard/manual-posts.json) via oEmbed ────
-// Each entry: { url, label?, destination_url?, posted_at? }. oEmbed gives the
+// Each entry: { url, label?, destination_url?, posted_at?, pin?, note? }. `note` is free text, never read.
+// `pin: true` (Jason's pinned TikToks, Oct 16 2026) marks the post pinned: the house puts it
+// first for a TikTok visitor, in this file's order (pin_order), and it is kept here however old. oEmbed gives the
 // title and a cover; the post date comes from posted_at or from the video id
 // itself (a TikTok id's top 32 bits are its Unix upload time).
 function tiktokIdDate(id) {
@@ -420,12 +422,14 @@ async function pullManual(cache) {
   const prev = cache.manual || {};
   const next = {};
   let fresh = 0;
+  let pins = 0;
   for (const e of seeds) {
     const id = (e.url.match(/tiktok\.com\/@[^/]+\/video\/(\d{15,22})/) || [])[1];
     if (!id) { console.log(`switchboard: manual seed skipped, not a TikTok video URL (${e.url.slice(0, 80)})`); continue; }
     const override = {};
     if (e.label) override.label = String(e.label);
     if (e.destination_url) override.url = String(e.destination_url);
+    const pin = e.pin === true ? { pinned: true, pin_order: pins++ } : { pinned: false, pin_order: null };
     try {
       const j = JSON.parse(await getText(`https://www.tiktok.com/oembed?url=${encodeURIComponent(`https://www.tiktok.com/@${TT_HANDLE}/video/${id}`)}`, { 'User-Agent': DESKTOP_UA }));
       if (!j || typeof j.title !== 'string') throw new Error('oEmbed gave no title');
@@ -434,10 +438,11 @@ async function pullManual(cache) {
         posted_at: isoOrNull(e.posted_at) || tiktokIdDate(id), caption: j.title, hashtags: [],
         thumb_src: j.thumbnail_url || null, manual: true, override,
         views: null, views_at: null,   // oEmbed carries no count; main() borrows the embed copy's when it has the same id
+        ...pin,
       };
       fresh++;
     } catch (err) {
-      if (prev[id]) { next[id] = { ...prev[id], override, posted_at: isoOrNull(e.posted_at) || prev[id].posted_at }; }
+      if (prev[id]) { next[id] = { ...prev[id], override, ...pin, posted_at: isoOrNull(e.posted_at) || prev[id].posted_at }; }
       console.log(`switchboard: manual tiktok ${id} oEmbed failed (${errLine(err)}), ${prev[id] ? 'kept last cached copy' : 'no cached copy'}`);
     }
   }
@@ -585,13 +590,14 @@ function captionLine(p) {
   return cut.replace(/[\s,;:.!?-]+$/, '') + '…';
 }
 
-// ── keep the last 10, drop older than 60 days ───────────────────────────────
+// ── keep the last 10, drop older than 60 days (a pinned post is always kept, on top of the 10) ─
 function trim(posts) {
   const cutoff = Date.now() - MAX_AGE_MS;
-  return posts
-    .filter(p => p.posted_at && Date.parse(p.posted_at) >= cutoff)
+  const pinned = posts.filter(p => p.pinned);
+  return pinned.concat(posts
+    .filter(p => !p.pinned && p.posted_at && Date.parse(p.posted_at) >= cutoff)
     .sort((a, b) => Date.parse(b.posted_at) - Date.parse(a.posted_at))
-    .slice(0, KEEP_PER_PLATFORM);
+    .slice(0, KEEP_PER_PLATFORM));
 }
 
 function readInternalKey() {
@@ -663,6 +669,7 @@ async function main() {
         thumb_b64: file ? fs.readFileSync(file).toString('base64') : null,
       };
       if (post.manual) row.manual = true;
+      if (post.pinned) { row.pinned = true; row.pin_order = post.pin_order; }
       posts.push(row);
     }
   }
