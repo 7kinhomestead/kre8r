@@ -4,7 +4,9 @@
 // YouTube (public RSS, no key; channel page fallback) and TikTok (public
 // creator embed page + manual oEmbed seeds, fail-soft),
 // makes 256 px webp thumbnails, guesses a destination per post from
-// switchboard-rules.json, and POSTs the list to the house:
+// switchboard-rules.json, reads each post's view count (`views`, null when the
+// platform did not say; `views_at`, when it was read: the house ranks rows by it,
+// Jason's ruling Oct 16 2026), and POSTs the list to the house:
 //   POST <HOUSE_URL>/api/bridge/switchboard  (x-internal-key)
 //
 // Flags:
@@ -130,6 +132,12 @@ function isoOrNull(v) {
   const t = typeof v === 'number' ? v * 1000 : Date.parse(v);
   return Number.isFinite(t) && t > 0 ? new Date(t).toISOString() : null;
 }
+// A view count as a whole number >= 0, or null when it is missing or not a number.
+function viewsOrNull(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+}
 
 // ── Facebook ─────────────────────────────────────────────────────────────────
 function readFacebookConnection() {
@@ -145,9 +153,11 @@ function readFacebookConnection() {
 }
 async function pullFacebook() {
   const conn = readFacebookConnection();
-  const fields = 'id,description,created_time,permalink_url,picture';
+  // `views` is on the Graph video object for videos and reels alike (checked Oct 16 2026).
+  const fields = 'id,description,created_time,permalink_url,picture,views';
   const byId = new Map();
   const problems = [];
+  const at = new Date().toISOString();
   for (const edge of ['videos', 'video_reels']) {
     try {
       const url = `${GRAPH}/${encodeURIComponent(conn.account_id)}/${edge}?fields=${fields}&limit=${KEEP_PER_PLATFORM}&access_token=${encodeURIComponent(conn.access_token)}`;
@@ -162,12 +172,27 @@ async function pullFacebook() {
           platform: 'facebook', id: String(v.id), url: link,
           posted_at: isoOrNull(v.created_time), caption: v.description || '',
           hashtags: [], thumb_src: v.picture || null,
+          views: viewsOrNull(v.views), views_at: at,
         });
       }
     } catch (e) { problems.push(`${edge}: ${errLine(e)}`); }
   }
   if (!byId.size) throw new Error(problems.join('; ') || 'no videos returned');
   if (problems.length) console.log(`switchboard: facebook partial (${problems.join('; ')})`);
+  // Only when the plain field is missing: the reel's lifetime plays, one request for all of them.
+  const missing = [...byId.values()].filter(p => p.views == null).map(p => p.id);
+  if (missing.length) {
+    try {
+      const url = `${GRAPH}/?ids=${missing.map(encodeURIComponent).join(',')}&fields=${encodeURIComponent('video_insights.metric(fb_reels_total_plays)')}&access_token=${encodeURIComponent(conn.access_token)}`;
+      const j = await (await fetch(url, { signal: AbortSignal.timeout(20000) })).json();
+      if (j.error) throw new Error(j.error.message || 'graph error');
+      for (const id of missing) {
+        const m = (((j[id] || {}).video_insights || {}).data || []).find(x => x.name === 'fb_reels_total_plays');
+        const n = viewsOrNull(m && m.values && m.values[0] && m.values[0].value);
+        if (n != null) byId.get(id).views = n;
+      }
+    } catch (e) { console.log(`switchboard: facebook plays fallback failed (${errLine(e)})`); }
+  }
   return [...byId.values()];
 }
 
@@ -186,21 +211,56 @@ function tag(block, name) {
 function ytFromRss(xml) {
   const entries = xml.split('<entry>').slice(1).map(s => s.split('</entry>')[0]);
   if (!entries.length) throw new Error('no entries in the RSS feed');
+  const at = new Date().toISOString();
   return entries.map(e => {
     const id = tag(e, 'yt:videoId');
     const link = (e.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/) || [])[1];
+    // The feed carries an exact count per entry (<media:statistics views="23205"/>); null if it ever stops.
+    const views = viewsOrNull((e.match(/<media:statistics[^>]*\bviews="(\d+)"/) || [])[1]);
     return {
       platform: 'youtube', id, url: link ? xmlDecode(link) : `https://www.youtube.com/watch?v=${id}`,
       posted_at: isoOrNull(tag(e, 'published')), caption: tag(e, 'title'), hashtags: [],
       // mqdefault is 16:9 with no letterbox bars (hqdefault, the feed's media:thumbnail, has bars)
       thumb_src: `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
+      views, views_at: views == null ? null : at,
     };
   }).filter(p => p.id);
 }
-// Fallback when the RSS feed is down (it 404s for every channel at times):
-// the public /videos tab (newest first, no key), then each NEW video's watch
-// page once for its exact publish date. Dates already in the cache are reused.
-async function ytFromChannelPage(cached) {
+// "23 thousand views", "1.2 million views", "1,234 views", "No views", or the
+// short "23K" / "1.2M" / "812" on the channel page. A rounded count, never a guess past it.
+function parseViewWords(s) {
+  const t = String(s || '').toLowerCase().replace(/,/g, '').trim();
+  if (!t) return null;
+  if (/^no views?$/.test(t)) return 0;
+  const m = t.match(/^([\d.]+)\s*(thousand|million|billion|k|m|b)?(?:\s+views?)?$/);
+  if (!m) return null;
+  const mult = { thousand: 1e3, k: 1e3, million: 1e6, m: 1e6, billion: 1e9, b: 1e9 }[m[2]] || 1;
+  return viewsOrNull(Number(m[1]) * mult);
+}
+// The view count in a channel-page item: the old videoRenderer's viewCountText,
+// or the lockup's metadata part labelled "... views".
+function ytItemViews(o) {
+  const v = o.videoRenderer;
+  if (v) {
+    const vc = v.viewCountText || {};
+    const txt = vc.simpleText || ((vc.runs || []).map(r => r.text).join('')) || '';
+    const n = parseViewWords(txt);
+    if (n != null) return n;
+    return parseViewWords((v.shortViewCountText || {}).simpleText);
+  }
+  const rows = (((((o.lockupViewModel || {}).metadata || {}).lockupMetadataViewModel || {}).metadata || {}).contentMetadataViewModel || {}).metadataRows || [];
+  for (const r of rows) {
+    for (const part of r.metadataParts || []) {
+      const label = String(part.accessibilityLabel || '');
+      if (/\bviews?\b/i.test(label)) { const n = parseViewWords(label); if (n != null) return n; }
+      const txt = ((part.text || {}).content) || '';
+      if (/\bviews?\b/i.test(txt)) { const n = parseViewWords(txt); if (n != null) return n; }
+    }
+  }
+  return null;
+}
+// The /videos tab, read once: [{ id, title, views }] newest first.
+async function ytChannelItems() {
   const html = await getText(`https://www.youtube.com/channel/${YT_CHANNEL}/videos`, { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9' });
   const m = html.match(/var ytInitialData = (\{[\s\S]*?\});<\/script>/);
   if (!m) throw new Error('no ytInitialData on the channel page');
@@ -213,16 +273,50 @@ async function ytFromChannelPage(cached) {
     if (l && l.contentId && !seen.has(l.contentId) && (!l.contentType || /VIDEO/.test(l.contentType))) {
       seen.add(l.contentId);
       const t = (((l.metadata || {}).lockupMetadataViewModel || {}).title || {}).content || '';
-      vids.push({ id: l.contentId, title: t });
+      vids.push({ id: l.contentId, title: t, views: ytItemViews(o) });
     }
     const v = o.videoRenderer;
     if (v && v.videoId && !seen.has(v.videoId)) {
       seen.add(v.videoId);
-      vids.push({ id: v.videoId, title: ((v.title || {}).runs || [{}])[0].text || '' });
+      vids.push({ id: v.videoId, title: ((v.title || {}).runs || [{}])[0].text || '', views: ytItemViews(o) });
     }
     for (const k in o) if (o[k] && typeof o[k] === 'object') walk(o[k]);
   })(data);
   if (!vids.length) throw new Error('no videos on the channel page');
+  return vids;
+}
+// Counts from the channel page, cached per id for an hour in cache.yt_views
+// ({ id: { views, at } }), so a run that needs them reads the page at most once.
+const YT_VIEWS_TTL = 60 * 60 * 1000;
+function rememberYtViews(cache, vids, at) {
+  const store = cache.yt_views = cache.yt_views || {};
+  for (const v of vids) if (v.views != null) store[v.id] = { views: v.views, at };
+  const cutoff = Date.now() - MAX_AGE_MS;
+  for (const id of Object.keys(store)) if (!(Date.parse(store[id].at) >= cutoff)) delete store[id];
+}
+async function fillYtViews(posts, cache) {
+  const store = cache.yt_views || {};
+  const fresh = (id) => store[id] && Date.now() - (Date.parse(store[id].at) || 0) < YT_VIEWS_TTL;
+  const need = posts.filter(p => p.views == null);
+  if (!need.length) return;
+  if (need.some(p => !fresh(p.id))) {
+    try {
+      const at = new Date().toISOString();
+      rememberYtViews(cache, await ytChannelItems(), at);
+    } catch (e) { console.log(`switchboard: youtube channel page counts failed (${errLine(e)})`); }
+  }
+  for (const p of need) {
+    const s = (cache.yt_views || {})[p.id];
+    if (s) { p.views = s.views; p.views_at = s.at; }
+  }
+}
+// Fallback when the RSS feed is down (it 404s for every channel at times):
+// the public /videos tab (newest first, no key), then each NEW video's watch
+// page once for its exact publish date. Dates already in the cache are reused.
+async function ytFromChannelPage(cached, cache) {
+  const vids = await ytChannelItems();
+  const at = new Date().toISOString();
+  rememberYtViews(cache, vids, at);
   const known = new Map((cached || []).map(p => [p.id, p]));
   const out = [];
   for (const v of vids) {
@@ -239,18 +333,22 @@ async function ytFromChannelPage(cached) {
       platform: 'youtube', id: v.id, url: `https://www.youtube.com/watch?v=${v.id}`,
       posted_at: posted || null, caption: xmlDecode(title), hashtags: [],
       thumb_src: `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`,
+      views: v.views, views_at: v.views == null ? null : at,
     });
   }
   return out;
 }
-async function pullYouTube(cached) {
+async function pullYouTube(cached, cache) {
+  let posts;
   try {
-    return ytFromRss(await getText(YT_RSS, { 'User-Agent': DESKTOP_UA }));
+    posts = ytFromRss(await getText(YT_RSS, { 'User-Agent': DESKTOP_UA }));
   } catch (e) {
-    const posts = await ytFromChannelPage(cached);
+    posts = await ytFromChannelPage(cached, cache);
     console.log(`switchboard: youtube rss failed (${errLine(e)}), used the channel page`);
-    return posts;
   }
+  // Any post still without a count (the feed dropped its statistics): the channel page, once, cached an hour.
+  await fillYtViews(posts, cache);
+  return posts;
 }
 
 // ── TikTok: the public creator embed page (fail-soft, one fetch per run) ─────
@@ -290,12 +388,18 @@ async function pullTikTok() {
   if (!state) throw new Error('no embedded state in the creator embed page');
   const items = collectEmbedItems(state);
   if (!items.length) throw new Error('creator embed page has no video items');
-  return items.map(it => ({
-    platform: 'tiktok', id: String(it.id),
-    url: `https://www.tiktok.com/@${TT_HANDLE}/video/${it.id}`,
-    posted_at: tiktokIdDate(String(it.id)), caption: it.desc || '', hashtags: [],
-    thumb_src: it.coverUrl || it.originCoverUrl || it.dynamicCoverUrl || null,
-  }));
+  const at = new Date().toISOString();
+  return items.map(it => {
+    // The embed item carries playCount at its top level (Oct 16 2026); stats.playCount is the profile page's shape.
+    const views = viewsOrNull(it.playCount != null ? it.playCount : (it.stats || {}).playCount);
+    return {
+      platform: 'tiktok', id: String(it.id),
+      url: `https://www.tiktok.com/@${TT_HANDLE}/video/${it.id}`,
+      posted_at: tiktokIdDate(String(it.id)), caption: it.desc || '', hashtags: [],
+      thumb_src: it.coverUrl || it.originCoverUrl || it.dynamicCoverUrl || null,
+      views, views_at: views == null ? null : at,
+    };
+  });
 }
 
 // ── manual TikTok seeds (scripts/switchboard/manual-posts.json) via oEmbed ────
@@ -329,6 +433,7 @@ async function pullManual(cache) {
         platform: 'tiktok', id, url: `https://www.tiktok.com/@${TT_HANDLE}/video/${id}`,
         posted_at: isoOrNull(e.posted_at) || tiktokIdDate(id), caption: j.title, hashtags: [],
         thumb_src: j.thumbnail_url || null, manual: true, override,
+        views: null, views_at: null,   // oEmbed carries no count; main() borrows the embed copy's when it has the same id
       };
       fresh++;
     } catch (err) {
@@ -512,7 +617,7 @@ async function main() {
   const status = {};
   for (const p of PLATFORMS) {
     try {
-      const fresh = trim(await pullers[p](cache.platforms[p].posts));
+      const fresh = trim(await pullers[p](cache.platforms[p].posts, cache));
       cache.platforms[p] = { fetched_at: nowIso, posts: fresh };
       status[p] = p === 'tiktok' ? 'embed' : 'ok';
     } catch (e) {
@@ -526,6 +631,12 @@ async function main() {
   // manual TikTok seeds: merged over the auto list (a manual copy wins on the same id)
   const manual = await pullManual(cache);
   const manualIds = new Set(manual.posts.map(m => m.id));
+  // A manual copy wins on the same id, but oEmbed has no count: keep the embed's.
+  const autoTt = new Map(cache.platforms.tiktok.posts.map(p => [p.id, p]));
+  for (const m of manual.posts) {
+    const a = autoTt.get(m.id);
+    if (m.views == null && a && a.views != null) { m.views = a.views; m.views_at = a.views_at || null; }
+  }
   const lists = {
     facebook: cache.platforms.facebook.posts,
     youtube: cache.platforms.youtube.posts,
@@ -548,6 +659,7 @@ async function main() {
       const row = {
         platform: post.platform, id: post.id, url: post.url, posted_at: post.posted_at,
         caption: post.caption, caption_line: captionLine(post), destination,
+        views: viewsOrNull(post.views), views_at: viewsOrNull(post.views) == null ? null : (post.views_at || null),
         thumb_b64: file ? fs.readFileSync(file).toString('base64') : null,
       };
       if (post.manual) row.manual = true;

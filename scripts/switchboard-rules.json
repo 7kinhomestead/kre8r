@@ -11,7 +11,7 @@
     { "name": "episode", "tool": false, "match": ["re:\\bep\\s?\\d+", "episode*", "re:rock rich\\s*\\|"], "label": "watch the episode", "url": "youtube:episode" },
     { "name": "ooyow",   "tool": false, "match": ["out of your own way"], "label": "the book, pay what you want", "url": "https://www.7kinhomestead.com/out-of-your-own-way-ebook-1" },
     { "name": "book",    "tool": false, "match": ["book", "shoestring"], "label": "the book, pay what you want", "url": "https://www.7kinhomestead.com/off-grid-on-a-shoestring-budget-landing-page-1" },
-    { "name": "house",   "tool": false, "match": ["rock rich", "community", "join", "free"], "label": "the community", "url": "https://www.7kinhomestead.com/" }
+    { "name": "house",   "tool": false, "_note": "Oct 16 2026: only the exact phrase, or a house link WITH a path (7kinhomestead.com/...). The bare www.7kinhomestead.com is the standing footer on nearly every Facebook post, so it never counts; plain community/join/free fired on ordinary captions and are gone.", "match": ["rock rich community", "link:7kinhomestead.com/"], "label": "the community", "url": "https://www.7kinhomestead.com/" }
   ],
   "youtube_self": { "label": "watch on YouTube" },
   "episode_fallback_url": "https://www.youtube.com/channel/UCFiYtvJimJzFZLH6rzNkc5Q/videos",
