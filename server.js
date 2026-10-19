@@ -374,10 +374,24 @@ app.get('/', (req, res, next) => {
   next();
 });
 
+// Oct 19 2026 audit: a Host header alone used to skip the login for EVERY path.
+// The public subdomains now pass only their own pages, their own APIs and static assets.
+const PUBLIC_HOST_PATHS = {
+  [TELEPROMPTER_HOST]: [/^\/teleprompter(\.html|-manifest\.json|-sw\.js)?$/, /^\/api\/teleprompter(\/|$)/],
+  'guard.kre8r.app':   [/^\/guard(\/|$)/, /^\/guardr(-inbox)?\.html$/, /^\/api\/guard(\/|$)/],
+};
+const STATIC_ASSET = /^\/(css|js|img|fonts|icons)\/|^\/favicon|^\/manifest\.json$/;
+function publicHostAllows(req) {
+  const rules = PUBLIC_HOST_PATHS[req.hostname];
+  if (!rules) return null;
+  return STATIC_ASSET.test(req.path) || rules.some(r => r.test(req.path));
+}
+
 app.use((req, res, next) => {
-  // Allow the teleprompter subdomain through without user login —
-  // session codes protect individual sessions, scripts aren't secret
-  if (req.hostname === TELEPROMPTER_HOST) return next();
+  // Public subdomains: their own paths pass without a login, everything else is not there.
+  const allowed = publicHostAllows(req);
+  if (allowed === true) return next();
+  if (allowed === false) return res.status(404).end();
 
   // ── First-run detection: if no users exist, funnel to setup wizard ──────────
   // Import here to avoid circular-require; initDb() has already run by this point.
@@ -437,8 +451,7 @@ app.use((req, res, next) => {
   // GuardΩr — public fan-facing pages, no auth
   if (req.path.startsWith('/guard/') || req.path === '/guard') return next();
   if (req.path.startsWith('/api/guard/')) return next();
-  // guard.kre8r.app subdomain — all paths are public GuardΩr fan pages
-  if (req.hostname === 'guard.kre8r.app') return next();
+  // guard.kre8r.app is handled by publicHostAllows() above (its own paths only).
   // OrgΩr bridge — internal key auth handled inside the route, no session needed
   if (req.path === '/api/stats-export') return next();
   // Community Intelligence sync — internal key auth handled inside the route
